@@ -1,0 +1,178 @@
+BeatSight Project - Development Notes
+====================================
+
+PROJECT RENAMED: drumify → BeatSight
+Reason: "drumify" was already taken. BeatSight captures the visual learning aspect perfectly.
+
+CURRENT STATUS: Foundation Complete ✅
+
+What's Been Built:
+------------------
+1. ✅ Complete project structure with all major components
+2. ✅ Desktop app skeleton using osu-framework
+3. ✅ Full AI processing pipeline with Demucs integration
+4. ✅ Beatmap format specification (.bsm files)
+5. ✅ Comprehensive documentation (architecture, setup, contributing)
+6. ✅ FastAPI server for remote processing
+7. ✅ All core data structures and file I/O
+
+Tech Stack Decisions:
+---------------------
+✅ Desktop: C# + osu-framework (battle-tested for rhythm games)
+✅ AI: Python + Demucs + PyTorch (state-of-the-art)
+✅ Backend: FastAPI (Python, async, fast)
+✅ Mobile: Flutter (future, cross-platform)
+✅ Database: PostgreSQL + S3 for audio (future)
+
+Next Immediate Steps:
+---------------------
+1. Build gameplay screen with falling notes
+2. Implement editor with timeline/waveform
+3. Add real-time microphone input detection
+4. Train ML model for better drum classification
+5. Create mobile apps (Flutter)
+
+Key Files to Start With:
+------------------------
+Desktop App Entry: desktop/BeatSight.Desktop/Program.cs
+Main Game Logic: desktop/BeatSight.Game/BeatSightGame.cs
+AI Pipeline Entry: ai-pipeline/pipeline/process.py
+Beatmap Format: docs/BEATMAP_FORMAT.md
+Architecture: docs/ARCHITECTURE.md
+
+Development Commands:
+---------------------
+# Desktop
+cd desktop/BeatSight.Desktop && dotnet run
+
+# AI Pipeline  
+cd ai-pipeline
+source venv/bin/activate.fish
+python -m pipeline.process --input song.mp3 --output beatmap.bsm
+
+# API Server
+python -m pipeline.server
+
+Project Philosophy:
+-------------------
+- Free and open-source forever
+- No ads, ever
+- Community-driven development
+- Learning-focused (both for users and contributors)
+- Quality over speed
+
+Patent Strategy:
+----------------
+- Free + open source = safer legally
+- Guitar Hero mechanics are generic now (patents expired)
+- Avoid exact visual designs
+- Focus on transformative use (education)
+
+Future Features:
+----------------
+✅ Real-time play-along scoring (planned)
+✅ Sample extraction from favorite bands (planned)
+✅ Community beatmap sharing (backend ready)
+✅ Distributed AI model training (architecture ready)
+✅ Approach rate customization (in beatmap format)
+✅ BPM adjustment and metronome (in beatmap format)
+⏳ Multi-instrument support (bass, guitar, etc.)
+⏳ VR mode for immersive learning
+
+Community Ideas:
+----------------
+- Weekly beatmap challenges
+- Leaderboards for popular songs
+- Tutorial series for beginners
+- Collaboration features (multi-track sessions)
+- Integration with electronic drum kits (MIDI)
+
+Known Challenges:
+-----------------
+1. Low-latency audio (critical for rhythm games)
+   → osu-framework handles this well ✅
+   
+2. AI accuracy for complex drum patterns
+   → Start simple, improve incrementally with ML
+   
+3. Copyright issues with audio files
+   → Store drum stems only (transformative use) ✅
+   → User uploads at own risk (ToS disclaimer)
+   
+4. Mobile performance vs. visual quality
+   → Adaptive graphics settings
+   → Prioritize gameplay smoothness
+
+Testing Plan:
+-------------
+1. Unit tests for data structures
+2. Integration tests for AI pipeline
+3. Performance tests for gameplay (60+ FPS)
+4. User testing with real drummers
+5. Accessibility testing
+
+Deployment Strategy:
+--------------------
+Phase 1 (MVP): Desktop-only, local processing ← YOU ARE HERE
+Phase 2: Add backend API, community features  
+Phase 3: Mobile apps (iOS/Android)
+Phase 4: Advanced features (real-time, VR, etc.)
+
+Success Metrics:
+----------------
+- User engagement (daily active users)
+- Beatmap quality (community ratings)
+- AI accuracy (precision/recall on test set)
+- Community contributions (PRs, beatmaps)
+- User testimonials (learning success stories)
+
+Personal Goals:
+---------------
+- Build a portfolio-worthy project
+- Learn game development with osu-framework
+- Master audio processing and ML
+- Contribute to open-source community
+- Help drummers learn more effectively
+
+Original Vision:
+----------------
+"I became a top osu! player where sight-reading high difficulty songs
+was easy. Why not make this same connection with learning drums?
+From osu, I use a tablet to aim and a keypad to tap. With drums,
+I use drum sticks to aim and tap. This project bridges my love for
+rhythm games, drums, and AI to help others avoid the frustration
+of learning by endless repetition. Make it fun, make it visual,
+make it accessible."
+
+Let's build something amazing! 🥁🎮✨
+
+
+
+original copy and paste text (do not delete):
+
+I would to make a really cool side project with your help. When I was little, I always love listening to music, but the drumming had always caught my attention most in any song. I decided to learn how to play drums, but it came at a cost. As most drummers do, they get lazy to read (or learn how to read) sheet music, so they decide to just keep listening to the song they want to learn. The problem with this is that when they decide to learn how to play drums for a song they like, likely what happens is when they keep replaying the song over and over (even at slower speeds to understand it better), but they end up getting more and more bored of the songs, and frustration builds. A little side story now but I became I top osu! (circle clicking game) player a while ago, where cite reading any high difficulty song was very easy and I could do it with no issue. The interesting thing I find is that why not make this same connection with learning drums? From osu, I use a tablet to aim and a keypad to tab, with drums, I use drum sticks to aim and tap upon hitting it. My idea is to create an AI, that processes instruments (drums first) into a guitar-hero like mapping where the flow of how the notes are shown become in sync with the song audio (or just the songs drums audio). I would like for this to be a free and free of advertisement app on ios, andriod, and on pc (havent decided if the pc version should be a website or a downloadable software). The user should be able to upload any song of their choice, the program isoloates to the instrument of the users choice (drums only for now) and the AI for the program processes it into a visual guitar-hero like mapping (where patents are dodged of course (but i'm not sure if I should dodge any patents since i'm deciding to make this free in the first place? you decide what's best for this course of action) ), in the best and easiest way possible for the user to associate what notes are for what part of the (drumset) instrument (You may also decide what the best way to do this is). Also, I currently have the name of this project as drumify, which I already know is an existing program, but I would like for you to think of a clever name(s) for this.
+
+
+Notes and specifications on the program (read EVERYTHING BELOW before proceeding):
+-It should detect how many drumset parts are in the audio and specifically what parts (like the crash, china, ride, etc).
+-There should be a toggle between playing the entire song or just isolating the instrument that they mapped the song to (the users initial choice of what instrument they chose to map the song to) (again, drums for now)
+-There should also be a bpm toggle that plays a bpm sound (with a variety of selection) in the background with the drums.
+-There should be a slider that slows down the audio however much they like
+-If the offchance that the AI has messed up with mapping the song to visual notes, the program should allow the user to edit and modify the notes to fix it.
+-There should be an upload feature tool that sends the file of the mapping with the audio (or only instrument specific audio if copyright issues) to the online server for this program for anyone to access (so they don't have to wait for an AI to process their song)
+-There should also be a feature where if the user does not decide to use the AI for their song (or even if they're trying to create a song) there should be an editorial mode of this program (similar to the edit thing i mentioned before but i'm being more descriptive about it) where they an edit an existing song (like I mentioned before) or create a song of their choosing from scratch. for this, they also have a choosing of instrument samples. Instrument Samples for this program are extracted from a specific instrument where they can use those sounds to create their own thing. For example, if a user really likes the drums of a specific band, the AI for this program can also extract all of the different parts of the drumset from that bands songs and map it to their respective part of the drumset (like the cymbal, snare, toms, etc. (with the correct labeling (like china, ride, crash)))
+-Just like how there's an approach rate in osu (how fast the outer circle closes in on the main circle before the user needs to tap) there should also be like an approach rate option in this program with show how fast the notes slide down from the top (since it's a guitar hero-like visual, unless you have a better idea) 
+-This one thing is an experimental idea and I'm not sure how possible it can be implemented, but I always wanted there to be like this real-time feature where the program (if on pc, they would need a microphone, and on mobile the microphone would need to be enabled too) could listen to you playing along to the mapping the AI (or the user) created, and it could detect realtime if they are hitting the right notes and give you a score in the end (like how osu! does it), and during the gameplay it could give you something similar to what osu! does where it give you 100 if you're too late or too early (300 is on time I think but most osu! users keep that off for distraction, I'd like to keep it that way with this program too)
+-I would like there to be a donate button for this program when it explains that all donations go straight back into the program itself (like server costs)
+-Decide if this is an AI that needs to be built with training or not. If it does need training, then I would like for you to build a separate sector of this project (but still implemented) where peers with high powered computers can join in on the training set for this application at just a click of a button (probably on pc for this project only, not mobile, unless you beg to differ). This is only if you yourself decide that this program is better off being separately trained or not.
+-Have the AI able to process multiple different kinds of audio files
+- I am using linux (ubuntu), with kitty, fish, and vscode. When it comes to the IOS development for this project, I will switch to a Mac. If you choose to do a software approach for the PC version, I would also like this software to be compatible for Windows, MacOS, and Linux.
+-Maybe it could be in your interest to fork/use the osu-framework (from https://github.com/ppy/osu-framework) for this project. 
+
+I want this to be a full fledged application. You are able to choose the best tools for this application yourself. It's up to you to make this program for me, you are welcome to add anything else you'd like that I didn't already mention since I trust you. I want you to try your best on it. Be clever, intuit, and ingenious with this.
+
+
+
+
+error?:
+Request textDocument/diagnostic failed. Message: Sequence contains more than one element Code: -32000 [object Object]

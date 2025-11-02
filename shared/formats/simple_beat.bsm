@@ -1,0 +1,59 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "title": "Simple Practice Beat",
+    "artist": "BeatSight Example",
+    "creator": "BeatSight Team",
+    "tags": ["example", "beginner", "practice"],
+    "difficulty": 2.0,
+    "previewTime": 0,
+    "beatmapId": "example-001",
+    "createdAt": "2025-11-02T00:00:00Z",
+    "modifiedAt": "2025-11-02T00:00:00Z",
+    "description": "A simple 4/4 beat for beginners. Kick on beats 1 and 3, snare on beats 2 and 4, constant eighth note hi-hats."
+  },
+  "audio": {
+    "filename": "simple_beat.mp3",
+    "hash": "sha256:example",
+    "duration": 10000,
+    "sampleRate": 44100
+  },
+  "timing": {
+    "bpm": 120.0,
+    "offset": 0,
+    "timeSignature": "4/4"
+  },
+  "drumKit": {
+    "components": [
+      "kick",
+      "snare",
+      "hihat_closed"
+    ],
+    "layout": "standard_5piece"
+  },
+  "hitObjects": [
+    {"time": 0, "component": "kick", "velocity": 0.9, "lane": 0},
+    {"time": 0, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
+    {"time": 250, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
+    {"time": 500, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
+    {"time": 750, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
+    {"time": 1000, "component": "snare", "velocity": 0.95, "lane": 2},
+    {"time": 1000, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
+    {"time": 1250, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
+    {"time": 1500, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
+    {"time": 1750, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
+    {"time": 2000, "component": "kick", "velocity": 0.9, "lane": 0},
+    {"time": 2000, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
+    {"time": 2250, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
+    {"time": 2500, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
+    {"time": 2750, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
+    {"time": 3000, "component": "snare", "velocity": 0.95, "lane": 2},
+    {"time": 3000, "component": "hihat_closed", "velocity": 0.7, "lane": 3}
+  ],
+  "editor": {
+    "snapDivisor": 4,
+    "visualLanes": 7,
+    "bookmarks": [0, 2000],
+    "aiGenerationMetadata": null
+  }
+}

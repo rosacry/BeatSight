@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <!-- Icon.ico will be added later -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BeatSight.Game\BeatSight.Game.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Using latest available versions from NuGet.org - framework auto-requires matching NativeLibs -->
+    <PackageReference Include="ppy.osu.Framework" Version="2025.1028.0" />
+  </ItemGroup>
+
+</Project>

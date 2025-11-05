@@ -1,4 +1,6 @@
+using BeatSight.Game.Screens.Editor;
 using BeatSight.Game.Screens.Gameplay;
+using BeatSight.Game.Screens.Settings;
 using BeatSight.Game.Screens.SongSelect;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -60,7 +62,15 @@ namespace BeatSight.Game.Screens
                         },
                         new MenuButton("Editor", Color4.Blue)
                         {
-                            Action = () => this.Push(new PlaceholderScreen("Editor"))
+                            Action = () => this.Push(new EditorScreen())
+                        },
+                        new MenuButton("Practice Mode", new Color4(120, 200, 255, 255))
+                        {
+                            Action = () => this.Push(new PracticeModeScreen())
+                        },
+                        new MenuButton("🎤 Live Input", new Color4(255, 100, 100, 255))
+                        {
+                            Action = () => this.Push(new LiveInputModeScreen())
                         },
                         new MenuButton("Browse Beatmaps", Color4.Purple)
                         {
@@ -68,7 +78,7 @@ namespace BeatSight.Game.Screens
                         },
                         new MenuButton("Settings", Color4.Orange)
                         {
-                            Action = () => this.Push(new PlaceholderScreen("Settings"))
+                            Action = () => this.Push(new SettingsScreen())
                         },
                         new MenuButton("Exit", Color4.Red)
                         {

@@ -2,10 +2,11 @@
 Audio preprocessing utilities
 """
 
-import soundfile as sf
+import contextlib
+import io
+
 import librosa
 import numpy as np
-from pathlib import Path
 from typing import Tuple
 
 
@@ -21,7 +22,10 @@ def preprocess_audio(input_path: str, target_sr: int = 44100) -> Tuple[np.ndarra
         Tuple of (audio data as numpy array, sample rate)
     """
     # Load audio with librosa (handles most formats via soundfile/audioread)
-    audio, sr = librosa.load(input_path, sr=target_sr, mono=False)
+    # Some decoders (notably libmpg123) can emit noisy stderr warnings for malformed
+    # ID3 frames. Redirect stderr while loading to avoid alarming the user.
+    with contextlib.redirect_stderr(io.StringIO()):
+        audio, sr = librosa.load(input_path, sr=target_sr, mono=False)
     
     # Convert stereo to mono if needed (mix down)
     if audio.ndim == 2:

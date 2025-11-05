@@ -25,6 +25,22 @@ python -c "import demucs.pretrained; demucs.pretrained.get_model('htdemucs')"
 python -m pipeline.process --input song.mp3 --output beatmap.bsm
 ```
 
+Add `--ml-model models/best_drum_classifier.pth` to enable the trained ML classifier, or rely on environment variables described below for automation.
+
+### Enable ML Drum Classifier
+
+1. Train or obtain `best_drum_classifier.pth` (see `training/README.md`).
+2. Place the file in `ai-pipeline/models/` or point to it explicitly:
+   ```bash
+   python -m pipeline.process --input song.mp3 --output beatmap.bsm \
+       --ml-model models/best_drum_classifier.pth
+   ```
+3. Alternatively set environment variables:
+   - `BEATSIGHT_ML_MODEL_PATH` – absolute/relative path to the `.pth` file
+   - `BEATSIGHT_USE_ML_CLASSIFIER=0` – disable ML and force heuristics (default is enabled when a model is available)
+
+Runtime flags `--ml` / `--no-ml` override the environment for a single invocation.
+
 ### Run as API Server
 
 ```bash
@@ -55,7 +71,7 @@ Then access at `http://localhost:8000`
    - Peak picking
 
 4. **Drum Classification** (`transcription/drum_classifier.py`)
-   - CNN-based classification
+   - ML classifier (when model is available) with heuristic fallback
    - Component identification
 
 5. **Beatmap Generation** (`beatmap_generator.py`)

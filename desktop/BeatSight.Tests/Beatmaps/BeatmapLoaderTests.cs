@@ -51,4 +51,37 @@ public class BeatmapLoaderTests
             previous = hit.Time;
         }
     }
+
+    [Fact]
+    public void SaveToFile_ThrowsWhenNoHitObjects()
+    {
+        var beatmap = new Beatmap
+        {
+            Metadata =
+            {
+                Title = "Unit Test Track",
+                Artist = "Test Artist",
+                Creator = "Test"
+            },
+            Audio =
+            {
+                Filename = "unit-test.mp3",
+                Duration = 1000
+            }
+        };
+
+        string tempPath = Path.Combine(Path.GetTempPath(), $"beatsight-test-{Guid.NewGuid()}.bsm");
+
+        try
+        {
+            var ex = Assert.Throws<InvalidDataException>(() => BeatmapLoader.SaveToFile(beatmap, tempPath));
+            Assert.Contains("at least one hit object", ex.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.False(File.Exists(tempPath));
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
+    }
 }

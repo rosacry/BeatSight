@@ -1,6 +1,6 @@
 # BeatSight Development Roadmap
 
-## 📍 Current Status: Phase 1 - Foundation Complete
+## 📍 Current Status: Phase 1 – Gameplay Polish & Hygiene
 
 **Last Updated**: November 2, 2025
 
@@ -32,7 +32,7 @@
 
 **Duration**: 3-4 months  
 **Target**: Functional desktop app with local processing  
-**Status**: 🟡 In Progress (20% complete)
+**Status**: 🟢 In Progress (Stage 1 polish, ~85% complete)
 
 ### Milestone 1.1: Desktop App Foundation ✅
 **Status**: Complete
@@ -43,28 +43,30 @@
 - [x] File I/O (loading/saving .bsm files)
 
 ### Milestone 1.2: Gameplay Implementation
-**Status**: 🔴 Not Started  
+**Status**: ✅ Complete  
 **Priority**: High
 
-- [ ] Gameplay screen layout
-- [ ] Falling notes visualization
-  - [ ] Note rendering pipeline
-  - [ ] Lane-based system (7 lanes)
-  - [ ] Approach rate implementation
-  - [ ] Visual polish (particle effects, trails)
-- [ ] Audio playback integration
-  - [ ] Full mix playback
+- [x] Gameplay screen layout
+- [x] Falling notes visualization
+  - [x] Note rendering pipeline
+  - [x] Lane-based system (7 lanes)
+  - [x] Approach duration + hit-line alignment
+  - [x] Visual polish (particles, glow, combo milestones)
+- [x] Audio playback integration
+  - [x] Full mix playback
   - [ ] Drum stem isolation toggle
-  - [ ] Speed adjustment (0.5x - 2.0x)
-  - [ ] Metronome overlay
-- [ ] Input handling
-  - [ ] Keyboard input (for testing)
-  - [ ] Timing windows (300/100/50/miss)
-  - [ ] Combo tracking
-- [ ] Scoring system
-  - [ ] Accuracy calculation
-  - [ ] Score display
-  - [ ] Results screen
+  - [x] Speed adjustment (0.25x - 2.0x)
+  - [x] Metronome overlay (Practice mode)
+- [x] Input handling
+  - [x] Keyboard input (for testing)
+  - [x] Timing windows (Perfect/Great/Good/Miss)
+  - [x] Combo tracking
+- [x] Scoring system
+- [x] Live input calibration + scoring integration
+  - [x] Accuracy calculation
+  - [x] Score display
+  - [x] Results screen
+- [x] Lane view toggle (2D classic ↔ 3D runway)
 
 **Time Estimate**: 4-6 weeks
 
@@ -88,11 +90,11 @@
 **Time Estimate**: 6-8 weeks
 
 ### Milestone 1.4: Beatmap Editor
-**Status**: 🔴 Not Started  
+**Status**: � Partial (playback skeleton online)  
 **Priority**: Medium
 
-- [ ] Editor screen UI
-- [ ] Timeline view
+- [x] Editor screen UI
+- [x] Timeline view
   - [ ] Waveform visualization
   - [ ] Zoom and pan controls
   - [ ] Beat grid overlay
@@ -101,9 +103,9 @@
   - [ ] Selection and deletion
   - [ ] Drag to move
   - [ ] Copy/paste
-- [ ] Playback controls
-  - [ ] Play/pause
-  - [ ] Seek
+- [x] Playback controls
+  - [x] Play/pause
+  - [x] Seek
   - [ ] Speed adjustment
   - [ ] Metronome
 - [ ] Metadata editor
@@ -112,12 +114,12 @@
 **Time Estimate**: 6-8 weeks
 
 ### Phase 1 Success Criteria
-- [ ] Can process an audio file into a playable beatmap
-- [ ] Beatmap is playable with keyboard input
-- [ ] Scoring system works accurately
+- [x] Can process an audio file into a playable beatmap
+- [x] Beatmap is playable with keyboard input
+- [x] Scoring system works accurately
 - [ ] Editor allows manual beatmap creation
-- [ ] Stable on Windows/Linux/macOS
-- [ ] Documentation for users and developers
+- [x] Stable on Windows/Linux/macOS (desktop verified)
+- [x] Documentation for users and developers (living docs, Stage 0 hygiene)
 
 ---
 
@@ -204,11 +206,11 @@
 **Status**: 🔴 Not Started
 
 ### Milestone 4.1: Real-Time Input
-- [ ] Microphone input processing
-- [ ] Low-latency onset detection
-- [ ] Real-time drum classification
-- [ ] Accuracy feedback
-- [ ] Score calculation
+- [x] Microphone input processing
+- [x] Low-latency onset detection
+- [x] Real-time drum classification
+- [x] Accuracy feedback
+- [x] Score calculation
 - [ ] Replay system
 
 ### Milestone 4.2: Advanced AI
@@ -246,7 +248,7 @@
 ### Milestone 5.1: User Experience
 - [ ] Onboarding tutorial
 - [ ] Accessibility features
-- [ ] Customization options
+- [x] Customization options (visual toggles, lane view)
 - [ ] Themes and skins
 - [ ] Localization (i18n)
 

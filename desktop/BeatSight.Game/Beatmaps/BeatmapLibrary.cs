@@ -89,7 +89,12 @@ namespace BeatSight.Game.Beatmaps
 
             var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             if (!string.IsNullOrEmpty(home))
+            {
+                // Match osu!'s "Songs" folder convention
+                yield return Path.Combine(home, "BeatSight", "Songs");
+                // Also check legacy "Beatmaps" folder for backwards compatibility
                 yield return Path.Combine(home, "BeatSight", "Beatmaps");
+            }
         }
     }
 }

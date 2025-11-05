@@ -14,11 +14,22 @@ namespace BeatSight.Game.Beatmaps
             if (!File.Exists(path))
                 throw new FileNotFoundException($"Beatmap file not found: {path}");
 
-            string json = File.ReadAllText(path);
-            var beatmap = JsonConvert.DeserializeObject<Beatmap>(json);
+            // Check file extension to determine format
+            string extension = Path.GetExtension(path).ToLowerInvariant();
 
-            if (beatmap == null)
-                throw new InvalidDataException("Failed to parse beatmap file");
+            Beatmap beatmap;
+
+            if (extension == ".osu")
+            {
+                // Parse osu! beatmap file
+                beatmap = OsuBeatmapParser.ParseFromFile(path);
+            }
+            else
+            {
+                // Parse BeatSight JSON format (.bsm or .bs)
+                string json = File.ReadAllText(path);
+                beatmap = JsonConvert.DeserializeObject<Beatmap>(json) ?? throw new InvalidDataException("Failed to parse beatmap file");
+            }
 
             ValidateBeatmap(beatmap);
             return beatmap;
@@ -29,6 +40,13 @@ namespace BeatSight.Game.Beatmaps
             ValidateBeatmap(beatmap);
 
             beatmap.Metadata.ModifiedAt = DateTime.UtcNow;
+
+            // Ensure path has correct extension (.bs is the default)
+            string extension = Path.GetExtension(path).ToLowerInvariant();
+            if (extension != ".bs" && extension != ".bsm")
+            {
+                path = Path.ChangeExtension(path, ".bs");
+            }
 
             string json = JsonConvert.SerializeObject(beatmap, Formatting.Indented);
             File.WriteAllText(path, json);

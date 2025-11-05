@@ -79,6 +79,9 @@ namespace BeatSight.Game.Beatmaps
         public int? VisualLanes { get; set; }
         public List<int>? Bookmarks { get; set; }
         public AIGenerationMetadata? AiGenerationMetadata { get; set; }
+        public double? TimelineZoom { get; set; }
+        public double? WaveformScale { get; set; }
+        public bool? BeatGridVisible { get; set; }
     }
 
     public class AIGenerationMetadata
@@ -87,5 +90,7 @@ namespace BeatSight.Game.Beatmaps
         public double? Confidence { get; set; }
         public DateTime? ProcessedAt { get; set; }
         public bool? ManualEdits { get; set; }
+        public string? MetadataProvider { get; set; }
+        public double? MetadataConfidence { get; set; }
     }
 }

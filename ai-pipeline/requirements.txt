@@ -10,3 +10,7 @@ uvicorn[standard]>=0.24.0
 python-multipart>=0.0.6
 pydantic>=2.0.0
 pydub>=0.25.0
+mutagen>=1.47.0
+pyacoustid>=1.2.2
+musicbrainzngs>=0.7.1
+pytest>=7.4

@@ -1,0 +1,6 @@
+sample_id,audio_path,onset_time,labels,velocities,openness,session_id,drummer_id,kit_id,room_id,is_synthetic,bleed_level,mix_context,negative_example
+s1,audio/train/wav/sess_a/s1.wav,1.234,"snare;hihat_closed","0.72;0.48",";0.05",sess_a,d1,k1,r1,false,med,full_mix,false
+s2,audio/train/wav/sess_a/s2.wav,2.345,"kick","0.65","",sess_a,d1,k1,r1,true,low,close_mic,false
+s3,audio/train/wav/sess_b/s3.wav,3.456,"","",,sess_b,d2,k2,r2,false,high,full_mix,true
+s4,audio/train/wav/sess_c/s4.wav,4.567,"tom_floor2","0.68","",sess_c,d3,k3,r2,false,med,full_mix,false
+s5,audio/train/wav/sess_c/s5.wav,5.010,"china2","0.80","",sess_c,d3,k3,r2,false,med,full_mix,false

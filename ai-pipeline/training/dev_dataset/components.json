@@ -1,0 +1,8 @@
+{
+  "components": [
+    "kick",
+    "snare",
+    "hihat_closed"
+  ],
+  "num_classes": 3
+}

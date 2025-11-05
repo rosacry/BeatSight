@@ -49,6 +49,12 @@ ai-pipeline/*.wav
 ai-pipeline/test_data/
 ai-pipeline/venv/
 demucs_cache/
+ai-pipeline/training/outputs/
+ai-pipeline/training/sessions/
+ai-pipeline/training/splits/
+ai-pipeline/training/test_ood_unknown/
+ai-pipeline/training/boundary_pack/
+ai-pipeline/training/negatives/
 
 # Node.js
 node_modules/

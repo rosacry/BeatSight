@@ -1,0 +1,53 @@
+1. Harvest everything licensable
+Open stems / MIDI packs:
+ENST-Drums - waiting for response back
+Groove MIDI Dataset
+Slakh
+MedleyDB
+IDMT-SMT-Drums
+Magenta/DDSP drum packs.
+
+Scrape multi‑track stems from free stem projects (Cambridge MT, academic releases).
+Community samples: curated drum libraries under CC-BY/CC0 (Splice public packs, Cymatics free releases, SampleScience).
+Drum machine archives: huge one-shot collections (TR-808/909, Lindrum) and multi-velocity round-robins—tag them as synthetic so gates can cap their contribution.
+“14k free drum samples” type bundles: run dedupe + loudness QC; even if half get rejected, the remainder boosts coverage.
+Document licensing terms in training/data/licenses/ and mark synthetic vs. real in the manifest. Your bandwidth makes downloading hundreds of GB feasible in hours.
+
+2. Turn every source into structured events
+Use training/tools/export_events.py (and the alias helper) to normalize each source into our schema (events.jsonl), applying per-source configs for aliases, velocity scaling, and metadata.
+Normalize sample rates and levels (SoX/librosa) to the canonical format before slicing.
+Add provenance (source_set, is_synthetic, session_id, etc.) so downstream QA can filter or isolate contributions.
+Automate ingestion: write scripts under training/tools/ingest_<source>.py that reach into each dataset, extract hits, and append to the master manifest; log everything in training/data/provenance/.
+
+3. Build your own gold-standard recordings
+Recruit drummers or book studio time; capture multiple kits, rooms, mic techniques. If budget allows, run multi-day sessions to cover all articulations (including edge cases like foot splashes, rim clicks, ghost notes).
+Instrument e-drums of different brands to capture CC4 openness curves.
+When possible, capture overheads, close mics, and room mics; use your alignment QC tooling (align_qc.py) to guarantee phase coherence.
+Log everything in provenance/ (drummer, kit, mic chain, processing).
+Labeling: either stand up the label UI or export to a DAW workflow; enforce dual annotation with adjudication for tricky hits.
+
+4. Crowdsource and community-driven data
+Add a contributor program: open a portal where users can upload recordings + beatmaps under a contributor agreement (automated gating, QC, and provenance logging).
+Offer annotated packs back to contributors to incentivize more submissions.
+
+5. Continuous QA and gating
+Every batch you ingest should run through dataset_health.py with the production thresholds (per-class minima, duplication cap, unknown labels). With your storage, you can archive every run and keep baselines per version.
+Use dedupe tooling (audfprint, panns, spectral similarity) to cap near-duplicates below 0.5% per split.
+Track bleed_level, mix_context, negative_example, etc., to maintain balance.
+
+6. Split and leakage control
+Once volume is high enough, run splitter.py (to be written, per plan) grouping by drummer/kit/room so nothing leaks between train/val/test. For each release, store the split definitions under training/data/splits/<version>/.
+Prepare OOD packs (brushes, odd meters, aggressive compression) to test open-set behavior.
+
+7. Storage and distribution
+With 2 TB, consider DVC or Git LFS hooked to cloud storage (S3/Backblaze) so you can version the manifests without bloating git. Audio sits in remote storage; manifests and provenance remain in the repo.
+Record SHA256 hashes and keep a deterministic extractor so reruns are byte-identical.
+
+8. Iterate toward “perfect”
+Schedule regular health reports (nightly or per ingest). Each time coverage improves, snapshot a new baseline (training/reports/health/baseline.json/html).
+Run hyperparameter sweeps (training/tools/hparam_sweep.py) for each significant corpus update; log metrics for reproducibility.
+Maintain a high-quality negatives pool and run the hard negative miner on full mixes to catch model blind spots.
+
+9. Legal/quality diligence
+Maintain LICENSES.md, contributor agreements, and a takedown mechanism. Ensure any third-party sample packs allow training & redistribution of derivatives.
+For “revolutionary” quality, invest in calibration sets: monthly annotator calibration packs, dedicated hi-hat openness sessions, dynamic bucket balance.

@@ -1,0 +1,26 @@
+{
+  "macro_f1": {
+    "point_estimate": 1.0,
+    "mean": 1.0,
+    "ci_lower": 1.0,
+    "ci_upper": 1.0
+  },
+  "micro_f1": {
+    "point_estimate": 1.0,
+    "mean": 1.0,
+    "ci_lower": 1.0,
+    "ci_upper": 1.0
+  },
+  "example_f1": {
+    "point_estimate": 1.0,
+    "mean": 1.0,
+    "ci_lower": 1.0,
+    "ci_upper": 1.0
+  },
+  "openness_mae": {
+    "point_estimate": 0.030000000000000013,
+    "mean": 0.030000000000000013,
+    "ci_lower": 0.03,
+    "ci_upper": 0.030000000000000027
+  }
+}

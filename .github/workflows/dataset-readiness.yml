@@ -1,0 +1,65 @@
+name: Dataset Readiness
+
+on:
+  push:
+    paths:
+      - "ai-pipeline/training/**"
+      - "ai-pipeline/tests/test_dataset_health.py"
+      - "ai-pipeline/tests/test_compare_reports.py"
+      - ".github/workflows/dataset-readiness.yml"
+  pull_request:
+    paths:
+      - "ai-pipeline/training/**"
+      - "ai-pipeline/tests/test_dataset_health.py"
+      - "ai-pipeline/tests/test_compare_reports.py"
+      - ".github/workflows/dataset-readiness.yml"
+
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest
+
+      - name: Generate candidate health report
+        run: |
+          python ai-pipeline/training/dataset_health.py \
+            --events ai-pipeline/training/examples/events_health_example.jsonl \
+            --output ai-pipeline/training/reports/health/latest_health_ci.json \
+            --html-output ai-pipeline/training/reports/health/latest_health_ci.html \
+            --min-class-count 1 \
+            --require-label hihat_closed \
+            --require-label snare \
+            --max-unknown-labels 0
+
+      - name: Compare against baseline
+        run: |
+          python ai-pipeline/training/compare_health_reports.py \
+            --baseline ai-pipeline/training/reports/health/baseline.json \
+            --candidate ai-pipeline/training/reports/health/latest_health_ci.json \
+            --max-drop 0 \
+            --json-output ai-pipeline/training/reports/health/latest_vs_baseline_ci.json
+
+      - name: Run targeted readiness tests
+        run: |
+          pytest ai-pipeline/tests/test_dataset_health.py ai-pipeline/tests/test_compare_reports.py
+
+      - name: Upload health artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dataset-health
+          path: |
+            ai-pipeline/training/reports/health/latest_health_ci.json
+            ai-pipeline/training/reports/health/latest_health_ci.html
+            ai-pipeline/training/reports/health/latest_vs_baseline_ci.json

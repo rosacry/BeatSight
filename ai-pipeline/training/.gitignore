@@ -1,8 +1,0 @@
-reports/
-outputs/
-sessions/
-splits/
-test_ood_unknown/
-boundary_pack/
-negatives/
-**/*.pyc

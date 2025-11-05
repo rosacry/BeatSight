@@ -1,11 +1,11 @@
 1. Harvest everything licensable
 Open stems / MIDI packs:
-ENST-Drums - waiting for response back
-Groove MIDI Dataset
-Slakh
-MedleyDB
-IDMT-SMT-Drums
-Magenta/DDSP drum packs.
+ENST-Drums - submitted a request for the data but still waiting for response back
+Groove MIDI Dataset - looks good but no china and html of front page attached for you to review
+Slakh - 100gb's of data but would like for you to review the html of the front page as well
+MedleyDB - submitted a request for the data but still waiting for response back
+IDMT-SMT-Drums - html of front page attached for you to review
+Magenta/DDSP drum packs - html of front page attached for you to review
 
 Scrape multi‑track stems from free stem projects (Cambridge MT, academic releases).
 Community samples: curated drum libraries under CC-BY/CC0 (Splice public packs, Cymatics free releases, SampleScience).

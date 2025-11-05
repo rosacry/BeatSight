@@ -283,22 +283,12 @@ and even more things (not sure if they're done already):
 
 
 for now:
-ask copilot to review and check these files:
--events_real_v1.jsonl
--export_config.json
--export_events.py
--events_real_v1.csv
--alias_events.py
--events_real_v1.norm.jsonl
--health_min_counts_prod.json
--health_min_counts_dev.json
--health_required_labels_prod.txt
-
+-add cowbell to model
+-find out if any of the data has chinas in it
 
 
 
 new things:
-
 -update the root (official) README.md to look more realistic, similar the one on ppy/osu (https://github.com/ppy/osu)
 -Make the training for any of the available models and AI for this project peer available. Meaning, anyone from anywhere can add their computational power to make the models and AI stronger for this project. Preferrably put this in the program interface itself for the people who aren't knowledgable of how to go about it through a terminal. The way I see it happening is (to my knowledge at least, but I might be ignorant), when the user opens the program and creates an account (maybe optional? i'm not sure), if they wanna use their own computational power to help train and better the models and AI, they would go into the settings, enable a developer mode checkbox, that opens up a button that allows them to do this (i'm totally okay if you want to change how to go about this too). Figure out how to do this.
 

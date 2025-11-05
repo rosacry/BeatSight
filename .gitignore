@@ -92,6 +92,19 @@ temp/
 *.m4a
 *.aac
 
+# Dataset storage (local only)
+data/archives/**
+!data/archives/
+!data/archives/**/
+!data/archives/**/.gitkeep
+data/raw/**
+!data/raw/
+!data/raw/**/
+!data/raw/**/.gitkeep
+data/pdf_and_text_data(not for training)
+data/signaturesounds_website
+
+
 # Beatmap files for testing (keep samples separate)
 *.bsm
 !shared/formats/*.bsm

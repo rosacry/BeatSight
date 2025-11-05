@@ -174,6 +174,26 @@ requests or CI dashboards. The `dataset-readiness` workflow publishes the
 latest JSON/HTML outputs and diff as artifacts so reviewers can inspect the
 changes without rerunning the tooling locally.
 
+### Hyperparameter Sweeps
+
+Use the lightweight grid-search driver to evaluate multiple training settings:
+
+```bash
+python training/tools/hparam_sweep.py \
+    --dataset training/dev_dataset \
+    --batch-sizes 8 16 \
+    --epochs 3 5 \
+    --learning-rates 0.001 0.0005 \
+    --device cuda \
+    --output-root training/hparam_runs \
+    --report training/reports/hparam_sweep.json
+```
+
+Each run invokes `train_classifier.py` with `--metrics-json`, stores models in a
+dedicated subdirectory under `training/hparam_runs/`, and aggregates results
+into the optional report file. Re-run specific combinations with `--rerun` or
+skip completed ones (default).
+
 ### 4. Normalize Hi-hat Openness
 
 Calibrate e-drum CC4 values before modeling:

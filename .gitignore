@@ -47,6 +47,7 @@ ai-pipeline/*.bsm
 ai-pipeline/*.mp3
 ai-pipeline/*.wav
 ai-pipeline/test_data/
+ai-pipeline/venv/
 demucs_cache/
 
 # Node.js

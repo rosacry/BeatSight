@@ -3,12 +3,19 @@ Simple training script for the drum classifier CNN.
 
 Usage:
     python train_classifier.py --dataset ./dataset --epochs 50 --batch-size 32
+
+Optionally emit a metrics JSON for downstream automation:
+    python train_classifier.py --dataset ./dataset --metrics-json reports/run.json
 """
+
+from __future__ import annotations
 
 import argparse
 import json
 import os
 from pathlib import Path
+from typing import Dict, List
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -125,6 +132,11 @@ def main():
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
     parser.add_argument("--output", default="models", help="Output directory for models")
     parser.add_argument("--device", default=None, help="Device (cuda/cpu)")
+    parser.add_argument(
+        "--metrics-json",
+        type=Path,
+        help="Optional path to write training metrics as JSON",
+    )
     
     args = parser.parse_args()
     
@@ -164,7 +176,10 @@ def main():
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5)
     
     # Training loop
-    best_val_acc = 0
+    best_val_acc = 0.0
+    best_epoch = -1
+    best_model_path: Path | None = None
+    history: List[Dict[str, float]] = []
     output_dir = Path(args.output)
     output_dir.mkdir(exist_ok=True)
     
@@ -174,6 +189,16 @@ def main():
         
         train_loss, train_acc = train_epoch(model, train_loader, criterion, optimizer, device)
         val_loss, val_acc = validate(model, val_loader, criterion, device)
+
+        history.append(
+            {
+                "epoch": float(epoch + 1),
+                "train_loss": float(train_loss),
+                "train_accuracy": float(train_acc),
+                "val_loss": float(val_loss),
+                "val_accuracy": float(val_acc),
+            }
+        )
         
         scheduler.step(val_loss)
         
@@ -183,8 +208,10 @@ def main():
         # Save best model
         if val_acc > best_val_acc:
             best_val_acc = val_acc
+            best_epoch = epoch + 1
             model_path = output_dir / "best_drum_classifier.pth"
             torch.save(model.state_dict(), model_path)
+            best_model_path = model_path
             print(f"✓ Saved best model (acc: {val_acc:.2f}%)")
     
     # Save final model
@@ -196,6 +223,26 @@ def main():
     print(f"Best validation accuracy: {best_val_acc:.2f}%")
     print(f"Models saved to: {output_dir}")
     print("=" * 60)
+
+    if args.metrics_json:
+        metrics = {
+            "epochs": int(args.epochs),
+            "batch_size": int(args.batch_size),
+            "learning_rate": float(args.lr),
+            "device": str(device),
+            "best_validation_accuracy": float(best_val_acc),
+            "best_epoch": int(best_epoch),
+            "best_model_path": str(best_model_path) if best_model_path else None,
+            "final_train_loss": float(history[-1]["train_loss"]) if history else None,
+            "final_val_loss": float(history[-1]["val_loss"]) if history else None,
+            "final_train_accuracy": float(history[-1]["train_accuracy"]) if history else None,
+            "final_val_accuracy": float(history[-1]["val_accuracy"]) if history else None,
+            "history": history,
+        }
+        metrics_path = args.metrics_json
+        metrics_path.parent.mkdir(parents=True, exist_ok=True)
+        with metrics_path.open("w", encoding="utf-8") as handle:
+            json.dump(metrics, handle, indent=2)
 
 
 if __name__ == "__main__":

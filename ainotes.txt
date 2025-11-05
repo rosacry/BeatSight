@@ -1,0 +1,40 @@
+Level Up the AI Drum Pipeline
+
+-Lock Foundations First – Stabilize onset detection + separation, ensure the current heuristics and ML toggle always deliver usable hits, and add automated regression tests to guard against downstream breakage as we iterate.
+-Build a World‑class Dataset – harvest labeled stems from public drum multitracks (ENST Drums, Groove MIDI libraries, Magenta Drum datasets), mine user beatmaps via collect_training_data.py, capture live drummers, and make ghost notes/accents explicit. Keep rich metadata (kit type, mic setup, dynamic level) so we can stratify later.
+-Label Like Pros – spin up an assisted labeling UI with high‑precision onset editing, waveform + spectrogram view, playback at variable speeds, AI suggestions that operators confirm, and quality‑control workflows (double‑checks, consensus, reviewer audits).
+-Augment Intelligently – time/pitch stretch with discrete velocity tiers, room impulse responses, tape saturation, cymbal swells, and targeted augmentation for under‑represented classes; use synthetic kits to cover the long tail without letting them dominate.
+-Upgrade the Model – evolve the CNN architecture (attention blocks, squeeze‑excitation, mixup layers, or EfficientNet front‑ends), explore hybrid sequence models (CRNN/transformer) that ingest multiple onsets jointly, and add multi‑task heads for accent/velocity prediction.
+-Train at Scale – orchestrate distributed/AMP training on your 3080 Ti rig with reproducible configs (Hydra/Lightning), automated hyper‑search (Optuna/W&B sweeps), mixed‑precision + gradient accumulation for big batches, and checkpoint/version management.
+-Evaluate Ruthlessly – track per‑class F1, macro AUC, confusion matrices, velocity error, latency, and calibration curves; torture test with tricky inputs (dense ghost‑note patterns, jazz rides, metal double‑kick); fold metrics into CI so regressions fail builds.
+-Tight Feedback Loop – surface model confidence to the editor, keep hit suggestions editable with human feedback, capture corrections to seed active‑learning batches, and tag tough examples for replay in future trainings.
+-Ship Seamlessly – quantize for CPU inference (ONNX/torch.compile), cache embeddings for batch processing, keep a heuristic fallback, and expose a run‑time flag in the desktop client so users can opt into ML instantly.
+-Operational Excellence – script one‑command training runs, artifact logging, and release notes; document experiments, dataset revisions, and evaluation reports; communicate progress so the AI feels like the project’s crown jewel.
+
+
+
+
+Let’s kick off Phase 1 of the AI upgrade—dataset and tooling. I’ll break it into two parallel tracks so you can see progress quickly:
+
+1. Intelligence Baseline & Planning
+
+-Inventory every existing labeled source (current .bsm + audio pairs, any third-party stems you already trust), note gaps (e.g., ghost notes, jazz rides, metal double-kicks).
+-Define the target class taxonomy and any extra attributes (e.g., velocity tiers, articulations) we eventually want. Even if we don’t train on all of them immediately, we’ll plan the schema now.
+-Sketch a contribution/QA workflow: who labels, how we review, how we version datasets. I’ll draft this as a short spec.
+2. Tooling & Pipeline Setup
+-Harden the current data collector: add commands for multi-folder import, YAML manifests for provenance, and quick stats (class balance, loudness histograms).
+-Stand up a minimal labeling UI (desktop or web) that can:
+-display waveform + spectrogram,
+-scrub at variable speeds,
+-suggest candidate onsets (from our detector),
+-allow dropdown/keyboard labeling,
+-capture velocity tags or accent flags.
+-Script augmentation hooks (pitch/tempo/IR/noise) so once a dataset directory exists, we can generate balanced variants automatically.
+
+Once these are in motion we can:
+-integrate public multitrack sets (ENST, Magenta, Groove Midi) using normalized metadata,
+-design automated tests to ensure the pipeline never regresses,
+-and line up the first training job on your 3080 Ti.
+
+If that roadmap looks good, I’ll start with the dataset inventory + tooling spec and move straight into the collector improvements.
+

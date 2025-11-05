@@ -1,0 +1,52 @@
+{
+    "required_labels": [
+        "kick",
+        "snare",
+        "rimshot",
+        "cross_stick",
+        "hihat_closed",
+        "hihat_open",
+        "hihat_pedal",
+        "hihat_foot_splash",
+        "ride_bow",
+        "ride_bell",
+        "crash",
+        "crash2",
+        "splash",
+        "china",
+        "tom_high",
+        "tom_mid",
+        "tom_low",
+        "aux_percussion"
+    ],
+    "label_aliases": {
+        "china2": "china",
+        "tom_floor": "tom_low",
+        "tom_floor2": "tom_low",
+        "tom_low2": "tom_low",
+        "floor_tom_2": "tom_low"
+    },
+    "alias_instances": {
+        "china2": 2,
+        "tom_floor": 2,
+        "tom_floor2": 2,
+        "tom_low2": 2,
+        "floor_tom_2": 2
+    },
+    "dynamic_thresholds": {
+        "ghost": 0.15,
+        "light": 0.35,
+        "medium": 0.65,
+        "accent": 1.01
+    },
+    "openness_level_thresholds": {
+        "none_max": 0.15,
+        "full_min": 0.85
+    },
+    "defaults": {
+        "source_set": "BeatSight",
+        "bleed_level": "med",
+        "mix_context": "full_mix",
+        "is_synthetic": false
+    }
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "file": "kick_val_00.wav",
+    "label": "kick",
+    "component_idx": 0
+  },
+  {
+    "file": "kick_val_01.wav",
+    "label": "kick",
+    "component_idx": 0
+  },
+  {
+    "file": "snare_val_00.wav",
+    "label": "snare",
+    "component_idx": 1
+  },
+  {
+    "file": "snare_val_01.wav",
+    "label": "snare",
+    "component_idx": 1
+  },
+  {
+    "file": "hihat_closed_val_00.wav",
+    "label": "hihat_closed",
+    "component_idx": 2
+  },
+  {
+    "file": "hihat_closed_val_01.wav",
+    "label": "hihat_closed",
+    "component_idx": 2
+  }
+]

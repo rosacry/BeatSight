@@ -1,0 +1,92 @@
+[
+  {
+    "file": "kick_train_00.wav",
+    "label": "kick",
+    "component_idx": 0
+  },
+  {
+    "file": "kick_train_01.wav",
+    "label": "kick",
+    "component_idx": 0
+  },
+  {
+    "file": "kick_train_02.wav",
+    "label": "kick",
+    "component_idx": 0
+  },
+  {
+    "file": "kick_train_03.wav",
+    "label": "kick",
+    "component_idx": 0
+  },
+  {
+    "file": "kick_train_04.wav",
+    "label": "kick",
+    "component_idx": 0
+  },
+  {
+    "file": "kick_train_05.wav",
+    "label": "kick",
+    "component_idx": 0
+  },
+  {
+    "file": "snare_train_00.wav",
+    "label": "snare",
+    "component_idx": 1
+  },
+  {
+    "file": "snare_train_01.wav",
+    "label": "snare",
+    "component_idx": 1
+  },
+  {
+    "file": "snare_train_02.wav",
+    "label": "snare",
+    "component_idx": 1
+  },
+  {
+    "file": "snare_train_03.wav",
+    "label": "snare",
+    "component_idx": 1
+  },
+  {
+    "file": "snare_train_04.wav",
+    "label": "snare",
+    "component_idx": 1
+  },
+  {
+    "file": "snare_train_05.wav",
+    "label": "snare",
+    "component_idx": 1
+  },
+  {
+    "file": "hihat_closed_train_00.wav",
+    "label": "hihat_closed",
+    "component_idx": 2
+  },
+  {
+    "file": "hihat_closed_train_01.wav",
+    "label": "hihat_closed",
+    "component_idx": 2
+  },
+  {
+    "file": "hihat_closed_train_02.wav",
+    "label": "hihat_closed",
+    "component_idx": 2
+  },
+  {
+    "file": "hihat_closed_train_03.wav",
+    "label": "hihat_closed",
+    "component_idx": 2
+  },
+  {
+    "file": "hihat_closed_train_04.wav",
+    "label": "hihat_closed",
+    "component_idx": 2
+  },
+  {
+    "file": "hihat_closed_train_05.wav",
+    "label": "hihat_closed",
+    "component_idx": 2
+  }
+]

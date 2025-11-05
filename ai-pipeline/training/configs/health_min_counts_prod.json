@@ -1,0 +1,20 @@
+{
+    "kick": 500,
+    "snare": 500,
+    "hihat_closed": 500,
+    "hihat_open": 300,
+    "hihat_pedal": 80,
+    "hihat_foot_splash": 40,
+    "ride_bow": 200,
+    "ride_bell": 100,
+    "crash": 200,
+    "crash2": 100,
+    "splash": 60,
+    "china": 60,
+    "tom_high": 150,
+    "tom_mid": 150,
+    "tom_low": 200,
+    "rimshot": 80,
+    "cross_stick": 60,
+    "aux_percussion": 60
+}

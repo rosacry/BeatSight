@@ -35,12 +35,13 @@ jobs:
       - name: Generate candidate health report
         run: |
           python ai-pipeline/training/dataset_health.py \
-            --events ai-pipeline/training/examples/events_health_example.jsonl \
+            --events ai-pipeline/training/data/events_real_v1.norm.jsonl \
             --output ai-pipeline/training/reports/health/latest_health_ci.json \
             --html-output ai-pipeline/training/reports/health/latest_health_ci.html \
-            --min-class-count 1 \
-            --require-label hihat_closed \
+            --require-label kick \
             --require-label snare \
+            --require-label hihat_closed \
+            --min-counts-json ai-pipeline/training/configs/health_min_counts_dev.json \
             --max-unknown-labels 0
 
       - name: Compare against baseline

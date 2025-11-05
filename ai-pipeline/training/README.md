@@ -4,11 +4,12 @@ This directory contains tools for training and improving the drum classification
 
 ## Overview
 
-The training system consists of three main components:
+The training system now includes:
 
-1. **Data Collection** (`collect_training_data.py`) - Collect and label drum samples
-2. **ML Classifier** (`../transcription/ml_drum_classifier.py`) - PyTorch CNN model
-3. **Training Script** (`train_classifier.py`) - Train the model
+1. **Data Collection** (`collect_training_data.py`) – Collect and label drum samples.
+2. **QA & Evaluation Utilities** (`align_qc.py`, `boundary_eval.py`, `openset_eval.py`, `bootstrap_eval.py`) – Enforce dataset readiness gates (alignment, streaming boundaries, open-set robustness, statistical significance).
+3. **ML Classifier** (`../transcription/ml_drum_classifier.py`) – PyTorch CNN model.
+4. **Training Script** (`train_classifier.py`) – Train the model once the dataset passes QA.
 
 ## Quick Start
 
@@ -41,7 +42,149 @@ python train_classifier.py --dataset ./dataset --epochs 100 --batch-size 64 --de
 python train_classifier.py --dataset ./dataset --lr 0.0001 --epochs 75
 ```
 
-### 3. Use the Trained Model
+### 3. Run QA & Evaluation Checks
+
+Before exporting a release candidate, run the new readiness checks:
+
+```bash
+# Multi-mic alignment (fails with exit code 1 when --strict)
+python align_qc.py --manifest sessions/session_001.json --report reports/session_001_alignment.json --strict
+
+# Streaming boundary recall (macro recall gate 0.95 by default)
+python boundary_eval.py --ground-truth boundary_pack/labels.jsonl --predictions outputs/boundary_predictions.jsonl --strict
+
+# Open-set rejection (AUROC gate 0.90, FPR@95 gate 0.10)
+python openset_eval.py --ground-truth test_ood_unknown/labels.jsonl --predictions outputs/test_ood_unknown_preds.jsonl --strict
+
+# Bootstrap confidence intervals (1,000 resamples)
+python bootstrap_eval.py --ground-truth splits/test.jsonl --predictions outputs/test_preds.jsonl \
+    --report reports/test_bootstrap.json --iterations 1000
+
+# Or run all checks together
+python run_readiness_checks.py \
+    --alignment-manifest sessions/session_001.json \
+    --alignment-report reports/session_001_alignment.json \
+    --boundary-ground-truth boundary_pack/labels.jsonl \
+    --boundary-predictions outputs/boundary_predictions.jsonl \
+    --boundary-report reports/boundary_metrics.json \
+    --openset-ground-truth test_ood_unknown/labels.jsonl \
+    --openset-predictions outputs/test_ood_unknown_preds.jsonl \
+    --openset-report reports/openset_metrics.json \
+    --bootstrap-ground-truth splits/test.jsonl \
+    --bootstrap-predictions outputs/test_preds.jsonl \
+    --bootstrap-report reports/test_bootstrap.json \
+    --halt-on-first-failure
+```
+
+Wire the `--strict` options into CI so releases block when gates fail. Reports in `reports/` feed directly into the dataset readiness documentation.
+
+See `examples/session_manifest_example.json` for the manifest format consumed by
+`align_qc.py`, and `boundary_pack/README.md` for guidance on building the
+streaming boundary dataset.
+
+`generate_boundary_pack.py` produces the streaming boundary JSONL from annotated
+events:
+
+```bash
+python generate_boundary_pack.py \
+    --events annotations/events.jsonl \
+    --output boundary_pack/labels.jsonl \
+    --window-ms 2048 \
+    --hop-ms 512 \
+    --margin-ms 40
+```
+
+Tune the window and hop sizes to mirror your streaming inference configuration.
+
+Example JSONL inputs for the readiness utilities are stored in `examples/` and
+can be used to sanity-check CLI invocation before wiring up real data.
+
+### CI Integration
+
+The repository ships with `.github/workflows/dataset-readiness.yml`, which
+invokes `run_readiness_checks.py` on pushes and pull requests that touch the
+`training/` directory. Update the workflow arguments (manifest paths, boundary
+pack locations, etc.) to match your production data layout before enabling it.
+
+### Hard Negative Mining
+
+Use `hard_negative_miner.py` to capture high-confidence false positives for
+labeling:
+
+```bash
+python hard_negative_miner.py \
+    --predictions outputs/full_mix_predictions.jsonl \
+    --ground-truth annotations/events.jsonl \
+    --output negatives/negatives_manifest.jsonl \
+    --min-confidence 0.7 \
+    --max-per-label 150
+```
+
+See `examples/hard_negative_predictions_example.jsonl` and
+`examples/hard_negative_events_example.jsonl` for expected schemas.
+
+### Dataset Health Reports
+
+Use `dataset_health.py` to inspect coverage, duplication, dynamics, and openness
+distributions before promoting a release:
+
+```bash
+python dataset_health.py \
+    --events annotations/events.jsonl \
+    --components components.json \
+    --output reports/health/latest_health.json \
+    --html-output reports/health/latest_health.html \
+    --max-duplication-rate 0.005 \
+    --min-class-count 200 \
+    --max-unknown-labels 0 \
+    --require-label hihat_open \
+    --require-labels-file configs/health_require_labels_example.txt \
+    --min-counts-json configs/health_min_counts_example.json
+```
+
+Sample inputs live in `examples/events_health_example.jsonl`. The report is JSON,
+ready to drop into `training_data/health_reports/` or to feed CI gates.
+
+`--min-class-count` enforces a uniform floor across the taxonomy (or all
+observed labels); `--min-counts-json` lets you specify bespoke thresholds per
+label, and `--require-label` (repeatable) guarantees at least one example for
+critical classes. `--require-labels-file` imports newline-separated labels so you
+can manage the list in version control, `--max-unknown-labels` guards against
+taxonomy drift, `--html-output` writes a lightweight summary, and
+`configs/health_min_counts_example.json` illustrates a starter threshold map.
+The JSON report now embeds `gating_results` and the HTML output lists pass/fail
+status for each gate.
+
+After generating reports, compare them against a blessed baseline before
+cutting a release:
+
+```bash
+python compare_health_reports.py \
+    --baseline reports/health/baseline.json \
+    --candidate reports/health/latest_health.json \
+    --max-drop 25 \
+    --ignore-label aux_percussion \
+    --json-output reports/health/diff_latest_vs_baseline.json
+```
+
+The comparator fails when per-class totals drop beyond `--max-drop`, when the
+candidate triggers new gate failures, or when unknown labels increase relative
+to the baseline. Use the JSON diff to surface regressions directly in pull
+requests or CI dashboards. The `dataset-readiness` workflow publishes the
+latest JSON/HTML outputs and diff as artifacts so reviewers can inspect the
+changes without rerunning the tooling locally.
+
+### 4. Normalize Hi-hat Openness
+
+Calibrate e-drum CC4 values before modeling:
+
+```bash
+python normalize_openness.py --events annotations/events.jsonl --output annotations/events_calibrated.jsonl --curves calibration/openness_curves.json
+```
+
+Use `--dry-run` to preview how many events are updated. The calibration file hosts vendor curves (`calibration/openness_curves.json`) and should grow as new devices are profiled.
+
+### 5. Use the Trained Model
 
 1. Copy the generated `best_drum_classifier.pth` into `ai-pipeline/models/`.
 2. Run the processor; it will automatically pick up the model when present, or specify it explicitly:
@@ -80,7 +223,7 @@ For precise labeling:
 For best results, aim for:
 - Minimum 100 samples per component
 - Balanced distribution across all components
-- Variety of sources (different drummers, songs, recording styles)
+- Variety of sources (different drummers, kits, rooms, recording styles)
 
 | Component | Minimum Samples | Recommended |
 |-----------|----------------|-------------|
@@ -200,6 +343,10 @@ print(classification_report(all_labels, all_predictions, target_names=component_
 ```
 
 ### Confusion Matrix
+### Additional QA Reports
+
+The dataset readiness plan defines acceptance gates that depend on the utilities above. Summaries from `align_qc.py`, `boundary_eval.py`, `openset_eval.py`, and `bootstrap_eval.py` should be stored under `training_data/health_reports/` or `reports/<version>/` and referenced when approving a release.
+
 
 ```python
 from sklearn.metrics import confusion_matrix

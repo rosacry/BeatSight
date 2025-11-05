@@ -1,0 +1,2 @@
+{"sample_id": "test_0001", "scores": {"snare": 0.91, "hihat_closed": 0.22}, "openness_pred": 0.69, "velocity_pred": 0.60}
+{"sample_id": "test_0002", "scores": {"snare": 0.18, "hihat_closed": 0.81}, "openness_pred": 0.15, "velocity_pred": 0.28}

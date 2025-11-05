@@ -1,0 +1,11 @@
+{
+    "kick": 300,
+    "snare": 300,
+    "hihat_closed": 400,
+    "hihat_open": 250,
+    "crash": 200,
+    "ride_bow": 150,
+    "tom_high": 150,
+    "tom_mid": 150,
+    "tom_low": 150
+}

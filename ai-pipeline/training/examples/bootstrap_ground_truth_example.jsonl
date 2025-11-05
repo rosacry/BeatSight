@@ -1,0 +1,2 @@
+{"sample_id": "test_0001", "labels": ["snare"], "openness": 0.72, "velocity": 0.65}
+{"sample_id": "test_0002", "labels": ["hihat_closed"], "openness": 0.18, "velocity": 0.32}

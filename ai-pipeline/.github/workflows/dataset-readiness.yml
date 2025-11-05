@@ -1,0 +1,88 @@
+name: Dataset Readiness
+
+on:
+  push:
+    paths:
+      - 'training/**'
+  pull_request:
+    paths:
+      - 'training/**'
+
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        working-directory: training
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ../requirements.txt
+
+      - name: Run dataset readiness checks
+        working-directory: training
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python run_readiness_checks.py \
+            --halt-on-first-failure \
+            --alignment-manifest sessions/session_001.json \
+            --alignment-report reports/session_001_alignment.json \
+            --boundary-ground-truth boundary_pack/labels.jsonl \
+            --boundary-predictions outputs/boundary_predictions.jsonl \
+            --boundary-report reports/boundary_metrics.json \
+            --openset-ground-truth test_ood_unknown/labels.jsonl \
+            --openset-predictions outputs/test_ood_unknown_preds.jsonl \
+            --openset-report reports/openset_metrics.json \
+            --bootstrap-ground-truth splits/test.jsonl \
+            --bootstrap-predictions outputs/test_preds.jsonl \
+            --bootstrap-report reports/test_bootstrap.json \
+            --checks alignment boundary openset bootstrap
+
+      - name: Run dataset health gate (conditional)
+        working-directory: training
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          if [ -f annotations/events.jsonl ]; then
+            if [ ! -d reports/health ]; then
+              mkdir -p reports/health
+            fi
+            args=(
+              --events annotations/events.jsonl
+              --output reports/health/latest_health.json
+              --html-output reports/health/latest_health.html
+              --max-duplication-rate 0.005
+              --min-class-count 200
+              --max-unknown-labels 0
+            )
+            if [ -f components.json ]; then
+              args+=(--components components.json)
+            fi
+            if [ -f configs/health_min_counts_example.json ]; then
+              args+=(--min-counts-json configs/health_min_counts_example.json)
+            fi
+            if [ -f configs/health_require_labels_example.txt ]; then
+              args+=(--require-labels-file configs/health_require_labels_example.txt)
+            fi
+            python dataset_health.py "${args[@]}"
+          else
+            echo "annotations/events.jsonl not found; skipping dataset health gate."
+          fi
+
+      - name: Run dataset health unit tests
+        working-directory: training
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python -m pytest ../tests/test_dataset_health.py

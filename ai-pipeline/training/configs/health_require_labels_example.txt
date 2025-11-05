@@ -1,0 +1,8 @@
+# Critical labels that must appear at least once in every release candidate
+basic
+kick
+snare
+hihat_closed
+hihat_open
+crash
+ride_bow

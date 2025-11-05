@@ -1,0 +1,114 @@
+{
+    "schema_version": "1.0",
+    "source": "BeatSight AI Pipeline",
+    "description": "Normalization curves mapping raw CC4 (0-127) to openness ∈ [0,1] for supported e-drum devices.",
+    "vendors": {
+        "Roland": {
+            "TD-50": {
+                "curve_id": "roland_td50_cc4_v1",
+                "offset": 0.02,
+                "breakpoints": [
+                    {
+                        "raw": 0,
+                        "normalized": 0.0
+                    },
+                    {
+                        "raw": 10,
+                        "normalized": 0.05
+                    },
+                    {
+                        "raw": 30,
+                        "normalized": 0.18
+                    },
+                    {
+                        "raw": 60,
+                        "normalized": 0.46
+                    },
+                    {
+                        "raw": 90,
+                        "normalized": 0.72
+                    },
+                    {
+                        "raw": 110,
+                        "normalized": 0.88
+                    },
+                    {
+                        "raw": 127,
+                        "normalized": 1.0
+                    }
+                ],
+                "notes": "Derived from calibration sessions with VH-14D hats. Offset applied to correct mechanical slack."
+            }
+        },
+        "Yamaha": {
+            "DTX-PROX": {
+                "curve_id": "yamaha_dtxprox_cc4_v1",
+                "offset": 0.0,
+                "breakpoints": [
+                    {
+                        "raw": 0,
+                        "normalized": 0.0
+                    },
+                    {
+                        "raw": 20,
+                        "normalized": 0.12
+                    },
+                    {
+                        "raw": 50,
+                        "normalized": 0.38
+                    },
+                    {
+                        "raw": 80,
+                        "normalized": 0.65
+                    },
+                    {
+                        "raw": 107,
+                        "normalized": 0.84
+                    },
+                    {
+                        "raw": 127,
+                        "normalized": 1.0
+                    }
+                ],
+                "notes": "Captured with RHH-135 hats; linear interpolation between breakpoints."
+            }
+        },
+        "Alesis": {
+            "StrikePro": {
+                "curve_id": "alesis_strikepro_cc4_v1",
+                "offset": -0.01,
+                "breakpoints": [
+                    {
+                        "raw": 0,
+                        "normalized": 0.0
+                    },
+                    {
+                        "raw": 15,
+                        "normalized": 0.08
+                    },
+                    {
+                        "raw": 45,
+                        "normalized": 0.35
+                    },
+                    {
+                        "raw": 70,
+                        "normalized": 0.55
+                    },
+                    {
+                        "raw": 95,
+                        "normalized": 0.75
+                    },
+                    {
+                        "raw": 120,
+                        "normalized": 0.93
+                    },
+                    {
+                        "raw": 127,
+                        "normalized": 1.0
+                    }
+                ],
+                "notes": "Calibration pack recorded with Strike Pro SE hats; slight negative offset handles premature openness."
+            }
+        }
+    }
+}

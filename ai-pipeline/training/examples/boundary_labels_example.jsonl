@@ -1,0 +1,2 @@
+{"sample_id": "boundary_0001", "labels": ["snare"], "window_index": 128, "window_size": 1024, "hop_size": 512, "edge": "trailing"}
+{"sample_id": "boundary_0002", "labels": ["hihat_closed"], "window_index": 129, "window_size": 1024, "hop_size": 512, "edge": "leading"}

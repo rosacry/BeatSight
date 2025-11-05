@@ -1,0 +1,2 @@
+{"sample_id": "cand_0001", "session_id": "sess_a", "audio_path": "audio/sess_a_clip.wav", "predicted_labels": ["snare"], "scores": {"snare": 0.92}, "onset_time": 42.18}
+{"sample_id": "cand_0002", "session_id": "sess_b", "audio_path": "audio/sess_b_clip.wav", "predicted_labels": ["hihat_closed"], "scores": {"hihat_closed": 0.87}, "onset_time": 18.44}

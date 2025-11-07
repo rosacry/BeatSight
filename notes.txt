@@ -316,7 +316,7 @@ MedleyDB
 
 Additional Model Detection Awareness:
 
--All relevant Techniques/Gestures/Timbres are listed in the additionaldrummertech.txt file in the root of this project
+-All relevant Techniques/Gestures/Timbres are listed in the additionaldrummertech.txt file in the root of this project (you (copilot) decide what should be considered when training the model from the additionaldrummertech.txt file.)
 -Variable time signature and tempo changes: Shifting meter and/or speed within a song, often using metric modulation to relate the new pulse to the old.
 -cowbell 
 -label high-crash, (mid-crash?), low-crash. same with high china, (mid-china?), low-china

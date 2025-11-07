@@ -1,9 +1,16 @@
--All(x) Multitrack files cambridge website (~N/Agb)
+-All(800) Multitrack files cambridge website (~800gb) (half is stored in C:\Users\10ros\OneDrive\Documets\github\Beatsight\data\raw\cambridge, other half is stored in D:\data\raw\cambridge (external hard drive))
 -Slakh file (~100gb)
--Groove MIDI dataset (~5gb)
--Extended Groove MIDI dataset (~100gb)
--IDMT-SMT-DRUMS-V2 file (~300mb)
--MUSDB18 Compressed (~4.4gb)
--MUSDB18 Uncompressed HQ (~21.1gb)
--23 of the telefunken multitracks (~N/Agb)
+-Groove MIDI dataset (6gb)
+-Extended Groove MIDI dataset (131gb)
+-IDMT-SMT-DRUMS-V2 file (~1gb)
+-MUSDB18 Compressed (~6gb)
+-MUSDB18 Uncompressed HQ (29gb)
+-23 of the telefunken multitracks (26gb)
+-ENST-Drums - (10gb) (Just got accepted to access the data this morning); Email: 10rosachri@gmail.com, Password: Chrislul
 -15 of the music packs from signaturesounds.org (~1gb)
+
+
+Still waiting on responses back:
+MedleyDB
+
+

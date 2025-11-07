@@ -1,0 +1,161 @@
+Techniques/Timbres/Gestures that I listed:
+Flam: A grace note followed immediately by a primary stroke, creating a thicker, two-hit sound.
+Roll: Rapid repeated strokes (single, double, or buzz) to sustain a continuous tone on a drum.
+Rimshot: Striking the drumhead and rim simultaneously for a loud, cracking accent.
+Cross-stick: Resting the stick on the snare head and clicking the rim with the tip for a woody, clicky tone.
+Crash-build (any cymbal): Repeated or alternating cymbal hits that crescendo to build intensity into a section.
+Cymbal choking: Grabbing the cymbal right after striking it to cut off the sustain abruptly.
+Crash-riding: Keeping time on a crash cymbal with repeated strokes, typically for high-energy sections.
+Rim clicks: Hitting just the rim (often with the stick tip/shoulder) for a sharp, percussive click.
+Ghost notes (snare): Very soft, low-volume strokes between main hits to add feel and texture.
+Hi-hat barking / continuous barking + splash: Quick open–close “bark” accents (repeated in time for continuous barking); a hi-hat splash is a foot-opened, longer, airy “fsshh” sound.
+Accent–tap / flow sticking: Alternating loud and soft notes (often with Moeller motion) to shape groove and dynamics.
+
+extra:
+-rolling on ride and hithat
+-hihat closes and pops 
+
+
+
+Techniques/Timbres/Gestures that GPT listed (and added onto):
+
+Snare & Rudimental Articulations:
+Drag / Ruff: Two (or more) soft grace notes preceding a primary stroke for a gritty, lead-in sound.
+Double-stroke (Diddle): Rapid RR/LL pairs that create the tight, even shimmer distinct from single strokes.
+Buzz/Press Roll: Multiple bounces per hand for a sustained, papery snare tone (different from open doubles).
+Dead Stroke (Muffle Stroke): Stick stays on the head after impact to produce a short, thuddy attack.
+Stick Shot (Shot): One stick strikes the head while the other is braced on the rim, yielding an explosive accent.
+Snares-Off Playing: Snare wires disengaged for a tom-like, dry voice (often used for dynamic contrast).
+Hi-Hat Specific
+Foot “Chick”: Closing the hats purely with the pedal for a tight, percussive chick without stick attack.
+Half-Open / Degree-of-Open Hats: Controlled gap between cymbals for steady “sizzle” versus tight chick.
+Hi-Hat Lift: Slightly opening the hats at impact to add wash, then re-closing to re-tighten the groove.
+Tambourine-on-Hi-Hat: Hardware or clip-on jingles add a bright jingle layer to each hat motion.
+Ride/Crash/Other Cymbals
+Bell Accents / Bell-to-Bow Orchestration: Alternating bell “ping” and bow “wash” to shape lines timbrally.
+Tip vs Shank Articulation: Playing with the stick tip (pingy) or the shoulder/shank (washy) for clear timbre shifts.
+Mallet Swells (Cymbal Rolls): Soft mallets on cymbals for seamless crescendos without discrete stick attacks.
+Sizzle Ride (Rivets/Chain): Built-in rivets or a chain produce sustained buzz that changes decay character.
+Cymbal Scrape: Dragging the stick tip along the edge/bow for a rising, shimmering scrape effect.
+Cymbal Stack Hits: Tight, stacked cymbals yield a short, trashy burst distinct from standard crashes.
+Tom Techniques
+Tom Rimshot: Hitting head + rim on a tom for a sharp, cracking accent different from center hits.
+Hand-Muted Toms: Palm or fingers damp the head at impact for tight, conga-like attacks.
+Timpani-Style Pitch Bend: Pressing the head while striking to momentarily raise pitch on floor/ride toms.
+Floor-Tom Ride: Timekeeping on a floor tom (often with muffling) for a deep, tribal groove bed.
+Bass Drum (Kick) Articulations
+Feathering (Jazz 4-on-the-floor): Very soft quarter-note pulses that support feel without obvious attack.
+Beater Bury vs Rebound: Holding the beater on the head (short/woody) versus letting it rebound (rounder).
+Double-Kick Bursts: Rapid consecutive pedal strokes (single or double pedal) for machine-gun accents.
+Heel-Down vs Heel-Up: Foot posture that changes attack speed, dynamics, and low-end length.
+Slide/Swivel Doubles: Foot techniques enabling fast consecutive hits with a single pedal for distinct spacing.
+Brush / Mallet / Stick-Type Colors
+Brush Sweeps/Stirs: Continuous circular or lateral brush motion for a whispery, sustained texture.
+Brush Taps/Flicks: Articulated brush strikes that mix click attack with quick, airy decay.
+Toms with Mallets: Round, orchestral thumps with soft attack and low overtone hash.
+Rods/Hot Rods: Bundled dowels reduce attack harshness for a dry, low-volume stick timbre.
+Time-Feel & Subdivision (Audio-Detectable)
+Swing/Triplet Feel: Eighths subdivided into triplets for lilted forward motion (vs straight).
+Shuffle (incl. Half-Time Shuffle): Swung grid with spaced backbeats and dense ghosting in between.
+Half-Time vs Double-Time Feel: Snare placement shifts (on “3” vs “2&4” feel) without changing actual tempo.
+Polyrhythms / Polymeter: Simultaneous conflicting subdivisions or meters that cycle against each other.
+Hemiola: 3-over-2 (or 2-over-3) accent pattern that re-groups pulses without changing tempo.
+Odd-Groupings (5s/7s/9s): Quintuplet/septuplet phrasing and fills with non-binary subdivisions.
+Linear Drumming: No simultaneous limb hits—each note isolated—for ultra-clear transient parsing.
+Backbeat Displacement: Moving the snare accent off the usual 2/4 to create tension and release.
+Metric Modulation: Re-interpreting the pulse so a subdivision becomes the new beat without a tempo jump.
+Sticking Vocabulary (Common, Sonically Telling)
+Paradiddle Family: Alternating single/double combos (RLRR LRLL, etc.) that imprint a signature accent map.
+Paradiddle-Diddle: Paradiddle ending with RR or LL, yielding flowing, triplet-friendly phrasing.
+Herta: Fast single-single-double (e.g., R L RR) burst used in fills and transitions.
+Swiss Army Triplet: Flam-accented triplet with a distinctive lilt (common in funk/fusion).
+Bonham Triplets: Orchestrated triplets (often R L K) with a heavy, rolling cadence.
+Flam Taps / Flam Accents / Flamacue: Flam-based rudiments that color accents with a widened attack.
+Orchestration & Prep/Muting
+Tea-Towel/Wallet Muting: Cloth or wallet on heads to shorten sustain and darken tone (Ringo-style).
+Moongel/External Dampers: Small gels or clips that reduce ring and overtones for controlled decay.
+Snare-Wire Tension Changes: Loose vs tight wires change sizzle length and buzz sensitivity across the kit.
+Cáscara on Shells: Sticking patterns played on drum shells or rims for dry, clave-oriented textures.
+Riveted/Chain-Sizzled Crashes: Crash cymbals fitted with rivets/chain for instant, long tail fizz.
+Style/Genre-Flagging (High-Value for Detection)
+Train Beat: Alternating snare/ghosts with steady hats (or brushes) evoking locomotive motion.
+Blast Beat (and Variants): Extreme fast alternation of kick/snare/cymbal creating a continuous wall.
+Spang-a-Lang Ride: Classic jazz ride phrasing (ding-ding-da-ding) that defines swing feel.
+Crash-Bell Punctuation: Strategic bell stabs inside ride or crash-ride patterns to lift phrases.
+
+
+
+
+
+
+GPT's and mine's combined list of Techniques/Timbres/Gestures that are shown on a manuscript:
+Rudiments & Snare Articulations
+Flam: Main note with a small grace note just before it (grace-note cue before the primary note).
+Roll (open/buzz/press): Sustained stroke shown by tremolo slashes (open) or a z on the stem (buzz/press).
+Drag / Ruff: Two (or more) small grace notes leading into a primary note.
+Double-stroke (diddle): RR/LL pairs notated normally, often clarified with sticking marks above/below.
+Flam Taps / Flam Accents / Flamacue: Standard rudiments combining flams with accents, shown via grace notes + accent marks.
+Stick Shot (shot): Indicated by a normal snare note with text “stick shot/shot” above.
+Ghost notes: Very soft notes in parentheses (often with pp/ppp context).
+Snares-off playing: Marked with “snares off/on” text instruction.
+Hi-Hat Specific
+Cross-stick (side-stick): X-notehead on the snare line with “cross-stick/CS” text.
+Hi-hat bark (open-close): Regular hat notes with o (open) then close mark (†/+) or pedal close symbol indicating quick open→close.
+Continuous hi-hat barking: Repeated open–close cycle shown by alternating o and close marks in time.
+Hi-hat splash (foot splash): Pedal note with an o (open) and “splash”/tie for brief open decay.
+Foot “chick”: Hi-hat pedal note on the bottom space with standard x-notehead (no stick attack).
+Half-open hats: Partial-open symbol (ø or small circle) above notes to specify degree of openness.
+Hi-hat lift: Open symbol o at impact tied to a close mark shortly after.
+Cymbals (Ride/Crash/Stacks)
+Rimshot (on snare/toms): Head+rim accent, often marked with text “rimshot” or a specific publisher symbol.
+Rim clicks (rim knocks): X-notehead on drum line with “rim”/“rim click” text.
+Crash-riding: Timekeeping written on a crash line with x-noteheads (often with dynamic markings).
+Crash build (any cymbal): Repeated cymbal figures under crescendo hairpins (〈 〉) to a target hit.
+Cymbal choking: Crash note followed by choke marking (staccatissimo + “choke”/grab text or cutoff symbol).
+Bell accents / bell-to-bow phrasing: Notes labeled “bell” vs normal ride line (sometimes diamond/bell noteheads or text).
+Tip vs shank articulation: Same rhythm annotated with “tip” or “shank/shoulder” text for timbre change.
+Mallet swells (cymbal rolls): Tremolo slashes with crescendo hairpins, often with mallet change text.
+Sizzle ride / chain: Instrument indication “sizzle ride” or “ride w/ chain,” affecting decay in the part.
+Cymbal scrape: Diagonal/rolled indication with “scrape” text or an effect marking.
+Cymbal stack hits: Notated on a dedicated line with x-noteheads and “stack” text.
+Tom Techniques
+Tom rimshot: Tom note with “rimshot” text indicating head+rim accent.
+Hand-muted toms: Tom notes with staccato/stopped symbols and “mute/hand mute” text.
+Timpani-style pitch bend on tom: Tom note with an upward bend arrow or gliss line plus instruction text.
+Floor-tom ride: Timekeeping written on floor-tom line (often with muffling indicated).
+Bass Drum (Kick)
+Feathering (jazz 4-on-the-floor): Soft quarter-note BD line marked pp (or softer) to indicate near-felt time.
+Double-kick bursts: Notated as fast BD figures (often separate voice/staff or two BD lines) with tuplets and/or “double pedal” text.
+Sticks/Brushes/Mallets
+Brush sweeps/stirs: Circular arrows/curve lines with “brush sweep/stir” text across the bar.
+Brush taps/flicks: Standard notes with an instrument change “brushes,” sometimes accented to distinguish.
+Toms with mallets: Instrument change to “mallets” (often with softer dynamic profile).
+Rods/Hot rods: Text instruction “rods/hot rods” altering attack/decay expectation.
+Time, Feel, Subdivision & Form
+Variable time signature & tempo changes: Explicit meter changes (e.g., 4/4→7/8) and tempo marks; metric mod shown with ratios (e.g., ♪.=♪).
+Swing / Triplet feel: “Swing” instruction or triplet-bracket equivalency (♩♪ = ♩♩) defining triplet subdivision.
+Shuffle / Half-time shuffle: Triplet-grid notation with rests/accents, labeled “shuffle” or “half-time shuffle.”
+Half-time vs double-time feel: Text cues (“half-time feel”/“double-time feel”) relocating backbeat without changing BPM.
+Polyrhythms / Polymeter: Layered tuplets (e.g., 3:2, 5:4) or simultaneous meters bracketed over parts.
+Hemiola: Accents regrouped as 3-over-2 (or 2-over-3), shown with phrasing brackets/accents.
+Odd groupings (5s/7s/9s…): Tuplet brackets (5:4, 7:4, etc.) or explicit odd meters.
+Linear drumming: Manuscript shows no stacked notes—one limb at a time—making the linearity visually explicit.
+Backbeat displacement: Snare/backbeat moved off typical 2/4, clearly visible in accent placement.
+Metric modulation: New pulse defined by a ratio equation (e.g., ♪ = ♩) with the ensuing notation re-beamed.
+Sticking Vocabulary (when the part includes stickings)
+Paradiddle family: Sticking letters (R/L) shown above/below notes to prescribe RLRR LRLL, etc.
+Paradiddle-diddle: Sticking marking for paradiddle ending with RR/LL, often aligning with triplet phrasing.
+Herta: Quick single-single-double figure notated as 32nd/16th grouping with suggested sticking.
+Swiss Army triplet: Flam-accented triplet (flam on the first partial) indicated via grace note + triplet bracket.
+Bonham triplets (RLK orchestration): Triplet figure labeled with sticking (R L K) to show limb orchestration.
+Accent-tap / flow sticking: Alternating accented (>) and unaccented notes, sometimes annotated with Moeller/”accent-tap” text.
+Orchestration, Prep & Muting (score-visible via text/symbols)
+Tea-towel/wallet muting: “Mute snare/toms” or specific dampening text at the top of the passage.
+Moongel/external dampers: “Dampen/muffle” instruction indicating reduced ring/overtones.
+Cáscara on shells: Pattern written on rim/shell line with “cáscara”/“shells” text.
+Riveted/chain-sizzled crashes: Instrument label “sizzle crash/with chain” to set expected decay.
+Style/Pattern Flags (printed plainly on the page)
+Train beat: Backbeat/ghosting pattern explicitly notated across snare/hat (often with brush option).
+Blast beat (variants): Extremely dense alternating limb figures written as fast subdivisions across BD/SN/CYM.
+Spang-a-lang ride: Classic jazz ride triplet pattern spelled out (ding-ding-da-ding) with articulations.
+Crash-bell punctuation: Specific bell notes embedded in ride/crash lines, labeled “bell” where needed.

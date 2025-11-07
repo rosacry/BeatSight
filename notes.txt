@@ -282,13 +282,62 @@ and even more things (not sure if they're done already):
 
 
 
-for now:
--add cowbell to model
--find out if any of the data has chinas in it
 
 
 
-new things:
+
+
+
+
+
+
+for now (BEFORE TRAINING):
+-fix repeating (redundant) directories in data/raw (for example, some directories say data/raw/egmd/groove_midi/groove (a folder leading to another folder), while others are data/raw/{then the contents of the folder instead of another repeating folder})
+-make sure that data has chinas in it
+-remove setup-linux.fish file on BeatSight project
+-sort .md and .txt files
+
+-All(800) Multitrack files cambridge website (~1TB) (half (~200) is stored in C:\Users\10ros\OneDrive\Documets\github\Beatsight\data\raw\cambridge, other half (~600) is stored in D:\data\raw\cambridge (external hard drive))
+-Slakh file (~100gb)
+-Groove MIDI dataset (6gb)
+-Extended Groove MIDI dataset (131gb)
+-IDMT-SMT-DRUMS-V2 file (~1gb)
+-MUSDB18 Compressed (~6gb)
+-MUSDB18 Uncompressed HQ (29gb)
+-23 of the telefunken multitracks (26gb)
+-ENST-Drums - (10gb) (Just got accepted to access the data this morning); Email: 10rosachri@gmail.com, Password: Chrislul
+-15 of the music packs from signaturesounds.org (~1gb)
+
+Still waiting on responses back:
+MedleyDB
+
+
+
+
+Additional Model Detection Awareness:
+
+-All relevant Techniques/Gestures/Timbres are listed in the additionaldrummertech.txt file in the root of this project
+-Variable time signature and tempo changes: Shifting meter and/or speed within a song, often using metric modulation to relate the new pulse to the old.
+-cowbell 
+-label high-crash, (mid-crash?), low-crash. same with high china, (mid-china?), low-china
+-possibly detect location of stick hit on certain cymbals (like on the hi-hat and ride cymbals)
+-have it detect if it classifies more than one unique cymbal but of the same catagory (like if there's 3 crashes, 4 splashes, or something like that)
+
+
+ask copilot for any other ones i’m missing, and anything i’m also missing from things written on a manuscript.
+
+
+
+
+future things:
+-have the ai attempt to scale (downsize and maybe upsize) the amount of drum instruments in the song to a lower amount to compensate for what the user has available
+-correct scale musical complexity to high star rating (like animals as leaders) and the same with stamina maps (like meshuggah) and the same with speed (like lorna shore? (ranked mode / live microphone detection)
+-user should be able to drag the slider that has the track on music on it???
+-scale approach rate with a formula that combines size of play screen, time signature, bpm, and cluster/density of notes
+-add eq
+-decide to make official model public or private from everything else
+-change name to something more drum curated (still deciding)
 -update the root (official) README.md to look more realistic, similar the one on ppy/osu (https://github.com/ppy/osu)
 -Make the training for any of the available models and AI for this project peer available. Meaning, anyone from anywhere can add their computational power to make the models and AI stronger for this project. Preferrably put this in the program interface itself for the people who aren't knowledgable of how to go about it through a terminal. The way I see it happening is (to my knowledge at least, but I might be ignorant), when the user opens the program and creates an account (maybe optional? i'm not sure), if they wanna use their own computational power to help train and better the models and AI, they would go into the settings, enable a developer mode checkbox, that opens up a button that allows them to do this (i'm totally okay if you want to change how to go about this too). Figure out how to do this.
+-find out how to make money on this program/(game?). I think the developer of osu (ppy) does a thing called osu! supporter (look into this for me to understand how it works for your own context and reference). I think the way he goes about doing osu! supporter thing is to possibly avoid copyrights, licenses, and possibly patents (but this is just a guess from me, correct me if i'm wrong)
 

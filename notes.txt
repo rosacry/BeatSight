@@ -292,9 +292,8 @@ and even more things (not sure if they're done already):
 
 
 for now (BEFORE TRAINING):
--fix repeating (redundant) directories in data/raw (for example, some directories say data/raw/egmd/groove_midi/groove (a folder leading to another folder), while others are data/raw/{then the contents of the folder instead of another repeating folder})
+-can (if it's worth doing..) fix repeating (redundant) directories in data/raw (for example, some directories say data/raw/egmd/groove_midi/groove (a folder leading to another folder), while others are data/raw/{then the contents of the folder instead of another repeating folder}). (if it's not worth doing then you don't have to do it)
 -make sure that data has chinas in it
--remove setup-linux.fish file on BeatSight project
 -sort .md and .txt files
 
 -All(800) Multitrack files cambridge website (~1TB) (half (~200) is stored in C:\Users\10ros\OneDrive\Documets\github\Beatsight\data\raw\cambridge, other half (~600) is stored in D:\data\raw\cambridge (external hard drive))

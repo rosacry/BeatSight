@@ -1,6 +1,7 @@
 using System.Collections.Generic;
+using System.IO;
 using BeatSight.Game.Beatmaps;
-using BeatSight.Game.Screens.Gameplay;
+using BeatSight.Game.Screens.Playback;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
@@ -93,12 +94,12 @@ namespace BeatSight.Game.Screens.SongSelect
                 return;
             }
 
-            statusText.Text = "Choose a song to play";
+            statusText.Text = "Select a mapping to audition. Toggle full mix vs drums inside playback.";
 
             foreach (var entry in beatmaps)
                 beatmapList.Add(new BeatmapButton(entry)
                 {
-                    Action = () => this.Push(new GameplayScreen(entry.Path))
+                    Action = () => this.Push(new MappingPlaybackScreen(entry.Path))
                 });
         }
 
@@ -154,10 +155,26 @@ namespace BeatSight.Game.Screens.SongSelect
                                 Text = $"Mapped by {metadata.Creator} • ★ {metadata.Difficulty:0.0}",
                                 Font = new FontUsage(size: 18),
                                 Colour = new Color4(190, 195, 210, 255)
+                            },
+                            new SpriteText
+                            {
+                                Text = buildAudioSummary(entry),
+                                Font = new FontUsage(size: 16),
+                                Colour = new Color4(170, 175, 190, 255)
                             }
                         }
                     }
                 });
+            }
+
+            private string buildAudioSummary(BeatmapLibrary.BeatmapEntry entry)
+            {
+                var audio = entry.Beatmap.Audio;
+                string duration = audio.Duration > 0 ? $"{audio.Duration:0}" : "?";
+                string filename = !string.IsNullOrEmpty(audio.Filename) ? Path.GetFileName(audio.Filename) : "no-audio";
+                string stem = !string.IsNullOrEmpty(audio.DrumStem) ? Path.GetFileName(audio.DrumStem) : "no stem";
+
+                return $"Audio {duration} ms • File {filename} • Drum Stem {stem}";
             }
 
             protected override bool OnHover(HoverEvent e)

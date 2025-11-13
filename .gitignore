@@ -32,9 +32,13 @@ venv/
 env/
 ENV/
 .venv
+.venv/
+**/.venv/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.pytest_cache/
 pip-log.txt
 pip-delete-this-directory.txt
-.pytest_cache/
 .coverage
 htmlcov/
 *.egg-info/
@@ -55,6 +59,11 @@ ai-pipeline/training/splits/
 ai-pipeline/training/test_ood_unknown/
 ai-pipeline/training/boundary_pack/
 ai-pipeline/training/negatives/
+ai-pipeline/training/data/manifests/*.jsonl
+ai-pipeline/training/data/provenance/*.jsonl
+ai-pipeline/training/datasets/
+ai-pipeline/training/feature_cache/
+ai-pipeline/training/runs/
 
 # Node.js
 node_modules/
@@ -78,15 +87,23 @@ Thumbs.db
 # Logs
 logs/
 *.log
+wandb/
 
 # Temporary files
 tmp/
 temp/
 *.tmp
+data/tmp/
+
+# Dataset health artifacts
+ai-pipeline/training/reports/health/**
+!ai-pipeline/training/reports/health/
+!ai-pipeline/training/reports/health/README.md
 
 # Audio files (large)
 *.mp3
 *.wav
+!shared/formats/simple_beat.wav
 *.flac
 *.ogg
 *.m4a
@@ -101,6 +118,9 @@ data/raw/**
 !data/raw/
 !data/raw/**/
 !data/raw/**/.gitkeep
+data/prod_*/**
+!data/prod_*/
+!data/prod_*/**/.gitkeep
 data/pdf_and_text_data(not for training)
 data/signaturesounds_website
 

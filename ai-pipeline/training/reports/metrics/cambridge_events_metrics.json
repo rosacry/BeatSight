@@ -1,0 +1,41 @@
+{
+  "manifest": "ai-pipeline/training/data/manifests/cambridge_events.jsonl",
+  "num_events": 2856,
+  "num_sessions": 431,
+  "label_counts": {
+    "kick": 623,
+    "snare": 651,
+    "tom_high": 247,
+    "tom_mid": 298,
+    "aux_percussion": 410,
+    "drum_mix": 70,
+    "hihat_closed": 313,
+    "tom_low": 107,
+    "ride_bow": 94,
+    "crash": 32,
+    "rimshot": 10,
+    "hihat_open": 1
+  },
+  "technique_counts": {
+    "multitrack_context": 70,
+    "ride_tip_articulation": 94,
+    "brush_sweep": 3,
+    "rimshot": 12,
+    "cowbell": 13,
+    "hihat_half_open": 1,
+    "hihat_splash": 1
+  },
+  "source_set_counts": {
+    "cambridge_multitrack": 2856
+  },
+  "openness_stats": {
+    "p05": 0.0,
+    "p25": 0.0,
+    "p50": 0.0,
+    "p75": 0.0,
+    "p95": 0.0,
+    "min": 0.0,
+    "max": 1.0,
+    "mean": 0.0031847133757961785
+  }
+}

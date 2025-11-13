@@ -27,16 +27,32 @@ namespace BeatSight.Game.Screens.Gameplay
 {
     public partial class GameplayScreen : Screen
     {
-        private static readonly Dictionary<osuTK.Input.Key, int> laneKeyBindings = new()
+        private readonly Dictionary<osuTK.Input.Key, int> laneKeyBindings = new();
+
+        private static readonly Dictionary<int, osuTK.Input.Key[]> defaultLaneKeyLayouts = new()
         {
-            { osuTK.Input.Key.S, 0 },
-            { osuTK.Input.Key.D, 1 },
-            { osuTK.Input.Key.F, 2 },
-            { osuTK.Input.Key.Space, 3 },
-            { osuTK.Input.Key.J, 4 },
-            { osuTK.Input.Key.K, 5 },
-            { osuTK.Input.Key.L, 6 }
+            { 4, new[] { osuTK.Input.Key.D, osuTK.Input.Key.F, osuTK.Input.Key.J, osuTK.Input.Key.K } },
+            { 5, new[] { osuTK.Input.Key.D, osuTK.Input.Key.F, osuTK.Input.Key.Space, osuTK.Input.Key.J, osuTK.Input.Key.K } },
+            { 6, new[] { osuTK.Input.Key.S, osuTK.Input.Key.D, osuTK.Input.Key.F, osuTK.Input.Key.J, osuTK.Input.Key.K, osuTK.Input.Key.L } },
+            { 7, new[] { osuTK.Input.Key.S, osuTK.Input.Key.D, osuTK.Input.Key.F, osuTK.Input.Key.Space, osuTK.Input.Key.J, osuTK.Input.Key.K, osuTK.Input.Key.L } },
+            { 8, new[] { osuTK.Input.Key.A, osuTK.Input.Key.S, osuTK.Input.Key.D, osuTK.Input.Key.F, osuTK.Input.Key.J, osuTK.Input.Key.K, osuTK.Input.Key.L, osuTK.Input.Key.Semicolon } },
+            { 9, new[] { osuTK.Input.Key.A, osuTK.Input.Key.S, osuTK.Input.Key.D, osuTK.Input.Key.F, osuTK.Input.Key.Space, osuTK.Input.Key.J, osuTK.Input.Key.K, osuTK.Input.Key.L, osuTK.Input.Key.Semicolon } }
         };
+
+        private static readonly osuTK.Input.Key[] fallbackLaneKeyOrder =
+        {
+            osuTK.Input.Key.A,
+            osuTK.Input.Key.S,
+            osuTK.Input.Key.D,
+            osuTK.Input.Key.F,
+            osuTK.Input.Key.Space,
+            osuTK.Input.Key.J,
+            osuTK.Input.Key.K,
+            osuTK.Input.Key.L,
+            osuTK.Input.Key.Semicolon
+        };
+
+        private IReadOnlyList<string> currentLaneKeyHints = Array.Empty<string>();
 
         private readonly string? requestedBeatmapPath;
         private double fallbackElapsed;
@@ -114,6 +130,8 @@ namespace BeatSight.Game.Screens.Gameplay
         private Bindable<double> backgroundBlurSetting = null!;
         private Bindable<bool> hitLightingEnabled = null!;
         private Bindable<bool> screenShakeEnabled = null!;
+        private Bindable<LanePreset> lanePresetSetting = null!;
+        private LaneLayout currentLaneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
 
         private const float maxBackgroundBlurSigma = 25f;
 
@@ -199,6 +217,8 @@ namespace BeatSight.Game.Screens.Gameplay
             metronomeEnabledSetting.BindValueChanged(_ => pendingMetronomePulse = false, true);
             drumStemPreferredSetting = config.GetBindable<bool>(BeatSightSetting.DrumStemPlaybackOnly);
             drumStemPreferredSetting.BindValueChanged(e => applyDrumStemPreference(e.NewValue), true);
+            lanePresetSetting = config.GetBindable<LanePreset>(BeatSightSetting.LanePreset);
+            lanePresetSetting.BindValueChanged(onLanePresetChanged, true);
             reloadMetronomeSample();
 
             loadBeatmap();
@@ -351,6 +371,9 @@ namespace BeatSight.Game.Screens.Gameplay
             };
 
             playfield.ResultApplied += onPlayfieldResult;
+            playfield.SetLaneLayout(currentLaneLayout);
+            playfield.SetLaneKeyHints(currentLaneKeyHints);
+            rebuildLaneKeyBindings();
 
             return playfieldContainer = new Container
             {
@@ -404,6 +427,10 @@ namespace BeatSight.Game.Screens.Gameplay
             {
                 beatmap = BeatmapLoader.LoadFromFile(path!);
                 beatmapPath = path;
+                DrumLaneHeuristics.ApplyToBeatmap(beatmap, currentLaneLayout);
+                playfield?.SetLaneLayout(currentLaneLayout);
+                if (IsLoaded)
+                    playfield?.LoadBeatmap(beatmap);
                 statusText.Text = $"Loaded: {beatmap.Metadata.Artist} — {beatmap.Metadata.Title}";
                 loadTrack();
                 fallbackElapsed = 0;
@@ -493,6 +520,8 @@ namespace BeatSight.Game.Screens.Gameplay
                 refreshTrackFromCache();
 
             resetMetronomeTracking();
+
+            playfield?.StartSession(restart);
 
             if (track != null)
             {
@@ -589,6 +618,7 @@ namespace BeatSight.Game.Screens.Gameplay
                     track.Volume.Value = e.NewValue;
             }, true);
 
+            playfield?.SetLaneLayout(currentLaneLayout);
             if (beatmap != null)
                 playfield?.LoadBeatmap(beatmap);
         }
@@ -651,13 +681,84 @@ namespace BeatSight.Game.Screens.Gameplay
 
             if (!e.Repeat && playfield != null && laneKeyBindings.TryGetValue(e.Key, out int lane))
             {
-                var result = playfield.HandleInput(lane, getCurrentTime());
-                if (result != GameplayPlayfield.HitResult.None)
-                    return true;
+                if (lane < currentLaneLayout.LaneCount)
+                {
+                    var result = playfield.HandleInput(lane, getCurrentTime());
+                    if (result != GameplayPlayfield.HitResult.None)
+                        return true;
+                }
             }
 
             return base.OnKeyDown(e);
         }
+
+        private void onLanePresetChanged(ValueChangedEvent<LanePreset> preset)
+        {
+            currentLaneLayout = LaneLayoutFactory.Create(preset.NewValue);
+
+            playfield?.SetLaneLayout(currentLaneLayout);
+            playfield?.SetLaneKeyHints(currentLaneKeyHints);
+            rebuildLaneKeyBindings();
+
+            if (beatmap != null)
+            {
+                DrumLaneHeuristics.ApplyToBeatmap(beatmap, currentLaneLayout);
+
+                if (IsLoaded)
+                    playfield?.LoadBeatmap(beatmap);
+            }
+        }
+
+        private void rebuildLaneKeyBindings()
+        {
+            laneKeyBindings.Clear();
+
+            int lanes = currentLaneLayout.LaneCount;
+            if (lanes <= 0)
+            {
+                currentLaneKeyHints = Array.Empty<string>();
+                return;
+            }
+
+            if (!defaultLaneKeyLayouts.TryGetValue(lanes, out var layoutKeys))
+                layoutKeys = fallbackLaneKeyOrder;
+
+            int keysToAssign = Math.Min(lanes, layoutKeys.Length);
+            var keyHints = Enumerable.Repeat(string.Empty, lanes).ToArray();
+
+            for (int lane = 0; lane < keysToAssign; lane++)
+            {
+                var key = layoutKeys[lane];
+                laneKeyBindings[key] = lane;
+                keyHints[lane] = formatKeyLabel(key);
+            }
+
+            if (keysToAssign < lanes)
+            {
+                osu.Framework.Logging.Logger.Log(
+                    $"[GameplayScreen] Lane preset requires {lanes} lanes but only {keysToAssign} default key bindings are available.",
+                    osu.Framework.Logging.LoggingTarget.Runtime,
+                    osu.Framework.Logging.LogLevel.Important);
+            }
+
+            currentLaneKeyHints = keyHints;
+            playfield?.SetLaneKeyHints(currentLaneKeyHints);
+        }
+
+        private static string formatKeyLabel(osuTK.Input.Key key) => key switch
+        {
+            osuTK.Input.Key.Space => "Space",
+            osuTK.Input.Key.Semicolon => ";",
+            osuTK.Input.Key.Comma => ",",
+            osuTK.Input.Key.Period => ".",
+            osuTK.Input.Key.Slash => "/",
+            osuTK.Input.Key.BackSlash => "\\",
+            osuTK.Input.Key.BracketLeft => "[",
+            osuTK.Input.Key.BracketRight => "]",
+            osuTK.Input.Key.Minus => "-",
+            osuTK.Input.Key.Plus => "+",
+            _ => key.ToString().Length <= 3 ? key.ToString().ToUpperInvariant() : key.ToString()
+        };
 
         private void toggleDrumMix()
         {
@@ -952,7 +1053,8 @@ namespace BeatSight.Game.Screens.Gameplay
 
     public partial class GameplayPlayfield : CompositeDrawable
     {
-        private const int laneCount = 7;
+        private LaneLayout laneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
+        private int laneCount => Math.Max(1, laneLayout.LaneCount);
         private const double approachDuration = 1800; // milliseconds from spawn to hit line
         private const double perfectWindow = 35;
         private const double greatWindow = 80;
@@ -978,11 +1080,14 @@ namespace BeatSight.Game.Screens.Gameplay
         private Container noteLayer = null!;
         private Container laneBackgroundContainer = null!;
         private Container laneGuideOverlay = null!;
+        private Container keyHintContainer = null!;
         private ThreeDHighwayBackground? threeDHighwayBackground;
         private SpriteText comboText = null!;
         private SpriteText accuracyText = null!;
         private SpriteText judgementText = null!;
         private HitErrorMeter hitErrorMeter = null!;
+        private string[] laneKeyHints = Array.Empty<string>();
+        private Beatmap? loadedBeatmap;
 
         private int combo;
         private int maxCombo;
@@ -1044,6 +1149,7 @@ namespace BeatSight.Game.Screens.Gameplay
             };
 
             laneGuideOverlay = createGuideOverlay();
+            keyHintContainer = createKeyHintLayer();
 
             InternalChildren = new Drawable[]
             {
@@ -1055,11 +1161,13 @@ namespace BeatSight.Game.Screens.Gameplay
                 laneBackgroundContainer,
                 noteLayer,
                 laneGuideOverlay,
+                keyHintContainer,
                 createOverlay()
             };
 
             laneViewMode.BindValueChanged(onLaneViewModeChanged, true);
             showHitErrorMeter.BindValueChanged(onShowHitErrorMeterChanged, true);
+            rebuildLaneKeyHints();
         }
 
         private Drawable createOverlay()
@@ -1158,13 +1266,15 @@ namespace BeatSight.Game.Screens.Gameplay
 
         private Drawable createLaneGrid2D()
         {
+            int lanes = laneCount;
+
             var laneContainer = new GridContainer
             {
                 RelativeSizeAxes = Axes.Both,
-                ColumnDimensions = Enumerable.Repeat(new Dimension(GridSizeMode.Relative, 1f / laneCount), laneCount).ToArray(),
+                ColumnDimensions = Enumerable.Repeat(new Dimension(GridSizeMode.Relative, 1f / lanes), lanes).ToArray(),
                 Content = new[]
                 {
-                    Enumerable.Range(0, laneCount).Select(createLaneBackground).ToArray()
+                    Enumerable.Range(0, lanes).Select(createLaneBackground).ToArray()
                 }
             };
 
@@ -1173,13 +1283,26 @@ namespace BeatSight.Game.Screens.Gameplay
 
         private Drawable createLaneGrid3D()
         {
-            threeDHighwayBackground = new ThreeDHighwayBackground(laneCount);
+            threeDHighwayBackground = new ThreeDHighwayBackground(laneLayout);
             return threeDHighwayBackground;
         }
 
         private void onLaneViewModeChanged(ValueChangedEvent<LaneViewMode> mode)
         {
             currentLaneViewMode = mode.NewValue;
+
+            rebuildLaneBackground();
+
+            laneGuideOverlay.FadeTo(currentLaneViewMode == LaneViewMode.ThreeDimensional ? 1f : 0f, 180, Easing.OutQuint);
+
+            foreach (var note in notes)
+                note.SetViewMode(currentLaneViewMode);
+        }
+
+        private void rebuildLaneBackground()
+        {
+            if (laneBackgroundContainer == null)
+                return;
 
             laneBackgroundContainer.Clear();
             threeDHighwayBackground = null;
@@ -1188,11 +1311,6 @@ namespace BeatSight.Game.Screens.Gameplay
                 laneBackgroundContainer.Add(createLaneGrid3D());
             else
                 laneBackgroundContainer.Add(createLaneGrid2D());
-
-            laneGuideOverlay.FadeTo(currentLaneViewMode == LaneViewMode.ThreeDimensional ? 1f : 0f, 180, Easing.OutQuint);
-
-            foreach (var note in notes)
-                note.SetViewMode(currentLaneViewMode);
         }
 
         private Drawable createLaneBackground(int laneIndex)
@@ -1212,6 +1330,100 @@ namespace BeatSight.Game.Screens.Gameplay
             };
         }
 
+        private Container createKeyHintLayer()
+        {
+            return new Container
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Anchor = Anchor.BottomCentre,
+                Origin = Anchor.BottomCentre,
+                Y = -60,
+                Alpha = 0
+            };
+        }
+
+        private void rebuildLaneKeyHints()
+        {
+            if (keyHintContainer == null)
+                return;
+
+            keyHintContainer.Clear();
+
+            int lanes = laneCount;
+            if (lanes <= 0 || laneKeyHints.Length == 0)
+            {
+                keyHintContainer.FadeOut(120, Easing.OutQuint);
+                return;
+            }
+
+            var hints = new string[lanes];
+            for (int i = 0; i < lanes; i++)
+                hints[i] = i < laneKeyHints.Length ? laneKeyHints[i] : string.Empty;
+
+            bool hasAny = hints.Any(h => !string.IsNullOrWhiteSpace(h));
+            if (!hasAny)
+            {
+                keyHintContainer.FadeOut(120, Easing.OutQuint);
+                return;
+            }
+
+            var grid = new GridContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                ColumnDimensions = Enumerable.Repeat(new Dimension(GridSizeMode.Relative, 1f / lanes), lanes).ToArray(),
+                Content = new[]
+                {
+                    Enumerable.Range(0, lanes)
+                        .Select(index => createKeyHintCell(hints[index]))
+                        .ToArray()
+                }
+            };
+
+            keyHintContainer.Add(grid);
+            keyHintContainer.FadeTo(0.9f, 120, Easing.OutQuint);
+        }
+
+        private Drawable createKeyHintCell(string label)
+        {
+            bool hasLabel = !string.IsNullOrWhiteSpace(label);
+            string display = hasLabel ? label : "—";
+
+            return new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                Children = new Drawable[]
+                {
+                    new Container
+                    {
+                        AutoSizeAxes = Axes.Both,
+                        Anchor = Anchor.BottomCentre,
+                        Origin = Anchor.BottomCentre,
+                        Masking = true,
+                        CornerRadius = 6,
+                        Padding = new MarginPadding { Horizontal = 12, Vertical = 6 },
+                        Children = new Drawable[]
+                        {
+                            new Box
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Colour = hasLabel ? new Color4(60, 70, 110, 220) : new Color4(50, 55, 80, 140)
+                            },
+                            new SpriteText
+                            {
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre,
+                                Font = new FontUsage(size: 18, weight: "Medium"),
+                                Colour = new Color4(235, 238, 255, 255),
+                                Text = display
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
         /// <summary>
         /// Sets whether this playfield is in preview mode (editor) or gameplay mode.
         /// In preview mode, notes won't be auto-judged as missed.
@@ -1221,13 +1433,47 @@ namespace BeatSight.Game.Screens.Gameplay
             isPreviewMode = preview;
         }
 
-        public void LoadBeatmap(Beatmap beatmap)
+        public void SetLaneLayout(LaneLayout layout)
         {
-            osu.Framework.Logging.Logger.Log($"[GameplayPlayfield] LoadBeatmap called: {beatmap.HitObjects.Count} hit objects, preview mode: {isPreviewMode}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
+            if (layout == null)
+                throw new ArgumentNullException(nameof(layout));
+
+            if (ReferenceEquals(laneLayout, layout))
+                return;
+
+            laneLayout = layout;
+            rebuildLaneBackground();
+            rebuildLaneKeyHints();
+        }
+
+        public void SetLaneKeyHints(IReadOnlyList<string> hints)
+        {
+            if (hints == null || hints.Count == 0)
+                laneKeyHints = Array.Empty<string>();
+            else
+                laneKeyHints = hints.Select(h => h?.Trim() ?? string.Empty).ToArray();
+
+            rebuildLaneKeyHints();
+        }
+
+        public void StartSession(bool restart)
+        {
+            if (!restart)
+                return;
+
+            if (loadedBeatmap != null)
+            {
+                LoadBeatmap(loadedBeatmap);
+                return;
+            }
 
             noteLayer.Clear();
             notes.Clear();
+            resetScoreState();
+        }
 
+        private void resetScoreState()
+        {
             combo = 0;
             maxCombo = 0;
             totalNotes = 0;
@@ -1239,9 +1485,33 @@ namespace BeatSight.Game.Screens.Gameplay
             mehCount = 0;
             missCount = 0;
 
-            comboText.Text = "Combo: 0";
-            accuracyText.Text = "Accuracy: --";
-            judgementText.Text = gameplayMode.Value == GameplayMode.Manual ? "Manual Mode" : "Ready";
+            if (comboText != null)
+                comboText.Text = "Combo: 0";
+
+            if (accuracyText != null)
+                accuracyText.Text = "Accuracy: --";
+
+            if (judgementText != null)
+            {
+                var mode = gameplayMode?.Value ?? GameplayMode.Auto;
+                judgementText.Text = mode == GameplayMode.Manual ? "Manual Mode" : "Ready";
+            }
+
+            hitErrorMeter?.Reset();
+        }
+
+        public void LoadBeatmap(Beatmap beatmap)
+        {
+            if (beatmap == null)
+                throw new ArgumentNullException(nameof(beatmap));
+
+            loadedBeatmap = beatmap;
+            osu.Framework.Logging.Logger.Log($"[GameplayPlayfield] LoadBeatmap called: {beatmap.HitObjects.Count} hit objects, preview mode: {isPreviewMode}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
+
+            noteLayer.Clear();
+            notes.Clear();
+
+            resetScoreState();
 
             foreach (var hit in beatmap.HitObjects)
             {
@@ -1297,7 +1567,8 @@ namespace BeatSight.Game.Screens.Gameplay
 
             double currentTime = currentTimeProvider();
             threeDHighwayBackground?.UpdateScroll(currentTime);
-            float laneWidth = DrawWidth / laneCount;
+            int lanes = laneCount;
+            float laneWidth = lanes > 0 ? DrawWidth / lanes : 0;
             float hitLineY = DrawHeight * 0.85f;
             float spawnTop = currentLaneViewMode == LaneViewMode.ThreeDimensional ? DrawHeight * 0.15f : DrawHeight * 0.05f;
             float travelDistance = hitLineY - spawnTop;
@@ -1356,7 +1627,8 @@ namespace BeatSight.Game.Screens.Gameplay
             float bottomY = DrawHeight * 0.85f;
             float topY = DrawHeight * 0.15f;
 
-            float laneOffset = note.Lane - (laneCount - 1) / 2f;
+            int lanes = laneCount;
+            float laneOffset = note.Lane - (lanes - 1) / 2f;
             float bottomSpacing = DrawWidth * 0.14f;
             float topSpacing = bottomSpacing * 0.42f;
 
@@ -1490,10 +1762,10 @@ namespace BeatSight.Game.Screens.Gameplay
             _ => 0,
         };
 
-        private static int resolveLane(HitObject hit)
+        private int resolveLane(HitObject hit)
         {
-            int lane = hit.Lane ?? DrumLaneHeuristics.ResolveLane(hit.Component);
-            return Math.Clamp(lane, 0, laneCount - 1);
+            int lane = DrumLaneHeuristics.ResolveLane(hit.Component, laneLayout, hit.Lane);
+            return laneLayout.ClampLane(lane);
         }
 
         private partial class HitErrorMeter : CompositeDrawable
@@ -1563,6 +1835,11 @@ namespace BeatSight.Game.Screens.Gameplay
                     markerLayer.Children.First().Expire();
             }
 
+            public void Reset()
+            {
+                markerLayer.Clear();
+            }
+
             private static Color4 colourFor(HitResult result) => result switch
             {
                 HitResult.Perfect => new Color4(140, 255, 200, 255),
@@ -1576,12 +1853,13 @@ namespace BeatSight.Game.Screens.Gameplay
 
         private partial class ThreeDHighwayBackground : CompositeDrawable
         {
-            private readonly int laneCount;
+            private readonly LaneLayout laneLayout;
+            private int laneCount => Math.Max(1, laneLayout.LaneCount);
             private readonly List<Box> timelineStripes = new List<Box>();
 
-            public ThreeDHighwayBackground(int laneCount)
+            public ThreeDHighwayBackground(LaneLayout layout)
             {
-                this.laneCount = laneCount;
+                laneLayout = layout ?? throw new ArgumentNullException(nameof(layout));
                 RelativeSizeAxes = Axes.Both;
                 Masking = true;
                 CornerRadius = 18;
@@ -1679,9 +1957,10 @@ namespace BeatSight.Game.Screens.Gameplay
 
             private Drawable createKickGuideLayer()
             {
+                int kickLane = laneLayout.KickLane;
                 float kickNormalized = laneCount <= 1
                     ? 0
-                    : (0 - (laneCount - 1) / 2f) / (laneCount - 1);
+                    : (kickLane - (laneCount - 1) / 2f) / (laneCount - 1);
 
                 var band = new Container
                 {

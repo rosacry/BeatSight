@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using BeatSight.Game.Beatmaps;
 using Xunit;
 
@@ -28,11 +29,18 @@ public class BeatmapLoaderTests
 
         Beatmap beatmap = BeatmapLoader.LoadFromFile(samplePath);
 
-        Assert.Equal("Simple Practice Beat", beatmap.Metadata.Title);
+        Assert.Equal("Handcrafted Groove Demo", beatmap.Metadata.Title);
         Assert.Equal("BeatSight Example", beatmap.Metadata.Artist);
         Assert.Equal("BeatSight Team", beatmap.Metadata.Creator);
-        Assert.Equal("simple_beat.mp3", beatmap.Audio.Filename);
+        Assert.Equal("simple_beat.wav", beatmap.Audio.Filename);
+        Assert.Equal("simple_beat.wav", beatmap.Audio.DrumStem);
+        Assert.Equal(8000, beatmap.Audio.Duration);
+        Assert.Equal("sha256:411ba3ededb98b59ece90eac679ac52af71fd54d626acd0ffc5789c13d97e1ac", beatmap.Audio.Hash);
+        Assert.Equal("sha256:411ba3ededb98b59ece90eac679ac52af71fd54d626acd0ffc5789c13d97e1ac", beatmap.Audio.DrumStemHash);
         Assert.Equal(120.0, beatmap.Timing.Bpm, precision: 5);
+        Assert.Contains("handcrafted", beatmap.Metadata.Tags, StringComparer.OrdinalIgnoreCase);
+        Assert.NotNull(beatmap.Editor?.AiGenerationMetadata);
+        Assert.Equal("2025.11-handcrafted", beatmap.Editor!.AiGenerationMetadata!.ModelVersion);
     }
 
     [Fact]
@@ -83,5 +91,28 @@ public class BeatmapLoaderTests
             if (File.Exists(tempPath))
                 File.Delete(tempPath);
         }
+    }
+
+    [Fact]
+    public void SampleBeatmap_AlignsWithLaneHeuristics()
+    {
+        string samplePath = GetSampleBeatmapPath();
+
+        Beatmap beatmap = BeatmapLoader.LoadFromFile(samplePath);
+
+        AssertComponentLane(beatmap, "kick", expectedLane: 3);
+        AssertComponentLane(beatmap, "snare", expectedLane: 2);
+        AssertComponentLane(beatmap, "hihat_closed", expectedLane: 1);
+        AssertComponentLane(beatmap, "ride", expectedLane: 5);
+        AssertComponentLane(beatmap, "crash", expectedLane: 0);
+        AssertComponentLane(beatmap, "tom_mid", expectedLane: 4);
+        AssertComponentLane(beatmap, "tom_low", expectedLane: 4);
+    }
+
+    private static void AssertComponentLane(Beatmap beatmap, string component, int expectedLane)
+    {
+        var hits = beatmap.HitObjects.Where(h => string.Equals(h.Component, component, StringComparison.OrdinalIgnoreCase)).ToList();
+        Assert.NotEmpty(hits);
+        Assert.All(hits, h => Assert.Equal(expectedLane, h.Lane));
     }
 }

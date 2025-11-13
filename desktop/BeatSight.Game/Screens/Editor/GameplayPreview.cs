@@ -1,6 +1,9 @@
 using System;
 using BeatSight.Game.Beatmaps;
+using BeatSight.Game.Configuration;
+using BeatSight.Game.Mapping;
 using BeatSight.Game.Screens.Gameplay;
+using osu.Framework.Bindables;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -17,6 +20,11 @@ namespace BeatSight.Game.Screens.Editor
         private GameplayReplayHost replayHost = null!;
         private SpriteText placeholderText = null!;
         private Beatmap? beatmap;
+        private Bindable<LanePreset> lanePresetSetting = null!;
+        private LaneLayout currentLaneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
+
+        [Resolved]
+        private BeatSightConfigManager config { get; set; } = null!;
 
         public GameplayPreview(Func<double> currentTimeProvider)
         {
@@ -51,6 +59,9 @@ namespace BeatSight.Game.Screens.Editor
                 }
             };
 
+            lanePresetSetting = config.GetBindable<LanePreset>(BeatSightSetting.LanePreset);
+            lanePresetSetting.BindValueChanged(onLanePresetChanged, true);
+
             // Beatmap will be applied in LoadComplete() to ensure all components are ready
         }
 
@@ -65,6 +76,7 @@ namespace BeatSight.Game.Screens.Editor
 
                 if (replayHost != null)
                 {
+                    replayHost.SetLaneLayout(currentLaneLayout);
                     replayHost.SetBeatmap(beatmap);
                 }
                 else
@@ -88,6 +100,7 @@ namespace BeatSight.Game.Screens.Editor
             }
 
             // Immediately update the replay host and placeholder
+            replayHost?.SetLaneLayout(currentLaneLayout);
             replayHost?.SetBeatmap(beatmap);
             updatePlaceholderState();
         }
@@ -97,8 +110,17 @@ namespace BeatSight.Game.Screens.Editor
             if (!IsLoaded)
                 return;
 
+            replayHost?.SetLaneLayout(currentLaneLayout);
             replayHost?.RefreshBeatmap();
             updatePlaceholderState();
+        }
+
+        private void onLanePresetChanged(ValueChangedEvent<LanePreset> preset)
+        {
+            currentLaneLayout = LaneLayoutFactory.Create(preset.NewValue);
+
+            if (replayHost != null)
+                replayHost.SetLaneLayout(currentLaneLayout);
         }
 
         private void updatePlaceholderState()

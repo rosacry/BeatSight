@@ -32,6 +32,14 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pytest
 
+      - name: Verify provenance coverage
+        run: |
+          python ai-pipeline/training/tools/audit_provenance.py \
+            --manifest ai-pipeline/training/data/manifests/prod_combined_events.jsonl \
+            --provenance-dir ai-pipeline/training/data/provenance \
+            --output-json ai-pipeline/training/reports/provenance/prod_combined_provenance_audit_ci.json \
+            --baseline ai-pipeline/training/reports/provenance/prod_combined_provenance_audit_baseline.json
+
       - name: Generate candidate health report
         run: |
           python ai-pipeline/training/dataset_health.py \
@@ -64,3 +72,4 @@ jobs:
             ai-pipeline/training/reports/health/latest_health_ci.json
             ai-pipeline/training/reports/health/latest_health_ci.html
             ai-pipeline/training/reports/health/latest_vs_baseline_ci.json
+            ai-pipeline/training/reports/provenance/prod_combined_provenance_audit_ci.json

@@ -12,7 +12,21 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Iterable, List, Optional
+def load_requirements_from_files(paths: Iterable[str]) -> List[str]:
+    values: List[str] = []
+    for raw_path in paths:
+        if not raw_path:
+            continue
+        file_path = Path(raw_path)
+        if not file_path.exists():
+            raise FileNotFoundError(f"Requirements file not found: {file_path}")
+        for line in file_path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            values.append(stripped)
+    return values
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
@@ -53,6 +67,10 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         help="Optional path to write dataset health HTML summary",
     )
     parser.add_argument(
+        "--health-dataset-metadata",
+        help="Optional metadata.json to merge duration telemetry into dataset health",
+    )
+    parser.add_argument(
         "--health-max-duplication-rate",
         type=float,
         help="Optional duplication gate (0-1) for dataset health",
@@ -81,6 +99,17 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         "--health-max-unknown-labels",
         type=int,
         help="Maximum total unknown label count allowed in dataset health",
+    )
+    parser.add_argument(
+        "--health-require-technique",
+        action="append",
+        default=[],
+        help="Ensure specific techniques appear at least once in dataset health",
+    )
+    parser.add_argument(
+        "--health-require-techniques-file",
+        action="append",
+        help="File containing required techniques (one per line, '#' comments ignored)",
     )
 
     parser.add_argument(
@@ -238,6 +267,19 @@ def main(argv: Optional[List[str]] = None) -> int:
                 cmd.extend(["--require-label", label])
             for path in args.health_require_labels_file or []:
                 cmd.extend(["--require-labels-file", path])
+            if args.health_dataset_metadata:
+                cmd.extend(["--dataset-metadata", args.health_dataset_metadata])
+            technique_requirements = list(args.health_require_technique or [])
+            technique_requirements.extend(
+                load_requirements_from_files(args.health_require_techniques_file or [])
+            )
+            if technique_requirements:
+                seen: set[str] = set()
+                for technique in technique_requirements:
+                    if technique in seen:
+                        continue
+                    seen.add(technique)
+                    cmd.extend(["--require-technique", technique])
             if args.health_max_unknown_labels is not None:
                 cmd.extend([
                     "--max-unknown-labels",

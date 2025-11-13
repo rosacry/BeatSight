@@ -441,6 +441,11 @@ namespace BeatSight.Game.Screens.Settings
                         config.GetBindable<LaneViewMode>(BeatSightSetting.LaneViewMode),
                         "Switch between classic 2D lanes and the new 3D runway view."
                     ),
+                    CreateEnumDropdown(
+                        "Lane Preset",
+                        config.GetBindable<LanePreset>(BeatSightSetting.LanePreset),
+                        "Select how many drum lanes to render and how instruments are arranged."
+                    ),
                     CreateSlider(
                         "Background Dim",
                         config.GetBindable<double>(BeatSightSetting.BackgroundDim),

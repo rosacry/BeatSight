@@ -1,0 +1,5202 @@
+[
+  {
+    "index": 188949,
+    "file": "audio/b2/b261ffba-63e3-5a50-a81c-cc801b8ff12d__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "ride_bow",
+    "true_index": 0,
+    "predicted_index": 1,
+    "confidence": 0.99951171875,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.99951171875
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.00027680397033691406
+      },
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.00019443035125732422
+      }
+    ]
+  },
+  {
+    "index": 26450,
+    "file": "audio/56/5686b627-3e51-5624-87d6-9aff150de56f__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "ride_bow",
+    "true_index": 2,
+    "predicted_index": 1,
+    "confidence": 0.9990234375,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.9990234375
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.0004086494445800781
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.000156402587890625
+      }
+    ]
+  },
+  {
+    "index": 144546,
+    "file": "audio/73/73e0be87-5a21-5b9e-bf11-4771c1290722__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "snare",
+    "true_index": 1,
+    "predicted_index": 6,
+    "confidence": 0.9990234375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9990234375
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.00027561187744140625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00021851062774658203
+      }
+    ]
+  },
+  {
+    "index": 186147,
+    "file": "audio/36/36af2446-6dc2-59db-a0f8-bc9102b404f2__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "snare",
+    "true_index": 10,
+    "predicted_index": 6,
+    "confidence": 0.9990234375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9990234375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0008392333984375
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 8.636713027954102e-05
+      }
+    ]
+  },
+  {
+    "index": 134043,
+    "file": "audio/81/819f5281-a34a-5024-a58f-20a2a6630dc7__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.99853515625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99853515625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0011692047119140625
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 9.226799011230469e-05
+      }
+    ]
+  },
+  {
+    "index": 299995,
+    "file": "audio/1d/1dc75ab0-39fb-5d04-958e-9fc4a887cdc7__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.99853515625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99853515625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00139617919921875
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 5.6862831115722656e-05
+      }
+    ]
+  },
+  {
+    "index": 308713,
+    "file": "audio/95/95f0ed2c-5602-544b-9e5c-18a1fd61ad1a__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "cross_stick",
+    "true_index": 2,
+    "predicted_index": 3,
+    "confidence": 0.99853515625,
+    "top3": [
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.99853515625
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.00042057037353515625
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.0003018379211425781
+      }
+    ]
+  },
+  {
+    "index": 191889,
+    "file": "audio/c5/c5efe01f-321a-508a-9aa6-706aa40dd1de__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.998046875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.998046875
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0008220672607421875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0006084442138671875
+      }
+    ]
+  },
+  {
+    "index": 28695,
+    "file": "audio/54/54eb2ffa-ae07-5db7-abdb-f852b911b39d__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.99755859375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99755859375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0019407272338867188
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0001863241195678711
+      }
+    ]
+  },
+  {
+    "index": 313049,
+    "file": "audio/39/3961e95b-ee55-58cc-8d7f-5e93f86db8dd__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.99755859375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99755859375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.001556396484375
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.0005693435668945312
+      }
+    ]
+  },
+  {
+    "index": 21598,
+    "file": "audio/8b/8b7f97df-0e26-542d-9aa0-09fff33a73d0__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.99658203125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99658203125
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0014181137084960938
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0009088516235351562
+      }
+    ]
+  },
+  {
+    "index": 48230,
+    "file": "audio/6a/6ae0870d-fc70-5fb9-81d0-ef9a06c95ace__snare.wav",
+    "true_label": "snare",
+    "predicted_label": "ride_bow",
+    "true_index": 6,
+    "predicted_index": 1,
+    "confidence": 0.99658203125,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.99658203125
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.0012521743774414062
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.000820159912109375
+      }
+    ]
+  },
+  {
+    "index": 267375,
+    "file": "audio/46/4687f0e9-66f0-5c9c-a872-2f7b3e7ec09e__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "snare",
+    "true_index": 10,
+    "predicted_index": 6,
+    "confidence": 0.99658203125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99658203125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0011529922485351562
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0009379386901855469
+      }
+    ]
+  },
+  {
+    "index": 270699,
+    "file": "audio/4f/4fd27eff-39da-59d5-aac6-a9bffb24e60e__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "snare",
+    "true_index": 10,
+    "predicted_index": 6,
+    "confidence": 0.99658203125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99658203125
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0011386871337890625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0010929107666015625
+      }
+    ]
+  },
+  {
+    "index": 117851,
+    "file": "audio/76/76072bd8-8063-5edf-b4a9-df02d309e6e3__crash.wav",
+    "true_label": "crash",
+    "predicted_label": "ride_bow",
+    "true_index": 8,
+    "predicted_index": 1,
+    "confidence": 0.99609375,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.99609375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.001415252685546875
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.000980377197265625
+      }
+    ]
+  },
+  {
+    "index": 1005,
+    "file": "audio/34/344060e0-8954-5e2b-b3a7-f8ec8a618dcf__hihat_open.wav",
+    "true_label": "hihat_open",
+    "predicted_label": "hihat_closed",
+    "true_index": 4,
+    "predicted_index": 10,
+    "confidence": 0.99560546875,
+    "top3": [
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.99560546875
+      },
+      {
+        "label": "hihat_open",
+        "index": 4,
+        "probability": 0.0012540817260742188
+      },
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.0008039474487304688
+      }
+    ]
+  },
+  {
+    "index": 21833,
+    "file": "audio/f0/f06b0b0d-90a2-50e4-af7f-9c0ab45a0557__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "ride_bell",
+    "true_index": 2,
+    "predicted_index": 13,
+    "confidence": 0.99560546875,
+    "top3": [
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.99560546875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0017690658569335938
+      },
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.0009412765502929688
+      }
+    ]
+  },
+  {
+    "index": 89482,
+    "file": "audio/03/03480f8c-a0cb-5223-9e9e-0ab28ea3ec6e__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.99560546875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99560546875
+      },
+      {
+        "label": "tom_high",
+        "index": 14,
+        "probability": 0.0022602081298828125
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.0009474754333496094
+      }
+    ]
+  },
+  {
+    "index": 117142,
+    "file": "audio/cc/cc16702d-ecde-5d36-bfc2-77c164f3b494__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.99560546875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99560546875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0037860870361328125
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.0002865791320800781
+      }
+    ]
+  },
+  {
+    "index": 201357,
+    "file": "audio/be/becc2ad9-2774-5f31-93a7-47b67bc251db__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "snare",
+    "true_index": 1,
+    "predicted_index": 6,
+    "confidence": 0.99560546875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99560546875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.003398895263671875
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.0007824897766113281
+      }
+    ]
+  },
+  {
+    "index": 286971,
+    "file": "audio/6e/6e999a3a-56cd-525e-bda8-93d7d7ce2439__snare.wav",
+    "true_label": "snare",
+    "predicted_label": "hihat_pedal",
+    "true_index": 6,
+    "predicted_index": 2,
+    "confidence": 0.99560546875,
+    "top3": [
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.99560546875
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.0017499923706054688
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.0007829666137695312
+      }
+    ]
+  },
+  {
+    "index": 49906,
+    "file": "audio/91/9185b51e-c802-595b-8b7d-1a2676f1d07c__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "snare",
+    "true_index": 1,
+    "predicted_index": 6,
+    "confidence": 0.9951171875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9951171875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.003971099853515625
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.0006585121154785156
+      }
+    ]
+  },
+  {
+    "index": 193799,
+    "file": "audio/62/622bafb8-52f2-5453-ae42-310edd7d2c62__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "ride_bow",
+    "true_index": 0,
+    "predicted_index": 1,
+    "confidence": 0.9951171875,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.9951171875
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.00270843505859375
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.0007767677307128906
+      }
+    ]
+  },
+  {
+    "index": 289616,
+    "file": "audio/38/38fb9552-b5cc-5a1d-b750-c9610ba68784__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "ride_bow",
+    "true_index": 2,
+    "predicted_index": 1,
+    "confidence": 0.9951171875,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.9951171875
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.0025348663330078125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0011386871337890625
+      }
+    ]
+  },
+  {
+    "index": 274827,
+    "file": "audio/39/394a949b-ecf3-5958-9a3c-b5d812ee1a2a__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "snare",
+    "true_index": 0,
+    "predicted_index": 6,
+    "confidence": 0.99462890625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99462890625
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.0020732879638671875
+      },
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.0008535385131835938
+      }
+    ]
+  },
+  {
+    "index": 8372,
+    "file": "audio/6c/6c97033c-5ed5-5f55-9dc0-5368d2d15d28__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "ride_bow",
+    "true_index": 2,
+    "predicted_index": 1,
+    "confidence": 0.994140625,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.994140625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.001720428466796875
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.0015497207641601562
+      }
+    ]
+  },
+  {
+    "index": 59879,
+    "file": "audio/13/13eaeb15-593a-5b80-8ac4-f9f246e83dac__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "snare",
+    "true_index": 10,
+    "predicted_index": 6,
+    "confidence": 0.994140625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.994140625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0016231536865234375
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.001544952392578125
+      }
+    ]
+  },
+  {
+    "index": 218264,
+    "file": "audio/4b/4b6ca928-9df3-518e-884f-69881d3ed882__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.994140625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.994140625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.005096435546875
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.0006051063537597656
+      }
+    ]
+  },
+  {
+    "index": 96625,
+    "file": "audio/b3/b32724ae-8de5-5dd9-9c12-04b48ac2690f__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.99365234375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99365234375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00389862060546875
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.0010166168212890625
+      }
+    ]
+  },
+  {
+    "index": 256831,
+    "file": "audio/75/7511e750-5aad-583f-a1f4-9baa525cf8d1__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "ride_bow",
+    "true_index": 0,
+    "predicted_index": 1,
+    "confidence": 0.99365234375,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.99365234375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0016355514526367188
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.0012350082397460938
+      }
+    ]
+  },
+  {
+    "index": 12002,
+    "file": "audio/34/344573ac-e27c-5d63-a6cb-1f90445af4e8__china.wav",
+    "true_label": "china",
+    "predicted_label": "snare",
+    "true_index": 5,
+    "predicted_index": 6,
+    "confidence": 0.9931640625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9931640625
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.002277374267578125
+      },
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.002105712890625
+      }
+    ]
+  },
+  {
+    "index": 17056,
+    "file": "audio/68/68935cee-c02e-5c57-b813-723a39c005b4__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "hihat_pedal",
+    "true_index": 1,
+    "predicted_index": 2,
+    "confidence": 0.9931640625,
+    "top3": [
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.9931640625
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.0026092529296875
+      },
+      {
+        "label": "hihat_foot_splash",
+        "index": 16,
+        "probability": 0.002285003662109375
+      }
+    ]
+  },
+  {
+    "index": 27262,
+    "file": "audio/04/04e948ad-6f45-57ec-b844-06a7055f5da9__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.9931640625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9931640625
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.0023555755615234375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0018491744995117188
+      }
+    ]
+  },
+  {
+    "index": 146778,
+    "file": "audio/18/18f10551-95a3-5543-950c-2af119d5a48e__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.9931640625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9931640625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.002277374267578125
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0016918182373046875
+      }
+    ]
+  },
+  {
+    "index": 151054,
+    "file": "audio/ea/ea08cfc8-e2b2-5948-b3ee-ad9388aaf9b9__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.9931640625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9931640625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0055694580078125
+      },
+      {
+        "label": "hihat_foot_splash",
+        "index": 16,
+        "probability": 0.0003578662872314453
+      }
+    ]
+  },
+  {
+    "index": 153986,
+    "file": "audio/e2/e2fe7690-fbfd-5cec-a53e-78c66371c0a6__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "snare",
+    "true_index": 10,
+    "predicted_index": 6,
+    "confidence": 0.9931640625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9931640625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00324249267578125
+      },
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.0015211105346679688
+      }
+    ]
+  },
+  {
+    "index": 304890,
+    "file": "audio/5a/5a455910-7b31-5d0b-94f2-ff9e836d5c1b__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "cross_stick",
+    "true_index": 1,
+    "predicted_index": 3,
+    "confidence": 0.9931640625,
+    "top3": [
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.9931640625
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.0015277862548828125
+      },
+      {
+        "label": "tom_high",
+        "index": 14,
+        "probability": 0.0015239715576171875
+      }
+    ]
+  },
+  {
+    "index": 40451,
+    "file": "audio/96/967ec377-9803-5ce8-83e8-a915372a116a__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "hihat_pedal",
+    "true_index": 0,
+    "predicted_index": 2,
+    "confidence": 0.99267578125,
+    "top3": [
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.99267578125
+      },
+      {
+        "label": "hihat_foot_splash",
+        "index": 16,
+        "probability": 0.0018758773803710938
+      },
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.0018625259399414062
+      }
+    ]
+  },
+  {
+    "index": 169170,
+    "file": "audio/57/57fe40cb-d400-5640-a88b-3ea1f5956015__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "ride_bow",
+    "true_index": 2,
+    "predicted_index": 1,
+    "confidence": 0.99267578125,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.99267578125
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.00429534912109375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0011758804321289062
+      }
+    ]
+  },
+  {
+    "index": 211287,
+    "file": "audio/b5/b5ba4ccb-fd41-5485-9983-7f6800f988fd__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "cross_stick",
+    "true_index": 10,
+    "predicted_index": 3,
+    "confidence": 0.99267578125,
+    "top3": [
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.99267578125
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.004413604736328125
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.000640869140625
+      }
+    ]
+  },
+  {
+    "index": 245367,
+    "file": "audio/e3/e3c5ee5b-6de2-577d-be75-5717fbf918ce__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "snare",
+    "true_index": 10,
+    "predicted_index": 6,
+    "confidence": 0.99267578125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99267578125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.004817962646484375
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0007338523864746094
+      }
+    ]
+  },
+  {
+    "index": 5222,
+    "file": "audio/91/917eb6c8-7bba-5d68-b765-9ad271e64d74__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.9921875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9921875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.005496978759765625
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0006704330444335938
+      }
+    ]
+  },
+  {
+    "index": 27351,
+    "file": "audio/b7/b77475d0-3c81-5fa2-b92b-5052acc03ab6__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.9921875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9921875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0033817291259765625
+      },
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.0011081695556640625
+      }
+    ]
+  },
+  {
+    "index": 40247,
+    "file": "audio/bc/bc7a38ad-ba8e-5e92-b621-ac8a67ea77f8__hihat_open.wav",
+    "true_label": "hihat_open",
+    "predicted_label": "hihat_closed",
+    "true_index": 4,
+    "predicted_index": 10,
+    "confidence": 0.9921875,
+    "top3": [
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.9921875
+      },
+      {
+        "label": "hihat_open",
+        "index": 4,
+        "probability": 0.002361297607421875
+      },
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.002155303955078125
+      }
+    ]
+  },
+  {
+    "index": 54160,
+    "file": "audio/30/30c0f323-fc88-5494-ba30-f537431d4d08__tom_low.wav",
+    "true_label": "tom_low",
+    "predicted_label": "snare",
+    "true_index": 7,
+    "predicted_index": 6,
+    "confidence": 0.9921875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9921875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0023784637451171875
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.0016527175903320312
+      }
+    ]
+  },
+  {
+    "index": 110300,
+    "file": "audio/98/989afa6e-b570-56a2-a628-35b63ef2bfa5__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.9921875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9921875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0038471221923828125
+      },
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.0007228851318359375
+      }
+    ]
+  },
+  {
+    "index": 114012,
+    "file": "audio/55/5535e867-03a7-53d7-a4a6-94462f470c22__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.9921875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9921875
+      },
+      {
+        "label": "tom_high",
+        "index": 14,
+        "probability": 0.002857208251953125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00142669677734375
+      }
+    ]
+  },
+  {
+    "index": 220924,
+    "file": "audio/08/08130585-0fad-53eb-ac86-3ed1f3e68264__hihat_open.wav",
+    "true_label": "hihat_open",
+    "predicted_label": "hihat_closed",
+    "true_index": 4,
+    "predicted_index": 10,
+    "confidence": 0.9921875,
+    "top3": [
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.9921875
+      },
+      {
+        "label": "hihat_open",
+        "index": 4,
+        "probability": 0.003177642822265625
+      },
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.0019235610961914062
+      }
+    ]
+  },
+  {
+    "index": 272730,
+    "file": "audio/cb/cb6cca97-9ad9-524a-95d6-4bfb95d82979__snare.wav",
+    "true_label": "snare",
+    "predicted_label": "ride_bow",
+    "true_index": 6,
+    "predicted_index": 1,
+    "confidence": 0.9921875,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.9921875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00318145751953125
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.002170562744140625
+      }
+    ]
+  },
+  {
+    "index": 172580,
+    "file": "audio/83/838558f7-762c-52ad-b54c-3d0063510e7a__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "snare",
+    "true_index": 10,
+    "predicted_index": 6,
+    "confidence": 0.99169921875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99169921875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.004207611083984375
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0018339157104492188
+      }
+    ]
+  },
+  {
+    "index": 175269,
+    "file": "audio/35/35494cb3-d354-5257-a4ca-50517a36485f__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.99169921875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99169921875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0035800933837890625
+      },
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.0012454986572265625
+      }
+    ]
+  },
+  {
+    "index": 217685,
+    "file": "audio/67/67e1de3a-67aa-5686-abbb-8b4e46aaecc7__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "ride_bow",
+    "true_index": 0,
+    "predicted_index": 1,
+    "confidence": 0.99169921875,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.99169921875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0028839111328125
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.002689361572265625
+      }
+    ]
+  },
+  {
+    "index": 251348,
+    "file": "audio/d0/d0353856-53f4-56fe-9903-1ceeb7d84b92__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "ride_bow",
+    "true_index": 2,
+    "predicted_index": 1,
+    "confidence": 0.99169921875,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.99169921875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0026950836181640625
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.002536773681640625
+      }
+    ]
+  },
+  {
+    "index": 260964,
+    "file": "audio/96/964af669-ce08-5ad7-be09-77bb0e023325__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "snare",
+    "true_index": 1,
+    "predicted_index": 6,
+    "confidence": 0.99169921875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99169921875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0030651092529296875
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.001804351806640625
+      }
+    ]
+  },
+  {
+    "index": 269511,
+    "file": "audio/da/da10ecf9-6fc7-5e0b-a682-a5ff13d855dd__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "snare",
+    "true_index": 10,
+    "predicted_index": 6,
+    "confidence": 0.99169921875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99169921875
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0029163360595703125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0015535354614257812
+      }
+    ]
+  },
+  {
+    "index": 34432,
+    "file": "audio/e4/e4e0576f-a496-5345-ab3c-6cd57f6a352a__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.9912109375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9912109375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0055389404296875
+      },
+      {
+        "label": "tom_high",
+        "index": 14,
+        "probability": 0.0008158683776855469
+      }
+    ]
+  },
+  {
+    "index": 76208,
+    "file": "audio/e0/e01ac661-d80b-5140-b9f8-e2d6e48ff5b0__snare.wav",
+    "true_label": "snare",
+    "predicted_label": "hihat_closed",
+    "true_index": 6,
+    "predicted_index": 10,
+    "confidence": 0.9912109375,
+    "top3": [
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.9912109375
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.0036106109619140625
+      },
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.0016736984252929688
+      }
+    ]
+  },
+  {
+    "index": 137041,
+    "file": "audio/87/8745f9dd-941f-5521-9adb-b0cbd25198f0__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "ride_bow",
+    "true_index": 2,
+    "predicted_index": 1,
+    "confidence": 0.9912109375,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.9912109375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00272369384765625
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.002414703369140625
+      }
+    ]
+  },
+  {
+    "index": 241930,
+    "file": "audio/8f/8f340676-44d2-5f59-94ec-6a023264ddc4__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.9912109375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9912109375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00347900390625
+      },
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.0016021728515625
+      }
+    ]
+  },
+  {
+    "index": 258011,
+    "file": "audio/ce/ce79cb93-e658-554b-b115-5b0202bf8497__snare.wav",
+    "true_label": "snare",
+    "predicted_label": "ride_bow",
+    "true_index": 6,
+    "predicted_index": 1,
+    "confidence": 0.9912109375,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.9912109375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0031795501708984375
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.0025806427001953125
+      }
+    ]
+  },
+  {
+    "index": 300659,
+    "file": "audio/a6/a68ff0fc-132c-5e6c-8aed-c82637b634f4__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.9912109375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9912109375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.003017425537109375
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.0019588470458984375
+      }
+    ]
+  },
+  {
+    "index": 2533,
+    "file": "audio/2a/2ad306f7-c907-55e6-8dec-5508dbafe17f__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.99072265625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99072265625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.004924774169921875
+      },
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.001068115234375
+      }
+    ]
+  },
+  {
+    "index": 54081,
+    "file": "audio/af/af8a3eb7-bb3f-59ea-83f1-5493a7977f15__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "ride_bow",
+    "true_index": 2,
+    "predicted_index": 1,
+    "confidence": 0.99072265625,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.99072265625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0027141571044921875
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.0017099380493164062
+      }
+    ]
+  },
+  {
+    "index": 68103,
+    "file": "audio/35/35845e33-0cda-5176-9e34-5058aebcfbab__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "ride_bell",
+    "true_index": 2,
+    "predicted_index": 13,
+    "confidence": 0.99072265625,
+    "top3": [
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.99072265625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.004779815673828125
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.0017414093017578125
+      }
+    ]
+  },
+  {
+    "index": 141503,
+    "file": "audio/b5/b515c898-8f62-54fe-b19c-acd19b13fb9b__tom_low.wav",
+    "true_label": "tom_low",
+    "predicted_label": "snare",
+    "true_index": 7,
+    "predicted_index": 6,
+    "confidence": 0.99072265625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99072265625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00244140625
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.0011663436889648438
+      }
+    ]
+  },
+  {
+    "index": 266333,
+    "file": "audio/57/57ec8b72-c75a-512a-8ad6-ec190892b397__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "ride_bow",
+    "true_index": 0,
+    "predicted_index": 1,
+    "confidence": 0.99072265625,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.99072265625
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.0047149658203125
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.001621246337890625
+      }
+    ]
+  },
+  {
+    "index": 271080,
+    "file": "audio/6e/6e1a5292-09d2-5e19-a53c-d14f748c7d3b__ride_bell.wav",
+    "true_label": "ride_bell",
+    "predicted_label": "snare",
+    "true_index": 13,
+    "predicted_index": 6,
+    "confidence": 0.99072265625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99072265625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0069122314453125
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.00040078163146972656
+      }
+    ]
+  },
+  {
+    "index": 285172,
+    "file": "audio/4c/4c8d11d9-5aa9-521e-8df3-9b7b4de3d248__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.99072265625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.99072265625
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0021800994873046875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0019235610961914062
+      }
+    ]
+  },
+  {
+    "index": 298129,
+    "file": "audio/38/3870b025-be35-5452-802d-eca649546982__snare.wav",
+    "true_label": "snare",
+    "predicted_label": "ride_bow",
+    "true_index": 6,
+    "predicted_index": 1,
+    "confidence": 0.99072265625,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.99072265625
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.003215789794921875
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.0027027130126953125
+      }
+    ]
+  },
+  {
+    "index": 23828,
+    "file": "audio/b8/b817580f-9180-5ea2-826a-75d449405dff__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "ride_bow",
+    "true_index": 2,
+    "predicted_index": 1,
+    "confidence": 0.990234375,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.990234375
+      },
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.0034618377685546875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0020732879638671875
+      }
+    ]
+  },
+  {
+    "index": 54146,
+    "file": "audio/54/544c291b-5820-5ddb-9018-168d81c1014d__crash.wav",
+    "true_label": "crash",
+    "predicted_label": "ride_bow",
+    "true_index": 8,
+    "predicted_index": 1,
+    "confidence": 0.990234375,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.990234375
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.0036525726318359375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0017290115356445312
+      }
+    ]
+  },
+  {
+    "index": 103788,
+    "file": "audio/4e/4ef667ac-7429-5ba4-bc43-1be5241b8f8a__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.990234375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.990234375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00629425048828125
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0008950233459472656
+      }
+    ]
+  },
+  {
+    "index": 230120,
+    "file": "audio/e6/e63b0199-9f7c-527e-95d6-8c9183a98d75__crash.wav",
+    "true_label": "crash",
+    "predicted_label": "ride_bow",
+    "true_index": 8,
+    "predicted_index": 1,
+    "confidence": 0.990234375,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.990234375
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.002765655517578125
+      },
+      {
+        "label": "tom_high",
+        "index": 14,
+        "probability": 0.001392364501953125
+      }
+    ]
+  },
+  {
+    "index": 126564,
+    "file": "audio/f4/f4bb9ed7-b67e-5130-b486-d363955b7852__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.98974609375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98974609375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00672149658203125
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0014600753784179688
+      }
+    ]
+  },
+  {
+    "index": 227888,
+    "file": "audio/22/22c97815-437f-5ebc-b294-c961824d00af__ride_bell.wav",
+    "true_label": "ride_bell",
+    "predicted_label": "snare",
+    "true_index": 13,
+    "predicted_index": 6,
+    "confidence": 0.98974609375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98974609375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0026397705078125
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.0019063949584960938
+      }
+    ]
+  },
+  {
+    "index": 239860,
+    "file": "audio/f6/f64e3295-d91b-529b-b773-abe2fd5e3f65__hihat_open.wav",
+    "true_label": "hihat_open",
+    "predicted_label": "hihat_closed",
+    "true_index": 4,
+    "predicted_index": 10,
+    "confidence": 0.98974609375,
+    "top3": [
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.98974609375
+      },
+      {
+        "label": "hihat_open",
+        "index": 4,
+        "probability": 0.003520965576171875
+      },
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.0017614364624023438
+      }
+    ]
+  },
+  {
+    "index": 278005,
+    "file": "audio/7b/7ba76314-03e1-5719-a30a-813308c5d397__snare.wav",
+    "true_label": "snare",
+    "predicted_label": "china",
+    "true_index": 6,
+    "predicted_index": 5,
+    "confidence": 0.98974609375,
+    "top3": [
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.98974609375
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.005153656005859375
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.002391815185546875
+      }
+    ]
+  },
+  {
+    "index": 281952,
+    "file": "audio/87/87408178-e5aa-5eab-b28e-448fb4551d96__cross_stick.wav",
+    "true_label": "cross_stick",
+    "predicted_label": "hihat_pedal",
+    "true_index": 3,
+    "predicted_index": 2,
+    "confidence": 0.98974609375,
+    "top3": [
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.98974609375
+      },
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.006153106689453125
+      },
+      {
+        "label": "hihat_foot_splash",
+        "index": 16,
+        "probability": 0.0007314682006835938
+      }
+    ]
+  },
+  {
+    "index": 18757,
+    "file": "audio/5c/5c08efee-5add-54cb-85e8-4151473fce74__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "cross_stick",
+    "true_index": 1,
+    "predicted_index": 3,
+    "confidence": 0.9892578125,
+    "top3": [
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.9892578125
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.002780914306640625
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.0027446746826171875
+      }
+    ]
+  },
+  {
+    "index": 59220,
+    "file": "audio/c4/c4222e90-4bc0-54b2-af35-63671ec31d67__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "snare",
+    "true_index": 10,
+    "predicted_index": 6,
+    "confidence": 0.9892578125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9892578125
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.004764556884765625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.002716064453125
+      }
+    ]
+  },
+  {
+    "index": 69926,
+    "file": "audio/80/80fc0e9a-7f42-54b3-9cf6-7c43dfe6d17d__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.9892578125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9892578125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0096588134765625
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.000339508056640625
+      }
+    ]
+  },
+  {
+    "index": 106652,
+    "file": "audio/85/85544a28-6e5d-506a-8aac-58c83df06c92__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.9892578125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9892578125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00762939453125
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0009274482727050781
+      }
+    ]
+  },
+  {
+    "index": 79938,
+    "file": "audio/3d/3d809260-9322-57cb-b039-6d72a870feba__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.98876953125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98876953125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00766754150390625
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.0007038116455078125
+      }
+    ]
+  },
+  {
+    "index": 169791,
+    "file": "audio/4c/4cf593ec-0aa8-53e9-b7e6-ffcf5672d1d2__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "ride_bow",
+    "true_index": 0,
+    "predicted_index": 1,
+    "confidence": 0.98876953125,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.98876953125
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.004024505615234375
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.0030155181884765625
+      }
+    ]
+  },
+  {
+    "index": 10667,
+    "file": "audio/23/23df59b2-38e1-5972-87d6-aa8a26fd60fc__tom_low.wav",
+    "true_label": "tom_low",
+    "predicted_label": "hihat_pedal",
+    "true_index": 7,
+    "predicted_index": 2,
+    "confidence": 0.98828125,
+    "top3": [
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.98828125
+      },
+      {
+        "label": "hihat_foot_splash",
+        "index": 16,
+        "probability": 0.0038013458251953125
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.0017547607421875
+      }
+    ]
+  },
+  {
+    "index": 192695,
+    "file": "audio/0e/0e96f2e9-c003-5c1c-9f41-8724cead0663__tom_high.wav",
+    "true_label": "tom_high",
+    "predicted_label": "hihat_pedal",
+    "true_index": 14,
+    "predicted_index": 2,
+    "confidence": 0.98828125,
+    "top3": [
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.98828125
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.003787994384765625
+      },
+      {
+        "label": "hihat_foot_splash",
+        "index": 16,
+        "probability": 0.0016088485717773438
+      }
+    ]
+  },
+  {
+    "index": 216345,
+    "file": "audio/8d/8d3c7f65-c48b-5da3-9bcc-ca7407912dfb__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "snare",
+    "true_index": 10,
+    "predicted_index": 6,
+    "confidence": 0.98828125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98828125
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.006710052490234375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.001766204833984375
+      }
+    ]
+  },
+  {
+    "index": 237158,
+    "file": "audio/56/56ff776d-7b23-5f7e-9346-27e23f890eef__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "snare",
+    "true_index": 1,
+    "predicted_index": 6,
+    "confidence": 0.98828125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98828125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0038299560546875
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.0014705657958984375
+      }
+    ]
+  },
+  {
+    "index": 237698,
+    "file": "audio/02/02eb84b5-4121-54ed-a571-bb97e7ed1ef0__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.98828125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98828125
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.006404876708984375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0032196044921875
+      }
+    ]
+  },
+  {
+    "index": 85126,
+    "file": "audio/35/35e52451-a6d6-5129-b97f-2bb9b76186a9__snare.wav",
+    "true_label": "snare",
+    "predicted_label": "ride_bow",
+    "true_index": 6,
+    "predicted_index": 1,
+    "confidence": 0.98779296875,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.98779296875
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.006374359130859375
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.0016632080078125
+      }
+    ]
+  },
+  {
+    "index": 161660,
+    "file": "audio/24/2497aef9-9a6c-5b77-b13d-6cf7808b1e12__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "ride_bow",
+    "true_index": 0,
+    "predicted_index": 1,
+    "confidence": 0.98779296875,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.98779296875
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.005359649658203125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.002338409423828125
+      }
+    ]
+  },
+  {
+    "index": 172645,
+    "file": "audio/ff/ff26962a-db89-5583-beb6-3fc55709a922__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "tom_high",
+    "true_index": 2,
+    "predicted_index": 14,
+    "confidence": 0.98779296875,
+    "top3": [
+      {
+        "label": "tom_high",
+        "index": 14,
+        "probability": 0.98779296875
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.004871368408203125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0034198760986328125
+      }
+    ]
+  },
+  {
+    "index": 180765,
+    "file": "audio/e5/e5742999-9fa1-581f-94b9-b459c4113bba__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.98779296875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98779296875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0076904296875
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0016498565673828125
+      }
+    ]
+  },
+  {
+    "index": 184336,
+    "file": "audio/5d/5d180d66-6e9a-5eb5-bff5-d98fa67e68e5__snare.wav",
+    "true_label": "snare",
+    "predicted_label": "ride_bow",
+    "true_index": 6,
+    "predicted_index": 1,
+    "confidence": 0.98779296875,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.98779296875
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.003032684326171875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0024852752685546875
+      }
+    ]
+  },
+  {
+    "index": 228546,
+    "file": "audio/67/67763223-8e35-5b39-8fe0-3345fa260ab2__china.wav",
+    "true_label": "china",
+    "predicted_label": "snare",
+    "true_index": 5,
+    "predicted_index": 6,
+    "confidence": 0.98779296875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98779296875
+      },
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.003589630126953125
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.0024814605712890625
+      }
+    ]
+  },
+  {
+    "index": 243216,
+    "file": "audio/3e/3e34d7ca-1404-52b2-a28d-199166285036__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.98779296875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98779296875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00909423828125
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.00091552734375
+      }
+    ]
+  },
+  {
+    "index": 302842,
+    "file": "audio/ca/cacaba8a-56fc-5eb2-8ecb-e60b758c3d08__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.98779296875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98779296875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00923919677734375
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.0008826255798339844
+      }
+    ]
+  },
+  {
+    "index": 305842,
+    "file": "audio/91/9173d8c3-6396-599e-aaed-88da8feabe60__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "snare",
+    "true_index": 1,
+    "predicted_index": 6,
+    "confidence": 0.98779296875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98779296875
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.005092620849609375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00255584716796875
+      }
+    ]
+  },
+  {
+    "index": 32121,
+    "file": "audio/92/92d8d6f6-b8ef-526b-aa9d-035ffead5bfc__hihat_open.wav",
+    "true_label": "hihat_open",
+    "predicted_label": "tom_high",
+    "true_index": 4,
+    "predicted_index": 14,
+    "confidence": 0.9873046875,
+    "top3": [
+      {
+        "label": "tom_high",
+        "index": 14,
+        "probability": 0.9873046875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00634765625
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.002307891845703125
+      }
+    ]
+  },
+  {
+    "index": 173508,
+    "file": "audio/25/258bbafd-8b00-513d-a6ba-39a1c8fb609a__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "ride_bow",
+    "true_index": 0,
+    "predicted_index": 1,
+    "confidence": 0.9873046875,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.9873046875
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.00373077392578125
+      },
+      {
+        "label": "tom_high",
+        "index": 14,
+        "probability": 0.0026950836181640625
+      }
+    ]
+  },
+  {
+    "index": 179254,
+    "file": "audio/5d/5dc2ca2a-0979-5985-8d93-5e5ba9ca5029__china.wav",
+    "true_label": "china",
+    "predicted_label": "kick",
+    "true_index": 5,
+    "predicted_index": 0,
+    "confidence": 0.9873046875,
+    "top3": [
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.9873046875
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.00644683837890625
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.002349853515625
+      }
+    ]
+  },
+  {
+    "index": 186125,
+    "file": "audio/26/26ae1d6e-ad4a-505a-95fd-0b1ecff05696__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "ride_bow",
+    "true_index": 0,
+    "predicted_index": 1,
+    "confidence": 0.9873046875,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.9873046875
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.00395965576171875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00295257568359375
+      }
+    ]
+  },
+  {
+    "index": 221721,
+    "file": "audio/1b/1bfde904-4015-5282-8f6c-2780be792a0f__hihat_open.wav",
+    "true_label": "hihat_open",
+    "predicted_label": "hihat_closed",
+    "true_index": 4,
+    "predicted_index": 10,
+    "confidence": 0.9873046875,
+    "top3": [
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.9873046875
+      },
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.00421142578125
+      },
+      {
+        "label": "hihat_open",
+        "index": 4,
+        "probability": 0.0028533935546875
+      }
+    ]
+  },
+  {
+    "index": 266038,
+    "file": "audio/a0/a08990e5-dd18-5f28-ac47-1cf1f95289cc__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "snare",
+    "true_index": 10,
+    "predicted_index": 6,
+    "confidence": 0.9873046875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9873046875
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.005504608154296875
+      },
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.001972198486328125
+      }
+    ]
+  },
+  {
+    "index": 294578,
+    "file": "audio/33/334a4e4f-9199-5b66-af50-652db720c95d__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "snare",
+    "true_index": 1,
+    "predicted_index": 6,
+    "confidence": 0.9873046875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9873046875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0032558441162109375
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.0022182464599609375
+      }
+    ]
+  },
+  {
+    "index": 88,
+    "file": "audio/cb/cb936e54-09b0-5056-bdef-31c2548de266__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "snare",
+    "true_index": 0,
+    "predicted_index": 6,
+    "confidence": 0.98681640625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98681640625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00475311279296875
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.004734039306640625
+      }
+    ]
+  },
+  {
+    "index": 47664,
+    "file": "audio/73/73c9b064-7f28-5f80-b1e6-0bf657652f62__tom_low.wav",
+    "true_label": "tom_low",
+    "predicted_label": "hihat_pedal",
+    "true_index": 7,
+    "predicted_index": 2,
+    "confidence": 0.98681640625,
+    "top3": [
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.98681640625
+      },
+      {
+        "label": "tom_high",
+        "index": 14,
+        "probability": 0.003326416015625
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.0028781890869140625
+      }
+    ]
+  },
+  {
+    "index": 55998,
+    "file": "audio/d1/d18938a7-1993-577a-9efe-72ebc120bb46__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "ride_bow",
+    "true_index": 2,
+    "predicted_index": 1,
+    "confidence": 0.98681640625,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.98681640625
+      },
+      {
+        "label": "tom_high",
+        "index": 14,
+        "probability": 0.0032024383544921875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00262451171875
+      }
+    ]
+  },
+  {
+    "index": 193910,
+    "file": "audio/0d/0d2ab9f3-c75d-508f-a22c-341e5a5aff40__snare.wav",
+    "true_label": "snare",
+    "predicted_label": "hihat_pedal",
+    "true_index": 6,
+    "predicted_index": 2,
+    "confidence": 0.98681640625,
+    "top3": [
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.98681640625
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.005847930908203125
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.0022907257080078125
+      }
+    ]
+  },
+  {
+    "index": 277313,
+    "file": "audio/a0/a03c7c4d-77dc-5417-b821-9d49a5bc16fd__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "snare",
+    "true_index": 10,
+    "predicted_index": 6,
+    "confidence": 0.98681640625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98681640625
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.006938934326171875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0029582977294921875
+      }
+    ]
+  },
+  {
+    "index": 285568,
+    "file": "audio/35/35e2540e-681f-5537-9820-f5aa5b8de96c__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "snare",
+    "true_index": 1,
+    "predicted_index": 6,
+    "confidence": 0.98681640625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98681640625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00461578369140625
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0016908645629882812
+      }
+    ]
+  },
+  {
+    "index": 289796,
+    "file": "audio/aa/aa9577db-f416-5e05-96e2-26b2dc9b09ca__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "ride_bow",
+    "true_index": 2,
+    "predicted_index": 1,
+    "confidence": 0.98681640625,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.98681640625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.007007598876953125
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.004177093505859375
+      }
+    ]
+  },
+  {
+    "index": 33073,
+    "file": "audio/92/924a292c-eb20-5aaf-8611-16b994e4bb16__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "cross_stick",
+    "true_index": 2,
+    "predicted_index": 3,
+    "confidence": 0.986328125,
+    "top3": [
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.986328125
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.0038700103759765625
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.0036487579345703125
+      }
+    ]
+  },
+  {
+    "index": 138107,
+    "file": "audio/ad/adec1775-6361-58ff-a2a8-ebaf1abb9138__cross_stick.wav",
+    "true_label": "cross_stick",
+    "predicted_label": "ride_bow",
+    "true_index": 3,
+    "predicted_index": 1,
+    "confidence": 0.986328125,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.986328125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00640106201171875
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.0021152496337890625
+      }
+    ]
+  },
+  {
+    "index": 155447,
+    "file": "audio/7f/7f8c8046-d481-5f32-b52d-5c2bbae93b08__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "snare",
+    "true_index": 10,
+    "predicted_index": 6,
+    "confidence": 0.986328125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.986328125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00756072998046875
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.001735687255859375
+      }
+    ]
+  },
+  {
+    "index": 204561,
+    "file": "audio/9e/9ef9d98a-4df1-589b-901f-882b5f1cef2a__china.wav",
+    "true_label": "china",
+    "predicted_label": "snare",
+    "true_index": 5,
+    "predicted_index": 6,
+    "confidence": 0.986328125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.986328125
+      },
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.005504608154296875
+      },
+      {
+        "label": "tom_high",
+        "index": 14,
+        "probability": 0.001697540283203125
+      }
+    ]
+  },
+  {
+    "index": 234751,
+    "file": "audio/83/838d1b4c-8f25-5093-ba94-c704657a89e5__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "snare",
+    "true_index": 10,
+    "predicted_index": 6,
+    "confidence": 0.986328125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.986328125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.005832672119140625
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0042572021484375
+      }
+    ]
+  },
+  {
+    "index": 245222,
+    "file": "audio/d0/d09928f1-97e7-57ee-9213-ada93c195d16__cross_stick.wav",
+    "true_label": "cross_stick",
+    "predicted_label": "kick",
+    "true_index": 3,
+    "predicted_index": 0,
+    "confidence": 0.986328125,
+    "top3": [
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.986328125
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.00206756591796875
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.0019779205322265625
+      }
+    ]
+  },
+  {
+    "index": 245962,
+    "file": "audio/df/df64b667-2b85-5a7e-bc01-79b78f18c620__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.986328125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.986328125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00447845458984375
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.0025882720947265625
+      }
+    ]
+  },
+  {
+    "index": 274012,
+    "file": "audio/57/5798c7b4-141e-56dd-8978-9ec005e00de6__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "snare",
+    "true_index": 0,
+    "predicted_index": 6,
+    "confidence": 0.986328125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.986328125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.006671905517578125
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.00353240966796875
+      }
+    ]
+  },
+  {
+    "index": 289979,
+    "file": "audio/d7/d74b9296-453f-54a6-a6cc-399c2fe0d401__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.986328125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.986328125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00988006591796875
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.0010709762573242188
+      }
+    ]
+  },
+  {
+    "index": 293978,
+    "file": "audio/20/20c24df6-399d-5fdd-bf6b-f88102318158__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.986328125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.986328125
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.00458526611328125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0045318603515625
+      }
+    ]
+  },
+  {
+    "index": 304784,
+    "file": "audio/18/18a77b81-1606-5213-9de4-9571b7436764__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.986328125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.986328125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.006683349609375
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.003223419189453125
+      }
+    ]
+  },
+  {
+    "index": 4923,
+    "file": "audio/b4/b4f8ca0f-8438-59cc-8b9d-57c005273518__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "kick",
+    "true_index": 1,
+    "predicted_index": 0,
+    "confidence": 0.98583984375,
+    "top3": [
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.98583984375
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.005462646484375
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0022525787353515625
+      }
+    ]
+  },
+  {
+    "index": 73689,
+    "file": "audio/f6/f6701be0-5ae6-5695-809e-f759d18f9810__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.98583984375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98583984375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0052032470703125
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.00443267822265625
+      }
+    ]
+  },
+  {
+    "index": 157723,
+    "file": "audio/89/89c76bcf-62ac-59ab-9c9f-76871e487858__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "kick",
+    "true_index": 10,
+    "predicted_index": 0,
+    "confidence": 0.98583984375,
+    "top3": [
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.98583984375
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.00664520263671875
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.0039520263671875
+      }
+    ]
+  },
+  {
+    "index": 220907,
+    "file": "audio/8c/8cc7bab6-5f01-5783-ba6c-14e3ff642dcb__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "snare",
+    "true_index": 10,
+    "predicted_index": 6,
+    "confidence": 0.98583984375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98583984375
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.006839752197265625
+      },
+      {
+        "label": "tom_high",
+        "index": 14,
+        "probability": 0.0026264190673828125
+      }
+    ]
+  },
+  {
+    "index": 225862,
+    "file": "audio/77/77cd5804-55ff-58aa-907e-b0cf287ada47__hihat_open.wav",
+    "true_label": "hihat_open",
+    "predicted_label": "hihat_closed",
+    "true_index": 4,
+    "predicted_index": 10,
+    "confidence": 0.98583984375,
+    "top3": [
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.98583984375
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.004154205322265625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0024280548095703125
+      }
+    ]
+  },
+  {
+    "index": 248331,
+    "file": "audio/c2/c28bcb5e-5f82-5501-ba2c-e3127eaacf08__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "kick",
+    "true_index": 10,
+    "predicted_index": 0,
+    "confidence": 0.98583984375,
+    "top3": [
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.98583984375
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0076904296875
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.0024394989013671875
+      }
+    ]
+  },
+  {
+    "index": 252667,
+    "file": "audio/69/69638751-1c3f-5df1-a466-db57d805dc0f__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.98583984375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98583984375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00998687744140625
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.0013580322265625
+      }
+    ]
+  },
+  {
+    "index": 275490,
+    "file": "audio/9a/9a047fec-e7d2-5c09-b54d-d5f92746db31__ride_bell.wav",
+    "true_label": "ride_bell",
+    "predicted_label": "snare",
+    "true_index": 13,
+    "predicted_index": 6,
+    "confidence": 0.98583984375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98583984375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00891876220703125
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.0012540817260742188
+      }
+    ]
+  },
+  {
+    "index": 166000,
+    "file": "audio/23/2336ea2f-7c8b-54ba-a633-bc4ea096a650__snare.wav",
+    "true_label": "snare",
+    "predicted_label": "kick",
+    "true_index": 6,
+    "predicted_index": 0,
+    "confidence": 0.9853515625,
+    "top3": [
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.9853515625
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.006931304931640625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0017557144165039062
+      }
+    ]
+  },
+  {
+    "index": 200877,
+    "file": "audio/81/81887491-ea0c-5a97-aebe-bd450609e68e__snare.wav",
+    "true_label": "snare",
+    "predicted_label": "ride_bow",
+    "true_index": 6,
+    "predicted_index": 1,
+    "confidence": 0.9853515625,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.9853515625
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.003864288330078125
+      },
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.0026721954345703125
+      }
+    ]
+  },
+  {
+    "index": 212314,
+    "file": "audio/42/42e08de0-f81b-5bec-b3e6-b05db9364562__tom_high.wav",
+    "true_label": "tom_high",
+    "predicted_label": "snare",
+    "true_index": 14,
+    "predicted_index": 6,
+    "confidence": 0.9853515625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9853515625
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.004180908203125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0027484893798828125
+      }
+    ]
+  },
+  {
+    "index": 223919,
+    "file": "audio/a3/a339666e-41e1-539a-9ea9-ea190db2be06__ride_bell.wav",
+    "true_label": "ride_bell",
+    "predicted_label": "hihat_pedal",
+    "true_index": 13,
+    "predicted_index": 2,
+    "confidence": 0.9853515625,
+    "top3": [
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.9853515625
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.00997161865234375
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.0013933181762695312
+      }
+    ]
+  },
+  {
+    "index": 250132,
+    "file": "audio/8e/8e61c11a-a134-5a45-becb-db97bfff1c78__ride_bell.wav",
+    "true_label": "ride_bell",
+    "predicted_label": "snare",
+    "true_index": 13,
+    "predicted_index": 6,
+    "confidence": 0.9853515625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9853515625
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.0070953369140625
+      },
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.001926422119140625
+      }
+    ]
+  },
+  {
+    "index": 251695,
+    "file": "audio/9a/9a24e983-70e1-560a-add3-c24f4261601c__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.9853515625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9853515625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.011749267578125
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0008854866027832031
+      }
+    ]
+  },
+  {
+    "index": 261442,
+    "file": "audio/28/284ad98a-0895-5912-8c6d-3e916e20e090__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.9853515625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9853515625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.005344390869140625
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0024738311767578125
+      }
+    ]
+  },
+  {
+    "index": 264158,
+    "file": "audio/b6/b6de14ce-d5cb-5ef5-95ee-c6a2be97131f__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "snare",
+    "true_index": 0,
+    "predicted_index": 6,
+    "confidence": 0.9853515625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9853515625
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.005001068115234375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00461578369140625
+      }
+    ]
+  },
+  {
+    "index": 3403,
+    "file": "audio/5a/5a12aadc-072c-5f69-9a68-6d5be2815b31__china.wav",
+    "true_label": "china",
+    "predicted_label": "ride_bow",
+    "true_index": 5,
+    "predicted_index": 1,
+    "confidence": 0.98486328125,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.98486328125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.005096435546875
+      },
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.0028400421142578125
+      }
+    ]
+  },
+  {
+    "index": 21441,
+    "file": "audio/30/30b32ba1-dbd9-5c1b-866a-b7e8c9b6f718__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.98486328125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98486328125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00634002685546875
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.0026416778564453125
+      }
+    ]
+  },
+  {
+    "index": 22608,
+    "file": "audio/ea/eafc0106-0733-5f36-ac7a-cf2937d3f95e__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "ride_bow",
+    "true_index": 2,
+    "predicted_index": 1,
+    "confidence": 0.98486328125,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.98486328125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.004352569580078125
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.003932952880859375
+      }
+    ]
+  },
+  {
+    "index": 45564,
+    "file": "audio/5b/5b3e7189-57cd-54fb-873c-5e706f57fdc9__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.98486328125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98486328125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.010711669921875
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.002777099609375
+      }
+    ]
+  },
+  {
+    "index": 60663,
+    "file": "audio/5b/5b12e054-7bb0-50b2-a98b-1fd5c8fe7f6e__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.98486328125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98486328125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00467681884765625
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.003917694091796875
+      }
+    ]
+  },
+  {
+    "index": 117563,
+    "file": "audio/9f/9ffcb972-e899-537a-8603-ef2465d97431__hihat_open.wav",
+    "true_label": "hihat_open",
+    "predicted_label": "hihat_closed",
+    "true_index": 4,
+    "predicted_index": 10,
+    "confidence": 0.98486328125,
+    "top3": [
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.98486328125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.003925323486328125
+      },
+      {
+        "label": "hihat_open",
+        "index": 4,
+        "probability": 0.002368927001953125
+      }
+    ]
+  },
+  {
+    "index": 176316,
+    "file": "audio/83/836b8991-44e1-52a9-9d2d-d57946ca4737__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "ride_bow",
+    "true_index": 2,
+    "predicted_index": 1,
+    "confidence": 0.98486328125,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.98486328125
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.0034809112548828125
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.002399444580078125
+      }
+    ]
+  },
+  {
+    "index": 248024,
+    "file": "audio/4e/4e467f1b-40e4-5d0a-b8b9-20515074597f__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "kick",
+    "true_index": 10,
+    "predicted_index": 0,
+    "confidence": 0.98486328125,
+    "top3": [
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.98486328125
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.01096343994140625
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.0015382766723632812
+      }
+    ]
+  },
+  {
+    "index": 18517,
+    "file": "audio/80/80367a2a-9a6c-554f-b3fe-e4d01d3c7714__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "snare",
+    "true_index": 1,
+    "predicted_index": 6,
+    "confidence": 0.984375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.984375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0036773681640625
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.0027446746826171875
+      }
+    ]
+  },
+  {
+    "index": 25803,
+    "file": "audio/f7/f78a0aaf-aa16-5aec-8ce7-4c829cc04d0b__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "snare",
+    "true_index": 10,
+    "predicted_index": 6,
+    "confidence": 0.984375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.984375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.005733489990234375
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.00261688232421875
+      }
+    ]
+  },
+  {
+    "index": 88949,
+    "file": "audio/a0/a0d06d6c-794d-5cfb-b07b-2d371cbef376__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "kick",
+    "true_index": 10,
+    "predicted_index": 0,
+    "confidence": 0.984375,
+    "top3": [
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.984375
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.013397216796875
+      },
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.0005183219909667969
+      }
+    ]
+  },
+  {
+    "index": 159852,
+    "file": "audio/93/93b55f0d-7a58-5197-81ef-c119e68970c2__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "snare",
+    "true_index": 1,
+    "predicted_index": 6,
+    "confidence": 0.984375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.984375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00875091552734375
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.00386810302734375
+      }
+    ]
+  },
+  {
+    "index": 175517,
+    "file": "audio/9e/9ec86974-c47a-5e27-b59f-a2d834b94c94__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "cross_stick",
+    "true_index": 2,
+    "predicted_index": 3,
+    "confidence": 0.984375,
+    "top3": [
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.984375
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.005657196044921875
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0030841827392578125
+      }
+    ]
+  },
+  {
+    "index": 189939,
+    "file": "audio/ed/ed391fed-034d-5edf-bd13-1da5a599122a__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.984375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.984375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00875091552734375
+      },
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.0010519027709960938
+      }
+    ]
+  },
+  {
+    "index": 229408,
+    "file": "audio/88/88b451f4-02f7-5145-8077-e4fcf156d564__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "kick",
+    "true_index": 1,
+    "predicted_index": 0,
+    "confidence": 0.984375,
+    "top3": [
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.984375
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.0038166046142578125
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.0031185150146484375
+      }
+    ]
+  },
+  {
+    "index": 72018,
+    "file": "audio/a6/a6eb07ab-7394-53a9-bbd7-8db5206e6323__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "snare",
+    "true_index": 1,
+    "predicted_index": 6,
+    "confidence": 0.98388671875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98388671875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00665283203125
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.0023937225341796875
+      }
+    ]
+  },
+  {
+    "index": 140730,
+    "file": "audio/71/71edda59-f81d-5a88-a49b-0cdbae0b490b__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "snare",
+    "true_index": 0,
+    "predicted_index": 6,
+    "confidence": 0.98388671875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98388671875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0112152099609375
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.0016679763793945312
+      }
+    ]
+  },
+  {
+    "index": 146361,
+    "file": "audio/c0/c033f860-bc12-55b8-8b49-b5945f3f31f2__tom_high.wav",
+    "true_label": "tom_high",
+    "predicted_label": "ride_bow",
+    "true_index": 14,
+    "predicted_index": 1,
+    "confidence": 0.98388671875,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.98388671875
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0057830810546875
+      },
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.0030651092529296875
+      }
+    ]
+  },
+  {
+    "index": 254335,
+    "file": "audio/e8/e85a7e6a-f190-515a-90c7-1380e582a312__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "snare",
+    "true_index": 1,
+    "predicted_index": 6,
+    "confidence": 0.98388671875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98388671875
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.015228271484375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0008358955383300781
+      }
+    ]
+  },
+  {
+    "index": 22688,
+    "file": "audio/eb/ebef5958-aadd-5240-9a79-4f8c45dbe3b7__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "ride_bow",
+    "true_index": 2,
+    "predicted_index": 1,
+    "confidence": 0.9833984375,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.9833984375
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.008056640625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00405120849609375
+      }
+    ]
+  },
+  {
+    "index": 28105,
+    "file": "audio/6d/6d20366a-c32b-5d83-936b-ff6b62f51146__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "ride_bow",
+    "true_index": 0,
+    "predicted_index": 1,
+    "confidence": 0.9833984375,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.9833984375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.007080078125
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.00443267822265625
+      }
+    ]
+  },
+  {
+    "index": 75252,
+    "file": "audio/f6/f678bb36-f14a-52fa-9892-bdc287508741__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.9833984375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9833984375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.006214141845703125
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.00484466552734375
+      }
+    ]
+  },
+  {
+    "index": 90579,
+    "file": "audio/c8/c8aace00-fcae-57eb-b3f5-c1951ced2f32__aux_percussion.wav",
+    "true_label": "aux_percussion",
+    "predicted_label": "snare",
+    "true_index": 15,
+    "predicted_index": 6,
+    "confidence": 0.9833984375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9833984375
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.007205963134765625
+      },
+      {
+        "label": "tom_high",
+        "index": 14,
+        "probability": 0.002742767333984375
+      }
+    ]
+  },
+  {
+    "index": 97089,
+    "file": "audio/15/1595eda2-52bf-57c4-b2c1-225e176895ac__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "hihat_closed",
+    "true_index": 0,
+    "predicted_index": 10,
+    "confidence": 0.9833984375,
+    "top3": [
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.9833984375
+      },
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.007053375244140625
+      },
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.0031871795654296875
+      }
+    ]
+  },
+  {
+    "index": 158237,
+    "file": "audio/4a/4a7ad117-2501-52d6-bc8f-7a2d2228461d__snare.wav",
+    "true_label": "snare",
+    "predicted_label": "hihat_pedal",
+    "true_index": 6,
+    "predicted_index": 2,
+    "confidence": 0.9833984375,
+    "top3": [
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.9833984375
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.0032825469970703125
+      },
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.0025196075439453125
+      }
+    ]
+  },
+  {
+    "index": 205885,
+    "file": "audio/e5/e5e02d05-1b80-5cf5-b423-b42b8db5a0f7__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "snare",
+    "true_index": 1,
+    "predicted_index": 6,
+    "confidence": 0.9833984375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9833984375
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.00600433349609375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00449371337890625
+      }
+    ]
+  },
+  {
+    "index": 246503,
+    "file": "audio/05/058419eb-51c1-519c-81a2-5de56dc1c05b__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.9833984375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9833984375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0058135986328125
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.0034885406494140625
+      }
+    ]
+  },
+  {
+    "index": 249901,
+    "file": "audio/87/87a19633-e7fe-5d5e-a26c-15ac7e60367f__tom_low.wav",
+    "true_label": "tom_low",
+    "predicted_label": "snare",
+    "true_index": 7,
+    "predicted_index": 6,
+    "confidence": 0.9833984375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9833984375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.006931304931640625
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.0019588470458984375
+      }
+    ]
+  },
+  {
+    "index": 253920,
+    "file": "audio/8a/8af10101-e616-52ff-a04c-f3d931bdbedd__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "snare",
+    "true_index": 0,
+    "predicted_index": 6,
+    "confidence": 0.9833984375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9833984375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.01094818115234375
+      },
+      {
+        "label": "hihat_foot_splash",
+        "index": 16,
+        "probability": 0.0019931793212890625
+      }
+    ]
+  },
+  {
+    "index": 1678,
+    "file": "audio/6b/6bb1e1bc-e12f-562b-98f7-c31e191bf11f__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "snare",
+    "true_index": 1,
+    "predicted_index": 6,
+    "confidence": 0.98291015625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98291015625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0036983489990234375
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.002994537353515625
+      }
+    ]
+  },
+  {
+    "index": 4175,
+    "file": "audio/dd/dd72b643-9c82-5612-9a88-25cdbc63a3fb__hihat_open.wav",
+    "true_label": "hihat_open",
+    "predicted_label": "hihat_closed",
+    "true_index": 4,
+    "predicted_index": 10,
+    "confidence": 0.98291015625,
+    "top3": [
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.98291015625
+      },
+      {
+        "label": "hihat_open",
+        "index": 4,
+        "probability": 0.00406646728515625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.003398895263671875
+      }
+    ]
+  },
+  {
+    "index": 6562,
+    "file": "audio/10/10bbf051-2903-5137-bdd7-22111e19765b__hihat_open.wav",
+    "true_label": "hihat_open",
+    "predicted_label": "hihat_closed",
+    "true_index": 4,
+    "predicted_index": 10,
+    "confidence": 0.98291015625,
+    "top3": [
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.98291015625
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.004192352294921875
+      },
+      {
+        "label": "hihat_open",
+        "index": 4,
+        "probability": 0.0038623809814453125
+      }
+    ]
+  },
+  {
+    "index": 39268,
+    "file": "audio/f7/f751d038-2383-57c3-a5f5-22d0f1e1f4cf__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.98291015625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98291015625
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0058441162109375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.005664825439453125
+      }
+    ]
+  },
+  {
+    "index": 48543,
+    "file": "audio/95/952c2811-0c11-5f4f-b21d-4785e66e3c03__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "ride_bow",
+    "true_index": 0,
+    "predicted_index": 1,
+    "confidence": 0.98291015625,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.98291015625
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.014404296875
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.0011234283447265625
+      }
+    ]
+  },
+  {
+    "index": 75184,
+    "file": "audio/8d/8d381364-c53c-5201-8090-ddb8ba261aa7__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "hihat_pedal",
+    "true_index": 1,
+    "predicted_index": 2,
+    "confidence": 0.98291015625,
+    "top3": [
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.98291015625
+      },
+      {
+        "label": "hihat_foot_splash",
+        "index": 16,
+        "probability": 0.0098876953125
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.0029392242431640625
+      }
+    ]
+  },
+  {
+    "index": 164821,
+    "file": "audio/31/3122ebfd-6c67-5894-931f-ab3a7519af03__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "kick",
+    "true_index": 10,
+    "predicted_index": 0,
+    "confidence": 0.98291015625,
+    "top3": [
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.98291015625
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.005367279052734375
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.004695892333984375
+      }
+    ]
+  },
+  {
+    "index": 171738,
+    "file": "audio/80/80c5ae2e-f816-566d-a0b2-bd42bb56c839__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "snare",
+    "true_index": 1,
+    "predicted_index": 6,
+    "confidence": 0.98291015625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98291015625
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.007274627685546875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.002696990966796875
+      }
+    ]
+  },
+  {
+    "index": 263302,
+    "file": "audio/a1/a1da076e-cb7d-5fa5-96ba-d91bf53ebd2e__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "snare",
+    "true_index": 1,
+    "predicted_index": 6,
+    "confidence": 0.98291015625,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98291015625
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.00675201416015625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.004180908203125
+      }
+    ]
+  },
+  {
+    "index": 305030,
+    "file": "audio/91/91bdbc92-0f7b-58d6-bb86-30c097cbfbf1__hihat_open.wav",
+    "true_label": "hihat_open",
+    "predicted_label": "hihat_closed",
+    "true_index": 4,
+    "predicted_index": 10,
+    "confidence": 0.98291015625,
+    "top3": [
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.98291015625
+      },
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.003604888916015625
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.0032558441162109375
+      }
+    ]
+  },
+  {
+    "index": 307083,
+    "file": "audio/88/88f4142d-c6e1-5f62-a033-865e5bc3babc__snare.wav",
+    "true_label": "snare",
+    "predicted_label": "hihat_pedal",
+    "true_index": 6,
+    "predicted_index": 2,
+    "confidence": 0.98291015625,
+    "top3": [
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.98291015625
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.01279449462890625
+      },
+      {
+        "label": "hihat_foot_splash",
+        "index": 16,
+        "probability": 0.002956390380859375
+      }
+    ]
+  },
+  {
+    "index": 24674,
+    "file": "audio/7c/7c9b17a0-2613-5b24-83a2-510eb2a317d1__hihat_open.wav",
+    "true_label": "hihat_open",
+    "predicted_label": "hihat_closed",
+    "true_index": 4,
+    "predicted_index": 10,
+    "confidence": 0.982421875,
+    "top3": [
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.982421875
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.004459381103515625
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.0034198760986328125
+      }
+    ]
+  },
+  {
+    "index": 25463,
+    "file": "audio/03/03039754-7c51-53c4-a9b0-a52adbd6744a__hihat_open.wav",
+    "true_label": "hihat_open",
+    "predicted_label": "hihat_closed",
+    "true_index": 4,
+    "predicted_index": 10,
+    "confidence": 0.982421875,
+    "top3": [
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.982421875
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.006610870361328125
+      },
+      {
+        "label": "hihat_open",
+        "index": 4,
+        "probability": 0.0023860931396484375
+      }
+    ]
+  },
+  {
+    "index": 82833,
+    "file": "audio/d8/d882736e-d64c-534b-af93-5a2be0bf52d5__tom_low.wav",
+    "true_label": "tom_low",
+    "predicted_label": "hihat_pedal",
+    "true_index": 7,
+    "predicted_index": 2,
+    "confidence": 0.982421875,
+    "top3": [
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.982421875
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.00396728515625
+      },
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.0038127899169921875
+      }
+    ]
+  },
+  {
+    "index": 138832,
+    "file": "audio/95/9560d297-da9a-5947-9013-70506b4609f8__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "kick",
+    "true_index": 10,
+    "predicted_index": 0,
+    "confidence": 0.982421875,
+    "top3": [
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.982421875
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.01184844970703125
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.001995086669921875
+      }
+    ]
+  },
+  {
+    "index": 194521,
+    "file": "audio/c5/c5d8c93b-d536-54c3-af10-4b2878db3b50__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "ride_bow",
+    "true_index": 2,
+    "predicted_index": 1,
+    "confidence": 0.982421875,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.982421875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.01099395751953125
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.0018110275268554688
+      }
+    ]
+  },
+  {
+    "index": 202746,
+    "file": "audio/b7/b733d3df-5353-58cb-b35a-0761e31525b1__ride_bell.wav",
+    "true_label": "ride_bell",
+    "predicted_label": "snare",
+    "true_index": 13,
+    "predicted_index": 6,
+    "confidence": 0.982421875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.982421875
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.0095367431640625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0038852691650390625
+      }
+    ]
+  },
+  {
+    "index": 211485,
+    "file": "audio/38/38b2385c-8784-5c92-95d0-f02d0170ed79__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "ride_bow",
+    "true_index": 2,
+    "predicted_index": 1,
+    "confidence": 0.982421875,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.982421875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00803375244140625
+      },
+      {
+        "label": "cross_stick",
+        "index": 3,
+        "probability": 0.0039215087890625
+      }
+    ]
+  },
+  {
+    "index": 217296,
+    "file": "audio/15/150cb410-c45f-58c6-93b4-ad77f5ebdd42__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "snare",
+    "true_index": 0,
+    "predicted_index": 6,
+    "confidence": 0.982421875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.982421875
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.00560760498046875
+      },
+      {
+        "label": "tom_high",
+        "index": 14,
+        "probability": 0.0022449493408203125
+      }
+    ]
+  },
+  {
+    "index": 304864,
+    "file": "audio/77/77aac053-c5c3-5f90-bcac-d2cf9c904e6f__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.982421875,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.982421875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0106201171875
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0018854141235351562
+      }
+    ]
+  },
+  {
+    "index": 101,
+    "file": "audio/82/825f8049-0ecb-5554-bf87-b46e93c2f1d2__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.98193359375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98193359375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.00640106201171875
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.004543304443359375
+      }
+    ]
+  },
+  {
+    "index": 13643,
+    "file": "audio/b2/b2aebe98-a72a-56b1-aa2d-25d76acbbc97__kick.wav",
+    "true_label": "kick",
+    "predicted_label": "ride_bow",
+    "true_index": 0,
+    "predicted_index": 1,
+    "confidence": 0.98193359375,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.98193359375
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.00824737548828125
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.0030078887939453125
+      }
+    ]
+  },
+  {
+    "index": 22966,
+    "file": "audio/a6/a61e7c13-5e95-5f68-9eda-cc6d73c065b4__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "snare",
+    "true_index": 1,
+    "predicted_index": 6,
+    "confidence": 0.98193359375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98193359375
+      },
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.006488800048828125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.004886627197265625
+      }
+    ]
+  },
+  {
+    "index": 56922,
+    "file": "audio/04/04a03d8a-a12d-5269-82f1-574bf749b726__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "ride_bow",
+    "true_index": 2,
+    "predicted_index": 1,
+    "confidence": 0.98193359375,
+    "top3": [
+      {
+        "label": "ride_bow",
+        "index": 1,
+        "probability": 0.98193359375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0085296630859375
+      },
+      {
+        "label": "ride_bell",
+        "index": 13,
+        "probability": 0.004642486572265625
+      }
+    ]
+  },
+  {
+    "index": 181214,
+    "file": "audio/0f/0fe14857-7a2c-52ea-8003-78d94ad87dd4__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.98193359375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98193359375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.007465362548828125
+      },
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.0024280548095703125
+      }
+    ]
+  },
+  {
+    "index": 198636,
+    "file": "audio/83/8306c3b3-7227-5e30-9e4d-6db68a9ccac3__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.98193359375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98193359375
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.01154327392578125
+      },
+      {
+        "label": "tom_high",
+        "index": 14,
+        "probability": 0.0014142990112304688
+      }
+    ]
+  },
+  {
+    "index": 255356,
+    "file": "audio/da/da6c80b0-e88e-5a73-9557-6d730c30601d__hihat_pedal.wav",
+    "true_label": "hihat_pedal",
+    "predicted_label": "snare",
+    "true_index": 2,
+    "predicted_index": 6,
+    "confidence": 0.98193359375,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.98193359375
+      },
+      {
+        "label": "tom_high",
+        "index": 14,
+        "probability": 0.005954742431640625
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.004917144775390625
+      }
+    ]
+  },
+  {
+    "index": 279072,
+    "file": "audio/ee/ee5317b7-bdce-5435-b801-16d2cc5be2c3__tom_low.wav",
+    "true_label": "tom_low",
+    "predicted_label": "kick",
+    "true_index": 7,
+    "predicted_index": 0,
+    "confidence": 0.98193359375,
+    "top3": [
+      {
+        "label": "kick",
+        "index": 0,
+        "probability": 0.98193359375
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.00565338134765625
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.0031566619873046875
+      }
+    ]
+  },
+  {
+    "index": 2858,
+    "file": "audio/3a/3aa402f1-c6a4-5ea7-9a3c-7da4450b3f19__ride_bow.wav",
+    "true_label": "ride_bow",
+    "predicted_label": "snare",
+    "true_index": 1,
+    "predicted_index": 6,
+    "confidence": 0.9814453125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9814453125
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.00994873046875
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.0025272369384765625
+      }
+    ]
+  },
+  {
+    "index": 41114,
+    "file": "audio/e6/e61410b1-9e9c-57ac-918f-692f96cf85bb__cross_stick.wav",
+    "true_label": "cross_stick",
+    "predicted_label": "snare",
+    "true_index": 3,
+    "predicted_index": 6,
+    "confidence": 0.9814453125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9814453125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.007442474365234375
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.0030059814453125
+      }
+    ]
+  },
+  {
+    "index": 99467,
+    "file": "audio/87/877aef91-d912-5e9a-8b43-ea55799672e3__hihat_closed.wav",
+    "true_label": "hihat_closed",
+    "predicted_label": "snare",
+    "true_index": 10,
+    "predicted_index": 6,
+    "confidence": 0.9814453125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9814453125
+      },
+      {
+        "label": "hihat_pedal",
+        "index": 2,
+        "probability": 0.01230621337890625
+      },
+      {
+        "label": "hihat_closed",
+        "index": 10,
+        "probability": 0.0027675628662109375
+      }
+    ]
+  },
+  {
+    "index": 106375,
+    "file": "audio/fd/fd0f97c7-c117-5045-8f1c-d8337da4457d__china.wav",
+    "true_label": "china",
+    "predicted_label": "snare",
+    "true_index": 5,
+    "predicted_index": 6,
+    "confidence": 0.9814453125,
+    "top3": [
+      {
+        "label": "snare",
+        "index": 6,
+        "probability": 0.9814453125
+      },
+      {
+        "label": "china",
+        "index": 5,
+        "probability": 0.0097198486328125
+      },
+      {
+        "label": "tom_low",
+        "index": 7,
+        "probability": 0.00213623046875
+      }
+    ]
+  }
+]

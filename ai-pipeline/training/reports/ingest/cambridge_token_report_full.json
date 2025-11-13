@@ -1,0 +1,431 @@
+{
+  "sessions": 620,
+  "total_tracks": 18000,
+  "classified_tracks": 3710,
+  "unknown_track_count": 393,
+  "unknown_tracks_sample": [
+    "Fergessen_BackFromTheStart_Full:Fergessen_BackFromTheStart_Full/Fergessen_BackFromTheStart_Full/08-130624_1035.wav",
+    "Fergessen_BackFromTheStart_Full:Fergessen_BackFromTheStart_Full/Fergessen_BackFromTheStart_Full/11-130624_1035.wav",
+    "Fergessen_BackFromTheStart_Full:Fergessen_BackFromTheStart_Full/Fergessen_BackFromTheStart_Full/15-130624_1040.wav",
+    "Forkupines_SugarFaith_Full:Forkupines_SugarFaith_Full/Forkupines_SugarFaith_Full/09_RIde.wav",
+    "HannesKeseberg_YouKnowBetter_Full:HannesKeseberg_YouKnowBetter_Full/HannesKeseberg_YouKnowBetter_Full/11_Timbale.wav",
+    "HannesKeseberg_YouKnowBetter_Full:HannesKeseberg_YouKnowBetter_Full/HannesKeseberg_YouKnowBetter_Full/32_Whistle1.wav",
+    "HannesKeseberg_YouKnowBetter_Full:HannesKeseberg_YouKnowBetter_Full/HannesKeseberg_YouKnowBetter_Full/33_Whistle2.wav",
+    "HannesKeseberg_YouKnowBetter_Full:HannesKeseberg_YouKnowBetter_Full/HannesKeseberg_YouKnowBetter_Full/34_Whistle3.wav",
+    "Hazael_AMiLado_Full:Hazael_AMiLado_Full/Hazael_AMiLado_Full/09_Guaracha.wav",
+    "Hazael_AMiLado_Full:Hazael_AMiLado_Full/Hazael_AMiLado_Full/10_GuarachaCumbia.wav",
+    "Hazael_AMiLado_Full:Hazael_AMiLado_Full/Hazael_AMiLado_Full/11_Paliteo.wav",
+    "Hazael_AMiLado_Full:Hazael_AMiLado_Full/Hazael_AMiLado_Full/12_Guache.wav",
+    "Hazael_AMiLado_Full:Hazael_AMiLado_Full/Hazael_AMiLado_Full/13_Llamador.wav",
+    "HollowGround_LeftBlind_Full:HollowGround_LeftBlind_Full/HollowGround_LeftBlind_Full/10_Gangs.wav",
+    "IAmCassettes_Believe:IAmCassettes_Believe/IAmCassettes_Believe/ACT L.wav",
+    "IAmCassettes_Believe:IAmCassettes_Believe/IAmCassettes_Believe/ACT Lead.wav",
+    "IAmCassettes_Believe:IAmCassettes_Believe/IAmCassettes_Believe/ACT Manley Center.wav",
+    "IAmCassettes_Believe:IAmCassettes_Believe/IAmCassettes_Believe/ACT R.wav",
+    "IAmCassettes_Believe:IAmCassettes_Believe/IAmCassettes_Believe/Glockenspiel.wav",
+    "IAmCassettes_Believe:IAmCassettes_Believe/IAmCassettes_Believe/HH.wav",
+    "IAmCassettes_Believe:IAmCassettes_Believe/IAmCassettes_Believe/Oh Left.wav",
+    "IAmCassettes_Believe:IAmCassettes_Believe/IAmCassettes_Believe/Oh Rright.wav",
+    "IanDearden_TeraniaCreekWalking_Full:IanDearden_TeraniaCreekWalking_Full/IanDearden_TeraniaCreekWalking_Full/19_OrchestraHit.wav",
+    "IkebeShakedown_TheLastStand_Full:IkebeShakedown_TheLastStand_Full/7. Ikebe Shakedown - The Last Stand/BONE_06-08.wav",
+    "IlmariKontia_Funkkihillo_Full:IlmariKontia_Funkkihillo_Full/IlmariKontia_Funkkihillo_Full/03_VinylNoise.wav"
+  ],
+  "unknown_tokens_top": [
+    {
+      "value": "wav",
+      "count": 393
+    },
+    {
+      "value": "full",
+      "count": 385
+    },
+    {
+      "value": "the",
+      "count": 63
+    },
+    {
+      "value": "sunshine",
+      "count": 32
+    },
+    {
+      "value": "mr",
+      "count": 28
+    },
+    {
+      "value": "copper",
+      "count": 24
+    },
+    {
+      "value": "lyn",
+      "count": 24
+    },
+    {
+      "value": "simon",
+      "count": 24
+    },
+    {
+      "value": "am",
+      "count": 22
+    },
+    {
+      "value": "of",
+      "count": 22
+    },
+    {
+      "value": "04",
+      "count": 21
+    },
+    {
+      "value": "01",
+      "count": 21
+    },
+    {
+      "value": "07",
+      "count": 19
+    },
+    {
+      "value": "ardelli",
+      "count": 19
+    },
+    {
+      "value": "johna",
+      "count": 19
+    },
+    {
+      "value": "asiza",
+      "count": 19
+    },
+    {
+      "value": "and",
+      "count": 19
+    },
+    {
+      "value": "session",
+      "count": 18
+    },
+    {
+      "value": "jeff",
+      "count": 18
+    },
+    {
+      "value": "hirata",
+      "count": 18
+    },
+    {
+      "value": "kangoro",
+      "count": 18
+    },
+    {
+      "value": "steel",
+      "count": 17
+    },
+    {
+      "value": "22",
+      "count": 17
+    },
+    {
+      "value": "magician",
+      "count": 17
+    },
+    {
+      "value": "magicians",
+      "count": 17
+    },
+    {
+      "value": "nephew",
+      "count": 17
+    },
+    {
+      "value": "m",
+      "count": 16
+    },
+    {
+      "value": "flag",
+      "count": 16
+    },
+    {
+      "value": "flags",
+      "count": 16
+    },
+    {
+      "value": "mr1103",
+      "count": 16
+    },
+    {
+      "value": "elec",
+      "count": 16
+    },
+    {
+      "value": "silence",
+      "count": 16
+    },
+    {
+      "value": "symphony",
+      "count": 16
+    },
+    {
+      "value": "moon",
+      "count": 16
+    },
+    {
+      "value": "09",
+      "count": 14
+    },
+    {
+      "value": "iron",
+      "count": 14
+    },
+    {
+      "value": "point",
+      "count": 14
+    },
+    {
+      "value": "expired",
+      "count": 14
+    },
+    {
+      "value": "mk",
+      "count": 14
+    },
+    {
+      "value": "your",
+      "count": 14
+    }
+  ],
+  "unknown_sessions_top": [
+    {
+      "value": "SimonLyn_Copper_Full",
+      "count": 24
+    },
+    {
+      "value": "JohnAArdelli_Asiza_Full",
+      "count": 19
+    },
+    {
+      "value": "JeffHirata_Sunshine_Full",
+      "count": 18
+    },
+    {
+      "value": "MR1103_Flags_Full",
+      "count": 16
+    },
+    {
+      "value": "MagiciansNephew_SymphonyOfSilence_Full",
+      "count": 16
+    },
+    {
+      "value": "IronPoint_Expired_Full",
+      "count": 14
+    },
+    {
+      "value": "SunshineGarciaBand_ForIAmTheMoon_Full",
+      "count": 14
+    },
+    {
+      "value": "KungFu_DaddyD_Full",
+      "count": 11
+    },
+    {
+      "value": "AinaTramullas_PerPoderTeCantar_Full",
+      "count": 9
+    },
+    {
+      "value": "FriendzWorldMusic_Triba-Bao-Kuku_Full",
+      "count": 9
+    },
+    {
+      "value": "Kangoro_KingRascal_Full",
+      "count": 9
+    },
+    {
+      "value": "IAmCassettes_Believe",
+      "count": 8
+    },
+    {
+      "value": "JackieGreene_DontLetTheDevilTakeYourMind_Full",
+      "count": 8
+    },
+    {
+      "value": "MR1108_WolfsHeadAndVixen_Full",
+      "count": 7
+    },
+    {
+      "value": "RoswellAudio_TheWeight_Full",
+      "count": 7
+    },
+    {
+      "value": "BronzeRadioReturn_MisterMister_Full",
+      "count": 6
+    },
+    {
+      "value": "Hazael_AMiLado_Full",
+      "count": 5
+    },
+    {
+      "value": "JeffreyHayat_AlexTheAdventurer_Full",
+      "count": 5
+    },
+    {
+      "value": "AlejoGranados_RumbaChonta_Full",
+      "count": 5
+    },
+    {
+      "value": "Kangoro_Rockshow_Full",
+      "count": 5
+    },
+    {
+      "value": "KarlHungus_GotYourLove_Full",
+      "count": 5
+    },
+    {
+      "value": "RoswellAudio_LittleWing_Full",
+      "count": 5
+    },
+    {
+      "value": "HannesKeseberg_YouKnowBetter_Full",
+      "count": 4
+    },
+    {
+      "value": "BenCarrigan_HeyCarrieAnne_Full",
+      "count": 4
+    },
+    {
+      "value": "GlenMcPhee_ASailorOnceMore_Full",
+      "count": 4
+    },
+    {
+      "value": "MikeSkalandunas_SunDrenched_Full",
+      "count": 4
+    },
+    {
+      "value": "RoversAhead_ItsInTheseTimes_Full",
+      "count": 4
+    },
+    {
+      "value": "Fergessen_BackFromTheStart_Full",
+      "count": 3
+    },
+    {
+      "value": "BabeGrand_AiguilleRouge_Full",
+      "count": 3
+    },
+    {
+      "value": "BenCarrigan_WellTalkAboutItAllTonight_Full",
+      "count": 3
+    }
+  ],
+  "label_distribution": {
+    "snare": 884,
+    "kick": 810,
+    "aux_percussion": 464,
+    "hihat_closed": 373,
+    "tom_mid": 365,
+    "tom_high": 287,
+    "drum_mix": 222,
+    "ride_bow": 131,
+    "tom_low": 128,
+    "crash": 33,
+    "rimshot": 9,
+    "hihat_open": 4
+  },
+  "technique_distribution": {
+    "multitrack_context": 222,
+    "ride_tip_articulation": 131,
+    "cowbell": 16,
+    "rimshot": 7,
+    "hihat_half_open": 4,
+    "brush_sweep": 3
+  },
+  "aux_variant_distribution": {
+    "mid": 365,
+    "aux": 365,
+    "high": 287,
+    "low": 128,
+    "sub": 51,
+    "break_fx": 16,
+    "cowbell": 16,
+    "impact_fx": 14,
+    "triangle": 6,
+    "marimba": 5,
+    "woodblock": 5,
+    "vibraphone": 5,
+    "glass_fx": 5,
+    "maracas": 4,
+    "cajon": 4,
+    "stomp": 3,
+    "rainstick": 3,
+    "brushes": 3,
+    "metal_hit": 2,
+    "sub_drop": 2,
+    "electro_hit": 1,
+    "water_drip": 1,
+    "cabasa": 1,
+    "cachapas": 1
+  },
+  "non_drum_keyword_distribution": {
+    "vox": 3777,
+    "gtr": 3186,
+    "synth": 1195,
+    "bass": 945,
+    "fx": 708,
+    "room": 429,
+    "overhead": 424,
+    "sample": 341,
+    "piano": 262,
+    "guitar": 194,
+    "loop": 179,
+    "cymbal": 144,
+    "strings": 131,
+    "percussion": 128,
+    "ela": 122,
+    "vocal": 122,
+    "keys": 106,
+    "m60": 80,
+    "stereo": 80,
+    "organ": 77,
+    "choir": 74,
+    "violin": 73,
+    "cello": 73,
+    "trumpet": 71,
+    "cymbals": 64,
+    "horn": 62,
+    "hammond": 61,
+    "acappella": 61,
+    "sax": 49,
+    "rhodes": 43,
+    "synths": 43,
+    "whisper": 42,
+    "trombone": 39,
+    "brass": 36,
+    "storm": 34,
+    "pad": 33,
+    "heartbeat": 33,
+    "viola": 32,
+    "pair": 29,
+    "saxophone": 24
+  },
+  "inventory_sessions": 620,
+  "selection": {
+    "limited": false,
+    "selected_total": 620,
+    "available_total": 620
+  },
+  "roots": [
+    {
+      "root": "/mnt/c/Users/10ros/OneDrive/Documents/github/BeatSight/data/raw/cambridge",
+      "tier": "primary",
+      "session_dirs": 200,
+      "sessions_with_audio": 200,
+      "skipped_empty": 0,
+      "duplicates": 0
+    },
+    {
+      "root": "/mnt/d/data/raw/cambridge",
+      "tier": "external",
+      "session_dirs": 420,
+      "sessions_with_audio": 420,
+      "skipped_empty": 0,
+      "duplicates": 0
+    }
+  ]
+}

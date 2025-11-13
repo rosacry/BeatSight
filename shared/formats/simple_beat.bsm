@@ -1,59 +1,128 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "metadata": {
-    "title": "Simple Practice Beat",
+    "title": "Handcrafted Groove Demo",
     "artist": "BeatSight Example",
     "creator": "BeatSight Team",
-    "tags": ["example", "beginner", "practice"],
-    "difficulty": 2.0,
+    "tags": [
+      "example",
+      "beginner",
+      "practice",
+      "handcrafted",
+      "ai-aligned"
+    ],
+    "difficulty": 2.8,
     "previewTime": 0,
-    "beatmapId": "example-001",
-    "createdAt": "2025-11-02T00:00:00Z",
-    "modifiedAt": "2025-11-02T00:00:00Z",
-    "description": "A simple 4/4 beat for beginners. Kick on beats 1 and 3, snare on beats 2 and 4, constant eighth note hi-hats."
+    "beatmapId": "handcrafted-groove-001",
+    "createdAt": "2025-11-12T00:00:00Z",
+    "modifiedAt": "2025-11-12T00:00:00Z",
+    "description": "Curated 120 BPM rock groove mirroring the default AI-generation heuristics."
   },
   "audio": {
-    "filename": "simple_beat.mp3",
-    "hash": "sha256:example",
-    "duration": 10000,
-    "sampleRate": 44100
+    "filename": "simple_beat.wav",
+  "hash": "sha256:411ba3ededb98b59ece90eac679ac52af71fd54d626acd0ffc5789c13d97e1ac",
+    "duration": 8000,
+    "sampleRate": 44100,
+    "drumStem": "simple_beat.wav",
+  "drumStemHash": "sha256:411ba3ededb98b59ece90eac679ac52af71fd54d626acd0ffc5789c13d97e1ac"
   },
   "timing": {
     "bpm": 120.0,
     "offset": 0,
-    "timeSignature": "4/4"
+    "timeSignature": "4/4",
+    "timingPoints": [
+      {
+        "time": 0,
+        "bpm": 120.0,
+        "timeSignature": "4/4"
+      }
+    ]
   },
   "drumKit": {
     "components": [
       "kick",
       "snare",
-      "hihat_closed"
+      "hihat_closed",
+      "tom_mid",
+      "tom_low",
+      "ride",
+      "crash"
     ],
-    "layout": "standard_5piece"
+    "layout": "standard_5piece",
+    "customSamples": null
   },
   "hitObjects": [
-    {"time": 0, "component": "kick", "velocity": 0.9, "lane": 0},
-    {"time": 0, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
-    {"time": 250, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
-    {"time": 500, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
-    {"time": 750, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
-    {"time": 1000, "component": "snare", "velocity": 0.95, "lane": 2},
-    {"time": 1000, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
-    {"time": 1250, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
-    {"time": 1500, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
-    {"time": 1750, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
-    {"time": 2000, "component": "kick", "velocity": 0.9, "lane": 0},
-    {"time": 2000, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
-    {"time": 2250, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
-    {"time": 2500, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
-    {"time": 2750, "component": "hihat_closed", "velocity": 0.7, "lane": 3},
-    {"time": 3000, "component": "snare", "velocity": 0.95, "lane": 2},
-    {"time": 3000, "component": "hihat_closed", "velocity": 0.7, "lane": 3}
+    {"time": 0, "component": "hihat_closed", "velocity": 0.78, "lane": 1},
+    {"time": 0, "component": "kick", "velocity": 0.96, "lane": 3},
+    {"time": 0, "component": "crash", "velocity": 0.85, "lane": 0},
+    {"time": 250, "component": "hihat_closed", "velocity": 0.78, "lane": 1},
+    {"time": 500, "component": "hihat_closed", "velocity": 0.64, "lane": 1},
+    {"time": 500, "component": "snare", "velocity": 0.9, "lane": 2},
+    {"time": 750, "component": "hihat_closed", "velocity": 0.64, "lane": 1},
+    {"time": 1000, "component": "hihat_closed", "velocity": 0.78, "lane": 1},
+    {"time": 1000, "component": "kick", "velocity": 0.96, "lane": 3},
+    {"time": 1250, "component": "hihat_closed", "velocity": 0.78, "lane": 1},
+    {"time": 1500, "component": "hihat_closed", "velocity": 0.64, "lane": 1},
+    {"time": 1500, "component": "snare", "velocity": 0.9, "lane": 2},
+    {"time": 1750, "component": "hihat_closed", "velocity": 0.64, "lane": 1},
+    {"time": 2000, "component": "hihat_closed", "velocity": 0.78, "lane": 1},
+    {"time": 2000, "component": "kick", "velocity": 0.96, "lane": 3},
+    {"time": 2000, "component": "ride", "velocity": 0.72, "lane": 5},
+    {"time": 2250, "component": "hihat_closed", "velocity": 0.78, "lane": 1},
+    {"time": 2500, "component": "hihat_closed", "velocity": 0.64, "lane": 1},
+    {"time": 2500, "component": "snare", "velocity": 0.9, "lane": 2},
+    {"time": 2750, "component": "hihat_closed", "velocity": 0.64, "lane": 1},
+    {"time": 3000, "component": "hihat_closed", "velocity": 0.78, "lane": 1},
+    {"time": 3000, "component": "kick", "velocity": 0.96, "lane": 3},
+    {"time": 3000, "component": "ride", "velocity": 0.72, "lane": 5},
+    {"time": 3250, "component": "hihat_closed", "velocity": 0.78, "lane": 1},
+    {"time": 3500, "component": "hihat_closed", "velocity": 0.64, "lane": 1},
+    {"time": 3500, "component": "snare", "velocity": 0.9, "lane": 2},
+    {"time": 3750, "component": "hihat_closed", "velocity": 0.64, "lane": 1},
+    {"time": 4000, "component": "hihat_closed", "velocity": 0.78, "lane": 1},
+    {"time": 4000, "component": "kick", "velocity": 0.96, "lane": 3},
+    {"time": 4000, "component": "crash", "velocity": 0.7, "lane": 0},
+    {"time": 4250, "component": "hihat_closed", "velocity": 0.78, "lane": 1},
+    {"time": 4500, "component": "hihat_closed", "velocity": 0.64, "lane": 1},
+    {"time": 4500, "component": "snare", "velocity": 0.9, "lane": 2},
+    {"time": 4750, "component": "hihat_closed", "velocity": 0.64, "lane": 1},
+    {"time": 5000, "component": "hihat_closed", "velocity": 0.78, "lane": 1},
+    {"time": 5000, "component": "kick", "velocity": 0.96, "lane": 3},
+    {"time": 5250, "component": "hihat_closed", "velocity": 0.78, "lane": 1},
+    {"time": 5500, "component": "hihat_closed", "velocity": 0.64, "lane": 1},
+    {"time": 5500, "component": "snare", "velocity": 0.9, "lane": 2},
+    {"time": 5750, "component": "hihat_closed", "velocity": 0.64, "lane": 1},
+    {"time": 6000, "component": "hihat_closed", "velocity": 0.78, "lane": 1},
+    {"time": 6000, "component": "kick", "velocity": 0.96, "lane": 3},
+    {"time": 6000, "component": "ride", "velocity": 0.72, "lane": 5},
+    {"time": 6250, "component": "hihat_closed", "velocity": 0.78, "lane": 1},
+    {"time": 6500, "component": "hihat_closed", "velocity": 0.64, "lane": 1},
+    {"time": 6500, "component": "snare", "velocity": 0.9, "lane": 2},
+    {"time": 6750, "component": "hihat_closed", "velocity": 0.64, "lane": 1},
+    {"time": 6800, "component": "tom_mid", "velocity": 0.88, "lane": 4},
+    {"time": 7000, "component": "hihat_closed", "velocity": 0.78, "lane": 1},
+    {"time": 7000, "component": "kick", "velocity": 0.96, "lane": 3},
+    {"time": 7000, "component": "ride", "velocity": 0.72, "lane": 5},
+    {"time": 7050, "component": "tom_low", "velocity": 0.95, "lane": 4},
+    {"time": 7250, "component": "hihat_closed", "velocity": 0.78, "lane": 1},
+    {"time": 7500, "component": "hihat_closed", "velocity": 0.64, "lane": 1},
+    {"time": 7500, "component": "snare", "velocity": 0.9, "lane": 2},
+    {"time": 7750, "component": "hihat_closed", "velocity": 0.64, "lane": 1}
   ],
   "editor": {
-    "snapDivisor": 4,
+    "snapDivisor": 8,
     "visualLanes": 7,
-    "bookmarks": [0, 2000],
-    "aiGenerationMetadata": null
+    "bookmarks": [0, 2000, 4000, 6000],
+    "aiGenerationMetadata": {
+      "modelVersion": "2025.11-handcrafted",
+      "confidence": 0.92,
+      "processedAt": "2025-11-12T00:00:00Z",
+      "manualEdits": true,
+      "metadataProvider": "handcrafted-reference",
+      "metadataConfidence": 0.9
+    },
+    "timelineZoom": 1.0,
+    "waveformScale": 1.0,
+    "beatGridVisible": true
   }
 }

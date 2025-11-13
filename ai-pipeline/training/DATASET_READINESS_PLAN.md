@@ -28,6 +28,20 @@
 | Magenta/DDSP drums | MIDI + rendered audio | Verify CC-BY | Optional | Fill tail classes; mark `is_synthetic=true` |
 | User-contributed recordings | Multitrack/mixes | Contributor agreement | Planned | Checklist + rights grant (training, redistribution terms) |
 
+### 2.1 Inclusion Policy — Production Manifest (Nov 2025)
+
+| Dataset | Decision | Rationale | Prerequisites |
+|---------|----------|-----------|---------------|
+| Groove MIDI Dataset | ✅ In production | Baseline corpus with stable taxonomy alignment | Maintain GM→BeatSight mapping tests |
+| Slakh2100 | ✅ In production | Rich synthetic stems with deterministic provenance | Keep synthetic flag + loudness normalization checks |
+| ENST-Drums | ✅ In production | Clean individual hits, permissive academic terms | Maintain LUFS span guardrails; monitor class balance shifts |
+| IDMT SMT Drums V2 | ✅ In production | Controlled studio captures, detailed metadata | Keep loudness normalization + label coverage checks in CI |
+| MUSDB18 HQ | ⏳ Hold | Drum stems include bleed; onset alignment is coarse | Improve separation/onset alignment before inclusion |
+| SignatureSounds Packs | ⏳ Hold | One-shots lack timing metadata; could skew event density | Introduce weighting for single-shot packs |
+| Telefunken Sessions | ⏳ Hold | Multitrack sessions missing per-hit annotations | Mature onset alignment & annotation tooling |
+
+Record changes to this matrix whenever datasets migrate between staged and production buckets; CI provenance audit must always reference the authoritative decision here.
+
 Action: maintain `LICENSES.md` with each source’s terms; include contributor Data Use Agreement (training rights, withdrawal process). Synthetic content must be flagged. Provide a **feature-only release option** (log-mel features or deterministic embeddings defined in `featurespec.yaml`) when audio redistribution is restricted; audio is then access-controlled but provenance hashes remain identical.
 
 ---
@@ -177,13 +191,15 @@ Events continue to log their local `tempo_bpm`/`meter`, but beat and bar indices
 
 ## 5) Quality Workflow
 
-1. Ingest → pending events + auto-features (`loudness`, crest factor, spectral centroid).
+0. **Pre-ingest hygiene**: run `check_dataset_integrity.py --verify-manifests` to confirm raw dataset roots and checksum manifests are intact before kicking off any rebuilds.
+1. Ingest → pending events + auto-features (`loudness`, crest factor, spectral centroid); immediately export a manifest snapshot with `summarize_manifest_metrics.py` so drift against prior runs is easy to quantify.
 2. Dual labeling (25–30%): two annotators; disagreements → adjudication queue. Track Cohen’s kappa per class.
 3. Audio QC pass: clipping, DC offset, extreme noise, metronome bleed; fix or reject.
 4. Dedup and near-dup: audio fingerprints + spectral similarity; cap dup rate ≤ 0.5% per split; remove cross-split families.
 5. Normalization: LUFS target per class for training slices (store raw + normalized if needed).
 6. Annotator rubric: maintain `docs/labeling_guidelines.md` with canonical examples (ghost vs light, rimshot vs center, ride bow vs crash edge).
 7. Calibration pack: 200-clip pack for monthly annotator calibration; track per-annotator accuracy and drift.
+8. **Export preflight**: before the full dataset write, run `pre_export_checklist.sh` to execute a 50k-event smoke export and dataset health check; keep the generated reports with the readiness artifacts.
 8. Deterministic slicing: extractor seeds and DSP versions logged; CI verifies byte-identical crops on rerun.
 9. Acceptance gate: block merges violating class balance, dup caps, split isolation, or rubric compliance.
 
@@ -198,6 +214,32 @@ Events continue to log their local `tempo_bpm`/`meter`, but beat and bar indices
 * Capture crash choke behaviour explicitly (shortened envelopes) either via labeled samples or augmentation that applies envelope truncation + decay.
 * Offer kick double-stroke augmentation (paired hits with realistic spacing and velocity ratios) when real data is scarce, but always tag synthetic patterns.
 * Adversarial processing pack: randomized bus compression, brickwall limiting, bit-depth reduction, MP3/OGG roundtrip, smartphone mic IR—tagged via `processing_chain`.
+
+## 7) Storage & Provenance Readiness (7 Nov 2025)
+
+| Source Set | Manifest Sessions | Provenance Records | Status |
+|------------|------------------|--------------------|--------|
+| Slakh2100 | 1708 | 1708 | ✅ Parity |
+| Groove MIDI | 1150 | 1150 | ✅ Parity |
+| ENST-Drums | 318 | 318 | ✅ Parity |
+| IDMT-SMT | 284 | 284 | ✅ Parity |
+| MUSDB HQ (drums) | 150 | 150 | ✅ Parity |
+| Telefunken Sessions | 143 | 143 | ✅ Parity |
+| Signature Sounds | 246 | 246 | ✅ Parity |
+
+### Findings
+
+* Session identifiers line up exactly between each manifest in `training/data/manifests/` and its paired provenance log under `training/data/provenance/`. Every record now carries matching SHA256 hashes, ingest commit references, and technique tags, so CI can assert storage coverage before training.
+* The merged production manifest `prod_combined_events.jsonl` (Groove + Slakh) remains the input for health/readiness gating; keep per-source manifests untouched so provenance continues to resolve per dataset.
+* Sampling weights (`reports/sampling/{slakh,groove,enst,prod_combined}_weights.json`) have been regenerated to reflect the latest manifests and dedupe heuristics. The production combined profile now covers 3,460 session_id groups (1,084,545 counted events) with crash dual-label totals `crash_dual_label` 4,200 and `multi_crash_variants` 370,956 after clamping weights to the [0.05, 0.5] window. Weighting policy decisions (clamping thresholds, bark boosts) should be finalized before the next large-scale training run.
+* Multi-crash coverage now ships with explicit `crash`/`crash2` components (metadata mapping archived in `training/reports/health/crash_dual_label_mapping_20251107.json`); production gates in `health_min_counts_prod.json`/`health_required_labels_prod.txt` once again enforce the dual-label counts. The latest readiness run (`prod_combined_health_20251108_crash_dual.json`) logged `crash` 27,550 and `crash2` 16,258 with the diff stored at `training/reports/health/diffs/prod_combined_health_delta_crash_dual_20251108.json`. Re-run the mapping pipeline whenever manifests refresh to keep the gate honest.
+
+### Outstanding Work
+
+1. Prioritise Cambridge inventory → manifest → readiness this week, capture provenance rows, and publish the health report alongside a sampling weights profile. MedleyDB remains blocked on data access; queue MUSDB cross-checks after Cambridge finishes, then ingest E-GMD (MIDI) with taxonomy validation. Track progress in `training/tasks/ingestion_schedule_20251108.md` and extend the provenance audit table as each dataset lands.
+2. Encode the dedupe/weighting strategy into `configs/sampling_profiles.json` (document min weight clamps, technique boosts) and rerun readiness if manifests change.
+3. For full training (beyond CPU smoke tests), run `train_classifier.py` with `--device cuda` so the RTX 3080 Ti handles the heavy workload; log metrics alongside provenance checkpoints for traceability.
+4. Track the production provenance audit (`training/reports/provenance/prod_combined_provenance_audit.md`) so Groove + Slakh remain in parity and staged datasets stay explicitly documented while they sit outside the merged manifest.
 * Guardrails: do not pitch-shift cymbals beyond ±2%; constrain time-stretch to ±3%; never alter openness labels via augmentation or stretch crash choke envelopes.
 * Record every augmentation in provenance for reproducibility.
 
@@ -234,6 +276,7 @@ Nightly `dataset_health.py` should emit:
 * Export HTML and JSON report to `health_reports/`.
 * Enforce coverage gates: global floor via `--min-class-count`, bespoke label floors with `--min-counts-json`, must-have labels via repeatable `--require-label`, and duplicate rate ceilings through `--max-duplication-rate`.
 * Flag taxonomy drift by capping `--max-unknown-labels` (default 0) and surface diffs via HTML summaries generated with `--html-output`. Manage required coverage lists via `training/configs/health_require_labels_example.txt`, and seed per-label minima with `training/configs/health_min_counts_example.json`; update both with release-specific thresholds before shipping.
+* Enforce technique coverage (`hihat_bark`, `metric_modulation`, `variable_meter`, `multi_cymbal_same_class`) through repeatable `--require-technique` flags or `run_readiness_checks.py --health-require-techniques-file training/configs/health_required_techniques_prod.txt` to block drops in critical articulation support. When legacy manifests are missing the newly required techniques, run `python training/tools/annotate_techniques.py --input <events.jsonl> --in-place` to backfill taxonomy inferences without reprocessing raw audio/MIDI. For production releases we gate on the merged manifest produced via `python training/tools/merge_manifests.py --input training/data/manifests/groove_events.jsonl --input training/data/manifests/slakh_events.jsonl --output training/data/manifests/prod_combined_events.jsonl` so Groove (steady tempo/meter) borrows the metric feel diversity present in Slakh while still preserving per-source manifests for ingestion.
 * Gate regressions before shipping by diffing the candidate health report against the last approved baseline with `training/compare_health_reports.py` (block merges if per-class totals regress beyond the agreed tolerance or if new gates fail). Keep the blessed baseline JSON under `training/reports/health/` so CI can retrieve it without extra setup, and archive the CI-produced candidate/baseline diff artifacts for release sign-off.
 
 ### 7.1 Streaming Boundary Pack

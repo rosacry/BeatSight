@@ -25,10 +25,13 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from html import escape
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple
 
 # Bin boundaries for openness histogram (inclusive of upper bound on last bin).
 _OPENNESS_BIN_EDGES: Tuple[float, ...] = tuple(i / 10 for i in range(11))
+
+CRASH_LABEL_PREFIX = "crash"
+CRASH_DUAL_LABEL_TAG = "crash_dual_label"
 
 
 @dataclass
@@ -36,12 +39,14 @@ class HealthOptions:
     events_path: Path
     output_path: Optional[Path]
     html_output_path: Optional[Path]
+    metadata_path: Optional[Path]
     components_path: Optional[Path]
     max_duplication_rate: Optional[float]
     min_class_count: Optional[int]
     min_counts_path: Optional[Path]
     require_labels: List[str]
     max_unknown_labels: Optional[int]
+    require_techniques: List[str]
 
 
 @dataclass
@@ -75,6 +80,14 @@ def parse_args() -> HealthOptions:
         "--html-output",
         type=Path,
         help="Optional path to write an HTML summary alongside JSON",
+    )
+    parser.add_argument(
+        "--dataset-metadata",
+        type=Path,
+        help=(
+            "Optional metadata.json produced by build_training_dataset.py. "
+            "When provided, duration telemetry is merged into the report."
+        ),
     )
     parser.add_argument(
         "--components",
@@ -123,6 +136,19 @@ def parse_args() -> HealthOptions:
         type=int,
         help="Maximum total count of unknown labels allowed before failing",
     )
+    parser.add_argument(
+        "--require-technique",
+        action="append",
+        default=[],
+        help="Ensure specific techniques appear at least once (repeat flag to add more).",
+    )
+    parser.add_argument(
+        "--require-techniques-file",
+        action="append",
+        type=Path,
+        default=[],
+        help="Path to file listing required techniques (one per line). Repeatable.",
+    )
     args = parser.parse_args()
 
     require_labels = list(args.require_label or [])
@@ -131,16 +157,24 @@ def parse_args() -> HealthOptions:
             if label not in require_labels:
                 require_labels.append(label)
 
+    require_techniques = list(args.require_technique or [])
+    for file_path in args.require_techniques_file or []:
+        for technique in load_required_labels(file_path):
+            if technique not in require_techniques:
+                require_techniques.append(technique)
+
     return HealthOptions(
         events_path=args.events,
         output_path=args.output,
         html_output_path=args.html_output,
+        metadata_path=args.dataset_metadata,
         components_path=args.components,
         max_duplication_rate=args.max_duplication_rate,
         min_class_count=args.min_class_count,
         min_counts_path=args.min_counts_json,
         require_labels=require_labels,
         max_unknown_labels=args.max_unknown_labels,
+        require_techniques=require_techniques,
     )
 
 
@@ -206,6 +240,36 @@ def bin_openness(value: float) -> int:
     return int(clamped * 10)
 
 
+def _coerce_number(value: object) -> Optional[float]:
+    if isinstance(value, bool):
+        return float(value)
+    if isinstance(value, (int, float)):
+        return float(value)
+    if value is None:
+        return None
+    try:
+        return float(str(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _format_duration(value: float) -> str:
+    seconds = max(float(value), 0.0)
+    if seconds < 1e-3:
+        return "0 s"
+    if seconds < 1:
+        return f"{seconds * 1000:.0f} ms"
+    hours = int(seconds // 3600)
+    remainder = seconds - hours * 3600
+    minutes = int(remainder // 60)
+    seconds_rem = remainder - minutes * 60
+    if hours:
+        return f"{hours}h {minutes:02d}m {seconds_rem:05.2f}s"
+    if minutes:
+        return f"{minutes}m {seconds_rem:05.2f}s"
+    return f"{seconds_rem:,.2f} s"
+
+
 def analyse_events(
     events_path: Path, taxonomy: Optional[Dict[str, Any]]
 ) -> Tuple[Dict[str, Any], float]:
@@ -214,6 +278,7 @@ def analyse_events(
     class_counts: Counter[str] = Counter()
     class_counts_real: Counter[str] = Counter()
     class_counts_synth: Counter[str] = Counter()
+    crash_variant_counts: Counter[str] = Counter()
     per_class_dynamic: Dict[str, Counter[str]] = defaultdict(Counter)
     dynamic_bucket_counts: Counter[str] = Counter()
     bleed_level_counts: Counter[str] = Counter()
@@ -230,6 +295,8 @@ def analyse_events(
     loudness_peak: List[float] = []
 
     unknown_labels: Counter[str] = Counter()
+    technique_counts: Counter[str] = Counter()
+    crash_dual_label_assignments = 0
 
     total_events = 0
     synthetic_events = 0
@@ -293,6 +360,8 @@ def analyse_events(
                     continue
 
                 class_counts[label] += 1
+                if isinstance(label, str) and label.startswith(CRASH_LABEL_PREFIX):
+                    crash_variant_counts[label] += 1
                 if is_synth:
                     class_counts_synth[label] += 1
                 else:
@@ -309,6 +378,12 @@ def analyse_events(
 
                 if allowed_labels and label not in allowed_labels:
                     unknown_labels[label] += 1
+
+            for technique in event.get("techniques", []) or []:
+                if isinstance(technique, str) and technique:
+                    technique_counts[technique] += 1
+                    if technique == CRASH_DUAL_LABEL_TAG:
+                        crash_dual_label_assignments += 1
 
     duplicate_sample_ids = {
         sid: count for sid, count in sample_id_counts.items() if count > 1
@@ -370,6 +445,9 @@ def analyse_events(
             "peak_dbfs": aggregate(loudness_peak),
         },
         "unknown_labels": dict(unknown_labels),
+        "crash_variant_counts": dict(crash_variant_counts),
+        "crash_dual_label_assignments": crash_dual_label_assignments,
+        "technique_counts": dict(technique_counts),
     }
 
     for label in sorted(class_counts):
@@ -380,6 +458,60 @@ def analyse_events(
         }
 
     return report, duplication_rate
+
+
+def _parse_float_mapping(raw: Any) -> Dict[str, float]:
+    result: Dict[str, float] = {}
+    if isinstance(raw, Mapping):
+        for key, value in raw.items():
+            number = _coerce_number(value)
+            if number is None:
+                continue
+            result[str(key)] = float(number)
+    return result
+
+
+def merge_metadata_durations(report: Dict[str, Any], metadata: Mapping[str, Any]) -> None:
+    """Augment report with duration telemetry sourced from dataset metadata."""
+
+    split_durations = _parse_float_mapping(metadata.get("split_durations_seconds"))
+    run_split_durations = _parse_float_mapping(metadata.get("run_split_durations_seconds"))
+    duration_by_source = _parse_float_mapping(metadata.get("duration_seconds_by_source"))
+    run_duration_by_source = _parse_float_mapping(metadata.get("run_duration_seconds_by_source"))
+
+    if split_durations:
+        report["split_durations_seconds"] = split_durations
+    if run_split_durations:
+        report["run_split_durations_seconds"] = run_split_durations
+    if duration_by_source:
+        report["duration_seconds_by_source"] = duration_by_source
+    if run_duration_by_source:
+        report["run_duration_seconds_by_source"] = run_duration_by_source
+
+    if not split_durations and not duration_by_source:
+        return
+
+    summary = report.setdefault("summary", {})
+
+    if split_durations:
+        total_seconds = float(sum(split_durations.values()))
+        summary["duration_seconds_total"] = round(total_seconds, 6)
+        summary["duration_hours_total"] = round(total_seconds / 3600.0, 6)
+
+
+def load_metadata(path: Optional[Path]) -> Optional[Mapping[str, Any]]:
+    if not path:
+        return None
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(f"Dataset metadata file not found: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Failed to parse dataset metadata {path}: {exc}") from exc
+    if not isinstance(data, Mapping):
+        raise ValueError("Dataset metadata must be a JSON object")
+    return data
 
 
 def collect_gate_failures(
@@ -461,6 +593,20 @@ def collect_gate_failures(
             GateResult(f"require_label[{label}]", passed, detail)
         )
 
+    technique_totals = report.get("technique_counts", {})
+
+    for technique in options.require_techniques:
+        total = technique_totals.get(technique, 0)
+        passed = total > 0
+        detail = f"{technique}: present={bool(total)}"
+        if not passed:
+            failures.append(
+                f"Coverage gating failed: required technique '{technique}' is missing."
+            )
+        gate_results.append(
+            GateResult(f"require_technique[{technique}]", passed, detail)
+        )
+
     if options.max_unknown_labels is not None:
         unknown_total = sum(report.get("unknown_labels", {}).values())
         passed = unknown_total <= options.max_unknown_labels
@@ -503,7 +649,12 @@ def write_html_report(
     summary = report.get("summary", {})
     per_class = report.get("per_class_counts", {})
     duplicates = report.get("duplicates", {})
+    technique_counts = report.get("technique_counts", {})
     openness = report.get("openness_histogram", [])
+    split_durations = report.get("split_durations_seconds", {})
+    run_split_durations = report.get("run_split_durations_seconds", {})
+    duration_by_source = report.get("duration_seconds_by_source", {})
+    run_duration_by_source = report.get("run_duration_seconds_by_source", {})
 
     lines: List[str] = [
         "<!DOCTYPE html>",
@@ -533,6 +684,8 @@ def write_html_report(
         "unique_sessions",
         "unique_drummers",
         "duplication_rate",
+        "duration_seconds_total",
+        "duration_hours_total",
     ]:
         if key in summary:
             lines.append(
@@ -570,6 +723,61 @@ def write_html_report(
         "    </tbody>",
         "  </table>",
     ])
+
+    def append_duration_table(title: str, mapping: Any) -> None:
+        if not isinstance(mapping, dict) or not mapping:
+            return
+        rows: List[Tuple[str, float]] = []
+        for key, value in mapping.items():
+            seconds_val = _coerce_number(value)
+            if seconds_val is None:
+                continue
+            rows.append((str(key), float(seconds_val)))
+        if not rows:
+            return
+        rows.sort(key=lambda item: (-item[1], item[0]))
+        lines.extend([
+            f"  <h2>{escape(title)}</h2>",
+            "  <table>",
+            "    <thead><tr><th>Key</th><th>Seconds</th><th>Formatted</th></tr></thead>",
+            "    <tbody>",
+        ])
+        for key, seconds_val in rows:
+            lines.append(
+                "      <tr><td>{name}</td><td>{seconds:.6f}</td><td>{formatted}</td></tr>".format(
+                    name=escape(str(key)),
+                    seconds=seconds_val,
+                    formatted=escape(_format_duration(seconds_val)),
+                )
+            )
+        lines.extend([
+            "    </tbody>",
+            "  </table>",
+        ])
+
+    append_duration_table("Duration by Split", split_durations)
+    append_duration_table("Run Duration by Split", run_split_durations)
+    append_duration_table("Duration by Source", duration_by_source)
+    append_duration_table("Run Duration by Source", run_duration_by_source)
+
+    if technique_counts:
+        lines.extend([
+            "  <h2>Technique Counts</h2>",
+            "  <table>",
+            "    <thead><tr><th>Technique</th><th>Count</th></tr></thead>",
+            "    <tbody>",
+        ])
+        for technique in sorted(technique_counts):
+            lines.append(
+                "      <tr><td>{technique}</td><td>{count}</td></tr>".format(
+                    technique=escape(str(technique)),
+                    count=escape(str(technique_counts[technique])),
+                )
+            )
+        lines.extend([
+            "    </tbody>",
+            "  </table>",
+        ])
 
     if gate_results:
         lines.extend([
@@ -643,6 +851,10 @@ def main() -> int:
     class_thresholds = load_class_thresholds(options.min_counts_path)
 
     report, duplication_rate = analyse_events(options.events_path, taxonomy)
+
+    metadata = load_metadata(options.metadata_path)
+    if metadata:
+        merge_metadata_durations(report, metadata)
 
     failures, gate_results = collect_gate_failures(
         report,

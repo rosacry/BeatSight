@@ -1,5 +1,5 @@
 using BeatSight.Game.Screens.Editor;
-using BeatSight.Game.Screens.Gameplay;
+using BeatSight.Game.Screens.Playback;
 using BeatSight.Game.Screens.Settings;
 using BeatSight.Game.Screens.SongSelect;
 using osu.Framework.Graphics;
@@ -46,9 +46,17 @@ namespace BeatSight.Game.Screens
                         },
                         new SpriteText
                         {
-                            Text = "Transform drums into gameplay",
+                            Text = "Audition AI + handcrafted drum mappings with instant playback",
                             Font = new FontUsage(size: 24),
-                            Colour = Color4.Gray,
+                            Colour = new Color4(195, 205, 220, 255),
+                            Anchor = Anchor.TopCentre,
+                            Origin = Anchor.TopCentre,
+                        },
+                        new SpriteText
+                        {
+                            Text = "Preview metadata, toggle drum stems, and iterate fast",
+                            Font = new FontUsage(size: 18),
+                            Colour = new Color4(160, 170, 190, 255),
                             Anchor = Anchor.TopCentre,
                             Origin = Anchor.TopCentre,
                         },
@@ -58,23 +66,15 @@ namespace BeatSight.Game.Screens
                         },
                         new MenuButton("Play", Color4.Green)
                         {
+                            Action = () => this.Push(new MappingPlaybackScreen())
+                        },
+                        new MenuButton("Playback Library", new Color4(125, 135, 200, 255))
+                        {
                             Action = () => this.Push(new SongSelectScreen())
                         },
                         new MenuButton("Editor", Color4.Blue)
                         {
                             Action = () => this.Push(new EditorScreen())
-                        },
-                        new MenuButton("Practice Mode", new Color4(120, 200, 255, 255))
-                        {
-                            Action = () => this.Push(new PracticeModeScreen())
-                        },
-                        new MenuButton("🎤 Live Input", new Color4(255, 100, 100, 255))
-                        {
-                            Action = () => this.Push(new LiveInputModeScreen())
-                        },
-                        new MenuButton("Browse Beatmaps", Color4.Purple)
-                        {
-                            Action = () => this.Push(new SongSelectScreen())
                         },
                         new MenuButton("Settings", Color4.Orange)
                         {

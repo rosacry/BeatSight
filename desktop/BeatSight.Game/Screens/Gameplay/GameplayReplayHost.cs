@@ -1,5 +1,7 @@
 using System;
 using BeatSight.Game.Beatmaps;
+using BeatSight.Game.Configuration;
+using BeatSight.Game.Mapping;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -14,6 +16,7 @@ namespace BeatSight.Game.Screens.Gameplay
         private readonly Func<double> currentTimeProvider;
         private GameplayPlayfield playfield = null!;
         private Beatmap? beatmap;
+        private LaneLayout currentLaneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
 
         public GameplayReplayHost(Func<double> currentTimeProvider)
         {
@@ -55,6 +58,8 @@ namespace BeatSight.Game.Screens.Gameplay
                     }
                 }
             };
+
+            playfield.SetLaneLayout(currentLaneLayout);
         }
 
         protected override void LoadComplete()
@@ -92,6 +97,22 @@ namespace BeatSight.Game.Screens.Gameplay
             applyBeatmap();
         }
 
+        public void SetLaneLayout(LaneLayout layout)
+        {
+            if (layout == null)
+                throw new ArgumentNullException(nameof(layout));
+
+            if (ReferenceEquals(currentLaneLayout, layout))
+                return;
+
+            currentLaneLayout = layout;
+            if (playfield != null)
+                playfield.SetLaneLayout(currentLaneLayout);
+
+            if (IsLoaded)
+                applyBeatmap();
+        }
+
         private void applyBeatmap()
         {
             if (playfield == null)
@@ -106,7 +127,11 @@ namespace BeatSight.Game.Screens.Gameplay
             playfield.SetPreviewMode(true);
 
             if (beatmap != null)
+            {
+                DrumLaneHeuristics.ApplyToBeatmap(beatmap, currentLaneLayout);
+                playfield.SetLaneLayout(currentLaneLayout);
                 playfield.LoadBeatmap(beatmap);
+            }
             else
                 playfield.LoadBeatmap(new Beatmap());
         }

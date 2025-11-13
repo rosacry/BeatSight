@@ -1,0 +1,1 @@
+"""BeatSight backend application package."""

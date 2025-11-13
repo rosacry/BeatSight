@@ -24,6 +24,7 @@ namespace BeatSight.Game.Configuration
             SetDefault(BeatSightSetting.ShowHitErrorMeter, true);
             SetDefault(BeatSightSetting.ScreenShakeOnMiss, true);
             SetDefault(BeatSightSetting.LaneViewMode, LaneViewMode.TwoDimensional);
+            SetDefault(BeatSightSetting.LanePreset, LanePreset.DrumSevenLane);
 
             // Visual Effects Settings
             SetDefault(BeatSightSetting.ShowApproachCircles, true);
@@ -84,6 +85,7 @@ namespace BeatSight.Game.Configuration
         ShowHitErrorMeter,
         ScreenShakeOnMiss,
         LaneViewMode,
+        LanePreset,
 
         // Visual Effects
         ShowApproachCircles,
@@ -157,6 +159,16 @@ namespace BeatSight.Game.Configuration
     {
         TwoDimensional,
         ThreeDimensional
+    }
+
+    public enum LanePreset
+    {
+        DrumFourLane,
+        DrumFiveLane,
+        DrumSixLane,
+        DrumSevenLane,
+        DrumEightLane,
+        DrumNineLane
     }
 
     public enum QuantizationGridSetting

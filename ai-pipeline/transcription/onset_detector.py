@@ -9,6 +9,38 @@ from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 import numpy as np
 import librosa
 from scipy import ndimage
+from importlib import import_module
+from typing import Callable
+
+
+def _librosa_version_tuple(version_str: str) -> tuple[int, int]:
+    parts: list[int] = []
+    for token in version_str.split("."):
+        digits = ""
+        for char in token:
+            if char.isdigit():
+                digits += char
+            else:
+                break
+        if digits:
+            parts.append(int(digits))
+        if len(parts) == 2:
+            break
+    while len(parts) < 2:
+        parts.append(0)
+    return tuple(parts[:2])
+
+
+def _resolve_tempo_fn() -> Callable:
+    version_tuple = _librosa_version_tuple(getattr(librosa, "__version__", "0.0"))
+    if version_tuple >= (0, 10):
+        module = import_module("librosa.feature.rhythm")
+    else:  # pragma: no cover - compatibility for older librosa
+        module = import_module("librosa.beat")
+    return getattr(module, "tempo")
+
+
+_estimate_tempo = _resolve_tempo_fn()
 
 
 @dataclass
@@ -132,7 +164,7 @@ def _tempo_candidates(
 ) -> List[float]:
     """Return tempo candidates including double/half time hypotheses."""
 
-    raw = librosa.beat.tempo(
+    raw = _estimate_tempo(
         onset_envelope=envelope,
         sr=sr,
         hop_length=hop_length,

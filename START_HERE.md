@@ -1,95 +1,83 @@
-# Quick Start - What to Do Next
+# Start Here
 
-## 🚀 Run the Application RIGHT NOW
+These are the minimum steps to get productive in the BeatSight workspace. Skim this page, then follow the linked docs for deeper context.
+
+## 1. TL;DR
+
+- Launch the desktop client: `cd ~/github/BeatSight/desktop/BeatSight.Desktop && dotnet run`
+- Review the live backlog in `docs/product/status.md` (updates happen here, not in this file)
+- Use `docs/Guidebook.md` as the table of contents for orientation, onboarding, and archives
+
+## 2. Run the Core Apps
+
+### Desktop Client
 
 ```bash
 cd ~/github/BeatSight/desktop/BeatSight.Desktop
 dotnet run
 ```
 
-## 🎮 Try These NEW Features
+- `dotnet watch run` is handy for UI iteration
+- Builds expect .NET 8 (see `docs/Guidebook.md#prereqs` for setup notes)
 
-### 1. Settings System (23 Settings!)
-- Click **"Settings"** from main menu
-- Try **Background Dim** slider → Watch gameplay darken in real-time
-- Enable **FPS Counter** → See top-right performance display
-- Explore 5 sections: Gameplay, Visual, Audio, Input, Performance
-
-### 2. Live Input Mode (Microphone!)
-- Click **"🎤 Live Input"** from main menu
-- Watch **7 level meters** react to sound
-- Press **M** to toggle listening
-- Clap or tap desk to see detection
-- Watch meters flash when sound detected
-
-### 3. Practice Mode Enhancements
-- Click **"Practice Mode"**
-- Press **[** and **]** to set loop points
-- Press **M** for metronome
-- Use **difficulty slider** (filtering coming soon)
-- Press **C** to clear loops
-
-## 📊 Check What's Working
+### Backend API (optional while prototyping)
 
 ```bash
-# See all new features
-cat ~/github/BeatSight/FEATURE_LIST.md
-
-# Implementation guide for next steps
-cat ~/github/BeatSight/IMPLEMENTATION_GUIDE.md
-
-# Complete session summary
-cat ~/github/BeatSight/SESSION_SUMMARY_2025_11_02_PART3.md
+cd ~/github/BeatSight/backend
+poetry install
+poetry run uvicorn app.main:app --reload
 ```
 
-## 🔧 Quick Development Commands
+See `backend/README.md` for routes and health checks if you need the service.
+
+## 3. Documentation Map
+
+- **Guidebook** → `docs/Guidebook.md` is the master index (orientation, engineering playbooks, archive pointers)
+- **Current status / next steps** → `docs/product/status.md`
+- **Roadmap** → `docs/product/roadmap.md`
+- **Training SOP** → `docs/ml_training_runbook.md`
+- **Recent archives** → `docs/archive/2025-11-02-phase12/` and `docs/archive/2025-11-orientation/`
+
+If you update any of the above, keep cross-links consistent. The root `NEXT_STEPS.md` and `CURRENT_STATUS.md` files simply redirect to the live status doc.
+
+## 4. Environment & Data Checklist
+
+- Configure dataset paths before running training or export tools:
 
 ```bash
-# Build (check for errors)
+export BEATSIGHT_DATA_ROOT="/mnt/data/beatsight"
+export BEATSIGHT_CACHE_ROOT="${BEATSIGHT_DATA_ROOT}/cache"
+export BEATSIGHT_RUN_ROOT="${BEATSIGHT_DATA_ROOT}/runs"
+```
+
+- `ai-pipeline/training/tools/post_export_commands.sh` reads the variables above; set them in your shell profile if you run exports often
+- Logs and large artifacts live in `data/` (see `docs/Guidebook.md#data` for naming conventions)
+
+## 5. Active Workstreams (sync with status doc)
+
+- **Storage migration:** move the production dataset to the new HDD mount; verify permissions so the training pipeline can stream directly
+- **Probe evaluation:** follow the warm-up probe notes in `docs/ml_training_runbook.md` before kicking off long trainings
+- **Desktop polishing:** see the “Critical Actions” section in `docs/product/status.md` for the UI backlog
+
+Always record progress in `docs/product/status.md`; we archive completed milestones from there into `docs/product/roadmap.md`.
+
+## 6. Useful Commands
+
+```bash
+# Solution-wide build (desktop + tests)
 cd ~/github/BeatSight
-dotnet build
+dotnet build BeatSight.sln
 
-# Run with hot reload
-cd desktop/BeatSight.Desktop
-dotnet watch run
+# Run C# tests
+dotnet test BeatSight.sln
 
-# Build release (optimized)
-dotnet build --configuration Release
+# Lint backend Python
+cd backend
+poetry run ruff check
 ```
 
-## ✅ Current Status
+## 7. Need More Context?
 
-**Build**: ✅ 0 Warnings, 0 Errors  
-**Phase**: 1.2 at 95% Complete  
-**Settings**: 23 total (up from 13)  
-**New Screens**: Live Input Mode  
-**Features**: 85+ implemented
-
-## 🎯 Next 3 Tasks (< 3 hours total)
-
-1. **Volume Control** (30 min) - Make audio settings work
-2. **Live Input Scoring** (1-2 hours) - Enable microphone gameplay scoring  
-3. **Note Filtering** (1 hour) - Make difficulty slider functional
-
-See `IMPLEMENTATION_GUIDE.md` for exact code to add!
-
-## 📱 What Just Happened
-
-**You asked**: "Copy settings from osu! and keep going"
-
-**I delivered**:
-- ✅ 10 new settings from osu!
-- ✅ Background dim (working!)
-- ✅ FPS counter (working!)
-- ✅ Full microphone input system
-- ✅ Real-time audio visualization
-- ✅ Drum detection algorithm
-- ✅ 5-section settings UI
-- ✅ Complete documentation
-
-**Time**: 4 hours  
-**Quality**: Production-ready
-
----
-
-**Ready?** Run `dotnet run` and explore! 🚀
+- Check `docs/Guidebook.md#orientation` for the narrative walkthrough of the project
+- For historical decisions, read `docs/product/roadmap.md` milestones and the archives referenced there
+- If something seems missing, add an entry to `docs/product/status.md` and link or create the supporting doc so future readers land in the right place

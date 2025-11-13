@@ -1,0 +1,73 @@
+{
+  "sessions": 3,
+  "total_tracks": 78,
+  "classified_tracks": 6,
+  "unknown_track_count": 0,
+  "unknown_tracks_sample": [],
+  "unknown_tokens_top": [],
+  "unknown_sessions_top": [],
+  "label_distribution": {
+    "aux_percussion": 2,
+    "kick": 1,
+    "snare": 1,
+    "tom_high": 1,
+    "tom_mid": 1
+  },
+  "technique_distribution": {},
+  "aux_variant_distribution": {
+    "aux": 2,
+    "high": 1,
+    "mid": 1
+  },
+  "non_drum_keyword_distribution": {
+    "vox": 43,
+    "gtr": 11,
+    "ela": 7,
+    "bass": 5,
+    "overhead": 2,
+    "piano": 2,
+    "synth": 1,
+    "room": 1
+  },
+  "inventory_sessions": 620,
+  "selection": {
+    "limited": true,
+    "max_sessions": 3,
+    "max_per_root": null,
+    "seed": null,
+    "selected_total": 3,
+    "available_total": 620,
+    "per_root": [
+      {
+        "storage_root": "C:/Users/10ros/OneDrive/Documents/github/BeatSight/data/raw/cambridge",
+        "tier": "primary",
+        "available": 200,
+        "selected": 3
+      },
+      {
+        "storage_root": "D:/data/raw/cambridge",
+        "tier": "external",
+        "available": 420,
+        "selected": 0
+      }
+    ]
+  },
+  "roots": [
+    {
+      "root": "C:/Users/10ros/OneDrive/Documents/github/BeatSight/data/raw/cambridge",
+      "tier": "primary",
+      "session_dirs": 200,
+      "sessions_with_audio": 200,
+      "skipped_empty": 0,
+      "duplicates": 0
+    },
+    {
+      "root": "D:/data/raw/cambridge",
+      "tier": "external",
+      "session_dirs": 420,
+      "sessions_with_audio": 420,
+      "skipped_empty": 0,
+      "duplicates": 0
+    }
+  ]
+}

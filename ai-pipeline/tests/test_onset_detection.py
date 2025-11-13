@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import librosa
+from types import SimpleNamespace
 
 from pipeline.transcription.onset_detector import detect_onsets, refine_onsets
 from pipeline.beatmap_generator import _select_best_quantization
@@ -119,3 +120,63 @@ def test_hint_falls_back_when_coverage_poor():
     assert result["bpm"] == pytest.approx(90.0)
     # Candidate summaries should still include the original hint for diagnostics.
     assert any(item["hint"] for item in result["candidates"])
+
+
+def test_version_tuple_parsing_handles_suffixes():
+    from transcription import onset_detector as detector
+
+    assert detector._librosa_version_tuple("0.10.1") == (0, 10)
+    assert detector._librosa_version_tuple("1.2.0a1") == (1, 2)
+    assert detector._librosa_version_tuple("3") == (3, 0)
+
+
+def test_tempo_resolver_prefers_feature_module(monkeypatch):
+    from transcription import onset_detector as detector
+
+    fake_librosa = SimpleNamespace(__version__="0.10.5")
+    monkeypatch.setattr(detector, "librosa", fake_librosa)
+
+    captured = {}
+
+    def fake_import(name: str):
+        captured["name"] = name
+
+        class _Dummy:
+            @staticmethod
+            def tempo(*_args, **_kwargs):
+                return "tempo"
+
+        return _Dummy()
+
+    monkeypatch.setattr(detector, "import_module", fake_import)
+
+    tempo_fn = detector._resolve_tempo_fn()
+
+    assert captured["name"] == "librosa.feature.rhythm"
+    assert tempo_fn() == "tempo"
+
+
+def test_tempo_resolver_supports_pre_010(monkeypatch):
+    from transcription import onset_detector as detector
+
+    fake_librosa = SimpleNamespace(__version__="0.9.2")
+    monkeypatch.setattr(detector, "librosa", fake_librosa)
+
+    captured = {}
+
+    def fake_import(name: str):
+        captured["name"] = name
+
+        class _Dummy:
+            @staticmethod
+            def tempo(*_args, **_kwargs):
+                return "legacy"
+
+        return _Dummy()
+
+    monkeypatch.setattr(detector, "import_module", fake_import)
+
+    tempo_fn = detector._resolve_tempo_fn()
+
+    assert captured["name"] == "librosa.beat"
+    assert tempo_fn() == "legacy"

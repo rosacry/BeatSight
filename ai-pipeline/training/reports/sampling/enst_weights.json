@@ -1,0 +1,2726 @@
+{
+  "parameters": {
+    "manifest": "ai-pipeline/training/data/manifests/enst_events.jsonl",
+    "group_field": "audio_path",
+    "min_count": 1,
+    "smoothing": 0.0,
+    "exponent": 0.5,
+    "technique_boosts": {
+      "hihat_bark": 0.75
+    },
+    "dedupe_fields": null,
+    "max_events_per_group": null,
+    "technique_filter": null,
+    "filter_match_all": false,
+    "include_unmatched": true,
+    "profile": "enst",
+    "min_weight": 0.075,
+    "max_weight": 0.4
+  },
+  "weights": {
+    "drummer_1\\audio\\dry_mix\\001_hits_snare-drum_sticks_x6.wav": {
+      "count": 6,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 6
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\002_hits_snare-drum-no-snare_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\003_hits_medium-tom_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\004_hits_low-tom_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\005_hits_bass-drum_pedal_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_pedal": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\006_hits_bass-drum-no-snare_pedal_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_pedal": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\007_hits_pedal-hi-hat-close_pedal_x1.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_pedal": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\008_hits_pedal-hi-hat-open_pedal_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_pedal": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\009_hits_flat-ride-cymbal_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5,
+        "ride_tip_articulation": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\010_hits_crash-cymbal_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "crash_high": 5,
+        "implement_sticks": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\011_hits_cowbell_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "cowbell": 5,
+        "implement_sticks": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\012_hits_snare-drum-brush-sweep_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\013_hits_snare-drum_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\014_hits_medium-tom_brushes_x5.wav": {
+      "count": 4,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 4
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\015_hits_low-tom_brushes_x5.wav": {
+      "count": 4,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 4
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\016_hits_closed-hi-hat_brushes_x3.wav": {
+      "count": 3,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 3
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\017_hits_open-hi-hat_brushes_x2.wav": {
+      "count": 2,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 2
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\018_hits_ride-cymbal_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 5,
+        "ride_tip_articulation": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\019_hits_crash-cymbal_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "crash_high": 5,
+        "implement_brushes": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\020_hits_cowbell_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "cowbell": 5,
+        "implement_brushes": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\021_hits_snare-drum_mallets_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_mallets": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\022_hits_snare-drum-no-snare_mallets_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_mallets": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\023_hits_medium-tom_mallets_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_mallets": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\024_hits_low-tom_mallets_x6.wav": {
+      "count": 6,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_mallets": 6
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\025_hits_ride-cymbal_mallets_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_mallets": 5,
+        "ride_tip_articulation": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\026_hits_open-hi-hat_mallets_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_mallets": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\027_hits_crash-cymbal_mallets_x6.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "crash_high": 5,
+        "implement_mallets": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\028_hits_cowbell_mallets_x4.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "cowbell": 5,
+        "implement_mallets": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\029_hits_cross-sticks_sticks_x4.wav": {
+      "count": 4,
+      "weight": 0.4,
+      "technique_counts": {
+        "cross_stick": 4,
+        "implement_sticks": 4
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\036_phrase_disco_simple_slow_sticks.wav": {
+      "count": 66,
+      "weight": 0.12309149097933274,
+      "technique_counts": {
+        "implement_sticks": 66
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\037_phrase_disco_simple_medium_sticks.wav": {
+      "count": 69,
+      "weight": 0.1203858530857692,
+      "technique_counts": {
+        "implement_sticks": 69
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\038_phrase_disco_simple_fast_sticks.wav": {
+      "count": 69,
+      "weight": 0.1203858530857692,
+      "technique_counts": {
+        "implement_sticks": 69
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\039_phrase_disco_complex_slow_sticks.wav": {
+      "count": 79,
+      "weight": 0.1125087900926024,
+      "technique_counts": {
+        "implement_sticks": 79,
+        "crash_high": 2
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\040_phrase_disco_complex_medium_sticks.wav": {
+      "count": 81,
+      "weight": 0.1111111111111111,
+      "technique_counts": {
+        "implement_sticks": 81,
+        "ride_tip_articulation": 3,
+        "crash_high": 1
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\041_phrase_disco_complex_fast_sticks.wav": {
+      "count": 93,
+      "weight": 0.10369516947304253,
+      "technique_counts": {
+        "implement_sticks": 93,
+        "ride_tip_articulation": 3,
+        "crash_high": 3
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\042_phrase_rock_simple_slow_rods.wav": {
+      "count": 49,
+      "weight": 0.14285714285714285,
+      "technique_counts": {
+        "implement_rods": 49
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\043_phrase_rock_simple_medium_rods.wav": {
+      "count": 52,
+      "weight": 0.1386750490563073,
+      "technique_counts": {
+        "implement_rods": 52,
+        "crash_high": 31
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\044_phrase_rock_simple_fast_rods.wav": {
+      "count": 55,
+      "weight": 0.13483997249264842,
+      "technique_counts": {
+        "implement_rods": 55,
+        "crash_high": 32
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\045_phrase_rock_complex_slow_rods.wav": {
+      "count": 76,
+      "weight": 0.11470786693528089,
+      "technique_counts": {
+        "implement_rods": 76,
+        "crash_high": 2
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\046_phrase_rock_complex_medium_rods.wav": {
+      "count": 78,
+      "weight": 0.11322770341445958,
+      "technique_counts": {
+        "implement_rods": 78,
+        "ride_tip_articulation": 2,
+        "crash_high": 1
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\047_phrase_rock_complex_fast_rods.wav": {
+      "count": 72,
+      "weight": 0.11785113019775792,
+      "technique_counts": {
+        "implement_rods": 72,
+        "crash_high": 19,
+        "ride_tip_articulation": 2
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\048_phrase_afro_simple_slow_mallets.wav": {
+      "count": 15,
+      "weight": 0.25819888974716115,
+      "technique_counts": {
+        "implement_mallets": 15
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\049_phrase_afro_simple_medium_mallets.wav": {
+      "count": 25,
+      "weight": 0.2,
+      "technique_counts": {
+        "implement_mallets": 25
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\050_phrase_afro_simple_fast_mallets.wav": {
+      "count": 32,
+      "weight": 0.1767766952966369,
+      "technique_counts": {
+        "implement_mallets": 32
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\051_phrase_afro_complex_slow_mallets.wav": {
+      "count": 55,
+      "weight": 0.13483997249264842,
+      "technique_counts": {
+        "cowbell": 55,
+        "implement_mallets": 55
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\052_phrase_afro_complex_medium_mallets.wav": {
+      "count": 119,
+      "weight": 0.09166984970282113,
+      "technique_counts": {
+        "cowbell": 119,
+        "implement_mallets": 119,
+        "crash_high": 1,
+        "ride_tip_articulation": 2
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\053_phrase_afro_complex_fast_mallets.wav": {
+      "count": 222,
+      "weight": 0.075,
+      "technique_counts": {
+        "cowbell": 222,
+        "implement_mallets": 222,
+        "crash_high": 47,
+        "ride_tip_articulation": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\060_phrase_salsa_simple_slow_sticks.wav": {
+      "count": 58,
+      "weight": 0.13130643285972254,
+      "technique_counts": {
+        "cowbell": 58,
+        "implement_sticks": 58
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\061_phrase_salsa_simple_medium_sticks.wav": {
+      "count": 62,
+      "weight": 0.1270001270001905,
+      "technique_counts": {
+        "cowbell": 62,
+        "implement_sticks": 62
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\062_phrase_salsa_simple_fast_sticks.wav": {
+      "count": 64,
+      "weight": 0.125,
+      "technique_counts": {
+        "cowbell": 64,
+        "implement_sticks": 64
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\063_phrase_salsa_complex_slow_sticks.wav": {
+      "count": 88,
+      "weight": 0.10660035817780522,
+      "technique_counts": {
+        "cowbell": 88,
+        "implement_sticks": 88
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\064_phrase_salsa_complex_medium_sticks.wav": {
+      "count": 103,
+      "weight": 0.09853292781642932,
+      "technique_counts": {
+        "implement_sticks": 103,
+        "crash_high": 37
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\065_phrase_salsa_complex_fast_sticks.wav": {
+      "count": 153,
+      "weight": 0.08084520834544433,
+      "technique_counts": {
+        "cowbell": 153,
+        "implement_sticks": 153,
+        "ride_tip_articulation": 1,
+        "crash_high": 1
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\066_phrase_shuffle-blues_simple_slow_brushes.wav": {
+      "count": 58,
+      "weight": 0.13130643285972254,
+      "technique_counts": {
+        "implement_brushes": 58
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\067_phrase_shuffle-blues_simple_medium_brushes.wav": {
+      "count": 51,
+      "weight": 0.14002800840280097,
+      "technique_counts": {
+        "implement_brushes": 51
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\068_phrase_shuffle-blues_simple_fast_brushes.wav": {
+      "count": 50,
+      "weight": 0.1414213562373095,
+      "technique_counts": {
+        "implement_brushes": 50,
+        "ride_tip_articulation": 31
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\069_phrase_shuffle-blues_complex_slow_brushes.wav": {
+      "count": 111,
+      "weight": 0.0949157995752499,
+      "technique_counts": {
+        "implement_brushes": 111,
+        "crash_high": 1
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\070_phrase_shuffle-blues_complex_medium_brushes.wav": {
+      "count": 144,
+      "weight": 0.08333333333333333,
+      "technique_counts": {
+        "implement_brushes": 144,
+        "ride_tip_articulation": 46,
+        "crash_high": 1
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\071_phrase_shuffle-blues_complex_fast_brushes.wav": {
+      "count": 150,
+      "weight": 0.08164965809277261,
+      "technique_counts": {
+        "implement_brushes": 150,
+        "crash_high": 56
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\078_phrase_reggae_simple_slow_sticks.wav": {
+      "count": 41,
+      "weight": 0.15617376188860607,
+      "technique_counts": {
+        "implement_sticks": 41,
+        "cross_stick": 4
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\079_phrase_reggae_simple_medium_sticks.wav": {
+      "count": 85,
+      "weight": 0.10846522890932808,
+      "technique_counts": {
+        "implement_sticks": 85,
+        "cross_stick": 11
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\080_phrase_reggae_simple_fast_sticks.wav": {
+      "count": 111,
+      "weight": 0.0949157995752499,
+      "technique_counts": {
+        "implement_sticks": 111,
+        "cross_stick": 18
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\081_phrase_reggae_complex_slow_sticks.wav": {
+      "count": 73,
+      "weight": 0.11704114719613057,
+      "technique_counts": {
+        "implement_sticks": 73,
+        "cross_stick": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\082_phrase_reggae_complex_medium_sticks.wav": {
+      "count": 88,
+      "weight": 0.10660035817780522,
+      "technique_counts": {
+        "implement_sticks": 88,
+        "cross_stick": 16,
+        "crash_high": 1
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\083_phrase_reggae-ska_complex_fast_sticks.wav": {
+      "count": 118,
+      "weight": 0.09205746178983233,
+      "technique_counts": {
+        "implement_sticks": 118,
+        "cross_stick": 12,
+        "crash_high": 1
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\084_phrase_waltz_simple_slow_brushes.wav": {
+      "count": 14,
+      "weight": 0.2672612419124244,
+      "technique_counts": {
+        "implement_brushes": 14
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\085_phrase_waltz_simple_medium_brushes.wav": {
+      "count": 33,
+      "weight": 0.17407765595569785,
+      "technique_counts": {
+        "implement_brushes": 33
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\086_phrase_waltz_simple_fast_brushes.wav": {
+      "count": 52,
+      "weight": 0.1386750490563073,
+      "technique_counts": {
+        "implement_brushes": 52,
+        "ride_tip_articulation": 27
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\087_phrase_waltz_complex_slow_brushes.wav": {
+      "count": 66,
+      "weight": 0.12309149097933274,
+      "technique_counts": {
+        "implement_brushes": 66
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\088_phrase_waltz_complex_medium_brushes.wav": {
+      "count": 91,
+      "weight": 0.10482848367219183,
+      "technique_counts": {
+        "implement_brushes": 91,
+        "crash_high": 33,
+        "ride_tip_articulation": 2
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\089_phrase_waltz_complex_fast_brushes.wav": {
+      "count": 146,
+      "weight": 0.0827605888602368,
+      "technique_counts": {
+        "implement_brushes": 146,
+        "ride_tip_articulation": 52,
+        "crash_high": 1
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\096_solo_latin_hands.wav": {
+      "count": 179,
+      "weight": 0.075,
+      "technique_counts": {
+        "cowbell": 179,
+        "implement_hands": 179,
+        "crash_high": 1
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\098_solo_afro_mallets.wav": {
+      "count": 142,
+      "weight": 0.08391813582966891,
+      "technique_counts": {
+        "cowbell": 142,
+        "implement_mallets": 142,
+        "ride_tip_articulation": 21,
+        "crash_high": 18
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\100_solo_rock_sticks.wav": {
+      "count": 248,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 248
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\101_solo_jazz-rock_rods.wav": {
+      "count": 215,
+      "weight": 0.075,
+      "technique_counts": {
+        "cowbell": 215,
+        "implement_rods": 215,
+        "ride_tip_articulation": 19,
+        "crash_high": 11
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\102_solo_salsa_sticks.wav": {
+      "count": 262,
+      "weight": 0.075,
+      "technique_counts": {
+        "cowbell": 262,
+        "implement_sticks": 262,
+        "crash_high": 1
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\107_minus-one_salsa_sticks.wav": {
+      "count": 740,
+      "weight": 0.075,
+      "technique_counts": {
+        "cowbell": 740,
+        "implement_sticks": 740,
+        "crash_high": 114,
+        "cross_stick": 32,
+        "ride_tip_articulation": 2
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\108_minus-one_rock-60s_sticks.wav": {
+      "count": 697,
+      "weight": 0.075,
+      "technique_counts": {
+        "cowbell": 697,
+        "implement_sticks": 697,
+        "ride_tip_articulation": 4,
+        "crash_high": 90
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\109_minus-one_metal_sticks.wav": {
+      "count": 481,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 481,
+        "ride_tip_articulation": 8,
+        "crash_high": 25
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\110_minus-one_musette_brushes.wav": {
+      "count": 416,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_brushes": 416,
+        "crash_high": 12,
+        "ride_tip_articulation": 50
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\111_minus-one_funky_rods.wav": {
+      "count": 498,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_rods": 498,
+        "crash_high": 22,
+        "ride_tip_articulation": 5
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\112_minus-one_funk_rods.wav": {
+      "count": 358,
+      "weight": 0.075,
+      "technique_counts": {
+        "cowbell": 358,
+        "implement_rods": 358,
+        "ride_tip_articulation": 3,
+        "crash_high": 3
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\113_minus-one_charleston_sticks.wav": {
+      "count": 460,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 460,
+        "crash_high": 41
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\114_minus-one_celtic-rock_brushes.wav": {
+      "count": 688,
+      "weight": 0.075,
+      "technique_counts": {
+        "cowbell": 688,
+        "implement_brushes": 688,
+        "ride_tip_articulation": 11,
+        "crash_high": 11
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\115_minus-one_bossa_brushes.wav": {
+      "count": 477,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_brushes": 477,
+        "cross_stick": 96,
+        "crash_high": 1,
+        "ride_tip_articulation": 9
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\121_MIDI-minus-one_bigband_brushes.wav": {
+      "count": 471,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_brushes": 471,
+        "ride_tip_articulation": 48,
+        "crash_high": 7
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\123_MIDI-minus-one_blues-102_sticks.wav": {
+      "count": 643,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 643,
+        "ride_tip_articulation": 9,
+        "crash_high": 1
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\125_MIDI-minus-one_country-120_brushes.wav": {
+      "count": 282,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_brushes": 282
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\127_MIDI-minus-one_disco-108_sticks.wav": {
+      "count": 314,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 314,
+        "crash_high": 1,
+        "ride_tip_articulation": 13
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\129_MIDI-minus-one_funk-101_sticks.wav": {
+      "count": 270,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 270
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\131_MIDI-minus-one_grunge_sticks.wav": {
+      "count": 305,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 305,
+        "crash_high": 131,
+        "ride_tip_articulation": 3
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\133_MIDI-minus-one_nu-soul_sticks.wav": {
+      "count": 263,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 263,
+        "ride_tip_articulation": 1
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\135_MIDI-minus-one_rock-113_sticks.wav": {
+      "count": 172,
+      "weight": 0.07624928516630233,
+      "technique_counts": {
+        "implement_sticks": 172
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\137_MIDI-minus-one_rock'n'roll-188_sticks.wav": {
+      "count": 469,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 469,
+        "ride_tip_articulation": 159
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\139_MIDI-minus-one_soul-120-marvin-gaye_sticks.wav": {
+      "count": 192,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 192
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\141_MIDI-minus-one_soul-98_sticks.wav": {
+      "count": 214,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 214,
+        "ride_tip_articulation": 52
+      }
+    },
+    "drummer_1\\audio\\dry_mix\\143_MIDI-minus-one_fusion-125_sticks.wav": {
+      "count": 378,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 378
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\001_hits_snare-drum_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\002_hits_medium-tom_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\003_hits_low-tom_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\004_hits_bass-drum_pedal_x6.wav": {
+      "count": 6,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_pedal": 6
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\005_hits_open-hi-hat_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\006_hits_closed-hi-hat_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\007_hits_half-opened-hi-hat_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\008_hits_ride-cymbal-1_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5,
+        "ride_bell_accent": 5
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\009_hits_ride-cymbal-2_sticks_x6.wav": {
+      "count": 6,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 6,
+        "ride_tip_articulation": 6
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\010_hits_chinese-ride-cymbal_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "china_high": 5,
+        "implement_sticks": 5
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\011_hits_crash-cymbal_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "crash_high": 5,
+        "implement_sticks": 5
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\012_hits_splash-cymbal_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\013_hits_cowbell_sticks_x7.wav": {
+      "count": 7,
+      "weight": 0.37796447300922725,
+      "technique_counts": {
+        "cowbell": 7,
+        "implement_sticks": 7
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\014_hits_snare-drum-shuffle_brushes_x7.wav": {
+      "count": 7,
+      "weight": 0.37796447300922725,
+      "technique_counts": {
+        "brush_sweep": 7,
+        "implement_brushes": 7
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\015_hits_snare-drum-no-snare_brushes_x3.wav": {
+      "count": 3,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 3
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\016_hits_snare-drum_brushes_x7.wav": {
+      "count": 7,
+      "weight": 0.37796447300922725,
+      "technique_counts": {
+        "implement_brushes": 7
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\017_hits_medium-tom_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 5
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\018_hits_low-tom_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 5
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\019_hits_open-hi-hat_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 5
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\020_hits_closed-hi-hat_brushes_x7.wav": {
+      "count": 7,
+      "weight": 0.37796447300922725,
+      "technique_counts": {
+        "implement_brushes": 7
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\021_hits_ride-cymbal-2_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 5,
+        "ride_tip_articulation": 5
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\022_hits_crash-cymbal_brushes_x6.wav": {
+      "count": 6,
+      "weight": 0.4,
+      "technique_counts": {
+        "crash_high": 6,
+        "implement_brushes": 6
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\023_hits_splash-cymbal_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 5
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\024_hits_cowbell_brushes_x8.wav": {
+      "count": 8,
+      "weight": 0.3535533905932738,
+      "technique_counts": {
+        "cowbell": 8,
+        "implement_brushes": 8
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\025_hits_snare-drum_rods_x8.wav": {
+      "count": 8,
+      "weight": 0.3535533905932738,
+      "technique_counts": {
+        "implement_rods": 8
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\026_hits_medium-tom_sticks_x6.wav": {
+      "count": 6,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 6
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\027_hits_low-tom_rods_x6.wav": {
+      "count": 6,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_rods": 6
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\028_hits_snare-drum-no-snare_mallets_x7.wav": {
+      "count": 7,
+      "weight": 0.37796447300922725,
+      "technique_counts": {
+        "implement_mallets": 7
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\029_hits_snare-drum_mallets_x10.wav": {
+      "count": 9,
+      "weight": 0.3333333333333333,
+      "technique_counts": {
+        "implement_mallets": 9
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\030_hits_medium-tom_mallets_x6.wav": {
+      "count": 6,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_mallets": 6
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\031_hits_low-tom_mallets_x6.wav": {
+      "count": 6,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_mallets": 6
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\038_phrase_disco_simple_slow_sticks.wav": {
+      "count": 62,
+      "weight": 0.1270001270001905,
+      "technique_counts": {
+        "crash_high": 1,
+        "implement_sticks": 62
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\039_phrase_disco_simple_medium_sticks.wav": {
+      "count": 61,
+      "weight": 0.12803687993289598,
+      "technique_counts": {
+        "implement_sticks": 61
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\040_phrase_disco_simple_fast_sticks.wav": {
+      "count": 58,
+      "weight": 0.13130643285972254,
+      "technique_counts": {
+        "implement_sticks": 58
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\041_phrase_disco_complex_slow_sticks.wav": {
+      "count": 90,
+      "weight": 0.10540925533894598,
+      "technique_counts": {
+        "implement_sticks": 90
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\042_phrase_disco_complex_medium_sticks.wav": {
+      "count": 61,
+      "weight": 0.12803687993289598,
+      "technique_counts": {
+        "implement_sticks": 61
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\043_phrase_disco_complex_fast_sticks.wav": {
+      "count": 95,
+      "weight": 0.10259783520851541,
+      "technique_counts": {
+        "implement_sticks": 95
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\044_phrase_rock_simple_slow_sticks.wav": {
+      "count": 81,
+      "weight": 0.1111111111111111,
+      "technique_counts": {
+        "implement_sticks": 81
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\045_phrase_rock_simple_medium_sticks.wav": {
+      "count": 55,
+      "weight": 0.13483997249264842,
+      "technique_counts": {
+        "implement_sticks": 55
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\046_phrase_rock_simple_fast_sticks.wav": {
+      "count": 77,
+      "weight": 0.11396057645963795,
+      "technique_counts": {
+        "implement_sticks": 77
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\047_phrase_rock_complex_slow_sticks.wav": {
+      "count": 95,
+      "weight": 0.10259783520851541,
+      "technique_counts": {
+        "implement_sticks": 95
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\048_phrase_rock_complex_medium_sticks.wav": {
+      "count": 55,
+      "weight": 0.13483997249264842,
+      "technique_counts": {
+        "implement_sticks": 55
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\049_phrase_rock_complex_fast_sticks.wav": {
+      "count": 102,
+      "weight": 0.09901475429766743,
+      "technique_counts": {
+        "implement_sticks": 102
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\050_phrase_afro_simple_slow_sticks.wav": {
+      "count": 177,
+      "weight": 0.07516460280028288,
+      "technique_counts": {
+        "implement_sticks": 177,
+        "china_high": 1
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\051_phrase_afro_simple_medium_sticks.wav": {
+      "count": 106,
+      "weight": 0.09712858623572641,
+      "technique_counts": {
+        "implement_sticks": 106
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\052_phrase_afro_simple_fast_sticks.wav": {
+      "count": 139,
+      "weight": 0.08481889296799709,
+      "technique_counts": {
+        "implement_sticks": 139
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\053_phrase_afro_complex_slow_sticks.wav": {
+      "count": 189,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 189,
+        "china_high": 2,
+        "ride_tip_articulation": 2,
+        "crash_high": 1
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\054_phrase_afro_complex_medium_sticks.wav": {
+      "count": 180,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 180,
+        "ride_tip_articulation": 6
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\055_phrase_afro_complex_fast_sticks.wav": {
+      "count": 271,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 271,
+        "ride_tip_articulation": 4,
+        "china_high": 3
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\069_phrase_shuffle-blues_simple_slow_sticks.wav": {
+      "count": 82,
+      "weight": 0.11043152607484655,
+      "technique_counts": {
+        "implement_sticks": 82,
+        "ride_bell_accent": 24
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\070_phrase_shuffle-blues_simple_medium_sticks.wav": {
+      "count": 62,
+      "weight": 0.1270001270001905,
+      "technique_counts": {
+        "implement_sticks": 62,
+        "ride_tip_articulation": 33
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\071_phrase_shuffle-blues_simple_fast_sticks.wav": {
+      "count": 103,
+      "weight": 0.09853292781642932,
+      "technique_counts": {
+        "implement_sticks": 103
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\072_phrase_shuffle-blues_complex_slow_sticks.wav": {
+      "count": 124,
+      "weight": 0.08980265101338746,
+      "technique_counts": {
+        "implement_sticks": 124,
+        "crash_high": 1,
+        "ride_bell_accent": 2,
+        "ride_tip_articulation": 2
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\073_phrase_shuffle-blues_complex_medium_sticks.wav": {
+      "count": 153,
+      "weight": 0.08084520834544433,
+      "technique_counts": {
+        "implement_sticks": 153,
+        "crash_high": 3,
+        "ride_tip_articulation": 28,
+        "china_high": 2
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\074_phrase_shuffle-blues_complex_fast_sticks.wav": {
+      "count": 257,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 257,
+        "crash_high": 3,
+        "ride_tip_articulation": 34,
+        "ride_bell_accent": 32
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\075_phrase_hard-rock_simple_slow_sticks.wav": {
+      "count": 52,
+      "weight": 0.1386750490563073,
+      "technique_counts": {
+        "implement_sticks": 52
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\076_phrase_hard-rock_simple_medium_sticks.wav": {
+      "count": 52,
+      "weight": 0.1386750490563073,
+      "technique_counts": {
+        "implement_sticks": 52,
+        "crash_high": 1
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\077_phrase_hard-rock_simple_fast_sticks.wav": {
+      "count": 126,
+      "weight": 0.0890870806374748,
+      "technique_counts": {
+        "implement_sticks": 126
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\078_phrase_hard-rock_complex_slow_sticks.wav": {
+      "count": 134,
+      "weight": 0.08638684255813601,
+      "technique_counts": {
+        "implement_sticks": 134,
+        "crash_high": 6,
+        "ride_tip_articulation": 30,
+        "china_high": 2
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\079_phrase_hard-rock_complex_medium_sticks.wav": {
+      "count": 113,
+      "weight": 0.09407208683835973,
+      "technique_counts": {
+        "implement_sticks": 113,
+        "crash_high": 6,
+        "china_high": 2,
+        "ride_tip_articulation": 17
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\080_phrase_hard-rock_complex_fast_sticks.wav": {
+      "count": 154,
+      "weight": 0.08058229640253803,
+      "technique_counts": {
+        "implement_sticks": 154,
+        "crash_high": 5,
+        "ride_tip_articulation": 29
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\087_phrase_waltz_simple_slow_brushes.wav": {
+      "count": 36,
+      "weight": 0.16666666666666666,
+      "technique_counts": {
+        "implement_brushes": 36,
+        "ride_tip_articulation": 1,
+        "ride_bell_accent": 1
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\088_phrase_waltz_simple_medium_brushes.wav": {
+      "count": 48,
+      "weight": 0.14433756729740643,
+      "technique_counts": {
+        "implement_brushes": 48,
+        "ride_tip_articulation": 1
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\089_phrase_waltz_simple_fast_brushes.wav": {
+      "count": 105,
+      "weight": 0.09759000729485331,
+      "technique_counts": {
+        "implement_brushes": 105,
+        "ride_bell_accent": 51,
+        "ride_tip_articulation": 2
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\090_phrase_waltz_complex_slow_brushes.wav": {
+      "count": 113,
+      "weight": 0.09407208683835973,
+      "technique_counts": {
+        "implement_brushes": 113,
+        "crash_high": 2,
+        "ride_bell_accent": 33,
+        "ride_tip_articulation": 12,
+        "china_high": 1
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\091_phrase_waltz_complex_medium_brushes.wav": {
+      "count": 192,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_brushes": 192,
+        "ride_tip_articulation": 64,
+        "crash_high": 1,
+        "china_high": 1
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\092_phrase_waltz_complex_fast_brushes.wav": {
+      "count": 302,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_brushes": 302,
+        "ride_bell_accent": 45,
+        "ride_tip_articulation": 55,
+        "crash_high": 1,
+        "china_high": 1
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\093_phrase_funk_simple_slow_sticks.wav": {
+      "count": 47,
+      "weight": 0.14586499149789456,
+      "technique_counts": {
+        "implement_sticks": 47
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\094_phrase_funk_simple_medium_sticks.wav": {
+      "count": 55,
+      "weight": 0.13483997249264842,
+      "technique_counts": {
+        "implement_sticks": 55
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\095_phrase_funk_simple_fast_sticks.wav": {
+      "count": 99,
+      "weight": 0.10050378152592121,
+      "technique_counts": {
+        "implement_sticks": 99
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\096_phrase_funk_complex_slow_sticks.wav": {
+      "count": 121,
+      "weight": 0.09090909090909091,
+      "technique_counts": {
+        "implement_sticks": 121,
+        "crash_high": 1,
+        "ride_tip_articulation": 1
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\097_phrase_funk_complex_medium_sticks.wav": {
+      "count": 183,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 183,
+        "crash_high": 1,
+        "ride_tip_articulation": 41,
+        "china_high": 1
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\098_phrase_funk_complex_fast_sticks.wav": {
+      "count": 239,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 239,
+        "crash_high": 3,
+        "ride_tip_articulation": 37
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\099_phrase_country_simple_slow_brushes.wav": {
+      "count": 52,
+      "weight": 0.1386750490563073,
+      "technique_counts": {
+        "implement_brushes": 52
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\100_phrase_country_simple_medium_brushes.wav": {
+      "count": 51,
+      "weight": 0.14002800840280097,
+      "technique_counts": {
+        "implement_brushes": 51
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\101_phrase_country_simple_fast_brushes.wav": {
+      "count": 102,
+      "weight": 0.09901475429766743,
+      "technique_counts": {
+        "implement_brushes": 102
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\102_phrase_country_simple_very-fast_brushes.wav": {
+      "count": 67,
+      "weight": 0.12216944435630522,
+      "technique_counts": {
+        "implement_brushes": 67
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\103_phrase_country_complex_slow_brushes.wav": {
+      "count": 156,
+      "weight": 0.08006407690254357,
+      "technique_counts": {
+        "implement_brushes": 156,
+        "crash_high": 3,
+        "ride_tip_articulation": 1
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\104_phrase_country_complex_medium_brushes.wav": {
+      "count": 126,
+      "weight": 0.0890870806374748,
+      "technique_counts": {
+        "implement_brushes": 126,
+        "ride_tip_articulation": 1,
+        "crash_high": 2
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\105_phrase_country_complex_fast_brushes.wav": {
+      "count": 167,
+      "weight": 0.07738232325341368,
+      "technique_counts": {
+        "implement_brushes": 167,
+        "china_high": 1,
+        "ride_tip_articulation": 1,
+        "crash_high": 1
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\106_solo_binary_sticks.wav": {
+      "count": 239,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 239,
+        "crash_high": 4,
+        "ride_tip_articulation": 2,
+        "china_high": 3
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\108_solo_toms_sticks.wav": {
+      "count": 368,
+      "weight": 0.075,
+      "technique_counts": {
+        "cowbell": 368,
+        "implement_sticks": 368,
+        "china_high": 2
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\110_solo_brushes_brushes.wav": {
+      "count": 373,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_brushes": 373,
+        "crash_high": 11,
+        "china_high": 3,
+        "ride_tip_articulation": 4,
+        "ride_bell_accent": 3
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\115_minus-one_salsa_sticks.wav": {
+      "count": 615,
+      "weight": 0.075,
+      "technique_counts": {
+        "cowbell": 615,
+        "implement_sticks": 615,
+        "crash_high": 3,
+        "china_high": 1
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\116_minus-one_rock-60s_sticks.wav": {
+      "count": 504,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 504,
+        "crash_high": 5,
+        "ride_tip_articulation": 36,
+        "ride_bell_accent": 100,
+        "china_high": 1
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\117_minus-one_metal_sticks.wav": {
+      "count": 451,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 451,
+        "crash_high": 12,
+        "china_high": 2,
+        "ride_tip_articulation": 3
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\118_minus-one_musette_brushes.wav": {
+      "count": 301,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_brushes": 301,
+        "crash_high": 4,
+        "ride_bell_accent": 1,
+        "ride_tip_articulation": 4
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\119_minus-one_funky_sticks.wav": {
+      "count": 481,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 481,
+        "crash_high": 6
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\120_minus-one_funk_sticks.wav": {
+      "count": 462,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 462,
+        "crash_high": 4,
+        "china_high": 1
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\121_minus-one_charleston_sticks.wav": {
+      "count": 953,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 953,
+        "ride_bell_accent": 1,
+        "cross_stick": 38
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\122_minus-one_celtic-rock_sticks.wav": {
+      "count": 410,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 410,
+        "ride_tip_articulation": 50,
+        "ride_bell_accent": 10,
+        "crash_high": 2
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\123_minus-one_celtic-rock-better-take_sticks.wav": {
+      "count": 737,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 737,
+        "ride_tip_articulation": 91,
+        "crash_high": 2
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\124_minus-one_bossa_sticks.wav": {
+      "count": 467,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 467,
+        "cross_stick": 83,
+        "crash_high": 13,
+        "ride_bell_accent": 72,
+        "ride_tip_articulation": 10
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\130_MIDI-minus-one_bigband_sticks.wav": {
+      "count": 300,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 300,
+        "crash_high": 7,
+        "ride_tip_articulation": 78,
+        "china_high": 1
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\132_MIDI-minus-one_blues-102_sticks.wav": {
+      "count": 267,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 267,
+        "crash_high": 3
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\134_MIDI-minus-one_country-120_sticks.wav": {
+      "count": 211,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 211,
+        "cross_stick": 36,
+        "crash_high": 1
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\136_MIDI-minus-one_disco-108_sticks.wav": {
+      "count": 226,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 226,
+        "crash_high": 2
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\138_MIDI-minus-one_funk-101_sticks.wav": {
+      "count": 273,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 273,
+        "crash_high": 4
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\140_MIDI-minus-one_grunge_sticks.wav": {
+      "count": 250,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 250,
+        "ride_tip_articulation": 57,
+        "crash_high": 4,
+        "china_high": 1
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\142_MIDI-minus-one_nu-soul_sticks.wav": {
+      "count": 289,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 289,
+        "crash_high": 5,
+        "ride_tip_articulation": 2,
+        "ride_bell_accent": 4
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\144_MIDI-minus-one_rock-113_sticks.wav": {
+      "count": 221,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 221,
+        "cross_stick": 1,
+        "ride_tip_articulation": 2,
+        "crash_high": 4,
+        "ride_bell_accent": 31
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\146_MIDI-minus-one_rock'n'roll-188_sticks.wav": {
+      "count": 267,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 267,
+        "crash_high": 3,
+        "ride_tip_articulation": 4,
+        "ride_bell_accent": 42
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\148_MIDI-minus-one_soul-120-marvin-gaye_sticks.wav": {
+      "count": 247,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 247,
+        "crash_high": 3,
+        "ride_bell_accent": 23,
+        "ride_tip_articulation": 1
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\150_MIDI-minus-one_soul-98_sticks.wav": {
+      "count": 246,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 246,
+        "ride_bell_accent": 43,
+        "ride_tip_articulation": 2,
+        "crash_high": 11,
+        "cross_stick": 15
+      }
+    },
+    "drummer_2\\audio\\dry_mix\\152_MIDI-minus-one_fusion-125_sticks.wav": {
+      "count": 353,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 353,
+        "crash_high": 10
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\001_hits_snare-drum_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\002_hits_medium-tom-1_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\003_hits_medium-tom-2_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\004_hits_low-tom-1_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\005_hits_low-tom-2_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\006_hits_bass-drum_pedal_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_pedal": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\007_hits_closed-hi-hat_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\008_hits_half-opened-hi-hat_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\009_hits_open-hi-hat_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\010_hits_wide-opened-hi-hat_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\011_hits_pedal-hi-hat-closing_pedal_x5.wav": {
+      "count": 10,
+      "weight": 0.31622776601683794,
+      "technique_counts": {
+        "implement_pedal": 10
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\012_hits_pedal-hi-hat_pedal_x1.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_pedal": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\013_hits_ride-cymbal-1_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5,
+        "ride_bell_accent": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\014_hits_ride-cymbal-1-dome_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5,
+        "ride_bell_accent": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\015_hits_ride-cymbal-2_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5,
+        "ride_tip_articulation": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\016_hits_ride-cymbal-played-as-crash_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5,
+        "ride_tip_articulation": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\017_hits_crash-cymbal-1_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "crash_mid": 5,
+        "implement_sticks": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\018_hits_crash-cymbal-2_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "crash_low": 5,
+        "implement_sticks": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\019_hits_chinese-ride-cymbal_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "china_low": 5,
+        "implement_sticks": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\020_hits_snare-drum_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\021_hits_snare-drum-shuffle_brushes_x19.wav": {
+      "count": 44,
+      "weight": 0.15075567228888181,
+      "technique_counts": {
+        "implement_brushes": 44
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\022_hits_medium-tom-1_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\023_hits_medium-tom-2_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\024_hits_low-tom-1_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\025_hits_low-tom-2_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\026_hits_ride-cymbal-1_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 5,
+        "ride_bell_accent": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\027_hits_ride-cymbal-1-dome_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 5,
+        "ride_bell_accent": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\028_hits_ride-cymbal-1-brush-back_brushes_x2.wav": {
+      "count": 2,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 2,
+        "ride_bell_accent": 2
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\029_hits_ride-cymbal-2_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 5,
+        "ride_tip_articulation": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\030_hits_crash-cymbal-1_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "crash_mid": 5,
+        "implement_brushes": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\031_hits_pedal-hi-hat-closing_brushes_x6.wav": {
+      "count": 12,
+      "weight": 0.28867513459481287,
+      "technique_counts": {
+        "implement_brushes": 12
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\032_hits_closed-hi-hat_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\033_hits_half-opened-hi-hat_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\034_hits_open-hi-hat_brushes_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_brushes": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\035_hits_snare-drum_rods_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_rods": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\036_hits_medium-tom-1_rods_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_rods": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\037_hits_medium-tom-2_rods_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_rods": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\038_hits_low-tom-1_rods_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_rods": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\039_hits_low-tom-2_rods_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_rods": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\040_hits_snare-drum_mallets_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_mallets": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\041_hits_snare-drum-no-snare_mallets_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_mallets": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\042_hits_medium-tom-1_mallets_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_mallets": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\043_hits_medium-tom-2_mallets_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_mallets": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\044_hits_low-tom-1_mallets_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_mallets": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\045_hits_low-tom-2_mallets_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_mallets": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\046_hits_crash-cymbal-1_mallets_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "crash_low": 5,
+        "implement_mallets": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\047_hits_rim-shot_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "implement_sticks": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\048_hits_cross-sticks_sticks_x5.wav": {
+      "count": 5,
+      "weight": 0.4,
+      "technique_counts": {
+        "cross_stick": 5,
+        "implement_sticks": 5
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\055_phrase_disco_simple_slow_sticks.wav": {
+      "count": 58,
+      "weight": 0.13130643285972254,
+      "technique_counts": {
+        "implement_sticks": 58
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\056_phrase_disco_simple_medium_sticks.wav": {
+      "count": 57,
+      "weight": 0.13245323570650439,
+      "technique_counts": {
+        "implement_sticks": 57
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\057_phrase_disco_simple_fast_sticks.wav": {
+      "count": 69,
+      "weight": 0.1203858530857692,
+      "technique_counts": {
+        "implement_sticks": 69,
+        "crash_mid": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\058_phrase_disco_complex_slow_sticks.wav": {
+      "count": 149,
+      "weight": 0.08192319205190404,
+      "technique_counts": {
+        "implement_sticks": 149,
+        "crash_mid": 2
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\059_phrase_disco_complex_medium_sticks.wav": {
+      "count": 159,
+      "weight": 0.07930515857181442,
+      "technique_counts": {
+        "implement_sticks": 159,
+        "crash_mid": 3,
+        "ride_tip_articulation": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\060_phrase_disco_complex_fast_sticks.wav": {
+      "count": 200,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 200,
+        "multi_crash_variants": 200,
+        "crash_mid": 2,
+        "multi_cymbal_same_class": 3,
+        "ride_tip_articulation": 1,
+        "china_low": 1,
+        "crash_low": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\061_phrase_rock_simple_slow_sticks.wav": {
+      "count": 82,
+      "weight": 0.11043152607484655,
+      "technique_counts": {
+        "implement_sticks": 82,
+        "crash_mid": 2
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\062_phrase_rock_simple_medium_sticks.wav": {
+      "count": 86,
+      "weight": 0.10783277320343841,
+      "technique_counts": {
+        "implement_sticks": 86,
+        "crash_mid": 1,
+        "ride_tip_articulation": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\063_phrase_rock_simple_fast_sticks.wav": {
+      "count": 74,
+      "weight": 0.11624763874381928,
+      "technique_counts": {
+        "implement_sticks": 74,
+        "ride_tip_articulation": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\064_phrase_rock_complex_slow_sticks.wav": {
+      "count": 166,
+      "weight": 0.07761505257063328,
+      "technique_counts": {
+        "implement_sticks": 166,
+        "multi_crash_variants": 166,
+        "crash_mid": 3,
+        "multi_cymbal_same_class": 4,
+        "crash_low": 1,
+        "china_low": 2
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\065_phrase_rock_complex_medium_sticks.wav": {
+      "count": 156,
+      "weight": 0.08006407690254357,
+      "technique_counts": {
+        "implement_sticks": 156,
+        "multi_crash_variants": 156,
+        "china_low": 1,
+        "crash_low": 1,
+        "multi_cymbal_same_class": 3,
+        "crash_mid": 2,
+        "ride_tip_articulation": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\066_phrase_rock_complex_fast_sticks.wav": {
+      "count": 226,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 226,
+        "multi_crash_variants": 226,
+        "crash_mid": 5,
+        "multi_cymbal_same_class": 8,
+        "ride_tip_articulation": 3,
+        "china_low": 2,
+        "crash_low": 3
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\067_phrase_afro_simple_slow_sticks.wav": {
+      "count": 100,
+      "weight": 0.1,
+      "technique_counts": {
+        "implement_sticks": 100,
+        "cross_stick": 21,
+        "crash_mid": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\068_phrase_afro_simple_medium_sticks.wav": {
+      "count": 115,
+      "weight": 0.09325048082403138,
+      "technique_counts": {
+        "implement_sticks": 115,
+        "ride_bell_accent": 44,
+        "cross_stick": 10
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\069_phrase_afro_simple_fast_sticks.wav": {
+      "count": 115,
+      "weight": 0.09325048082403138,
+      "technique_counts": {
+        "implement_sticks": 115,
+        "ride_bell_accent": 43
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\070_phrase_afro-samba_complex_slow_sticks.wav": {
+      "count": 233,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 233
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\071_phrase_afro-samba_complex_medium_sticks.wav": {
+      "count": 215,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 215,
+        "crash_mid": 1,
+        "ride_tip_articulation": 2
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\072_phrase_afro-samba_complex_fast_sticks.wav": {
+      "count": 323,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 323,
+        "multi_crash_variants": 323,
+        "ride_bell_accent": 51,
+        "crash_mid": 2,
+        "multi_cymbal_same_class": 3,
+        "ride_tip_articulation": 1,
+        "crash_low": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\079_phrase_salsa_simple_slow_sticks.wav": {
+      "count": 130,
+      "weight": 0.08770580193070292,
+      "technique_counts": {
+        "cross_stick": 30,
+        "implement_sticks": 130,
+        "ride_bell_accent": 73
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\080_phrase_salsa_simple_medium_sticks.wav": {
+      "count": 155,
+      "weight": 0.08032193289024989,
+      "technique_counts": {
+        "cross_stick": 31,
+        "implement_sticks": 155,
+        "ride_bell_accent": 67
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\081_phrase_salsa_simple_medium_sticks.wav": {
+      "count": 138,
+      "weight": 0.08512565307587486,
+      "technique_counts": {
+        "cowbell": 138,
+        "implement_sticks": 138,
+        "cross_stick": 30
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\082_phrase_salsa_complex_slow_sticks.wav": {
+      "count": 138,
+      "weight": 0.08512565307587486,
+      "technique_counts": {
+        "implement_sticks": 138,
+        "cross_stick": 30
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\083_phrase_salsa_complex_medium_sticks.wav": {
+      "count": 172,
+      "weight": 0.07624928516630233,
+      "technique_counts": {
+        "implement_sticks": 172,
+        "ride_bell_accent": 68,
+        "crash_mid": 1,
+        "ride_tip_articulation": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\084_phrase_salsa_complex_fast_sticks.wav": {
+      "count": 221,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 221,
+        "ride_bell_accent": 86,
+        "crash_mid": 1,
+        "ride_tip_articulation": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\085_phrase_shuffle-blues_simple_slow_sticks.wav": {
+      "count": 97,
+      "weight": 0.1015346165133619,
+      "technique_counts": {
+        "implement_sticks": 97
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\086_phrase_shuffle-blues_simple_medium_sticks.wav": {
+      "count": 137,
+      "weight": 0.0854357657716761,
+      "technique_counts": {
+        "implement_sticks": 137,
+        "crash_mid": 2
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\087_phrase_shuffle-blues_simple_fast_sticks.wav": {
+      "count": 268,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 268,
+        "ride_bell_accent": 55,
+        "crash_mid": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\088_phrase_shuffle-blues_complex_slow_sticks.wav": {
+      "count": 132,
+      "weight": 0.08703882797784893,
+      "technique_counts": {
+        "implement_sticks": 132,
+        "crash_mid": 2
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\089_phrase_shuffle-blues_complex_medium_sticks.wav": {
+      "count": 213,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 213,
+        "multi_crash_variants": 213,
+        "crash_mid": 2,
+        "multi_cymbal_same_class": 3,
+        "crash_low": 1,
+        "ride_bell_accent": 14
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\090_phrase_shuffle-blues_complex_fast_sticks.wav": {
+      "count": 202,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 202,
+        "stick_click": 202,
+        "ride_tip_articulation": 2,
+        "ride_bell_accent": 65,
+        "crash_mid": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\091_phrase_reggae_simple_slow_sticks.wav": {
+      "count": 101,
+      "weight": 0.09950371902099892,
+      "technique_counts": {
+        "implement_sticks": 101,
+        "stick_click": 101,
+        "crash_mid": 1,
+        "cross_stick": 19
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\092_phrase_reggae_simple_medium_sticks.wav": {
+      "count": 115,
+      "weight": 0.09325048082403138,
+      "technique_counts": {
+        "implement_sticks": 115,
+        "multi_crash_variants": 115,
+        "crash_mid": 2,
+        "multi_cymbal_same_class": 3,
+        "cross_stick": 22,
+        "crash_low": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\093_phrase_reggae_simple_fast_sticks.wav": {
+      "count": 144,
+      "weight": 0.08333333333333333,
+      "technique_counts": {
+        "implement_sticks": 144,
+        "crash_mid": 2,
+        "cross_stick": 26,
+        "ride_tip_articulation": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\094_phrase_reggae_complex_slow_sticks.wav": {
+      "count": 120,
+      "weight": 0.09128709291752768,
+      "technique_counts": {
+        "implement_sticks": 120,
+        "cross_stick": 12,
+        "crash_mid": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\095_phrase_reggae_complex_medium_sticks.wav": {
+      "count": 143,
+      "weight": 0.08362420100070908,
+      "technique_counts": {
+        "implement_sticks": 143,
+        "cross_stick": 13,
+        "ride_tip_articulation": 1,
+        "china_low": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\096_phrase_reggae_complex_fast_sticks.wav": {
+      "count": 206,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 206,
+        "cross_stick": 6,
+        "crash_mid": 1,
+        "china_low": 1,
+        "ride_tip_articulation": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\109_phrase_oriental_simple_slow_sticks.wav": {
+      "count": 121,
+      "weight": 0.09090909090909091,
+      "technique_counts": {
+        "implement_sticks": 121
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\110_phrase_oriental_simple_medium_sticks.wav": {
+      "count": 79,
+      "weight": 0.1125087900926024,
+      "technique_counts": {
+        "implement_sticks": 79,
+        "crash_mid": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\111_phrase_oriental_simple_fast_sticks.wav": {
+      "count": 68,
+      "weight": 0.12126781251816648,
+      "technique_counts": {
+        "cross_stick": 17,
+        "implement_sticks": 68
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\112_phrase_oriental_complex_slow_sticks.wav": {
+      "count": 152,
+      "weight": 0.08111071056538127,
+      "technique_counts": {
+        "implement_sticks": 152,
+        "crash_mid": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\113_phrase_oriental_complex_medium_sticks.wav": {
+      "count": 164,
+      "weight": 0.07808688094430304,
+      "technique_counts": {
+        "implement_sticks": 164,
+        "crash_mid": 3,
+        "ride_tip_articulation": 2
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\114_phrase_oriental_complex_fast_sticks.wav": {
+      "count": 263,
+      "weight": 0.075,
+      "technique_counts": {
+        "cross_stick": 15,
+        "implement_sticks": 263,
+        "multi_crash_variants": 263,
+        "crash_mid": 1,
+        "multi_cymbal_same_class": 2,
+        "ride_tip_articulation": 1,
+        "ride_bell_accent": 1,
+        "crash_low": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\115_phrase_cha-cha_simple_slow_sticks.wav": {
+      "count": 93,
+      "weight": 0.10369516947304253,
+      "technique_counts": {
+        "implement_sticks": 93,
+        "cross_stick": 25
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\116_phrase_cha-cha_complex_slow_sticks.wav": {
+      "count": 132,
+      "weight": 0.08703882797784893,
+      "technique_counts": {
+        "cowbell": 132,
+        "implement_sticks": 132,
+        "crash_mid": 2,
+        "ride_tip_articulation": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\117_solo_afro_sticks.wav": {
+      "count": 262,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 262,
+        "ride_tip_articulation": 3,
+        "crash_mid": 2
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\119_solo_toms_mallets.wav": {
+      "count": 231,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_mallets": 231,
+        "multi_crash_variants": 231,
+        "crash_low": 2,
+        "multi_cymbal_same_class": 4,
+        "crash_mid": 2,
+        "china_low": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\121_solo_jazz-funk_sticks.wav": {
+      "count": 736,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 736,
+        "multi_crash_variants": 736,
+        "crash_low": 8,
+        "multi_cymbal_same_class": 14,
+        "ride_bell_accent": 74,
+        "ride_tip_articulation": 11,
+        "china_low": 5,
+        "crash_mid": 6
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\126_minus-one_salsa_sticks.wav": {
+      "count": 705,
+      "weight": 0.075,
+      "technique_counts": {
+        "cowbell": 705,
+        "implement_sticks": 705,
+        "multi_crash_variants": 705,
+        "ride_bell_accent": 224,
+        "ride_tip_articulation": 5,
+        "crash_mid": 7,
+        "multi_cymbal_same_class": 9,
+        "crash_low": 2
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\127_minus-one_rock-60s_sticks.wav": {
+      "count": 568,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 568,
+        "multi_crash_variants": 568,
+        "crash_low": 2,
+        "multi_cymbal_same_class": 6,
+        "ride_bell_accent": 2,
+        "crash_mid": 4,
+        "china_low": 1,
+        "ride_tip_articulation": 2
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\128_minus-one_metal_sticks.wav": {
+      "count": 508,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 508,
+        "multi_crash_variants": 508,
+        "crash_low": 7,
+        "multi_cymbal_same_class": 15,
+        "crash_mid": 8,
+        "ride_tip_articulation": 3,
+        "china_low": 3
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\129_minus-one_musette_sticks.wav": {
+      "count": 569,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 569,
+        "multi_crash_variants": 569,
+        "ride_bell_accent": 108,
+        "ride_tip_articulation": 85,
+        "crash_mid": 4,
+        "multi_cymbal_same_class": 5,
+        "crash_low": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\130_minus-one_funky_sticks.wav": {
+      "count": 615,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 615,
+        "ride_tip_articulation": 4,
+        "crash_mid": 4,
+        "ride_bell_accent": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\131_minus-one_funk_sticks.wav": {
+      "count": 442,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 442,
+        "multi_crash_variants": 442,
+        "crash_mid": 8,
+        "multi_cymbal_same_class": 10,
+        "ride_bell_accent": 35,
+        "ride_tip_articulation": 2,
+        "crash_low": 2,
+        "china_low": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\132_minus-one_charleston_sticks.wav": {
+      "count": 710,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 710,
+        "ride_bell_accent": 2,
+        "crash_mid": 2
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\133_minus-one_celtic-rock_sticks.wav": {
+      "count": 662,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 662,
+        "crash_mid": 6,
+        "ride_tip_articulation": 2,
+        "ride_bell_accent": 101
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\134_minus-one_bossa_sticks.wav": {
+      "count": 498,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 498,
+        "cross_stick": 61,
+        "crash_mid": 3,
+        "ride_bell_accent": 37,
+        "ride_tip_articulation": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\140_MIDI-minus-one_bigband_sticks.wav": {
+      "count": 248,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 248,
+        "multi_crash_variants": 248,
+        "ride_bell_accent": 15,
+        "china_low": 1,
+        "crash_mid": 5,
+        "multi_cymbal_same_class": 6,
+        "ride_tip_articulation": 3,
+        "crash_low": 1,
+        "cross_stick": 27
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\142_MIDI-minus-one_blues-102_sticks.wav": {
+      "count": 275,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 275,
+        "multi_crash_variants": 275,
+        "crash_low": 2,
+        "multi_cymbal_same_class": 4,
+        "crash_mid": 2,
+        "china_low": 1,
+        "ride_tip_articulation": 1,
+        "ride_bell_accent": 29
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\144_MIDI-minus-one_country-120_sticks.wav": {
+      "count": 227,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 227,
+        "crash_mid": 2,
+        "ride_tip_articulation": 1,
+        "ride_bell_accent": 12
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\146_MIDI-minus-one_disco-108_sticks.wav": {
+      "count": 313,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 313,
+        "ride_tip_articulation": 2,
+        "crash_mid": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\148_MIDI-minus-one_funk-101_sticks.wav": {
+      "count": 320,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 320,
+        "crash_mid": 2
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\150_MIDI-minus-one_grunge_sticks.wav": {
+      "count": 272,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 272,
+        "crash_mid": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\152_MIDI-minus-one_nu-soul_sticks.wav": {
+      "count": 408,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 408,
+        "crash_mid": 3,
+        "ride_tip_articulation": 2,
+        "ride_bell_accent": 22
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\154_MIDI-minus-one_rock-113_sticks.wav": {
+      "count": 265,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 265,
+        "multi_crash_variants": 265,
+        "crash_low": 2,
+        "multi_cymbal_same_class": 3,
+        "ride_bell_accent": 2,
+        "crash_mid": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\156_MIDI-minus-one_rock'n'roll-188_sticks.wav": {
+      "count": 391,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 391,
+        "crash_mid": 2
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\158_MIDI-minus-one_soul-120-marvin-gaye_sticks.wav": {
+      "count": 340,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 340,
+        "crash_mid": 2,
+        "ride_tip_articulation": 2
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\160_MIDI-minus-one_soul-98_sticks.wav": {
+      "count": 262,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 262,
+        "multi_crash_variants": 262,
+        "crash_mid": 9,
+        "multi_cymbal_same_class": 10,
+        "china_low": 1,
+        "ride_bell_accent": 74,
+        "cross_stick": 2,
+        "crash_low": 1
+      }
+    },
+    "drummer_3\\audio\\dry_mix\\162_MIDI-minus-one_fusion-125_sticks.wav": {
+      "count": 494,
+      "weight": 0.075,
+      "technique_counts": {
+        "implement_sticks": 494,
+        "multi_crash_variants": 494,
+        "ride_tip_articulation": 6,
+        "crash_mid": 11,
+        "multi_cymbal_same_class": 13,
+        "china_low": 4,
+        "crash_low": 2,
+        "ride_bell_accent": 1
+      }
+    }
+  },
+  "technique_totals": {
+    "implement_sticks": 37332,
+    "implement_pedal": 46,
+    "ride_tip_articulation": 1539,
+    "crash_high": 952,
+    "cowbell": 6090,
+    "implement_brushes": 5710,
+    "implement_mallets": 945,
+    "cross_stick": 773,
+    "implement_rods": 1492,
+    "implement_hands": 179,
+    "ride_bell_accent": 1851,
+    "china_high": 37,
+    "brush_sweep": 7,
+    "crash_mid": 157,
+    "crash_low": 52,
+    "china_low": 31,
+    "multi_crash_variants": 6965,
+    "multi_cymbal_same_class": 128,
+    "stick_click": 303
+  }
+}

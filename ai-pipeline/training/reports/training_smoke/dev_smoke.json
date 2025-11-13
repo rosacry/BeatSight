@@ -1,0 +1,22 @@
+{
+  "epochs": 1,
+  "batch_size": 4,
+  "learning_rate": 0.001,
+  "device": "cpu",
+  "best_validation_accuracy": 33.333333333333336,
+  "best_epoch": 1,
+  "best_model_path": "ai-pipeline/training/dev_models/best_drum_classifier.pth",
+  "final_train_loss": 0.9247160434722901,
+  "final_val_loss": 1.114222526550293,
+  "final_train_accuracy": 55.55555555555556,
+  "final_val_accuracy": 33.333333333333336,
+  "history": [
+    {
+      "epoch": 1.0,
+      "train_loss": 0.9247160434722901,
+      "train_accuracy": 55.55555555555556,
+      "val_loss": 1.114222526550293,
+      "val_accuracy": 33.333333333333336
+    }
+  ]
+}

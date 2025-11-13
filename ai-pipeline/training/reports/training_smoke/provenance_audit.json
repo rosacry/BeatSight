@@ -1,0 +1,58 @@
+[
+  {
+    "manifest": "slakh_events.jsonl",
+    "prov": "slakh_provenance.jsonl",
+    "manifest_sessions": 1708,
+    "prov_sessions": 1708,
+    "missing_count": 0,
+    "extra_count": 0
+  },
+  {
+    "manifest": "groove_events.jsonl",
+    "prov": "groove_provenance.jsonl",
+    "manifest_sessions": 1150,
+    "prov_sessions": 1150,
+    "missing_count": 0,
+    "extra_count": 0
+  },
+  {
+    "manifest": "enst_events.jsonl",
+    "prov": "enst_provenance.jsonl",
+    "manifest_sessions": 318,
+    "prov_sessions": 318,
+    "missing_count": 0,
+    "extra_count": 0
+  },
+  {
+    "manifest": "idmt_events.jsonl",
+    "prov": "idmt_provenance.jsonl",
+    "manifest_sessions": 284,
+    "prov_sessions": 284,
+    "missing_count": 0,
+    "extra_count": 0
+  },
+  {
+    "manifest": "musdb_hq_events.jsonl",
+    "prov": "musdb_hq_provenance.jsonl",
+    "manifest_sessions": 150,
+    "prov_sessions": 150,
+    "missing_count": 0,
+    "extra_count": 0
+  },
+  {
+    "manifest": "telefunken_events.jsonl",
+    "prov": "telefunken_provenance.jsonl",
+    "manifest_sessions": 143,
+    "prov_sessions": 143,
+    "missing_count": 0,
+    "extra_count": 0
+  },
+  {
+    "manifest": "signaturesounds_events.jsonl",
+    "prov": "signaturesounds_provenance.jsonl",
+    "manifest_sessions": 246,
+    "prov_sessions": 246,
+    "missing_count": 0,
+    "extra_count": 0
+  }
+]

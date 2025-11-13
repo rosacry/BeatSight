@@ -11,9 +11,9 @@ public class BeatmapLibraryTests
     {
         var beatmaps = BeatmapLibrary.GetAvailableBeatmaps();
 
-        var sample = beatmaps.FirstOrDefault(entry => entry.Beatmap.Metadata.BeatmapId == "example-001");
+        var sample = beatmaps.FirstOrDefault(entry => entry.Beatmap.Metadata.BeatmapId == "handcrafted-groove-001");
         Assert.NotNull(sample);
-        Assert.Equal("Simple Practice Beat", sample!.Beatmap.Metadata.Title);
+        Assert.Equal("Handcrafted Groove Demo", sample!.Beatmap.Metadata.Title);
     }
 
     [Fact]

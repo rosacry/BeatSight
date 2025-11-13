@@ -1,0 +1,68 @@
+{
+    "datasets": [
+        {
+            "name": "cambridge_multitrack",
+            "roots": [
+                "data/raw/cambridge",
+                "/mnt/d/data/raw/cambridge"
+            ],
+            "checksum_manifest": "data/archives/checksums/cambridge.sha256"
+        },
+        {
+            "name": "slakh2100",
+            "roots": [
+                "data/raw/slakh2100"
+            ],
+            "checksum_manifest": "data/archives/checksums/slakh2100.sha256"
+        },
+        {
+            "name": "groove_mididataset",
+            "roots": [
+                "data/raw/groove_midi"
+            ],
+            "checksum_manifest": "data/archives/checksums/groove_midi.sha256"
+        },
+        {
+            "name": "extended_groove_mididataset",
+            "roots": [
+                "data/raw/egmd"
+            ],
+            "checksum_manifest": "data/archives/checksums/egmd.sha256"
+        },
+        {
+            "name": "enst_drums",
+            "roots": [
+                "data/raw/ENST-Drums"
+            ],
+            "checksum_manifest": "data/archives/checksums/enst_drums.sha256"
+        },
+        {
+            "name": "idmt_smt_drums_v2",
+            "roots": [
+                "data/raw/idmt_smt_drums_v2"
+            ],
+            "checksum_manifest": "data/archives/checksums/idmt_smt_drums_v2.sha256"
+        },
+        {
+            "name": "musdb18_hq",
+            "roots": [
+                "data/raw/musdb18_hq"
+            ],
+            "checksum_manifest": "data/archives/checksums/musdb18_hq.sha256"
+        },
+        {
+            "name": "signaturesounds",
+            "roots": [
+                "data/raw/signaturesounds"
+            ],
+            "checksum_manifest": "data/archives/checksums/signaturesounds.sha256"
+        },
+        {
+            "name": "telefunken_sessions",
+            "roots": [
+                "data/raw/telefunken"
+            ],
+            "checksum_manifest": "data/archives/checksums/telefunken.sha256"
+        }
+    ]
+}

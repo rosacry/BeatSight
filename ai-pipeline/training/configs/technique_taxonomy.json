@@ -1,0 +1,903 @@
+{
+    "version": 1,
+    "generated_at": "2025-11-07T00:00:00Z",
+    "source": "additionaldrummertech.txt",
+    "description": "Canonical list of drummer techniques, gestures, timbres, and timing feels curated for ingestion, sampling, and health gating.",
+    "techniques": [
+        {
+            "id": "flam",
+            "category": "snare_rudiment",
+            "priority": "core",
+            "aliases": [
+                "Flam"
+            ],
+            "keywords": [
+                "grace note",
+                "two-hit"
+            ],
+            "description": "Grace note followed immediately by a primary stroke to create a thick two-hit accent."
+        },
+        {
+            "id": "drag",
+            "category": "snare_rudiment",
+            "priority": "core",
+            "aliases": [
+                "Drag",
+                "Ruff"
+            ],
+            "keywords": [
+                "multiple grace notes"
+            ],
+            "description": "Two or more soft grace notes preceding a primary stroke for gritty lead-in articulation."
+        },
+        {
+            "id": "double_stroke",
+            "category": "snare_rudiment",
+            "priority": "core",
+            "aliases": [
+                "Double-stroke",
+                "Diddle"
+            ],
+            "keywords": [
+                "RR",
+                "LL"
+            ],
+            "description": "Rapid RR/LL sticking pairs that produce an even shimmer distinct from single strokes."
+        },
+        {
+            "id": "buzz_roll",
+            "category": "snare_rudiment",
+            "priority": "core",
+            "aliases": [
+                "Buzz roll",
+                "Press roll"
+            ],
+            "keywords": [
+                "multiple bounces"
+            ],
+            "description": "Sustained stroke using multiple stick bounces per hand for a papery continuous tone."
+        },
+        {
+            "id": "rimshot",
+            "category": "snare_articulation",
+            "priority": "core",
+            "aliases": [
+                "Rimshot"
+            ],
+            "keywords": [
+                "head and rim"
+            ],
+            "description": "Simultaneous strike of drumhead and rim yielding a loud cracking accent."
+        },
+        {
+            "id": "cross_stick",
+            "category": "snare_articulation",
+            "priority": "core",
+            "aliases": [
+                "Cross-stick",
+                "Side-stick"
+            ],
+            "keywords": [
+                "rim click"
+            ],
+            "description": "Stick rests on head while tip clicks the rim for a woody, percussive tone."
+        },
+        {
+            "id": "ghost_note",
+            "category": "snare_articulation",
+            "priority": "core",
+            "aliases": [
+                "Ghost note"
+            ],
+            "keywords": [
+                "pp",
+                "low velocity"
+            ],
+            "description": "Very soft strokes between primary hits that add feel and texture."
+        },
+        {
+            "id": "stick_shot",
+            "category": "snare_articulation",
+            "priority": "supporting",
+            "aliases": [
+                "Stick shot",
+                "Shot"
+            ],
+            "keywords": [
+                "one stick braced"
+            ],
+            "description": "One stick strikes while the other is braced on the rim for an explosive accent."
+        },
+        {
+            "id": "dead_stroke",
+            "category": "snare_articulation",
+            "priority": "supporting",
+            "aliases": [
+                "Dead stroke",
+                "Muffle stroke"
+            ],
+            "keywords": [
+                "stick stays on head"
+            ],
+            "description": "Stick remains on head post-impact to produce a short thuddy attack."
+        },
+        {
+            "id": "snares_off",
+            "category": "snare_articulation",
+            "priority": "supporting",
+            "aliases": [
+                "Snares off"
+            ],
+            "keywords": [
+                "wires disengaged"
+            ],
+            "description": "Snare wires disengaged for a tom-like, dry voice used for dynamic contrast."
+        },
+        {
+            "id": "rim_click",
+            "category": "snare_articulation",
+            "priority": "supporting",
+            "aliases": [
+                "Rim click"
+            ],
+            "keywords": [
+                "rim only"
+            ],
+            "description": "Hitting the rim alone to create a sharp percussive click distinct from cross-stick."
+        },
+        {
+            "id": "accent_tap_flow",
+            "category": "snare_rudiment",
+            "priority": "supporting",
+            "aliases": [
+                "Accent-tap",
+                "Flow sticking"
+            ],
+            "keywords": [
+                "moeller"
+            ],
+            "description": "Alternating loud and soft notes to sculpt groove dynamics."
+        },
+        {
+            "id": "hihat_bark",
+            "category": "hihat_articulation",
+            "priority": "core",
+            "aliases": [
+                "Hi-hat bark",
+                "Continuous barking"
+            ],
+            "keywords": [
+                "open close",
+                "bark"
+            ],
+            "description": "Quick open-close accents creating an aggressive bark timbre."
+        },
+        {
+            "id": "hihat_splash",
+            "category": "hihat_articulation",
+            "priority": "core",
+            "aliases": [
+                "Hi-hat splash",
+                "Foot splash"
+            ],
+            "keywords": [
+                "pedal open"
+            ],
+            "description": "Foot-opened hi-hat producing a longer airy sustain."
+        },
+        {
+            "id": "hihat_foot_chick",
+            "category": "hihat_articulation",
+            "priority": "core",
+            "aliases": [
+                "Foot chick"
+            ],
+            "keywords": [
+                "pedal close"
+            ],
+            "description": "Closing the hats purely with the pedal for a tight chick without stick attack."
+        },
+        {
+            "id": "hihat_half_open",
+            "category": "hihat_articulation",
+            "priority": "supporting",
+            "aliases": [
+                "Half-open hats",
+                "Degree-of-open"
+            ],
+            "keywords": [
+                "partial open"
+            ],
+            "description": "Controlled gap between cymbals yielding a sizzle with pitch/decay variance."
+        },
+        {
+            "id": "hihat_lift",
+            "category": "hihat_articulation",
+            "priority": "supporting",
+            "aliases": [
+                "Hi-hat lift"
+            ],
+            "keywords": [
+                "open at impact"
+            ],
+            "description": "Slightly opening the hats at impact then re-closing to color groove transitions."
+        },
+        {
+            "id": "hihat_tip_articulation",
+            "category": "hihat_articulation",
+            "priority": "supporting",
+            "aliases": [
+                "Hi-hat tip"
+            ],
+            "keywords": [
+                "tip on top"
+            ],
+            "description": "Striking hats with the stick tip for a bright articulated ping."
+        },
+        {
+            "id": "hihat_shank_articulation",
+            "category": "hihat_articulation",
+            "priority": "supporting",
+            "aliases": [
+                "Hi-hat shank"
+            ],
+            "keywords": [
+                "shoulder attack"
+            ],
+            "description": "Using the stick shoulder against the hat edge for a washier texture."
+        },
+        {
+            "id": "tambourine_on_hihat",
+            "category": "hihat_articulation",
+            "priority": "stretch",
+            "aliases": [
+                "Tambourine on hi-hat"
+            ],
+            "keywords": [
+                "jingles"
+            ],
+            "description": "Clip-on jingles augment the hi-hat motion with tambourine resonance."
+        },
+        {
+            "id": "ride_bell_accent",
+            "category": "cymbal_articulation",
+            "priority": "core",
+            "aliases": [
+                "Bell accents",
+                "Bell-to-bow"
+            ],
+            "keywords": [
+                "ride bell"
+            ],
+            "description": "Alternating ride bell pings and bow wash to shape phrases timbrally."
+        },
+        {
+            "id": "ride_tip_articulation",
+            "category": "cymbal_articulation",
+            "priority": "supporting",
+            "aliases": [
+                "Ride tip"
+            ],
+            "keywords": [
+                "stick tip"
+            ],
+            "description": "Playing ride with stick tip on bow for precise definition."
+        },
+        {
+            "id": "ride_shank_articulation",
+            "category": "cymbal_articulation",
+            "priority": "supporting",
+            "aliases": [
+                "Ride shoulder",
+                "Ride shank"
+            ],
+            "keywords": [
+                "stick shoulder"
+            ],
+            "description": "Using stick shoulder on ride bow for broader wash."
+        },
+        {
+            "id": "mallet_swells",
+            "category": "cymbal_articulation",
+            "priority": "stretch",
+            "aliases": [
+                "Mallet swells",
+                "Cymbal rolls"
+            ],
+            "keywords": [
+                "soft mallet"
+            ],
+            "description": "Soft mallets on cymbals for seamless crescendos without discrete stick attacks."
+        },
+        {
+            "id": "cymbal_choke",
+            "category": "cymbal_articulation",
+            "priority": "core",
+            "aliases": [
+                "Cymbal choke"
+            ],
+            "keywords": [
+                "grab mute"
+            ],
+            "description": "Grabbing the cymbal immediately after strike to halt sustain."
+        },
+        {
+            "id": "cymbal_scrape",
+            "category": "cymbal_articulation",
+            "priority": "stretch",
+            "aliases": [
+                "Cymbal scrape"
+            ],
+            "keywords": [
+                "edge drag"
+            ],
+            "description": "Dragging stick along cymbal edge or bow for a shimmering scrape effect."
+        },
+        {
+            "id": "cymbal_stack_hit",
+            "category": "cymbal_articulation",
+            "priority": "stretch",
+            "aliases": [
+                "Cymbal stack"
+            ],
+            "keywords": [
+                "stacked crash"
+            ],
+            "description": "Tight stacked cymbals producing a short trashy burst distinct from standard crashes."
+        },
+        {
+            "id": "crash_build",
+            "category": "cymbal_pattern",
+            "priority": "core",
+            "aliases": [
+                "Crash build"
+            ],
+            "keywords": [
+                "crescendo",
+                "cymbal swell"
+            ],
+            "description": "Repeated or alternating cymbal hits that crescendo into a target section."
+        },
+        {
+            "id": "crash_riding",
+            "category": "cymbal_pattern",
+            "priority": "core",
+            "aliases": [
+                "Crash riding"
+            ],
+            "keywords": [
+                "timekeeping on crash"
+            ],
+            "description": "Maintaining time on a crash cymbal for high-energy passages."
+        },
+        {
+            "id": "multi_cymbal_same_class",
+            "category": "inventory",
+            "priority": "core",
+            "aliases": [
+                "Multiple cymbals same class"
+            ],
+            "keywords": [
+                "three crashes",
+                "multiple splashes"
+            ],
+            "description": "Score calls out that more than one cymbal of the same family is active (e.g., 3 crashes)."
+        },
+        {
+            "id": "crash_high",
+            "category": "cymbal_position",
+            "priority": "supporting",
+            "aliases": [
+                "High crash"
+            ],
+            "keywords": [
+                "upper pitch"
+            ],
+            "description": "Distinct high-pitched crash cymbal for multi-crash detection."
+        },
+        {
+            "id": "crash_mid",
+            "category": "cymbal_position",
+            "priority": "supporting",
+            "aliases": [
+                "Mid crash"
+            ],
+            "keywords": [
+                "middle crash"
+            ],
+            "description": "Mid-voiced crash cymbal when multiple crashes are present."
+        },
+        {
+            "id": "crash_low",
+            "category": "cymbal_position",
+            "priority": "supporting",
+            "aliases": [
+                "Low crash"
+            ],
+            "keywords": [
+                "dark crash"
+            ],
+            "description": "Lower pitched crash cymbal in multi-crash setups."
+        },
+        {
+            "id": "china_high",
+            "category": "cymbal_position",
+            "priority": "stretch",
+            "aliases": [
+                "High china"
+            ],
+            "keywords": [
+                "bright china"
+            ],
+            "description": "Higher register china cymbal (or small china) detection."
+        },
+        {
+            "id": "china_mid",
+            "category": "cymbal_position",
+            "priority": "stretch",
+            "aliases": [
+                "Mid china"
+            ],
+            "keywords": [
+                "medium china"
+            ],
+            "description": "Medium-sized china cymbal entry for multi-china kits."
+        },
+        {
+            "id": "china_low",
+            "category": "cymbal_position",
+            "priority": "stretch",
+            "aliases": [
+                "Low china"
+            ],
+            "keywords": [
+                "dark china"
+            ],
+            "description": "Lower pitched china cymbal (large or stacked) to distinguish tonal roles."
+        },
+        {
+            "id": "cymbal_bell_punctuation",
+            "category": "cymbal_pattern",
+            "priority": "supporting",
+            "aliases": [
+                "Crash bell punctuation"
+            ],
+            "keywords": [
+                "bell hits"
+            ],
+            "description": "Strategic bell stabs inside ride/crash phrases to lift transitions."
+        },
+        {
+            "id": "cowbell",
+            "category": "aux_percussion",
+            "priority": "core",
+            "aliases": [
+                "Cowbell"
+            ],
+            "keywords": [
+                "clave bell"
+            ],
+            "description": "Cowbell or similar pitched metal block integrated into the kit."
+        },
+        {
+            "id": "cascara_shells",
+            "category": "aux_percussion",
+            "priority": "stretch",
+            "aliases": [
+                "Cáscara on shells"
+            ],
+            "keywords": [
+                "shell pattern"
+            ],
+            "description": "Clave-oriented sticking patterns executed on drum shells or rims."
+        },
+        {
+            "id": "hand_muted_tom",
+            "category": "tom_articulation",
+            "priority": "supporting",
+            "aliases": [
+                "Hand-muted tom"
+            ],
+            "keywords": [
+                "palm mute"
+            ],
+            "description": "Palm or fingers damp the tom head at impact for short conga-like tone."
+        },
+        {
+            "id": "tom_pitch_bend",
+            "category": "tom_articulation",
+            "priority": "stretch",
+            "aliases": [
+                "Timpani-style pitch bend"
+            ],
+            "keywords": [
+                "press head"
+            ],
+            "description": "Pressing the head while striking to momentarily raise tom pitch."
+        },
+        {
+            "id": "floor_tom_ride",
+            "category": "tom_pattern",
+            "priority": "supporting",
+            "aliases": [
+                "Floor tom ride"
+            ],
+            "keywords": [
+                "time on floor tom"
+            ],
+            "description": "Timekeeping shifted to a floor tom, often with muffling for deep groove beds."
+        },
+        {
+            "id": "tea_towel_muting",
+            "category": "damping",
+            "priority": "supporting",
+            "aliases": [
+                "Tea towel muting",
+                "Wallet muting"
+            ],
+            "keywords": [
+                "cloth dampening"
+            ],
+            "description": "External cloth dampening on drums for reduced sustain and darker tone."
+        },
+        {
+            "id": "moongel_damping",
+            "category": "damping",
+            "priority": "supporting",
+            "aliases": [
+                "Moongel",
+                "External dampers"
+            ],
+            "keywords": [
+                "gel"
+            ],
+            "description": "Small gels or clips applied to heads to reduce ring and overtones."
+        },
+        {
+            "id": "riveted_crash",
+            "category": "cymbal_articulation",
+            "priority": "supporting",
+            "aliases": [
+                "Sizzle ride",
+                "Chain cymbal"
+            ],
+            "keywords": [
+                "rivets",
+                "chain"
+            ],
+            "description": "Cymbal fitted with rivets or chain producing sustained buzz."
+        },
+        {
+            "id": "brush_sweeps",
+            "category": "stick_choice",
+            "priority": "supporting",
+            "aliases": [
+                "Brush sweeps",
+                "Brush stirs"
+            ],
+            "keywords": [
+                "brush circle"
+            ],
+            "description": "Continuous circular or lateral brush motion for whispery sustained texture."
+        },
+        {
+            "id": "brush_taps",
+            "category": "stick_choice",
+            "priority": "supporting",
+            "aliases": [
+                "Brush taps",
+                "Brush flicks"
+            ],
+            "keywords": [
+                "articulated brush"
+            ],
+            "description": "Discrete brush strikes combining click attack with airy decay."
+        },
+        {
+            "id": "mallet_toms",
+            "category": "stick_choice",
+            "priority": "stretch",
+            "aliases": [
+                "Toms with mallets"
+            ],
+            "keywords": [
+                "soft mallet"
+            ],
+            "description": "Using soft mallets on toms for round orchestral thumps."
+        },
+        {
+            "id": "rods_hot_rods",
+            "category": "stick_choice",
+            "priority": "supporting",
+            "aliases": [
+                "Rods",
+                "Hot rods"
+            ],
+            "keywords": [
+                "bundled dowels"
+            ],
+            "description": "Bundled dowels reducing attack harshness for low-volume playing."
+        },
+        {
+            "id": "variable_meter",
+            "category": "time_structure",
+            "priority": "core",
+            "aliases": [
+                "Variable time signature"
+            ],
+            "keywords": [
+                "meter change"
+            ],
+            "description": "Shifting meter within a song with clear notation of new signatures."
+        },
+        {
+            "id": "metric_modulation",
+            "category": "time_structure",
+            "priority": "core",
+            "aliases": [
+                "Metric modulation"
+            ],
+            "keywords": [
+                "pulse relation"
+            ],
+            "description": "New pulse derived from subdivision of prior tempo without abrupt BPM jump."
+        },
+        {
+            "id": "tempo_change",
+            "category": "time_structure",
+            "priority": "supporting",
+            "aliases": [
+                "Tempo change"
+            ],
+            "keywords": [
+                "speed shift"
+            ],
+            "description": "Explicit acceleration or ritardando passages impacting groove feel."
+        },
+        {
+            "id": "swing_feel",
+            "category": "time_feel",
+            "priority": "core",
+            "aliases": [
+                "Swing"
+            ],
+            "keywords": [
+                "triplet grid"
+            ],
+            "description": "Triplet subdivision giving lilted forward motion compared to straight feel."
+        },
+        {
+            "id": "shuffle_feel",
+            "category": "time_feel",
+            "priority": "core",
+            "aliases": [
+                "Shuffle",
+                "Half-time shuffle"
+            ],
+            "keywords": [
+                "triplet spacing"
+            ],
+            "description": "Triplet-grid patterns with spaced backbeats and dense ghosting."
+        },
+        {
+            "id": "half_time_feel",
+            "category": "time_feel",
+            "priority": "supporting",
+            "aliases": [
+                "Half-time feel"
+            ],
+            "keywords": [
+                "snare on 3"
+            ],
+            "description": "Backbeat relocated to create half-time sensation without tempo change."
+        },
+        {
+            "id": "double_time_feel",
+            "category": "time_feel",
+            "priority": "supporting",
+            "aliases": [
+                "Double-time feel"
+            ],
+            "keywords": [
+                "double grid"
+            ],
+            "description": "Backbeat frequency doubled to heighten intensity while BPM stays constant."
+        },
+        {
+            "id": "polyrhythm",
+            "category": "time_structure",
+            "priority": "stretch",
+            "aliases": [
+                "Polyrhythm",
+                "Polymeter"
+            ],
+            "keywords": [
+                "simultaneous meters"
+            ],
+            "description": "Simultaneous conflicting subdivisions or meters cycling against each other."
+        },
+        {
+            "id": "hemiola",
+            "category": "time_structure",
+            "priority": "supporting",
+            "aliases": [
+                "Hemiola"
+            ],
+            "keywords": [
+                "3 over 2"
+            ],
+            "description": "Accents regrouped as three over two (or vice versa) creating tension."
+        },
+        {
+            "id": "odd_grouping",
+            "category": "time_structure",
+            "priority": "supporting",
+            "aliases": [
+                "Odd grouping"
+            ],
+            "keywords": [
+                "5s",
+                "7s",
+                "9s"
+            ],
+            "description": "Tuplet or phrase groupings beyond binary subdivisions such as quintuplets."
+        },
+        {
+            "id": "linear_drumming",
+            "category": "time_structure",
+            "priority": "supporting",
+            "aliases": [
+                "Linear drumming"
+            ],
+            "keywords": [
+                "no stacked hits"
+            ],
+            "description": "Patterns where limbs never strike simultaneously, creating isolated transients."
+        },
+        {
+            "id": "backbeat_displacement",
+            "category": "time_structure",
+            "priority": "supporting",
+            "aliases": [
+                "Backbeat displacement"
+            ],
+            "keywords": [
+                "off 2 and 4"
+            ],
+            "description": "Snare accent moved off usual 2 and 4 placements to create tension."
+        },
+        {
+            "id": "paradiddle_family",
+            "category": "snare_rudiment",
+            "priority": "supporting",
+            "aliases": [
+                "Paradiddle family"
+            ],
+            "keywords": [
+                "RLRR LRLL"
+            ],
+            "description": "Alternating single/double combos forming the base for accent grids."
+        },
+        {
+            "id": "paradiddle_diddle",
+            "category": "snare_rudiment",
+            "priority": "supporting",
+            "aliases": [
+                "Paradiddle-diddle"
+            ],
+            "keywords": [
+                "triplet friendly"
+            ],
+            "description": "Paradiddle variation ending with RR or LL giving flowing triplet phrasing."
+        },
+        {
+            "id": "herta",
+            "category": "snare_rudiment",
+            "priority": "stretch",
+            "aliases": [
+                "Herta"
+            ],
+            "keywords": [
+                "single single double"
+            ],
+            "description": "Fast single-single-double burst used in fills and transitions."
+        },
+        {
+            "id": "swiss_army_triplet",
+            "category": "snare_rudiment",
+            "priority": "stretch",
+            "aliases": [
+                "Swiss Army triplet"
+            ],
+            "keywords": [
+                "flam accented triplet"
+            ],
+            "description": "Flam-accented triplet with distinctive lilt common in funk and fusion."
+        },
+        {
+            "id": "bonham_triplet",
+            "category": "ensemble_pattern",
+            "priority": "stretch",
+            "aliases": [
+                "Bonham triplet"
+            ],
+            "keywords": [
+                "RLK orchestration"
+            ],
+            "description": "Triplet figure orchestrated as R L K for rolling rock cadence."
+        },
+        {
+            "id": "train_beat",
+            "category": "ensemble_pattern",
+            "priority": "supporting",
+            "aliases": [
+                "Train beat"
+            ],
+            "keywords": [
+                "brush or stick"
+            ],
+            "description": "Alternating snare/ghosts with steady hats evoking locomotive motion."
+        },
+        {
+            "id": "blast_beat",
+            "category": "ensemble_pattern",
+            "priority": "stretch",
+            "aliases": [
+                "Blast beat"
+            ],
+            "keywords": [
+                "extreme tempo"
+            ],
+            "description": "Extreme fast alternation of kick, snare, and cymbal forming a continuous wall."
+        },
+        {
+            "id": "spang_a_lang",
+            "category": "ensemble_pattern",
+            "priority": "supporting",
+            "aliases": [
+                "Spang-a-lang"
+            ],
+            "keywords": [
+                "jazz ride"
+            ],
+            "description": "Classic jazz ride phrasing ding-ding-da-ding anchoring swing feel."
+        },
+        {
+            "id": "crash_bell_punctuation",
+            "category": "ensemble_pattern",
+            "priority": "supporting",
+            "aliases": [
+                "Crash-bell punctuation"
+            ],
+            "keywords": [
+                "bell target"
+            ],
+            "description": "Bell hits inserted into crash or ride phrases to highlight accents."
+        },
+        {
+            "id": "double_kick_burst",
+            "category": "kick_articulation",
+            "priority": "supporting",
+            "aliases": [
+                "Double-kick",
+                "Slide/swivel doubles"
+            ],
+            "keywords": [
+                "rapid kicks"
+            ],
+            "description": "Rapid consecutive pedal strokes using single or double pedal techniques."
+        },
+        {
+            "id": "feathering",
+            "category": "kick_articulation",
+            "priority": "supporting",
+            "aliases": [
+                "Feathering"
+            ],
+            "keywords": [
+                "soft quarter notes"
+            ],
+            "description": "Very soft quarter-note pulses supporting feel without overt attack."
+        }
+    ]
+}

@@ -25,6 +25,10 @@ python -c "import demucs.pretrained; demucs.pretrained.get_model('htdemucs')"
 python -m pipeline.process --input song.mp3 --output beatmap.bsm
 ```
 
+> **Tip:** The repository includes a `sitecustomize.py` shim, so the command
+> works whether you run it from the `ai-pipeline/` directory or the repository
+> root.
+
 Add `--ml-model models/best_drum_classifier.pth` to enable the trained ML classifier, or rely on environment variables described below for automation.
 
 ### Enable ML Drum Classifier

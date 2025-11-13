@@ -8,6 +8,9 @@ format for the readiness tooling:
 - `openset_ground_truth_example.jsonl` & `openset_predictions_example.jsonl` – inputs for `openset_eval.py`.
 - `bootstrap_ground_truth_example.jsonl` & `bootstrap_predictions_example.jsonl` – inputs for `bootstrap_eval.py`.
 - `events_health_example.jsonl` – sample events for `dataset_health.py`.
+- `metadata_health_example.json` – companion `metadata.json` emitted by
+	`build_training_dataset.py`; pass to `dataset_health.py --dataset-metadata`
+	to surface duration tables in the report outputs.
 - `hard_negative_events_example.jsonl` & `hard_negative_predictions_example.jsonl` – inputs for `hard_negative_miner.py`.
 - `../configs/health_min_counts_example.json` – baseline label thresholds for
 	`dataset_health.py` when using bespoke minimum counts.

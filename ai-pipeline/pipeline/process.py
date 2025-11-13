@@ -61,14 +61,18 @@ def process_audio_file(
     Returns:
         Dictionary with processing results and statistics
     """
+    input_path = Path(input_path)
+    output_path = Path(output_path)
+    debug_output_path = Path(debug_output_path) if debug_output_path else None
+
     print(f"🎵 Processing: {input_path}")
     start_time = time.time()
 
     # Step 1: Preprocessing
     print("📊 Step 1/5: Preprocessing audio...")
-    audio_data, sample_rate = preprocess_audio(input_path)
+    audio_data, sample_rate = preprocess_audio(str(input_path))
 
-    detected_metadata = detect_song_metadata(input_path)
+    detected_metadata = detect_song_metadata(str(input_path))
     if detected_metadata.get("title") or detected_metadata.get("artist"):
         pretty_title = detected_metadata.get("title") or "?"
         pretty_artist = detected_metadata.get("artist") or "?"
@@ -217,7 +221,7 @@ def process_audio_file(
 
     beatmap, debug_info = generate_beatmap(
         classified_hits,
-        audio_path=input_path,
+        audio_path=str(input_path),
         drum_stem_path=None,
         metadata=metadata_payload,
         analysis_audio=audio_data,
@@ -234,12 +238,18 @@ def process_audio_file(
     )
 
     # Save beatmap
-    with open(output_path, 'w') as f:
+    if output_path.parent:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with output_path.open('w') as f:
         json.dump(beatmap, f, indent=2)
 
     if debug_output_path:
+        if debug_output_path.parent:
+            debug_output_path.parent.mkdir(parents=True, exist_ok=True)
+
         debug_payload = {
-            "input": input_path,
+            "input": str(input_path),
             "generated_at": time.time(),
             "sensitivity": detection_sensitivity,
             "confidence_threshold": confidence_threshold,
@@ -257,7 +267,7 @@ def process_audio_file(
             "generation": debug_info,
         }
 
-        with open(debug_output_path, "w") as debug_file:
+        with debug_output_path.open("w") as debug_file:
             json.dump(debug_payload, debug_file, indent=2)
 
     elapsed = time.time() - start_time
@@ -267,11 +277,11 @@ def process_audio_file(
 
     return {
         "success": True,
-        "output_path": output_path,
+        "output_path": str(output_path),
         "total_hits": len(classified_hits),
         "processing_time": elapsed,
         "confidence_threshold": confidence_threshold,
-        "debug_path": debug_output_path,
+        "debug_path": str(debug_output_path) if debug_output_path else None,
         "classifier": drum_classifier.last_classifier_mode,
         "classifier_model_path": drum_classifier.last_classifier_model_path,
     }

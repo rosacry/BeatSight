@@ -50,10 +50,11 @@ namespace BeatSight.Game.Screens.Mapping
         private BasicButton openInEditorButton = null!;
         private DetectionDebugOverlay debugOverlay = null!;
         private BasicSliderBar<double> sensitivitySlider = null!;
-        private BasicDropdown<QuantizationGridSetting> quantizationDropdown = null!;
+        private BeatSight.Game.UI.Components.Dropdown<QuantizationGridSetting> quantizationDropdown = null!;
         private BasicCheckbox debugOverlayCheckbox = null!;
         private Container progressBarContainer = null!;
         private WeightedProgressBar weightedProgressBar = null!;
+        private Container dropdownOverlay = null!;
         private SpriteText heartbeatStatusText = null!;
         private Container warningContainer = null!;
         private SpriteText warningText = null!;
@@ -89,9 +90,9 @@ namespace BeatSight.Game.Screens.Mapping
         private FillFlowContainer advancedSettingsBody = null!;
         private FillFlowContainer livePlaybackSettingsContainer = null!;
         private BasicCheckbox metronomeCheckbox = null!;
-        private BasicDropdown<MetronomeSoundOption> metronomeSoundDropdown = null!;
+        private BeatSight.Game.UI.Components.Dropdown<MetronomeSoundOption> metronomeSoundDropdown = null!;
         private BasicCheckbox drumStemCheckbox = null!;
-        private BasicDropdown<NoteSkinOption> noteSkinDropdown = null!;
+        private BeatSight.Game.UI.Components.Dropdown<NoteSkinOption> noteSkinDropdown = null!;
         private SpriteText livePlaybackStatusText = null!;
         private IReadOnlyDictionary<GenerationStageId, double>? lastStageDurations;
         private string? lastStageDurationSummary;
@@ -131,6 +132,14 @@ namespace BeatSight.Game.Screens.Mapping
             metronomeSound.BindTo(config.GetBindable<MetronomeSoundOption>(BeatSightSetting.MetronomeSound));
             drumStemOnly.BindTo(config.GetBindable<bool>(BeatSightSetting.DrumStemPlaybackOnly));
             noteSkinSelection.BindTo(config.GetBindable<NoteSkinOption>(BeatSightSetting.NoteSkin));
+
+            dropdownOverlay = new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                AlwaysPresent = true,
+                // Ensure dropdown menus display above the rest of the configuration UI.
+                Depth = -1
+            };
 
             InternalChildren = new Drawable[]
             {
@@ -219,6 +228,7 @@ namespace BeatSight.Game.Screens.Mapping
                         }
                     }
                 }
+            , dropdownOverlay
             };
 
             startButton.Enabled.Value = true;
@@ -418,17 +428,21 @@ namespace BeatSight.Game.Screens.Mapping
             };
             drumStemCheckbox.Current.BindTo(drumStemOnly);
 
-            metronomeSoundDropdown = new BasicDropdown<MetronomeSoundOption>
+            metronomeSoundDropdown = new BeatSight.Game.UI.Components.Dropdown<MetronomeSoundOption>
             {
-                Width = 200
+                Width = 200,
+                SearchEnabled = true
             };
+            metronomeSoundDropdown.OverlayLayer = dropdownOverlay;
             metronomeSoundDropdown.Items = Enum.GetValues<MetronomeSoundOption>();
             metronomeSoundDropdown.Current.BindTo(metronomeSound);
 
-            noteSkinDropdown = new BasicDropdown<NoteSkinOption>
+            noteSkinDropdown = new BeatSight.Game.UI.Components.Dropdown<NoteSkinOption>
             {
-                Width = 220
+                Width = 220,
+                SearchEnabled = true
             };
+            noteSkinDropdown.OverlayLayer = dropdownOverlay;
             noteSkinDropdown.Items = Enum.GetValues<NoteSkinOption>();
             noteSkinDropdown.Current.BindTo(noteSkinSelection);
 
@@ -594,10 +608,11 @@ namespace BeatSight.Game.Screens.Mapping
             sensitivityValue.MaxValue = 100;
             sensitivitySlider.Current.BindTo(sensitivityValue);
 
-            quantizationDropdown = new BasicDropdown<QuantizationGridSetting>
+            quantizationDropdown = new BeatSight.Game.UI.Components.Dropdown<QuantizationGridSetting>
             {
                 RelativeSizeAxes = Axes.X
             };
+            quantizationDropdown.OverlayLayer = dropdownOverlay;
             quantizationDropdown.Items = new[]
             {
                 QuantizationGridSetting.Eighth,

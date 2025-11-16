@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using osu.Framework.Platform;
 using BeatSight.Game;
 using System.Linq;
+using Microsoft.Win32.SafeHandles;
 
 namespace BeatSight.Desktop
 {
@@ -18,20 +19,55 @@ namespace BeatSight.Desktop
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool AllocConsole();
 
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern IntPtr CreateFile(
+            string lpFileName,
+            uint dwDesiredAccess,
+            uint dwShareMode,
+            IntPtr lpSecurityAttributes,
+            uint dwCreationDisposition,
+            uint dwFlagsAndAttributes,
+            IntPtr hTemplateFile);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool SetStdHandle(int nStdHandle, IntPtr hHandle);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr GetStdHandle(int nStdHandle);
+
         private const int ATTACH_PARENT_PROCESS = -1;
+        private const int STD_OUTPUT_HANDLE = -11;
+        private const int STD_ERROR_HANDLE = -12;
+
+        private const uint GENERIC_READ = 0x80000000;
+        private const uint GENERIC_WRITE = 0x40000000;
+        private const uint FILE_SHARE_READ = 0x00000001;
+        private const uint FILE_SHARE_WRITE = 0x00000002;
+        private const uint OPEN_EXISTING = 3;
+        private static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
 
         public static void Main(string[] args)
         {
-            bool verboseLogsRequested = args.Any(a =>
-                a.Equals("--verbose-logs", StringComparison.OrdinalIgnoreCase)
-                || a.Equals("--verbose", StringComparison.OrdinalIgnoreCase));
+            bool verboseLogsRequested = true;
 
-            // Try to attach to parent console (for terminal output)
-            if (!AttachConsole(ATTACH_PARENT_PROCESS))
+            foreach (string argument in args)
             {
-                // If no parent console, allocate a new one
-                AllocConsole();
+                if (argument.Equals("--verbose-logs", StringComparison.OrdinalIgnoreCase)
+                    || argument.Equals("--verbose", StringComparison.OrdinalIgnoreCase))
+                {
+                    verboseLogsRequested = true;
+                }
+
+                if (argument.Equals("--quiet", StringComparison.OrdinalIgnoreCase)
+                    || argument.Equals("--no-verbose", StringComparison.OrdinalIgnoreCase)
+                    || argument.Equals("--no-verbose-logs", StringComparison.OrdinalIgnoreCase))
+                {
+                    verboseLogsRequested = false;
+                    break;
+                }
             }
+
+            ensureConsoleAttachment();
 
             // Default to debug-level logging unless verbose logs are explicitly requested.
             Logger.Level = verboseLogsRequested ? LogLevel.Verbose : LogLevel.Debug;
@@ -72,16 +108,75 @@ namespace BeatSight.Desktop
             };
         }
 
+        private static void ensureConsoleAttachment()
+        {
+            bool attached = AttachConsole(ATTACH_PARENT_PROCESS);
+
+            if (attached)
+            {
+                configureConsoleWriters();
+                return;
+            }
+
+            // If stdout/stderr are already redirected (e.g. running from Mintty/Git Bash),
+            // avoid allocating a second console window but make sure the writers flush.
+            if (Console.IsOutputRedirected || Console.IsErrorRedirected)
+            {
+                configureConsoleWriters();
+                return;
+            }
+
+            if (AllocConsole())
+                configureConsoleWriters();
+        }
+
+        private static void configureConsoleWriters()
+        {
+            try
+            {
+                redirectStream(STD_OUTPUT_HANDLE, writer => Console.SetOut(writer));
+                redirectStream(STD_ERROR_HANDLE, writer => Console.SetError(writer));
+
+                // Fire a bootstrap log so the user can quickly confirm attachment succeeded.
+                Console.WriteLine("[bootstrap] Console attached for BeatSight.Desktop diagnostics.");
+            }
+            catch
+            {
+                // If this fails we fall back to whatever defaults are available.
+            }
+        }
+
+        private static void redirectStream(int stdHandle, Action<TextWriter> applyWriter)
+        {
+            IntPtr handle = GetStdHandle(stdHandle);
+
+            if (handle == IntPtr.Zero || handle == INVALID_HANDLE_VALUE)
+            {
+                handle = CreateFile("CONOUT$", GENERIC_WRITE | GENERIC_READ, FILE_SHARE_WRITE | FILE_SHARE_READ, IntPtr.Zero, OPEN_EXISTING, 0, IntPtr.Zero);
+
+                if (handle == IntPtr.Zero || handle == INVALID_HANDLE_VALUE)
+                    return;
+
+                SetStdHandle(stdHandle, handle);
+            }
+
+            var safeHandle = new SafeFileHandle(handle, ownsHandle: false);
+            var stream = new FileStream(safeHandle, FileAccess.Write);
+            var writer = new StreamWriter(stream) { AutoFlush = true };
+
+            applyWriter(writer);
+        }
+
         private static void configureLogging(bool includeRawFrameworkLogs)
         {
             var inputLogger = Logger.GetLogger(LoggingTarget.Input);
-            inputLogger.OutputToListeners = false;
+            inputLogger.OutputToListeners = true;
 
             foreach (LoggingTarget target in Enum.GetValues(typeof(LoggingTarget)))
             {
                 try
                 {
-                    Logger.GetLogger(target).OutputToListeners = false;
+                    Logger.GetLogger(target).OutputToListeners = true;
                 }
                 catch
                 {
@@ -109,7 +204,7 @@ namespace BeatSight.Desktop
 
             Logger.Log(includeRawFrameworkLogs
                 ? "Verbose framework logging enabled."
-                : "Verbose framework logging suppressed (tablet spam hidden).",
+                : "Verbose framework logging suppressed (tablet spam hidden). Use --quiet/--no-verbose to skip framework spam.",
                 LoggingTarget.Runtime,
                 LogLevel.Important);
         }

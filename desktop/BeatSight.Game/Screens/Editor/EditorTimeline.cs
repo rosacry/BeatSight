@@ -6,6 +6,7 @@ using BeatSight.Game.Mapping;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Events;
 using osu.Framework.Utils;
 using osuTK;
@@ -83,6 +84,9 @@ namespace BeatSight.Game.Screens.Editor
             private const int laneCount = 7;
             private const double basePixelsPerSecond = 220;
             private static readonly int[] allowedSnapDivisors = { 1, 2, 3, 4, 6, 8, 12, 16, 24, 32 };
+            private static readonly double[] rulerStepCandidatesSeconds = { 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 180, 240, 300, 600 };
+            private const double minimumMajorTickSpacing = 80;
+            private const double minimumMinorTickSpacing = 40;
 
             public event Action<double>? SeekRequested;
             public event Action<HitObject>? NoteSelected;
@@ -93,13 +97,18 @@ namespace BeatSight.Game.Screens.Editor
             public event Action<double>? ZoomChanged;
             public event Action<int>? SnapDivisorChanged;
 
+            private const float rulerHeight = 32f;
+
             private readonly BasicScrollContainer scroll;
             private readonly Container timelineSurface;
+            private readonly Container contentArea;
             private readonly Container laneBackgrounds;
             private readonly Container beatGridLayer;
             private readonly WaveformDrawable waveformDrawable;
             private readonly Container noteLayer;
             private readonly Box playhead;
+            private readonly Container rulerLayer;
+            private readonly Container rulerTickLayer;
 
             private Beatmap? beatmap;
             private WaveformData? waveform;
@@ -124,7 +133,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 RelativeSizeAxes = Axes.Both;
 
-                InternalChild = scroll = new BasicScrollContainer
+                InternalChild = scroll = new TimelineScrollContainer
                 {
                     RelativeSizeAxes = Axes.Both,
                     ScrollbarOverlapsContent = false,
@@ -139,31 +148,59 @@ namespace BeatSight.Game.Screens.Editor
                                 RelativeSizeAxes = Axes.Both,
                                 Colour = new Color4(26, 28, 38, 255)
                             },
-                            laneBackgrounds = new Container
-                            {
-                                RelativeSizeAxes = Axes.Both
-                            },
-                            beatGridLayer = new Container
+                            contentArea = new Container
                             {
                                 RelativeSizeAxes = Axes.Both,
-                                Alpha = 0.9f
+                                Padding = new MarginPadding { Top = rulerHeight, Bottom = 16 },
+                                Children = new Drawable[]
+                                {
+                                    laneBackgrounds = new Container
+                                    {
+                                        RelativeSizeAxes = Axes.Both
+                                    },
+                                    beatGridLayer = new Container
+                                    {
+                                        RelativeSizeAxes = Axes.Both,
+                                        Alpha = 0.9f
+                                    },
+                                    waveformDrawable = new WaveformDrawable
+                                    {
+                                        RelativeSizeAxes = Axes.Both,
+                                        Alpha = 0.45f
+                                    },
+                                    noteLayer = new Container
+                                    {
+                                        RelativeSizeAxes = Axes.Both
+                                    },
+                                    playhead = new Box
+                                    {
+                                        RelativeSizeAxes = Axes.Y,
+                                        Width = 3,
+                                        Colour = new Color4(255, 172, 120, 255),
+                                        Anchor = Anchor.TopLeft,
+                                        Origin = Anchor.TopCentre
+                                    }
+                                }
                             },
-                            waveformDrawable = new WaveformDrawable
+                            rulerLayer = new Container
                             {
-                                RelativeSizeAxes = Axes.Both,
-                                Alpha = 0.45f
-                            },
-                            noteLayer = new Container
-                            {
-                                RelativeSizeAxes = Axes.Both
-                            },
-                            playhead = new Box
-                            {
-                                RelativeSizeAxes = Axes.Y,
-                                Width = 3,
-                                Colour = new Color4(255, 172, 120, 255),
+                                RelativeSizeAxes = Axes.X,
+                                Height = rulerHeight,
                                 Anchor = Anchor.TopLeft,
-                                Origin = Anchor.TopCentre
+                                Origin = Anchor.TopLeft,
+                                Children = new Drawable[]
+                                {
+                                    new Box
+                                    {
+                                        RelativeSizeAxes = Axes.Both,
+                                        Colour = new Color4(38, 42, 58, 230)
+                                    },
+                                    rulerTickLayer = new Container
+                                    {
+                                        RelativeSizeAxes = Axes.Both,
+                                        Padding = new MarginPadding { Left = 12, Right = 12 }
+                                    }
+                                }
                             }
                         }
                     }
@@ -238,8 +275,9 @@ namespace BeatSight.Game.Screens.Editor
             {
                 var local = timelineSurface.ToLocalSpace(e.ScreenSpaceMousePosition);
                 double timeMs = Math.Max(0, local.X / PixelsPerSecond * 1000);
+                var laneLocal = laneBackgrounds.ToLocalSpace(e.ScreenSpaceMousePosition);
                 EditBegan?.Invoke();
-                addNoteAt(timeMs, local.Y);
+                addNoteAt(timeMs, laneLocal.Y);
                 return true;
             }
 
@@ -419,6 +457,129 @@ namespace BeatSight.Game.Screens.Editor
                 }
             }
 
+            private void rebuildRuler()
+            {
+                if (rulerTickLayer == null)
+                    return;
+
+                rulerTickLayer.Clear();
+
+                rulerTickLayer.Add(new Box
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Height = 1,
+                    Anchor = Anchor.BottomLeft,
+                    Origin = Anchor.BottomLeft,
+                    Colour = new Color4(70, 82, 110, 255)
+                });
+
+                double duration = durationMs;
+                double pixelsPerSecond = PixelsPerSecond;
+
+                if (duration <= 0 || pixelsPerSecond <= 0)
+                    return;
+
+                double majorStepSeconds = rulerStepCandidatesSeconds[^1];
+
+                foreach (double candidate in rulerStepCandidatesSeconds)
+                {
+                    majorStepSeconds = candidate;
+                    if (candidate * pixelsPerSecond >= minimumMajorTickSpacing)
+                        break;
+                }
+
+                if (majorStepSeconds <= 0)
+                    majorStepSeconds = 1;
+
+                int subdivisions = majorStepSeconds switch
+                {
+                    >= 120 => 4,
+                    >= 30 => 6,
+                    _ => 4
+                };
+
+                double minorStepSeconds = majorStepSeconds / subdivisions;
+                bool drawMinor = minorStepSeconds * pixelsPerSecond >= minimumMinorTickSpacing;
+
+                double majorStepMs = majorStepSeconds * 1000;
+                double minorStepMs = minorStepSeconds * 1000;
+
+                int majorTickCount = (int)Math.Ceiling(duration / majorStepMs);
+
+                void addTick(double timeMs, bool major)
+                {
+                    float x = (float)(timeMs / 1000.0 * pixelsPerSecond);
+                    if (x < -2 || x > timelineSurface.Width + 4)
+                        return;
+
+                    rulerTickLayer.Add(new Box
+                    {
+                        Width = major ? 2f : 1f,
+                        Height = major ? 14f : 8f,
+                        Anchor = Anchor.BottomLeft,
+                        Origin = Anchor.BottomCentre,
+                        X = x,
+                        Colour = major
+                            ? new Color4(220, 232, 255, 255)
+                            : new Color4(140, 160, 200, 200)
+                    });
+
+                    if (!major)
+                        return;
+
+                    var label = new SpriteText
+                    {
+                        Text = formatRulerLabel(timeMs),
+                        Font = new FontUsage(size: 12, weight: "SemiBold"),
+                        Colour = EditorColours.TextSecondary,
+                        Anchor = Anchor.TopCentre,
+                        Origin = Anchor.BottomCentre,
+                        X = x,
+                        Y = -18,
+                        Alpha = 0.95f
+                    };
+
+                    rulerTickLayer.Add(label);
+                }
+
+                for (int i = 0; i <= majorTickCount; i++)
+                {
+                    double majorTime = i * majorStepMs;
+                    addTick(majorTime, true);
+
+                    if (!drawMinor)
+                        continue;
+
+                    for (int s = 1; s < subdivisions; s++)
+                    {
+                        double minorTime = majorTime + s * minorStepMs;
+                        if (minorTime >= (i + 1) * majorStepMs || minorTime > duration)
+                            break;
+
+                        addTick(minorTime, false);
+                    }
+                }
+            }
+
+            private static string formatRulerLabel(double timeMs)
+            {
+                var span = TimeSpan.FromMilliseconds(Math.Max(0, timeMs));
+
+                if (span.TotalHours >= 1)
+                    return $"{(int)span.TotalHours}:{span.Minutes:00}:{span.Seconds:00}";
+
+                return $"{(int)span.TotalMinutes:00}:{span.Seconds:00}";
+            }
+
+            private partial class TimelineScrollContainer : BasicScrollContainer
+            {
+                protected override bool OnDragStart(DragStartEvent e) => false;
+
+                protected override void OnDrag(DragEvent e)
+                {
+                }
+            }
+
             private void rebuildNotes()
             {
                 noteLayer.Clear();
@@ -443,13 +604,25 @@ namespace BeatSight.Game.Screens.Editor
                 if (notes.Count == 0)
                     return;
 
-                float laneHeight = timelineSurface.DrawHeight / laneCount;
+                float laneHeight = laneHeightForNotes();
 
                 foreach (var note in notes)
                 {
                     note.UpdateLayout(PixelsPerSecond, laneHeight);
                     updateNoteDepth(note);
                 }
+            }
+
+            private float laneHeightForNotes()
+            {
+                float laneAreaHeight = laneBackgrounds.DrawHeight;
+                if (laneAreaHeight <= 0)
+                    laneAreaHeight = contentArea.DrawSize.Y;
+
+                if (laneAreaHeight <= 0)
+                    laneAreaHeight = 1;
+
+                return laneAreaHeight / Math.Max(1, laneCount);
             }
 
             private TimelineNoteDrawable createNoteDrawable(HitObject hit)
@@ -504,7 +677,7 @@ namespace BeatSight.Game.Screens.Editor
                     : timeMs;
 
                 note.HitObject.Time = (int)Math.Round(snapped);
-                note.UpdateLayout(PixelsPerSecond, timelineSurface.DrawHeight / laneCount);
+                note.UpdateLayout(PixelsPerSecond, laneHeightForNotes());
                 updateNoteDepth(note);
                 NoteChanged?.Invoke(note.HitObject);
             }
@@ -512,7 +685,7 @@ namespace BeatSight.Game.Screens.Editor
             private void onNoteLaneChanged(TimelineNoteDrawable note, int lane)
             {
                 note.HitObject.Lane = lane;
-                note.UpdateLayout(PixelsPerSecond, timelineSurface.DrawHeight / laneCount);
+                note.UpdateLayout(PixelsPerSecond, laneHeightForNotes());
                 NoteChanged?.Invoke(note.HitObject);
             }
 
@@ -530,7 +703,12 @@ namespace BeatSight.Game.Screens.Editor
                     ? snapToInterval(timeMs, snapIntervalMs.Value)
                     : timeMs;
 
-                int lane = Math.Clamp((int)(yPosition / Math.Max(1, timelineSurface.DrawHeight) * laneCount), 0, laneCount - 1);
+                float laneAreaHeight = laneHeightForNotes() * laneCount;
+                if (laneAreaHeight <= 0)
+                    laneAreaHeight = laneCount;
+
+                float clampedY = Math.Clamp(yPosition, 0, laneAreaHeight);
+                int lane = Math.Clamp((int)(clampedY / Math.Max(1, laneAreaHeight) * laneCount), 0, laneCount - 1);
                 string component = LaneComponentMapping[lane];
 
                 var hit = new HitObject
@@ -548,7 +726,7 @@ namespace BeatSight.Game.Screens.Editor
                 var note = createNoteDrawable(hit);
                 notes.Add(note);
                 noteLayer.Add(note);
-                note.UpdateLayout(PixelsPerSecond, timelineSurface.DrawHeight / laneCount);
+                note.UpdateLayout(PixelsPerSecond, laneHeightForNotes());
                 updateNoteDepth(note);
                 NoteAdded?.Invoke(hit);
                 onNoteSelected(note);
@@ -559,6 +737,7 @@ namespace BeatSight.Game.Screens.Editor
                 double pixelWidth = Math.Max(1000, durationMs / 1000.0 * PixelsPerSecond);
                 timelineSurface.Width = (float)pixelWidth;
                 rebuildBeatGrid();
+                rebuildRuler();
             }
 
             private static double snapToInterval(double value, double interval)

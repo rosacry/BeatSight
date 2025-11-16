@@ -41,6 +41,8 @@ namespace BeatSight.Game.Screens.Settings
         private BackButton backButton = null!;
         private readonly Dictionary<SettingsCategory, SettingsButton> sectionButtons = new();
         private SettingsCategory currentCategory = SettingsCategory.Playback;
+        private Container dropdownOverlay = null!;
+        private Container overlayRoot = null!;
 
         private enum SettingsCategory
         {
@@ -58,7 +60,28 @@ namespace BeatSight.Game.Screens.Settings
             backButton = new BackButton
             {
                 Action = () => this.Exit(),
-                Margin = BackButton.DefaultMargin
+                Margin = BackButton.DefaultMargin,
+                Depth = -10
+            };
+
+            dropdownOverlay = new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                AlwaysPresent = true,
+                Masking = false,
+                Depth = -5
+            };
+
+            overlayRoot = new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                AlwaysPresent = true,
+                Depth = -10,
+                Children = new Drawable[]
+                {
+                    dropdownOverlay,
+                    backButton
+                }
             };
 
             InternalChildren = new Drawable[]
@@ -66,11 +89,13 @@ namespace BeatSight.Game.Screens.Settings
                 new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = UITheme.Background
+                    Colour = UITheme.Background,
+                    Depth = 2 // Background at the very back
                 },
                 new GridContainer
                 {
                     RelativeSizeAxes = Axes.Both,
+                    Depth = 1, // Render below dropdowns
                     RowDimensions = new[]
                     {
                         new Dimension(GridSizeMode.Absolute, 80),
@@ -105,44 +130,14 @@ namespace BeatSight.Game.Screens.Settings
                         }
                     }
                 },
-                backButton
+                overlayRoot
             };
+
 
             // Show playback settings by default
             showSection(SettingsCategory.Playback);
         }
 
-        private Drawable createHeader()
-        {
-            return new Container
-            {
-                RelativeSizeAxes = Axes.Both,
-                Children = new Drawable[]
-                {
-                    new Box
-                    {
-                        RelativeSizeAxes = Axes.Both,
-                        Colour = UITheme.Surface
-                    },
-                    new Container
-                    {
-                        RelativeSizeAxes = Axes.Both,
-                        Padding = new MarginPadding { Horizontal = 30 },
-                        Children = new Drawable[]
-                        {
-                            new SpriteText
-                            {
-                                Text = "Settings",
-                                Font = new FontUsage(size: 32, weight: "Bold"),
-                                Colour = UITheme.TextPrimary,
-                                Anchor = Anchor.Centre,
-                                Origin = Anchor.Centre
-                            }
-                        }
-                    }
-                }
-            };
-        }
 
         private Drawable createSidebar()
         {
@@ -193,6 +188,11 @@ namespace BeatSight.Game.Screens.Settings
             if (currentCategory == category && currentSection != null && contentContainer.Child == currentSection)
                 return;
 
+            // Ensure any dropdown menus currently hosted in the shared overlay are disposed
+            // before tearing down the owning section. This prevents orphaned menus from
+            // lingering at the screen origin when the source control disappears.
+            dropdownOverlay.Clear(disposeChildren: true);
+
             currentCategory = category;
             currentSection = createSectionInstance(category);
             contentContainer.Child = currentSection;
@@ -206,14 +206,46 @@ namespace BeatSight.Game.Screens.Settings
             switch (category)
             {
                 case SettingsCategory.Playback:
-                    return new PlaybackSettingsSection(config);
+                    return new PlaybackSettingsSection(config, dropdownOverlay);
                 case SettingsCategory.Audio:
-                    return new AudioSettingsSection(config, host);
+                    return new AudioSettingsSection(config, host, dropdownOverlay);
                 case SettingsCategory.Graphics:
-                    return new GraphicsSettingsSection(config, host);
+                    return new GraphicsSettingsSection(config, host, dropdownOverlay);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(category), category, null);
             }
+        }
+
+        private Drawable createHeader()
+        {
+            return new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                Children = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = UITheme.Surface
+                    },
+                    new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Padding = new MarginPadding { Horizontal = 30 },
+                        Children = new Drawable[]
+                        {
+                            new SpriteText
+                            {
+                                Text = "Settings",
+                                Font = new FontUsage(size: 32, weight: "Bold"),
+                                Colour = UITheme.TextPrimary,
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre
+                            }
+                        }
+                    }
+                }
+            };
         }
 
         internal static void OpenDirectoryExternally(GameHost host, string relativePath)
@@ -362,14 +394,18 @@ namespace BeatSight.Game.Screens.Settings
     public abstract partial class SettingsSection : CompositeDrawable
     {
         private readonly string title;
+        protected Container DropdownOverlay { get; }
+        private BasicScrollContainer sectionScrollContainer = null!;
         private FillFlowContainer contentFlow = null!;
         private FillFlowContainer sectionBody = null!;
         protected const float dropdown_menu_max_height = 240;
+        protected BasicScrollContainer ScrollViewport => sectionScrollContainer;
 
-        protected SettingsSection(string title)
+        protected SettingsSection(string title, Container dropdownOverlay)
         {
             this.title = title;
             RelativeSizeAxes = Axes.Both;
+            DropdownOverlay = dropdownOverlay;
         }
 
         [BackgroundDependencyLoader]
@@ -403,12 +439,14 @@ namespace BeatSight.Game.Screens.Settings
                 sectionBody
             });
 
-            InternalChild = new BasicScrollContainer
+            sectionScrollContainer = new BasicScrollContainer
             {
                 RelativeSizeAxes = Axes.Both,
                 ClampExtension = 0,
                 Child = contentFlow
             };
+
+            InternalChild = sectionScrollContainer;
 
             rebuildContent();
         }
@@ -442,7 +480,7 @@ namespace BeatSight.Game.Screens.Settings
             });
         }
 
-        protected SettingItem CreateEnumDropdown<T>(string label, Bindable<T> bindable, string? description = null, Func<T, string>? formatter = null) where T : struct, Enum
+        protected SettingItem CreateEnumDropdown<T>(string label, Bindable<T> bindable, string? description = null, Func<T, string>? formatter = null, bool enableSearch = false) where T : struct, Enum
         {
             if (formatter == null)
             {
@@ -450,9 +488,12 @@ namespace BeatSight.Game.Screens.Settings
                 {
                     Width = 220,
                     Anchor = Anchor.CentreRight,
-                    Origin = Anchor.CentreRight
+                    Origin = Anchor.CentreRight,
+                    SearchEnabled = enableSearch
                 };
 
+                directDropdown.OverlayLayer = DropdownOverlay;
+                directDropdown.ScrollViewport = ScrollViewport;
                 directDropdown.Current = bindable;
                 directDropdown.Items = Enum.GetValues(typeof(T)).Cast<T>().ToArray();
 
@@ -466,9 +507,12 @@ namespace BeatSight.Game.Screens.Settings
                 Width = 220,
                 Anchor = Anchor.CentreRight,
                 Origin = Anchor.CentreRight,
-                Items = items
+                Items = items,
+                SearchEnabled = enableSearch
             };
 
+            mappedDropdown.OverlayLayer = DropdownOverlay;
+            mappedDropdown.ScrollViewport = ScrollViewport;
             mappedDropdown.Current.BindValueChanged(e =>
             {
                 if (!EqualityComparer<T>.Default.Equals(bindable.Value, e.NewValue.Value))
@@ -518,21 +562,11 @@ namespace BeatSight.Game.Screens.Settings
             return new SettingItem(label, description, container);
         }
 
-        protected sealed partial class SettingsDropdown<T> : BasicDropdown<T>
+        protected sealed partial class SettingsDropdown<T> : BeatSight.Game.UI.Components.Dropdown<T>
         {
-            private readonly float menuMaxHeight;
-
             public SettingsDropdown(float menuMaxHeight)
             {
-                this.menuMaxHeight = menuMaxHeight;
-            }
-
-            protected override void LoadComplete()
-            {
-                base.LoadComplete();
-
-                if (Menu != null)
-                    Menu.MaxHeight = menuMaxHeight;
+                MenuMaxHeight = menuMaxHeight;
             }
         }
 
@@ -612,7 +646,7 @@ namespace BeatSight.Game.Screens.Settings
     {
         private readonly BeatSightConfigManager config;
 
-        public PlaybackSettingsSection(BeatSightConfigManager config) : base("Playback Settings")
+        public PlaybackSettingsSection(BeatSightConfigManager config, Container dropdownOverlay) : base("Playback Settings", dropdownOverlay)
         {
             this.config = config;
         }
@@ -739,7 +773,7 @@ namespace BeatSight.Game.Screens.Settings
         [Resolved]
         private AudioManager audioManager { get; set; } = null!;
 
-        public AudioSettingsSection(BeatSightConfigManager config, GameHost host) : base("Audio Settings")
+        public AudioSettingsSection(BeatSightConfigManager config, GameHost host, Container dropdownOverlay) : base("Audio Settings", dropdownOverlay)
         {
             this.config = config;
             this.host = host;
@@ -837,6 +871,9 @@ namespace BeatSight.Game.Screens.Settings
                 Items = Enum.GetValues(typeof(MetronomeSoundOption)).Cast<MetronomeSoundOption>().ToArray()
             };
 
+            dropdown.SearchEnabled = true;
+
+            dropdown.OverlayLayer = DropdownOverlay;
             dropdown.Current = metronomeSound;
             dropdown.Current.BindValueChanged(_ => stopPreviewChannel());
 
@@ -1014,21 +1051,11 @@ namespace BeatSight.Game.Screens.Settings
             metronomePreviewChannel = null;
         }
 
-        private sealed partial class InlineDropdown<T> : BasicDropdown<T>
+        private sealed partial class InlineDropdown<T> : BeatSight.Game.UI.Components.Dropdown<T>
         {
-            private readonly float maxHeight;
-
             public InlineDropdown(float maxHeight)
             {
-                this.maxHeight = maxHeight;
-            }
-
-            protected override void LoadComplete()
-            {
-                base.LoadComplete();
-
-                if (Menu != null)
-                    Menu.MaxHeight = maxHeight;
+                MenuMaxHeight = maxHeight;
             }
         }
     }
@@ -1056,7 +1083,7 @@ namespace BeatSight.Game.Screens.Settings
         private bool monitorRefreshScheduled;
         private bool resolutionRefreshScheduled;
 
-        public GraphicsSettingsSection(BeatSightConfigManager config, GameHost host) : base("Graphics Settings")
+        public GraphicsSettingsSection(BeatSightConfigManager config, GameHost host, Container dropdownOverlay) : base("Graphics Settings", dropdownOverlay)
         {
             this.config = config;
             this.host = host;
@@ -1090,7 +1117,8 @@ namespace BeatSight.Game.Screens.Settings
                     CreateEnumDropdown(
                         "Skin",
                         config.GetBindable<NoteSkinOption>(BeatSightSetting.NoteSkin),
-                        "Switch the appearance of notes between available skins."
+                        "Switch the appearance of notes between available skins.",
+                        enableSearch: true
                     ),
                     createSkinManagementSetting(),
                     CreateCheckbox(
@@ -1177,6 +1205,8 @@ namespace BeatSight.Game.Screens.Settings
                 Origin = Anchor.CentreRight
             };
 
+            monitorDropdown.OverlayLayer = DropdownOverlay;
+            monitorDropdown.ScrollViewport = ScrollViewport;
             monitorDropdown.Current.BindValueChanged(e =>
             {
                 if (suppressMonitorSync || windowDisplay == null)
@@ -1205,6 +1235,8 @@ namespace BeatSight.Game.Screens.Settings
                 Origin = Anchor.CentreRight
             };
 
+            resolutionDropdown.OverlayLayer = DropdownOverlay;
+            resolutionDropdown.ScrollViewport = ScrollViewport;
             resolutionDropdown.Current.BindValueChanged(e =>
             {
                 if (suppressResolutionSync || windowWidth == null || windowHeight == null)
@@ -1223,7 +1255,7 @@ namespace BeatSight.Game.Screens.Settings
 
             return new SettingItem(
                 "Resolution",
-                "Set the window size BeatSight uses when not running fullscreen.",
+                "Choose the render resolution. Fullscreen selects the display mode; windowed uses it for the window size.",
                 resolutionDropdown);
         }
 
@@ -1497,7 +1529,7 @@ namespace BeatSight.Game.Screens.Settings
 
             suppressResolutionSync = true;
             bool originalDisabled = resolutionDropdown.Current.Disabled;
-            bool targetDisabledState = isFullscreen || originalDisabled;
+            bool targetDisabledState = originalDisabled;
             try
             {
                 if (resolutionDropdown.Current.Disabled)
@@ -1506,7 +1538,7 @@ namespace BeatSight.Game.Screens.Settings
                 resolutionDropdown.Items = resolutionChoices;
 
                 var selection = resolutionChoices.FirstOrDefault(choice => choice.Width == windowWidth.Value && choice.Height == windowHeight.Value);
-                if (isFullscreen && display is Display displayForFullscreen)
+                if (!selection.IsValid && isFullscreen && display is Display displayForFullscreen)
                 {
                     var displaySelection = resolutionChoices.FirstOrDefault(choice => choice.Width == displayForFullscreen.Bounds.Width && choice.Height == displayForFullscreen.Bounds.Height);
                     if (displaySelection.IsValid)

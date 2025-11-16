@@ -2,10 +2,12 @@ using System;
 using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
-using osu.Framework.Bindables;
+using BeatSight.Game.Screens.Gameplay;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osuTK;
@@ -16,11 +18,14 @@ namespace BeatSight.Game.Screens.Editor
     public partial class GameplayPreview : CompositeDrawable
     {
         private readonly Func<double> currentTimeProvider;
-        private PreviewPlaceholder previewDisplay = null!;
+        private PreviewStageContainer stageContainer = null!;
+        private GameplayPlayfield playfield = null!;
         private SpriteText placeholderText = null!;
         private Beatmap? beatmap;
         private Bindable<LanePreset> lanePresetSetting = null!;
+        private Bindable<KickLaneMode> kickLaneModeSetting = null!;
         private LaneLayout currentLaneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
+        private bool useGlobalKickLine;
 
         [Resolved]
         private BeatSightConfigManager config { get; set; } = null!;
@@ -31,68 +36,63 @@ namespace BeatSight.Game.Screens.Editor
 
             RelativeSizeAxes = Axes.Both;
             Masking = true;
-            CornerRadius = 10;
+            CornerRadius = 20;
         }
 
         [BackgroundDependencyLoader]
         private void load()
         {
+            playfield = new GameplayPlayfield(currentTimeProvider)
+            {
+                RelativeSizeAxes = Axes.Both
+            };
+            playfield.SetPreviewMode(true);
+            playfield.SetLaneLayout(currentLaneLayout);
+
+            stageContainer = new PreviewStageContainer(playfield)
+            {
+                RelativeSizeAxes = Axes.Both
+            };
+
+            placeholderText = new SpriteText
+            {
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                Font = new FontUsage(size: 18, weight: "Medium"),
+                Colour = new Color4(198, 205, 224, 255),
+                Text = "Load or create a beatmap to preview gameplay",
+                Alpha = 0
+            };
+
             InternalChildren = new Drawable[]
             {
-                new Box
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Colour = new Color4(24, 26, 38, 235)
-                },
-                previewDisplay = new PreviewPlaceholder(currentTimeProvider)
-                {
-                    RelativeSizeAxes = Axes.Both
-                },
-                placeholderText = new SpriteText
-                {
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    Font = new FontUsage(size: 18, weight: "Medium"),
-                    Colour = new Color4(200, 205, 220, 255),
-                    Text = "Load a beatmap to preview gameplay"
-                }
+                stageContainer,
+                placeholderText
             };
 
             lanePresetSetting = config.GetBindable<LanePreset>(BeatSightSetting.LanePreset);
             lanePresetSetting.BindValueChanged(onLanePresetChanged, true);
 
-            // Beatmap will be applied in LoadComplete() to ensure all components are ready
+            kickLaneModeSetting = config.GetBindable<KickLaneMode>(BeatSightSetting.KickLaneMode);
+            kickLaneModeSetting.BindValueChanged(onKickLaneModeChanged, true);
+
+            updatePlaceholderState();
         }
 
         protected override void LoadComplete()
         {
             base.LoadComplete();
-
-            // Apply any beatmap that was set before we finished loading
-            if (beatmap != null)
-            {
-                osu.Framework.Logging.Logger.Log($"[GameplayPreview] LoadComplete: applying pending beatmap with {beatmap.HitObjects.Count} notes", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
-                previewDisplay?.SetLaneLayout(currentLaneLayout);
-                previewDisplay?.SetBeatmap(beatmap);
-                updatePlaceholderState();
-            }
+            applyBeatmap();
         }
+
         public void SetBeatmap(Beatmap? beatmap)
         {
             this.beatmap = beatmap;
 
-            osu.Framework.Logging.Logger.Log($"[GameplayPreview] SetBeatmap called: beatmap={(beatmap == null ? "null" : $"{beatmap.HitObjects.Count} notes")}, IsLoaded={IsLoaded}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
-
             if (!IsLoaded)
-            {
-                osu.Framework.Logging.Logger.Log("[GameplayPreview] SetBeatmap: not loaded yet, will apply in LoadComplete", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
                 return;
-            }
 
-            // Immediately update the replay host and placeholder
-            previewDisplay?.SetLaneLayout(currentLaneLayout);
-            previewDisplay?.SetBeatmap(beatmap);
-            updatePlaceholderState();
+            applyBeatmap();
         }
 
         public void RefreshBeatmap()
@@ -100,67 +100,123 @@ namespace BeatSight.Game.Screens.Editor
             if (!IsLoaded)
                 return;
 
-            previewDisplay?.SetLaneLayout(currentLaneLayout);
-            previewDisplay?.RefreshBeatmap();
+            applyBeatmap();
+        }
+
+        private void applyBeatmap()
+        {
+            if (playfield == null)
+                return;
+
+            if (beatmap != null)
+            {
+                playfield.LoadBeatmap(beatmap);
+            }
+            else
+            {
+                playfield.LoadBeatmap(new Beatmap());
+            }
+
             updatePlaceholderState();
         }
 
         private void onLanePresetChanged(ValueChangedEvent<LanePreset> preset)
         {
             currentLaneLayout = LaneLayoutFactory.Create(preset.NewValue);
+            playfield?.SetLaneLayout(currentLaneLayout);
+        }
 
-            previewDisplay?.SetLaneLayout(currentLaneLayout);
+        private void onKickLaneModeChanged(ValueChangedEvent<KickLaneMode> mode)
+        {
+            useGlobalKickLine = mode.NewValue == KickLaneMode.GlobalLine;
+            playfield?.SetKickLineMode(useGlobalKickLine);
         }
 
         private void updatePlaceholderState()
         {
+            int noteCount = beatmap?.HitObjects.Count ?? 0;
+            bool hasContent = noteCount > 0;
+
+            stageContainer?.FadeTo(hasContent ? 1f : 0.35f, 200, Easing.OutQuint);
+
             if (placeholderText == null)
                 return;
 
-            int noteCount = beatmap?.HitObjects.Count ?? 0;
-            bool showPlaceholder = noteCount == 0;
-            osu.Framework.Logging.Logger.Log($"[GameplayPreview] updatePlaceholderState: showPlaceholder={showPlaceholder}, beatmap={(beatmap == null ? "null" : $"{noteCount} notes")}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
-            placeholderText.Text = showPlaceholder
-                ? "Load a beatmap to preview gameplay"
-                : $"Preview disabled (beatmap has {noteCount} notes)";
-
-            placeholderText.FadeTo(1f, 200, Easing.OutQuint);
+            if (hasContent)
+            {
+                placeholderText.FadeOut(200, Easing.OutQuint);
+            }
+            else
+            {
+                placeholderText.Text = beatmap == null
+                    ? "Load or create a beatmap to preview gameplay"
+                    : "Add notes to preview gameplay";
+                placeholderText.FadeIn(200, Easing.OutQuint);
+            }
         }
 
-        private partial class PreviewPlaceholder : CompositeDrawable
+        private partial class PreviewStageContainer : CompositeDrawable
         {
-            private readonly Func<double> timeProvider;
-            private Beatmap? beatmap;
-            private LaneLayout laneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
+            private readonly Container stagePadding;
 
-            public PreviewPlaceholder(Func<double> timeProvider)
+            public PreviewStageContainer(Drawable playfield)
             {
-                this.timeProvider = timeProvider;
                 RelativeSizeAxes = Axes.Both;
-                Masking = true;
-                CornerRadius = 8;
 
-                InternalChild = new Box
+                var stageSurface = new Container
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = new Color4(18, 20, 30, 255)
+                    Masking = true,
+                    CornerRadius = 28,
+                    EdgeEffect = new EdgeEffectParameters
+                    {
+                        Type = EdgeEffectType.Shadow,
+                        Colour = new Color4(0, 0, 0, 48),
+                        Radius = 32,
+                        Roundness = 1f
+                    },
+                    Children = new Drawable[]
+                    {
+                        new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Colour = new Color4(10, 12, 20, 255)
+                        },
+                        playfield
+                    }
                 };
+
+                stagePadding = new Container
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Child = new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Padding = new MarginPadding { Horizontal = 24, Vertical = 18 },
+                        Child = stageSurface
+                    }
+                };
+
+                InternalChild = stagePadding;
             }
 
-            public void SetBeatmap(Beatmap? beatmap)
+            protected override void Update()
             {
-                this.beatmap = beatmap;
-                // No-op for now – preview visuals were retired with gameplay replay host.
-            }
+                base.Update();
 
-            public void RefreshBeatmap()
-            {
-                // No-op; kept for API compatibility with existing editor flow.
-            }
+                if (DrawWidth <= 0 || DrawHeight <= 0)
+                    return;
 
-            public void SetLaneLayout(LaneLayout layout)
-            {
-                laneLayout = layout;
+                float horizontal = Math.Clamp(DrawWidth * 0.012f, 12f, 60f);
+                float vertical = Math.Clamp(DrawHeight * 0.018f, 10f, 60f);
+
+                stagePadding.Padding = new MarginPadding
+                {
+                    Left = horizontal,
+                    Right = horizontal,
+                    Top = vertical,
+                    Bottom = vertical + 18
+                };
             }
         }
     }

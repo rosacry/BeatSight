@@ -3242,7 +3242,7 @@ namespace BeatSight.Game.Screens.Gameplay
                 Subdivision
             }
 
-            private sealed class DrawableGridLine : CompositeDrawable
+            private sealed partial class DrawableGridLine : CompositeDrawable
             {
                 private readonly Box line;
                 private readonly Box glow;

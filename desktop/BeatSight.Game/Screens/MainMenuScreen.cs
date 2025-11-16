@@ -2,12 +2,14 @@ using BeatSight.Game.Screens.Editor;
 using BeatSight.Game.Screens.Playback;
 using BeatSight.Game.Screens.Settings;
 using BeatSight.Game.Screens.SongSelect;
+using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
+using osu.Framework.Platform;
 using osu.Framework.Screens;
 using osuTK;
 using osuTK.Graphics;
@@ -16,6 +18,14 @@ namespace BeatSight.Game.Screens
 {
     public partial class MainMenuScreen : Screen
     {
+        private GameHost host = null!;
+
+        [BackgroundDependencyLoader]
+        private void load(GameHost host)
+        {
+            this.host = host;
+        }
+
         public override void OnEntering(ScreenTransitionEvent e)
         {
             base.OnEntering(e);
@@ -46,7 +56,7 @@ namespace BeatSight.Game.Screens
                         },
                         new SpriteText
                         {
-                            Text = "Audition AI + handcrafted drum mappings with instant playback",
+                            Text = "Drag and drop a song to jump straight into playback.",
                             Font = new FontUsage(size: 24),
                             Colour = new Color4(195, 205, 220, 255),
                             Anchor = Anchor.TopCentre,
@@ -54,7 +64,7 @@ namespace BeatSight.Game.Screens
                         },
                         new SpriteText
                         {
-                            Text = "Preview metadata, toggle drum stems, and iterate fast",
+                            Text = "Or use the menu below to browse, edit, or tweak your setup.",
                             Font = new FontUsage(size: 18),
                             Colour = new Color4(160, 170, 190, 255),
                             Anchor = Anchor.TopCentre,
@@ -66,11 +76,7 @@ namespace BeatSight.Game.Screens
                         },
                         new MenuButton("Play", Color4.Green)
                         {
-                            Action = () => this.Push(new MappingPlaybackScreen())
-                        },
-                        new MenuButton("Playback Library", new Color4(125, 135, 200, 255))
-                        {
-                            Action = () => this.Push(new SongSelectScreen())
+                            Action = () => this.Push(new SongSelectScreen(SongSelectDestination.Gameplay))
                         },
                         new MenuButton("Editor", Color4.Blue)
                         {
@@ -82,11 +88,17 @@ namespace BeatSight.Game.Screens
                         },
                         new MenuButton("Exit", Color4.Red)
                         {
-                            Action = this.Exit
+                            Action = exitGame
                         },
                     }
                 }
             };
+        }
+
+        private void exitGame()
+        {
+            if (host != null)
+                host.Exit();
         }
     }
 

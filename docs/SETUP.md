@@ -1,339 +1,132 @@
 # Development Setup Guide
 
-## Prerequisites
+This document captures the common pieces of the BeatSight developer environment and points to the platform-specific playbooks. Skim this page first, then follow the detailed guides for your operating system.
 
-### Required Software
+## Platform Checklists
 
-1. **.NET 8.0 SDK**
+- **Windows (Git Bash preferred):** see `SETUP_WINDOWS.md`
+- **Linux (fish/kitty or bash/zsh):** see `SETUP_LINUX.md`
+
+Both guides land you in the same project layout with .NET for the desktop client, Python for the AI pipeline, and Poetry for the backend. Use whichever shell is native to your machine; Git Bash on Windows and fish on Linux are both fully supported.
+
+## Core Prerequisites (All Platforms)
+
+| Tool | Minimum Version | Notes |
+|------|-----------------|-------|
+| .NET SDK | 8.0.x | Required for `BeatSight.Desktop` and tests |
+| Python | 3.10+ | Used by `ai-pipeline` and training scripts |
+| Poetry | 1.7+ | Dependency manager for the FastAPI backend |
+| FFmpeg | Latest stable | Audio processing and previews |
+| Git | Latest stable | Recommended: enable long path support |
+
+### Quick Install Snippets
+
+- **Windows (PowerShell as Administrator):**
+   ```powershell
+   winget install --id Git.Git --source winget
+   winget install --id Microsoft.DotNet.SDK.8 --source winget
+   winget install --id Python.Python.3.12 --source winget
+   winget install --id Gyan.FFmpeg --source winget
+   winget install --id Python.Pipx --source winget
+   pipx install poetry
+   pipx ensurepath
+   ```
+
+- **Ubuntu/Debian:**
    ```bash
-   # Ubuntu/Debian
-   wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb
-   sudo dpkg -i packages-microsoft-prod.deb
    sudo apt update
-   sudo apt install -y dotnet-sdk-8.0
-   
-   # Verify
-   dotnet --version
+   sudo apt install -y dotnet-sdk-8.0 python3.10 python3.10-venv python3-pip python3-dev \
+                                 ffmpeg git libopenal-dev libasound2-dev libgl1-mesa-dev libglu1-mesa-dev
+   python3 -m pip install --upgrade pip
+   python3 -m pip install --user poetry
    ```
+   Add Poetry to your PATH: `export PATH="$HOME/.local/bin:$PATH"` (place in shell config).
 
-2. **Python 3.10+**
-   ```bash
-   # Ubuntu/Debian
-   sudo apt install python3.10 python3.10-venv python3-pip
-   
-   # Verify
-   python3 --version
-   ```
-
-3. **FFmpeg** (for audio processing)
-   ```bash
-   sudo apt install ffmpeg
-   ```
-
-4. **Git**
-   ```bash
-   sudo apt install git
-   ```
-
-## Project Setup
-
-### 1. Clone Repository
+## Repository Bootstrap
 
 ```bash
-cd ~/github
-git clone https://github.com/yourusername/beatsight.git
-cd beatsight
+cd ~/OneDrive/Documents/github     # or any workspace path without spaces
+git clone https://github.com/rosacry/BeatSight.git
+cd BeatSight
+git config core.longpaths true
 ```
 
-### 2. Desktop App Setup
+When collaborating across Windows and Linux machines, set `git config core.autocrlf input` to keep line endings consistent.
 
-```bash
-cd desktop/BeatSight.Desktop
-dotnet restore
-dotnet build
+## Desktop Client (osu-framework)
 
-# Run the app
-dotnet run
-```
+| Platform | Commands |
+|----------|----------|
+| Windows (Git Bash) | `cd desktop/BeatSight.Desktop && dotnet restore && dotnet run` |
+| Linux/macOS | `cd desktop/BeatSight.Desktop && dotnet restore && dotnet run` |
 
-**Troubleshooting:**
-- If osu-framework fails to restore, ensure you have internet connection
-- On Linux, you may need additional libraries:
-  ```bash
-  sudo apt install libopenal-dev libgl1-mesa-dev libglu1-mesa-dev
-  ```
+Use `dotnet watch run` during UI iteration. The client requires a GPU capable of OpenGL 3.0+. Windows relies on ANGLE; keep GPU drivers current. Linux users should confirm Mesa/OpenGL packages (see `SETUP_LINUX.md`).
 
-### 3. AI Pipeline Setup
+## AI Pipeline (Python)
 
-```bash
-cd ../../ai-pipeline
+Create a virtual environment per platform and install requirements:
 
-# Create virtual environment
-python3 -m venv venv
-
-# Activate (bash/zsh)
-source venv/bin/activate
-
-# Activate (fish shell)
-source venv/bin/activate.fish
-
-# Install dependencies
-pip install --upgrade pip
-pip install -r requirements.txt
-
-# Download Demucs model (first time only, ~300MB)
-python -c "import demucs.pretrained; demucs.pretrained.get_model('htdemucs')"
-
-# Test the pipeline
-python -m pipeline.process --help
-```
-
-**GPU Support (Optional but Recommended):**
-```bash
-# If you have NVIDIA GPU with CUDA 11.8+
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-```
-
-### 4. Backend API Setup (Future)
-
-```bash
-cd ../backend
-npm install
-npm run dev
-```
-
-## IDE Setup
-
-### Visual Studio Code (Recommended)
-
-1. **Install VS Code**
+- **Windows (Git Bash):**
    ```bash
-   sudo snap install code --classic
-   ```
-
-2. **Install Extensions**
-   - C# Dev Kit (Microsoft)
-   - Python (Microsoft)
-   - Pylance
-   - GitLens
-   - Thunder Client (API testing)
-
-3. **Open Workspace**
-   ```bash
-   code ~/github/beatsight
-   ```
-
-4. **Configure Python Interpreter**
-   - Press `Ctrl+Shift+P`
-   - Type "Python: Select Interpreter"
-   - Choose `./ai-pipeline/venv/bin/python`
-
-### VS Code Settings
-
-Create `.vscode/settings.json`:
-
-```json
-{
-  "editor.formatOnSave": true,
-  "editor.codeActionsOnSave": {
-    "source.organizeImports": true
-  },
-  "python.defaultInterpreterPath": "${workspaceFolder}/ai-pipeline/venv/bin/python",
-  "python.linting.enabled": true,
-  "python.linting.pylintEnabled": true,
-  "python.formatting.provider": "black",
-  "python.testing.pytestEnabled": true,
-  "python.testing.pytestArgs": ["ai-pipeline/tests"],
-  "[csharp]": {
-    "editor.defaultFormatter": "ms-dotnettools.csharp"
-  },
-  "[python]": {
-    "editor.defaultFormatter": "ms-python.python"
-  }
-}
-```
-
-## Testing Your Setup
-
-### Test Desktop App
-
-```bash
-cd desktop/BeatSight.Desktop
-dotnet run
-```
-
-You should see a window with the BeatSight main menu.
-
-### Test AI Pipeline
-
-```bash
-cd ai-pipeline
-
-# Create a test directory
-mkdir -p test_data
-cd test_data
-
-# Download a Creative Commons test audio file
-wget https://freepd.com/music/Example.mp3 -O test.mp3
-
-# Process it
-cd ..
-python -m pipeline.process --input test_data/test.mp3 --output test_data/test.bsm --confidence 0.6
-
-# Check the output
-cat test_data/test.bsm
-```
-
-## Development Workflow
-
-### Typical Workflow
-
-1. **Create Feature Branch**
-   ```bash
-   git checkout -b feature/my-new-feature
-   ```
-
-2. **Make Changes**
-   - Edit code in your IDE
-   - Test frequently
-   - Commit incrementally
-
-3. **Run Tests**
-   ```bash
-   # C# tests
-   cd desktop
-   dotnet test
-   
-   # Python tests
    cd ai-pipeline
-   pytest tests/
+   python -m venv .venv
+   source .venv/Scripts/activate
+   pip install --upgrade pip
+   pip install -r requirements.txt
    ```
 
-4. **Commit Changes**
-   ```bash
-   git add .
-   git commit -m "feat: add amazing feature"
+- **Linux (fish):**
+   ```fish
+   cd ai-pipeline
+   python3 -m venv venv
+   source venv/bin/activate.fish
+   pip install --upgrade pip
+   pip install -r requirements.txt
    ```
 
-5. **Push and Create PR**
-   ```bash
-   git push origin feature/my-new-feature
-   ```
+Run `python -m pipeline.process --help` to confirm the CLI is wired up. Install GPU-enabled PyTorch if you have CUDA hardware (see platform guides for version-specific commands).
 
-### Hot Reload
+## Environment Variable Hook
 
-**Desktop App:**
-- osu-framework supports hot reload for some changes
-- For major changes, stop and restart with `dotnet run`
+Source the helper script before running training tools so shared paths are in sync. Override any variable beforehand if your datasets live on a different drive.
 
-**AI Pipeline:**
-- Python modules reload automatically in most cases
-- Restart the server for server.py changes:
+- **Bash/Zsh/Git Bash:**
   ```bash
-  # Stop with Ctrl+C, then:
-  python -m pipeline.server
+  source ai-pipeline/training/tools/beatsight_env.sh
   ```
 
-## Debugging
+- **fish:**
+  ```fish
+  source ai-pipeline/training/tools/beatsight_env.fish
+  ```
 
-### Desktop App
+The script prints the resolved directories for quick verification.
 
-**VS Code:**
-1. Open `desktop/BeatSight.Desktop`
-2. Press `F5` or go to Run > Start Debugging
-3. Set breakpoints by clicking left of line numbers
+## Smoke Tests
 
-**Command Line:**
+Run these checks after a fresh setup (activate your Python virtualenv first):
+
 ```bash
-cd desktop/BeatSight.Desktop
-dotnet run --configuration Debug
+# Solution build + tests
+cd <repo>
+
+# AI pipeline
+cd ai-pipeline
+python -m pipeline.process --help
+
+# Backend
+cd ../backend
+poetry run uvicorn app.main:app --reload --port 9000
 ```
 
-### AI Pipeline
+Visit `http://localhost:9000/health/live` to confirm the backend responds.
 
-**VS Code:**
-1. Set breakpoints in Python files
-2. Press `F5` or Run > Start Debugging
-3. Or use the Python debugger:
-   ```bash
-   python -m pdb pipeline/process.py --input test.mp3 --output test.bsm
-   ```
+## Troubleshooting Cross-Platform Issues
 
-**Print Debugging:**
-```python
-print(f"Debug: {variable}")
-import pdb; pdb.set_trace()  # Breakpoint
-```
+- **File paths & casing:** Keep the repository on a case-preserving filesystem (Windows with NTFS, Linux ext4). Avoid case-only renames when collaborating across OSes.
+- **Line endings:** Prefer LF (`git config core.autocrlf input`).
+- **OneDrive sync delays:** Store large datasets outside your synced folder and point `BEATSIGHT_DATA_ROOT` to the alternate location.
+- **Audio/graphics packages:** Linux requirements are captured in `SETUP_LINUX.md`; Windows uses bundled dependencies from the .NET runtime.
+- **Poetry not found:** Re-open your shell after installing via `pipx` (Windows) or add `$HOME/.local/bin` to PATH (Linux).
 
-## Common Issues
-
-### Linux-Specific Issues
-
-**Audio Playback Issues:**
-```bash
-# Install ALSA
-sudo apt install libasound2-dev
-
-# Or use PulseAudio
-sudo apt install pulseaudio
-```
-
-**Graphics Issues:**
-```bash
-# Install Mesa drivers
-sudo apt install mesa-utils
-glxinfo | grep "OpenGL"
-```
-
-### Python Issues
-
-**ImportError: No module named 'torch':**
-```bash
-pip install torch torchvision torchaudio
-```
-
-**CUDA out of memory:**
-- Reduce batch size in config
-- Use CPU mode: Set `device = "cpu"` in code
-- Close other GPU applications
-
-### .NET Issues
-
-**Package restore fails:**
-```bash
-dotnet nuget locals all --clear
-dotnet restore --force
-```
-
-**"Unable to find osu.Framework":**
-- Check internet connection
-- Try updating: `dotnet nuget update`
-
-## Performance Tips
-
-### AI Pipeline Optimization
-
-1. **Use GPU** if available (10-50x faster for Demucs)
-2. **Reduce sample rate** for faster testing (16kHz instead of 44.1kHz)
-3. **Cache Demucs model** (downloaded automatically on first run)
-4. **Parallel processing** for batch jobs
-
-### Desktop App Optimization
-
-1. **Release builds** for performance testing:
-   ```bash
-   dotnet build -c Release
-   dotnet run -c Release
-   ```
-
-2. **Profile with dotTrace** or VS profiler
-3. **Check frame rate** in osu-framework stats overlay (Ctrl+F2)
-
-## Next Steps
-
-- Read [ARCHITECTURE.md](ARCHITECTURE.md) for system overview
-- Check [BEATMAP_FORMAT.md](BEATMAP_FORMAT.md) for file format details
-- See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines
-- Join our [Discord](https://discord.gg/beatsight) for help
-
-Happy coding! 🥁
+Refer back to `SETUP_WINDOWS.md` and `SETUP_LINUX.md` for deeper troubleshooting, recommended shell aliases, and optional productivity tooling.

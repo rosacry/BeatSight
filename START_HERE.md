@@ -4,18 +4,29 @@ These are the minimum steps to get productive in the BeatSight workspace. Skim t
 
 ## 1. TL;DR
 
-- Launch the desktop client: `cd ~/github/BeatSight/desktop/BeatSight.Desktop && dotnet run`
+- Launch the desktop client from your shell of choice:
+	- **Windows (Git Bash):** `cd ~/OneDrive/Documents/github/BeatSight/desktop/BeatSight.Desktop && dotnet run`
+	- **Linux/macOS:** `cd ~/github/BeatSight/desktop/BeatSight.Desktop && dotnet run`
 - Review the live backlog in `docs/product/status.md` (updates happen here, not in this file)
 - Use `docs/Guidebook.md` as the table of contents for orientation, onboarding, and archives
+- Need a fresh environment? Follow `docs/SETUP.md` and the platform guides it links (`SETUP_WINDOWS.md`, `SETUP_LINUX.md`)
 
 ## 2. Run the Core Apps
 
 ### Desktop Client
 
-```bash
-cd ~/github/BeatSight/desktop/BeatSight.Desktop
-dotnet run
-```
+Use the command pair that matches your platform:
+
+- **Windows (Git Bash):**
+	```bash
+	cd ~/OneDrive/Documents/github/BeatSight/desktop/BeatSight.Desktop
+	dotnet run
+	```
+- **Linux/macOS:**
+	```bash
+	cd ~/github/BeatSight/desktop/BeatSight.Desktop
+	dotnet run
+	```
 
 - `dotnet watch run` is handy for UI iteration
 - Builds expect .NET 8 (see `docs/Guidebook.md#prereqs` for setup notes)
@@ -23,7 +34,7 @@ dotnet run
 ### Backend API (optional while prototyping)
 
 ```bash
-cd ~/github/BeatSight/backend
+cd ~/OneDrive/Documents/github/BeatSight/backend
 poetry install
 poetry run uvicorn app.main:app --reload
 ```
@@ -42,15 +53,17 @@ If you update any of the above, keep cross-links consistent. The root `NEXT_STEP
 
 ## 4. Environment & Data Checklist
 
-- Configure dataset paths before running training or export tools:
+- Configure dataset paths before running training or export tools. The quickest route is to source the helper hook from your shell:
 
 ```bash
-export BEATSIGHT_DATA_ROOT="/mnt/data/beatsight"
-export BEATSIGHT_CACHE_ROOT="${BEATSIGHT_DATA_ROOT}/cache"
-export BEATSIGHT_RUN_ROOT="${BEATSIGHT_DATA_ROOT}/runs"
+cd ~/OneDrive/Documents/github/BeatSight
+source ai-pipeline/training/tools/beatsight_env.sh
 ```
 
-- `ai-pipeline/training/tools/post_export_commands.sh` reads the variables above; set them in your shell profile if you run exports often
+	- fish users: `source ai-pipeline/training/tools/beatsight_env.fish`
+
+- Override any of the exported variables (`BEATSIGHT_DATA_ROOT`, `BEATSIGHT_DATASET_DIR`, `BEATSIGHT_CACHE_DIR`, etc.) before sourcing if you keep data on a different volume.
+- `ai-pipeline/training/tools/post_export_commands.sh` and the training scripts consume these variables directly, so once the hook is sourced every command in the checklist runs against the same layout.
 - Logs and large artifacts live in `data/` (see `docs/Guidebook.md#data` for naming conventions)
 
 ## 5. Active Workstreams (sync with status doc)
@@ -65,7 +78,7 @@ Always record progress in `docs/product/status.md`; we archive completed milesto
 
 ```bash
 # Solution-wide build (desktop + tests)
-cd ~/github/BeatSight
+cd ~/OneDrive/Documents/github/BeatSight   # adjust the root for your clone path
 dotnet build BeatSight.sln
 
 # Run C# tests

@@ -22,6 +22,7 @@ This guidebook is the navigation hub for every Markdown reference inside the rep
 
 ## Engineering Systems
 - Environment & tooling:
+  - `SETUP_WINDOWS.md`
   - `SETUP_LINUX.md`
   - `docs/SETUP.md`
   - `SETTINGS_REFERENCE.md`
@@ -35,7 +36,7 @@ This guidebook is the navigation hub for every Markdown reference inside the rep
 
 ## Domain Specs & Research
 - Formats: `docs/BS_FILE_FORMAT.md`, `docs/BEATMAP_FORMAT.md`, `shared/formats/` specs.
-- Live input QA: `docs/LIVE_INPUT_REGRESSION_CHECKLIST.md`.
+- Live input QA (archived reference only): `docs/LIVE_INPUT_REGRESSION_CHECKLIST.md`.
 - Training governance: `docs/ml_training_runbook.md`, `ai-pipeline/training/DATASET_READINESS_PLAN.md`, readiness reports under `ai-pipeline/training/reports/`.
 - Experiment archives: see `wandb/` runs, `ai-pipeline/training/examples/`, and `ai-pipeline/training/tools/` for utilities referenced by the plan.
 

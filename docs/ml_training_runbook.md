@@ -8,7 +8,7 @@ This runbook captures the end-to-end workflow for refreshing the drum classifier
 
 ## 0. Logistics (current)
 - Replacement HDD arrival (Nov 13) is required before moving forward; hold exports until the new drive is installed.
-- Once the drive is online, migrate `prod_combined_profile_run`, `feature_cache`, checkpoints, W&B offline runs, and other heavy assets from WSL storage back to `C:`.
+- Once the drive is online, migrate `prod_combined_profile_run`, `feature_cache`, checkpoints, W&B offline runs, and other heavy assets off the old WSL storage and fully onto `C:` for the Git Bash workflow.
 - Confirm the final data layout (e.g., `C:\BeatSightData\prod_combined_profile_run`, `...\feature_cache`, `...\checkpoints`). This layout will inform the new environment hook described below.
 
 ## 1. Prerequisites
@@ -18,38 +18,44 @@ This runbook captures the end-to-end workflow for refreshing the drum classifier
 - Python virtualenv activated (`source ai-pipeline/venv/bin/activate`).
 - Weights & Biases logged in (`wandb login`), or W&B offline mode configured.
 - Storage budget: ≥1 TB free for dataset export + cache + checkpoints.
-- **Pending update:** Introduce a centralized `BEATSIGHT_DATA_ROOT` env/config hook so datasets, caches, checkpoints, and W&B paths derive from one source. Until it is wired in, keep path overrides consistent across scripts.
+- Source `ai-pipeline/training/tools/beatsight_env.sh` (or export the same variables manually) so `BEATSIGHT_DATA_ROOT`, `BEATSIGHT_DATASET_DIR`, `BEATSIGHT_CACHE_DIR`, etc. point at your chosen storage layout.
 
 ## 2. Export Dataset
 1. Verify manifest resolution (optional smoke):
    ```bash
+   source ai-pipeline/training/tools/beatsight_env.sh
+   export BEATSIGHT_SECONDARY_ROOT="${BEATSIGHT_SECONDARY_ROOT:-$BEATSIGHT_DATA_ROOT}"
+
    PYTHONPATH=ai-pipeline python ai-pipeline/training/tools/build_training_dataset.py \
       ai-pipeline/training/data/manifests/prod_combined_events.jsonl \
-      /tmp/prod_combined_profile_run \
-      --audio-root /mnt/c/Users/10ros/OneDrive/Documents/github/BeatSight/data/raw \
-      --audio-root-map slakh2100=/mnt/c/Users/10ros/OneDrive/Documents/github/BeatSight/data/raw/slakh2100 \
-      --audio-root-map groove_mididataset=/mnt/c/Users/10ros/OneDrive/Documents/github/BeatSight/data/raw/groove_midi \
-      --audio-root-map cambridge_multitrack=/mnt/c/Users/10ros/OneDrive/Documents/github/BeatSight/data/raw/cambridge \
-      --audio-root-map cambridge_multitrack=/mnt/d/data/raw/cambridge \
+      "$BEATSIGHT_DATA_ROOT/prod_combined_profile_run_smoke" \
+      --audio-root "$BEATSIGHT_DATA_ROOT/raw" \
+      --audio-root-map slakh2100=$BEATSIGHT_DATA_ROOT/raw/slakh2100 \
+      --audio-root-map groove_mididataset=$BEATSIGHT_DATA_ROOT/raw/groove_midi \
+      --audio-root-map cambridge_multitrack=$BEATSIGHT_DATA_ROOT/raw/cambridge \
+   --audio-root-map cambridge_multitrack=$BEATSIGHT_SECONDARY_ROOT/raw/cambridge \
       --limit 1000 --verify-only
    ```
 2. Full export (monitor Rich dashboard):
    ```bash
+   source ai-pipeline/training/tools/beatsight_env.sh
+   export BEATSIGHT_SECONDARY_ROOT="${BEATSIGHT_SECONDARY_ROOT:-$BEATSIGHT_DATA_ROOT}"
+
    PYTHONPATH=ai-pipeline python ai-pipeline/training/tools/build_training_dataset.py \
       ai-pipeline/training/data/manifests/prod_combined_events.jsonl \
-      /home/chrig/prod_combined_profile_run \
-      --audio-root /mnt/c/Users/10ros/OneDrive/Documents/github/BeatSight/data/raw \
-      --audio-root-map slakh2100=/mnt/c/Users/10ros/OneDrive/Documents/github/BeatSight/data/raw/slakh2100 \
-      --audio-root-map groove_mididataset=/mnt/c/Users/10ros/OneDrive/Documents/github/BeatSight/data/raw/groove_midi \
-      --audio-root-map cambridge_multitrack=/mnt/c/Users/10ros/OneDrive/Documents/github/BeatSight/data/raw/cambridge \
-      --audio-root-map cambridge_multitrack=/mnt/d/data/raw/cambridge \
+      "$BEATSIGHT_DATA_ROOT/prod_combined_profile_run" \
+      --audio-root "$BEATSIGHT_DATA_ROOT/raw" \
+      --audio-root-map slakh2100=$BEATSIGHT_DATA_ROOT/raw/slakh2100 \
+      --audio-root-map groove_mididataset=$BEATSIGHT_DATA_ROOT/raw/groove_midi \
+      --audio-root-map cambridge_multitrack=$BEATSIGHT_DATA_ROOT/raw/cambridge \
+      --audio-root-map cambridge_multitrack=$BEATSIGHT_SECONDARY_ROOT/raw/cambridge \
       --manifest-total 3010770 \
       --write-workers 8 \
       --force-rich \
       --overwrite
    ```
 
-> Adjust output paths (`/home/chrig/...`) if running on a different machine; keep metadata relative for downstream scripts.
+> Adjust `BEATSIGHT_DATA_ROOT` (and optionally `BEATSIGHT_SECONDARY_ROOT`) if your heavy data lives elsewhere. All downstream scripts will respect these exports.
 
 ## 3. Post-Export Checklist
 Run the predefined script to validate the dataset and prep for training:

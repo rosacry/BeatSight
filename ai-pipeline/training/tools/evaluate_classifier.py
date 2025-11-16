@@ -21,6 +21,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from training.common_paths import dataset_root as default_dataset_root
+from training.common_paths import feature_cache_root as default_feature_cache_root
 from training.train_classifier import (  # noqa: E402
     DrumSampleDataset,
     stratified_sample_indices,
@@ -30,7 +32,15 @@ from transcription.ml_drum_classifier import DrumClassifierCNN  # noqa: E402
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate a drum classifier checkpoint")
-    parser.add_argument("--dataset", required=True, type=Path, help="Path to dataset root (train/val)")
+    parser.add_argument(
+        "--dataset",
+        type=Path,
+        default=default_dataset_root(),
+        help=(
+            "Path to dataset root (train/val). Defaults to BEATSIGHT_DATASET_DIR or "
+            "BEATSIGHT_DATA_ROOT/prod_combined_profile_run"
+        ),
+    )
     parser.add_argument("--split", choices=["train", "val"], default="val", help="Dataset split to evaluate")
     parser.add_argument("--checkpoint", required=True, type=Path, help="Model checkpoint (.pth)")
     parser.add_argument("--batch-size", type=int, default=128, help="Evaluation batch size")
@@ -38,7 +48,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--num-workers", type=int, default=4, help="DataLoader workers")
     parser.add_argument("--prefetch-factor", type=int, default=2, help="Prefetch factor for DataLoader workers")
     parser.add_argument("--pin-memory", action="store_true", help="Pin DataLoader memory (recommended on CUDA)")
-    parser.add_argument("--feature-cache-dir", type=Path, help="Optional directory containing cached features")
+    parser.add_argument(
+        "--feature-cache-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Optional directory containing cached features. Defaults to "
+            "BEATSIGHT_CACHE_DIR or BEATSIGHT_DATA_ROOT/feature_cache/prod_combined_warmup"
+        ),
+    )
     parser.add_argument("--fraction", type=float, default=1.0, help="Evaluate on a stratified subset of this fraction")
     parser.add_argument("--subset-seed", type=int, default=42, help="RNG seed for subset selection")
     parser.add_argument("--output-json", type=Path, required=True, help="Where to write evaluation summary JSON")
@@ -76,7 +94,13 @@ def parse_args() -> argparse.Namespace:
         help="Autocast dtype when --amp is enabled",
     )
     parser.add_argument("--progress", action="store_true", help="Display progress bar")
-    return parser.parse_args()
+    args = parser.parse_args()
+    args.dataset = Path(args.dataset).expanduser().resolve()
+    if args.feature_cache_dir is None:
+        args.feature_cache_dir = default_feature_cache_root()
+    else:
+        args.feature_cache_dir = Path(args.feature_cache_dir).expanduser().resolve()
+    return args
 
 
 def load_components(dataset_root: Path, explicit_path: Optional[Path]) -> Tuple[List[str], Dict[int, str]]:

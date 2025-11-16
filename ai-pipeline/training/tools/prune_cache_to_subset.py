@@ -10,8 +10,8 @@ reclaim disk space without nuking the entire tree.
 
 Usage (dry run by default):
     PYTHONPATH=ai-pipeline python ai-pipeline/training/tools/prune_cache_to_subset.py \
-        --dataset /home/chrig/prod_combined_profile_run \
-        --cache-dir /home/chrig/feature_cache/prod_combined_warmup \
+        --dataset C:/Users/10ros/OneDrive/Documents/github/BeatSight/data/prod_combined_profile_run \
+        --cache-dir C:/Users/10ros/OneDrive/Documents/github/BeatSight/data/feature_cache/prod_combined_warmup \
         --train-fraction 0.08 \
         --val-fraction 0.12 \
         --subset-seed 20251112

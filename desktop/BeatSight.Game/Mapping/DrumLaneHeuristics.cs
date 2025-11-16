@@ -44,7 +44,15 @@ namespace BeatSight.Game.Mapping
         {
             Span<DrumComponentCategory> categories = stackalloc DrumComponentCategory[maxCategoryDepth];
             int length = 0;
-            SidePreference side = SidePreference.Centre;
+
+            SidePreference side = type switch
+            {
+                DrumType.HiHatClosed or DrumType.HiHatOpen or DrumType.HiHatPedal or DrumType.HiHatFootSplash => SidePreference.Left,
+                DrumType.CrashHigh or DrumType.SplashHigh or DrumType.ChinaHigh or DrumType.TomRackHigh => SidePreference.Left,
+                DrumType.RideBow or DrumType.RideBell or DrumType.CrashLow or DrumType.CrashStack or DrumType.SplashLow or DrumType.ChinaLow or DrumType.ChinaStack
+                    or DrumType.TomRackLow or DrumType.TomFloorHigh or DrumType.TomFloorLow or DrumType.Cowbell => SidePreference.Right,
+                _ => SidePreference.Centre
+            };
 
             switch (type)
             {
@@ -53,29 +61,105 @@ namespace BeatSight.Game.Mapping
                     break;
 
                 case DrumType.Snare:
+                case DrumType.SnareGhost:
                     addCategory(ref length, categories, DrumComponentCategory.Snare);
                     addCategory(ref length, categories, DrumComponentCategory.Rimshot);
                     addCategory(ref length, categories, DrumComponentCategory.CrossStick);
                     break;
 
-                case DrumType.HiHat:
-                    addCategory(ref length, categories, DrumComponentCategory.HiHatClosed);
-                    addCategory(ref length, categories, DrumComponentCategory.HiHatOpen);
-                    addCategory(ref length, categories, DrumComponentCategory.HiHatPedal);
-                    side = SidePreference.Left;
+                case DrumType.SnareRimshot:
+                    addCategory(ref length, categories, DrumComponentCategory.Rimshot);
+                    addCategory(ref length, categories, DrumComponentCategory.Snare);
+                    addCategory(ref length, categories, DrumComponentCategory.CrossStick);
                     break;
 
-                case DrumType.Tom:
+                case DrumType.SnareCrossStick:
+                    addCategory(ref length, categories, DrumComponentCategory.CrossStick);
+                    addCategory(ref length, categories, DrumComponentCategory.Snare);
+                    break;
+
+                case DrumType.HiHatClosed:
+                case DrumType.HiHatOpen:
+                case DrumType.HiHatPedal:
+                case DrumType.HiHatFootSplash:
+                    if (type == DrumType.HiHatPedal)
+                        addCategory(ref length, categories, DrumComponentCategory.HiHatPedal);
+
+                    if (type != DrumType.HiHatPedal)
+                        addCategory(ref length, categories, DrumComponentCategory.HiHatClosed);
+
+                    if (type == DrumType.HiHatOpen || type == DrumType.HiHatFootSplash)
+                        addCategory(ref length, categories, DrumComponentCategory.HiHatOpen);
+
+                    addCategory(ref length, categories, DrumComponentCategory.Crash);
+                    addCategory(ref length, categories, DrumComponentCategory.Ride);
+                    break;
+
+                case DrumType.RideBow:
+                case DrumType.RideBell:
+                    addCategory(ref length, categories, DrumComponentCategory.Ride);
+                    addCategory(ref length, categories, DrumComponentCategory.Crash);
+                    addCategory(ref length, categories, DrumComponentCategory.China);
+                    break;
+
+                case DrumType.CrashHigh:
+                case DrumType.CrashLow:
+                case DrumType.CrashStack:
+                    addCategory(ref length, categories, DrumComponentCategory.Crash);
+                    addCategory(ref length, categories, DrumComponentCategory.Splash);
+                    addCategory(ref length, categories, DrumComponentCategory.Ride);
+                    addCategory(ref length, categories, DrumComponentCategory.China);
+                    break;
+
+                case DrumType.SplashHigh:
+                case DrumType.SplashLow:
+                    addCategory(ref length, categories, DrumComponentCategory.Splash);
+                    addCategory(ref length, categories, DrumComponentCategory.Crash);
+                    addCategory(ref length, categories, DrumComponentCategory.Ride);
+                    break;
+
+                case DrumType.ChinaHigh:
+                case DrumType.ChinaLow:
+                case DrumType.ChinaStack:
+                    addCategory(ref length, categories, DrumComponentCategory.China);
+                    addCategory(ref length, categories, DrumComponentCategory.Crash);
+                    addCategory(ref length, categories, DrumComponentCategory.Ride);
+                    break;
+
+                case DrumType.TomRackHigh:
+                    addCategory(ref length, categories, DrumComponentCategory.TomHigh);
+                    addCategory(ref length, categories, DrumComponentCategory.TomMid);
+                    break;
+
+                case DrumType.TomRackMid:
                     addCategory(ref length, categories, DrumComponentCategory.TomMid);
                     addCategory(ref length, categories, DrumComponentCategory.TomHigh);
                     addCategory(ref length, categories, DrumComponentCategory.TomLow);
                     break;
 
-                case DrumType.Cymbal:
+                case DrumType.TomRackLow:
+                case DrumType.TomFloorHigh:
+                    addCategory(ref length, categories, DrumComponentCategory.TomLow);
+                    addCategory(ref length, categories, DrumComponentCategory.TomMid);
+                    break;
+
+                case DrumType.TomFloorLow:
+                    addCategory(ref length, categories, DrumComponentCategory.TomLow);
+                    break;
+
+                case DrumType.Cowbell:
+                    addCategory(ref length, categories, DrumComponentCategory.Cowbell);
+                    addCategory(ref length, categories, DrumComponentCategory.Percussion);
                     addCategory(ref length, categories, DrumComponentCategory.Ride);
-                    addCategory(ref length, categories, DrumComponentCategory.Crash);
-                    addCategory(ref length, categories, DrumComponentCategory.China);
-                    side = SidePreference.Right;
+                    break;
+
+                case DrumType.Percussion:
+                    addCategory(ref length, categories, DrumComponentCategory.Percussion);
+                    addCategory(ref length, categories, DrumComponentCategory.Cowbell);
+                    break;
+
+                case DrumType.Unknown:
+                    addCategory(ref length, categories, DrumComponentCategory.Unknown);
                     break;
 
                 default:

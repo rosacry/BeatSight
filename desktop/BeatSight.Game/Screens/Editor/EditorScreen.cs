@@ -5,11 +5,13 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Audio;
+using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
 using BeatSight.Game.Screens.Gameplay;
+using BeatSight.Game.UI.Components;
+using BeatSight.Game.UI.Theming;
 using Newtonsoft.Json;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
@@ -21,14 +23,42 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
-using osu.Framework.Platform;
 using osu.Framework.IO.Stores;
+using osu.Framework.Logging;
+using osu.Framework.Platform;
 using osu.Framework.Screens;
 using osuTK;
 using osuTK.Graphics;
 
 namespace BeatSight.Game.Screens.Editor
 {
+    internal static class EditorColours
+    {
+        public static readonly Color4 ScreenBackground = UITheme.Background;
+        public static readonly Color4 HeaderBackground = UITheme.Surface;
+        public static readonly Color4 ControlsBackground = UITheme.SurfaceAlt;
+        public static readonly Color4 TimelineBackground = UITheme.Surface;
+        public static readonly Color4 TimelineToolbarBackground = UITheme.SurfaceAlt;
+        public static readonly Color4 PreviewBackground = UITheme.BackgroundLayer;
+        public static readonly Color4 HistoryBackground = UITheme.SurfaceAlt.Opacity(0.8f);
+        public static readonly Color4 Divider = UITheme.Divider;
+
+        public static Color4 AccentPlay => UITheme.AccentSecondary;
+        public static Color4 AccentSave => UITheme.AccentPrimary;
+        public static Color4 AccentUndo => UITheme.SurfaceAlt;
+        public static Color4 AccentRedo => UITheme.SurfaceAlt;
+
+        public static Color4 Warning => UITheme.AccentWarning;
+
+        public static Color4 TextPrimary => UITheme.TextPrimary;
+        public static Color4 TextSecondary => UITheme.TextSecondary;
+        public static Color4 TextMuted => UITheme.TextMuted;
+
+        public static Color4 Lighten(Color4 colour, float factor) => UITheme.Emphasise(colour, factor);
+
+        public static Color4 WithAlpha(Color4 colour, float alpha) => new Color4(colour.R, colour.G, colour.B, colour.A * alpha);
+    }
+
     public partial class EditorScreen : Screen
     {
         private Beatmap? beatmap;
@@ -57,6 +87,7 @@ namespace BeatSight.Game.Screens.Editor
         private EditorButton saveButton = null!;
         private EditorButton undoButton = null!;
         private EditorButton redoButton = null!;
+        private BackButton backButton = null!;
 
         private bool isPlaying;
         private double currentTime;
@@ -290,12 +321,18 @@ namespace BeatSight.Game.Screens.Editor
             laneViewMode.BindValueChanged(onLaneViewModeChanged, true);
             previewMode.BindValueChanged(onPreviewModeChanged);
 
+            backButton = new BackButton
+            {
+                Margin = BackButton.DefaultMargin,
+                Action = () => this.Exit()
+            };
+
             InternalChildren = new Drawable[]
             {
                 new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = new Color4(18, 18, 28, 255)
+                    Colour = EditorColours.ScreenBackground
                 },
                 new GridContainer
                 {
@@ -314,7 +351,8 @@ namespace BeatSight.Game.Screens.Editor
                         new Drawable[] { createEditor() },
                         new Drawable[] { createFooter() }
                     }
-                }
+                },
+                backButton
             };
 
             if (!string.IsNullOrEmpty(beatmapPath))
@@ -349,7 +387,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 Text = "BeatSight Editor",
                 Font = new FontUsage(size: 28, weight: "Bold"),
-                Colour = Color4.White,
+                Colour = EditorColours.TextPrimary,
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft
             };
@@ -366,14 +404,14 @@ namespace BeatSight.Game.Screens.Editor
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = new Color4(22, 25, 35, 255)
+                        Colour = EditorColours.HeaderBackground
                     },
                     statusText,
                     new SpriteText
                     {
                         Text = "Esc — back to menu",
                         Font = new FontUsage(size: 18),
-                        Colour = new Color4(180, 185, 200, 255),
+                        Colour = EditorColours.TextSecondary,
                         Anchor = Anchor.CentreRight,
                         Origin = Anchor.CentreRight
                     }
@@ -387,12 +425,12 @@ namespace BeatSight.Game.Screens.Editor
             {
                 Text = formatTime(0),
                 Font = new FontUsage(size: 32, weight: "Medium"),
-                Colour = Color4.White,
+                Colour = EditorColours.TextPrimary,
                 Anchor = Anchor.TopCentre,
                 Origin = Anchor.TopCentre
             };
 
-            playPauseButton = new EditorButton("▶ Play", Color4.Green)
+            playPauseButton = new EditorButton("▶ Play", EditorColours.AccentPlay)
             {
                 Size = new Vector2(120, 40),
                 Action = togglePlayback
@@ -400,19 +438,19 @@ namespace BeatSight.Game.Screens.Editor
             playPauseButton.HoverHintChanged += setHoverHint;
             playPauseButton.UpdateState(true, "Play or pause the preview. Shift+Space rewinds to start.");
 
-            saveButton = new EditorButton("Save", new Color4(70, 130, 255, 255))
+            saveButton = new EditorButton("Save", EditorColours.AccentSave)
             {
                 Size = new Vector2(120, 40),
                 Action = saveBeatmap
             };
 
-            undoButton = new EditorButton("Undo", new Color4(90, 95, 115, 255))
+            undoButton = new EditorButton("Undo", EditorColours.AccentUndo)
             {
                 Size = new Vector2(120, 40),
                 Action = undoLastEdit
             };
 
-            redoButton = new EditorButton("Redo", new Color4(90, 95, 115, 255))
+            redoButton = new EditorButton("Redo", EditorColours.AccentRedo)
             {
                 Size = new Vector2(120, 40),
                 Action = redoLastEdit
@@ -436,7 +474,7 @@ namespace BeatSight.Game.Screens.Editor
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = new Color4(25, 28, 38, 255)
+                        Colour = EditorColours.ControlsBackground
                     },
                     new FillFlowContainer
                     {
@@ -467,7 +505,7 @@ namespace BeatSight.Game.Screens.Editor
                             actionHintText = new SpriteText
                             {
                                 Font = new FontUsage(size: 14),
-                                Colour = new Color4(200, 205, 220, 255),
+                                Colour = EditorColours.TextSecondary,
                                 Alpha = 0,
                                 Text = string.Empty,
                                 Anchor = Anchor.TopCentre,
@@ -478,7 +516,7 @@ namespace BeatSight.Game.Screens.Editor
                             playbackStatusText = new SpriteText
                             {
                                 Font = new FontUsage(size: 14),
-                                Colour = new Color4(255, 210, 140, 255),
+                                Colour = EditorColours.Warning,
                                 Alpha = 0,
                                 Text = string.Empty,
                                 Anchor = Anchor.TopCentre,
@@ -501,7 +539,7 @@ namespace BeatSight.Game.Screens.Editor
                                         new Box
                                         {
                                             RelativeSizeAxes = Axes.Both,
-                                            Colour = new Color4(30, 34, 48, 200)
+                                            Colour = EditorColours.HistoryBackground
                                         },
                                         new FillFlowContainer
                                         {
@@ -602,7 +640,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 Text = $"{timelineZoom:0.00}x",
                 Font = new FontUsage(size: 14, weight: "Bold"),
-                Colour = Color4.White,
+                Colour = EditorColours.TextPrimary,
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft
             };
@@ -638,7 +676,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 Text = $"{waveformScale:0.00}x",
                 Font = new FontUsage(size: 14, weight: "Bold"),
-                Colour = Color4.White,
+                Colour = EditorColours.TextPrimary,
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft
             };
@@ -674,7 +712,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 Text = $"1/{snapDivisor}",
                 Font = new FontUsage(size: 14, weight: "Bold"),
-                Colour = Color4.White,
+                Colour = EditorColours.TextPrimary,
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft
             };
@@ -732,7 +770,7 @@ namespace BeatSight.Game.Screens.Editor
             var background = new Box
             {
                 RelativeSizeAxes = Axes.Both,
-                Colour = new Color4(30, 34, 48, 240)
+                Colour = EditorColours.TimelineToolbarBackground
             };
 
             var container = new Container
@@ -765,7 +803,7 @@ namespace BeatSight.Game.Screens.Editor
                     {
                         Text = title,
                         Font = new FontUsage(size: 13, weight: "Bold"),
-                        Colour = new Color4(185, 190, 205, 255)
+                        Colour = EditorColours.TextSecondary
                     },
                     new FillFlowContainer
                     {
@@ -783,7 +821,7 @@ namespace BeatSight.Game.Screens.Editor
             var button = new BasicButton
             {
                 Size = new Vector2(width, 28),
-                BackgroundColour = new Color4(52, 56, 72, 255),
+                BackgroundColour = EditorColours.Lighten(EditorColours.ControlsBackground, 1.08f),
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft,
                 Masking = true,
@@ -795,7 +833,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 Text = text,
                 Font = new FontUsage(size: text.Length > 2 ? 13 : 16, weight: "Bold"),
-                Colour = Color4.White,
+                Colour = EditorColours.TextPrimary,
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre
             });
@@ -1025,7 +1063,7 @@ namespace BeatSight.Game.Screens.Editor
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = new Color4(22, 25, 35, 255)
+                        Colour = EditorColours.HeaderBackground
                     },
                     new FillFlowContainer
                     {
@@ -1071,13 +1109,13 @@ namespace BeatSight.Game.Screens.Editor
                             new Box
                             {
                                 RelativeSizeAxes = Axes.Both,
-                                Colour = new Color4(60, 65, 85, 255)
+                                Colour = EditorColours.ControlsBackground
                             },
                             new SpriteText
                             {
                                 Text = key,
                                 Font = new FontUsage(size: 16, weight: "Bold"),
-                                Colour = Color4.White,
+                                Colour = EditorColours.TextPrimary,
                                 Margin = new MarginPadding { Horizontal = 8, Vertical = 4 }
                             }
                         }
@@ -1086,7 +1124,7 @@ namespace BeatSight.Game.Screens.Editor
                     {
                         Text = action,
                         Font = new FontUsage(size: 16),
-                        Colour = new Color4(180, 185, 200, 255),
+                        Colour = EditorColours.TextSecondary,
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft
                     }
@@ -1100,7 +1138,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 Text = title,
                 Font = new FontUsage(size: 15, weight: "Bold"),
-                Colour = Color4.White
+                Colour = EditorColours.TextPrimary
             };
 
             listFlow = new FillFlowContainer
@@ -1178,13 +1216,13 @@ namespace BeatSight.Game.Screens.Editor
                     {
                         Text = title,
                         Font = new FontUsage(size: emphasise ? 13 : 12, weight: emphasise ? "Bold" : "Medium"),
-                        Colour = emphasise ? new Color4(220, 230, 255, 255) : new Color4(200, 205, 220, 255)
+                        Colour = emphasise ? EditorColours.TextPrimary : EditorColours.TextSecondary
                     },
                     new SpriteText
                     {
                         Text = details,
                         Font = new FontUsage(size: 11),
-                        Colour = new Color4(150, 155, 175, 255)
+                        Colour = EditorColours.TextMuted
                     }
                 }
             };
@@ -1196,7 +1234,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 Text = "No entries yet",
                 Font = new FontUsage(size: 11),
-                Colour = new Color4(140, 145, 165, 255)
+                Colour = EditorColours.TextMuted
             };
         }
 
@@ -1743,7 +1781,7 @@ namespace BeatSight.Game.Screens.Editor
 
             if (beatmap == null)
             {
-                osu.Framework.Logging.Logger.Log("[EditorScreen] reloadTimeline: beatmap is NULL", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
+                Logger.Log("[EditorScreen] reloadTimeline: beatmap is NULL", LoggingTarget.Runtime, LogLevel.Important);
                 timeline.LoadBeatmap(new Beatmap(), Math.Max(trackLength, 60000), waveformData);
                 timeline.SetZoom(timelineZoom);
                 timeline.SetSnap(snapDivisor, 120);
@@ -1758,7 +1796,7 @@ namespace BeatSight.Game.Screens.Editor
                 ? trackLength
                 : Math.Max(beatmap.Audio.Duration, beatmap.HitObjects.Count > 0 ? beatmap.HitObjects[^1].Time + 5000 : 60000);
 
-            osu.Framework.Logging.Logger.Log($"[EditorScreen] reloadTimeline: setting beatmap with {beatmap.HitObjects.Count} notes, gameplayPreview={(gameplayPreview == null ? "NULL" : "exists")}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
+            Logger.Log($"[EditorScreen] reloadTimeline: setting beatmap with {beatmap.HitObjects.Count} notes, gameplayPreview={(gameplayPreview == null ? "NULL" : "exists")}", LoggingTarget.Runtime, LogLevel.Important);
 
             timeline.LoadBeatmap(beatmap, duration, waveformData);
             timeline.SetZoom(timelineZoom);
@@ -2313,8 +2351,8 @@ namespace BeatSight.Game.Screens.Editor
             private readonly Box background;
             private readonly SpriteText label;
             private readonly Bindable<EditorPreviewMode> previewMode;
-            private readonly Color4 colour2D = new Color4(92, 150, 255, 255);
-            private readonly Color4 colour3D = new Color4(180, 120, 255, 255);
+            private readonly Color4 colour2D = UITheme.AccentPrimary;
+            private readonly Color4 colour3D = UITheme.AccentSecondary;
 
             public event Action<string?>? HoverHintChanged;
 
@@ -2336,7 +2374,7 @@ namespace BeatSight.Game.Screens.Editor
                         Anchor = Anchor.Centre,
                         Origin = Anchor.Centre,
                         Font = new FontUsage(size: 18, weight: "Medium"),
-                        Colour = Color4.White
+                        Colour = EditorColours.TextPrimary
                     }
                 });
 
@@ -2366,7 +2404,7 @@ namespace BeatSight.Game.Screens.Editor
                 HoverHintChanged?.Invoke(tooltip);
 
                 var targetColour = previewMode.Value == EditorPreviewMode.Playfield3D ? colour3D : colour2D;
-                background.FadeColour(lightenColour(targetColour, 1.15f), 140, Easing.OutQuint);
+                background.FadeColour(EditorColours.Lighten(targetColour, 1.15f), 140, Easing.OutQuint);
                 this.ScaleTo(1.05f, 140, Easing.OutQuint);
                 return base.OnHover(e);
             }
@@ -2381,11 +2419,6 @@ namespace BeatSight.Game.Screens.Editor
                 this.ScaleTo(1f, 180, Easing.OutQuint);
             }
 
-            private static Color4 lightenColour(Color4 colour, float multiplier)
-            {
-                float clamp(float v) => Math.Clamp(v, 0f, 1f);
-                return new Color4(clamp(colour.R * multiplier), clamp(colour.G * multiplier), clamp(colour.B * multiplier), colour.A);
-            }
         }
 
         private partial class EditorButton : BasicButton
@@ -2403,9 +2436,9 @@ namespace BeatSight.Game.Screens.Editor
             public EditorButton(string text, Color4 colour)
             {
                 baseText = text;
-                hoverColour = colour;
-                idleColour = scaleColour(colour, 0.7f);
-                disabledColour = scaleColour(colour, 0.35f);
+                hoverColour = EditorColours.Lighten(colour, 1.15f);
+                idleColour = colour;
+                disabledColour = EditorColours.Lighten(colour, 0.6f);
 
                 Masking = true;
                 CornerRadius = 8;
@@ -2420,7 +2453,7 @@ namespace BeatSight.Game.Screens.Editor
                 {
                     Text = text,
                     Font = new FontUsage(size: 20),
-                    Colour = Color4.White,
+                    Colour = EditorColours.TextPrimary,
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre
                 });
@@ -2474,15 +2507,7 @@ namespace BeatSight.Game.Screens.Editor
                 this.FadeTo(enabled ? 1f : 0.5f, 200, Easing.OutQuint);
                 if (!enabled)
                     this.ScaleTo(1f, 200, Easing.OutQuint);
-                label.FadeColour(enabled ? Color4.White : scaleColour(Color4.White, 0.85f), 200, Easing.OutQuint);
-            }
-
-            private static Color4 scaleColour(Color4 colour, float factor)
-            {
-                float r = Math.Clamp(colour.R * factor, 0f, 1f);
-                float g = Math.Clamp(colour.G * factor, 0f, 1f);
-                float b = Math.Clamp(colour.B * factor, 0f, 1f);
-                return new Color4(r, g, b, colour.A);
+                label.FadeColour(enabled ? EditorColours.TextPrimary : EditorColours.Lighten(EditorColours.TextPrimary, 0.8f), 200, Easing.OutQuint);
             }
         }
 

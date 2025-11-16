@@ -1,8 +1,19 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using BeatSight.Game.Calibration;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Drawing;
+using BeatSight.Game.Audio;
+using BeatSight.Game.Customization;
 using BeatSight.Game.Configuration;
+using BeatSight.Game.UI.Components;
+using BeatSight.Game.UI.Theming;
+using osu.Framework.Audio;
+using osu.Framework.Audio.Sample;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -11,6 +22,8 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
+using osu.Framework.IO.Stores;
+using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Framework.Screens;
 using osuTK;
@@ -25,6 +38,16 @@ namespace BeatSight.Game.Screens.Settings
 
         private Container contentContainer = null!;
         private SettingsSection? currentSection;
+        private BackButton backButton = null!;
+        private readonly Dictionary<SettingsCategory, SettingsButton> sectionButtons = new();
+        private SettingsCategory currentCategory = SettingsCategory.Playback;
+
+        private enum SettingsCategory
+        {
+            Playback,
+            Audio,
+            Graphics
+        }
 
         [BackgroundDependencyLoader]
         private void load(BeatSightConfigManager configManager, GameHost gameHost)
@@ -32,12 +55,18 @@ namespace BeatSight.Game.Screens.Settings
             config = configManager;
             host = gameHost;
 
+            backButton = new BackButton
+            {
+                Action = () => this.Exit(),
+                Margin = BackButton.DefaultMargin
+            };
+
             InternalChildren = new Drawable[]
             {
                 new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = new Color4(15, 15, 22, 255)
+                    Colour = UITheme.Background
                 },
                 new GridContainer
                 {
@@ -68,18 +97,19 @@ namespace BeatSight.Game.Screens.Settings
                                         contentContainer = new Container
                                         {
                                             RelativeSizeAxes = Axes.Both,
-                                            Padding = new MarginPadding(30)
+                                            Padding = UITheme.ScreenPadding
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                }
+                },
+                backButton
             };
 
-            // Show gameplay settings by default
-            showSection(new GameplaySettingsSection(config));
+            // Show playback settings by default
+            showSection(SettingsCategory.Playback);
         }
 
         private Drawable createHeader()
@@ -92,7 +122,7 @@ namespace BeatSight.Game.Screens.Settings
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = new Color4(20, 20, 30, 255)
+                        Colour = UITheme.Surface
                     },
                     new Container
                     {
@@ -102,19 +132,11 @@ namespace BeatSight.Game.Screens.Settings
                         {
                             new SpriteText
                             {
-                                Text = "⚙ Settings",
+                                Text = "Settings",
                                 Font = new FontUsage(size: 32, weight: "Bold"),
-                                Colour = Color4.White,
-                                Anchor = Anchor.CentreLeft,
-                                Origin = Anchor.CentreLeft
-                            },
-                            new SpriteText
-                            {
-                                Text = "Esc — back to menu",
-                                Font = new FontUsage(size: 18),
-                                Colour = new Color4(180, 185, 200, 255),
-                                Anchor = Anchor.CentreRight,
-                                Origin = Anchor.CentreRight
+                                Colour = UITheme.TextPrimary,
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre
                             }
                         }
                     }
@@ -132,7 +154,7 @@ namespace BeatSight.Game.Screens.Settings
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = new Color4(18, 18, 26, 255)
+                        Colour = UITheme.SurfaceAlt
                     },
                     new BasicScrollContainer
                     {
@@ -147,11 +169,9 @@ namespace BeatSight.Game.Screens.Settings
                             Padding = new MarginPadding(20),
                             Children = new Drawable[]
                             {
-                                new SettingsButton("🎮 Gameplay", () => showSection(new GameplaySettingsSection(config))),
-                                new SettingsButton("👁 Visual Effects", () => showSection(new VisualSettingsSection(config))),
-                                new SettingsButton("🔊 Audio", () => showSection(new AudioSettingsSection(config, host))),
-                                new SettingsButton("⌨ Input", () => showSection(new InputSettingsSection(config))),
-                                new SettingsButton("⚡ Performance", () => showSection(new PerformanceSettingsSection(config)))
+                                createSectionButton(SettingsCategory.Playback, "Playback"),
+                                createSectionButton(SettingsCategory.Audio, "Audio"),
+                                createSectionButton(SettingsCategory.Graphics, "Graphics")
                             }
                         }
                     }
@@ -159,11 +179,83 @@ namespace BeatSight.Game.Screens.Settings
             };
         }
 
-        private void showSection(SettingsSection section)
+        private SettingsButton createSectionButton(SettingsCategory category, string text)
         {
-            currentSection?.Expire();
-            currentSection = section;
+            var button = new SettingsButton(text, () => showSection(category));
+            sectionButtons[category] = button;
+            if (category == currentCategory)
+                button.SetSelected(true);
+            return button;
+        }
+
+        private void showSection(SettingsCategory category)
+        {
+            if (currentCategory == category && currentSection != null && contentContainer.Child == currentSection)
+                return;
+
+            currentCategory = category;
+            currentSection = createSectionInstance(category);
             contentContainer.Child = currentSection;
+
+            foreach (var entry in sectionButtons)
+                entry.Value.SetSelected(entry.Key == category);
+        }
+
+        private SettingsSection createSectionInstance(SettingsCategory category)
+        {
+            switch (category)
+            {
+                case SettingsCategory.Playback:
+                    return new PlaybackSettingsSection(config);
+                case SettingsCategory.Audio:
+                    return new AudioSettingsSection(config, host);
+                case SettingsCategory.Graphics:
+                    return new GraphicsSettingsSection(config, host);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(category), category, null);
+            }
+        }
+
+        internal static void OpenDirectoryExternally(GameHost host, string relativePath)
+        {
+            try
+            {
+                string fullPath = host.Storage.GetFullPath(relativePath);
+                Directory.CreateDirectory(fullPath);
+                launchFileBrowser(fullPath);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[Settings] Failed to open directory '{relativePath}': {ex.Message}", LoggingTarget.Runtime, LogLevel.Debug);
+            }
+        }
+
+        private static void launchFileBrowser(string path)
+        {
+            try
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "explorer.exe",
+                        Arguments = $"\"{path}\"",
+                        UseShellExecute = true
+                    });
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    Process.Start("open", path);
+                }
+                else
+                {
+                    Process.Start("xdg-open", path);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[Settings] Failed to launch file browser for '{path}': {ex.Message}", LoggingTarget.Runtime, LogLevel.Debug);
+            }
         }
 
         protected override bool OnKeyDown(KeyDownEvent e)
@@ -180,7 +272,10 @@ namespace BeatSight.Game.Screens.Settings
         private partial class SettingsButton : CompositeDrawable
         {
             private readonly Box background;
+            private readonly Box accentBar;
+            private readonly SpriteText label;
             private readonly Action action;
+            private bool isSelected;
 
             public SettingsButton(string text, Action action)
             {
@@ -193,42 +288,73 @@ namespace BeatSight.Game.Screens.Settings
 
                 InternalChildren = new Drawable[]
                 {
+                    accentBar = new Box
+                    {
+                        RelativeSizeAxes = Axes.Y,
+                        Width = 6,
+                        Colour = UITheme.AccentPrimary,
+                        Alpha = 0,
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft
+                    },
                     background = new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = new Color4(30, 30, 42, 255)
+                        Colour = UITheme.Surface
                     },
-                    new SpriteText
+                    label = new SpriteText
                     {
                         Text = text,
                         Font = new FontUsage(size: 20),
-                        Colour = Color4.White,
+                        Colour = UITheme.TextSecondary,
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
-                        Padding = new MarginPadding { Left = 16 }
+                        Padding = new MarginPadding { Left = 24 }
                     }
                 };
+            }
+
+            public void SetSelected(bool selected)
+            {
+                if (isSelected == selected)
+                {
+                    updateVisualState();
+                    return;
+                }
+
+                isSelected = selected;
+                updateVisualState();
             }
 
             protected override bool OnClick(ClickEvent e)
             {
                 action?.Invoke();
-                background.FlashColour(new Color4(60, 60, 82, 255), 100);
                 return true;
             }
 
             protected override bool OnHover(HoverEvent e)
             {
-                background.FadeColour(new Color4(45, 45, 62, 255), 200, Easing.OutQuint);
-                this.ScaleTo(1.02f, 200, Easing.OutQuint);
+                updateVisualState(true);
                 return base.OnHover(e);
             }
 
             protected override void OnHoverLost(HoverLostEvent e)
             {
                 base.OnHoverLost(e);
-                background.FadeColour(new Color4(30, 30, 42, 255), 200, Easing.OutQuint);
-                this.ScaleTo(1f, 200, Easing.OutQuint);
+                updateVisualState();
+            }
+
+            private void updateVisualState(bool hovering = false)
+            {
+                Colour4 baseColour = isSelected ? UITheme.Emphasise(UITheme.Surface, 1.18f) : UITheme.Surface;
+
+                if (hovering)
+                    baseColour = UITheme.Emphasise(baseColour, 1.06f);
+
+                background.FadeColour(baseColour, 200, Easing.OutQuint);
+                accentBar.FadeTo(isSelected ? 1f : 0f, 200, Easing.OutQuint);
+                label.FadeColour(isSelected ? UITheme.TextPrimary : UITheme.TextSecondary, 200, Easing.OutQuint);
+                this.ScaleTo(hovering ? 1.02f : 1f, 200, Easing.OutQuint);
             }
         }
     }
@@ -238,6 +364,7 @@ namespace BeatSight.Game.Screens.Settings
         private readonly string title;
         private FillFlowContainer contentFlow = null!;
         private FillFlowContainer sectionBody = null!;
+        protected const float dropdown_menu_max_height = 240;
 
         protected SettingsSection(string title)
         {
@@ -270,7 +397,7 @@ namespace BeatSight.Game.Screens.Settings
                 {
                     Text = title,
                     Font = new FontUsage(size: 28, weight: "Bold"),
-                    Colour = Color4.White,
+                    Colour = UITheme.TextPrimary,
                     Margin = new MarginPadding { Bottom = 10 }
                 },
                 sectionBody
@@ -315,15 +442,47 @@ namespace BeatSight.Game.Screens.Settings
             });
         }
 
-        protected SettingItem CreateEnumDropdown<T>(string label, Bindable<T> bindable, string? description = null) where T : struct, Enum
+        protected SettingItem CreateEnumDropdown<T>(string label, Bindable<T> bindable, string? description = null, Func<T, string>? formatter = null) where T : struct, Enum
         {
-            return new SettingItem(label, description, new BasicDropdown<T>
+            if (formatter == null)
             {
-                Width = 200,
-                Current = bindable,
+                var directDropdown = new SettingsDropdown<T>(dropdown_menu_max_height)
+                {
+                    Width = 220,
+                    Anchor = Anchor.CentreRight,
+                    Origin = Anchor.CentreRight
+                };
+
+                directDropdown.Current = bindable;
+                directDropdown.Items = Enum.GetValues(typeof(T)).Cast<T>().ToArray();
+
+                return new SettingItem(label, description, directDropdown);
+            }
+
+            var items = Enum.GetValues(typeof(T)).Cast<T>().Select(value => new EnumChoice<T>(formatter(value), value)).ToArray();
+
+            var mappedDropdown = new SettingsDropdown<EnumChoice<T>>(dropdown_menu_max_height)
+            {
+                Width = 220,
                 Anchor = Anchor.CentreRight,
-                Origin = Anchor.CentreRight
+                Origin = Anchor.CentreRight,
+                Items = items
+            };
+
+            mappedDropdown.Current.BindValueChanged(e =>
+            {
+                if (!EqualityComparer<T>.Default.Equals(bindable.Value, e.NewValue.Value))
+                    bindable.Value = e.NewValue.Value;
             });
+
+            bindable.BindValueChanged(e =>
+            {
+                var target = items.FirstOrDefault(choice => EqualityComparer<T>.Default.Equals(choice.Value, e.NewValue));
+                if (!target.Equals(default(EnumChoice<T>)) && !mappedDropdown.Current.Value.Equals(target))
+                    mappedDropdown.Current.Value = target;
+            }, true);
+
+            return new SettingItem(label, description, mappedDropdown);
         }
 
         protected SettingItem CreateSlider(string label, Bindable<double> bindable, double min, double max, double precision, string? description = null)
@@ -358,6 +517,40 @@ namespace BeatSight.Game.Screens.Settings
 
             return new SettingItem(label, description, container);
         }
+
+        protected sealed partial class SettingsDropdown<T> : BasicDropdown<T>
+        {
+            private readonly float menuMaxHeight;
+
+            public SettingsDropdown(float menuMaxHeight)
+            {
+                this.menuMaxHeight = menuMaxHeight;
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                if (Menu != null)
+                    Menu.MaxHeight = menuMaxHeight;
+            }
+        }
+
+        private readonly struct EnumChoice<T> : IEquatable<EnumChoice<T>> where T : struct, Enum
+        {
+            public EnumChoice(string label, T value)
+            {
+                Label = label;
+                Value = value;
+            }
+
+            public string Label { get; }
+            public T Value { get; }
+            public override string ToString() => Label;
+            public bool Equals(EnumChoice<T> other) => EqualityComparer<T>.Default.Equals(Value, other.Value) && Label == other.Label;
+            public override bool Equals(object? obj) => obj is EnumChoice<T> other && Equals(other);
+            public override int GetHashCode() => HashCode.Combine(Label, Value);
+        }
     }
 
     public partial class SettingItem : CompositeDrawable
@@ -366,15 +559,18 @@ namespace BeatSight.Game.Screens.Settings
         {
             RelativeSizeAxes = Axes.X;
             AutoSizeAxes = Axes.Y;
-            Masking = true;
-            CornerRadius = 8;
-
             InternalChildren = new Drawable[]
             {
-                new Box
+                new Container
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = new Color4(25, 25, 36, 255)
+                    Masking = true,
+                    CornerRadius = 8,
+                    Child = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = UITheme.Surface
+                    }
                 },
                 new Container
                 {
@@ -395,13 +591,13 @@ namespace BeatSight.Game.Screens.Settings
                                 {
                                     Text = label,
                                     Font = new FontUsage(size: 22, weight: "Medium"),
-                                    Colour = Color4.White
+                                    Colour = UITheme.TextPrimary
                                 },
                                 string.IsNullOrEmpty(description) ? Empty() : new SpriteText
                                 {
                                     Text = description,
                                     Font = new FontUsage(size: 16),
-                                    Colour = new Color4(160, 165, 180, 255)
+                                    Colour = UITheme.TextSecondary
                                 }
                             }
                         },
@@ -412,11 +608,11 @@ namespace BeatSight.Game.Screens.Settings
         }
     }
 
-    public partial class GameplaySettingsSection : SettingsSection
+    public partial class PlaybackSettingsSection : SettingsSection
     {
         private readonly BeatSightConfigManager config;
 
-        public GameplaySettingsSection(BeatSightConfigManager config) : base("Gameplay Settings")
+        public PlaybackSettingsSection(BeatSightConfigManager config) : base("Playback Settings")
         {
             this.config = config;
         }
@@ -432,19 +628,10 @@ namespace BeatSight.Game.Screens.Settings
                 Children = new Drawable[]
                 {
                     CreateEnumDropdown(
-                        "Gameplay Mode",
-                        config.GetBindable<GameplayMode>(BeatSightSetting.GameplayMode),
-                        "Auto: Scoring and detection enabled. Manual: Play-along mode without scoring."
-                    ),
-                    CreateEnumDropdown(
                         "Lane View",
                         config.GetBindable<LaneViewMode>(BeatSightSetting.LaneViewMode),
-                        "Switch between classic 2D lanes and the new 3D runway view."
-                    ),
-                    CreateEnumDropdown(
-                        "Lane Preset",
-                        config.GetBindable<LanePreset>(BeatSightSetting.LanePreset),
-                        "Select how many drum lanes to render and how instruments are arranged."
+                        "Switch between classic 2D lanes and the new 3D runway view.",
+                        formatLaneViewMode
                     ),
                     CreateSlider(
                         "Background Dim",
@@ -452,7 +639,7 @@ namespace BeatSight.Game.Screens.Settings
                         0,
                         1,
                         0.01,
-                        "How much to dim the background during gameplay (0% = bright, 100% = dark)."
+                        "How much to dim the background during playback (0% = bright, 100% = dark)."
                     ),
                     CreateSlider(
                         "Background Blur",
@@ -460,125 +647,106 @@ namespace BeatSight.Game.Screens.Settings
                         0,
                         1,
                         0.01,
-                        "Amount of blur applied to the background during gameplay."
-                    ),
-                    CreateCheckbox(
-                        "Hit Lighting",
-                        config.GetBindable<bool>(BeatSightSetting.HitLighting),
-                        "Screen flash effects when hitting notes perfectly."
-                    ),
-                    CreateCheckbox(
-                        "Show Hit Error Meter",
-                        config.GetBindable<bool>(BeatSightSetting.ShowHitErrorMeter),
-                        "Display timing accuracy visualization bar."
-                    ),
-                    CreateCheckbox(
-                        "Screen Shake on Miss",
-                        config.GetBindable<bool>(BeatSightSetting.ScreenShakeOnMiss),
-                        "Shake the screen slightly when missing notes."
-                    ),
-                    CreateCheckbox(
-                        "Show Combo Milestones",
-                        config.GetBindable<bool>(BeatSightSetting.ShowComboMilestones),
-                        "Celebration animations at every 50 combo."
-                    )
-                }
-            };
-        }
-    }
-
-    public partial class VisualSettingsSection : SettingsSection
-    {
-        private readonly BeatSightConfigManager config;
-
-        public VisualSettingsSection(BeatSightConfigManager config) : base("Visual Effects")
-        {
-            this.config = config;
-        }
-
-        protected override Drawable createContent()
-        {
-            return new FillFlowContainer
-            {
-                RelativeSizeAxes = Axes.X,
-                AutoSizeAxes = Axes.Y,
-                Direction = FillDirection.Vertical,
-                Spacing = new Vector2(0, 12),
-                Children = new Drawable[]
-                {
-                    CreateCheckbox(
-                        "Approach Circles",
-                        config.GetBindable<bool>(BeatSightSetting.ShowApproachCircles),
-                        "Show circles that scale down as notes approach."
-                    ),
-                    CreateCheckbox(
-                        "Particle Effects",
-                        config.GetBindable<bool>(BeatSightSetting.ShowParticleEffects),
-                        "Show burst animations when hitting notes."
-                    ),
-                    CreateCheckbox(
-                        "Glow Effects",
-                        config.GetBindable<bool>(BeatSightSetting.ShowGlowEffects),
-                        "Show glowing effects with additive blending."
-                    ),
-                    CreateCheckbox(
-                        "Hit Burst Animations",
-                        config.GetBindable<bool>(BeatSightSetting.ShowHitBurstAnimations),
-                        "Show explosion animations on perfect/great hits."
+                        "Amount of blur applied to the background during playback."
                     ),
                     CreateEnumDropdown(
-                        "Note Skin",
-                        config.GetBindable<NoteSkinOption>(BeatSightSetting.NoteSkin),
-                        "Switch the appearance of notes between available skins."
+                        "Kick Lane Mode",
+                        config.GetBindable<KickLaneMode>(BeatSightSetting.KickLaneMode),
+                        "Switch between a shared timing line or a dedicated lane for kick hits.",
+                        formatKickLaneMode
                     ),
-                    CreateCheckbox(
-                        "Show FPS Counter",
-                        config.GetBindable<bool>(BeatSightSetting.ShowFpsCounter),
-                        "Display frames per second in the corner."
-                    ),
-                    CreateSlider(
-                        "UI Scale",
-                        config.GetBindable<double>(BeatSightSetting.UIScale),
-                        0.5,
-                        1.5,
-                        0.01,
-                        "Adjust the size of all UI elements (50% - 150%)."
-                    )
+                    createResetSettingsButton()
                 }
             };
         }
+
+        private SettingItem createResetSettingsButton()
+        {
+            var defaultColour = new Color4(176, 70, 70, 255);
+            var confirmColour = new Color4(204, 98, 98, 255);
+
+            var resetButton = new BasicButton
+            {
+                Width = 220,
+                Height = 36,
+                Text = "Reset All Settings",
+                BackgroundColour = defaultColour,
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight
+            };
+
+            bool awaitingConfirmation = false;
+
+            resetButton.Action = () =>
+            {
+                if (!awaitingConfirmation)
+                {
+                    awaitingConfirmation = true;
+                    resetButton.Text = "Click again to confirm";
+                    resetButton.BackgroundColour = confirmColour;
+                    return;
+                }
+
+                awaitingConfirmation = false;
+                resetButton.Text = "Reset All Settings";
+                resetButton.BackgroundColour = defaultColour;
+
+                config.ResetToDefaults();
+                Logger.Log("[Settings] User reset configuration to defaults.", LoggingTarget.Runtime, LogLevel.Important);
+            };
+
+            var control = new Container
+            {
+                AutoSizeAxes = Axes.Both,
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+                Child = resetButton
+            };
+
+            return new SettingItem(
+                "Reset All Settings",
+                "Restore every setting to the factory defaults. This affects audio, graphics, and gameplay preferences.",
+                control);
+        }
+
+        private static string formatLaneViewMode(LaneViewMode mode) => mode switch
+        {
+            LaneViewMode.TwoDimensional => "2D",
+            LaneViewMode.ThreeDimensional => "3D",
+            _ => mode.ToString()
+        };
+
+        private static string formatKickLaneMode(KickLaneMode mode) => mode switch
+        {
+            KickLaneMode.GlobalLine => "Global Line",
+            KickLaneMode.DedicatedLane => "Dedicated Line",
+            _ => mode.ToString()
+        };
     }
 
     public partial class AudioSettingsSection : SettingsSection
     {
         private readonly BeatSightConfigManager config;
         private readonly GameHost host;
-        private readonly MicCalibrationManager calibrationManager;
-        private Bindable<bool> calibrationCompleted = null!;
-        private Bindable<string> calibrationLastUpdated = null!;
-        private Bindable<string> calibrationProfilePath = null!;
-        private Bindable<string> calibrationDeviceId = null!;
-        private SpriteText calibrationStatusText = null!;
-        private SpriteText calibrationUpdatedText = null!;
-        private SpriteText calibrationPathText = null!;
-        private SpriteText calibrationDeviceText = null!;
-        private SpriteText calibrationHintText = null!;
-        private BasicButton clearCalibrationButton = null!;
+        private StorageBackedResourceStore? storageResourceStore;
+        private ISampleStore? storageSampleStore;
+        private NamespacedResourceStore<byte[]>? embeddedResourceStore;
+        private ISampleStore? embeddedSampleStore;
+        private SampleChannel? metronomePreviewChannel;
+        private const string userMetronomeDirectory = UserAssetDirectories.MetronomeSounds;
+        private const float dropdownMenuMaxHeight = 240;
+
+        [Resolved]
+        private AudioManager audioManager { get; set; } = null!;
 
         public AudioSettingsSection(BeatSightConfigManager config, GameHost host) : base("Audio Settings")
         {
             this.config = config;
             this.host = host;
-            calibrationManager = new MicCalibrationManager(host.Storage);
         }
 
         protected override Drawable createContent()
         {
-            calibrationCompleted = config.GetBindable<bool>(BeatSightSetting.MicCalibrationCompleted);
-            calibrationLastUpdated = config.GetBindable<string>(BeatSightSetting.MicCalibrationLastUpdated);
-            calibrationProfilePath = config.GetBindable<string>(BeatSightSetting.MicCalibrationProfilePath);
-            calibrationDeviceId = config.GetBindable<string>(BeatSightSetting.MicCalibrationDeviceId);
-
             return new FillFlowContainer
             {
                 RelativeSizeAxes = Axes.X,
@@ -619,303 +787,854 @@ namespace BeatSight.Game.Screens.Settings
                         0.01,
                         "Volume for individual note hit feedback sounds."
                     ),
-                    CreateCheckbox(
-                        "Metronome Enabled",
-                        config.GetBindable<bool>(BeatSightSetting.MetronomeEnabled),
-                        "Enable the click track during playback and previews."
-                    ),
                     CreateSlider(
                         "Metronome Volume",
                         config.GetBindable<double>(BeatSightSetting.MetronomeVolume),
                         0,
-                        1,
+                        1.5,
                         0.01,
-                        "Adjust the metronome level relative to the music mix."
+                        "Adjust the metronome level relative to the music mix, with extra headroom for loud clicks."
                     ),
-                    CreateEnumDropdown(
-                        "Metronome Sound",
-                        config.GetBindable<MetronomeSoundOption>(BeatSightSetting.MetronomeSound),
-                        "Select the tone used for the metronome click."
+                    CreateCheckbox(
+                        "Metronome",
+                        config.GetBindable<bool>(BeatSightSetting.MetronomeEnabled),
+                        "Enable or disable the click track during playback and previews."
                     ),
+                    createMetronomeSoundSetting(),
+                    createMetronomeAssetSetting(),
                     CreateCheckbox(
                         "Prefer Drum Stem Playback",
                         config.GetBindable<bool>(BeatSightSetting.DrumStemPlaybackOnly),
                         "When available, switch playback to the isolated drum stem instead of the full mix."
                     ),
-                    CreateCalibrationSetting()
+                    CreateSlider(
+                        "Audio Offset",
+                        config.GetBindable<double>(BeatSightSetting.AudioOffset),
+                        -500,
+                        500,
+                        1,
+                        "Adjust audio timing in milliseconds if playback is out of sync."
+                    )
                 }
             };
         }
 
-        private SettingItem CreateCalibrationSetting()
+        protected override void Dispose(bool isDisposing)
         {
-            calibrationStatusText = new SpriteText
+            stopPreviewChannel();
+            base.Dispose(isDisposing);
+        }
+
+        private SettingItem createMetronomeSoundSetting()
+        {
+            var metronomeSound = config.GetBindable<MetronomeSoundOption>(BeatSightSetting.MetronomeSound);
+
+            var dropdown = new InlineDropdown<MetronomeSoundOption>(dropdownMenuMaxHeight)
             {
-                Font = new FontUsage(size: 18, weight: "Medium"),
-                Colour = Color4.White,
-                Text = "Status: Unknown"
+                Width = 220,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                Items = Enum.GetValues(typeof(MetronomeSoundOption)).Cast<MetronomeSoundOption>().ToArray()
             };
 
-            calibrationUpdatedText = new SpriteText
+            dropdown.Current = metronomeSound;
+            dropdown.Current.BindValueChanged(_ => stopPreviewChannel());
+
+            var previewButton = new BasicButton
             {
-                Font = new FontUsage(size: 14),
-                Colour = new Color4(180, 185, 200, 255),
-                Text = "Last updated: --"
+                Size = new Vector2(72, 32),
+                Text = "Play",
+                BackgroundColour = new Color4(72, 84, 120, 255),
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                Action = () => playMetronomePreview(dropdown.Current.Value)
             };
 
-            calibrationPathText = new SpriteText
+            var control = new FillFlowContainer
             {
-                Font = new FontUsage(size: 14),
-                Colour = new Color4(150, 155, 170, 255),
-                Text = "Profile path: --"
+                AutoSizeAxes = Axes.Both,
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+                Direction = FillDirection.Horizontal,
+                Spacing = new Vector2(8, 0),
+                Children = new Drawable[]
+                {
+                    previewButton,
+                    dropdown
+                }
             };
 
-            calibrationDeviceText = new SpriteText
-            {
-                Font = new FontUsage(size: 14),
-                Colour = new Color4(150, 155, 170, 255),
-                Text = "Captured device: --"
-            };
+            return new SettingItem(
+                "Metronome Sound",
+                "Select the tone used for the metronome click. Use the play button to preview it immediately.",
+                control);
+        }
 
-            calibrationHintText = new SpriteText
+        private SettingItem createMetronomeAssetSetting()
+        {
+            var openButton = new BasicButton
             {
-                Font = new FontUsage(size: 14),
-                Colour = new Color4(160, 165, 180, 255),
-                Text = "Launch Live Input to (re)calibrate your kit."
-            };
-
-            clearCalibrationButton = new BasicButton
-            {
-                Text = "Clear Calibration",
-                Width = 170,
+                Width = 260,
                 Height = 32,
-                Anchor = Anchor.TopRight,
-                Origin = Anchor.TopRight,
+                Text = "Open Metronome Sounds Folder",
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+                Action = () => SettingsScreen.OpenDirectoryExternally(host, userMetronomeDirectory)
             };
-
-            clearCalibrationButton.Action = clearCalibration;
 
             var control = new Container
             {
                 AutoSizeAxes = Axes.Both,
                 Anchor = Anchor.CentreRight,
                 Origin = Anchor.CentreRight,
-                Child = new FillFlowContainer
+                Child = openButton
+            };
+
+            return new SettingItem(
+                "Custom Metronome Library",
+                "Drop your own accent/regular samples into the folder that opens to extend the metronome library.",
+                control);
+        }
+
+        private void playMetronomePreview(MetronomeSoundOption option)
+        {
+            ensureSampleStores();
+
+            var (accentPath, regularPath) = MetronomeSampleLibrary.GetSamplePaths(option);
+
+            Sample? sample = tryGetSample(accentPath) ?? tryGetSample(regularPath);
+
+            if (sample == null)
+            {
+                foreach (var fallback in MetronomeSampleLibrary.GetFallbackCandidates(true))
                 {
-                    AutoSizeAxes = Axes.Both,
-                    Direction = FillDirection.Vertical,
-                    Spacing = new Vector2(0, 4),
-                    Children = new Drawable[]
+                    sample = tryGetSample(fallback);
+                    if (sample != null)
+                        break;
+                }
+            }
+
+            if (sample == null)
+            {
+                Logger.Log($"[Settings] No metronome sample could be previewed for option '{option}'.", LoggingTarget.Runtime, LogLevel.Debug);
+                return;
+            }
+
+            stopPreviewChannel();
+
+            var channel = sample.GetChannel();
+            if (channel == null)
+                return;
+
+            double previewVolume = config.GetBindable<double>(BeatSightSetting.MetronomeVolume).Value;
+            double effectsVolume = config.GetBindable<double>(BeatSightSetting.EffectVolume).Value;
+            channel.Volume.Value = (float)Math.Clamp(previewVolume * effectsVolume, 0, 1.5);
+            channel.Play();
+
+            metronomePreviewChannel = channel;
+        }
+
+        private void ensureSampleStores()
+        {
+            if (embeddedResourceStore == null)
+            {
+                embeddedResourceStore = new NamespacedResourceStore<byte[]>(
+                    new DllResourceStore(typeof(global::BeatSight.Game.BeatSightGame).Assembly),
+                    "BeatSight.Game.Resources");
+            }
+
+            MetronomeSampleBootstrap.EnsureDefaults(host.Storage, embeddedResourceStore, userMetronomeDirectory);
+            NoteSkinBootstrap.EnsureDefaults(host.Storage, embeddedResourceStore, UserAssetDirectories.Skins);
+
+            storageResourceStore ??= new StorageBackedResourceStore(host.Storage);
+            storageSampleStore ??= audioManager.GetSampleStore(storageResourceStore);
+            embeddedSampleStore ??= audioManager.GetSampleStore(embeddedResourceStore);
+        }
+
+        private Sample? tryGetSample(string path)
+        {
+            try
+            {
+                ensureSampleStores();
+
+                Sample? sample = null;
+
+                if (storageSampleStore != null)
+                {
+                    string fileName = Path.GetFileName(path);
+                    if (!string.IsNullOrEmpty(fileName))
                     {
-                        calibrationStatusText,
-                        calibrationUpdatedText,
-                        calibrationPathText,
-                        calibrationDeviceText,
-                        calibrationHintText,
-                        new Container
+                        sample = storageSampleStore.Get($"{userMetronomeDirectory}/{fileName}");
+
+                        if (sample == null)
                         {
-                            AutoSizeAxes = Axes.Both,
-                            Child = clearCalibrationButton
+                            string? stem = Path.GetFileNameWithoutExtension(fileName);
+                            if (!string.IsNullOrEmpty(stem))
+                                sample = storageSampleStore.Get($"{userMetronomeDirectory}/{stem}");
                         }
+                    }
+                }
+
+                if (sample == null && embeddedSampleStore != null)
+                {
+                    sample = embeddedSampleStore.Get(path);
+
+                    if (sample == null && Path.HasExtension(path))
+                    {
+                        string? trimmedEmbedded = Path.ChangeExtension(path, null);
+                        if (!string.IsNullOrEmpty(trimmedEmbedded))
+                            sample = embeddedSampleStore.Get(trimmedEmbedded);
+                    }
+                }
+
+                sample ??= audioManager.Samples.Get(path);
+
+                if (sample == null && Path.HasExtension(path))
+                {
+                    string? trimmed = Path.ChangeExtension(path, null);
+                    if (!string.IsNullOrEmpty(trimmed))
+                        sample = audioManager.Samples.Get(trimmed);
+                }
+
+                return sample;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[Settings] Error loading metronome preview sample '{path}': {ex.Message}", LoggingTarget.Runtime, LogLevel.Debug);
+                return null;
+            }
+        }
+
+        private void stopPreviewChannel()
+        {
+            if (metronomePreviewChannel == null)
+                return;
+
+            metronomePreviewChannel.Stop();
+            metronomePreviewChannel = null;
+        }
+
+        private sealed partial class InlineDropdown<T> : BasicDropdown<T>
+        {
+            private readonly float maxHeight;
+
+            public InlineDropdown(float maxHeight)
+            {
+                this.maxHeight = maxHeight;
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                if (Menu != null)
+                    Menu.MaxHeight = maxHeight;
+            }
+        }
+    }
+
+    public partial class GraphicsSettingsSection : SettingsSection
+    {
+        private readonly BeatSightConfigManager config;
+        private readonly GameHost host;
+        private Bindable<int>? windowWidth;
+        private Bindable<int>? windowHeight;
+        private Bindable<bool>? windowFullscreen;
+        private Bindable<int>? windowDisplay;
+        private Bindable<bool>? frameLimiterEnabled;
+        private Bindable<double>? frameLimiterTarget;
+        private SettingsDropdown<MonitorChoice>? monitorDropdown;
+        private SettingsDropdown<ResolutionOptionChoice>? resolutionDropdown;
+        private MonitorChoice[] monitorChoices = Array.Empty<MonitorChoice>();
+        private ResolutionOptionChoice[] resolutionChoices = Array.Empty<ResolutionOptionChoice>();
+        private BasicSliderBar<double>? frameLimiterSlider;
+        private SpriteText? frameLimiterValueText;
+        private BindableDouble? frameLimiterSliderBindable;
+        private bool frameLimiterValueSync;
+        private bool suppressMonitorSync;
+        private bool suppressResolutionSync;
+        private bool monitorRefreshScheduled;
+        private bool resolutionRefreshScheduled;
+
+        public GraphicsSettingsSection(BeatSightConfigManager config, GameHost host) : base("Graphics Settings")
+        {
+            this.config = config;
+            this.host = host;
+        }
+
+        protected override Drawable createContent()
+        {
+            windowWidth ??= config.GetBindable<int>(BeatSightSetting.WindowWidth);
+            windowHeight ??= config.GetBindable<int>(BeatSightSetting.WindowHeight);
+            windowFullscreen ??= config.GetBindable<bool>(BeatSightSetting.WindowFullscreen);
+            windowDisplay ??= config.GetBindable<int>(BeatSightSetting.WindowDisplayIndex);
+            frameLimiterEnabled ??= config.GetBindable<bool>(BeatSightSetting.FrameLimiterEnabled);
+            frameLimiterTarget ??= config.GetBindable<double>(BeatSightSetting.FrameLimiterTarget);
+
+            return new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(0, 12),
+                Children = new Drawable[]
+                {
+                    createMonitorSetting(),
+                    createResolutionSetting(),
+                    CreateCheckbox(
+                        "Fullscreen Mode",
+                        windowFullscreen!,
+                        "Toggle fullscreen rendering. When off, BeatSight uses the resolution specified above."
+                    ),
+                    createFrameLimiterSetting(),
+                    CreateEnumDropdown(
+                        "Skin",
+                        config.GetBindable<NoteSkinOption>(BeatSightSetting.NoteSkin),
+                        "Switch the appearance of notes between available skins."
+                    ),
+                    createSkinManagementSetting(),
+                    CreateCheckbox(
+                        "Show FPS Counter",
+                        config.GetBindable<bool>(BeatSightSetting.ShowFpsCounter),
+                        "Display frames per second in the corner."
+                    ),
+                    CreateSlider(
+                        "UI Scale",
+                        config.GetBindable<double>(BeatSightSetting.UIScale),
+                        0.5,
+                        1.5,
+                        0.01,
+                        "Adjust the size of all UI elements (50% - 150%)."
+                    ),
+                    CreateCheckbox(
+                        "Approach Circles",
+                        config.GetBindable<bool>(BeatSightSetting.ShowApproachCircles),
+                        "Show circles that scale down as notes approach."
+                    ),
+                    CreateCheckbox(
+                        "Particle Effects",
+                        config.GetBindable<bool>(BeatSightSetting.ShowParticleEffects),
+                        "Show burst animations when hitting notes."
+                    ),
+                    CreateCheckbox(
+                        "Glow Effects",
+                        config.GetBindable<bool>(BeatSightSetting.ShowGlowEffects),
+                        "Show glowing effects with additive blending."
+                    ),
+                    CreateCheckbox(
+                        "Hit Burst Animations",
+                        config.GetBindable<bool>(BeatSightSetting.ShowHitBurstAnimations),
+                        "Show explosion animations on perfect/great hits."
+                    )
+                }
+            };
+        }
+
+        private SettingItem createSkinManagementSetting()
+        {
+            var openButton = new BasicButton
+            {
+                Width = 160,
+                Height = 32,
+                Text = "Open Skins Folder",
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                Action = () => SettingsScreen.OpenDirectoryExternally(host, UserAssetDirectories.Skins)
+            };
+
+            var editorButton = new BasicButton
+            {
+                Width = 160,
+                Height = 32,
+                Text = "Skin Editor (Soon)"
+            };
+            editorButton.Anchor = Anchor.CentreLeft;
+            editorButton.Origin = Anchor.CentreLeft;
+            editorButton.Enabled.Value = false;
+
+            var control = new FillFlowContainer
+            {
+                AutoSizeAxes = Axes.Both,
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+                Direction = FillDirection.Horizontal,
+                Spacing = new Vector2(8, 0),
+                Children = new Drawable[] { openButton, editorButton }
+            };
+
+            return new SettingItem(
+                "Skin Tools",
+                "Manage installed skins or prepare to create your own. The editor toggle is placeholder until development finishes.",
+                control);
+        }
+
+        private SettingItem createMonitorSetting()
+        {
+            monitorDropdown = new SettingsDropdown<MonitorChoice>(dropdown_menu_max_height)
+            {
+                Width = 220,
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight
+            };
+
+            monitorDropdown.Current.BindValueChanged(e =>
+            {
+                if (suppressMonitorSync || windowDisplay == null)
+                    return;
+
+                if (windowDisplay.Value != e.NewValue.Index)
+                    windowDisplay.Value = e.NewValue.Index;
+            });
+
+            windowDisplay?.BindValueChanged(_ => scheduleMonitorRefresh(), true);
+
+            updateMonitorDropdownItems();
+
+            return new SettingItem(
+                "Monitor",
+                "Choose which display BeatSight launches on.",
+                monitorDropdown);
+        }
+
+        private SettingItem createResolutionSetting()
+        {
+            resolutionDropdown = new SettingsDropdown<ResolutionOptionChoice>(dropdown_menu_max_height)
+            {
+                Width = 220,
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight
+            };
+
+            resolutionDropdown.Current.BindValueChanged(e =>
+            {
+                if (suppressResolutionSync || windowWidth == null || windowHeight == null)
+                    return;
+
+                if (windowWidth.Value != e.NewValue.Width)
+                    windowWidth.Value = e.NewValue.Width;
+                if (windowHeight.Value != e.NewValue.Height)
+                    windowHeight.Value = e.NewValue.Height;
+            });
+
+            windowWidth?.BindValueChanged(_ => scheduleResolutionRefresh(), true);
+            windowHeight?.BindValueChanged(_ => scheduleResolutionRefresh(), true);
+
+            updateResolutionDropdownItems();
+
+            return new SettingItem(
+                "Resolution",
+                "Set the window size BeatSight uses when not running fullscreen.",
+                resolutionDropdown);
+        }
+
+        private SettingItem createFrameLimiterSetting()
+        {
+            frameLimiterSliderBindable = new BindableDouble
+            {
+                MinValue = 60,
+                MaxValue = computeFrameLimiterCeiling(),
+                Precision = 1
+            };
+
+            if (frameLimiterTarget != null)
+            {
+                frameLimiterSliderBindable.Value = Math.Clamp(
+                    frameLimiterTarget.Value,
+                    frameLimiterSliderBindable.MinValue,
+                    frameLimiterSliderBindable.MaxValue);
+            }
+            else
+            {
+                frameLimiterSliderBindable.Value = frameLimiterSliderBindable.MinValue;
+            }
+
+            frameLimiterSlider = new BasicSliderBar<double>
+            {
+                RelativeSizeAxes = Axes.X,
+                Height = 16,
+                Current = frameLimiterSliderBindable
+            };
+
+            frameLimiterValueText = new SpriteText
+            {
+                Font = new FontUsage(size: 16),
+                Colour = UITheme.TextSecondary,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft
+            };
+
+            frameLimiterSliderBindable.BindValueChanged(e =>
+            {
+                frameLimiterValueText.Text = $"{Math.Round(e.NewValue)} Hz";
+
+                if (frameLimiterTarget == null)
+                    return;
+
+                if (frameLimiterValueSync)
+                    return;
+
+                frameLimiterValueSync = true;
+                try
+                {
+                    frameLimiterTarget.Value = e.NewValue;
+                }
+                finally
+                {
+                    frameLimiterValueSync = false;
+                }
+            }, true);
+
+            if (frameLimiterTarget != null)
+            {
+                frameLimiterTarget.BindValueChanged(e =>
+                {
+                    if (frameLimiterSliderBindable == null)
+                        return;
+
+                    if (frameLimiterValueSync)
+                        return;
+
+                    frameLimiterValueSync = true;
+                    try
+                    {
+                        frameLimiterSliderBindable.Value = e.NewValue;
+                    }
+                    finally
+                    {
+                        frameLimiterValueSync = false;
+                    }
+                }, true);
+            }
+
+            if (frameLimiterEnabled != null)
+            {
+                bool enabledNow = frameLimiterEnabled.Value;
+                frameLimiterSliderBindable.Disabled = !enabledNow;
+                frameLimiterSlider.Alpha = enabledNow ? 1f : 0.5f;
+
+                frameLimiterEnabled.BindValueChanged(e =>
+                {
+                    bool enabled = e.NewValue;
+                    frameLimiterSliderBindable.Disabled = !enabled;
+                    frameLimiterSlider.FadeTo(enabled ? 1f : 0.5f, 200, Easing.OutQuint);
+                    frameLimiterValueText?.FadeColour(enabled ? UITheme.TextSecondary : UITheme.TextMuted, 200, Easing.OutQuint);
+                }, true);
+            }
+
+            updateFrameLimiterSliderRange();
+
+            var checkbox = new BasicCheckbox
+            {
+                Current = frameLimiterEnabled!,
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre
+            };
+
+            var control = new FillFlowContainer
+            {
+                Width = 320,
+                AutoSizeAxes = Axes.Y,
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(0, 8),
+                Children = new Drawable[]
+                {
+                    new FillFlowContainer
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Horizontal,
+                        Spacing = new Vector2(12, 0),
+                        Children = new Drawable[]
+                        {
+                            new Container
+                            {
+                                Size = new Vector2(24),
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
+                                Child = checkbox
+                            },
+                            frameLimiterValueText
+                        }
+                    },
+                    new Container
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        Height = 20,
+                        Child = frameLimiterSlider
                     }
                 }
             };
 
-            calibrationCompleted.BindValueChanged(_ => updateCalibrationDisplay(), true);
-            calibrationLastUpdated.BindValueChanged(_ => updateCalibrationDisplay(), true);
-            calibrationProfilePath.BindValueChanged(_ => updateCalibrationDisplay(), true);
-            calibrationDeviceId.BindValueChanged(_ => updateCalibrationDisplay(), true);
-
             return new SettingItem(
-                "Microphone Calibration",
-                "BeatSight uses this profile for Live Input scoring. Clear to force a fresh capture.",
-                control
-            );
+                "Frame Limiter",
+                "Throttle BeatSight's rendering speed to save power or match your monitor.",
+                control);
         }
 
-        private void clearCalibration()
+        protected override void LoadComplete()
         {
-            calibrationManager.Clear();
-            calibrationCompleted.Value = false;
-            calibrationLastUpdated.Value = string.Empty;
-            calibrationProfilePath.Value = string.Empty;
-            calibrationDeviceId.Value = string.Empty;
-            updateCalibrationDisplay();
-            calibrationHintText.Text = "Calibration cleared. Launch Live Input to capture a new profile.";
+            base.LoadComplete();
+
+            if (host.Window != null)
+                host.Window.DisplaysChanged += onDisplaysChanged;
+
+            updateMonitorDropdownItems();
+            updateResolutionDropdownItems();
+            updateFrameLimiterSliderRange();
         }
 
-        private void updateCalibrationDisplay()
+        protected override void Dispose(bool isDisposing)
         {
-            bool hasProfile = calibrationCompleted.Value && !string.IsNullOrWhiteSpace(calibrationProfilePath.Value) && calibrationManager.HasProfile();
+            if (host.Window != null)
+                host.Window.DisplaysChanged -= onDisplaysChanged;
 
-            if (!hasProfile)
-            {
-                calibrationStatusText.Text = "Status: Not calibrated";
-                calibrationStatusText.Colour = new Color4(255, 190, 120, 255);
-                calibrationUpdatedText.Text = "Last updated: never";
-                calibrationPathText.Text = "Profile path: (none)";
-                calibrationDeviceText.Text = "Captured device: (none)";
-                calibrationHintText.Text = "Launch Live Input from the main menu to run calibration.";
-                setButtonState(enabled: false, "Clear Calibration");
+            base.Dispose(isDisposing);
+        }
+
+        private void scheduleMonitorRefresh()
+        {
+            if (monitorRefreshScheduled)
                 return;
-            }
 
-            calibrationStatusText.Text = "Status: Complete";
-            calibrationStatusText.Colour = new Color4(120, 255, 140, 255);
-
-            calibrationUpdatedText.Text = $"Last updated: {formatTimestamp(calibrationLastUpdated.Value)}";
-            calibrationPathText.Text = formatProfilePath(calibrationProfilePath.Value);
-            calibrationDeviceText.Text = formatDeviceName(calibrationDeviceId.Value);
-            calibrationHintText.Text = "Need adjustments? Clear the profile or recalibrate in Live Input.";
-            setButtonState(enabled: true, "Clear Calibration");
+            monitorRefreshScheduled = true;
+            Schedule(() =>
+            {
+                monitorRefreshScheduled = false;
+                updateMonitorDropdownItems();
+            });
         }
 
-        private void setButtonState(bool enabled, string label)
+        private void scheduleResolutionRefresh()
         {
-            clearCalibrationButton.Text = label;
-            clearCalibrationButton.Enabled.Value = enabled;
-            clearCalibrationButton.Alpha = enabled ? 1f : 0.35f;
+            if (resolutionRefreshScheduled)
+                return;
+
+            resolutionRefreshScheduled = true;
+            Schedule(() =>
+            {
+                resolutionRefreshScheduled = false;
+                updateResolutionDropdownItems();
+            });
         }
 
-        private static string formatProfilePath(string path)
+        private void updateMonitorDropdownItems()
         {
-            if (string.IsNullOrWhiteSpace(path))
-                return "Profile path: (none)";
+            if (monitorDropdown == null)
+                return;
 
-            string display = path;
+            var displays = host.Window?.Displays ?? ImmutableArray<Display>.Empty;
+            monitorChoices = displays.Length == 0
+                ? new[] { new MonitorChoice(0, "Primary Display") }
+                : displays.Select(d => new MonitorChoice(d.Index, $"{d.Index + 1}: {d.Name}"))
+                          .OrderBy(choice => choice.Index)
+                          .ToArray();
+            if (monitorChoices.Length == 0)
+                monitorChoices = new[] { new MonitorChoice(0, "Primary Display") };
+
+            suppressMonitorSync = true;
             try
             {
-                display = Path.GetFileName(path);
+                int targetIndex = windowDisplay?.Value ?? 0;
+                var selection = monitorChoices.FirstOrDefault(choice => choice.Index == targetIndex);
+                if (!selection.IsValid)
+                    selection = monitorChoices[0];
+
+                monitorDropdown.Current.Value = selection;
             }
-            catch
+            finally
             {
-                // Keep fallback display.
+                suppressMonitorSync = false;
             }
 
-            return $"Profile path: {display}";
+            updateResolutionDropdownItems();
+            updateFrameLimiterSliderRange();
         }
 
-        private static string formatDeviceName(string value)
+        private void updateResolutionDropdownItems()
         {
-            if (string.IsNullOrWhiteSpace(value))
-                return "Captured device: (unknown)";
+            if (resolutionDropdown == null || windowWidth == null || windowHeight == null)
+                return;
 
-            return $"Captured device: {value}";
-        }
+            bool isFullscreen = windowFullscreen?.Value == true;
+            var display = getDisplayByIndex(windowDisplay?.Value ?? 0);
 
-        private static string formatTimestamp(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return "never";
+            var modeSizes = new HashSet<(int Width, int Height)>();
 
-            if (!DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed))
+            if (display is Display displayValue)
             {
-                if (!DateTime.TryParse(value, out parsed))
-                    return value;
+                foreach (var mode in displayValue.DisplayModes)
+                {
+                    var size = mode.Size;
+
+                    if (size.Width < 800 || size.Height < 600)
+                        continue;
+
+                    modeSizes.Add((size.Width, size.Height));
+                }
             }
 
+            if (modeSizes.Count == 0)
+            {
+                modeSizes.Add((1280, 720));
+                modeSizes.Add((1600, 900));
+                modeSizes.Add((1920, 1080));
+            }
+
+            modeSizes.Add((Math.Max(800, windowWidth.Value), Math.Max(600, windowHeight.Value)));
+            if (isFullscreen && display is Display fullscreenDisplay)
+                modeSizes.Add((fullscreenDisplay.Bounds.Width, fullscreenDisplay.Bounds.Height));
+
+            resolutionChoices = modeSizes
+                .Select(size => new ResolutionOptionChoice(
+                    size.Width,
+                    size.Height,
+                    !displayHasResolution(display, size) && size.Width == windowWidth.Value && size.Height == windowHeight.Value))
+                .OrderBy(choice => choice.Width)
+                .ThenBy(choice => choice.Height)
+                .ToArray();
+
+            suppressResolutionSync = true;
+            bool originalDisabled = resolutionDropdown.Current.Disabled;
+            bool targetDisabledState = isFullscreen || originalDisabled;
             try
             {
-                var local = parsed.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(parsed, DateTimeKind.Utc).ToLocalTime() : parsed.ToLocalTime();
-                return local.ToString("MMM d, yyyy • HH:mm", CultureInfo.CurrentCulture);
-            }
-            catch
-            {
-                return parsed.ToString(CultureInfo.CurrentCulture);
-            }
-        }
-    }
+                if (resolutionDropdown.Current.Disabled)
+                    resolutionDropdown.Current.Disabled = false;
 
-    public partial class InputSettingsSection : SettingsSection
-    {
-        private readonly BeatSightConfigManager config;
+                resolutionDropdown.Items = resolutionChoices;
 
-        public InputSettingsSection(BeatSightConfigManager config) : base("Input Settings")
-        {
-            this.config = config;
-        }
-
-        protected override Drawable createContent()
-        {
-            return new FillFlowContainer
-            {
-                RelativeSizeAxes = Axes.X,
-                AutoSizeAxes = Axes.Y,
-                Direction = FillDirection.Vertical,
-                Spacing = new Vector2(0, 12),
-                Children = new Drawable[]
+                var selection = resolutionChoices.FirstOrDefault(choice => choice.Width == windowWidth.Value && choice.Height == windowHeight.Value);
+                if (isFullscreen && display is Display displayForFullscreen)
                 {
-                    CreateSlider(
-                        "Audio Offset",
-                        config.GetBindable<double>(BeatSightSetting.AudioOffset),
-                        -150,
-                        150,
-                        1,
-                        "Adjust timing offset for audio synchronization (in milliseconds)."
-                    ),
-                    CreateSlider(
-                        "Hitsound Offset",
-                        config.GetBindable<double>(BeatSightSetting.HitsoundOffset),
-                        -150,
-                        150,
-                        1,
-                        "Separate offset for hitsound playback timing (in milliseconds)."
-                    ),
-                    new SettingItem(
-                        "Key Bindings",
-                        "Configure drum component key mappings.",
-                        new SpriteText
-                        {
-                            Text = "Coming Soon",
-                            Font = new FontUsage(size: 18),
-                            Colour = new Color4(150, 150, 170, 255),
-                            Anchor = Anchor.CentreRight,
-                            Origin = Anchor.CentreRight
-                        }
-                    )
+                    var displaySelection = resolutionChoices.FirstOrDefault(choice => choice.Width == displayForFullscreen.Bounds.Width && choice.Height == displayForFullscreen.Bounds.Height);
+                    if (displaySelection.IsValid)
+                        selection = displaySelection;
                 }
-            };
-        }
-    }
+                if (!selection.IsValid)
+                    selection = resolutionChoices[^1];
 
-    public partial class PerformanceSettingsSection : SettingsSection
-    {
-        private readonly BeatSightConfigManager config;
-
-        public PerformanceSettingsSection(BeatSightConfigManager config) : base("Performance Settings")
-        {
-            this.config = config;
-        }
-
-        protected override Drawable createContent()
-        {
-            return new FillFlowContainer
+                resolutionDropdown.Current.Value = selection;
+            }
+            finally
             {
-                RelativeSizeAxes = Axes.X,
-                AutoSizeAxes = Axes.Y,
-                Direction = FillDirection.Vertical,
-                Spacing = new Vector2(0, 12),
-                Children = new Drawable[]
-                {
-                    CreateEnumDropdown(
-                        "Frame Limiter",
-                        config.GetBindable<FrameLimiterMode>(BeatSightSetting.FrameLimiter),
-                        "Limit maximum framerate to reduce system load or enable VSync."
-                    ),
-                    new SettingItem(
-                        "Rendering Info",
-                        "Current renderer and performance statistics.",
-                        new SpriteText
-                        {
-                            Text = "See FPS Counter in Visual settings",
-                            Font = new FontUsage(size: 16),
-                            Colour = new Color4(150, 150, 170, 255),
-                            Anchor = Anchor.CentreRight,
-                            Origin = Anchor.CentreRight
-                        }
-                    )
-                }
-            };
+                resolutionDropdown.Current.Disabled = targetDisabledState;
+                suppressResolutionSync = false;
+            }
+
+            updateFrameLimiterSliderRange();
+        }
+
+        private void updateFrameLimiterSliderRange()
+        {
+            if (frameLimiterSliderBindable == null)
+                return;
+
+            double ceiling = Math.Max(60, computeFrameLimiterCeiling());
+            frameLimiterSliderBindable.MinValue = 60;
+            frameLimiterSliderBindable.MaxValue = ceiling;
+
+            if (frameLimiterTarget != null && frameLimiterTarget.Value > ceiling)
+                frameLimiterTarget.Value = ceiling;
+
+            if (frameLimiterSliderBindable.Value > ceiling)
+                frameLimiterSliderBindable.Value = ceiling;
+
+            if (frameLimiterSliderBindable.Value < frameLimiterSliderBindable.MinValue)
+                frameLimiterSliderBindable.Value = frameLimiterSliderBindable.MinValue;
+        }
+
+        private double computeFrameLimiterCeiling()
+        {
+            var display = getDisplayByIndex(windowDisplay?.Value ?? 0);
+
+            if (display is Display displayValue)
+            {
+                double maxRefresh = 0;
+                foreach (var mode in displayValue.DisplayModes)
+                    maxRefresh = Math.Max(maxRefresh, mode.RefreshRate);
+
+                if (maxRefresh >= 30)
+                    return Math.Clamp(maxRefresh, 60, 1000);
+            }
+
+            return 240;
+        }
+
+        private Display? getDisplayByIndex(int index)
+        {
+            var displays = host.Window?.Displays ?? ImmutableArray<Display>.Empty;
+            if (displays.Length == 0)
+                return null;
+
+            foreach (var display in displays)
+            {
+                if (display.Index == index)
+                    return display;
+            }
+
+            return displays[0];
+        }
+
+        private static bool displayHasResolution(Display? display, (int Width, int Height) size)
+        {
+            if (display is not Display displayValue)
+                return false;
+
+            foreach (var mode in displayValue.DisplayModes)
+            {
+                if (mode.Size.Width == size.Width && mode.Size.Height == size.Height)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private void onDisplaysChanged(IEnumerable<Display> _)
+        {
+            scheduleMonitorRefresh();
+        }
+
+        private readonly struct MonitorChoice : IEquatable<MonitorChoice>
+        {
+            public MonitorChoice(int index, string label)
+            {
+                Index = index;
+                Label = label;
+            }
+
+            public int Index { get; }
+            public string Label { get; }
+            public bool IsValid => !string.IsNullOrEmpty(Label);
+            public bool Equals(MonitorChoice other) => Index == other.Index && Label == other.Label;
+            public override bool Equals(object? obj) => obj is MonitorChoice other && Equals(other);
+            public override int GetHashCode() => HashCode.Combine(Index, Label);
+            public override string ToString() => Label;
+        }
+
+        private readonly struct ResolutionOptionChoice : IEquatable<ResolutionOptionChoice>
+        {
+            public ResolutionOptionChoice(int width, int height, bool isCustom)
+            {
+                Width = width;
+                Height = height;
+                IsCustom = isCustom;
+            }
+
+            public int Width { get; }
+            public int Height { get; }
+            public bool IsCustom { get; }
+            public bool IsValid => Width > 0 && Height > 0;
+
+            public bool Equals(ResolutionOptionChoice other) => Width == other.Width && Height == other.Height;
+            public override bool Equals(object? obj) => obj is ResolutionOptionChoice other && Equals(other);
+            public override int GetHashCode() => HashCode.Combine(Width, Height);
+            public override string ToString()
+            {
+                string label = $"{Width} x {Height}";
+                return IsCustom ? label + " (Custom)" : label;
+            }
         }
     }
 }

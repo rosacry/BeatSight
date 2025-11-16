@@ -126,8 +126,8 @@ data/signaturesounds_website
 
 
 # Beatmap files for testing (keep samples separate)
-*.bsm
-!shared/formats/*.bsm
+# *.bsm
+# !shared/formats/*.bsm
 
 # Database
 *.db

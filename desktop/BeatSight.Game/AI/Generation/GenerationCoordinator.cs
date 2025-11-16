@@ -35,7 +35,8 @@ namespace BeatSight.Game.AI.Generation
         ImportedAudioTrack Track,
         int DetectionSensitivity,
         QuantizationGrid Quantization,
-        bool DebugOverlayEnabled);
+        bool DebugOverlayEnabled,
+        TempoOverride? TempoOverride = null);
 
     public readonly record struct GenerationProgress(
         GenStage Stage,
@@ -128,7 +129,7 @@ namespace BeatSight.Game.AI.Generation
                 updateState(runId, GenerationState.Preparing);
                 transition(runId, GenStage.AudioInit, 0.01, "Preparing audio", stopwatch, observer, null, GenerationStageId.ModelLoad, 0.0, GenerationStagePlan.StageLabels[GenerationStageId.ModelLoad]);
 
-                var request = new GenerationPipelineRequest(snapshot.Track, new AiGenerationOptions
+                var options = new AiGenerationOptions
                 {
                     DetectionSensitivity = snapshot.DetectionSensitivity,
                     QuantizationGrid = snapshot.Quantization,
@@ -136,7 +137,12 @@ namespace BeatSight.Game.AI.Generation
                     EnableDrumSeparation = true,
                     ConfidenceThreshold = 0.3,
                     MaxSnapErrorMilliseconds = 12.0
-                });
+                };
+
+                if (snapshot.TempoOverride is TempoOverride tempoOverride)
+                    tempoOverride.ApplyTo(options);
+
+                var request = new GenerationPipelineRequest(snapshot.Track, options);
 
                 currentTask = Task.Run(async () =>
                 {
@@ -198,11 +204,13 @@ namespace BeatSight.Game.AI.Generation
                     }
 
                     if (finalResult == null)
-                        finalResult = GenerationPipelineResult.CreateFailure("Generation ended unexpectedly.", false, true, false, false, null, null, null, Array.Empty<string>(), null);
+                        finalResult = GenerationPipelineResult.CreateFailure("Generation ended unexpectedly.", false, true, false, false, null, null, null, Array.Empty<string>(), null, detectionStats: null);
 
                     var terminalStage = finalResult.Success ? GenStage.Completed : finalResult.Cancelled ? GenStage.Cancelled : GenStage.Failed;
                     transition(runId, GenStage.Finalising, 0.98, "Finalising", stopwatch, observer, null, GenerationStageId.Finalise, 0.75, GenerationStagePlan.StageLabels[GenerationStageId.Finalise]);
                     transition(runId, terminalStage, 1.0, messageForResult(finalResult), stopwatch, observer, null, GenerationStageId.Finalise, 1.0, GenerationStagePlan.StageLabels[GenerationStageId.Finalise]);
+
+                    applyFinalStats(runId, finalResult.DetectionStats, finalResult.Analysis);
 
                     return new GenerationResult(runId, finalResult);
                 }, CancellationToken.None);
@@ -251,6 +259,24 @@ namespace BeatSight.Game.AI.Generation
                 metrics = stats.Value.ToMetrics();
 
             transition(runId, nextStage, percent, message, stopwatch, observer, metrics, stageId, stageProgress, stageLabel);
+        }
+
+        private void applyFinalStats(Guid runId, DetectionStats? detectionStats, DrumOnsetAnalysis? latestAnalysis)
+        {
+            if (detectionStats == null && latestAnalysis == null)
+                return;
+
+            schedule(() =>
+            {
+                if (currentRunId != runId)
+                    return;
+
+                if (detectionStats != null)
+                    stats.Value = detectionStats;
+
+                if (latestAnalysis != null)
+                    analysis.Value = latestAnalysis;
+            });
         }
 
         private static string tempoMessage(DetectionStats stats) =>

@@ -56,6 +56,8 @@ except Exception:  # pragma: no cover - optional dependency
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
 from transcription.ml_drum_classifier import DrumClassifierCNN
+from training.common_paths import dataset_root as default_dataset_root
+from training.common_paths import feature_cache_root as default_feature_cache_root
 
 
 class DrumSampleDataset(Dataset):
@@ -368,7 +370,15 @@ def validate(
 
 def main():
     parser = argparse.ArgumentParser(description="Train Drum Classifier CNN")
-    parser.add_argument("--dataset", required=True, help="Path to dataset directory")
+    parser.add_argument(
+        "--dataset",
+        type=Path,
+        default=default_dataset_root(),
+        help=(
+            "Path to dataset directory (defaults to BEATSIGHT_DATASET_DIR or "
+            "BEATSIGHT_DATA_ROOT/prod_combined_profile_run)"
+        ),
+    )
     parser.add_argument("--epochs", type=int, default=50, help="Number of epochs")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
@@ -443,10 +453,14 @@ def main():
     parser.add_argument("--fmax", type=int, default=8000, help="Maximum mel frequency (Hz)")
     parser.add_argument("--target-frames", type=int, default=128, help="Number of spectrogram frames after resizing")
     parser.add_argument(
-        "--feature-cache-dir",
-        type=Path,
-        help="Optional root directory to cache precomputed features (will mirror dataset structure)",
-    )
+            "--feature-cache-dir",
+            type=Path,
+            default=None,
+            help=(
+                "Optional root directory to cache precomputed features (defaults to "
+                "BEATSIGHT_CACHE_DIR or BEATSIGHT_DATA_ROOT/feature_cache/prod_combined_warmup)"
+            ),
+        )
     parser.add_argument(
         "--cache-dtype",
         choices=["float32", "float16", "bfloat16"],
@@ -535,6 +549,13 @@ def main():
     )
     
     args = parser.parse_args()
+
+    args.dataset = Path(args.dataset).expanduser().resolve()
+
+    if args.feature_cache_dir is None:
+        args.feature_cache_dir = default_feature_cache_root()
+    else:
+        args.feature_cache_dir = Path(args.feature_cache_dir).expanduser().resolve()
     
     if args.warmup_epochs < 0:
         parser.error("--warmup-epochs must be non-negative")

@@ -45,7 +45,6 @@ BeatSight is designed as a modular, scalable system with clear separation betwee
   - `SongSelectScreen`: Browse local/downloaded beatmaps
   - `GameplayScreen`: Main rhythm game interface
   - `EditorScreen`: Beatmap creation/editing
-  - `ResultsScreen`: Score display and replay
   - `SettingsScreen`: Configuration
 
 - **Gameplay Components**:
@@ -60,7 +59,6 @@ BeatSight is designed as a modular, scalable system with clear separation betwee
   - `AudioEngine`: Playback with pitch-independent speed control
   - `MetronomeOverlay`: Configurable click track
   - `TrackIsolation`: Toggle between full mix and stems
-  - `MicrophoneInput`: Real-time audio capture for scoring
 
 - **Editor Components**:
   - `TimelineView`: Waveform display with zoom
@@ -85,6 +83,11 @@ BeatSight is designed as a modular, scalable system with clear separation betwee
 - **Latency**: <10ms audio-visual sync
 - **Frame Rate**: 60 FPS minimum, 240 FPS capable
 - **Input Lag**: <5ms (critical for rhythm games)
+
+### Retired Experiments (November 2025)
+- Live microphone gameplay (`MicrophoneCapture`, `RealtimeOnsetDetector`, `LiveInputHudOverlay`, `LiveInputModeScreen`) has been removed from the codebase while we focus on manual/auto gameplay polish.
+- Practice-specific surface (`PracticeModeScreen`, `GameplayReplayHost`, `ResultsScreen`) was shelved; future UX will fold these ideas back into the core `GameplayScreen` when they return.
+- Configuration hooks for microphone calibration (`MicCalibration*` settings) no longer ship with the default ini.
 
 ## 2. Mobile Clients (iOS/Android)
 

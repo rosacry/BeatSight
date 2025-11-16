@@ -22,9 +22,12 @@ public class DrumLaneHeuristicsTests
     [Theory]
     [InlineData(DrumType.Kick, 3)]
     [InlineData(DrumType.Snare, 2)]
-    [InlineData(DrumType.HiHat, 1)]
-    [InlineData(DrumType.Tom, 4)]
-    [InlineData(DrumType.Cymbal, 5)]
+    [InlineData(DrumType.HiHatClosed, 1)]
+    [InlineData(DrumType.HiHatFootSplash, 1)]
+    [InlineData(DrumType.TomRackMid, 4)]
+    [InlineData(DrumType.CrashHigh, 0)]
+    [InlineData(DrumType.CrashLow, 6)]
+    [InlineData(DrumType.RideBow, 5)]
     public void ResolveLane_ByType_UsesConsistentMapping(DrumType type, int expectedLane)
     {
         Assert.Equal(expectedLane, DrumLaneHeuristics.ResolveLane(type));

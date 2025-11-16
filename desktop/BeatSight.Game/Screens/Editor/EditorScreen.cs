@@ -75,6 +75,7 @@ namespace BeatSight.Game.Screens.Editor
         private GameplayPreview gameplayPreview = null!;
         private PreviewToggleButton previewToggle = null!;
         private SpriteText statusText = null!;
+        private SpriteText statusDetailLine = null!;
         private SpriteText timeText = null!;
         private SpriteText actionHintText = null!;
         private SpriteText playbackStatusText = null!;
@@ -94,7 +95,7 @@ namespace BeatSight.Game.Screens.Editor
         private double trackLength;
         private WaveformData? waveformData;
         private CancellationTokenSource? waveformLoadCts;
-        private string statusBaseText = "BeatSight Editor";
+        private string statusBaseText = string.Empty;
         private string? statusDetailText;
         private bool hasUnsavedChanges;
         private readonly List<EditorSnapshot> undoStack = new();
@@ -186,17 +187,26 @@ namespace BeatSight.Game.Screens.Editor
 
         private void updateStatusText()
         {
-            if (statusText == null)
-                return;
+            if (statusText != null)
+            {
+                statusText.Text = statusBaseText;
+                statusText.Alpha = string.IsNullOrWhiteSpace(statusBaseText) ? 0 : 1;
+            }
 
             string? detail = statusDetailText;
 
-            if (hasUnsavedChanges)
-                detail = string.IsNullOrWhiteSpace(detail) ? "Unsaved changes" : $"{detail}, Unsaved changes";
+            if (!string.IsNullOrWhiteSpace(detail))
+                detail = detail.Replace(", ", " • ");
 
-            statusText.Text = string.IsNullOrWhiteSpace(detail)
-                ? statusBaseText
-                : $"{statusBaseText} • {detail}";
+            if (hasUnsavedChanges)
+                detail = string.IsNullOrWhiteSpace(detail) ? "Unsaved changes" : $"{detail} • Unsaved changes";
+
+            if (statusDetailLine != null)
+            {
+                bool showDetail = !string.IsNullOrWhiteSpace(detail);
+                statusDetailLine.Text = showDetail ? detail! : string.Empty;
+                statusDetailLine.Alpha = showDetail ? 1 : 0;
+            }
         }
 
         private void setHoverHint(string? hint)
@@ -222,8 +232,10 @@ namespace BeatSight.Game.Screens.Editor
 
             if (previewToggle != null)
             {
-                previewToggle.Enabled.Value = true;
-                previewToggle.FadeTo(playbackAvailable ? 1f : 0.85f, 150);
+                previewToggle.SetAvailability(true, null);
+
+                float targetAlpha = playbackAvailable ? 1f : 0.75f;
+                previewToggle.FadeTo(targetAlpha, 150);
             }
 
             if (playbackStatusText != null)
@@ -339,15 +351,13 @@ namespace BeatSight.Game.Screens.Editor
                     RelativeSizeAxes = Axes.Both,
                     RowDimensions = new[]
                     {
-                        new Dimension(GridSizeMode.Absolute, 60),
-                        new Dimension(GridSizeMode.Absolute, 120),
+                        new Dimension(GridSizeMode.AutoSize),
                         new Dimension(),
                         new Dimension(GridSizeMode.Absolute, 80)
                     },
                     Content = new[]
                     {
                         new Drawable[] { createHeader() },
-                        new Drawable[] { createControls() },
                         new Drawable[] { createEditor() },
                         new Drawable[] { createFooter() }
                     }
@@ -362,6 +372,13 @@ namespace BeatSight.Game.Screens.Editor
             else if (importedAudio != null)
             {
                 initializeNewProject(importedAudio);
+            }
+            else
+            {
+                reloadTimeline();
+                updateActionButtons();
+                refreshTimelineToolboxState();
+                updatePlaybackAvailabilityUI();
             }
         }
 
@@ -385,58 +402,75 @@ namespace BeatSight.Game.Screens.Editor
         {
             statusText = new SpriteText
             {
-                Text = "BeatSight Editor",
-                Font = new FontUsage(size: 28, weight: "Bold"),
+                Text = string.Empty,
+                Font = new FontUsage(size: 26, weight: "SemiBold"),
                 Colour = EditorColours.TextPrimary,
-                Anchor = Anchor.CentreLeft,
-                Origin = Anchor.CentreLeft
+                AllowMultiline = true,
+                MaxWidth = 440,
+                Anchor = Anchor.TopLeft,
+                Origin = Anchor.TopLeft
             };
 
-            setStatusBase("BeatSight Editor");
-            setStatusDetail(null);
-
-            return new Container
+            statusDetailLine = new SpriteText
             {
-                RelativeSizeAxes = Axes.Both,
-                Padding = new MarginPadding { Horizontal = 30 },
+                Font = new FontUsage(size: 14),
+                Colour = EditorColours.TextSecondary,
+                Alpha = 0,
+                AllowMultiline = true,
+                MaxWidth = 440,
+                Anchor = Anchor.TopLeft,
+                Origin = Anchor.TopLeft
+            };
+
+            var statusColumn = new FillFlowContainer
+            {
+                AutoSizeAxes = Axes.Both,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(0, 4),
+                Anchor = Anchor.TopLeft,
+                Origin = Anchor.TopLeft,
+                Children = new Drawable[]
+                {
+                    statusText,
+                    statusDetailLine
+                }
+            };
+
+            float safeLeftPadding = BackButton.DefaultMargin.Left + (backButton?.Width ?? 120) + 16;
+
+            timeText = new SpriteText
+            {
+                Text = formatTime(0),
+                Font = new FontUsage(size: 30, weight: "Bold"),
+                Colour = EditorColours.TextPrimary,
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                Margin = new MarginPadding { Horizontal = 22, Vertical = 10 }
+            };
+
+            var timeBadge = new Container
+            {
+                AutoSizeAxes = Axes.Both,
+                Masking = true,
+                CornerRadius = 10,
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
                 Children = new Drawable[]
                 {
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = EditorColours.HeaderBackground
+                        Colour = EditorColours.Lighten(EditorColours.ControlsBackground, 1.05f)
                     },
-                    statusText,
-                    new SpriteText
-                    {
-                        Text = "Esc — back to menu",
-                        Font = new FontUsage(size: 18),
-                        Colour = EditorColours.TextSecondary,
-                        Anchor = Anchor.CentreRight,
-                        Origin = Anchor.CentreRight
-                    }
+                    timeText
                 }
             };
-        }
 
-        private Drawable createControls()
-        {
-            timeText = new SpriteText
-            {
-                Text = formatTime(0),
-                Font = new FontUsage(size: 32, weight: "Medium"),
-                Colour = EditorColours.TextPrimary,
-                Anchor = Anchor.TopCentre,
-                Origin = Anchor.TopCentre
-            };
-
-            playPauseButton = new EditorButton("▶ Play", EditorColours.AccentPlay)
+            playPauseButton = new EditorButton("Play", EditorColours.AccentPlay)
             {
                 Size = new Vector2(120, 40),
                 Action = togglePlayback
             };
-            playPauseButton.HoverHintChanged += setHoverHint;
-            playPauseButton.UpdateState(true, "Play or pause the preview. Shift+Space rewinds to start.");
 
             saveButton = new EditorButton("Save", EditorColours.AccentSave)
             {
@@ -456,115 +490,185 @@ namespace BeatSight.Game.Screens.Editor
                 Action = redoLastEdit
             };
 
+            previewToggle = new PreviewToggleButton(previewMode)
+            {
+                Size = new Vector2(136, 40),
+                Alpha = 0
+            };
+
+            playPauseButton.HoverHintChanged += setHoverHint;
             saveButton.HoverHintChanged += setHoverHint;
             undoButton.HoverHintChanged += setHoverHint;
             redoButton.HoverHintChanged += setHoverHint;
-            previewToggle = new PreviewToggleButton(previewMode)
-            {
-                Size = new Vector2(120, 40)
-            };
             previewToggle.HoverHintChanged += setHoverHint;
 
-            var controls = new Container
+            var buttonFlow = new FillFlowContainer
             {
-                RelativeSizeAxes = Axes.Both,
-                Padding = new MarginPadding { Horizontal = 30, Vertical = 15 },
+                AutoSizeAxes = Axes.Both,
+                Direction = FillDirection.Horizontal,
+                Spacing = new Vector2(10, 0),
+                Anchor = Anchor.TopRight,
+                Origin = Anchor.TopRight,
                 Children = new Drawable[]
                 {
-                    new Box
+                    playPauseButton,
+                    saveButton,
+                    undoButton,
+                    redoButton,
+                    previewToggle
+                }
+            };
+
+            actionHintText = new SpriteText
+            {
+                Font = new FontUsage(size: 14),
+                Colour = EditorColours.TextSecondary,
+                Alpha = 0,
+                Text = string.Empty,
+                Anchor = Anchor.TopCentre,
+                Origin = Anchor.TopCentre,
+                MaxWidth = 900,
+                AllowMultiline = true
+            };
+
+            playbackStatusText = new SpriteText
+            {
+                Font = new FontUsage(size: 14),
+                Colour = EditorColours.Warning,
+                Alpha = 0,
+                Text = string.Empty,
+                Anchor = Anchor.TopCentre,
+                Origin = Anchor.TopCentre,
+                MaxWidth = 900,
+                AllowMultiline = true
+            };
+
+            historyPanel = new Container
+            {
+                AutoSizeAxes = Axes.Both,
+                Anchor = Anchor.TopCentre,
+                Origin = Anchor.TopCentre,
+                Child = new Container
+                {
+                    AutoSizeAxes = Axes.Both,
+                    CornerRadius = 6,
+                    Masking = true,
+                    Children = new Drawable[]
                     {
-                        RelativeSizeAxes = Axes.Both,
-                        Colour = EditorColours.ControlsBackground
-                    },
-                    new FillFlowContainer
-                    {
-                        AutoSizeAxes = Axes.Both,
-                        Direction = FillDirection.Vertical,
-                        Anchor = Anchor.Centre,
-                        Origin = Anchor.Centre,
-                        Spacing = new Vector2(0, 10),
-                        Children = new Drawable[]
+                        new Box
                         {
-                            timeText,
-                            new FillFlowContainer
+                            RelativeSizeAxes = Axes.Both,
+                            Colour = EditorColours.HistoryBackground
+                        },
+                        new FillFlowContainer
+                        {
+                            AutoSizeAxes = Axes.Both,
+                            Direction = FillDirection.Horizontal,
+                            Spacing = new Vector2(20, 0),
+                            Padding = new MarginPadding { Horizontal = 14, Vertical = 10 },
+                            Children = new Drawable[]
                             {
-                                AutoSizeAxes = Axes.Both,
-                                Direction = FillDirection.Horizontal,
-                                Spacing = new Vector2(10, 0),
-                                Anchor = Anchor.TopCentre,
-                                Origin = Anchor.TopCentre,
-                                Children = new Drawable[]
-                                {
-                                    playPauseButton,
-                                    saveButton,
-                                    undoButton,
-                                    redoButton,
-                                    previewToggle
-                                }
-                            },
-                            actionHintText = new SpriteText
-                            {
-                                Font = new FontUsage(size: 14),
-                                Colour = EditorColours.TextSecondary,
-                                Alpha = 0,
-                                Text = string.Empty,
-                                Anchor = Anchor.TopCentre,
-                                Origin = Anchor.TopCentre,
-                                MaxWidth = 700,
-                                AllowMultiline = true
-                            },
-                            playbackStatusText = new SpriteText
-                            {
-                                Font = new FontUsage(size: 14),
-                                Colour = EditorColours.Warning,
-                                Alpha = 0,
-                                Text = string.Empty,
-                                Anchor = Anchor.TopCentre,
-                                Origin = Anchor.TopCentre,
-                                MaxWidth = 700,
-                                AllowMultiline = true
-                            },
-                            historyPanel = new Container
-                            {
-                                AutoSizeAxes = Axes.Both,
-                                Anchor = Anchor.TopCentre,
-                                Origin = Anchor.TopCentre,
-                                Child = new Container
-                                {
-                                    AutoSizeAxes = Axes.Both,
-                                    CornerRadius = 6,
-                                    Masking = true,
-                                    Children = new Drawable[]
-                                    {
-                                        new Box
-                                        {
-                                            RelativeSizeAxes = Axes.Both,
-                                            Colour = EditorColours.HistoryBackground
-                                        },
-                                        new FillFlowContainer
-                                        {
-                                            AutoSizeAxes = Axes.Both,
-                                            Direction = FillDirection.Horizontal,
-                                            Spacing = new Vector2(20, 0),
-                                            Padding = new MarginPadding { Horizontal = 14, Vertical = 10 },
-                                            Children = new Drawable[]
-                                            {
-                                                createHistoryColumn("Undo", out undoHeaderText, out undoHistoryFlow),
-                                                createHistoryColumn("Redo", out redoHeaderText, out redoHistoryFlow)
-                                            }
-                                        }
-                                    }
-                                }
+                                createHistoryColumn("Undo", out undoHeaderText, out undoHistoryFlow),
+                                createHistoryColumn("Redo", out redoHeaderText, out redoHistoryFlow)
                             }
                         }
                     }
                 }
             };
 
+            var mainRow = new GridContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                ColumnDimensions = new[]
+                {
+                    new Dimension(GridSizeMode.Relative, 0.34f),
+                    new Dimension(GridSizeMode.Relative, 0.32f),
+                    new Dimension(GridSizeMode.Relative, 0.34f)
+                },
+                Content = new[]
+                {
+                    new Drawable[]
+                    {
+                        new Container
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Padding = new MarginPadding { Left = safeLeftPadding, Right = 24 },
+                            Child = statusColumn
+                        },
+                        new Container
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Child = timeBadge
+                        },
+                        new Container
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Padding = new MarginPadding { Left = 24 },
+                            Child = buttonFlow
+                        }
+                    }
+                }
+            };
+
+            var informationFlow = new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(6),
+                Anchor = Anchor.TopCentre,
+                Origin = Anchor.TopCentre,
+                Children = new Drawable[]
+                {
+                    actionHintText,
+                    playbackStatusText,
+                    historyPanel
+                }
+            };
+
+            var content = new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(12),
+                Children = new Drawable[]
+                {
+                    mainRow,
+                    informationFlow
+                }
+            };
+
+            var header = new Container
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Children = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = EditorColours.HeaderBackground
+                    },
+                    new Container
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Padding = new MarginPadding { Horizontal = 36, Vertical = 18 },
+                        Child = content
+                    }
+                }
+            };
+
+            setStatusBase(string.Empty);
+            setStatusDetail("Load or import audio to begin mapping.");
             updateActionButtons();
             updatePlaybackAvailabilityUI();
-            return controls;
+
+            return header;
         }
+
 
         private Drawable createEditor()
         {
@@ -612,7 +716,7 @@ namespace BeatSight.Game.Screens.Editor
                 RelativeSizeAxes = Axes.Both,
                 RowDimensions = new[]
                 {
-                    new Dimension(GridSizeMode.Absolute, 220),
+                    new Dimension(GridSizeMode.Absolute, 260),
                     new Dimension()
                 },
                 Content = new[]
@@ -1789,6 +1893,7 @@ namespace BeatSight.Game.Screens.Editor
                 timeline.SetBeatGridVisible(beatGridVisible);
                 timeline.SetCurrentTime(currentTime);
                 gameplayPreview?.SetBeatmap(null);
+                updatePlaybackAvailabilityUI();
                 return;
             }
 
@@ -1805,6 +1910,7 @@ namespace BeatSight.Game.Screens.Editor
             timeline.SetBeatGridVisible(beatGridVisible);
             timeline.SetCurrentTime(currentTime);
             gameplayPreview?.SetBeatmap(beatmap);
+            updatePlaybackAvailabilityUI();
         }
         private void queueWaveformLoad(string absolutePath)
         {
@@ -1917,8 +2023,9 @@ namespace BeatSight.Game.Screens.Editor
             }
             catch (Exception ex)
             {
-                setStatusBase("BeatSight Editor");
-                setStatusDetail($"Failed to load: {ex.Message}");
+                setStatusBase(string.Empty);
+                setStatusDetail($"Failed to load beatmap: {ex.Message}");
+                reloadTimeline();
                 updateActionButtons();
             }
         }
@@ -2149,7 +2256,7 @@ namespace BeatSight.Game.Screens.Editor
             if (playPauseButton == null)
                 return;
 
-            string label = isPlaying ? "⏸ Pause" : "▶ Play";
+            string label = isPlaying ? "Pause" : "Play";
             string tooltip;
 
             if (playbackAvailable)
@@ -2161,7 +2268,7 @@ namespace BeatSight.Game.Screens.Editor
             else
             {
                 if (!isPlaying)
-                    label = "▶ Play (silent)";
+                    label = "Play (silent)";
 
                 tooltip = isPlaying
                     ? "Pause timeline playback (audio unavailable)."
@@ -2349,16 +2456,21 @@ namespace BeatSight.Game.Screens.Editor
         private partial class PreviewToggleButton : BasicButton
         {
             private readonly Box background;
-            private readonly SpriteText label;
+            private readonly SpriteIcon icon;
+            private readonly SpriteText modeLabel;
             private readonly Bindable<EditorPreviewMode> previewMode;
             private readonly Color4 colour2D = UITheme.AccentPrimary;
             private readonly Color4 colour3D = UITheme.AccentSecondary;
+            private Color4 currentBaseColour;
+            private string? availabilityMessage;
 
             public event Action<string?>? HoverHintChanged;
 
             public PreviewToggleButton(Bindable<EditorPreviewMode> previewMode)
             {
                 this.previewMode = previewMode.GetBoundCopy();
+                currentBaseColour = colour2D;
+                availabilityMessage = "Load or create a beatmap to enable 2D/3D switching.";
 
                 Masking = true;
                 CornerRadius = 8;
@@ -2369,17 +2481,38 @@ namespace BeatSight.Game.Screens.Editor
                     {
                         RelativeSizeAxes = Axes.Both
                     },
-                    label = new SpriteText
+                    new FillFlowContainer
                     {
+                        AutoSizeAxes = Axes.Both,
                         Anchor = Anchor.Centre,
                         Origin = Anchor.Centre,
-                        Font = new FontUsage(size: 18, weight: "Medium"),
-                        Colour = EditorColours.TextPrimary
+                        Direction = FillDirection.Horizontal,
+                        Spacing = new Vector2(6, 0),
+                        Children = new Drawable[]
+                        {
+                            icon = new SpriteIcon
+                            {
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre,
+                                Size = new Vector2(22),
+                                Colour = EditorColours.TextPrimary,
+                                Icon = FontAwesome.Solid.LayerGroup
+                            },
+                            modeLabel = new SpriteText
+                            {
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre,
+                                Font = new FontUsage(size: 16, weight: "SemiBold"),
+                                Colour = EditorColours.TextPrimary,
+                                Text = "2D View"
+                            }
+                        }
                     }
                 });
 
                 Action = toggleMode;
                 this.previewMode.BindValueChanged(updateState, true);
+                Enabled.BindValueChanged(_ => updateBackgroundForAvailability(), true);
             }
 
             private void toggleMode()
@@ -2392,19 +2525,27 @@ namespace BeatSight.Game.Screens.Editor
             private void updateState(ValueChangedEvent<EditorPreviewMode> state)
             {
                 bool is3D = state.NewValue == EditorPreviewMode.Playfield3D;
-                label.Text = is3D ? "3D View" : "2D View";
-                background.FadeColour(is3D ? colour3D : colour2D, 200, Easing.OutQuint);
+                icon.Icon = is3D ? FontAwesome.Solid.Cube : FontAwesome.Solid.LayerGroup;
+                modeLabel.Text = is3D ? "3D View" : "2D View";
+                currentBaseColour = is3D ? colour3D : colour2D;
+                updateBackgroundForAvailability();
             }
 
             protected override bool OnHover(HoverEvent e)
             {
+                if (!Enabled.Value)
+                {
+                    HoverHintChanged?.Invoke(availabilityMessage ?? "Load or create a beatmap to enable 2D/3D switching.");
+                    return base.OnHover(e);
+                }
+
                 string tooltip = previewMode.Value == EditorPreviewMode.Playfield3D
                     ? "Switch to 2D flat osu!mania-style lane view"
                     : "Switch to 3D Guitar Hero-style lane view";
                 HoverHintChanged?.Invoke(tooltip);
 
-                var targetColour = previewMode.Value == EditorPreviewMode.Playfield3D ? colour3D : colour2D;
-                background.FadeColour(EditorColours.Lighten(targetColour, 1.15f), 140, Easing.OutQuint);
+                var targetColour = EditorColours.Lighten(currentBaseColour, 1.15f);
+                background.FadeColour(targetColour, 140, Easing.OutQuint);
                 this.ScaleTo(1.05f, 140, Easing.OutQuint);
                 return base.OnHover(e);
             }
@@ -2413,12 +2554,27 @@ namespace BeatSight.Game.Screens.Editor
             {
                 base.OnHoverLost(e);
                 HoverHintChanged?.Invoke(null);
-
-                var targetColour = previewMode.Value == EditorPreviewMode.Playfield3D ? colour3D : colour2D;
-                background.FadeColour(targetColour, 180, Easing.OutQuint);
+                updateBackgroundForAvailability();
                 this.ScaleTo(1f, 180, Easing.OutQuint);
             }
 
+            public void SetAvailability(bool available, string? reason)
+            {
+                availabilityMessage = reason;
+                Enabled.Value = available;
+                updateBackgroundForAvailability();
+            }
+
+            private void updateBackgroundForAvailability()
+            {
+                var targetColour = Enabled.Value
+                    ? currentBaseColour
+                    : EditorColours.Lighten(currentBaseColour, 0.65f);
+
+                background.FadeColour(targetColour, 180, Easing.OutQuint);
+                icon.Colour = Enabled.Value ? EditorColours.TextPrimary : EditorColours.TextSecondary;
+                modeLabel.Colour = Enabled.Value ? EditorColours.TextPrimary : EditorColours.TextSecondary;
+            }
         }
 
         private partial class EditorButton : BasicButton

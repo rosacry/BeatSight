@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Globalization;
 using BeatSight.Game.AI;
 using BeatSight.Game.AI.Generation;
 using BeatSight.Game.Audio;
@@ -43,6 +44,8 @@ namespace BeatSight.Game
         private DependencyContainer dependencies = null!;
         [Resolved(CanBeNull = true)]
         private AudioManager? audioManager { get; set; }
+        [Resolved]
+        private FrameworkConfigManager frameworkConfig { get; set; } = null!;
 
         private AudioEngine audioEngine = null!;
         private GenerationPipeline generationPipeline = null!;
@@ -59,11 +62,62 @@ namespace BeatSight.Game
         private Bindable<double>? frameLimiterTargetSetting;
         private Bindable<Display>? hostDisplayBindable;
         private Bindable<WindowMode>? hostWindowModeBindable;
+        private Bindable<Size>? frameworkFullscreenSizeSetting;
         private bool suppressWindowFeedback;
         private double defaultMaxDrawHz;
         private double defaultMaxUpdateHz;
         private System.Drawing.Size lastWindowedClientSize = System.Drawing.Size.Empty;
         private FrameworkWindowState lastWindowState = FrameworkWindowState.Normal;
+        private bool windowHandleWarningLogged;
+        private bool windowResizeFailureLogged;
+        private bool windowManagedResizeWarningLogged;
+        private bool applyingWindowSizeInProgress;
+        private bool windowSizeReapplyPending; // ensures batched setting updates (width/height) finish with latest size
+
+        private static readonly BindingFlags windowReflectionFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy;
+        private static readonly string[] windowSizePropertyPreferredNames =
+        {
+            "ClientSize",
+            "WindowSize",
+            "Size",
+            "RenderSize",
+            "PreferredSize",
+            "RequestedSize",
+            "DesiredSize",
+            "Resolution"
+        };
+
+        private static readonly string[] windowSizePropertyTokens =
+        {
+            "size",
+            "resolution",
+            "dimensions"
+        };
+
+        private static readonly string[] windowSizeMethodPreferredNames =
+        {
+            "SetWindowSize",
+            "SetClientSize",
+            "SetSize",
+            "Resize",
+            "ResizeWindow",
+            "ResizeClient",
+            "ResizeClientArea",
+            "ChangeSize",
+            "RequestResize",
+            "RequestResolution",
+            "SetResolution",
+            "UpdateWindowSize",
+            "ApplyWindowSize"
+        };
+
+        private static readonly string[] windowSizeMethodTokens =
+        {
+            "resize",
+            "size",
+            "resolution",
+            "dimensions"
+        };
 
         protected override IReadOnlyDependencyContainer CreateChildDependencies(IReadOnlyDependencyContainer parent) =>
             dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
@@ -116,6 +170,113 @@ namespace BeatSight.Game
                     fpsCounter.AlwaysPresent = e.NewValue;
                     fpsCounter.FadeTo(e.NewValue ? 1f : 0f, 200, Easing.OutQuint);
                 }, true);
+        }
+
+        private WindowMode getPreferredFullscreenMode()
+        {
+            if (boundWindow == null)
+                return WindowMode.Fullscreen;
+
+            var supported = boundWindow.SupportedWindowModes?.ToArray() ?? Array.Empty<WindowMode>();
+
+            if (supported.Contains(WindowMode.Fullscreen))
+                return WindowMode.Fullscreen;
+
+            if (supported.Contains(WindowMode.Borderless))
+                return WindowMode.Borderless;
+
+            return supported.Contains(WindowMode.Windowed) ? WindowMode.Windowed : WindowMode.Fullscreen;
+        }
+
+        private void applyBorderlessFullscreen()
+        {
+            if (boundWindow == null)
+                return;
+
+            var displayBounds = getCurrentDisplayBounds();
+            suppressWindowFeedback = true;
+            try
+            {
+                applyBorderlessBounds(displayBounds);
+                boundWindow.WindowState = FrameworkWindowState.Maximised;
+            }
+            finally
+            {
+                suppressWindowFeedback = false;
+            }
+        }
+
+        private void applyFullscreenResolution()
+        {
+            if (windowWidthSetting == null || windowHeightSetting == null)
+                return;
+
+            var resolvedSize = resolveFullscreenSize(windowWidthSetting.Value, windowHeightSetting.Value);
+
+            if (frameworkFullscreenSizeSetting != null && frameworkFullscreenSizeSetting.Value != resolvedSize)
+                frameworkFullscreenSizeSetting.Value = resolvedSize;
+
+            if (windowWidthSetting.Value != resolvedSize.Width)
+                windowWidthSetting.Value = resolvedSize.Width;
+
+            if (windowHeightSetting.Value != resolvedSize.Height)
+                windowHeightSetting.Value = resolvedSize.Height;
+        }
+
+        private Size resolveFullscreenSize(int width, int height)
+        {
+            width = Math.Max(320, width);
+            height = Math.Max(240, height);
+
+            Display? display = hostDisplayBindable?.Value ?? boundWindow?.PrimaryDisplay;
+            if (display == null)
+                return new Size(width, height);
+
+            var modes = display.DisplayModes;
+
+            if (modes != null && modes.Length > 0)
+            {
+                DisplayMode? exact = null;
+                DisplayMode? best = null;
+
+                foreach (var mode in modes)
+                {
+                    if (mode.Size.Width == width && mode.Size.Height == height)
+                    {
+                        if (exact == null || mode.RefreshRate > exact.Value.RefreshRate)
+                            exact = mode;
+                        continue;
+                    }
+
+                    if (best == null)
+                    {
+                        best = mode;
+                        continue;
+                    }
+
+                    int bestDiff = Math.Abs(best.Value.Size.Width - width) + Math.Abs(best.Value.Size.Height - height);
+                    int modeDiff = Math.Abs(mode.Size.Width - width) + Math.Abs(mode.Size.Height - height);
+
+                    if (modeDiff < bestDiff || (modeDiff == bestDiff && mode.RefreshRate > best.Value.RefreshRate))
+                        best = mode;
+                }
+
+                if (exact != null)
+                    return exact.Value.Size;
+
+                if (best != null)
+                    return best.Value.Size;
+
+                var fallback = display.FindDisplayMode(new Size(width, height));
+                if (fallback.Size.Width > 0 && fallback.Size.Height > 0)
+                    return fallback.Size;
+            }
+
+            var bounds = display.Bounds;
+            if (bounds.Width > 0 && bounds.Height > 0)
+                return new Size(Math.Clamp(width, 320, bounds.Width), Math.Clamp(height, 240, bounds.Height));
+
+            return new Size(width, height);
         }
 
         protected override void LoadComplete()
@@ -181,6 +342,7 @@ namespace BeatSight.Game
             windowDisplaySetting = config.GetBindable<int>(BeatSightSetting.WindowDisplayIndex);
             frameLimiterEnabledSetting = config.GetBindable<bool>(BeatSightSetting.FrameLimiterEnabled);
             frameLimiterTargetSetting = config.GetBindable<double>(BeatSightSetting.FrameLimiterTarget);
+            frameworkFullscreenSizeSetting ??= frameworkConfig.GetBindable<Size>(FrameworkSetting.SizeFullscreen);
 
             lastWindowState = boundWindow.WindowState;
             if (lastWindowState == FrameworkWindowState.Normal)
@@ -205,20 +367,8 @@ namespace BeatSight.Game
             hostDisplayBindable.BindValueChanged(onHostDisplayChanged);
 
             hostWindowModeBindable = boundWindow.WindowMode;
-            bool hostStartsFullscreen = hostWindowModeBindable.Value != WindowMode.Windowed;
 
-            if (windowFullscreenSetting.Value != hostStartsFullscreen)
-            {
-                suppressWindowFeedback = true;
-                try
-                {
-                    windowFullscreenSetting.Value = hostStartsFullscreen;
-                }
-                finally
-                {
-                    suppressWindowFeedback = false;
-                }
-            }
+            ensureDefaultWindowSizeMatchesDisplay();
 
             hostWindowModeBindable.BindValueChanged(onHostWindowModeChanged);
 
@@ -228,7 +378,10 @@ namespace BeatSight.Game
 
             applyMonitorSelection();
             applyWindowMode();
-            applyWindowSize();
+
+            if (windowFullscreenSetting?.Value != true)
+                applyWindowSize();
+
             applyFrameLimiter();
         }
 
@@ -250,11 +403,44 @@ namespace BeatSight.Game
             if (boundWindow == null || windowWidthSetting == null || windowHeightSetting == null)
                 return;
 
-            if (suppressWindowFeedback)
-                return;
-
             if (windowFullscreenSetting?.Value == true)
+            {
+                windowSizeReapplyPending = false;
+                applyFullscreenResolution();
                 return;
+            }
+
+            if (suppressWindowFeedback)
+            {
+                if (applyingWindowSizeInProgress)
+                    windowSizeReapplyPending = true;
+                return;
+            }
+
+            windowSizeReapplyPending = false;
+
+            if (boundWindow.WindowState != FrameworkWindowState.Normal)
+            {
+                suppressWindowFeedback = true;
+                try
+                {
+                    boundWindow.WindowState = FrameworkWindowState.Normal;
+                }
+                finally
+                {
+                    suppressWindowFeedback = false;
+                }
+
+                Schedule(() =>
+                {
+                    if (boundWindow == null)
+                        return;
+
+                    applyWindowSize();
+                });
+
+                return;
+            }
 
             int width = Math.Max(960, windowWidthSetting.Value);
             int height = Math.Max(540, windowHeightSetting.Value);
@@ -284,29 +470,50 @@ namespace BeatSight.Game
                 return;
 
             suppressWindowFeedback = true;
-            try
+            applyingWindowSizeInProgress = true;
+
+            Schedule(() =>
             {
+                if (boundWindow == null)
+                {
+                    applyingWindowSizeInProgress = false;
+                    suppressWindowFeedback = false;
+                    return;
+                }
+
                 var originalMin = boundWindow.MinSize;
                 var originalMax = boundWindow.MaxSize;
 
-                boundWindow.MinSize = desired;
-                boundWindow.MaxSize = desired;
-
-                Schedule(() =>
+                try
                 {
-                    if (boundWindow == null)
-                        return;
+                    boundWindow.MinSize = desired;
+                    boundWindow.MaxSize = desired;
 
-                    boundWindow.MinSize = originalMin;
-                    boundWindow.MaxSize = originalMax;
+                    bool managedResizeApplied = tryApplyManagedWindowSize(desired);
 
-                    centerWindowOnCurrentDisplay(desired, applySize: true);
-                });
-            }
-            finally
-            {
-                suppressWindowFeedback = false;
-            }
+                    if (managedResizeApplied)
+                        centerWindowOnCurrentDisplay(desired, applySize: false, logHandleFailure: false);
+                    else
+                        centerWindowOnCurrentDisplay(desired, applySize: true);
+                }
+                finally
+                {
+                    if (boundWindow != null)
+                    {
+                        boundWindow.MinSize = originalMin;
+                        boundWindow.MaxSize = originalMax;
+                    }
+
+                    applyingWindowSizeInProgress = false;
+                    suppressWindowFeedback = false;
+
+                    if (windowSizeReapplyPending)
+                    {
+                        windowSizeReapplyPending = false;
+                        Schedule(() => applyWindowSize());
+                    }
+                }
+            });
         }
 
         private void applyWindowMode()
@@ -314,7 +521,8 @@ namespace BeatSight.Game
             if (boundWindow == null || windowFullscreenSetting == null)
                 return;
 
-            var desiredMode = windowFullscreenSetting.Value ? WindowMode.Borderless : WindowMode.Windowed;
+            bool wantsFullscreen = windowFullscreenSetting.Value;
+            var desiredMode = wantsFullscreen ? getPreferredFullscreenMode() : WindowMode.Windowed;
 
             if (hostWindowModeBindable != null && hostWindowModeBindable.Value != desiredMode)
             {
@@ -329,37 +537,82 @@ namespace BeatSight.Game
                 }
             }
 
-            if (windowFullscreenSetting.Value)
+            if (wantsFullscreen)
             {
                 if (boundWindow.WindowState == FrameworkWindowState.Normal)
                     lastWindowedClientSize = sanitiseWindowSize(boundWindow.ClientSize);
 
-                var displayBounds = getCurrentDisplayBounds();
-                suppressWindowFeedback = true;
-                try
+                applyFullscreenResolution();
+
+                if (desiredMode == WindowMode.Fullscreen)
+                    return;
+
+                if (desiredMode == WindowMode.Borderless)
                 {
-                    applyBorderlessBounds(displayBounds);
-                    boundWindow.WindowState = FrameworkWindowState.Maximised;
-                }
-                finally
-                {
-                    suppressWindowFeedback = false;
-                }
-            }
-            else
-            {
-                suppressWindowFeedback = true;
-                try
-                {
-                    boundWindow.WindowState = FrameworkWindowState.Normal;
-                }
-                finally
-                {
-                    suppressWindowFeedback = false;
+                    applyBorderlessFullscreen();
+                    return;
                 }
 
                 applyWindowSize();
+                return;
             }
+
+            suppressWindowFeedback = true;
+            try
+            {
+                boundWindow.WindowState = FrameworkWindowState.Normal;
+            }
+            finally
+            {
+                suppressWindowFeedback = false;
+            }
+
+            applyWindowSize();
+        }
+
+        private void ensureDefaultWindowSizeMatchesDisplay()
+        {
+            if (boundWindow == null || windowWidthSetting == null || windowHeightSetting == null)
+                return;
+
+            if (!windowWidthSetting.IsDefault || !windowHeightSetting.IsDefault)
+                return;
+
+            if (windowFullscreenSetting?.Value == true)
+                return;
+
+            var targetDisplay = hostDisplayBindable?.Value ?? boundWindow.PrimaryDisplay;
+            var recommended = calculateRecommendedWindowSize(targetDisplay.Bounds);
+
+            windowWidthSetting.Default = recommended.Width;
+            windowHeightSetting.Default = recommended.Height;
+
+            windowWidthSetting.Value = recommended.Width;
+            windowHeightSetting.Value = recommended.Height;
+
+            lastWindowedClientSize = recommended;
+        }
+
+        private Size calculateRecommendedWindowSize(Rectangle displayBounds)
+        {
+            const double scale = 0.7;
+
+            if (displayBounds.Width <= 0 || displayBounds.Height <= 0)
+                return sanitiseWindowSize(new Size(1024, 576));
+
+            if (displayBounds.Width < 960 || displayBounds.Height < 540)
+            {
+                int adjustedWidth = Math.Max(320, displayBounds.Width);
+                int adjustedHeight = Math.Max(240, displayBounds.Height);
+                return new Size(adjustedWidth, adjustedHeight);
+            }
+
+            int scaledWidth = Math.Max(960, (int)Math.Round(displayBounds.Width * scale));
+            int scaledHeight = Math.Max(540, (int)Math.Round(displayBounds.Height * scale));
+
+            var scaledSize = new Size(scaledWidth, scaledHeight);
+
+            return sanitiseWindowSize(scaledSize);
         }
 
         private void applyMonitorSelection()
@@ -409,7 +662,17 @@ namespace BeatSight.Game
                 if (boundWindow == null)
                     return;
 
-                centerWindowOnCurrentDisplay(boundWindow.ClientSize, applySize: false);
+                if (windowFullscreenSetting?.Value == true)
+                {
+                    applyFullscreenResolution();
+
+                    if (hostWindowModeBindable?.Value == WindowMode.Borderless)
+                        applyBorderlessFullscreen();
+                }
+                else
+                {
+                    centerWindowOnCurrentDisplay(boundWindow.ClientSize, applySize: false);
+                }
             });
         }
 
@@ -735,7 +998,7 @@ namespace BeatSight.Game
 
         }
 
-        private void centerWindowOnCurrentDisplay(Size windowSize, bool applySize)
+        private void centerWindowOnCurrentDisplay(Size windowSize, bool applySize, bool logHandleFailure = true)
         {
             if (boundWindow == null)
                 return;
@@ -761,21 +1024,361 @@ namespace BeatSight.Game
 
             IntPtr handle = NativeWindowHelpers.GetWindowHandle(boundWindow);
             if (handle == IntPtr.Zero)
+            {
+                if (logHandleFailure && !windowHandleWarningLogged)
+                {
+                    windowHandleWarningLogged = true;
+                    Logger.Log("Unable to resolve native window handle; windowed resolution changes may not be applied.", LoggingTarget.Runtime, LogLevel.Debug);
+                }
+
                 return;
+            }
 
             suppressWindowFeedback = true;
             try
             {
-                if (!NativeWindowHelpers.SetWindowBounds(handle, x, y, windowSize.Width, windowSize.Height, applySize))
+                if (!NativeWindowHelpers.SetWindowBounds(handle, x, y, windowSize.Width, windowSize.Height, applySize) && !windowResizeFailureLogged)
                 {
+                    windowResizeFailureLogged = true;
                     int error = Marshal.GetLastWin32Error();
-                    Logger.Log($"Failed to reposition window: {error}", LoggingTarget.Runtime, LogLevel.Debug);
+                    Logger.Log($"Failed to apply windowed resolution via native APIs (error {error}).", LoggingTarget.Runtime, LogLevel.Debug);
                 }
             }
             finally
             {
                 suppressWindowFeedback = false;
             }
+        }
+
+        private bool tryApplyManagedWindowSize(Size desired)
+        {
+            if (boundWindow == null)
+                return false;
+
+            var windowType = boundWindow.GetType();
+
+            for (var current = windowType; current != null; current = current.BaseType)
+            {
+                if (tryApplyManagedWindowSizeToType(boundWindow, current, desired))
+                    return true;
+            }
+
+            foreach (var interfaceType in windowType.GetInterfaces())
+            {
+                if (tryApplyManagedWindowSizeToType(boundWindow, interfaceType, desired))
+                    return true;
+            }
+
+            if (!windowManagedResizeWarningLogged)
+            {
+                windowManagedResizeWarningLogged = true;
+                Logger.Log($"Managed window resize path unavailable on '{windowType.FullName}'. Falling back to native window manipulation.", LoggingTarget.Runtime, LogLevel.Debug);
+            }
+
+            return false;
+        }
+
+        private bool tryApplyManagedWindowSizeToType(object target, Type reflectionType, Size desired)
+        {
+            if (reflectionType == null)
+                return false;
+
+            if (trySetSizeViaProperties(target, reflectionType, desired))
+                return true;
+
+            if (trySetSizeViaMethods(target, reflectionType, desired))
+                return true;
+
+            return false;
+        }
+
+        private bool trySetSizeViaProperties(object target, Type reflectionType, Size desired)
+        {
+            foreach (var property in reflectionType.GetProperties(windowReflectionFlags))
+            {
+                if (!property.CanWrite)
+                    continue;
+
+                if (property.GetIndexParameters().Length > 0)
+                    continue;
+
+                if (!isLikelySizeProperty(property.Name))
+                    continue;
+
+                if (!tryCreateSizeCompatibleValue(desired, property.PropertyType, out var value))
+                    continue;
+
+                try
+                {
+                    property.SetValue(target, value);
+                    if (windowClientSizeMatches(desired))
+                        return true;
+                }
+                catch
+                {
+                    // Ignore and continue probing other properties.
+                }
+            }
+
+            return false;
+        }
+
+        private bool trySetSizeViaMethods(object target, Type reflectionType, Size desired)
+        {
+            foreach (var method in reflectionType.GetMethods(windowReflectionFlags))
+            {
+                if (method.IsStatic || method.IsGenericMethod || method.IsSpecialName)
+                    continue;
+
+                if (!isLikelySizeMethod(method.Name))
+                    continue;
+
+                if (tryInvokeSizeMethod(target, method, desired))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool tryInvokeSizeMethod(object target, MethodInfo method, Size desired)
+        {
+            var parameters = method.GetParameters();
+
+            if (parameters.Length == 1)
+            {
+                if (parameters[0].IsOut || parameters[0].ParameterType.IsByRef)
+                    return false;
+
+                if (!tryCreateSizeCompatibleValue(desired, parameters[0].ParameterType, out var argument))
+                    return false;
+
+                try
+                {
+                    method.Invoke(target, new[] { argument });
+                    return windowClientSizeMatches(desired);
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            if (parameters.Length == 2)
+            {
+                if (parameters[0].IsOut || parameters[0].ParameterType.IsByRef)
+                    return false;
+
+                if (parameters[1].IsOut || parameters[1].ParameterType.IsByRef)
+                    return false;
+
+                if (!tryConvertDimensionComponent(desired.Width, parameters[0].ParameterType, out var widthArg))
+                    return false;
+
+                if (!tryConvertDimensionComponent(desired.Height, parameters[1].ParameterType, out var heightArg))
+                    return false;
+
+                try
+                {
+                    method.Invoke(target, new[] { widthArg, heightArg });
+                    return windowClientSizeMatches(desired);
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool tryCreateSizeCompatibleValue(Size size, Type targetType, out object? value)
+        {
+            var underlying = Nullable.GetUnderlyingType(targetType);
+            if (underlying != null)
+                return tryCreateSizeCompatibleValue(size, underlying, out value);
+
+            if (targetType == typeof(Size))
+            {
+                value = size;
+                return true;
+            }
+
+            if (targetType == typeof(SizeF))
+            {
+                value = new SizeF(size.Width, size.Height);
+                return true;
+            }
+
+            if (targetType == typeof(ValueTuple<int, int>))
+            {
+                value = (size.Width, size.Height);
+                return true;
+            }
+
+            if (targetType == typeof(ValueTuple<float, float>))
+            {
+                value = ((float)size.Width, (float)size.Height);
+                return true;
+            }
+
+            if (targetType == typeof(ValueTuple<double, double>))
+            {
+                value = ((double)size.Width, (double)size.Height);
+                return true;
+            }
+
+            if (targetType == typeof(Tuple<int, int>))
+            {
+                value = Tuple.Create(size.Width, size.Height);
+                return true;
+            }
+
+            if (targetType == typeof(Tuple<float, float>))
+            {
+                value = Tuple.Create((float)size.Width, (float)size.Height);
+                return true;
+            }
+
+            if (targetType == typeof(Tuple<double, double>))
+            {
+                value = Tuple.Create((double)size.Width, (double)size.Height);
+                return true;
+            }
+
+            if (targetType.FullName is string fullName)
+            {
+                switch (fullName)
+                {
+                    case "osuTK.Vector2i":
+                    case "OpenTK.Mathematics.Vector2i":
+                    case "osuTK.Vector2I":
+                    case "OpenTK.Mathematics.Vector2I":
+                        value = Activator.CreateInstance(targetType, size.Width, size.Height);
+                        if (value != null)
+                            return true;
+                        break;
+                    case "osuTK.Vector2":
+                    case "OpenTK.Mathematics.Vector2":
+                    case "System.Numerics.Vector2":
+                        value = Activator.CreateInstance(targetType, (float)size.Width, (float)size.Height);
+                        if (value != null)
+                            return true;
+                        break;
+                    case "osuTK.Vector2d":
+                    case "OpenTK.Mathematics.Vector2d":
+                        value = Activator.CreateInstance(targetType, (double)size.Width, (double)size.Height);
+                        if (value != null)
+                            return true;
+                        break;
+                    case "System.Drawing.Rectangle":
+                        value = new Rectangle(0, 0, size.Width, size.Height);
+                        return true;
+                    case "System.Drawing.RectangleF":
+                        value = new RectangleF(0, 0, size.Width, size.Height);
+                        return true;
+                }
+            }
+
+            if (targetType.IsValueType)
+            {
+                try
+                {
+                    value = Activator.CreateInstance(targetType, size.Width, size.Height);
+                    if (value != null)
+                        return true;
+                }
+                catch
+                {
+                    // Ignore and fall through.
+                }
+            }
+
+            value = null;
+            return false;
+        }
+
+        private static bool tryConvertDimensionComponent(int component, Type targetType, out object? converted)
+        {
+            var underlying = Nullable.GetUnderlyingType(targetType) ?? targetType;
+
+            try
+            {
+                if (underlying == typeof(uint) || underlying == typeof(ulong) || underlying == typeof(ushort) || underlying == typeof(byte))
+                {
+                    converted = Convert.ChangeType(Math.Max(component, 0), underlying, CultureInfo.InvariantCulture);
+                    return true;
+                }
+
+                if (underlying == typeof(float) || underlying == typeof(double) || underlying == typeof(decimal))
+                {
+                    converted = Convert.ChangeType(component, underlying, CultureInfo.InvariantCulture);
+                    return true;
+                }
+
+                if (underlying == typeof(int) || underlying == typeof(long) || underlying == typeof(short) || underlying == typeof(sbyte))
+                {
+                    converted = Convert.ChangeType(component, underlying, CultureInfo.InvariantCulture);
+                    return true;
+                }
+
+                converted = null;
+                return false;
+            }
+            catch
+            {
+                converted = null;
+                return false;
+            }
+        }
+
+        private static bool isLikelySizeProperty(string? name)
+        {
+            if (string.IsNullOrEmpty(name))
+                return false;
+
+            string lowered = name.ToLowerInvariant();
+
+            if (lowered.Contains("min") || lowered.Contains("max") || lowered.Contains("minimum") || lowered.Contains("maximum") || lowered.Contains("pref") || lowered.Contains("default"))
+                return false;
+
+            foreach (var preferred in windowSizePropertyPreferredNames)
+            {
+                if (string.Equals(preferred, name, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            foreach (var token in windowSizePropertyTokens)
+            {
+                if (lowered.Contains(token))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool isLikelySizeMethod(string? name)
+        {
+            if (string.IsNullOrEmpty(name))
+                return false;
+
+            string lowered = name.ToLowerInvariant();
+
+            if (lowered.Contains("min") || lowered.Contains("minimum") || lowered.Contains("max") || lowered.Contains("maximum"))
+                return false;
+
+            foreach (var preferred in windowSizeMethodPreferredNames)
+            {
+                if (string.Equals(preferred, name, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            foreach (var token in windowSizeMethodTokens)
+            {
+                if (lowered.Contains(token))
+                    return true;
+            }
+
+            return false;
         }
 
         private void applyBorderlessBounds(Rectangle bounds)
@@ -788,37 +1391,51 @@ namespace BeatSight.Game
 
             IntPtr handle = NativeWindowHelpers.GetWindowHandle(boundWindow);
             if (handle == IntPtr.Zero)
-                return;
-
-            if (!NativeWindowHelpers.SetWindowBounds(handle, bounds.X, bounds.Y, bounds.Width, bounds.Height, applySize: true))
             {
+                if (!windowHandleWarningLogged)
+                {
+                    windowHandleWarningLogged = true;
+                    Logger.Log("Unable to resolve native window handle; windowed resolution changes may not be applied.", LoggingTarget.Runtime, LogLevel.Debug);
+                }
+
+                return;
+            }
+
+            if (!NativeWindowHelpers.SetWindowBounds(handle, bounds.X, bounds.Y, bounds.Width, bounds.Height, applySize: true) && !windowResizeFailureLogged)
+            {
+                windowResizeFailureLogged = true;
                 int error = Marshal.GetLastWin32Error();
-                Logger.Log($"Failed to apply borderless bounds: {error}", LoggingTarget.Runtime, LogLevel.Debug);
+                Logger.Log($"Failed to apply borderless bounds via native APIs (error {error}).", LoggingTarget.Runtime, LogLevel.Debug);
             }
         }
 
         private Size sanitiseWindowSize(Size requestedSize)
         {
             var bounds = getCurrentDisplayBounds();
-
             int maxWidth = bounds.Width > 0 ? bounds.Width : int.MaxValue;
             int maxHeight = bounds.Height > 0 ? bounds.Height : int.MaxValue;
 
-            int width = Math.Clamp(requestedSize.Width, 960, maxWidth);
-            int height = Math.Clamp(requestedSize.Height, 540, maxHeight);
-
-            double aspect = getCurrentDisplayAspectRatio();
-
-            if (aspect > 0 && maxWidth < int.MaxValue && maxHeight < int.MaxValue)
+            if (boundWindow != null)
             {
-                int heightFromWidth = (int)Math.Round(width / aspect);
-                int widthFromHeight = (int)Math.Round(height * aspect);
-
-                if (Math.Abs(heightFromWidth - height) <= Math.Abs(widthFromHeight - width))
-                    height = Math.Clamp(heightFromWidth, 540, maxHeight);
-                else
-                    width = Math.Clamp(widthFromHeight, 960, maxWidth);
+                var maxSize = boundWindow.MaxSize;
+                if (maxSize.Width > 0)
+                    maxWidth = Math.Min(maxWidth, maxSize.Width);
+                if (maxSize.Height > 0)
+                    maxHeight = Math.Min(maxHeight, maxSize.Height);
             }
+
+            // Ensure the window never shrinks below the core UI's minimum layout.
+            const int minWidth = 960;
+            const int minHeight = 540;
+
+            // Guard against displays that report extremely small bounds.
+            if (maxWidth < minWidth)
+                maxWidth = minWidth;
+            if (maxHeight < minHeight)
+                maxHeight = minHeight;
+
+            int width = Math.Clamp(requestedSize.Width, minWidth, maxWidth);
+            int height = Math.Clamp(requestedSize.Height, minHeight, maxHeight);
 
             return new Size(width, height);
         }
@@ -837,21 +1454,18 @@ namespace BeatSight.Game
             return new Rectangle(0, 0, 1920, 1080);
         }
 
-        private double getCurrentDisplayAspectRatio()
-        {
-            var bounds = getCurrentDisplayBounds();
-            if (bounds.Height > 0)
-                return (double)bounds.Width / bounds.Height;
-
-            if (lastWindowedClientSize.Height > 0)
-                return (double)lastWindowedClientSize.Width / lastWindowedClientSize.Height;
-
-            return 16d / 9d;
-        }
-
         private static bool sizesApproximatelyEqual(Size a, Size b)
         {
             return Math.Abs(a.Width - b.Width) <= 1 && Math.Abs(a.Height - b.Height) <= 1;
+        }
+
+        private bool windowClientSizeMatches(Size desired)
+        {
+            if (boundWindow == null)
+                return false;
+
+            var current = boundWindow.ClientSize;
+            return sizesApproximatelyEqual(current, desired);
         }
 
         private static class NativeWindowHelpers
@@ -860,9 +1474,58 @@ namespace BeatSight.Game
             private const uint SWP_NOZORDER = 0x0004;
             private const uint SWP_NOOWNERZORDER = 0x0200;
             private const uint SWP_NOACTIVATE = 0x0010;
+            private const uint SWP_FRAMECHANGED = 0x0020;
 
             private const int GWL_STYLE = -16;
             private const int GWL_EXSTYLE = -20;
+            private const int max_handle_search_depth = 6;
+
+            private static readonly BindingFlags handle_binding_flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+            private static readonly string[] handle_property_candidates =
+            {
+                "WindowHandle",
+                "Handle",
+                "NativeHandle",
+                "NativeWindowHandle",
+                "SDLWindowHandle",
+                "SdlWindowHandle",
+                "HWND",
+                "Hwnd",
+                "Window",
+                "NativeWindow",
+                "Implementation",
+                "WindowImplementation",
+                "UnderlyingWindow",
+                "GameWindow"
+            };
+
+            private static readonly string[] handle_field_candidates =
+            {
+                "windowHandle",
+                "handle",
+                "nativeHandle",
+                "nativeWindowHandle",
+                "sdlWindowHandle",
+                "hwnd",
+                "window",
+                "nativeWindow",
+                "implementation",
+                "windowImplementation",
+                "underlyingWindow",
+                "gameWindow"
+            };
+
+            private static readonly string[] handle_method_candidates =
+            {
+                "get_WindowHandle",
+                "get_Handle",
+                "GetWindowHandle",
+                "GetHandle",
+                "GetNativeHandle",
+                "GetHWND",
+                "GetWindow",
+                "GetNativeWindow"
+            };
 
             [StructLayout(LayoutKind.Sequential)]
             private struct RECT
@@ -891,6 +1554,8 @@ namespace BeatSight.Game
 
                 if (applySize)
                 {
+                    flags |= SWP_FRAMECHANGED;
+
                     RECT rect = new RECT
                     {
                         Left = 0,
@@ -902,11 +1567,19 @@ namespace BeatSight.Game
                     uint style = (uint)GetWindowLong(windowHandle, GWL_STYLE);
                     uint exStyle = (uint)GetWindowLong(windowHandle, GWL_EXSTYLE);
 
-                    if (!AdjustWindowRectEx(ref rect, style, bMenu: false, exStyle))
-                        return false;
+                    if (AdjustWindowRectEx(ref rect, style, bMenu: false, exStyle))
+                    {
+                        width = rect.Right - rect.Left;
+                        height = rect.Bottom - rect.Top;
+                    }
+                    else
+                    {
+                        width = clientWidth;
+                        height = clientHeight;
+                    }
 
-                    width = rect.Right - rect.Left;
-                    height = rect.Bottom - rect.Top;
+                    width = Math.Max(1, width);
+                    height = Math.Max(1, height);
                 }
                 else
                 {
@@ -918,28 +1591,178 @@ namespace BeatSight.Game
 
             public static IntPtr GetWindowHandle(IWindow window)
             {
-                var type = window.GetType();
-                var handleProperty = type.GetProperty("WindowHandle", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                if (handleProperty != null)
+                if (window == null)
+                    return IntPtr.Zero;
+
+                var visited = new HashSet<object>(ReferenceEqualityComparer.Instance);
+                return resolveHandle(window, visited, 0);
+            }
+
+            private static IntPtr resolveHandle(object? source, HashSet<object> visited, int depth)
+            {
+                if (source == null || depth > max_handle_search_depth)
+                    return IntPtr.Zero;
+
+                if (tryConvertToIntPtr(source, out var direct) && direct != IntPtr.Zero)
+                    return direct;
+
+                Type type = source.GetType();
+
+                if (!type.IsValueType)
                 {
-                    var value = handleProperty.GetValue(window);
-                    if (value is IntPtr propertyHandle)
-                        return propertyHandle;
-                    if (value is long longHandle)
-                        return new IntPtr(longHandle);
+                    if (!visited.Add(source))
+                        return IntPtr.Zero;
                 }
 
-                var method = type.GetMethod("get_WindowHandle", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                if (method != null)
+                foreach (var name in handle_property_candidates)
                 {
-                    var value = method.Invoke(window, null);
-                    if (value is IntPtr methodHandle)
-                        return methodHandle;
-                    if (value is long longHandle)
-                        return new IntPtr(longHandle);
+                    var property = type.GetProperty(name, handle_binding_flags);
+                    if (property == null || property.GetIndexParameters().Length > 0)
+                        continue;
+
+                    object? value;
+                    try
+                    {
+                        value = property.GetValue(source);
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+
+                    var handle = resolveHandle(value, visited, depth + 1);
+                    if (handle != IntPtr.Zero)
+                        return handle;
+                }
+
+                foreach (var fieldName in handle_field_candidates)
+                {
+                    var field = type.GetField(fieldName, handle_binding_flags);
+                    if (field == null)
+                        continue;
+
+                    object? value;
+                    try
+                    {
+                        value = field.GetValue(source);
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+
+                    var handle = resolveHandle(value, visited, depth + 1);
+                    if (handle != IntPtr.Zero)
+                        return handle;
+                }
+
+                foreach (var methodName in handle_method_candidates)
+                {
+                    var method = type.GetMethod(methodName, handle_binding_flags, binder: null, Type.EmptyTypes, null);
+                    if (method == null)
+                        continue;
+
+                    object? value;
+                    try
+                    {
+                        value = method.Invoke(source, null);
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+
+                    var handle = resolveHandle(value, visited, depth + 1);
+                    if (handle != IntPtr.Zero)
+                        return handle;
+                }
+
+                foreach (var property in type.GetProperties(handle_binding_flags))
+                {
+                    if (property.GetIndexParameters().Length > 0 || !isHandleType(property.PropertyType))
+                        continue;
+
+                    object? value;
+                    try
+                    {
+                        value = property.GetValue(source);
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+
+                    if (tryConvertToIntPtr(value, out var handle) && handle != IntPtr.Zero)
+                        return handle;
+                }
+
+                foreach (var field in type.GetFields(handle_binding_flags))
+                {
+                    if (!isHandleType(field.FieldType))
+                        continue;
+
+                    object? value;
+                    try
+                    {
+                        value = field.GetValue(source);
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+
+                    if (tryConvertToIntPtr(value, out var handle) && handle != IntPtr.Zero)
+                        return handle;
                 }
 
                 return IntPtr.Zero;
+            }
+
+            private static bool tryConvertToIntPtr(object? candidate, out IntPtr handle)
+            {
+                switch (candidate)
+                {
+                    case null:
+                        handle = IntPtr.Zero;
+                        return false;
+                    case IntPtr ptr:
+                        handle = ptr;
+                        return true;
+                    case HandleRef handleRef:
+                        handle = handleRef.Handle;
+                        return true;
+                    case UIntPtr uintPtrValue:
+                        handle = IntPtr.Size == 8
+                            ? new IntPtr(unchecked((long)uintPtrValue.ToUInt64()))
+                            : new IntPtr(unchecked((int)uintPtrValue.ToUInt32()));
+                        return true;
+                    case long longValue:
+                        handle = IntPtr.Size == 8 ? new IntPtr(longValue) : new IntPtr(unchecked((int)longValue));
+                        return true;
+                    case ulong ulongValue:
+                        handle = IntPtr.Size == 8 ? new IntPtr(unchecked((long)ulongValue)) : new IntPtr(unchecked((int)ulongValue));
+                        return true;
+                    case int intValue:
+                        handle = new IntPtr(intValue);
+                        return true;
+                    case uint uintValue:
+                        handle = new IntPtr(unchecked((int)uintValue));
+                        return true;
+                    default:
+                        handle = IntPtr.Zero;
+                        return false;
+                }
+            }
+
+            private static bool isHandleType(Type type)
+            {
+                if (type == typeof(IntPtr) || type == typeof(UIntPtr) || type == typeof(HandleRef))
+                    return true;
+
+                if (type == typeof(long) || type == typeof(ulong) || type == typeof(int) || type == typeof(uint))
+                    return true;
+
+                return false;
             }
         }
     }

@@ -99,6 +99,17 @@ cd ~/github/BeatSight/desktop/BeatSight.Desktop
 dotnet restore
 ```
 
+#### 5. Load Shared Environment Defaults (Recommended)
+
+Many training utilities expect a common set of paths. Source the fish helper before running exporters or training scripts:
+
+```fish
+cd ~/github/BeatSight
+source ai-pipeline/training/tools/beatsight_env.fish
+```
+
+Override any variable (e.g. `BEATSIGHT_DATA_ROOT`) before sourcing if your datasets live on a different drive or mount.
+
 ---
 
 ## 🧪 Test Your Setup

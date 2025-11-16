@@ -1,5 +1,7 @@
 # Live Input Regression Checklist
 
+> **Status (Nov 2025):** Live microphone gameplay has been de-scoped for now. This checklist is kept solely for historical reference until the experiment returns.
+
 Use this pass before shipping any changes impacting microphone gameplay. Run through every item on each supported platform configuration when possible.
 
 ## Quick Pass (5 min)

@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using osu.Framework.Configuration;
 using osu.Framework.Platform;
 
@@ -5,6 +7,8 @@ namespace BeatSight.Game.Configuration
 {
     public class BeatSightConfigManager : IniConfigManager<BeatSightSetting>
     {
+        private readonly List<Action> resetActions = new();
+
         protected override string Filename => "beatsight.ini";
 
         public BeatSightConfigManager(Storage storage)
@@ -14,80 +18,106 @@ namespace BeatSight.Game.Configuration
 
         protected override void InitialiseDefaults()
         {
-            // Gameplay Settings
-            SetDefault(BeatSightSetting.GameplayMode, GameplayMode.Auto);
-            SetDefault(BeatSightSetting.SpeedAdjustmentMin, 0.25);
-            SetDefault(BeatSightSetting.SpeedAdjustmentMax, 2.0);
-            SetDefault(BeatSightSetting.BackgroundDim, 0.8);
-            SetDefault(BeatSightSetting.BackgroundBlur, 0.0);
-            SetDefault(BeatSightSetting.HitLighting, true);
-            SetDefault(BeatSightSetting.ShowHitErrorMeter, true);
-            SetDefault(BeatSightSetting.ScreenShakeOnMiss, true);
-            SetDefault(BeatSightSetting.LaneViewMode, LaneViewMode.TwoDimensional);
-            SetDefault(BeatSightSetting.LanePreset, LanePreset.DrumSevenLane);
+            // Window / Display
+            setDefault(BeatSightSetting.WindowWidth, 1280);
+            setDefault(BeatSightSetting.WindowHeight, 720);
+            setDefault(BeatSightSetting.WindowFullscreen, false);
+            setDefault(BeatSightSetting.WindowDisplayIndex, 0);
 
-            // Visual Effects Settings
-            SetDefault(BeatSightSetting.ShowApproachCircles, true);
-            SetDefault(BeatSightSetting.ShowParticleEffects, true);
-            SetDefault(BeatSightSetting.ShowGlowEffects, true);
-            SetDefault(BeatSightSetting.ShowHitBurstAnimations, true);
-            SetDefault(BeatSightSetting.ShowComboMilestones, true);
-            SetDefault(BeatSightSetting.ShowFpsCounter, false);
-            SetDefault(BeatSightSetting.UIScale, 1.0);
+            // Playback Settings
+            setDefault(BeatSightSetting.GameplayMode, GameplayMode.Manual);
+            setDefault(BeatSightSetting.SpeedAdjustmentMin, 0.25);
+            setDefault(BeatSightSetting.SpeedAdjustmentMax, 2.0);
+            setDefault(BeatSightSetting.BackgroundDim, 0.8);
+            setDefault(BeatSightSetting.BackgroundBlur, 0.0);
+            setDefault(BeatSightSetting.HitLighting, true);
+            setDefault(BeatSightSetting.ScreenShakeOnMiss, false);
+            setDefault(BeatSightSetting.LaneViewMode, LaneViewMode.TwoDimensional);
+            setDefault(BeatSightSetting.LanePreset, LanePreset.DrumSevenLane);
+            setDefault(BeatSightSetting.KickLaneMode, KickLaneMode.GlobalLine);
+
+            // Visual Settings
+            setDefault(BeatSightSetting.ShowApproachCircles, true);
+            setDefault(BeatSightSetting.ShowParticleEffects, true);
+            setDefault(BeatSightSetting.ShowGlowEffects, true);
+            setDefault(BeatSightSetting.ShowHitBurstAnimations, true);
+            setDefault(BeatSightSetting.ShowComboMilestones, true);
+            setDefault(BeatSightSetting.ShowFpsCounter, false);
+            setDefault(BeatSightSetting.UIScale, 1.0);
+            setDefault(BeatSightSetting.NoteSkin, NoteSkinOption.Classic);
 
             // Audio Settings
-            SetDefault(BeatSightSetting.MasterVolume, 1.0);
-            SetDefault(BeatSightSetting.MusicVolume, 0.8);
-            SetDefault(BeatSightSetting.EffectVolume, 0.6);
-            SetDefault(BeatSightSetting.HitsoundVolume, 0.5);
-            SetDefault(BeatSightSetting.MetronomeEnabled, true);
-            SetDefault(BeatSightSetting.MetronomeVolume, 0.6);
-            SetDefault(BeatSightSetting.MetronomeSound, MetronomeSoundOption.Click);
-            SetDefault(BeatSightSetting.DrumStemPlaybackOnly, false);
+            setDefault(BeatSightSetting.MasterVolume, 1.0);
+            setDefault(BeatSightSetting.MusicVolume, 0.8);
+            setDefault(BeatSightSetting.EffectVolume, 0.6);
+            setDefault(BeatSightSetting.HitsoundVolume, 0.5);
+            setDefault(BeatSightSetting.MetronomeEnabled, false);
+            setDefault(BeatSightSetting.MetronomeVolume, 0.6);
+            setDefault(BeatSightSetting.MetronomeSound, MetronomeSoundOption.PercMetronomeQuartz);
+            setDefault(BeatSightSetting.DrumStemPlaybackOnly, false);
 
             // Detection / Analysis
-            SetDefault(BeatSightSetting.DetectionSensitivity, 60);
-            SetDefault(BeatSightSetting.DetectionQuantizationGrid, QuantizationGridSetting.Sixteenth);
-            SetDefault(BeatSightSetting.ShowDetectionDebugOverlay, false);
-
-            // Visual Customisation
-            SetDefault(BeatSightSetting.NoteSkin, NoteSkinOption.Classic);
+            setDefault(BeatSightSetting.DetectionSensitivity, 60);
+            setDefault(BeatSightSetting.DetectionQuantizationGrid, QuantizationGridSetting.Sixteenth);
+            setDefault(BeatSightSetting.ShowDetectionDebugOverlay, false);
 
             // Editor Defaults
-            SetDefault(BeatSightSetting.EditorTimelineZoomDefault, 1.0);
-            SetDefault(BeatSightSetting.EditorWaveformScaleDefault, 1.0);
-            SetDefault(BeatSightSetting.EditorBeatGridVisibleDefault, true);
+            setDefault(BeatSightSetting.EditorTimelineZoomDefault, 1.0);
+            setDefault(BeatSightSetting.EditorWaveformScaleDefault, 1.0);
+            setDefault(BeatSightSetting.EditorBeatGridVisibleDefault, true);
 
-            // Input Settings
-            SetDefault(BeatSightSetting.AudioOffset, 0.0);
-            SetDefault(BeatSightSetting.HitsoundOffset, 0.0);
-
-            // Calibration
-            SetDefault(BeatSightSetting.MicCalibrationCompleted, false);
-            SetDefault(BeatSightSetting.MicCalibrationLastUpdated, string.Empty);
-            SetDefault(BeatSightSetting.MicCalibrationProfilePath, string.Empty);
-            SetDefault(BeatSightSetting.MicCalibrationDeviceId, string.Empty);
+            // Audio Timing
+            setDefault(BeatSightSetting.AudioOffset, 0.0);
+            setDefault(BeatSightSetting.HitsoundOffset, 0.0);
 
             // Performance Settings
-            SetDefault(BeatSightSetting.FrameLimiter, FrameLimiterMode.Unlimited);
+            setDefault(BeatSightSetting.FrameLimiterEnabled, false);
+            setDefault(BeatSightSetting.FrameLimiterTarget, 144.0);
+            setDefault(BeatSightSetting.FrameLimiter, FrameLimiterMode.Unlimited);
+        }
+
+        public void ResetToDefaults()
+        {
+            foreach (var reset in resetActions)
+                reset();
+        }
+
+        private void setDefault<T>(BeatSightSetting setting, T value)
+        {
+            SetDefault(setting, value);
+
+            var capturedSetting = setting;
+            var capturedValue = value;
+
+            resetActions.Add(() =>
+            {
+                var bindable = GetBindable<T>(capturedSetting);
+                bindable.Value = capturedValue;
+            });
         }
     }
 
     public enum BeatSightSetting
     {
-        // Gameplay
+        // Window / Display
+        WindowWidth,
+        WindowHeight,
+        WindowFullscreen,
+        WindowDisplayIndex,
+
+        // Playback
         GameplayMode,
         SpeedAdjustmentMin,
         SpeedAdjustmentMax,
         BackgroundDim,
         BackgroundBlur,
         HitLighting,
-        ShowHitErrorMeter,
         ScreenShakeOnMiss,
         LaneViewMode,
         LanePreset,
+        KickLaneMode,
 
-        // Visual Effects
+        // Visual
         ShowApproachCircles,
         ShowParticleEffects,
         ShowGlowEffects,
@@ -95,6 +125,7 @@ namespace BeatSight.Game.Configuration
         ShowComboMilestones,
         ShowFpsCounter,
         UIScale,
+        NoteSkin,
 
         // Audio
         MasterVolume,
@@ -105,8 +136,6 @@ namespace BeatSight.Game.Configuration
         MetronomeVolume,
         MetronomeSound,
         DrumStemPlaybackOnly,
-
-        // Input
         AudioOffset,
         HitsoundOffset,
 
@@ -115,22 +144,15 @@ namespace BeatSight.Game.Configuration
         DetectionQuantizationGrid,
         ShowDetectionDebugOverlay,
 
-        // Visual Customisation
-        NoteSkin,
-
         // Editor Defaults
         EditorTimelineZoomDefault,
         EditorWaveformScaleDefault,
         EditorBeatGridVisibleDefault,
 
-        // Calibration
-        MicCalibrationCompleted,
-        MicCalibrationLastUpdated,
-        MicCalibrationProfilePath,
-        MicCalibrationDeviceId,
-
         // Performance
-        FrameLimiter
+        FrameLimiter,
+        FrameLimiterEnabled,
+        FrameLimiterTarget
     }
 
     public enum GameplayMode
@@ -146,19 +168,16 @@ namespace BeatSight.Game.Configuration
         Manual
     }
 
-    public enum FrameLimiterMode
-    {
-        Unlimited,
-        VSync,
-        Limit60,
-        Limit120,
-        Limit240
-    }
-
     public enum LaneViewMode
     {
         TwoDimensional,
         ThreeDimensional
+    }
+
+    public enum KickLaneMode
+    {
+        GlobalLine,
+        DedicatedLane
     }
 
     public enum LanePreset
@@ -169,6 +188,15 @@ namespace BeatSight.Game.Configuration
         DrumSevenLane,
         DrumEightLane,
         DrumNineLane
+    }
+
+    public enum FrameLimiterMode
+    {
+        Unlimited,
+        VSync,
+        Limit60,
+        Limit120,
+        Limit240
     }
 
     public enum QuantizationGridSetting
@@ -182,9 +210,69 @@ namespace BeatSight.Game.Configuration
 
     public enum MetronomeSoundOption
     {
-        Click,
-        Woodblock,
-        Cowbell
+        // Percussion sounds
+        PercCan,
+        PercCastanet,
+        PercChair,
+        PercClackhead,
+        PercClap,
+        PercClickToy,
+        PercGlass,
+        PercHeadKnock,
+        PercKeyboard,
+        PercMetal,
+        PercMetronomeQuartz, // Default
+        PercMouthPop,
+        PercMusicStand,
+        PercPracticePad,
+        PercSnap,
+        PercSqueak,
+        PercStick,
+        PercTambA,
+        PercTambB,
+        PercTambC,
+        PercTambD,
+        PercTeeth,
+        PercTongue,
+        PercTrashCan,
+        PercWhistleParty,
+        PercWhistleRef,
+
+        // Synth sounds
+        SynthBellA,
+        SynthBellB,
+        SynthBlockA,
+        SynthBlockB,
+        SynthBlockC,
+        SynthBlockD,
+        SynthBlockE,
+        SynthBlockF,
+        SynthBlockG,
+        SynthBlockH,
+        SynthSineA,
+        SynthSineB,
+        SynthSineC,
+        SynthSineD,
+        SynthSineE,
+        SynthSineF,
+        SynthSquareA,
+        SynthSquareB,
+        SynthSquareC,
+        SynthSquareD,
+        SynthSquareE,
+        SynthTickA,
+        SynthTickB,
+        SynthTickC,
+        SynthTickD,
+        SynthTickE,
+        SynthTickF,
+        SynthTickG,
+        SynthTickH,
+        SynthWeirdA,
+        SynthWeirdB,
+        SynthWeirdC,
+        SynthWeirdD,
+        SynthWeirdE
     }
 
     public enum NoteSkinOption

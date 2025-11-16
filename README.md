@@ -40,6 +40,7 @@ BeatSight pairs an osu!-framework desktop client with a Python processing stack 
 ### Data management & QA
 - `data/` hierarchy captures archival datasets, raw source mirrors, and production exports with gitignore rules that keep huge assets out of version control.
 - Readiness and roadmap documents (`docs/product/status.md`, `docs/product/roadmap.md`) track operational blockers, dataset migration, and GPU training milestones.
+- `source ai-pipeline/training/tools/beatsight_env.sh` hydrates the training environment variables (`BEATSIGHT_DATA_ROOT`, etc.) so exporters, cache warmers, and training presets resolve the correct storage layout.
 - `ai-pipeline/training/reports/` retains health baselines; tooling scripts enforce replacement of synthetic baselines with production metrics.
 
 ### Documentation & governance
@@ -74,12 +75,14 @@ BeatSight/
 - **.NET 8 SDK** for the desktop solution (`BeatSight.sln`).
 - **Python 3.10+** with virtualenv support for the AI pipeline and training tools.
 - **Poetry 1.7+** (or `pipx install poetry`) for the backend service.
-- **FFmpeg + Demucs model cache** for source separation (see `SETUP_LINUX.md`).
+- **FFmpeg + Demucs model cache** for source separation (see the platform guides referenced by `docs/SETUP.md`).
 - Optional: CUDA-enabled GPU for accelerated separation and training.
+- Detailed platform setup: start with `docs/SETUP.md` and follow `SETUP_WINDOWS.md` or `SETUP_LINUX.md` as appropriate.
 
 ### Desktop client
+Run the commands from Git Bash on Windows (path below reflects a OneDrive clone); adjust the root for Linux/macOS if you keep the repo elsewhere.
 ```bash
-cd desktop/BeatSight.Desktop
+cd ~/OneDrive/Documents/github/BeatSight/desktop/BeatSight.Desktop
 dotnet restore
 dotnet run
 ```
@@ -88,8 +91,8 @@ Use `dotnet watch run` for rapid UI iteration. The client stores configuration u
 ### AI pipeline
 ```bash
 cd ai-pipeline
-python -m venv venv
-source venv/bin/activate  # On Windows PowerShell: .\venv\Scripts\Activate.ps1
+python -m venv .venv
+source .venv/Scripts/activate  # Git Bash on Windows (Linux/macOS bash: source venv/bin/activate; fish: source venv/bin/activate.fish)
 pip install -r requirements.txt
 python -m pipeline.process --input path/to/song.mp3 --output draft.bsm
 ```

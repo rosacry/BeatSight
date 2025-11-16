@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BeatSight.Game.AI;
@@ -38,7 +39,7 @@ public class GenerationCoordinatorTests
         var pipeline = new FakePipeline(() => sequence(pipelineResult));
         var coordinator = new GenerationCoordinator(pipeline, action => action());
 
-        var parameters = new GenerationParams(track, DetectionSensitivity: 60, Quantization: QuantizationGrid.Sixteenth, DebugOverlayEnabled: false);
+        var parameters = new GenerationParams(track, DetectionSensitivity: 60, Quantization: QuantizationGrid.Sixteenth, DebugOverlayEnabled: false, TempoOverride: null);
 
         var result = await coordinator.RunAsync(parameters, CancellationToken.None);
 
@@ -48,6 +49,46 @@ public class GenerationCoordinatorTests
         Assert.Null(result.PipelineResult.LaneStats);
         Assert.Equal(GenStage.Completed, coordinator.Stage.Value);
         Assert.Equal(GenerationState.Complete, coordinator.State.Value);
+
+        coordinator.Dispose();
+    }
+
+    [Fact]
+    public async Task RunAsync_AppliesTempoOverride()
+    {
+        var track = new ImportedAudioTrack(
+            originalPath: "/tmp/source.wav",
+            storedPath: "/tmp/stored.wav",
+            relativeStoragePath: "stored.wav",
+            displayName: "Test Track",
+            fileSizeBytes: 1024,
+            durationMilliseconds: 120_000);
+
+        var tempoOverride = new TempoOverride(Bpm: 150, OffsetSeconds: 0.025, StepSeconds: 0.125, ForceQuantization: true);
+
+        var pipelineResult = GenerationPipelineResult.CreateSuccess(
+            beatmap: new AiGenerationResult { Success = true, BeatmapPath = "beatmap.bsm" },
+            analysis: null,
+            waveform: null,
+            usedFallback: false,
+            playbackAvailable: true,
+            usedOfflineDecode: false,
+            offlineFallbackEncountered: false,
+            warning: null,
+            logs: Array.Empty<string>());
+
+        var pipeline = new FakePipeline(() => sequence(pipelineResult));
+        var coordinator = new GenerationCoordinator(pipeline, action => action());
+
+        var parameters = new GenerationParams(track, DetectionSensitivity: 60, Quantization: QuantizationGrid.Sixteenth, DebugOverlayEnabled: false, TempoOverride: tempoOverride);
+
+        await coordinator.RunAsync(parameters, CancellationToken.None);
+
+        var options = pipeline.CapturedRequests.Single().Options;
+        Assert.Equal(150, options.ForcedBpm);
+        Assert.Equal(0.025, options.ForcedOffsetSeconds);
+        Assert.Equal(0.125, options.ForcedStepSeconds);
+        Assert.True(options.ForceQuantization);
 
         coordinator.Dispose();
     }

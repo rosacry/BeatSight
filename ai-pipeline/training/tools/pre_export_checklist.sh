@@ -13,8 +13,8 @@
 #
 # Environment overrides:
 #   EXPORT_LIMIT       -- number of events to export (default: 50000)
-#   RAW_PRIMARY        -- primary raw audio root (default: /mnt/c/.../data/raw)
-#   RAW_SECONDARY      -- secondary raw audio root (default: /mnt/d/.../data/raw)
+#   RAW_PRIMARY        -- primary raw audio root (default: <repo>/data/raw)
+#   RAW_SECONDARY      -- secondary raw audio root (default: RAW_PRIMARY)
 #   KEEP_SMOKE_OUTPUT  -- set to 1 to keep the smoke dataset on disk
 #
 # The script writes dataset health reports to
@@ -23,12 +23,13 @@
 
 set -euo pipefail
 
-ROOT=/mnt/c/Users/10ros/OneDrive/Documents/github/BeatSight
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+ROOT=${ROOT_OVERRIDE:-$(cd "$SCRIPT_DIR"/../../.. && pwd)}
 MANIFEST=${1:-$ROOT/ai-pipeline/training/data/manifests/prod_combined_events.jsonl}
-OUTPUT=${2:-/tmp/prod_combined_smoke_run}
+OUTPUT=${2:-$ROOT/data/prod_combined_smoke_run}
 EXPORT_LIMIT=${EXPORT_LIMIT:-50000}
 RAW_PRIMARY=${RAW_PRIMARY:-$ROOT/data/raw}
-RAW_SECONDARY=${RAW_SECONDARY:-/mnt/d/data/raw}
+RAW_SECONDARY=${RAW_SECONDARY:-$RAW_PRIMARY}
 REPORT_DIR=$ROOT/ai-pipeline/training/reports/health
 REPORT_JSON=$REPORT_DIR/preflight_dataset_health.json
 REPORT_HTML=$REPORT_DIR/preflight_dataset_health.html

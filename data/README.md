@@ -1,8 +1,8 @@
 # Data Inventory and Layout
 
 ## Storage Topology
-- Primary workspace: `C:\Users\10ros\OneDrive\Documents\github\BeatSight` (mirrored into WSL at `/mnt/c/Users/10ros/OneDrive/Documents/github/BeatSight`).
-- External bulk storage: `D:\data\raw` (mounted in WSL at `/mnt/d/data/raw`).
+- Primary workspace: `C:\Users\10ros\OneDrive\Documents\github\BeatSight` (Git Bash path `/c/Users/10ros/OneDrive/Documents/github/BeatSight`).
+- External bulk storage: `D:\data\raw` (Git Bash path `/d/data/raw`).
 - NVMe cache budget: 2 TB total, allocate <1 TB for preprocessed features under `data/cache/` when normalization scripts land.
 
 ## Dataset Inventory
@@ -34,7 +34,7 @@
 
 ## Open Tasks
 - [ ] Enumerate directory listing for each dataset and confirm counts vs. expected totals.
-- [ ] Verify mount paths under WSL (`/mnt/c`, `/mnt/d`) and document in scripts.
+- [ ] Verify Git Bash paths (`/c/Users/...`, `/d/data/...`) and document in scripts.
 - [ ] Generate initial checksum manifests and store under `data/archives/checksums/`.
   Use `python ai-pipeline/training/tools/write_checksums.py <root> data/archives/checksums/<dataset>.sha256` per corpus.
 - [ ] Draft baseline provenance templates for each dataset (fields: `source_set`, `session_id`, `mic_config`, `tempo_map`, `techniques`).

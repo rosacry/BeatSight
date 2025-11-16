@@ -2,7 +2,6 @@ using System;
 using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
-using BeatSight.Game.Screens.Gameplay;
 using osu.Framework.Bindables;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
@@ -17,7 +16,7 @@ namespace BeatSight.Game.Screens.Editor
     public partial class GameplayPreview : CompositeDrawable
     {
         private readonly Func<double> currentTimeProvider;
-        private GameplayReplayHost replayHost = null!;
+        private PreviewPlaceholder previewDisplay = null!;
         private SpriteText placeholderText = null!;
         private Beatmap? beatmap;
         private Bindable<LanePreset> lanePresetSetting = null!;
@@ -45,7 +44,7 @@ namespace BeatSight.Game.Screens.Editor
                     RelativeSizeAxes = Axes.Both,
                     Colour = new Color4(24, 26, 38, 235)
                 },
-                replayHost = new GameplayReplayHost(currentTimeProvider)
+                previewDisplay = new PreviewPlaceholder(currentTimeProvider)
                 {
                     RelativeSizeAxes = Axes.Both
                 },
@@ -72,18 +71,9 @@ namespace BeatSight.Game.Screens.Editor
             // Apply any beatmap that was set before we finished loading
             if (beatmap != null)
             {
-                osu.Framework.Logging.Logger.Log($"[GameplayPreview] LoadComplete: applying pending beatmap with {beatmap.HitObjects.Count} notes, replayHost={(replayHost == null ? "NULL" : "exists")}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
-
-                if (replayHost != null)
-                {
-                    replayHost.SetLaneLayout(currentLaneLayout);
-                    replayHost.SetBeatmap(beatmap);
-                }
-                else
-                {
-                    osu.Framework.Logging.Logger.Log("[GameplayPreview] LoadComplete: ERROR - replayHost is NULL!", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
-                }
-
+                osu.Framework.Logging.Logger.Log($"[GameplayPreview] LoadComplete: applying pending beatmap with {beatmap.HitObjects.Count} notes", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
+                previewDisplay?.SetLaneLayout(currentLaneLayout);
+                previewDisplay?.SetBeatmap(beatmap);
                 updatePlaceholderState();
             }
         }
@@ -100,8 +90,8 @@ namespace BeatSight.Game.Screens.Editor
             }
 
             // Immediately update the replay host and placeholder
-            replayHost?.SetLaneLayout(currentLaneLayout);
-            replayHost?.SetBeatmap(beatmap);
+            previewDisplay?.SetLaneLayout(currentLaneLayout);
+            previewDisplay?.SetBeatmap(beatmap);
             updatePlaceholderState();
         }
 
@@ -110,8 +100,8 @@ namespace BeatSight.Game.Screens.Editor
             if (!IsLoaded)
                 return;
 
-            replayHost?.SetLaneLayout(currentLaneLayout);
-            replayHost?.RefreshBeatmap();
+            previewDisplay?.SetLaneLayout(currentLaneLayout);
+            previewDisplay?.RefreshBeatmap();
             updatePlaceholderState();
         }
 
@@ -119,8 +109,7 @@ namespace BeatSight.Game.Screens.Editor
         {
             currentLaneLayout = LaneLayoutFactory.Create(preset.NewValue);
 
-            if (replayHost != null)
-                replayHost.SetLaneLayout(currentLaneLayout);
+            previewDisplay?.SetLaneLayout(currentLaneLayout);
         }
 
         private void updatePlaceholderState()
@@ -128,9 +117,51 @@ namespace BeatSight.Game.Screens.Editor
             if (placeholderText == null)
                 return;
 
-            bool showPlaceholder = beatmap == null || beatmap.HitObjects.Count == 0;
-            osu.Framework.Logging.Logger.Log($"[GameplayPreview] updatePlaceholderState: showPlaceholder={showPlaceholder}, beatmap={(beatmap == null ? "null" : $"{beatmap.HitObjects.Count} notes")}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
-            placeholderText.FadeTo(showPlaceholder ? 1f : 0f, 200, Easing.OutQuint);
+            int noteCount = beatmap?.HitObjects.Count ?? 0;
+            bool showPlaceholder = noteCount == 0;
+            osu.Framework.Logging.Logger.Log($"[GameplayPreview] updatePlaceholderState: showPlaceholder={showPlaceholder}, beatmap={(beatmap == null ? "null" : $"{noteCount} notes")}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
+            placeholderText.Text = showPlaceholder
+                ? "Load a beatmap to preview gameplay"
+                : $"Preview disabled (beatmap has {noteCount} notes)";
+
+            placeholderText.FadeTo(1f, 200, Easing.OutQuint);
+        }
+
+        private partial class PreviewPlaceholder : CompositeDrawable
+        {
+            private readonly Func<double> timeProvider;
+            private Beatmap? beatmap;
+            private LaneLayout laneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
+
+            public PreviewPlaceholder(Func<double> timeProvider)
+            {
+                this.timeProvider = timeProvider;
+                RelativeSizeAxes = Axes.Both;
+                Masking = true;
+                CornerRadius = 8;
+
+                InternalChild = new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = new Color4(18, 20, 30, 255)
+                };
+            }
+
+            public void SetBeatmap(Beatmap? beatmap)
+            {
+                this.beatmap = beatmap;
+                // No-op for now – preview visuals were retired with gameplay replay host.
+            }
+
+            public void RefreshBeatmap()
+            {
+                // No-op; kept for API compatibility with existing editor flow.
+            }
+
+            public void SetLaneLayout(LaneLayout layout)
+            {
+                laneLayout = layout;
+            }
         }
     }
 }

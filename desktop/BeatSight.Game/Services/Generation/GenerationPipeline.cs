@@ -364,7 +364,8 @@ namespace BeatSight.Game.Services.Generation
                         aiResult,
                         laneStats: laneTelemetry,
                         stageDurations: failureStageDurations,
-                        totalDurationMs: failureDurationMs);
+                        totalDurationMs: failureDurationMs,
+                        detectionStats: finalDetectionStats);
                     await context.EmitAsync(PipelinePhase.Faulted, GenerationStageId.DraftMapping, 0.95, finalResult.FailureReason ?? failureReason, resultOverride: finalResult).ConfigureAwait(false);
                     return;
                 }
@@ -441,7 +442,7 @@ namespace BeatSight.Game.Services.Generation
 
                 double successDurationMs = stopwatch.Elapsed.TotalMilliseconds;
                 var successStageDurations = finalizeStageDurations(stageDurationsCapture, successDurationMs);
-                finalResult = GenerationPipelineResult.CreateSuccess(aiResult, latestAnalysis, waveform, usedFallback, playbackAvailable, offlineDecodeUsed, offlineFallbackEncountered, context.Warning, logs, stageDurations: successStageDurations, totalDurationMs: successDurationMs, laneStats: laneTelemetry);
+                finalResult = GenerationPipelineResult.CreateSuccess(aiResult, latestAnalysis, waveform, usedFallback, playbackAvailable, offlineDecodeUsed, offlineFallbackEncountered, context.Warning, logs, detectionStats: finalDetectionStats, stageDurations: successStageDurations, totalDurationMs: successDurationMs, laneStats: laneTelemetry);
                 await context.EmitAsync(PipelinePhase.Completed, GenerationStageId.Finalise, 1.0, "AI beatmap ready!", resultOverride: finalResult).ConfigureAwait(false);
                 logs.Add("[gen] pipeline complete");
             }
@@ -464,7 +465,7 @@ namespace BeatSight.Game.Services.Generation
 
                 double cancelledDurationMs = stopwatch.Elapsed.TotalMilliseconds;
                 var cancelledStageDurations = finalizeStageDurations(stageDurationsCapture, cancelledDurationMs);
-                finalResult = GenerationPipelineResult.CreateCancelled(usedFallback, playbackAvailable, offlineDecodeUsed, offlineFallbackEncountered, context.Warning, latestAnalysis, waveform, logs, stageDurations: cancelledStageDurations, totalDurationMs: cancelledDurationMs);
+                finalResult = GenerationPipelineResult.CreateCancelled(usedFallback, playbackAvailable, offlineDecodeUsed, offlineFallbackEncountered, context.Warning, latestAnalysis, waveform, logs, stageDurations: cancelledStageDurations, totalDurationMs: cancelledDurationMs, detectionStats: finalDetectionStats);
                 await context.EmitAsync(PipelinePhase.Cancelled, GenerationStageId.Finalise, 1.0, "Generation cancelled", resultOverride: finalResult).ConfigureAwait(false);
             }
             catch (Exception ex)
@@ -500,7 +501,8 @@ namespace BeatSight.Game.Services.Generation
                     beatmap: null,
                     laneStats: null,
                     stageDurations: failureStageDurations,
-                    totalDurationMs: failureDurationMs);
+                    totalDurationMs: failureDurationMs,
+                    detectionStats: finalDetectionStats);
                 await context.EmitAsync(PipelinePhase.Faulted, GenerationStageId.Finalise, 1.0, ex.Message, resultOverride: finalResult).ConfigureAwait(false);
             }
             finally
@@ -850,12 +852,13 @@ namespace BeatSight.Game.Services.Generation
         public AiGenerationResult? Beatmap { get; private init; }
         public DrumOnsetAnalysis? Analysis { get; private init; }
         public WaveformData? Waveform { get; private init; }
+        public DetectionStats? DetectionStats { get; private init; }
         public IReadOnlyList<string> Logs { get; private init; } = Array.Empty<string>();
         public GenerationLaneStats? LaneStats { get; private init; }
         public IReadOnlyDictionary<GenerationStageId, double> StageDurations { get; private init; } = new Dictionary<GenerationStageId, double>();
         public double TotalDurationMs { get; private init; }
 
-        public static GenerationPipelineResult CreateSuccess(AiGenerationResult beatmap, DrumOnsetAnalysis? analysis, WaveformData? waveform, bool usedFallback, bool playbackAvailable, bool usedOfflineDecode, bool offlineFallbackEncountered, string? warning, IReadOnlyList<string> logs, IReadOnlyDictionary<GenerationStageId, double>? stageDurations = null, double totalDurationMs = 0, GenerationLaneStats? laneStats = null)
+        public static GenerationPipelineResult CreateSuccess(AiGenerationResult beatmap, DrumOnsetAnalysis? analysis, WaveformData? waveform, bool usedFallback, bool playbackAvailable, bool usedOfflineDecode, bool offlineFallbackEncountered, string? warning, IReadOnlyList<string> logs, DetectionStats? detectionStats = null, IReadOnlyDictionary<GenerationStageId, double>? stageDurations = null, double totalDurationMs = 0, GenerationLaneStats? laneStats = null)
         {
             return new GenerationPipelineResult
             {
@@ -868,6 +871,7 @@ namespace BeatSight.Game.Services.Generation
                 UsedOfflineDecode = usedOfflineDecode,
                 OfflineFallbackEncountered = offlineFallbackEncountered,
                 Warning = warning,
+                DetectionStats = detectionStats,
                 Logs = logs,
                 LaneStats = laneStats,
                 StageDurations = stageDurations ?? new Dictionary<GenerationStageId, double>(),
@@ -875,7 +879,7 @@ namespace BeatSight.Game.Services.Generation
             };
         }
 
-        public static GenerationPipelineResult CreateFailure(string reason, bool usedFallback, bool playbackAvailable, bool usedOfflineDecode, bool offlineFallbackEncountered, string? warning, DrumOnsetAnalysis? analysis, WaveformData? waveform, IReadOnlyList<string> logs, AiGenerationResult? beatmap, GenerationLaneStats? laneStats = null, IReadOnlyDictionary<GenerationStageId, double>? stageDurations = null, double totalDurationMs = 0)
+        public static GenerationPipelineResult CreateFailure(string reason, bool usedFallback, bool playbackAvailable, bool usedOfflineDecode, bool offlineFallbackEncountered, string? warning, DrumOnsetAnalysis? analysis, WaveformData? waveform, IReadOnlyList<string> logs, AiGenerationResult? beatmap, GenerationLaneStats? laneStats = null, IReadOnlyDictionary<GenerationStageId, double>? stageDurations = null, double totalDurationMs = 0, DetectionStats? detectionStats = null)
         {
             return new GenerationPipelineResult
             {
@@ -888,6 +892,7 @@ namespace BeatSight.Game.Services.Generation
                 Warning = warning,
                 Analysis = analysis,
                 Waveform = waveform,
+                DetectionStats = detectionStats,
                 Logs = logs,
                 Beatmap = beatmap,
                 LaneStats = laneStats,
@@ -896,7 +901,7 @@ namespace BeatSight.Game.Services.Generation
             };
         }
 
-        public static GenerationPipelineResult CreateCancelled(bool usedFallback, bool playbackAvailable, bool usedOfflineDecode, bool offlineFallbackEncountered, string? warning, DrumOnsetAnalysis? analysis, WaveformData? waveform, IReadOnlyList<string> logs, GenerationLaneStats? laneStats = null, IReadOnlyDictionary<GenerationStageId, double>? stageDurations = null, double totalDurationMs = 0)
+        public static GenerationPipelineResult CreateCancelled(bool usedFallback, bool playbackAvailable, bool usedOfflineDecode, bool offlineFallbackEncountered, string? warning, DrumOnsetAnalysis? analysis, WaveformData? waveform, IReadOnlyList<string> logs, GenerationLaneStats? laneStats = null, IReadOnlyDictionary<GenerationStageId, double>? stageDurations = null, double totalDurationMs = 0, DetectionStats? detectionStats = null)
         {
             return new GenerationPipelineResult
             {
@@ -909,6 +914,7 @@ namespace BeatSight.Game.Services.Generation
                 Warning = warning,
                 Analysis = analysis,
                 Waveform = waveform,
+                DetectionStats = detectionStats,
                 Logs = logs,
                 LaneStats = laneStats,
                 StageDurations = stageDurations ?? new Dictionary<GenerationStageId, double>(),

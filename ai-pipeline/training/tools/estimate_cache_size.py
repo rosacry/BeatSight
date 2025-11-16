@@ -7,11 +7,11 @@ at an existing cache directory to subtract files that already exist on disk.
 
 Usage example:
     PYTHONPATH=ai-pipeline python ai-pipeline/training/tools/estimate_cache_size.py \
-        --dataset /home/chrig/prod_combined_profile_run \
+        --dataset C:/Users/10ros/OneDrive/Documents/github/BeatSight/data/prod_combined_profile_run \
         --train-fraction 0.08 \
         --val-fraction 0.30 \
         --subset-seed 20251112 \
-        --cache-dir /home/chrig/feature_cache/prod_combined_warmup
+    --cache-dir C:/Users/10ros/OneDrive/Documents/github/BeatSight/data/feature_cache/prod_combined_warmup
 """
 
 from __future__ import annotations

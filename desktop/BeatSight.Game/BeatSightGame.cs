@@ -73,6 +73,7 @@ namespace BeatSight.Game
         private bool windowManagedResizeWarningLogged;
         private bool applyingWindowSizeInProgress;
         private bool windowSizeReapplyPending; // ensures batched setting updates (width/height) finish with latest size
+        private bool lastRequestedFullscreen;
 
         private static readonly BindingFlags windowReflectionFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy;
         private static readonly string[] windowSizePropertyPreferredNames =
@@ -343,6 +344,7 @@ namespace BeatSight.Game
             frameLimiterEnabledSetting = config.GetBindable<bool>(BeatSightSetting.FrameLimiterEnabled);
             frameLimiterTargetSetting = config.GetBindable<double>(BeatSightSetting.FrameLimiterTarget);
             frameworkFullscreenSizeSetting ??= frameworkConfig.GetBindable<Size>(FrameworkSetting.SizeFullscreen);
+            lastRequestedFullscreen = windowFullscreenSetting.Value;
 
             lastWindowState = boundWindow.WindowState;
             if (lastWindowState == FrameworkWindowState.Normal)
@@ -522,6 +524,9 @@ namespace BeatSight.Game
                 return;
 
             bool wantsFullscreen = windowFullscreenSetting.Value;
+            bool wasFullscreenRequested = lastRequestedFullscreen;
+            lastRequestedFullscreen = wantsFullscreen;
+            bool forceNativeResolution = wantsFullscreen && !wasFullscreenRequested;
             var desiredMode = wantsFullscreen ? getPreferredFullscreenMode() : WindowMode.Windowed;
 
             if (hostWindowModeBindable != null && hostWindowModeBindable.Value != desiredMode)
@@ -541,6 +546,9 @@ namespace BeatSight.Game
             {
                 if (boundWindow.WindowState == FrameworkWindowState.Normal)
                     lastWindowedClientSize = sanitiseWindowSize(boundWindow.ClientSize);
+
+                if (forceNativeResolution)
+                    applyNativeFullscreenResolution();
 
                 applyFullscreenResolution();
 
@@ -568,6 +576,35 @@ namespace BeatSight.Game
             }
 
             applyWindowSize();
+        }
+
+        private void applyNativeFullscreenResolution()
+        {
+            if (boundWindow == null || windowWidthSetting == null || windowHeightSetting == null)
+                return;
+
+            var targetDisplay = hostDisplayBindable?.Value ?? boundWindow.PrimaryDisplay;
+            var bounds = targetDisplay?.Bounds ?? Rectangle.Empty;
+
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+                return;
+
+            if (windowWidthSetting.Value == bounds.Width && windowHeightSetting.Value == bounds.Height)
+                return;
+
+            suppressWindowFeedback = true;
+            try
+            {
+                if (windowWidthSetting.Value != bounds.Width)
+                    windowWidthSetting.Value = bounds.Width;
+
+                if (windowHeightSetting.Value != bounds.Height)
+                    windowHeightSetting.Value = bounds.Height;
+            }
+            finally
+            {
+                suppressWindowFeedback = false;
+            }
         }
 
         private void ensureDefaultWindowSizeMatchesDisplay()

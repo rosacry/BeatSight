@@ -8,12 +8,21 @@ namespace BeatSight.Game.Configuration
     public class BeatSightConfigManager : IniConfigManager<BeatSightSetting>
     {
         private readonly List<Action> resetActions = new();
+        private readonly List<Action> trackingInitialisers = new();
+        private readonly HashSet<BeatSightSetting> trackedSettings = new();
+
+        /// <summary>
+        /// Exposes the full set of settings currently bound to the on-disk user configuration.
+        /// Useful for diagnostics and for ensuring new enum members are persisted.
+        /// </summary>
+        public IReadOnlyCollection<BeatSightSetting> TrackedSettings => trackedSettings;
 
         protected override string Filename => "beatsight.ini";
 
         public BeatSightConfigManager(Storage storage)
             : base(storage)
         {
+            ensureAllSettingsTracked();
         }
 
         protected override void InitialiseDefaults()
@@ -48,9 +57,13 @@ namespace BeatSight.Game.Configuration
 
             // Audio Settings
             setDefault(BeatSightSetting.MasterVolume, 1.0);
+            setDefault(BeatSightSetting.MasterVolumeEnabled, true);
             setDefault(BeatSightSetting.MusicVolume, 0.8);
+            setDefault(BeatSightSetting.MusicVolumeEnabled, true);
             setDefault(BeatSightSetting.EffectVolume, 0.6);
+            setDefault(BeatSightSetting.EffectVolumeEnabled, true);
             setDefault(BeatSightSetting.HitsoundVolume, 0.5);
+            setDefault(BeatSightSetting.HitsoundVolumeEnabled, true);
             setDefault(BeatSightSetting.MetronomeEnabled, false);
             setDefault(BeatSightSetting.MetronomeVolume, 0.6);
             setDefault(BeatSightSetting.MetronomeSound, MetronomeSoundOption.PercMetronomeQuartz);
@@ -82,6 +95,17 @@ namespace BeatSight.Game.Configuration
                 reset();
         }
 
+        private void ensureAllSettingsTracked()
+        {
+            if (trackingInitialisers.Count == 0)
+                return;
+
+            foreach (var initialise in trackingInitialisers)
+                initialise();
+
+            trackingInitialisers.Clear();
+        }
+
         private void setDefault<T>(BeatSightSetting setting, T value)
         {
             SetDefault(setting, value);
@@ -93,6 +117,17 @@ namespace BeatSight.Game.Configuration
             {
                 var bindable = GetBindable<T>(capturedSetting);
                 bindable.Value = capturedValue;
+            });
+
+            trackingInitialisers.Add(() =>
+            {
+                var bindable = GetBindable<T>(capturedSetting);
+                if (trackedSettings.Add(capturedSetting))
+                {
+                    // Touch the bindable once so the underlying config manager starts tracking
+                    // this setting immediately and persists the default to the user config.
+                    var _ = bindable.Value;
+                }
             });
         }
     }
@@ -129,9 +164,13 @@ namespace BeatSight.Game.Configuration
 
         // Audio
         MasterVolume,
+        MasterVolumeEnabled,
         MusicVolume,
+        MusicVolumeEnabled,
         EffectVolume,
+        EffectVolumeEnabled,
         HitsoundVolume,
+        HitsoundVolumeEnabled,
         MetronomeEnabled,
         MetronomeVolume,
         MetronomeSound,

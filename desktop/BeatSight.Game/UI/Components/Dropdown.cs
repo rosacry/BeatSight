@@ -12,7 +12,7 @@ using osuTK;
 
 namespace BeatSight.Game.UI.Components
 {
-    public partial class Dropdown<T> : BasicDropdown<T>
+    public partial class Dropdown<T> : BasicDropdown<T>, ISettingsTooltipSuppressionSource
     {
         public float? MenuMaxHeight { get; set; }
         public Container? OverlayLayer { get; set; }
@@ -20,6 +20,11 @@ namespace BeatSight.Game.UI.Components
 
         private bool searchEnabled;
         private DropdownHeader? dropdownHeader;
+        private bool tooltipSuppressed;
+
+        public event Action<bool>? TooltipSuppressionChanged;
+
+        public bool IsTooltipSuppressed => tooltipSuppressed;
 
         public bool SearchEnabled
         {
@@ -38,6 +43,15 @@ namespace BeatSight.Game.UI.Components
         {
             AutoSizeAxes = Axes.Y;
             RelativeSizeAxes = Axes.None;
+        }
+
+        internal void SetTooltipSuppression(bool suppressed)
+        {
+            if (tooltipSuppressed == suppressed)
+                return;
+
+            tooltipSuppressed = suppressed;
+            TooltipSuppressionChanged?.Invoke(suppressed);
         }
 
         protected override DropdownMenu CreateMenu() => new DropdownMenu(this);
@@ -77,6 +91,13 @@ namespace BeatSight.Game.UI.Components
         protected sealed partial class DropdownHeader : BasicDropdownHeader
         {
             private DropdownSearchBar? searchBar;
+            private const float header_corner_radius = 8f;
+
+            public DropdownHeader()
+            {
+                Masking = true;
+                CornerRadius = header_corner_radius;
+            }
 
             protected override DropdownSearchBar CreateSearchBar()
                 => searchBar = new DropdownSearchBar();
@@ -158,11 +179,14 @@ namespace BeatSight.Game.UI.Components
             private float originalDepth;
             private bool suppressNextClose;
             private float? forcedOverlayWidth;
+            private const float menu_corner_radius = 10f;
 
             public DropdownMenu(Dropdown<T> owner)
             {
                 this.owner = owner;
                 BypassAutoSizeAxes = Axes.Both;
+                Masking = true;
+                CornerRadius = menu_corner_radius;
                 StateChanged += onStateChanged;
             }
 
@@ -186,6 +210,7 @@ namespace BeatSight.Game.UI.Components
                     pendingScrollFrames = 0;
                     scrollCompleted = false;
                     restoreParent();
+                    owner.SetTooltipSuppression(false);
                     return;
                 }
 
@@ -197,6 +222,7 @@ namespace BeatSight.Game.UI.Components
                     suppressNextClose = true;
                     moveToOverlay();
                 });
+                owner.SetTooltipSuppression(true);
             }
 
             private void moveToOverlay()

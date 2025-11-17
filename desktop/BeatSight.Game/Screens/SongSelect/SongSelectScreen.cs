@@ -159,9 +159,15 @@ namespace BeatSight.Game.Screens.SongSelect
 
         private partial class BeatmapButton : Button
         {
+            private const float corner_radius = 16f;
+            private const float hover_scale = 1.015f;
+            private const float edge_padding = 16f;
+            private const float masking_smoothness = 2f;
+
             private readonly BeatmapLibrary.BeatmapEntry entry;
             private readonly SongSelectDestination destination;
             private readonly Box background;
+            private readonly Container buttonBody;
 
             public BeatmapButton(BeatmapLibrary.BeatmapEntry entry, SongSelectDestination destination)
             {
@@ -170,15 +176,23 @@ namespace BeatSight.Game.Screens.SongSelect
 
                 RelativeSizeAxes = Axes.X;
                 AutoSizeAxes = Axes.Y;
-                Masking = true;
-                CornerRadius = 14;
+                Padding = new MarginPadding { Horizontal = edge_padding };
+
+                InternalChild = buttonBody = new Container
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Masking = true,
+                    CornerRadius = corner_radius,
+                    MaskingSmoothness = masking_smoothness
+                };
 
                 var metadata = entry.Beatmap.Metadata;
                 var accentColour = destination == SongSelectDestination.Gameplay
                     ? UITheme.AccentPrimary
                     : UITheme.AccentSecondary;
 
-                AddRangeInternal(new Drawable[]
+                buttonBody.AddRange(new Drawable[]
                 {
                     background = new Box
                     {
@@ -316,7 +330,7 @@ namespace BeatSight.Game.Screens.SongSelect
             protected override bool OnHover(HoverEvent e)
             {
                 background.FadeColour(UITheme.Emphasise(UITheme.Surface, 1.07f), 200, Easing.OutQuint);
-                this.ScaleTo(1.02f, 200, Easing.OutQuint);
+                buttonBody.ScaleTo(hover_scale, 200, Easing.OutQuint);
                 return base.OnHover(e);
             }
 
@@ -324,12 +338,16 @@ namespace BeatSight.Game.Screens.SongSelect
             {
                 base.OnHoverLost(e);
                 background.FadeColour(UITheme.Surface, 200, Easing.OutQuint);
-                this.ScaleTo(1f, 200, Easing.OutQuint);
+                buttonBody.ScaleTo(1f, 200, Easing.OutQuint);
             }
 
             protected override bool OnClick(ClickEvent e)
             {
-                this.ScaleTo(0.98f, 80, Easing.OutQuint).Then().ScaleTo(1.02f, 120, Easing.OutQuint);
+                buttonBody.ScaleTo(0.98f, 80, Easing.OutQuint)
+                          .Then()
+                          .ScaleTo(hover_scale, 120, Easing.OutQuint)
+                          .Then()
+                          .ScaleTo(1f, 120, Easing.OutQuint);
                 return base.OnClick(e);
             }
         }

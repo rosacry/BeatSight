@@ -18,16 +18,22 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
+using FrameworkRectangleF = osu.Framework.Graphics.Primitives.RectangleF;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
+using osu.Framework.Input;
 using osu.Framework.Input.Events;
 using osu.Framework.IO.Stores;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Framework.Screens;
+using osu.Framework.Utils;
+using osu.Framework.Threading;
 using osuTK;
 using osuTK.Graphics;
+using osuTK.Input;
 
 namespace BeatSight.Game.Screens.Settings
 {
@@ -42,6 +48,7 @@ namespace BeatSight.Game.Screens.Settings
         private readonly Dictionary<SettingsCategory, SettingsButton> sectionButtons = new();
         private SettingsCategory currentCategory = SettingsCategory.Playback;
         private Container dropdownOverlay = null!;
+        private SettingsTooltipOverlay tooltipOverlay = null!;
         private Container overlayRoot = null!;
 
         private enum SettingsCategory
@@ -80,6 +87,11 @@ namespace BeatSight.Game.Screens.Settings
                 Children = new Drawable[]
                 {
                     dropdownOverlay,
+                    tooltipOverlay = new SettingsTooltipOverlay
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        AlwaysPresent = true
+                    },
                     backButton
                 }
             };
@@ -206,11 +218,11 @@ namespace BeatSight.Game.Screens.Settings
             switch (category)
             {
                 case SettingsCategory.Playback:
-                    return new PlaybackSettingsSection(config, dropdownOverlay);
+                    return new PlaybackSettingsSection(config, dropdownOverlay, tooltipOverlay);
                 case SettingsCategory.Audio:
-                    return new AudioSettingsSection(config, host, dropdownOverlay);
+                    return new AudioSettingsSection(config, host, dropdownOverlay, tooltipOverlay);
                 case SettingsCategory.Graphics:
-                    return new GraphicsSettingsSection(config, host, dropdownOverlay);
+                    return new GraphicsSettingsSection(config, host, dropdownOverlay, tooltipOverlay);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(category), category, null);
             }
@@ -303,11 +315,17 @@ namespace BeatSight.Game.Screens.Settings
 
         private partial class SettingsButton : CompositeDrawable
         {
+            private const float button_corner_radius = 10f;
+            private const float button_hover_scale = 1.015f;
+            private const float button_masking_smoothness = 1.5f;
+
             private readonly Box background;
             private readonly Box accentBar;
+            private readonly Container highlightOverlay;
             private readonly SpriteText label;
             private readonly Action action;
             private bool isSelected;
+            private readonly Container buttonBody;
 
             public SettingsButton(string text, Action action)
             {
@@ -315,10 +333,17 @@ namespace BeatSight.Game.Screens.Settings
 
                 RelativeSizeAxes = Axes.X;
                 Height = 50;
-                Masking = true;
-                CornerRadius = 8;
+                Padding = new MarginPadding { Horizontal = 10 };
 
-                InternalChildren = new Drawable[]
+                InternalChild = buttonBody = new Container
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Masking = true,
+                    CornerRadius = button_corner_radius,
+                    MaskingSmoothness = button_masking_smoothness
+                };
+
+                buttonBody.AddRange(new Drawable[]
                 {
                     accentBar = new Box
                     {
@@ -334,6 +359,26 @@ namespace BeatSight.Game.Screens.Settings
                         RelativeSizeAxes = Axes.Both,
                         Colour = UITheme.Surface
                     },
+                    highlightOverlay = new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Alpha = 0,
+                        Masking = true,
+                        CornerRadius = button_corner_radius,
+                        EdgeEffect = new EdgeEffectParameters
+                        {
+                            Type = EdgeEffectType.Glow,
+                            Colour = UITheme.AccentPrimary.Opacity(0.35f),
+                            Radius = 12,
+                            Roundness = button_corner_radius,
+                            Hollow = true
+                        },
+                        Child = new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Colour = UITheme.AccentPrimary.Opacity(0.18f)
+                        }
+                    },
                     label = new SpriteText
                     {
                         Text = text,
@@ -343,7 +388,7 @@ namespace BeatSight.Game.Screens.Settings
                         Origin = Anchor.CentreLeft,
                         Padding = new MarginPadding { Left = 24 }
                     }
-                };
+                });
             }
 
             public void SetSelected(bool selected)
@@ -378,15 +423,26 @@ namespace BeatSight.Game.Screens.Settings
 
             private void updateVisualState(bool hovering = false)
             {
-                Colour4 baseColour = isSelected ? UITheme.Emphasise(UITheme.Surface, 1.18f) : UITheme.Surface;
+                Colour4 baseColour = UITheme.Surface;
+
+                if (isSelected)
+                    baseColour = UITheme.Emphasise(baseColour, 1.2f);
 
                 if (hovering)
-                    baseColour = UITheme.Emphasise(baseColour, 1.06f);
+                    baseColour = UITheme.Emphasise(baseColour, 1.08f);
 
                 background.FadeColour(baseColour, 200, Easing.OutQuint);
-                accentBar.FadeTo(isSelected ? 1f : 0f, 200, Easing.OutQuint);
-                label.FadeColour(isSelected ? UITheme.TextPrimary : UITheme.TextSecondary, 200, Easing.OutQuint);
-                this.ScaleTo(hovering ? 1.02f : 1f, 200, Easing.OutQuint);
+
+                float accentAlpha = isSelected ? 1f : hovering ? 0.45f : 0f;
+                accentBar.FadeTo(accentAlpha, 200, Easing.OutQuint);
+
+                float highlightAlpha = isSelected ? 1f : hovering ? 0.6f : 0f;
+                highlightOverlay.FadeTo(highlightAlpha, 200, Easing.OutQuint);
+
+                var targetLabelColour = (isSelected || hovering) ? UITheme.TextPrimary : UITheme.TextSecondary;
+                label.FadeColour(targetLabelColour, 200, Easing.OutQuint);
+
+                buttonBody.ScaleTo(hovering ? button_hover_scale : 1f, 200, Easing.OutQuint);
             }
         }
     }
@@ -398,14 +454,21 @@ namespace BeatSight.Game.Screens.Settings
         private BasicScrollContainer sectionScrollContainer = null!;
         private FillFlowContainer contentFlow = null!;
         private FillFlowContainer sectionBody = null!;
+        protected SettingsTooltipOverlay TooltipOverlay { get; }
         protected const float dropdown_menu_max_height = 240;
         protected BasicScrollContainer ScrollViewport => sectionScrollContainer;
+        protected enum SliderToggleMode
+        {
+            DisableSlider,
+            ZeroValue
+        }
 
-        protected SettingsSection(string title, Container dropdownOverlay)
+        protected SettingsSection(string title, Container dropdownOverlay, SettingsTooltipOverlay tooltipOverlay)
         {
             this.title = title;
             RelativeSizeAxes = Axes.Both;
             DropdownOverlay = dropdownOverlay;
+            TooltipOverlay = tooltipOverlay;
         }
 
         [BackgroundDependencyLoader]
@@ -462,22 +525,44 @@ namespace BeatSight.Game.Screens.Settings
 
         protected abstract Drawable createContent();
 
+        protected SettingItem CreateSettingItem(string label, string? description, Drawable control, params ISettingsTooltipSuppressionSource[] suppressionSources)
+        {
+            var item = new SettingItem(label, description, control, TooltipOverlay);
+
+            if (control is ISettingsTooltipSuppressionSource controlSuppressor)
+                item.TrackTooltipSuppressor(controlSuppressor);
+
+            if (suppressionSources != null)
+            {
+                foreach (var source in suppressionSources)
+                {
+                    if (source != null)
+                        item.TrackTooltipSuppressor(source);
+                }
+            }
+
+            return item;
+        }
+
         protected SettingItem CreateCheckbox(string label, Bindable<bool> bindable, string? description = null)
         {
-            var checkbox = new BasicCheckbox
+            var checkbox = new BeatSightCheckbox
             {
                 Current = bindable,
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre
             };
 
-            return new SettingItem(label, description, new Container
+            var setting = CreateSettingItem(label, description, new Container
             {
                 Size = new Vector2(24, 24),
                 Anchor = Anchor.CentreRight,
                 Origin = Anchor.CentreRight,
                 Child = checkbox
             });
+
+            setting.EnableRowToggle(bindable);
+            return setting;
         }
 
         protected SettingItem CreateEnumDropdown<T>(string label, Bindable<T> bindable, string? description = null, Func<T, string>? formatter = null, bool enableSearch = false) where T : struct, Enum
@@ -497,7 +582,7 @@ namespace BeatSight.Game.Screens.Settings
                 directDropdown.Current = bindable;
                 directDropdown.Items = Enum.GetValues(typeof(T)).Cast<T>().ToArray();
 
-                return new SettingItem(label, description, directDropdown);
+                return CreateSettingItem(label, description, directDropdown);
             }
 
             var items = Enum.GetValues(typeof(T)).Cast<T>().Select(value => new EnumChoice<T>(formatter(value), value)).ToArray();
@@ -526,10 +611,10 @@ namespace BeatSight.Game.Screens.Settings
                     mappedDropdown.Current.Value = target;
             }, true);
 
-            return new SettingItem(label, description, mappedDropdown);
+            return CreateSettingItem(label, description, mappedDropdown);
         }
 
-        protected SettingItem CreateSlider(string label, Bindable<double> bindable, double min, double max, double precision, string? description = null)
+        protected SettingItem CreateSlider(string label, Bindable<double> bindable, double min, double max, double precision, string? description = null, Func<double, string>? valueFormatter = null, Bindable<bool>? toggleBindable = null, Action<bool>? toggleStateChanged = null, string? toggleLabelText = null, SliderToggleMode toggleMode = SliderToggleMode.DisableSlider)
         {
             var sliderBindable = new BindableDouble
             {
@@ -540,26 +625,315 @@ namespace BeatSight.Game.Screens.Settings
 
             sliderBindable.BindTo(bindable);
 
-            var container = new Container
+            var sliderBar = new BeatSightSliderBar
             {
-                Width = 250,
-                Height = 24,
+                RelativeSizeAxes = Axes.X,
+                Height = 16,
+                Current = sliderBindable,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft
+            };
+
+            var valueText = new SpriteText
+            {
+                Font = new FontUsage(size: 16),
+                Colour = UITheme.TextSecondary,
                 Anchor = Anchor.CentreRight,
-                Origin = Anchor.CentreRight,
-                Children = new Drawable[]
+                Origin = Anchor.CentreRight
+            };
+
+            var formatter = valueFormatter ?? createDefaultSliderFormatter(precision);
+            sliderBindable.BindValueChanged(e => valueText.Text = formatter(e.NewValue), true);
+
+            var valueContainer = new Container
+            {
+                Width = 64,
+                Height = 24,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                Child = new Container
                 {
-                    new BasicSliderBar<double>
-                    {
-                        RelativeSizeAxes = Axes.X,
-                        Height = 16,
-                        Current = sliderBindable,
-                        Anchor = Anchor.CentreLeft,
-                        Origin = Anchor.CentreLeft
-                    }
+                    RelativeSizeAxes = Axes.Both,
+                    Anchor = Anchor.CentreRight,
+                    Origin = Anchor.CentreRight,
+                    Child = valueText
                 }
             };
 
-            return new SettingItem(label, description, container);
+            const float rowSpacing = 8;
+            const float controlWidthWithoutToggle = 320;
+            const float controlWidthWithToggle = 360;
+            const float sliderToggleSpacing = 16;
+
+            float baseSliderWidth = Math.Max(120, controlWidthWithoutToggle - valueContainer.Width - rowSpacing);
+
+            var sliderContainerChildren = new List<Drawable> { sliderBar };
+            SliderInputBlocker? sliderInputBlocker = null;
+
+            if (toggleMode == SliderToggleMode.DisableSlider)
+            {
+                sliderInputBlocker = new SliderInputBlocker
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Blocking = false
+                };
+                sliderContainerChildren.Add(sliderInputBlocker);
+            }
+
+            Container sliderContainer = new Container
+            {
+                Width = baseSliderWidth,
+                Height = 18,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                Children = sliderContainerChildren.ToArray()
+            };
+
+            float controlWidth = controlWidthWithoutToggle;
+
+            var sliderCluster = new FillFlowContainer
+            {
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Horizontal,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                Spacing = new Vector2(sliderToggleSpacing, 0)
+            };
+
+            sliderCluster.Add(sliderContainer);
+
+            var rowFlow = new FillFlowContainer
+            {
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Horizontal,
+                Spacing = new Vector2(rowSpacing, 0),
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight
+            };
+
+            rowFlow.AddRange(new Drawable[] { valueContainer, sliderCluster });
+
+            if (toggleBindable != null)
+            {
+                controlWidth = controlWidthWithToggle;
+
+                const float checkboxWidth = 24;
+                float toggleAreaWidth = string.IsNullOrEmpty(toggleLabelText) ? checkboxWidth : 132;
+                float sliderWidth = Math.Max(120, controlWidthWithToggle - valueContainer.Width - rowSpacing - toggleAreaWidth - sliderToggleSpacing);
+                sliderContainer.Width = sliderWidth;
+
+                var checkbox = new BeatSightCheckbox
+                {
+                    Anchor = Anchor.CentreRight,
+                    Origin = Anchor.CentreRight,
+                    Current = toggleBindable
+                };
+
+                Drawable toggleDrawable = checkbox;
+
+                if (!string.IsNullOrEmpty(toggleLabelText))
+                {
+                    toggleDrawable = new FillFlowContainer
+                    {
+                        AutoSizeAxes = Axes.Both,
+                        Anchor = Anchor.CentreRight,
+                        Origin = Anchor.CentreRight,
+                        Direction = FillDirection.Horizontal,
+                        Spacing = new Vector2(4, 0),
+                        Children = new Drawable[]
+                        {
+                            new SpriteText
+                            {
+                                Text = toggleLabelText!,
+                                Font = new FontUsage(size: 14),
+                                Colour = UITheme.TextSecondary,
+                                Anchor = Anchor.CentreRight,
+                                Origin = Anchor.CentreRight
+                            },
+                            checkbox
+                        }
+                    };
+                }
+
+                var toggleContainer = new Container
+                {
+                    Width = toggleAreaWidth,
+                    Height = 24,
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft,
+                    Child = new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Anchor = Anchor.CentreRight,
+                        Origin = Anchor.CentreRight,
+                        Child = toggleDrawable
+                    }
+                };
+
+                sliderCluster.Add(toggleContainer);
+
+                if (toggleMode == SliderToggleMode.DisableSlider && sliderInputBlocker != null)
+                {
+                    void applyToggleState(bool enabled, bool instant)
+                    {
+                        sliderInputBlocker.Blocking = !enabled;
+                        if (instant)
+                        {
+                            sliderBar.Alpha = enabled ? 1f : 0.45f;
+                            valueText.Colour = enabled ? UITheme.TextSecondary : UITheme.TextMuted;
+                        }
+                        else
+                        {
+                            sliderBar.FadeTo(enabled ? 1f : 0.45f, 200, Easing.OutQuint);
+                            valueText.FadeColour(enabled ? UITheme.TextSecondary : UITheme.TextMuted, 200, Easing.OutQuint);
+                        }
+                    }
+
+                    applyToggleState(toggleBindable.Value, true);
+
+                    toggleBindable.BindValueChanged(e =>
+                    {
+                        applyToggleState(e.NewValue, false);
+                        toggleStateChanged?.Invoke(e.NewValue);
+                    }, true);
+                }
+                else if (toggleMode == SliderToggleMode.ZeroValue)
+                {
+                    double sliderMin = sliderBindable.MinValue;
+                    double sliderMax = sliderBindable.MaxValue;
+
+                    bool suppressSliderToToggleSync = false;
+                    bool suppressToggleToSliderSync = false;
+
+                    toggleBindable.BindValueChanged(e =>
+                    {
+                        if (suppressToggleToSliderSync)
+                        {
+                            toggleStateChanged?.Invoke(e.NewValue);
+                            return;
+                        }
+
+                        if (!e.NewValue)
+                        {
+                            suppressSliderToToggleSync = true;
+                            sliderBindable.Value = sliderMin;
+                            suppressSliderToToggleSync = false;
+                        }
+                        else
+                        {
+                            suppressSliderToToggleSync = true;
+                            sliderBindable.Value = sliderMax;
+                            suppressSliderToToggleSync = false;
+                        }
+
+                        toggleStateChanged?.Invoke(e.NewValue);
+                    }, true);
+
+                    sliderBindable.BindValueChanged(e =>
+                    {
+                        if (suppressSliderToToggleSync)
+                            return;
+
+                        bool hasValue = !Precision.AlmostEquals(e.NewValue, sliderMin);
+                        if (toggleBindable.Value != hasValue)
+                        {
+                            suppressToggleToSliderSync = true;
+                            toggleBindable.Value = hasValue;
+                            suppressToggleToSliderSync = false;
+                        }
+                    });
+                }
+            }
+
+            rowFlow.Width = controlWidth;
+
+            var controlContainer = new Container
+            {
+                Width = controlWidth,
+                AutoSizeAxes = Axes.Y,
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+                Child = rowFlow
+            };
+
+            var setting = CreateSettingItem(label, description, controlContainer, sliderBar);
+
+            if (toggleBindable != null)
+                setting.EnableRowToggle(toggleBindable);
+
+            return setting;
+        }
+
+        protected static Func<double, string> PercentageFormatter(int decimalPlaces = 0)
+        {
+            int places = Math.Max(0, decimalPlaces);
+            string format = $"F{places}";
+            return value => $"{(value * 100).ToString(format, CultureInfo.InvariantCulture)}%";
+        }
+
+        protected static Func<double, string> MillisecondsFormatter(int decimalPlaces = 0)
+        {
+            int places = Math.Max(0, decimalPlaces);
+            string format = $"F{places}";
+            return value => $"{value.ToString(format, CultureInfo.InvariantCulture)} ms";
+        }
+
+        protected static Func<double, string> MultiplierFormatter(int decimalPlaces = 2)
+        {
+            int places = Math.Max(0, decimalPlaces);
+            string format = $"F{places}";
+            return value => $"{value.ToString(format, CultureInfo.InvariantCulture)}x";
+        }
+
+        private static Func<double, string> createDefaultSliderFormatter(double precision)
+        {
+            int decimalPlaces = determineDecimalPlaces(precision);
+            string format = $"F{decimalPlaces}";
+            return value => value.ToString(format, CultureInfo.InvariantCulture);
+        }
+
+        private static int determineDecimalPlaces(double precision)
+        {
+            if (precision <= 0)
+                return 2;
+
+            double places = -Math.Log10(precision);
+            if (double.IsNaN(places) || double.IsInfinity(places))
+                return 2;
+
+            return Math.Clamp((int)Math.Ceiling(places), 0, 4);
+        }
+
+        protected partial class SliderInputBlocker : Container
+        {
+            public bool Blocking { get; set; }
+
+            public override bool HandlePositionalInput => Blocking || base.HandlePositionalInput;
+            public override bool HandleNonPositionalInput => Blocking || base.HandleNonPositionalInput;
+
+            protected override bool OnMouseDown(MouseDownEvent e)
+            {
+                if (Blocking)
+                    return true;
+
+                return base.OnMouseDown(e);
+            }
+
+            protected override bool OnDragStart(DragStartEvent e)
+            {
+                if (Blocking)
+                    return true;
+
+                return base.OnDragStart(e);
+            }
+
+            protected override bool OnScroll(ScrollEvent e)
+            {
+                if (Blocking)
+                    return true;
+
+                return base.OnScroll(e);
+            }
         }
 
         protected sealed partial class SettingsDropdown<T> : BeatSight.Game.UI.Components.Dropdown<T>
@@ -589,10 +963,53 @@ namespace BeatSight.Game.Screens.Settings
 
     public partial class SettingItem : CompositeDrawable
     {
-        public SettingItem(string label, string? description, Drawable control)
+        private const double hover_transition_duration = 200;
+
+        private readonly bool hasDescription;
+        private readonly string? descriptionText;
+        private readonly SettingsTooltipOverlay? tooltipOverlay;
+        private readonly Box backgroundBox;
+        private readonly Container hoverHighlight;
+        private Bindable<bool>? rowToggleBindable;
+        private readonly List<(ISettingsTooltipSuppressionSource source, Action<bool> handler)> suppressionSubscriptions = new();
+
+        public SettingItem(string label, string? description, Drawable control, SettingsTooltipOverlay? tooltipOverlay)
         {
+            hasDescription = !string.IsNullOrWhiteSpace(description);
+            descriptionText = description;
+            this.tooltipOverlay = tooltipOverlay;
+
             RelativeSizeAxes = Axes.X;
             AutoSizeAxes = Axes.Y;
+
+            backgroundBox = new Box
+            {
+                RelativeSizeAxes = Axes.Both,
+                Colour = UITheme.Surface
+            };
+
+            hoverHighlight = new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                Alpha = 0,
+                Masking = true,
+                CornerRadius = 8,
+                EdgeEffect = new EdgeEffectParameters
+                {
+                    Type = EdgeEffectType.Glow,
+                    Colour = UITheme.AccentPrimary.Opacity(0.32f),
+                    Radius = 14,
+                    Roundness = 8
+                },
+                Child = new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = UITheme.AccentPrimary.Opacity(0.08f)
+                }
+            };
+
+            var textColumn = createTextColumn(label);
+
             InternalChildren = new Drawable[]
             {
                 new Container
@@ -600,10 +1017,10 @@ namespace BeatSight.Game.Screens.Settings
                     RelativeSizeAxes = Axes.Both,
                     Masking = true,
                     CornerRadius = 8,
-                    Child = new Box
+                    Children = new Drawable[]
                     {
-                        RelativeSizeAxes = Axes.Both,
-                        Colour = UITheme.Surface
+                        backgroundBox,
+                        hoverHighlight
                     }
                 },
                 new Container
@@ -613,32 +1030,424 @@ namespace BeatSight.Game.Screens.Settings
                     Padding = new MarginPadding(20),
                     Children = new Drawable[]
                     {
-                        new FillFlowContainer
-                        {
-                            RelativeSizeAxes = Axes.X,
-                            AutoSizeAxes = Axes.Y,
-                            Direction = FillDirection.Vertical,
-                            Spacing = new Vector2(0, 6),
-                            Children = new Drawable[]
-                            {
-                                new SpriteText
-                                {
-                                    Text = label,
-                                    Font = new FontUsage(size: 22, weight: "Medium"),
-                                    Colour = UITheme.TextPrimary
-                                },
-                                string.IsNullOrEmpty(description) ? Empty() : new SpriteText
-                                {
-                                    Text = description,
-                                    Font = new FontUsage(size: 16),
-                                    Colour = UITheme.TextSecondary
-                                }
-                            }
-                        },
+                        textColumn,
                         control
                     }
                 }
             };
+        }
+
+        private Drawable createTextColumn(string label)
+        {
+            var labelText = new SpriteText
+            {
+                Text = label,
+                Font = new FontUsage(size: 22, weight: "Medium"),
+                Colour = UITheme.TextPrimary
+            };
+
+            return new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Children = new Drawable[] { labelText }
+            };
+        }
+
+        public void TrackTooltipSuppressor(ISettingsTooltipSuppressionSource source)
+        {
+            if (tooltipOverlay == null)
+                return;
+
+            void handler(bool suppressed) => tooltipOverlay.SetSuppressed(source, suppressed);
+            source.TooltipSuppressionChanged += handler;
+            suppressionSubscriptions.Add((source, handler));
+
+            if (source.IsTooltipSuppressed)
+                tooltipOverlay.SetSuppressed(source, true);
+        }
+
+        protected override bool OnHover(HoverEvent e)
+        {
+            backgroundBox.FadeColour(UITheme.Emphasise(UITheme.Surface, 1.12f), hover_transition_duration, Easing.OutQuint);
+            hoverHighlight.FadeTo(0.85f, hover_transition_duration, Easing.OutQuint);
+            hoverHighlight.ScaleTo(1f, hover_transition_duration, Easing.OutQuint);
+
+            if (hasDescription)
+                tooltipOverlay?.BeginHover(this, descriptionText!, e.ScreenSpaceMousePosition);
+
+            return base.OnHover(e);
+        }
+
+        protected override bool OnMouseMove(MouseMoveEvent e)
+        {
+            if (hasDescription)
+                tooltipOverlay?.UpdateHoverPosition(this, e.ScreenSpaceMousePosition);
+
+            return base.OnMouseMove(e);
+        }
+
+        protected override void OnHoverLost(HoverLostEvent e)
+        {
+            base.OnHoverLost(e);
+            tooltipOverlay?.EndHover(this);
+            backgroundBox.FadeColour(UITheme.Surface, hover_transition_duration, Easing.OutQuint);
+            hoverHighlight.FadeOut(hover_transition_duration, Easing.OutQuint);
+        }
+
+        public void EnableRowToggle(Bindable<bool> toggleBindable)
+        {
+            rowToggleBindable = toggleBindable ?? throw new ArgumentNullException(nameof(toggleBindable));
+        }
+
+        protected override bool OnClick(ClickEvent e)
+        {
+            if (rowToggleBindable != null && !rowToggleBindable.Disabled && e.Button == MouseButton.Left)
+            {
+                rowToggleBindable.Value = !rowToggleBindable.Value;
+                return true;
+            }
+
+            return base.OnClick(e);
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            tooltipOverlay?.EndHover(this);
+
+            foreach (var (source, handler) in suppressionSubscriptions)
+            {
+                source.TooltipSuppressionChanged -= handler;
+                tooltipOverlay?.SetSuppressed(source, false);
+            }
+
+            suppressionSubscriptions.Clear();
+            base.Dispose(isDisposing);
+        }
+    }
+
+    // Shared tooltip overlay that mimics osu!'s delayed hover descriptions.
+    public sealed partial class SettingsTooltipOverlay : CompositeDrawable
+    {
+        private const double appear_delay = 450;
+        private const double fade_duration = 180;
+        private const float tooltip_margin = 10;
+        private const float tooltip_offset_x = 18;
+        private const float tooltip_offset_y = 12;
+        private const float tooltip_max_width = 420;
+
+        private readonly Container tooltipBody;
+        private readonly TooltipTextFlow tooltipText;
+        private SettingItem? currentOwner;
+        private ScheduledDelegate? showSchedule;
+        private Vector2 pendingPosition;
+        private string? pendingDescription;
+        private readonly HashSet<object> suppressionTokens = new();
+        private Vector2 lastTooltipSize;
+        private Vector2? lastTrackedMousePosition;
+
+        public SettingsTooltipOverlay()
+        {
+            RelativeSizeAxes = Axes.Both;
+            AlwaysPresent = true;
+            Alpha = 0;
+
+            InternalChild = tooltipBody = new Container
+            {
+                AutoSizeAxes = Axes.Both,
+                Anchor = Anchor.TopLeft,
+                Origin = Anchor.TopLeft,
+                Masking = true,
+                CornerRadius = 6,
+                Alpha = 0,
+                EdgeEffect = new EdgeEffectParameters
+                {
+                    Type = EdgeEffectType.Glow,
+                    Colour = UITheme.AccentPrimary.Opacity(0.2f),
+                    Radius = 10,
+                    Roundness = 6
+                },
+                Child = new Container
+                {
+                    AutoSizeAxes = Axes.Both,
+                    Children = new Drawable[]
+                    {
+                        new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Colour = UITheme.SurfaceAlt.Opacity(0.94f)
+                        },
+                        new Container
+                        {
+                            AutoSizeAxes = Axes.Both,
+                            Padding = new MarginPadding { Horizontal = 14, Vertical = 10 },
+                            Child = tooltipText = new TooltipTextFlow(tooltip_max_width)
+                        }
+                    }
+                }
+            };
+        }
+
+        public void BeginHover(SettingItem source, string description, Vector2 screenSpacePosition)
+        {
+            pendingPosition = screenSpacePosition;
+            lastTrackedMousePosition = screenSpacePosition;
+
+            if (string.IsNullOrWhiteSpace(description))
+                return;
+
+            pendingDescription = description;
+
+            if (currentOwner != source)
+            {
+                hideTooltip();
+                currentOwner = source;
+            }
+
+            scheduleShow();
+        }
+
+        public void UpdateHoverPosition(SettingItem source, Vector2 screenSpacePosition)
+        {
+            pendingPosition = screenSpacePosition;
+            lastTrackedMousePosition = screenSpacePosition;
+
+            if (currentOwner != source)
+                return;
+
+            if (tooltipBody.Alpha <= 0 || TooltipsSuppressed)
+                return;
+
+            moveTooltip(false);
+        }
+
+        public void EndHover(SettingItem source)
+        {
+            if (currentOwner != source)
+                return;
+
+            currentOwner = null;
+            pendingDescription = null;
+            showSchedule?.Cancel();
+            showSchedule = null;
+            lastTrackedMousePosition = null;
+            hideTooltip();
+        }
+
+        public void SetSuppressed(object token, bool suppressed)
+        {
+            if (suppressed)
+            {
+                if (suppressionTokens.Add(token))
+                {
+                    showSchedule?.Cancel();
+                    hideTooltip();
+                }
+            }
+            else
+            {
+                if (suppressionTokens.Remove(token) && !TooltipsSuppressed)
+                    scheduleShow();
+            }
+        }
+
+        private void scheduleShow()
+        {
+            showSchedule?.Cancel();
+
+            if (TooltipsSuppressed || currentOwner == null || string.IsNullOrWhiteSpace(pendingDescription))
+                return;
+
+            showSchedule = Scheduler.AddDelayed(() => showTooltip(pendingDescription!), appear_delay);
+        }
+
+        private void showTooltip(string description)
+        {
+            if (TooltipsSuppressed)
+                return;
+
+            tooltipText.SetText(description);
+            moveTooltip(true);
+            tooltipBody.FadeIn(fade_duration, Easing.OutQuint);
+            this.FadeIn(fade_duration, Easing.OutQuint);
+        }
+
+        private void moveTooltip(bool instant)
+        {
+            Vector2 local = ToLocalSpace(pendingPosition) + new Vector2(tooltip_offset_x, tooltip_offset_y);
+            Vector2 tooltipSize = tooltipBody.BoundingBox.Size;
+
+            if (Precision.AlmostEquals(tooltipSize.X, 0) || Precision.AlmostEquals(tooltipSize.Y, 0))
+                tooltipSize = tooltipBody.DrawSize;
+
+            var ownerBounds = getCurrentOwnerBounds();
+            if (ownerBounds.HasValue)
+            {
+                float belowY = ownerBounds.Value.Bottom + tooltip_margin;
+                float aboveY = ownerBounds.Value.Top - tooltip_margin - tooltipSize.Y;
+                bool canPlaceBelow = belowY + tooltipSize.Y <= DrawHeight - tooltip_margin;
+                bool canPlaceAbove = aboveY >= tooltip_margin;
+
+                if (canPlaceAbove)
+                    local.Y = Math.Max(tooltip_margin, aboveY);
+                else if (canPlaceBelow)
+                    local.Y = belowY;
+
+                float rightAlignedX = ownerBounds.Value.Right + tooltip_margin;
+                float leftAlignedX = ownerBounds.Value.Left - tooltip_margin - tooltipSize.X;
+
+                bool canPlaceRight = rightAlignedX + tooltipSize.X <= DrawWidth - tooltip_margin;
+                bool canPlaceLeft = leftAlignedX >= tooltip_margin;
+
+                var tooltipBounds = new FrameworkRectangleF(local.X, local.Y, tooltipSize.X, tooltipSize.Y);
+                if (rectanglesOverlap(ownerBounds.Value, tooltipBounds))
+                {
+                    bool pointerPrefersRight = pendingPosition.X >= ownerBounds.Value.Centre.X;
+                    bool placed = false;
+
+                    if (pointerPrefersRight && canPlaceRight)
+                    {
+                        local.X = rightAlignedX;
+                        placed = true;
+                    }
+                    else if (!pointerPrefersRight && canPlaceLeft)
+                    {
+                        local.X = leftAlignedX;
+                        placed = true;
+                    }
+
+                    if (!placed)
+                    {
+                        if (pointerPrefersRight && canPlaceLeft)
+                        {
+                            local.X = leftAlignedX;
+                            placed = true;
+                        }
+                        else if (!pointerPrefersRight && canPlaceRight)
+                        {
+                            local.X = rightAlignedX;
+                            placed = true;
+                        }
+                    }
+
+                    if (!placed)
+                    {
+                        if (canPlaceRight)
+                            local.X = rightAlignedX;
+                        else if (canPlaceLeft)
+                            local.X = leftAlignedX;
+                    }
+                }
+            }
+
+            float maxX = DrawWidth - tooltipSize.X - tooltip_margin;
+            float maxY = DrawHeight - tooltipSize.Y - tooltip_margin;
+
+            local.X = Math.Clamp(local.X, tooltip_margin, Math.Max(tooltip_margin, maxX));
+            local.Y = Math.Clamp(local.Y, tooltip_margin, Math.Max(tooltip_margin, maxY));
+
+            if (instant)
+                tooltipBody.Position = local;
+            else
+                tooltipBody.MoveTo(local, 200, Easing.OutQuint);
+        }
+
+        private void hideTooltip()
+        {
+            tooltipBody.FadeOut(fade_duration, Easing.OutQuint);
+            this.FadeOut(fade_duration, Easing.OutQuint);
+        }
+
+        private sealed partial class TooltipTextFlow : TextFlowContainer
+        {
+            private readonly FontUsage fontUsage = new FontUsage(size: 16);
+
+            public TooltipTextFlow(float maxWidth)
+            {
+                AutoSizeAxes = Axes.Y;
+                RelativeSizeAxes = Axes.None;
+                Width = maxWidth;
+                TextAnchor = Anchor.TopLeft;
+            }
+
+            public void SetText(string text)
+            {
+                Clear();
+                AddParagraph(text, t =>
+                {
+                    t.Font = fontUsage;
+                    t.Colour = UITheme.TextSecondary;
+                });
+            }
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            if (currentOwner == null)
+                return;
+
+            var inputManager = GetContainingInputManager();
+            if (inputManager == null)
+                return;
+
+            Vector2 cursorPosition = inputManager.CurrentState.Mouse.Position;
+
+            if (lastTrackedMousePosition.HasValue
+                && Precision.AlmostEquals(lastTrackedMousePosition.Value.X, cursorPosition.X)
+                && Precision.AlmostEquals(lastTrackedMousePosition.Value.Y, cursorPosition.Y))
+            {
+                return;
+            }
+
+            lastTrackedMousePosition = cursorPosition;
+            pendingPosition = cursorPosition;
+
+            if (tooltipBody.Alpha <= 0 || TooltipsSuppressed)
+                return;
+
+            moveTooltip(false);
+        }
+
+        private bool TooltipsSuppressed => suppressionTokens.Count > 0;
+
+        private FrameworkRectangleF? getCurrentOwnerBounds()
+        {
+            if (currentOwner == null)
+                return null;
+
+            var quad = currentOwner.ScreenSpaceDrawQuad;
+            var topLeft = ToLocalSpace(quad.TopLeft);
+            var bottomRight = ToLocalSpace(quad.BottomRight);
+
+            float left = Math.Min(topLeft.X, bottomRight.X);
+            float right = Math.Max(topLeft.X, bottomRight.X);
+            float top = Math.Min(topLeft.Y, bottomRight.Y);
+            float bottom = Math.Max(topLeft.Y, bottomRight.Y);
+
+            return new FrameworkRectangleF(left, top, right - left, bottom - top);
+        }
+
+        private static bool rectanglesOverlap(FrameworkRectangleF a, FrameworkRectangleF b)
+            => a.Right > b.Left && a.Left < b.Right && a.Bottom > b.Top && a.Top < b.Bottom;
+
+        protected override void UpdateAfterChildren()
+        {
+            base.UpdateAfterChildren();
+
+            var currentSize = tooltipBody.BoundingBox.Size;
+
+            if (Precision.AlmostEquals(currentSize.X, lastTooltipSize.X) && Precision.AlmostEquals(currentSize.Y, lastTooltipSize.Y))
+                return;
+
+            lastTooltipSize = currentSize;
+
+            if (currentOwner == null || pendingDescription == null || TooltipsSuppressed)
+                return;
+
+            moveTooltip(true);
         }
     }
 
@@ -646,13 +1455,20 @@ namespace BeatSight.Game.Screens.Settings
     {
         private readonly BeatSightConfigManager config;
 
-        public PlaybackSettingsSection(BeatSightConfigManager config, Container dropdownOverlay) : base("Playback Settings", dropdownOverlay)
+        public PlaybackSettingsSection(BeatSightConfigManager config, Container dropdownOverlay, SettingsTooltipOverlay tooltipOverlay)
+            : base("Playback Settings", dropdownOverlay, tooltipOverlay)
         {
             this.config = config;
         }
 
         protected override Drawable createContent()
         {
+            var masterVolumeEnabled = config.GetBindable<bool>(BeatSightSetting.MasterVolumeEnabled);
+            var musicVolumeEnabled = config.GetBindable<bool>(BeatSightSetting.MusicVolumeEnabled);
+            var effectVolumeEnabled = config.GetBindable<bool>(BeatSightSetting.EffectVolumeEnabled);
+            var hitsoundVolumeEnabled = config.GetBindable<bool>(BeatSightSetting.HitsoundVolumeEnabled);
+            var metronomeEnabled = config.GetBindable<bool>(BeatSightSetting.MetronomeEnabled);
+
             return new FillFlowContainer
             {
                 RelativeSizeAxes = Axes.X,
@@ -673,7 +1489,8 @@ namespace BeatSight.Game.Screens.Settings
                         0,
                         1,
                         0.01,
-                        "How much to dim the background during playback (0% = bright, 100% = dark)."
+                        "How much to dim the background during playback (0% = bright, 100% = dark).",
+                        valueFormatter: PercentageFormatter()
                     ),
                     CreateSlider(
                         "Background Blur",
@@ -681,7 +1498,8 @@ namespace BeatSight.Game.Screens.Settings
                         0,
                         1,
                         0.01,
-                        "Amount of blur applied to the background during playback."
+                        "Amount of blur applied to the background during playback.",
+                        valueFormatter: PercentageFormatter()
                     ),
                     CreateEnumDropdown(
                         "Kick Lane Mode",
@@ -699,7 +1517,7 @@ namespace BeatSight.Game.Screens.Settings
             var defaultColour = new Color4(176, 70, 70, 255);
             var confirmColour = new Color4(204, 98, 98, 255);
 
-            var resetButton = new BasicButton
+            var resetButton = new BeatSightButton
             {
                 Width = 220,
                 Height = 36,
@@ -737,7 +1555,7 @@ namespace BeatSight.Game.Screens.Settings
                 Child = resetButton
             };
 
-            return new SettingItem(
+            return CreateSettingItem(
                 "Reset All Settings",
                 "Restore every setting to the factory defaults. This affects audio, graphics, and gameplay preferences.",
                 control);
@@ -773,7 +1591,8 @@ namespace BeatSight.Game.Screens.Settings
         [Resolved]
         private AudioManager audioManager { get; set; } = null!;
 
-        public AudioSettingsSection(BeatSightConfigManager config, GameHost host, Container dropdownOverlay) : base("Audio Settings", dropdownOverlay)
+        public AudioSettingsSection(BeatSightConfigManager config, GameHost host, Container dropdownOverlay, SettingsTooltipOverlay tooltipOverlay)
+            : base("Audio Settings", dropdownOverlay, tooltipOverlay)
         {
             this.config = config;
             this.host = host;
@@ -781,6 +1600,12 @@ namespace BeatSight.Game.Screens.Settings
 
         protected override Drawable createContent()
         {
+            var masterVolumeEnabled = config.GetBindable<bool>(BeatSightSetting.MasterVolumeEnabled);
+            var musicVolumeEnabled = config.GetBindable<bool>(BeatSightSetting.MusicVolumeEnabled);
+            var effectVolumeEnabled = config.GetBindable<bool>(BeatSightSetting.EffectVolumeEnabled);
+            var hitsoundVolumeEnabled = config.GetBindable<bool>(BeatSightSetting.HitsoundVolumeEnabled);
+            var metronomeEnabled = config.GetBindable<bool>(BeatSightSetting.MetronomeEnabled);
+
             return new FillFlowContainer
             {
                 RelativeSizeAxes = Axes.X,
@@ -795,7 +1620,10 @@ namespace BeatSight.Game.Screens.Settings
                         0,
                         1,
                         0.01,
-                        "Overall volume control."
+                        "Overall volume control.",
+                        valueFormatter: PercentageFormatter(),
+                        toggleBindable: masterVolumeEnabled,
+                        toggleMode: SliderToggleMode.ZeroValue
                     ),
                     CreateSlider(
                         "Music Volume",
@@ -803,7 +1631,10 @@ namespace BeatSight.Game.Screens.Settings
                         0,
                         1,
                         0.01,
-                        "Volume for music tracks."
+                        "Volume for music tracks.",
+                        valueFormatter: PercentageFormatter(),
+                        toggleBindable: musicVolumeEnabled,
+                        toggleMode: SliderToggleMode.ZeroValue
                     ),
                     CreateSlider(
                         "Effect Volume",
@@ -811,7 +1642,10 @@ namespace BeatSight.Game.Screens.Settings
                         0,
                         1,
                         0.01,
-                        "Volume for hit sounds and effects."
+                        "Volume for hit sounds and effects.",
+                        valueFormatter: PercentageFormatter(),
+                        toggleBindable: effectVolumeEnabled,
+                        toggleMode: SliderToggleMode.ZeroValue
                     ),
                     CreateSlider(
                         "Hitsound Volume",
@@ -819,7 +1653,10 @@ namespace BeatSight.Game.Screens.Settings
                         0,
                         1,
                         0.01,
-                        "Volume for individual note hit feedback sounds."
+                        "Volume for individual note hit feedback sounds.",
+                        valueFormatter: PercentageFormatter(),
+                        toggleBindable: hitsoundVolumeEnabled,
+                        toggleMode: SliderToggleMode.ZeroValue
                     ),
                     CreateSlider(
                         "Metronome Volume",
@@ -827,12 +1664,10 @@ namespace BeatSight.Game.Screens.Settings
                         0,
                         1.5,
                         0.01,
-                        "Adjust the metronome level relative to the music mix, with extra headroom for loud clicks."
-                    ),
-                    CreateCheckbox(
-                        "Metronome",
-                        config.GetBindable<bool>(BeatSightSetting.MetronomeEnabled),
-                        "Enable or disable the click track during playback and previews."
+                        "Adjust the metronome level relative to the music mix, with extra headroom for loud clicks.",
+                        valueFormatter: value => $"{Math.Min(value * 100, 100).ToString("F0", CultureInfo.InvariantCulture)}%",
+                        toggleBindable: metronomeEnabled,
+                        toggleMode: SliderToggleMode.ZeroValue
                     ),
                     createMetronomeSoundSetting(),
                     createMetronomeAssetSetting(),
@@ -847,7 +1682,8 @@ namespace BeatSight.Game.Screens.Settings
                         -500,
                         500,
                         1,
-                        "Adjust audio timing in milliseconds if playback is out of sync."
+                        "Adjust audio timing in milliseconds if playback is out of sync.",
+                        valueFormatter: MillisecondsFormatter()
                     )
                 }
             };
@@ -877,7 +1713,7 @@ namespace BeatSight.Game.Screens.Settings
             dropdown.Current = metronomeSound;
             dropdown.Current.BindValueChanged(_ => stopPreviewChannel());
 
-            var previewButton = new BasicButton
+            var previewButton = new BeatSightButton
             {
                 Size = new Vector2(72, 32),
                 Text = "Play",
@@ -901,15 +1737,16 @@ namespace BeatSight.Game.Screens.Settings
                 }
             };
 
-            return new SettingItem(
+            return CreateSettingItem(
                 "Metronome Sound",
                 "Select the tone used for the metronome click. Use the play button to preview it immediately.",
-                control);
+                control,
+                dropdown);
         }
 
         private SettingItem createMetronomeAssetSetting()
         {
-            var openButton = new BasicButton
+            var openButton = new BeatSightButton
             {
                 Width = 260,
                 Height = 32,
@@ -927,7 +1764,7 @@ namespace BeatSight.Game.Screens.Settings
                 Child = openButton
             };
 
-            return new SettingItem(
+            return CreateSettingItem(
                 "Custom Metronome Library",
                 "Drop your own accent/regular samples into the folder that opens to extend the metronome library.",
                 control);
@@ -1074,7 +1911,7 @@ namespace BeatSight.Game.Screens.Settings
         private SettingsDropdown<ResolutionOptionChoice>? resolutionDropdown;
         private MonitorChoice[] monitorChoices = Array.Empty<MonitorChoice>();
         private ResolutionOptionChoice[] resolutionChoices = Array.Empty<ResolutionOptionChoice>();
-        private BasicSliderBar<double>? frameLimiterSlider;
+        private BeatSightSliderBar? frameLimiterSlider;
         private SpriteText? frameLimiterValueText;
         private BindableDouble? frameLimiterSliderBindable;
         private bool frameLimiterValueSync;
@@ -1083,7 +1920,8 @@ namespace BeatSight.Game.Screens.Settings
         private bool monitorRefreshScheduled;
         private bool resolutionRefreshScheduled;
 
-        public GraphicsSettingsSection(BeatSightConfigManager config, GameHost host, Container dropdownOverlay) : base("Graphics Settings", dropdownOverlay)
+        public GraphicsSettingsSection(BeatSightConfigManager config, GameHost host, Container dropdownOverlay, SettingsTooltipOverlay tooltipOverlay)
+            : base("Graphics Settings", dropdownOverlay, tooltipOverlay)
         {
             this.config = config;
             this.host = host;
@@ -1132,7 +1970,8 @@ namespace BeatSight.Game.Screens.Settings
                         0.5,
                         1.5,
                         0.01,
-                        "Adjust the size of all UI elements (50% - 150%)."
+                        "Adjust the size of all UI elements (50% - 150%).",
+                        valueFormatter: PercentageFormatter(0)
                     ),
                     CreateCheckbox(
                         "Approach Circles",
@@ -1160,7 +1999,7 @@ namespace BeatSight.Game.Screens.Settings
 
         private SettingItem createSkinManagementSetting()
         {
-            var openButton = new BasicButton
+            var openButton = new BeatSightButton
             {
                 Width = 160,
                 Height = 32,
@@ -1170,7 +2009,7 @@ namespace BeatSight.Game.Screens.Settings
                 Action = () => SettingsScreen.OpenDirectoryExternally(host, UserAssetDirectories.Skins)
             };
 
-            var editorButton = new BasicButton
+            var editorButton = new BeatSightButton
             {
                 Width = 160,
                 Height = 32,
@@ -1190,7 +2029,7 @@ namespace BeatSight.Game.Screens.Settings
                 Children = new Drawable[] { openButton, editorButton }
             };
 
-            return new SettingItem(
+            return CreateSettingItem(
                 "Skin Tools",
                 "Manage installed skins or prepare to create your own. The editor toggle is placeholder until development finishes.",
                 control);
@@ -1220,7 +2059,7 @@ namespace BeatSight.Game.Screens.Settings
 
             updateMonitorDropdownItems();
 
-            return new SettingItem(
+            return CreateSettingItem(
                 "Monitor",
                 "Choose which display BeatSight launches on.",
                 monitorDropdown);
@@ -1253,7 +2092,7 @@ namespace BeatSight.Game.Screens.Settings
 
             updateResolutionDropdownItems();
 
-            return new SettingItem(
+            return CreateSettingItem(
                 "Resolution",
                 "Choose the render resolution. Fullscreen selects the display mode; windowed uses it for the window size.",
                 resolutionDropdown);
@@ -1280,29 +2119,32 @@ namespace BeatSight.Game.Screens.Settings
                 frameLimiterSliderBindable.Value = frameLimiterSliderBindable.MinValue;
             }
 
-            frameLimiterSlider = new BasicSliderBar<double>
+            frameLimiterSlider = new BeatSightSliderBar
             {
                 RelativeSizeAxes = Axes.X,
                 Height = 16,
                 Current = frameLimiterSliderBindable
             };
 
+            var frameLimiterSliderBlocker = new SliderInputBlocker
+            {
+                RelativeSizeAxes = Axes.Both,
+                Blocking = false
+            };
+
             frameLimiterValueText = new SpriteText
             {
                 Font = new FontUsage(size: 16),
                 Colour = UITheme.TextSecondary,
-                Anchor = Anchor.CentreLeft,
-                Origin = Anchor.CentreLeft
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight
             };
 
             frameLimiterSliderBindable.BindValueChanged(e =>
             {
-                frameLimiterValueText.Text = $"{Math.Round(e.NewValue)} Hz";
+                frameLimiterValueText.Text = $"{Math.Round(e.NewValue)}";
 
-                if (frameLimiterTarget == null)
-                    return;
-
-                if (frameLimiterValueSync)
+                if (frameLimiterTarget == null || frameLimiterValueSync)
                     return;
 
                 frameLimiterValueSync = true;
@@ -1320,10 +2162,7 @@ namespace BeatSight.Game.Screens.Settings
             {
                 frameLimiterTarget.BindValueChanged(e =>
                 {
-                    if (frameLimiterSliderBindable == null)
-                        return;
-
-                    if (frameLimiterValueSync)
+                    if (frameLimiterSliderBindable == null || frameLimiterValueSync)
                         return;
 
                     frameLimiterValueSync = true;
@@ -1340,69 +2179,121 @@ namespace BeatSight.Game.Screens.Settings
 
             if (frameLimiterEnabled != null)
             {
-                bool enabledNow = frameLimiterEnabled.Value;
-                frameLimiterSliderBindable.Disabled = !enabledNow;
-                frameLimiterSlider.Alpha = enabledNow ? 1f : 0.5f;
-
-                frameLimiterEnabled.BindValueChanged(e =>
+                void applyFrameLimiterState(bool enabled, bool instant)
                 {
-                    bool enabled = e.NewValue;
-                    frameLimiterSliderBindable.Disabled = !enabled;
-                    frameLimiterSlider.FadeTo(enabled ? 1f : 0.5f, 200, Easing.OutQuint);
-                    frameLimiterValueText?.FadeColour(enabled ? UITheme.TextSecondary : UITheme.TextMuted, 200, Easing.OutQuint);
-                }, true);
+                    frameLimiterSliderBlocker.Blocking = !enabled;
+                    if (instant)
+                    {
+                        frameLimiterSlider.Alpha = enabled ? 1f : 0.5f;
+                        frameLimiterValueText.Colour = enabled ? UITheme.TextSecondary : UITheme.TextMuted;
+                    }
+                    else
+                    {
+                        frameLimiterSlider.FadeTo(enabled ? 1f : 0.5f, 200, Easing.OutQuint);
+                        frameLimiterValueText.FadeColour(enabled ? UITheme.TextSecondary : UITheme.TextMuted, 200, Easing.OutQuint);
+                    }
+                }
+
+                applyFrameLimiterState(frameLimiterEnabled.Value, true);
+                frameLimiterEnabled.BindValueChanged(e => applyFrameLimiterState(e.NewValue, false), true);
             }
 
             updateFrameLimiterSliderRange();
 
-            var checkbox = new BasicCheckbox
+            var checkbox = new BeatSightCheckbox
             {
                 Current = frameLimiterEnabled!,
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre
             };
 
-            var control = new FillFlowContainer
+            var valueContainer = new Container
             {
-                Width = 320,
-                AutoSizeAxes = Axes.Y,
-                Anchor = Anchor.CentreRight,
-                Origin = Anchor.CentreRight,
-                Direction = FillDirection.Vertical,
-                Spacing = new Vector2(0, 8),
-                Children = new Drawable[]
+                Width = 64,
+                Height = 24,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                Child = new Container
                 {
-                    new FillFlowContainer
-                    {
-                        RelativeSizeAxes = Axes.X,
-                        AutoSizeAxes = Axes.Y,
-                        Direction = FillDirection.Horizontal,
-                        Spacing = new Vector2(12, 0),
-                        Children = new Drawable[]
-                        {
-                            new Container
-                            {
-                                Size = new Vector2(24),
-                                Anchor = Anchor.CentreLeft,
-                                Origin = Anchor.CentreLeft,
-                                Child = checkbox
-                            },
-                            frameLimiterValueText
-                        }
-                    },
-                    new Container
-                    {
-                        RelativeSizeAxes = Axes.X,
-                        Height = 20,
-                        Child = frameLimiterSlider
-                    }
+                    RelativeSizeAxes = Axes.Both,
+                    Anchor = Anchor.CentreRight,
+                    Origin = Anchor.CentreRight,
+                    Child = frameLimiterValueText
                 }
             };
 
-            return new SettingItem(
+            var sliderContainer = new Container
+            {
+                Width = 256,
+                Height = 20,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                Children = new Drawable[]
+                {
+                    frameLimiterSlider,
+                    frameLimiterSliderBlocker
+                }
+            };
+
+            var toggleContainer = new Container
+            {
+                Width = 24,
+                Height = 24,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                Child = new Container
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Anchor = Anchor.CentreRight,
+                    Origin = Anchor.CentreRight,
+                    Child = checkbox
+                }
+            };
+
+            var sliderCluster = new FillFlowContainer
+            {
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Horizontal,
+                Spacing = new Vector2(16, 0),
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                Children = new Drawable[] { sliderContainer, toggleContainer }
+            };
+
+            var frameLimiterFlow = new FillFlowContainer
+            {
+                Width = 360,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Horizontal,
+                Spacing = new Vector2(8, 0),
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+                Children = new Drawable[]
+                {
+                    valueContainer,
+                    sliderCluster
+                }
+            };
+
+            var control = new Container
+            {
+                Width = 360,
+                AutoSizeAxes = Axes.Y,
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+                Child = frameLimiterFlow
+            };
+
+            var frameLimiterSetting = CreateSettingItem(
                 "Frame Limiter",
                 "Throttle BeatSight's rendering speed to save power or match your monitor.",
-                control);
+                control,
+                frameLimiterSlider);
+
+            if (frameLimiterEnabled != null)
+                frameLimiterSetting.EnableRowToggle(frameLimiterEnabled);
+
+            return frameLimiterSetting;
         }
 
         protected override void LoadComplete()

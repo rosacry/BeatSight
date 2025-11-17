@@ -112,9 +112,9 @@ namespace BeatSight.Game.Screens.Editor
         private double lastTrackTime;
         private readonly bool playbackAvailable;
 
-        private BasicSliderBar<double> timelineZoomSlider = null!;
+        private BeatSightSliderBar timelineZoomSlider = null!;
         private SpriteText timelineZoomValueText = null!;
-        private BasicSliderBar<double> waveformScaleSlider = null!;
+        private BeatSightSliderBar waveformScaleSlider = null!;
         private SpriteText waveformScaleValueText = null!;
         private SpriteText snapDivisorText = null!;
         private BasicCheckbox beatGridCheckbox = null!;
@@ -407,6 +407,7 @@ namespace BeatSight.Game.Screens.Editor
                 Colour = EditorColours.TextPrimary,
                 AllowMultiline = true,
                 MaxWidth = 440,
+                Truncate = false,
                 Anchor = Anchor.TopLeft,
                 Origin = Anchor.TopLeft
             };
@@ -418,6 +419,7 @@ namespace BeatSight.Game.Screens.Editor
                 Alpha = 0,
                 AllowMultiline = true,
                 MaxWidth = 440,
+                Truncate = false,
                 Anchor = Anchor.TopLeft,
                 Origin = Anchor.TopLeft
             };
@@ -528,7 +530,8 @@ namespace BeatSight.Game.Screens.Editor
                 Anchor = Anchor.TopCentre,
                 Origin = Anchor.TopCentre,
                 MaxWidth = 900,
-                AllowMultiline = true
+                AllowMultiline = true,
+                Truncate = false
             };
 
             playbackStatusText = new SpriteText
@@ -540,7 +543,8 @@ namespace BeatSight.Game.Screens.Editor
                 Anchor = Anchor.TopCentre,
                 Origin = Anchor.TopCentre,
                 MaxWidth = 900,
-                AllowMultiline = true
+                AllowMultiline = true,
+                Truncate = false
             };
 
             historyPanel = new Container
@@ -749,7 +753,7 @@ namespace BeatSight.Game.Screens.Editor
                 Origin = Anchor.CentreLeft
             };
 
-            timelineZoomSlider = new BasicSliderBar<double>
+            timelineZoomSlider = new BeatSightSliderBar
             {
                 RelativeSizeAxes = Axes.Both
             };
@@ -785,7 +789,7 @@ namespace BeatSight.Game.Screens.Editor
                 Origin = Anchor.CentreLeft
             };
 
-            waveformScaleSlider = new BasicSliderBar<double>
+            waveformScaleSlider = new BeatSightSliderBar
             {
                 RelativeSizeAxes = Axes.Both
             };

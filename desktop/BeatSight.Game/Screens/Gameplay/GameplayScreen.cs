@@ -115,6 +115,11 @@ namespace BeatSight.Game.Screens.Gameplay
         private Bindable<double> musicVolumeSetting = null!;
         private Bindable<double> masterVolumeSetting = null!;
         private Bindable<double> effectVolumeSetting = null!;
+        private Bindable<double> hitsoundVolumeSetting = null!;
+        private Bindable<bool> masterVolumeEnabledSetting = null!;
+        private Bindable<bool> musicVolumeEnabledSetting = null!;
+        private Bindable<bool> effectVolumeEnabledSetting = null!;
+        private Bindable<bool> hitsoundVolumeEnabledSetting = null!;
         private Bindable<bool> metronomeEnabledSetting = null!;
         private Bindable<MetronomeSoundOption> metronomeSoundSetting = null!;
         private readonly BindableDouble metronomeVolume = new BindableDouble
@@ -271,6 +276,11 @@ namespace BeatSight.Game.Screens.Gameplay
             masterVolumeSetting = config.GetBindable<double>(BeatSightSetting.MasterVolume);
             musicVolumeSetting = config.GetBindable<double>(BeatSightSetting.MusicVolume);
             effectVolumeSetting = config.GetBindable<double>(BeatSightSetting.EffectVolume);
+            hitsoundVolumeSetting = config.GetBindable<double>(BeatSightSetting.HitsoundVolume);
+            masterVolumeEnabledSetting = config.GetBindable<bool>(BeatSightSetting.MasterVolumeEnabled);
+            musicVolumeEnabledSetting = config.GetBindable<bool>(BeatSightSetting.MusicVolumeEnabled);
+            effectVolumeEnabledSetting = config.GetBindable<bool>(BeatSightSetting.EffectVolumeEnabled);
+            hitsoundVolumeEnabledSetting = config.GetBindable<bool>(BeatSightSetting.HitsoundVolumeEnabled);
             metronomeEnabledSetting = config.GetBindable<bool>(BeatSightSetting.MetronomeEnabled);
             metronomeSoundSetting = config.GetBindable<MetronomeSoundOption>(BeatSightSetting.MetronomeSound);
             metronomeVolume.BindTo(config.GetBindable<double>(BeatSightSetting.MetronomeVolume));
@@ -758,7 +768,7 @@ namespace BeatSight.Game.Screens.Gameplay
                 Text = formatSpeedLabel(speedAdjustment.Value)
             };
 
-            var slider = new BasicSliderBar<double>
+            var slider = new BeatSightSliderBar
             {
                 RelativeSizeAxes = Axes.X,
                 Height = 16,
@@ -792,7 +802,7 @@ namespace BeatSight.Game.Screens.Gameplay
                 Text = formatOffsetLabel(offsetAdjustment.Value)
             };
 
-            var slider = new BasicSliderBar<double>
+            var slider = new BeatSightSliderBar
             {
                 RelativeSizeAxes = Axes.X,
                 Height = 16,
@@ -1251,16 +1261,45 @@ namespace BeatSight.Game.Screens.Gameplay
             backgroundDimBindable.BindValueChanged(e => backgroundDim.Alpha = (float)e.NewValue, true);
 
             // Bind volume settings
-            masterVolumeSetting.BindValueChanged(e => audioManager.Volume.Value = e.NewValue, true);
-            musicVolumeSetting.BindValueChanged(e =>
-            {
-                if (track != null)
-                    track.Volume.Value = e.NewValue;
-            }, true);
+            masterVolumeSetting.BindValueChanged(_ => updateMasterVolumeOutput(), true);
+            masterVolumeEnabledSetting.BindValueChanged(_ => updateMasterVolumeOutput(), true);
+            musicVolumeSetting.BindValueChanged(_ => updateMusicVolumeOutput(), true);
+            musicVolumeEnabledSetting.BindValueChanged(_ => updateMusicVolumeOutput(), true);
 
             playfield?.SetLaneLayout(currentLaneLayout);
             if (beatmap != null)
                 playfield?.LoadBeatmap(beatmap);
+        }
+
+        private void updateMasterVolumeOutput()
+        {
+            double value = masterVolumeSetting?.Value ?? 0;
+            bool enabled = masterVolumeEnabledSetting?.Value ?? true;
+            audioManager.Volume.Value = enabled ? value : 0;
+        }
+
+        private void updateMusicVolumeOutput()
+        {
+            if (track == null)
+                return;
+
+            double value = musicVolumeSetting?.Value ?? 0;
+            bool enabled = musicVolumeEnabledSetting?.Value ?? true;
+            track.Volume.Value = enabled ? value : 0;
+        }
+
+        private double getEffectiveEffectVolume()
+        {
+            double value = effectVolumeSetting?.Value ?? 0;
+            bool enabled = effectVolumeEnabledSetting?.Value ?? true;
+            return enabled ? value : 0;
+        }
+
+        private double getEffectiveHitsoundVolume()
+        {
+            double value = hitsoundVolumeSetting?.Value ?? 0;
+            bool enabled = hitsoundVolumeEnabledSetting?.Value ?? true;
+            return enabled ? value : 0;
         }
 
         public override void OnEntering(ScreenTransitionEvent e)
@@ -1479,7 +1518,7 @@ namespace BeatSight.Game.Screens.Gameplay
 
             track = loadedTrack;
             track.Completed += onTrackCompleted;
-            track.Volume.Value = musicVolumeSetting.Value;
+            updateMusicVolumeOutput();
             track.Tempo.Value = playbackSpeed;
             fallbackRunning = false;
             isTrackRunning = false;
@@ -1784,7 +1823,7 @@ namespace BeatSight.Game.Screens.Gameplay
 
         private float getMetronomeGain(bool isAccent)
         {
-            double effects = effectVolumeSetting?.Value ?? 1.0;
+            double effects = getEffectiveEffectVolume();
             double metronomeLevel = metronomeVolume.Value;
 
             if (metronomeLevel <= 0.001 || effects <= 0.001)
@@ -1900,7 +1939,7 @@ namespace BeatSight.Game.Screens.Gameplay
             return string.IsNullOrEmpty(filtered) ? string.Empty : filtered;
         }
 
-        private partial class ScrubbableSliderBar : BasicSliderBar<double>
+        private partial class ScrubbableSliderBar : BeatSightSliderBar
         {
             public event Action<bool>? ScrubbingChanged;
 

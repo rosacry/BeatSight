@@ -21,6 +21,8 @@
 ### Location
 Settings are automatically saved to: `~/.local/share/BeatSight/beatsight.ini`
 
+All BeatSight settings are now bound to this file up front, so every option is present even before you tweak it and any change made in-game (or by editing the file) stays in sync automatically.
+
 ### Gameplay Settings
 | Setting | Options | Default | Description |
 |---------|---------|---------|-------------|

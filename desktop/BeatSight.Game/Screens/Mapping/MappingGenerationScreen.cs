@@ -49,7 +49,7 @@ namespace BeatSight.Game.Screens.Mapping
         private BasicButton startButton = null!;
         private BasicButton openInEditorButton = null!;
         private DetectionDebugOverlay debugOverlay = null!;
-        private BasicSliderBar<double> sensitivitySlider = null!;
+        private BeatSightSliderBar sensitivitySlider = null!;
         private BeatSight.Game.UI.Components.Dropdown<QuantizationGridSetting> quantizationDropdown = null!;
         private BasicCheckbox debugOverlayCheckbox = null!;
         private Container progressBarContainer = null!;
@@ -599,7 +599,7 @@ namespace BeatSight.Game.Screens.Mapping
 
         private Drawable createDetectionControls()
         {
-            sensitivitySlider = new BasicSliderBar<double>
+            sensitivitySlider = new BeatSightSliderBar
             {
                 RelativeSizeAxes = Axes.X,
                 Height = 24
@@ -764,7 +764,8 @@ namespace BeatSight.Game.Screens.Mapping
                 Font = new FontUsage(size: 16),
                 Colour = new Color4(170, 175, 195, 255),
                 Alpha = 0,
-                AllowMultiline = true
+                AllowMultiline = true,
+                Truncate = false
             };
 
             var description = new SpriteText
@@ -794,7 +795,8 @@ namespace BeatSight.Game.Screens.Mapping
                 Font = new FontUsage(size: 12),
                 Colour = new Color4(150, 155, 175, 255),
                 Alpha = 0,
-                AllowMultiline = true
+                AllowMultiline = true,
+                Truncate = false
             };
 
             offlineStatusText = new SpriteText

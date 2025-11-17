@@ -5,6 +5,7 @@ using System.Linq;
 using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
+using BeatSight.Game.UI.Components;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Audio.Track;
@@ -679,7 +680,7 @@ namespace BeatSight.Game.Screens.Playback
             return base.OnKeyDown(e);
         }
 
-        private partial class SeekSlider : BasicSliderBar<double>
+        private partial class SeekSlider : BeatSightSliderBar
         {
             public SeekSlider()
             {

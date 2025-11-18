@@ -1,3 +1,4 @@
+using System;
 using osu.Framework.Graphics;
 using osuTK.Graphics;
 
@@ -101,6 +102,17 @@ namespace BeatSight.Game.UI.Theming
         public static Color4 Opacity(this Color4 baseColour, float alpha)
         {
             return new Color4(baseColour.R, baseColour.G, baseColour.B, baseColour.A * alpha);
+        }
+
+        public static Color4 Mix(Color4 first, Color4 second, float amount)
+        {
+            amount = (float)Math.Clamp(amount, 0f, 1f);
+            float inverse = 1f - amount;
+            return new Color4(
+                first.R * inverse + second.R * amount,
+                first.G * inverse + second.G * amount,
+                first.B * inverse + second.B * amount,
+                first.A * inverse + second.A * amount);
         }
 
         private static int modulo(int value, int modulus)

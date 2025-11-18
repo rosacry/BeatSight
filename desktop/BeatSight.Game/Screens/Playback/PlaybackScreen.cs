@@ -30,9 +30,9 @@ using osu.Framework.Timing;
 using osuTK;
 using osuTK.Graphics;
 
-namespace BeatSight.Game.Screens.Gameplay
+namespace BeatSight.Game.Screens.Playback
 {
-    public partial class GameplayScreen : Screen
+    public partial class PlaybackScreen : Screen
     {
         private static readonly Dictionary<osuTK.Input.Key, int> laneKeyBindings = new()
         {
@@ -76,7 +76,7 @@ namespace BeatSight.Game.Screens.Gameplay
         protected string? beatmapPath;
         protected Track? track;
 
-        protected GameplayPlayfield? playfield;
+        protected PlaybackPlayfield? playfield;
         private SpriteText statusText = null!;
         private SpriteText offsetValueText = null!;
         private SpriteText speedValueText = null!;
@@ -137,7 +137,7 @@ namespace BeatSight.Game.Screens.Gameplay
         private SampleChannel? activeMetronomeAccentChannel;
         private int lastMetronomeBeatIndex = -1;
         private bool pendingMetronomePulse;
-        private bool metronomeInitialised;
+        private bool suppressMetronomeUntilBeatChange;
         protected event Action<double>? MetronomeTick;
 
         private Bindable<double> speedMinSetting = null!;
@@ -179,7 +179,7 @@ namespace BeatSight.Game.Screens.Gameplay
         protected IBindable<bool> MetronomeEnabledBinding => metronomeEnabledSetting;
         protected IBindable<MetronomeSoundOption> MetronomeSoundBinding => metronomeSoundSetting;
         protected IBindable<double> MetronomeVolumeBinding => metronomeVolume;
-        private bool KickLineEnabled => kickLaneModeSetting?.Value == KickLaneMode.GlobalLine;
+        private bool KickLineEnabled => (kickLaneModeSetting?.Value ?? KickLaneMode.GlobalLine) == KickLaneMode.GlobalLine;
 
         [Resolved]
         private AudioManager audioManager { get; set; } = null!;
@@ -190,7 +190,7 @@ namespace BeatSight.Game.Screens.Gameplay
         [Resolved]
         private BeatSightConfigManager config { get; set; } = null!;
 
-        public GameplayScreen(string? beatmapPath = null)
+        public PlaybackScreen(string? beatmapPath = null)
         {
             requestedBeatmapPath = beatmapPath;
         }
@@ -199,6 +199,13 @@ namespace BeatSight.Game.Screens.Gameplay
         [BackgroundDependencyLoader]
         private void load()
         {
+            // Pre-fetch lane configuration so the playfield reflects user settings before UI construction.
+            lanePresetSetting = config.GetBindable<LanePreset>(BeatSightSetting.LanePreset);
+            currentLaneLayout = LaneLayoutFactory.Create(lanePresetSetting.Value);
+
+            laneViewModeSetting = config.GetBindable<LaneViewMode>(BeatSightSetting.LaneViewMode);
+            kickLaneModeSetting = config.GetBindable<KickLaneMode>(BeatSightSetting.KickLaneMode);
+
             backgroundBlurContainer = new BufferedContainer
             {
                 RelativeSizeAxes = Axes.Both,
@@ -301,26 +308,22 @@ namespace BeatSight.Game.Screens.Gameplay
                 pendingMetronomePulse = false;
                 updateMetronomeToggle(e.NewValue);
                 lastMetronomeBeatIndex = -1;
-                pendingMetronomePulse = true;
-                if (!e.NewValue)
+                if (e.NewValue)
                 {
+                    suppressMetronomeUntilBeatChange = isPlaybackActive();
+                    pendingMetronomePulse = true;
+                }
+                else
+                {
+                    suppressMetronomeUntilBeatChange = false;
                     stopMetronomeChannels();
                 }
-                else if (metronomeInitialised)
-                {
-                    TriggerMetronomePreview(accent: true);
-                }
-
-                metronomeInitialised = true;
             }, true);
             metronomeSoundSetting.BindValueChanged(e => loadMetronomeSamples(e.NewValue), true);
             drumStemPreferredSetting = config.GetBindable<bool>(BeatSightSetting.DrumStemPlaybackOnly);
             drumStemPreferredSetting.BindValueChanged(e => applyDrumStemPreference(e.NewValue), true);
-            lanePresetSetting = config.GetBindable<LanePreset>(BeatSightSetting.LanePreset);
             lanePresetSetting.BindValueChanged(onLanePresetChanged, true);
-            laneViewModeSetting = config.GetBindable<LaneViewMode>(BeatSightSetting.LaneViewMode);
             laneViewModeSetting.BindValueChanged(e => updateViewModeToggle(e.NewValue), true);
-            kickLaneModeSetting = config.GetBindable<KickLaneMode>(BeatSightSetting.KickLaneMode);
             kickLaneModeSetting.BindValueChanged(e => updateKickLayoutToggle(e.NewValue), true);
             // Ensure playback speed starts at default before clamping to configured bounds.
             speedAdjustment.Value = speedAdjustment.Default;
@@ -385,7 +388,7 @@ namespace BeatSight.Game.Screens.Gameplay
 
         private Drawable createPlayfieldArea()
         {
-            playfield = new GameplayPlayfield(getCurrentTime)
+            playfield = new PlaybackPlayfield(getCurrentTime)
             {
                 RelativeSizeAxes = Axes.Both,
                 Anchor = Anchor.Centre,
@@ -684,6 +687,7 @@ namespace BeatSight.Game.Screens.Gameplay
                 return;
 
             playfield.LoadBeatmap(beatmap);
+            playfield.SetKickLineMode(KickLineEnabled);
             playfield.JumpToTime(targetMs);
         }
 
@@ -1080,9 +1084,9 @@ namespace BeatSight.Game.Screens.Gameplay
             button.BackgroundColour = active ? sidebarButtonActive : sidebarButtonInactive;
         }
 
-        private void onPlayfieldResult(GameplayPlayfield.HitResult result, double offset, Color4 accentColour)
+        private void onPlayfieldResult(PlaybackPlayfield.HitResult result, double offset, Color4 accentColour)
         {
-            if (hitLightingEnabled?.Value == true && (result == GameplayPlayfield.HitResult.Perfect || result == GameplayPlayfield.HitResult.Great))
+            if (hitLightingEnabled?.Value == true && (result == PlaybackPlayfield.HitResult.Perfect || result == PlaybackPlayfield.HitResult.Great))
             {
                 hitLightingOverlay.Colour = new Color4(accentColour.R, accentColour.G, accentColour.B, 255);
                 hitLightingOverlay.FadeTo(0.4f, 60, Easing.OutQuint)
@@ -1107,6 +1111,7 @@ namespace BeatSight.Game.Screens.Gameplay
                 DrumLaneHeuristics.ApplyToBeatmap(beatmap, currentLaneLayout);
                 playfield?.SetLaneLayout(currentLaneLayout);
                 playfield?.LoadBeatmap(beatmap);
+                playfield?.SetKickLineMode(KickLineEnabled);
                 setStatusMessage($"Loaded: {beatmap.Metadata.Artist} — {beatmap.Metadata.Title}");
                 loadTrack();
                 fallbackElapsed = 0;
@@ -1381,7 +1386,7 @@ namespace BeatSight.Game.Screens.Gameplay
                 if (lane < currentLaneLayout.LaneCount)
                 {
                     var result = playfield.HandleInput(lane, getCurrentTime());
-                    if (result != GameplayPlayfield.HitResult.None)
+                    if (result != PlaybackPlayfield.HitResult.None)
                         return true;
                 }
             }
@@ -1427,7 +1432,7 @@ namespace BeatSight.Game.Screens.Gameplay
             if (keysToAssign < lanes)
             {
                 osu.Framework.Logging.Logger.Log(
-                    $"[GameplayScreen] Lane preset requires {lanes} lanes but only {keysToAssign} default key bindings are available.",
+                    $"[PlaybackScreen] Lane preset requires {lanes} lanes but only {keysToAssign} default key bindings are available.",
                     osu.Framework.Logging.LoggingTarget.Runtime,
                     osu.Framework.Logging.LogLevel.Important);
             }
@@ -1452,7 +1457,7 @@ namespace BeatSight.Game.Screens.Gameplay
             if (beatmap == null)
                 return;
 
-            string cacheFolder = "GameplayAudio";
+            string cacheFolder = "PlaybackAudio";
             string cachePrefix = sanitizeFileComponent(beatmap.Metadata.BeatmapId ?? string.Empty);
 
             if (string.IsNullOrEmpty(cachePrefix))
@@ -1494,7 +1499,7 @@ namespace BeatSight.Game.Screens.Gameplay
                 }
                 catch (Exception ex)
                 {
-                    osu.Framework.Logging.Logger.Log($"[Gameplay] Failed to cache drum stem '{drumStemSource}': {ex.Message}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Debug);
+                    osu.Framework.Logging.Logger.Log($"[Playback] Failed to cache drum stem '{drumStemSource}': {ex.Message}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Debug);
                     cachedDrumStemPath = null;
                     drumStemAvailable = false;
                 }
@@ -1522,7 +1527,7 @@ namespace BeatSight.Game.Screens.Gameplay
 
             if (loadedTrack == null)
             {
-                osu.Framework.Logging.Logger.Log($"[Gameplay] Unable to resolve cached track '{targetRelativePath}'", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Debug);
+                osu.Framework.Logging.Logger.Log($"[Playback] Unable to resolve cached track '{targetRelativePath}'", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Debug);
                 track = null;
                 return;
             }
@@ -1552,7 +1557,7 @@ namespace BeatSight.Game.Screens.Gameplay
                 return;
             }
 
-            osu.Framework.Logging.Logger.Log($"[Gameplay] Switching audio mode: drumsOnly={targetDrumsOnly}, drumStemAvailable={drumStemAvailable}",
+            osu.Framework.Logging.Logger.Log($"[Playback] Switching audio mode: drumsOnly={targetDrumsOnly}, drumStemAvailable={drumStemAvailable}",
                 osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
 
             double resumeTime = track?.CurrentTime ?? fallbackElapsed;
@@ -1572,7 +1577,7 @@ namespace BeatSight.Game.Screens.Gameplay
                 }
 
                 fallbackRunning = false;
-                osu.Framework.Logging.Logger.Log($"[Gameplay] Audio mode switched successfully, track loaded: {(drumsOnlyMode ? "Drums Only" : "Full Mix")}",
+                osu.Framework.Logging.Logger.Log($"[Playback] Audio mode switched successfully, track loaded: {(drumsOnlyMode ? "Drums Only" : "Full Mix")}",
                     osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
             }
             else if (wasRunning)
@@ -1615,6 +1620,7 @@ namespace BeatSight.Game.Screens.Gameplay
         {
             lastMetronomeBeatIndex = -1;
             pendingMetronomePulse = true;
+            suppressMetronomeUntilBeatChange = false;
         }
 
         private void handleMetronome()
@@ -1662,6 +1668,14 @@ namespace BeatSight.Game.Screens.Gameplay
 
             int beatIndex = (int)Math.Floor(songTime / beatDuration);
 
+            if (suppressMetronomeUntilBeatChange)
+            {
+                suppressMetronomeUntilBeatChange = false;
+                pendingMetronomePulse = false;
+                lastMetronomeBeatIndex = beatIndex;
+                return;
+            }
+
             if (!pendingMetronomePulse && beatIndex == lastMetronomeBeatIndex)
                 return;
 
@@ -1686,7 +1700,7 @@ namespace BeatSight.Game.Screens.Gameplay
             // Debug logging (will be noisy but helps debug)
             if (beatIndex % 4 == 0) // Log every 4th beat to reduce spam
             {
-                osu.Framework.Logging.Logger.Log($"[Gameplay] Metronome tick: beat {beatIndex}, accent={isAccentBeat}, bpm={bpm:F1}",
+                osu.Framework.Logging.Logger.Log($"[Playback] Metronome tick: beat {beatIndex}, accent={isAccentBeat}, bpm={bpm:F1}",
                     osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Debug);
             }
         }
@@ -1713,7 +1727,7 @@ namespace BeatSight.Game.Screens.Gameplay
             }
             catch (Exception ex)
             {
-                osu.Framework.Logging.Logger.Log($"[Gameplay] Failed to play metronome sample: {ex.Message}",
+                osu.Framework.Logging.Logger.Log($"[Playback] Failed to play metronome sample: {ex.Message}",
                     osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Debug);
             }
 
@@ -1811,14 +1825,14 @@ namespace BeatSight.Game.Screens.Gameplay
                 }
 
                 if (sample == null)
-                    osu.Framework.Logging.Logger.Log($"[Gameplay] Missing metronome sample: {path}",
+                    osu.Framework.Logging.Logger.Log($"[Playback] Missing metronome sample: {path}",
                         osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Debug);
 
                 return sample;
             }
             catch (Exception ex)
             {
-                osu.Framework.Logging.Logger.Log($"[Gameplay] Error loading metronome sample '{path}': {ex.Message}",
+                osu.Framework.Logging.Logger.Log($"[Playback] Error loading metronome sample '{path}': {ex.Message}",
                     osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Debug);
                 return null;
             }
@@ -1885,7 +1899,7 @@ namespace BeatSight.Game.Screens.Gameplay
                 }
             }
 
-            osu.Framework.Logging.Logger.Log("[Gameplay] No metronome samples available after fallbacks",
+            osu.Framework.Logging.Logger.Log("[Playback] No metronome samples available after fallbacks",
                 osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Debug);
         }
 
@@ -2151,7 +2165,7 @@ namespace BeatSight.Game.Screens.Gameplay
         }
 
     }
-    public partial class GameplayPlayfield : CompositeDrawable
+    public partial class PlaybackPlayfield : CompositeDrawable
     {
         private LaneLayout laneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
         private int laneCount => Math.Max(1, laneLayout.LaneCount);
@@ -2194,7 +2208,7 @@ namespace BeatSight.Game.Screens.Gameplay
 
         public event Action<HitResult, double, Color4>? ResultApplied;
 
-        public GameplayPlayfield(Func<double> currentTimeProvider)
+        public PlaybackPlayfield(Func<double> currentTimeProvider)
         {
             this.currentTimeProvider = currentTimeProvider;
 
@@ -2382,23 +2396,30 @@ namespace BeatSight.Game.Screens.Gameplay
 
         private Drawable createLaneBackground(int laneIndex, int displayIndex, int visibleLaneCount, int totalLaneCount, bool emphasiseKick)
         {
+            var standardColour = UITheme.GetLaneColour(displayIndex, visibleLaneCount);
+            var standardEdge = UITheme.GetLaneEdgeColour(displayIndex, visibleLaneCount);
+
             ColourInfo laneFill;
+            Color4 edgeColour;
 
             if (emphasiseKick)
             {
-                var top = UITheme.Emphasise(UITheme.KickGlobalFill, 1.15f);
-                var bottom = UITheme.Emphasise(UITheme.KickGlobalFill, 0.82f);
-                laneFill = ColourInfo.GradientVertical(top, bottom);
+                // Blend the kick lane with the primary palette so it matches the stage surface while still standing out.
+                var logicalColour = UITheme.GetLaneColourForLogicalIndex(laneIndex, totalLaneCount);
+                var logicalEdgeColour = UITheme.GetLaneEdgeColourForLogicalIndex(laneIndex, totalLaneCount);
+                var topBlend = UITheme.Mix(logicalColour, UITheme.SurfaceAlt, 0.2f);
+                var bottomBlend = UITheme.Mix(logicalColour, UITheme.Surface, 0.4f);
+                var sheen = UITheme.Mix(logicalColour, UITheme.AccentPrimary, 0.08f);
+                laneFill = ColourInfo.GradientVertical(
+                    UITheme.Mix(topBlend, sheen, 0.35f),
+                    UITheme.Emphasise(bottomBlend, 0.95f));
+                edgeColour = UITheme.Emphasise(UITheme.Mix(logicalEdgeColour, UITheme.Divider, 0.3f), 1.05f);
             }
             else
             {
-                var colour = UITheme.GetLaneColour(displayIndex, visibleLaneCount);
-                laneFill = ColourInfo.SingleColour(colour);
+                laneFill = ColourInfo.SingleColour(standardColour);
+                edgeColour = standardEdge;
             }
-
-            var edgeColour = emphasiseKick
-                ? UITheme.Emphasise(UITheme.KickGlobalGlow, 0.85f)
-                : UITheme.GetLaneEdgeColour(displayIndex, visibleLaneCount);
 
             return new Container
             {
@@ -2517,7 +2538,7 @@ namespace BeatSight.Game.Screens.Gameplay
                 throw new ArgumentNullException(nameof(beatmap));
 
             loadedBeatmap = beatmap;
-            osu.Framework.Logging.Logger.Log($"[GameplayPlayfield] LoadBeatmap called: {beatmap.HitObjects.Count} hit objects, preview mode: {isPreviewMode}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
+            osu.Framework.Logging.Logger.Log($"[PlaybackPlayfield] LoadBeatmap called: {beatmap.HitObjects.Count} hit objects, preview mode: {isPreviewMode}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
 
             if (noteLayer == null)
                 return;
@@ -2553,7 +2574,7 @@ namespace BeatSight.Game.Screens.Gameplay
             }
 
             firstActiveNoteIndex = 0;
-            osu.Framework.Logging.Logger.Log($"[GameplayPlayfield] LoadBeatmap complete: {notes.Count} notes added to noteLayer", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
+            osu.Framework.Logging.Logger.Log($"[PlaybackPlayfield] LoadBeatmap complete: {notes.Count} notes added to noteLayer", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
             applyKickModeToNotes();
             timingGridOverlay?.Configure(beatmap, laneLayout, kickUsesGlobalLine);
             timingGridOverlay?.SetViewMode(currentLaneViewMode);
@@ -2641,7 +2662,7 @@ namespace BeatSight.Game.Screens.Gameplay
 
                 if (safetyCounter >= maxIterations)
                 {
-                    osu.Framework.Logging.Logger.Log($"[GameplayPlayfield] Warning: Hit safety limit while processing notes. firstActiveNoteIndex: {firstActiveNoteIndex}, noteCount: {noteCount}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
+                    osu.Framework.Logging.Logger.Log($"[PlaybackPlayfield] Warning: Hit safety limit while processing notes. firstActiveNoteIndex: {firstActiveNoteIndex}, noteCount: {noteCount}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
                 }
             }
             else
@@ -2732,7 +2753,7 @@ namespace BeatSight.Game.Screens.Gameplay
             startTime.Stop();
             if (startTime.ElapsedMilliseconds > 16) // Log if Update takes longer than one frame (16ms at 60fps)
             {
-                osu.Framework.Logging.Logger.Log($"[GameplayPlayfield] Slow Update: {startTime.ElapsedMilliseconds}ms, notes: {noteCount}, processed: {notesProcessed}, firstActive: {firstActiveNoteIndex}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
+                osu.Framework.Logging.Logger.Log($"[PlaybackPlayfield] Slow Update: {startTime.ElapsedMilliseconds}ms, notes: {noteCount}, processed: {notesProcessed}, firstActive: {firstActiveNoteIndex}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
             }
         }
 
@@ -2869,7 +2890,7 @@ namespace BeatSight.Game.Screens.Gameplay
             // Validate depth is not NaN or Infinity
             if (float.IsNaN(depth) || float.IsInfinity(depth))
             {
-                osu.Framework.Logging.Logger.Log($"[GameplayPlayfield] Invalid depth value: {depth}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
+                osu.Framework.Logging.Logger.Log($"[PlaybackPlayfield] Invalid depth value: {depth}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Important);
                 return;
             }
 
@@ -2883,7 +2904,7 @@ namespace BeatSight.Game.Screens.Gameplay
                 }
                 catch (Exception ex)
                 {
-                    osu.Framework.Logging.Logger.Log($"[GameplayPlayfield] Error changing note depth: {ex.Message}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Error);
+                    osu.Framework.Logging.Logger.Log($"[PlaybackPlayfield] Error changing note depth: {ex.Message}", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Error);
                 }
             }
         }
@@ -3111,7 +3132,7 @@ namespace BeatSight.Game.Screens.Gameplay
                 _ = kickLaneIndex;
                 _ = spawnTop;
 
-                double previewWindow = GameplayPlayfield.approachDuration * previewMultiplier;
+                double previewWindow = PlaybackPlayfield.approachDuration * previewMultiplier;
                 double cutoffPast = -pastAllowance;
 
                 int activeCount = 0;
@@ -3124,7 +3145,7 @@ namespace BeatSight.Game.Screens.Gameplay
                     if (delta > previewWindow)
                         break;
 
-                    float progress = (float)(1 - (delta / GameplayPlayfield.approachDuration));
+                    float progress = (float)(1 - (delta / PlaybackPlayfield.approachDuration));
                     float clampedProgress = Math.Clamp(progress, 0f, 1.1f);
                     float y = hitLineY - travelDistance * (1 - clampedProgress);
                     y = Math.Clamp(y, spawnTop, hitLineY + 32f);
@@ -4557,7 +4578,7 @@ namespace BeatSight.Game.Screens.Gameplay
             return false;
         }
 
-        public void ApplyResult(GameplayPlayfield.HitResult result)
+        public void ApplyResult(PlaybackPlayfield.HitResult result)
         {
             if (IsJudged)
                 return;
@@ -4577,15 +4598,15 @@ namespace BeatSight.Game.Screens.Gameplay
 
             switch (result)
             {
-                case GameplayPlayfield.HitResult.Miss:
+                case PlaybackPlayfield.HitResult.Miss:
                     this.FlashColour(new Color4(255, 80, 90, 255), 90, Easing.OutQuint);
                     this.FadeColour(new Color4(120, 20, 30, 200), 120, Easing.OutQuint);
                     this.MoveToY(Y + 18, 160, Easing.OutQuint);
                     this.FadeOut(140, Easing.OutQuint).Expire();
                     break;
 
-                case GameplayPlayfield.HitResult.Perfect:
-                case GameplayPlayfield.HitResult.Great:
+                case PlaybackPlayfield.HitResult.Perfect:
+                case PlaybackPlayfield.HitResult.Great:
                     if (showParticleEffects.Value)
                     {
                         // Burst effect

@@ -10,7 +10,7 @@ Build a browser-first BeatSight experience that allows drummers to ingest songs,
   - Enable lightweight in-browser editing and correction workflows, with submissions routed to verifiers.
   - Support responsive mobile layouts with touch-oriented review/edit controls.
 - **Non-Goals (MVP)**
-  - Real-time mic scoring or latency-sensitive gameplay in the browser.
+  - Real-time mic scoring or latency-sensitive live monitoring in the browser.
   - Full-featured timeline editor parity with desktop app.
   - Native billing integrations beyond Stripe web checkout.
   - Handling licensing of full-length audio for distribution; focus on user-supplied content and hashed fingerprints.

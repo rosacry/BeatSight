@@ -82,9 +82,9 @@ namespace BeatSight.Game.Screens
                             {
                                 Height = 40
                             },
-                            new MenuButton("Play", Color4.Green)
+                            new MenuButton("Playback", UITheme.AccentPrimary)
                             {
-                                Action = () => this.Push(new SongSelectScreen(SongSelectDestination.Gameplay))
+                                Action = () => this.Push(new SongSelectScreen())
                             },
                             new MenuButton("Editor", Color4.Blue)
                             {

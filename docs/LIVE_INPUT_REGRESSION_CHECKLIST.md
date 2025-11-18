@@ -1,8 +1,8 @@
 # Live Input Regression Checklist
 
-> **Status (Nov 2025):** Live microphone gameplay has been de-scoped for now. This checklist is kept solely for historical reference until the experiment returns.
+> **Status (Nov 2025):** Live microphone tracking has been de-scoped for now. This checklist is kept solely for historical reference until the experiment returns.
 
-Use this pass before shipping any changes impacting microphone gameplay. Run through every item on each supported platform configuration when possible.
+Use this pass before shipping any changes impacting microphone-driven playback. Run through every item on each supported platform configuration when possible.
 
 ## Quick Pass (5 min)
 - [ ] Launch desktop build and open **🎤 Live Input**.
@@ -29,7 +29,7 @@ Use this pass before shipping any changes impacting microphone gameplay. Run thr
 - Toggle listening with `M` and confirm status text reflects Listening/Paused states immediately.
 - Trigger each drum type and observe lane-specific meter flash + estimated drum label in the HUD.
 - Hit detection should respect `MinTimeBetweenOnsets` (simulate rapid rolls to ensure no double-triggering).
-- Pause/resume gameplay; verify meters freeze while paused and resume smoothly afterwards.
+- Pause/resume playback; verify meters freeze while paused and resume smoothly afterwards.
 
 ## Persistence & Recovery
 - Close the application, reopen, and verify calibration persists (check timestamp in overlay tooltip if present).

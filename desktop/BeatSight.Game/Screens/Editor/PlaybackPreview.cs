@@ -2,7 +2,7 @@ using System;
 using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
-using BeatSight.Game.Screens.Gameplay;
+using BeatSight.Game.Screens.Playback;
 using BeatSight.Game.UI.Theming;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -17,11 +17,11 @@ using osuTK.Graphics;
 
 namespace BeatSight.Game.Screens.Editor
 {
-    public partial class GameplayPreview : CompositeDrawable
+    public partial class PlaybackPreview : CompositeDrawable
     {
         private readonly Func<double> currentTimeProvider;
         private PreviewStageContainer stageContainer = null!;
-        private GameplayPlayfield playfield = null!;
+        private PlaybackPlayfield playfield = null!;
         private SpriteText placeholderText = null!;
         private Beatmap? beatmap;
         private Bindable<LanePreset> lanePresetSetting = null!;
@@ -32,7 +32,7 @@ namespace BeatSight.Game.Screens.Editor
         [Resolved]
         private BeatSightConfigManager config { get; set; } = null!;
 
-        public GameplayPreview(Func<double> currentTimeProvider)
+        public PlaybackPreview(Func<double> currentTimeProvider)
         {
             this.currentTimeProvider = currentTimeProvider;
 
@@ -44,7 +44,7 @@ namespace BeatSight.Game.Screens.Editor
         [BackgroundDependencyLoader]
         private void load()
         {
-            playfield = new GameplayPlayfield(currentTimeProvider)
+            playfield = new PlaybackPlayfield(currentTimeProvider)
             {
                 RelativeSizeAxes = Axes.Both
             };
@@ -62,7 +62,7 @@ namespace BeatSight.Game.Screens.Editor
                 Origin = Anchor.Centre,
                 Font = BeatSightFont.Section(18f),
                 Colour = new Color4(198, 205, 224, 255),
-                Text = "Load or create a beatmap to preview gameplay",
+                Text = "Load or create a beatmap to preview playback",
                 Alpha = 0
             };
 
@@ -151,8 +151,8 @@ namespace BeatSight.Game.Screens.Editor
             else
             {
                 placeholderText.Text = beatmap == null
-                    ? "Load or create a beatmap to preview gameplay"
-                    : "Add notes to preview gameplay";
+                    ? "Load or create a beatmap to preview playback"
+                    : "Add notes to preview playback";
                 placeholderText.FadeIn(200, Easing.OutQuint);
             }
         }

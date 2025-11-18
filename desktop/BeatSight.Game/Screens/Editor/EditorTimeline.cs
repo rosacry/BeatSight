@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using BeatSight.Game.Audio;
 using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Mapping;
+using BeatSight.Game.UI.Theming;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osu.Framework.Input.Events;
 using osu.Framework.Utils;
 using osuTK;
@@ -78,6 +80,15 @@ namespace BeatSight.Game.Screens.Editor
 
         public void SetWaveformScale(double scale)
             => content.SetWaveformScale(scale);
+
+        public bool TrySelectHitObject(HitObject hit)
+            => content.TrySelectHitObject(hit);
+
+        public bool TryDeleteHitObject(HitObject hit)
+            => content.TryDeleteHitObject(hit);
+
+        public void RefreshHitObject(HitObject hit)
+            => content.RefreshHitObject(hit);
 
         private partial class TimelineContent : CompositeDrawable
         {
@@ -236,6 +247,37 @@ namespace BeatSight.Game.Screens.Editor
             public void SetBeatGridVisible(bool visible) => setBeatGridVisibleInternal(visible);
 
             public void SetWaveformScale(double scale) => setWaveformScaleInternal(scale);
+
+            public bool TrySelectHitObject(HitObject hit)
+            {
+                var note = findNoteDrawable(hit);
+                if (note == null)
+                    return false;
+
+                onNoteSelected(note);
+                SetCurrentTime(hit.Time);
+                return true;
+            }
+
+            public bool TryDeleteHitObject(HitObject hit)
+            {
+                var note = findNoteDrawable(hit);
+                if (note == null)
+                    return false;
+
+                onNoteDeleted(note);
+                return true;
+            }
+
+            public void RefreshHitObject(HitObject hit)
+            {
+                var note = findNoteDrawable(hit);
+                if (note == null)
+                    return;
+
+                note.UpdateLayout(PixelsPerSecond, laneHeightForNotes());
+                updateNoteDepth(note);
+            }
 
             public void SetCurrentTime(double timeMs)
             {
@@ -530,7 +572,7 @@ namespace BeatSight.Game.Screens.Editor
                     var label = new SpriteText
                     {
                         Text = formatRulerLabel(timeMs),
-                        Font = new FontUsage(size: 12, weight: "SemiBold"),
+                        Font = BeatSightFont.Title(12f),
                         Colour = EditorColours.TextSecondary,
                         Anchor = Anchor.TopCentre,
                         Origin = Anchor.BottomCentre,
@@ -611,6 +653,17 @@ namespace BeatSight.Game.Screens.Editor
                     note.UpdateLayout(PixelsPerSecond, laneHeight);
                     updateNoteDepth(note);
                 }
+            }
+
+            private TimelineNoteDrawable? findNoteDrawable(HitObject hit)
+            {
+                for (int i = 0; i < notes.Count; i++)
+                {
+                    if (ReferenceEquals(notes[i].HitObject, hit))
+                        return notes[i];
+                }
+
+                return null;
             }
 
             private float laneHeightForNotes()

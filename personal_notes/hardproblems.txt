@@ -1,0 +1,6 @@
+-Block all hover-induced scrolling
+-Make the dropdown box list look like it extends from the drop down box button itself
+-Make text look softer and less skinny
+-Dropdown box that have searching added, upon clicking it, the edges go back to squaring off (sharp edging) instead of maintaining the rounded edgess that it originally has
+-Fix single monitor setting
+-Frame Limiter slider and number are not scaled / sized correctly with the other sliders and numbers, this is likely because of the addition of the checkbox the frame limiter has. Make sure you size the frame limiter slider and number correctly while keeping the slider centered (since last time i asked you to do this you scaled it correctly but ended up making the slider a little position a little higher on the y-axis)

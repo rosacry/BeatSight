@@ -2,11 +2,14 @@ using BeatSight.Game.Screens.Editor;
 using BeatSight.Game.Screens.Playback;
 using BeatSight.Game.Screens.Settings;
 using BeatSight.Game.Screens.SongSelect;
+using BeatSight.Game.UI.Components;
+using BeatSight.Game.UI.Theming;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Platform;
@@ -37,59 +40,65 @@ namespace BeatSight.Game.Screens
                     RelativeSizeAxes = Axes.Both,
                     Colour = new Color4(20, 20, 30, 255)
                 },
-                new FillFlowContainer
+                new ScreenEdgeContainer(scrollable: false)
                 {
-                    AutoSizeAxes = Axes.Both,
-                    Direction = FillDirection.Vertical,
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    Spacing = new Vector2(0, 20),
-                    Children = new Drawable[]
+                    Content = new FillFlowContainer
                     {
-                        new SpriteText
+                        AutoSizeAxes = Axes.Both,
+                        Direction = FillDirection.Vertical,
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        Spacing = new Vector2(0, 20),
+                        Children = new Drawable[]
                         {
-                            Text = "BeatSight",
-                            Font = new FontUsage(size: 60, weight: "Bold"),
-                            Colour = Color4.White,
-                            Anchor = Anchor.TopCentre,
-                            Origin = Anchor.TopCentre,
-                        },
-                        new SpriteText
-                        {
-                            Text = "Drag and drop a song to jump straight into playback.",
-                            Font = new FontUsage(size: 24),
-                            Colour = new Color4(195, 205, 220, 255),
-                            Anchor = Anchor.TopCentre,
-                            Origin = Anchor.TopCentre,
-                        },
-                        new SpriteText
-                        {
-                            Text = "Or use the menu below to browse, edit, or tweak your setup.",
-                            Font = new FontUsage(size: 18),
-                            Colour = new Color4(160, 170, 190, 255),
-                            Anchor = Anchor.TopCentre,
-                            Origin = Anchor.TopCentre,
-                        },
-                        new Container
-                        {
-                            Height = 40
-                        },
-                        new MenuButton("Play", Color4.Green)
-                        {
-                            Action = () => this.Push(new SongSelectScreen(SongSelectDestination.Gameplay))
-                        },
-                        new MenuButton("Editor", Color4.Blue)
-                        {
-                            Action = () => this.Push(new EditorScreen())
-                        },
-                        new MenuButton("Settings", Color4.Orange)
-                        {
-                            Action = () => this.Push(new SettingsScreen())
-                        },
-                        new MenuButton("Exit", Color4.Red)
-                        {
-                            Action = exitGame
-                        },
+                            new SpriteText
+                            {
+                                Text = "BeatSight",
+                                Font = BeatSightFont.Title(60f),
+                                Colour = Color4.White,
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre,
+                                Shadow = false
+                            },
+                            new SpriteText
+                            {
+                                Text = "Drag and drop a song to jump straight into playback.",
+                                Font = BeatSightFont.Subtitle(24f),
+                                Colour = new Color4(195, 205, 220, 255),
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre,
+                                Shadow = false
+                            },
+                            new SpriteText
+                            {
+                                Text = "Or use the menu below to browse, edit, or tweak your setup.",
+                                Font = BeatSightFont.Body(18f),
+                                Colour = new Color4(160, 170, 190, 255),
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre,
+                                Shadow = false
+                            },
+                            new Container
+                            {
+                                Height = 40
+                            },
+                            new MenuButton("Play", Color4.Green)
+                            {
+                                Action = () => this.Push(new SongSelectScreen(SongSelectDestination.Gameplay))
+                            },
+                            new MenuButton("Editor", Color4.Blue)
+                            {
+                                Action = () => this.Push(new EditorScreen())
+                            },
+                            new MenuButton("Settings", Color4.Orange)
+                            {
+                                Action = () => this.Push(new SettingsScreen())
+                            },
+                            new MenuButton("Exit", Color4.Red)
+                            {
+                                Action = exitGame
+                            },
+                        }
                     }
                 }
             };
@@ -134,7 +143,7 @@ namespace BeatSight.Game.Screens
                         new SpriteText
                         {
                             Text = text,
-                            Font = new FontUsage(size: 28),
+                            Font = BeatSightFont.Button(28f),
                             Colour = Color4.White,
                             Anchor = Anchor.Centre,
                             Origin = Anchor.Centre,
@@ -188,7 +197,7 @@ namespace BeatSight.Game.Screens
                 new SpriteText
                 {
                     Text = $"{title} screen coming soon",
-                    Font = new FontUsage(size: 48),
+                    Font = BeatSightFont.Title(48f),
                     Colour = Color4.White,
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre
@@ -196,7 +205,7 @@ namespace BeatSight.Game.Screens
                 new SpriteText
                 {
                     Text = "Press Esc to return",
-                    Font = new FontUsage(size: 24),
+                    Font = BeatSightFont.Subtitle(24f),
                     Colour = Color4.Gray,
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,

@@ -20,6 +20,8 @@ using BeatSight.Game.Services.Analysis;
 using BeatSight.Game.Services.Decode;
 using BeatSight.Game.Services.Generation;
 using BeatSight.Game.Services.Separation;
+using BeatSight.Game.UI.Theming;
+using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osu.Framework.Audio;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -41,6 +43,7 @@ namespace BeatSight.Game
     public partial class BeatSightGame : osu.Framework.Game
     {
         private ScreenStack screenStack = null!;
+        private Container uiScaleRoot = null!;
         private DependencyContainer dependencies = null!;
         [Resolved(CanBeNull = true)]
         private AudioManager? audioManager { get; set; }
@@ -60,6 +63,7 @@ namespace BeatSight.Game
         private Bindable<int>? windowDisplaySetting;
         private Bindable<bool>? frameLimiterEnabledSetting;
         private Bindable<double>? frameLimiterTargetSetting;
+        private Bindable<double>? uiScaleSetting;
         private Bindable<Display>? hostDisplayBindable;
         private Bindable<WindowMode>? hostWindowModeBindable;
         private Bindable<Size>? frameworkFullscreenSizeSetting;
@@ -127,6 +131,17 @@ namespace BeatSight.Game
 
         private const string audioImportsDirectory = "AudioImports";
         private static readonly string[] supportedAudioExtensions = { ".mp3", ".wav", ".ogg", ".flac", ".m4a", ".aac" };
+        private static readonly string[] bundledFonts =
+        {
+            "Fonts/Exo2/Exo2-Regular",
+            "Fonts/Exo2/Exo2-Medium",
+            "Fonts/Exo2/Exo2-SemiBold",
+            "Fonts/Exo2/Exo2-Bold",
+            "Fonts/Nunito/Nunito-Light",
+            "Fonts/Nunito/Nunito-Regular",
+            "Fonts/Nunito/Nunito-Medium",
+            "Fonts/Nunito/Nunito-SemiBold"
+        };
 
         [BackgroundDependencyLoader]
         private void load()
@@ -143,6 +158,7 @@ namespace BeatSight.Game
 
             embeddedResourceStore = new NamespacedResourceStore<byte[]>(new DllResourceStore(typeof(BeatSightGame).Assembly), "BeatSight.Game.Resources");
             Resources.AddStore(embeddedResourceStore);
+            registerFonts();
 
             var decodeService = new DecodeService();
             dependencies.Cache(decodeService);
@@ -160,9 +176,18 @@ namespace BeatSight.Game
             // Initialize the game
             Children = new Drawable[]
             {
-                screenStack = new ScreenStack { RelativeSizeAxes = Axes.Both },
+                uiScaleRoot = new Container
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    Child = screenStack = new ScreenStack { RelativeSizeAxes = Axes.Both }
+                },
                 fpsCounter = new FpsCounter()
             };
+
+            uiScaleSetting = config.GetBindable<double>(BeatSightSetting.UIScale);
+            uiScaleSetting.BindValueChanged(onUiScaleChanged, true);
 
             // Bind FPS counter visibility
             config.GetBindable<bool>(BeatSightSetting.ShowFpsCounter)
@@ -171,6 +196,68 @@ namespace BeatSight.Game
                     fpsCounter.AlwaysPresent = e.NewValue;
                     fpsCounter.FadeTo(e.NewValue ? 1f : 0f, 200, Easing.OutQuint);
                 }, true);
+        }
+
+        private void registerFonts()
+        {
+            if (embeddedResourceStore == null)
+            {
+                Logger.Log("Embedded resource store is unavailable; bundled fonts cannot be registered.", LoggingTarget.Runtime, LogLevel.Error);
+                return;
+            }
+
+            foreach (string font in bundledFonts)
+            {
+                string resourceKey = getFontResourceKey(font);
+
+                using (var validationStream = Resources.GetStream(resourceKey))
+                {
+                    if (validationStream == null)
+                        Logger.Log($"Font resource '{resourceKey}' missing via Resources store.", LoggingTarget.Runtime, LogLevel.Error);
+                    else
+                        Logger.Log($"Font resource '{resourceKey}' resolved {validationStream.Length} bytes via Resources store.", LoggingTarget.Runtime, LogLevel.Debug);
+                }
+
+                if (!fontResourceExists(resourceKey))
+                {
+                    Logger.Log($"Font resource '{resourceKey}' is missing from the embedded resources.", LoggingTarget.Runtime, LogLevel.Error);
+                    continue;
+                }
+
+                try
+                {
+                    AddFont(Resources, font);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"Failed to register font '{font}': {ex.Message}", LoggingTarget.Runtime, LogLevel.Important);
+                }
+            }
+        }
+
+        private void onUiScaleChanged(ValueChangedEvent<double> scaleEvent)
+        {
+            if (uiScaleRoot == null)
+                return;
+
+            float clamped = (float)Math.Clamp(scaleEvent.NewValue, 0.5, 1.5);
+            uiScaleRoot.Scale = new Vector2(clamped);
+        }
+
+        private static string getFontResourceKey(string font)
+        {
+            if (font.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase))
+                return font;
+
+            return $"{font}.ttf";
+        }
+
+        private bool fontResourceExists(string font)
+        {
+            if (embeddedResourceStore == null)
+                return false;
+
+            return embeddedResourceStore.Get(font) != null;
         }
 
         private WindowMode getPreferredFullscreenMode()
@@ -1838,9 +1925,9 @@ namespace BeatSight.Game
                         fpsText = new SpriteText
                         {
                             Text = "FPS: 0",
-                            Font = new FontUsage(size: 18, weight: "Bold"),
-                            Colour = Color4.White,
-                            Padding = new MarginPadding { Horizontal = 10, Vertical = 5 }
+                            Font = BeatSightFont.Caption(16f),
+                            Colour = UITheme.TextSecondary,
+                            Padding = new MarginPadding { Horizontal = 12, Vertical = 6 }
                         }
                     }
                 }

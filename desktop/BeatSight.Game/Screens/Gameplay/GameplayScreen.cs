@@ -20,6 +20,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.IO.Stores;
@@ -233,27 +234,37 @@ namespace BeatSight.Game.Screens.Gameplay
             {
                 backgroundBlurContainer,
                 backgroundDim,
-                new GridContainer
+                new Container
                 {
                     RelativeSizeAxes = Axes.Both,
-                    RowDimensions = new[]
+                    Padding = new MarginPadding { Top = BackButton.DefaultMargin.Top },
+                    Child = new GridContainer
                     {
-                        new Dimension(GridSizeMode.Absolute, 55),
-                        new Dimension()
-                    },
-                    Content = new[]
-                    {
-                        new Drawable[]
+                        RelativeSizeAxes = Axes.Both,
+                        RowDimensions = new[]
                         {
-                            createHeader()
+                            new Dimension(GridSizeMode.Absolute, 86),
+                            new Dimension()
                         },
-                        new Drawable[]
+                        Content = new[]
                         {
-                            createMainContent()
+                            new Drawable[]
+                            {
+                                createHeader()
+                            },
+                            new Drawable[]
+                            {
+                                createMainContent()
+                            }
                         }
                     }
                 },
-                backButton,
+                new SafeAreaContainer
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Padding = BackButton.DefaultMargin,
+                    Child = backButton
+                },
                 hitLightingOverlay
             };
 
@@ -355,7 +366,7 @@ namespace BeatSight.Game.Screens.Gameplay
         {
             statusText = new SpriteText
             {
-                Font = new FontUsage(size: 24, weight: "Medium"),
+                Font = BeatSightFont.Section(24f),
                 Colour = Color4.White,
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft,
@@ -367,7 +378,7 @@ namespace BeatSight.Game.Screens.Gameplay
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
-                Padding = new MarginPadding { Left = 150, Right = 28, Top = 6, Bottom = 4 },
+                Padding = new MarginPadding { Left = 150, Right = 28, Top = 20, Bottom = 6 },
                 Child = statusText
             };
         }
@@ -405,14 +416,14 @@ namespace BeatSight.Game.Screens.Gameplay
             timelineCurrentText = new SpriteText
             {
                 Text = "0:00",
-                Font = new FontUsage(size: 14, weight: "Medium"),
+                Font = BeatSightFont.Section(14f),
                 Colour = new Color4(200, 205, 220, 255)
             };
 
             timelineTotalText = new SpriteText
             {
                 Text = "--:--",
-                Font = new FontUsage(size: 14, weight: "Medium"),
+                Font = BeatSightFont.Section(14f),
                 Colour = new Color4(150, 160, 185, 255)
             };
 
@@ -450,7 +461,7 @@ namespace BeatSight.Game.Screens.Gameplay
                             new SpriteText
                             {
                                 Text = "/",
-                                Font = new FontUsage(size: 14),
+                                Font = BeatSightFont.Caption(14f),
                                 Colour = new Color4(150, 160, 185, 255)
                             },
                             timelineTotalText
@@ -572,7 +583,7 @@ namespace BeatSight.Game.Screens.Gameplay
                         new SpriteText
                         {
                             Text = title,
-                            Font = new FontUsage(size: 15, weight: "Medium"),
+                            Font = BeatSightFont.Section(15f),
                             Colour = Color4.White
                         },
                         content
@@ -743,7 +754,7 @@ namespace BeatSight.Game.Screens.Gameplay
                     new SpriteText
                     {
                         Text = "Toggle between 2D lanes and the 3D stage.",
-                        Font = new FontUsage(size: 13),
+                        Font = BeatSightFont.Caption(13f),
                         Colour = new Color4(170, 180, 210, 255),
                         Alpha = 0.9f
                     },
@@ -751,7 +762,7 @@ namespace BeatSight.Game.Screens.Gameplay
                     new SpriteText
                     {
                         Text = "Switch kick drum between a shared timing line and per-pad notes.",
-                        Font = new FontUsage(size: 13),
+                        Font = BeatSightFont.Caption(13f),
                         Colour = new Color4(170, 180, 210, 255),
                         Alpha = 0.9f
                     }
@@ -763,7 +774,7 @@ namespace BeatSight.Game.Screens.Gameplay
         {
             speedValueText = new SpriteText
             {
-                Font = new FontUsage(size: 16, weight: "Medium"),
+                Font = BeatSightFont.Section(16f),
                 Colour = new Color4(220, 225, 240, 255),
                 Text = formatSpeedLabel(speedAdjustment.Value)
             };
@@ -797,7 +808,7 @@ namespace BeatSight.Game.Screens.Gameplay
         {
             offsetValueText = new SpriteText
             {
-                Font = new FontUsage(size: 16, weight: "Medium"),
+                Font = BeatSightFont.Section(16f),
                 Colour = new Color4(220, 225, 240, 255),
                 Text = formatOffsetLabel(offsetAdjustment.Value)
             };
@@ -865,7 +876,7 @@ namespace BeatSight.Game.Screens.Gameplay
                                 new SpriteText
                                 {
                                     Text = label,
-                                    Font = new FontUsage(size: 16),
+                                    Font = BeatSightFont.Body(16f),
                                     Colour = new Color4(190, 196, 220, 255),
                                     Anchor = Anchor.CentreLeft,
                                     Origin = Anchor.CentreLeft

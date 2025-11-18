@@ -22,6 +22,7 @@ using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
 using FrameworkRectangleF = osu.Framework.Graphics.Primitives.RectangleF;
 using osu.Framework.Graphics.Sprites;
+using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input;
 using osu.Framework.Input.Events;
@@ -92,7 +93,12 @@ namespace BeatSight.Game.Screens.Settings
                         RelativeSizeAxes = Axes.Both,
                         AlwaysPresent = true
                     },
-                    backButton
+                    new SafeAreaContainer
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Padding = BackButton.DefaultMargin,
+                        Child = backButton
+                    }
                 }
             };
 
@@ -104,37 +110,40 @@ namespace BeatSight.Game.Screens.Settings
                     Colour = UITheme.Background,
                     Depth = 2 // Background at the very back
                 },
-                new GridContainer
+                new ScreenEdgeContainer(scrollable: false)
                 {
-                    RelativeSizeAxes = Axes.Both,
-                    Depth = 1, // Render below dropdowns
-                    RowDimensions = new[]
+                    Content = new GridContainer
                     {
-                        new Dimension(GridSizeMode.Absolute, 80),
-                        new Dimension()
-                    },
-                    Content = new[]
-                    {
-                        new Drawable[] { createHeader() },
-                        new Drawable[]
+                        RelativeSizeAxes = Axes.Both,
+                        Depth = 1, // Render below dropdowns
+                        RowDimensions = new[]
                         {
-                            new GridContainer
+                            new Dimension(GridSizeMode.Absolute, 80),
+                            new Dimension()
+                        },
+                        Content = new[]
+                        {
+                            new Drawable[] { createHeader() },
+                            new Drawable[]
                             {
-                                RelativeSizeAxes = Axes.Both,
-                                ColumnDimensions = new[]
+                                new GridContainer
                                 {
-                                    new Dimension(GridSizeMode.Absolute, 250),
-                                    new Dimension()
-                                },
-                                Content = new[]
-                                {
-                                    new Drawable[]
+                                    RelativeSizeAxes = Axes.Both,
+                                    ColumnDimensions = new[]
                                     {
-                                        createSidebar(),
-                                        contentContainer = new Container
+                                        new Dimension(GridSizeMode.Absolute, 250),
+                                        new Dimension()
+                                    },
+                                    Content = new[]
+                                    {
+                                        new Drawable[]
                                         {
-                                            RelativeSizeAxes = Axes.Both,
-                                            Padding = UITheme.ScreenPadding
+                                            createSidebar(),
+                                            contentContainer = new Container
+                                            {
+                                                RelativeSizeAxes = Axes.Both,
+                                                Padding = UITheme.ScreenPadding
+                                            }
                                         }
                                     }
                                 }
@@ -249,7 +258,7 @@ namespace BeatSight.Game.Screens.Settings
                             new SpriteText
                             {
                                 Text = "Settings",
-                                Font = new FontUsage(size: 32, weight: "Bold"),
+                                Font = BeatSightFont.Title(34f),
                                 Colour = UITheme.TextPrimary,
                                 Anchor = Anchor.Centre,
                                 Origin = Anchor.Centre
@@ -382,7 +391,7 @@ namespace BeatSight.Game.Screens.Settings
                     label = new SpriteText
                     {
                         Text = text,
-                        Font = new FontUsage(size: 20),
+                        Font = BeatSightFont.Subtitle(20f),
                         Colour = UITheme.TextSecondary,
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
@@ -495,7 +504,7 @@ namespace BeatSight.Game.Screens.Settings
                 new SpriteText
                 {
                     Text = title,
-                    Font = new FontUsage(size: 28, weight: "Bold"),
+                    Font = BeatSightFont.Section(28f),
                     Colour = UITheme.TextPrimary,
                     Margin = new MarginPadding { Bottom = 10 }
                 },
@@ -555,10 +564,15 @@ namespace BeatSight.Game.Screens.Settings
 
             var setting = CreateSettingItem(label, description, new Container
             {
-                Size = new Vector2(24, 24),
-                Anchor = Anchor.CentreRight,
-                Origin = Anchor.CentreRight,
-                Child = checkbox
+                RelativeSizeAxes = Axes.X,
+                Height = 24,
+                Child = new Container
+                {
+                    Size = new Vector2(24, 24),
+                    Anchor = Anchor.CentreRight,
+                    Origin = Anchor.CentreRight,
+                    Child = checkbox
+                }
             });
 
             setting.EnableRowToggle(bindable);
@@ -636,7 +650,7 @@ namespace BeatSight.Game.Screens.Settings
 
             var valueText = new SpriteText
             {
-                Font = new FontUsage(size: 16),
+                Font = BeatSightFont.Label(16f),
                 Colour = UITheme.TextSecondary,
                 Anchor = Anchor.CentreRight,
                 Origin = Anchor.CentreRight
@@ -745,7 +759,7 @@ namespace BeatSight.Game.Screens.Settings
                             new SpriteText
                             {
                                 Text = toggleLabelText!,
-                                Font = new FontUsage(size: 14),
+                                Font = BeatSightFont.Caption(14f),
                                 Colour = UITheme.TextSecondary,
                                 Anchor = Anchor.CentreRight,
                                 Origin = Anchor.CentreRight
@@ -1027,12 +1041,8 @@ namespace BeatSight.Game.Screens.Settings
                 {
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
-                    Padding = new MarginPadding(20),
-                    Children = new Drawable[]
-                    {
-                        textColumn,
-                        control
-                    }
+                    Padding = new MarginPadding(24),
+                    Child = createRowContent(textColumn, control)
                 }
             };
         }
@@ -1042,8 +1052,10 @@ namespace BeatSight.Game.Screens.Settings
             var labelText = new SpriteText
             {
                 Text = label,
-                Font = new FontUsage(size: 22, weight: "Medium"),
-                Colour = UITheme.TextPrimary
+                Font = BeatSightFont.Section(26f),
+                Colour = UITheme.TextPrimary,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft
             };
 
             return new FillFlowContainer
@@ -1051,7 +1063,56 @@ namespace BeatSight.Game.Screens.Settings
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
                 Direction = FillDirection.Vertical,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                Spacing = new Vector2(0, 6),
                 Children = new Drawable[] { labelText }
+            };
+        }
+
+        private Drawable createRowContent(Drawable textColumn, Drawable control)
+        {
+            const float textColumnWeight = 0.6f;
+
+            var controlWrapper = new Container
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+                Child = new Container
+                {
+                    AutoSizeAxes = Axes.Both,
+                    Anchor = Anchor.CentreRight,
+                    Origin = Anchor.CentreRight,
+                    Child = control
+                }
+            };
+
+            return new GridContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                ColumnDimensions = new[]
+                {
+                    new Dimension(GridSizeMode.Distributed, textColumnWeight),
+                    new Dimension(GridSizeMode.AutoSize)
+                },
+                Content = new[]
+                {
+                    new Drawable[]
+                    {
+                        new Container
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Padding = new MarginPadding { Right = 28 },
+                            Anchor = Anchor.CentreLeft,
+                            Origin = Anchor.CentreLeft,
+                            Child = textColumn
+                        },
+                        controlWrapper
+                    }
+                }
             };
         }
 
@@ -1361,7 +1422,7 @@ namespace BeatSight.Game.Screens.Settings
 
         private sealed partial class TooltipTextFlow : TextFlowContainer
         {
-            private readonly FontUsage fontUsage = new FontUsage(size: 16);
+            private readonly FontUsage fontUsage = BeatSightFont.Body(16f);
 
             public TooltipTextFlow(float maxWidth)
             {
@@ -2123,18 +2184,22 @@ namespace BeatSight.Game.Screens.Settings
             {
                 RelativeSizeAxes = Axes.X,
                 Height = 16,
-                Current = frameLimiterSliderBindable
+                Current = frameLimiterSliderBindable,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft
             };
 
             var frameLimiterSliderBlocker = new SliderInputBlocker
             {
                 RelativeSizeAxes = Axes.Both,
-                Blocking = false
+                Blocking = false,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft
             };
 
             frameLimiterValueText = new SpriteText
             {
-                Font = new FontUsage(size: 16),
+                Font = BeatSightFont.Label(16f),
                 Colour = UITheme.TextSecondary,
                 Anchor = Anchor.CentreRight,
                 Origin = Anchor.CentreRight
@@ -2222,10 +2287,17 @@ namespace BeatSight.Game.Screens.Settings
                 }
             };
 
+            const float rowSpacing = 8;
+            const float controlWidthWithToggle = 360;
+            const float sliderToggleSpacing = 16;
+            const float toggleAreaWidth = 24;
+
+            float sliderWidth = Math.Max(120, controlWidthWithToggle - valueContainer.Width - rowSpacing - toggleAreaWidth - sliderToggleSpacing);
+
             var sliderContainer = new Container
             {
-                Width = 256,
-                Height = 20,
+                Width = sliderWidth,
+                Height = 18,
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft,
                 Children = new Drawable[]
@@ -2235,9 +2307,20 @@ namespace BeatSight.Game.Screens.Settings
                 }
             };
 
+            var sliderCluster = new FillFlowContainer
+            {
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Horizontal,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                Spacing = new Vector2(sliderToggleSpacing, 0)
+            };
+
+            sliderCluster.Add(sliderContainer);
+
             var toggleContainer = new Container
             {
-                Width = 24,
+                Width = toggleAreaWidth,
                 Height = 24,
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft,
@@ -2250,38 +2333,27 @@ namespace BeatSight.Game.Screens.Settings
                 }
             };
 
-            var sliderCluster = new FillFlowContainer
+            sliderCluster.Add(toggleContainer);
+
+            var rowFlow = new FillFlowContainer
             {
                 AutoSizeAxes = Axes.Y,
                 Direction = FillDirection.Horizontal,
-                Spacing = new Vector2(16, 0),
-                Anchor = Anchor.CentreLeft,
-                Origin = Anchor.CentreLeft,
-                Children = new Drawable[] { sliderContainer, toggleContainer }
+                Spacing = new Vector2(rowSpacing, 0),
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight
             };
 
-            var frameLimiterFlow = new FillFlowContainer
-            {
-                Width = 360,
-                AutoSizeAxes = Axes.Y,
-                Direction = FillDirection.Horizontal,
-                Spacing = new Vector2(8, 0),
-                Anchor = Anchor.CentreRight,
-                Origin = Anchor.CentreRight,
-                Children = new Drawable[]
-                {
-                    valueContainer,
-                    sliderCluster
-                }
-            };
+            rowFlow.AddRange(new Drawable[] { valueContainer, sliderCluster });
+            rowFlow.Width = controlWidthWithToggle;
 
             var control = new Container
             {
-                Width = 360,
+                Width = controlWidthWithToggle,
                 AutoSizeAxes = Axes.Y,
                 Anchor = Anchor.CentreRight,
                 Origin = Anchor.CentreRight,
-                Child = frameLimiterFlow
+                Child = rowFlow
             };
 
             var frameLimiterSetting = CreateSettingItem(

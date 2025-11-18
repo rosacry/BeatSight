@@ -233,7 +233,7 @@ Array of drum hits, sorted by time (ascending).
 - 0.7 - 0.9: Normal
 - 0.9 - 1.0: Accent / Loud
 
-**Lane Assignment**: Lanes determine horizontal position in gameplay. Standard 7-lane layout:
+**Lane Assignment**: Lanes determine horizontal position during playback sessions. Standard 7-lane layout:
 - Lane 0: Kick
 - Lane 1: Hi-hat (foot)
 - Lane 2: Snare
@@ -246,7 +246,7 @@ Array of drum hits, sorted by time (ascending).
 
 ### `editor` Object (Optional)
 
-Contains editor-specific data that doesn't affect gameplay.
+Contains editor-specific data that doesn't affect playback.
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
@@ -313,7 +313,7 @@ A JSON schema file (`beatsight-map-schema.json`) is provided for validation.
 ### Performance
 - Use streaming JSON parsers for large files
 - Index `hitObjects` by time for fast lookup
-- Cache parsed beatmaps in memory during gameplay
+- Cache parsed beatmaps in memory during playback
 
 ---
 

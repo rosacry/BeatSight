@@ -1,20 +1,29 @@
 # BeatSight Quick Settings Reference
 
-## 🎮 Gameplay Controls
+## 🧭 Session Controls
 
-### Standard Gameplay
-- **S, D, F**: Left drums (Kick, Hi-hat Pedal, Snare)
-- **Space**: Center (Hi-hat)
-- **J, K, L**: Right drums (Toms, Crash/Ride/Cymbals)
-- **R**: Retry current beatmap
-- **Esc**: Return to menu
+These shortcuts focus on playback, looping, and view management. No score or hit input is recorded—the controls simply steer the visual rehearsal experience.
 
-### Practice Mode (Additional)
-- **[**: Set loop start point
-- **]**: Set loop end point
-- **C**: Clear loop points
-- **M**: Toggle metronome on/off
-- **All standard controls** also work
+### Global Shortcuts
+- **Space**: Play / pause the current map
+- **Esc**: Return to the previous screen
+- **[** / **]**: Set loop start and loop end markers at the current timeline position
+- **C**: Clear loop markers and resume continuous playback
+- **M**: Toggle the metronome overlay
+- **Arrow Up / Down**: Increment or decrement the playback speed slider
+- **Arrow Left / Right**: Nudge the offset slider (useful when aligning stems to the rendered lanes)
+- **Ctrl + Scroll**: Zoom the timeline while the pointer rests over it
+
+### View Toggles (PlaybackScreen)
+- **V**: Cycle through view modes (2D lanes, 3D highway, manuscript preview)
+- **Shift + V**: Reverse-cycle the view modes
+- **K**: Toggle kick-line emphasis when practising double bass patterns
+
+### Editor Preview
+- **Space**: Play / pause PlaybackPreview within the editor
+- **Shift + Space**: Restart preview from the loop start marker
+- **F**: Focus the preview panel
+- **Tab**: Jump between timeline, inspector, and preview focus areas
 
 ## ⚙️ Settings Overview
 
@@ -23,11 +32,11 @@ Settings are automatically saved to: `~/.local/share/BeatSight/beatsight.ini`
 
 All BeatSight settings are now bound to this file up front, so every option is present even before you tweak it and any change made in-game (or by editing the file) stays in sync automatically.
 
-### Gameplay Settings
+### Playback Settings
 | Setting | Options | Default | Description |
 |---------|---------|---------|-------------|
-| **Gameplay Mode** | Auto / Manual | Auto | Auto: Full scoring. Manual: No scoring/results. |
-| **Show Combo Milestones** | On / Off | On | Celebration animations every 50 combo |
+| **Playback Flow Mode** | Guided / Manual | Guided | Guided keeps all instructional overlays (lane highlights, cue banners). Manual hides guidance layers for screen recordings or when stepping through a transcription frame-by-frame. |
+| **Show Section Milestones** | On / Off | On | Displays subtle markers every 50 measures to help track long-form practice sessions. |
 
 ### Visual Effects
 | Setting | Options | Default | Description |
@@ -49,7 +58,7 @@ All BeatSight settings are now bound to this file up front, so every option is p
 |---------|-------|---------|-------------|
 | **Audio Offset** | -120ms to +120ms | 0ms | Global timing adjustment |
 
-### Gameplay Adjustments (In-Game)
+### Playback Adjustments (In-Session)
 | Control | Range | Default | Description |
 |---------|-------|---------|-------------|
 | **Speed Adjustment** | 0.25x - 2.0x | 1.0x | Playback speed (pitch-preserving) |
@@ -67,7 +76,7 @@ All BeatSight settings are now bound to this file up front, so every option is p
 **Visual Feedback:**
 - Green text when loop is active
 - Shows loop start → end time and duration
-- Loop status displayed in practice overlay
+- Loop status displayed in the practice overlay and on the transport timeline
 
 ### Metronome
 - **Toggle:** Press **M** to enable/disable
@@ -83,27 +92,27 @@ All BeatSight settings are now bound to this file up front, so every option is p
 
 ## 🎯 Recommended Settings by Use Case
 
-### First Time Playing
+### First Time Studying a Song
 ```
 ✅ All visual effects ON
-✅ Gameplay Mode: Auto
+✅ Playback Flow: Guided
 ✅ Speed: 0.75x (slightly slower)
-✅ Combo Milestones: ON
+✅ Section Milestones: ON
 ```
 
-### Serious Practice
+### Deep Practice Blocks
 ```
 ⚠️ Approach Circles: ON (timing guidance)
 ⚠️ Particle Effects: OFF (less distraction)
 ⚠️ Glow Effects: OFF (cleaner visuals)
 ⚠️ Speed: 0.5x - 0.75x (learn patterns slowly)
-⚠️ Use Practice Mode with looping!
+⚠️ Use loop markers aggressively
 ```
 
-### Performance/Recording
+### Capture / Presentation
 ```
-🎬 Gameplay Mode: Manual (no UI clutter)
-🎬 All visual effects: OFF (clean gameplay)
+🎬 Playback Flow: Manual (no guidance overlays)
+🎬 All visual effects: OFF (clean capture)
 🎬 Speed: 1.0x (normal speed)
 🎬 Offset: Adjust for recording latency
 ```
@@ -119,10 +128,10 @@ All BeatSight settings are now bound to this file up front, so every option is p
 
 ## 📝 Tips & Tricks
 
-### Perfecting Your Timing
+### Aligning Audio & Visuals
 1. Start with **Audio Offset** at 0ms
-2. If you're consistently hitting early: **increase** offset (+20ms, +40ms)
-3. If you're consistently hitting late: **decrease** offset (-20ms, -40ms)
+2. If cymbals visually lead the music, **increase** offset (+20ms, +40ms)
+3. If the audio feels late compared to the lane visuals, **decrease** offset (-20ms, -40ms)
 4. Fine-tune in 5ms increments once you're close
 
 ### Learning a New Song
@@ -131,12 +140,12 @@ All BeatSight settings are now bound to this file up front, so every option is p
 3. Once comfortable, increase to 0.75x
 4. Loop the **next section**
 5. Eventually practice at 1.0x
-6. Finally, try **Auto Mode** for scoring
+6. Switch to the manuscript or 3D view to test memorisation
 
-### Improving Accuracy
+### Improving Focus
 - Disable **Particle Effects** and **Glow Effects** for cleaner visuals
 - Keep **Approach Circles** ON for timing guidance
-- Use **Manual Mode** to focus on technique without score pressure
+- Use **Manual Flow** to hide overlays when you want a distraction-free lane
 - Practice with **Metronome** to develop internal timing
 
 ### Maximizing Performance
@@ -147,20 +156,24 @@ All BeatSight settings are now bound to this file up front, so every option is p
 
 ## 🆘 Troubleshooting
 
-### "My hits aren't registering"
-- Check **Audio Offset** in Settings → Input
-- Verify your keyboard keys match the defaults (S/D/F/Space/J/K/L)
-- Ensure no other application is capturing keyboard input
-
-### "Notes are misaligned with audio"
+### "Playback feels out of sync"
 - Adjust **Audio Offset** in Settings → Input
-- Try adjusting **Offset Adjustment** in-game with Up/Down arrows
-- Test at different playback speeds to isolate the issue
+- Nudge the **Offset Adjustment** slider in-session
+- Confirm you loaded the correct drum stem (full mix vs drums-only can highlight transient differences)
+
+### "Loop markers won't clear"
+- Press **C** or click the inline "Clear" button near the transport bar
+- Ensure neither loop point is locked in the editor (timeline context menu → unlock)
 
 ### "Visual effects are laggy"
 - Disable **Particle Effects** and **Glow Effects**
 - Build in Release mode for better performance
 - Check system resources (CPU/GPU usage)
+
+### "Metronome is missing"
+- Confirm **Metronome Enabled** is ON in Settings → Audio
+- Ensure a metronome sound set is installed under `UserData/MetronomeSounds`
+- Press **M** once to re-sync the overlay; it will flash gold on the next beat
 
 ### "Settings aren't saving"
 - Check file permissions on `~/.local/share/BeatSight/`

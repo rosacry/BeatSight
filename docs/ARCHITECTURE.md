@@ -2,7 +2,7 @@
 
 ## Overview
 
-BeatSight is designed as a modular, scalable system with clear separation between the gameplay client, AI processing pipeline, and community backend services.
+BeatSight is designed as a modular, scalable system with clear separation between the playback client, AI processing pipeline, and community backend services.
 
 ## System Components
 
@@ -43,17 +43,16 @@ BeatSight is designed as a modular, scalable system with clear separation betwee
 - **Screens**:
   - `MainMenuScreen`: Navigation hub
   - `SongSelectScreen`: Browse local/downloaded beatmaps
-  - `GameplayScreen`: Main rhythm game interface
+  - `PlaybackScreen`: Primary playback/practice interface (2D/3D/manuscript views)
   - `EditorScreen`: Beatmap creation/editing
   - `SettingsScreen`: Configuration
 
-- **Gameplay Components**:
-  - `PlayfieldRenderer`: Visualizes falling notes
-  - `DrumKitDisplay`: Shows drum kit layout
-  - `JudgementProcessor`: Calculates accuracy (300/100/50/miss)
-  - `ComboCounter`: Tracks consecutive hits
-  - `ScoreCalculator`: osu!-inspired pp-like system
-  - `HitObjectManager`: Manages note timing and rendering
+- **Playback Components**:
+  - `PlaybackPlayfield`: Visualises lanes across 2D, 3D, and manuscript sessions
+  - `DrumKitDisplay`: Shows drum kit layout for quick instrument context
+  - `TimingOrchestrator`: Applies offsets, metronome accents, and tempo scaling without affecting pitch
+  - `LoopController`: Handles sectional looping, rehearsal blocks, and preview ranges
+  - `HitObjectManager`: Manages note timing and rendering pipelines for each view mode
 
 - **Audio System**:
   - `AudioEngine`: Playback with pitch-independent speed control
@@ -82,11 +81,11 @@ BeatSight is designed as a modular, scalable system with clear separation betwee
 ### Performance Targets
 - **Latency**: <10ms audio-visual sync
 - **Frame Rate**: 60 FPS minimum, 240 FPS capable
-- **Input Lag**: <5ms (critical for rhythm games)
+- **UI Interaction Latency**: <5ms so timeline scrubs and overlays feel immediate
 
 ### Retired Experiments (November 2025)
-- Live microphone gameplay (`MicrophoneCapture`, `RealtimeOnsetDetector`, `LiveInputHudOverlay`, `LiveInputModeScreen`) has been removed from the codebase while we focus on manual/auto gameplay polish.
-- Practice-specific surface (`PracticeModeScreen`, `GameplayReplayHost`, `ResultsScreen`) was shelved; future UX will fold these ideas back into the core `GameplayScreen` when they return.
+- Live microphone tracking (`MicrophoneCapture`, `RealtimeOnsetDetector`, `LiveInputHudOverlay`, `LiveInputModeScreen`) has been removed while we focus on guided playback polish.
+- Practice-specific surface (`PracticeModeScreen`, the legacy replay host, `ResultsScreen`) was shelved; future UX will fold these ideas back into the core `PlaybackScreen` when they return.
 - Configuration hooks for microphone calibration (`MicCalibration*` settings) no longer ship with the default ini.
 
 ## 2. Mobile Clients (iOS/Android)
@@ -99,11 +98,11 @@ BeatSight is designed as a modular, scalable system with clear separation betwee
 - **Storage**: sqlite + hive (local cache)
 
 ### Design Philosophy
-- Touch-optimized gameplay (tap circles on drum zones)
+- Touch-optimized playback (tap to spotlight lanes or scrub sections)
 - Simplified editor (view-only or basic adjustments)
 - Beatmap browser and downloader
 - Offline playback support
-- Cloud sync for scores/progress
+- Cloud sync for annotations/progress notes
 
 ### Platform-Specific
 - **iOS**: 
@@ -364,7 +363,7 @@ See [BEATMAP_FORMAT.md](BEATMAP_FORMAT.md) for detailed specification.
 ### Performance Scaling
 - Desktop: Full visual effects, high frame rates
 - Mobile: Reduced particle effects, battery optimization
-- All platforms: Same core timing/scoring logic
+- All platforms: Same core timing/cue logic
 
 ## 7. Security & Privacy
 
@@ -395,10 +394,10 @@ See [BEATMAP_FORMAT.md](BEATMAP_FORMAT.md) for detailed specification.
 ### Phase 3: Mobile (Months 7-9)
 - iOS/Android apps
 - Cross-platform sync
-- Mobile-optimized gameplay
+- Mobile-optimized playback
 
 ### Phase 4: Advanced (Months 10-12)
-- Real-time mic input scoring
+- Real-time mic input monitoring
 - Distributed training platform
 - Advanced AI models (transformer-based)
 - Sample extraction tools

@@ -11,7 +11,7 @@ using BeatSight.Game.Audio;
 using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
-using BeatSight.Game.Screens.Gameplay;
+using BeatSight.Game.Screens.Playback;
 using BeatSight.Game.UI.Components;
 using BeatSight.Game.UI.Theming;
 using Newtonsoft.Json;
@@ -71,7 +71,7 @@ namespace BeatSight.Game.Screens.Editor
         private Bindable<EditorPreviewMode> previewMode = null!;
 
         private EditorTimeline timeline = null!;
-        private GameplayPreview gameplayPreview = null!;
+        private PlaybackPreview playbackPreview = null!;
         private PreviewToggleButton previewToggle = null!;
         private SpriteText statusText = null!;
         private SpriteText statusDetailLine = null!;
@@ -424,9 +424,9 @@ namespace BeatSight.Game.Screens.Editor
             base.LoadComplete();
 
             // Ensure preview is synchronized after everything is loaded
-            if (beatmap != null && gameplayPreview != null)
+            if (beatmap != null && playbackPreview != null)
             {
-                gameplayPreview.SetBeatmap(beatmap);
+                playbackPreview.SetBeatmap(beatmap);
             }
 
             // Make sure the correct preview mode is visible
@@ -727,7 +727,7 @@ namespace BeatSight.Game.Screens.Editor
             timeline.ZoomChanged += onTimelineZoomChanged;
             timeline.SnapDivisorChanged += onTimelineSnapDivisorChanged;
 
-            gameplayPreview = new GameplayPreview(() => currentTime)
+            playbackPreview = new PlaybackPreview(() => currentTime)
             {
                 RelativeSizeAxes = Axes.Both
             };
@@ -748,7 +748,7 @@ namespace BeatSight.Game.Screens.Editor
                     {
                         RelativeSizeAxes = Axes.Both,
                         Padding = new MarginPadding { Horizontal = 36, Vertical = 26 },
-                        Child = gameplayPreview
+                        Child = playbackPreview
                     }
                 }
             };
@@ -2068,7 +2068,7 @@ namespace BeatSight.Game.Screens.Editor
 
             beatmap.HitObjects.Sort((a, b) => a.Time.CompareTo(b.Time));
             beatmap.Metadata.ModifiedAt = DateTime.UtcNow;
-            gameplayPreview?.RefreshBeatmap();
+            playbackPreview?.RefreshBeatmap();
             markUnsaved();
             refreshUnsavedState();
 
@@ -2112,9 +2112,9 @@ namespace BeatSight.Game.Screens.Editor
 
         private void onLaneViewModeChanged(ValueChangedEvent<LaneViewMode> change)
         {
-            if (gameplayPreview != null)
+            if (playbackPreview != null)
             {
-                Schedule(() => gameplayPreview.RefreshBeatmap());
+                Schedule(() => playbackPreview.RefreshBeatmap());
             }
         }
 
@@ -2601,7 +2601,7 @@ namespace BeatSight.Game.Screens.Editor
                 timeline.SetWaveformScale(waveformScale);
                 timeline.SetBeatGridVisible(beatGridVisible);
                 timeline.SetCurrentTime(currentTime);
-                gameplayPreview?.SetBeatmap(null);
+                playbackPreview?.SetBeatmap(null);
                 updateInspectorEnabledState(false);
                 selectedHitObject = null;
                 updateSelectionSummary();
@@ -2615,7 +2615,7 @@ namespace BeatSight.Game.Screens.Editor
                 ? trackLength
                 : Math.Max(beatmap.Audio.Duration, beatmap.HitObjects.Count > 0 ? beatmap.HitObjects[^1].Time + 5000 : 60000);
 
-            Logger.Log($"[EditorScreen] reloadTimeline: setting beatmap with {beatmap.HitObjects.Count} notes, gameplayPreview={(gameplayPreview == null ? "NULL" : "exists")}", LoggingTarget.Runtime, LogLevel.Important);
+            Logger.Log($"[EditorScreen] reloadTimeline: setting beatmap with {beatmap.HitObjects.Count} notes, playbackPreview={(playbackPreview == null ? "NULL" : "exists")}", LoggingTarget.Runtime, LogLevel.Important);
 
             timeline.LoadBeatmap(beatmap, duration, waveformData);
             timeline.SetZoom(timelineZoom);
@@ -2623,7 +2623,7 @@ namespace BeatSight.Game.Screens.Editor
             timeline.SetWaveformScale(waveformScale);
             timeline.SetBeatGridVisible(beatGridVisible);
             timeline.SetCurrentTime(currentTime);
-            gameplayPreview?.SetBeatmap(beatmap);
+            playbackPreview?.SetBeatmap(beatmap);
             if (selectedHitObject != null && !beatmap.HitObjects.Contains(selectedHitObject))
                 selectedHitObject = null;
             updateSelectionSummary();

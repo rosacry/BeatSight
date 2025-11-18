@@ -1,29 +1,35 @@
 dotnet restore
 dotnet run
+pip install -r requirements.txt
 # BeatSight
 
-Transforming drum practice into a sight-readable, data-aware workflow across desktop, AI services, and the web.
+BeatSight is an AI-assisted drum learning environment. It turns any song into a visual, moving score that drummers can follow in real time, edit to taste, and rehearse across 2D, 3D, or manuscript-style views. There is no scoring, tapping, or input latency to chase—just accurate playback surfaces tuned for practice.
 
 ## Vision
 
-BeatSight pairs an osu!-framework desktop client with a Python processing stack and FastAPI services to deliver AI-assisted drum visualisations, precise playback tooling, and community workflows. The project is engineered as a full application suite: gameplay and editing happen on the desktop, audio understanding flows through the AI pipeline, and service infrastructure prepares the path toward web sharing and verification.
+The project fuses an osu!-framework desktop client, a Python-based processing pipeline, and lightweight FastAPI services. Together they deliver:
+
+- Automatic transcription of drum performances into structured “maps”.
+- Fast iteration on those maps through an editor that mirrors DAW workflows.
+- Rich playback controls (stems, metronome accents, offsets, slow practice) that help drummers internalise parts.
+- Multiple presentation modes: vertical lane view (osu!mania/StepMania style), 3D highway (Guitar Hero-inspired), and a manuscript-following surface that is in progress.
 
 ## Subsystems
 
-- **Desktop client (`desktop/`)** – C#/.NET 8 application with osu-framework UI, mapping pipeline integration, practice tooling, and playback UIs.
+- **Desktop client (`desktop/`)** – osu-framework UI hosting PlaybackScreen sessions, editor workflows, and configuration surfaces.
 - **AI pipeline (`ai-pipeline/`)** – Python orchestration around Demucs separation, onset analysis, heuristic/ML drum classification, beatmap drafting, and dataset QA tooling.
-- **Backend services (`backend/`)** – FastAPI scaffolding with SQLAlchemy models, async services, and job queue primitives for map generation, song metadata, and future review flows.
+- **Backend services (`backend/`)** – FastAPI scaffolding for metadata lookup, AI job orchestration, and future sharing hubs.
 - **Data and training ops (`data/`, `ai-pipeline/training/`)** – Manifests, readiness gates, export scripts, and training presets governed by the ML runbook.
-- **Documentation (`docs/`, root *.md)* – Living knowledge base covering setup, architecture, product planning, training SOPs, and archives.
+- **Documentation (`docs/` + root *.md)** – Living knowledge base covering setup, architecture, product planning, training SOPs, and archives.
 
 ## Current Capabilities
 
 ### Desktop application
 - Drag-and-drop audio import pipeline that hands jobs to the AI generator and surfaces advanced options (sensitivity, quantisation grid, overrides).
 - Generation UI with weighted progress, debug overlay hooks, detection confidence banners, and lane statistics.
-- Playback screen supporting beatmap metadata review, stem/full-mix toggles, timeline visualisation, and configurable lane presets.
-- Practice overlays (looping, metronome, playback speed) and settings surfaces driven by `BeatSightConfigManager` persist user preferences.
-- Editor entry point scaffolding that opens generated drafts and will host deeper authoring workflows.
+- PlaybackScreen for practice sessions: metadata review, drum/full-mix stem toggles, timeline scrubbing, configurable lane presets, offset + speed controls, and the BackButton-driven navigation shell.
+- Practice overlays (looping, metronome, playback speed) and `BeatSightConfigManager` settings surfaces that persist per-user preferences.
+- Editor entry point scaffolding that opens generated drafts, embeds PlaybackPreview, and will host deeper authoring workflows.
 
 ### AI processing & tooling
 - Command line entry-point (`python -m pipeline.process`) orchestrating preprocessing, Demucs-based separation, onset detection/refinement, drum classification (ML or heuristic), and `.bsm` generation with debug payloads.
@@ -40,7 +46,7 @@ BeatSight pairs an osu!-framework desktop client with a Python processing stack 
 ### Data management & QA
 - `data/` hierarchy captures archival datasets, raw source mirrors, and production exports with gitignore rules that keep huge assets out of version control.
 - Readiness and roadmap documents (`docs/product/status.md`, `docs/product/roadmap.md`) track operational blockers, dataset migration, and GPU training milestones.
-- `source ai-pipeline/training/tools/beatsight_env.sh` hydrates the training environment variables (`BEATSIGHT_DATA_ROOT`, etc.) so exporters, cache warmers, and training presets resolve the correct storage layout.
+- `source ai-pipeline/training/tools/beatsight_env.sh` hydrates the training environment variables so exporters, cache warmers, and training presets resolve correct storage layouts.
 - `ai-pipeline/training/reports/` retains health baselines; tooling scripts enforce replacement of synthetic baselines with production metrics.
 
 ### Documentation & governance
@@ -53,8 +59,8 @@ BeatSight pairs an osu!-framework desktop client with a Python processing stack 
 ```
 BeatSight/
 ├── desktop/
-│   ├── BeatSight.Desktop/        # platform host
-│   ├── BeatSight.Game/           # game, mapping, playback, editor
+│   ├── BeatSight.Desktop/        # osu-framework host shell
+│   ├── BeatSight.Game/           # playback, mapping, and editor surfaces
 │   └── BeatSight.Tests/          # detection stats + timebase tests
 ├── ai-pipeline/
 │   ├── pipeline/                 # CLI/server orchestration modules
@@ -104,7 +110,7 @@ When verbose output is enabled, repetitive framework spam (like the "Texture upl
 cd ai-pipeline
 python -m venv .venv
 source .venv/Scripts/activate  # Git Bash on Windows (Linux/macOS bash: source venv/bin/activate; fish: source venv/bin/activate.fish)
-pip install -r requirements.txt
+
 python -m pipeline.process --input path/to/song.mp3 --output draft.bsm
 ```
 Set `BEATSIGHT_USE_ML_CLASSIFIER=1` and drop model weights into `ai-pipeline/models/` to enable ML inference. Run `python -m pipeline.server` for the FastAPI wrapper.
@@ -122,6 +128,9 @@ Environment variables live in `backend/.env.example`. The service exposes health
 - Use `docs/Guidebook.md` as the index for subsystem docs, archives, and SOPs.
 - Operational status and immediate next actions are captured in `docs/product/status.md`; roadmap targets reside in `docs/product/roadmap.md`.
 - Training guardrails and exporter instructions are maintained in `docs/ml_training_runbook.md` and `ai-pipeline/training/README.md`.
+
+## Future Work
+- Performance and scoring modes are in design as an optional layer on top of the existing playback flow; they will surface once we have reliable accuracy metrics and ergonomic input hardware paths.
 
 ## Contributing
 - Review `docs/CONTRIBUTING.md` for coding standards, PR expectations, and documentation etiquette.

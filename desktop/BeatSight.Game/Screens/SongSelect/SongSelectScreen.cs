@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
 using BeatSight.Game.Beatmaps;
-using BeatSight.Game.Screens.Gameplay;
 using BeatSight.Game.Screens.Playback;
 using BeatSight.Game.UI.Components;
 using osu.Framework.Graphics;
@@ -18,23 +17,15 @@ using osuTK.Graphics;
 
 namespace BeatSight.Game.Screens.SongSelect
 {
-    public enum SongSelectDestination
-    {
-        Gameplay,
-        Playback
-    }
-
     public partial class SongSelectScreen : Screen
     {
-        private readonly SongSelectDestination destination;
         private FillFlowContainer beatmapList = null!;
         private SpriteText titleText = null!;
         private BackButton backButton = null!;
 
-        public SongSelectScreen(SongSelectDestination destination = SongSelectDestination.Playback)
+        public SongSelectScreen()
         {
             backButton = new BackButton { Margin = BackButton.DefaultMargin };
-            this.destination = destination;
         }
 
         public override void OnEntering(ScreenTransitionEvent e)
@@ -84,7 +75,7 @@ namespace BeatSight.Game.Screens.SongSelect
                 Origin = Anchor.TopCentre
             };
 
-            titleText.Text = destination == SongSelectDestination.Gameplay ? "Song Selection" : "Playback Library";
+            titleText.Text = "Session Selection";
 
             return new Container
             {
@@ -128,7 +119,7 @@ namespace BeatSight.Game.Screens.SongSelect
 
             foreach (var entry in beatmaps)
             {
-                beatmapList.Add(new BeatmapButton(entry, destination)
+                beatmapList.Add(new BeatmapButton(entry)
                 {
                     Action = () => launchEntry(entry)
                 });
@@ -137,17 +128,7 @@ namespace BeatSight.Game.Screens.SongSelect
 
         private void launchEntry(BeatmapLibrary.BeatmapEntry entry)
         {
-            switch (destination)
-            {
-                case SongSelectDestination.Gameplay:
-                    this.Push(new GameplayScreen(entry.Path));
-                    break;
-
-                case SongSelectDestination.Playback:
-                default:
-                    this.Push(new MappingPlaybackScreen(entry.Path));
-                    break;
-            }
+            this.Push(new PlaybackScreen(entry.Path));
         }
 
         protected override bool OnKeyDown(KeyDownEvent e)
@@ -169,14 +150,12 @@ namespace BeatSight.Game.Screens.SongSelect
             private const float masking_smoothness = 2f;
 
             private readonly BeatmapLibrary.BeatmapEntry entry;
-            private readonly SongSelectDestination destination;
             private readonly Box background;
             private readonly Container buttonBody;
 
-            public BeatmapButton(BeatmapLibrary.BeatmapEntry entry, SongSelectDestination destination)
+            public BeatmapButton(BeatmapLibrary.BeatmapEntry entry)
             {
                 this.entry = entry;
-                this.destination = destination;
 
                 RelativeSizeAxes = Axes.X;
                 AutoSizeAxes = Axes.Y;
@@ -192,9 +171,7 @@ namespace BeatSight.Game.Screens.SongSelect
                 };
 
                 var metadata = entry.Beatmap.Metadata;
-                var accentColour = destination == SongSelectDestination.Gameplay
-                    ? UITheme.AccentPrimary
-                    : UITheme.AccentSecondary;
+                var accentColour = UITheme.AccentPrimary;
 
                 buttonBody.AddRange(new Drawable[]
                 {
@@ -258,7 +235,7 @@ namespace BeatSight.Game.Screens.SongSelect
 
                 var actionLabel = new SpriteText
                 {
-                    Text = destination == SongSelectDestination.Gameplay ? "Play" : "Preview",
+                    Text = "Open Session",
                     Font = BeatSightFont.Button(17f),
                     Colour = UITheme.Emphasise(accentColour, 1.05f),
                     Anchor = Anchor.Centre,

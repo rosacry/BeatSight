@@ -1,7 +1,7 @@
 # BeatSight Status (November 13, 2025)
 
 ## Snapshot
-- Desktop reference build: ✅ shipping-quality gameplay and editor skeleton remain green; the live-input experiment has been shelved and its code/config removed to reduce maintenance drag.
+- Desktop reference build: ✅ shipping-quality playback experience and editor skeleton remain green; the live-input experiment has been shelved and its code/config removed to reduce maintenance drag.
 - AI pipeline: 🟠 dual-crash relabel complete; GPU retrain still pending while we wait for the replacement hard drive and repatriate datasets/checkpoints to `C:`.
 - Web pivot: 🟡 planning artifacts published (PRD, schema, UX, costs); backend FastAPI scaffold alive but workstreams not yet staffed.
 - Documentation: 🟢 consolidated under `docs/Guidebook.md`; historical logs preserved in `docs/archive/`.
@@ -19,6 +19,7 @@
 - **AI Readiness:** Cambridge ingest restored, weights refreshed, BEATSIGHT env hook merged. Awaiting drive delivery and final data migration before exporter + retrain resume.
 - **Web MVP Planning:** Architecture, schema, UX, and cost models are ready. Needs engineering tickets and service spikes.
 - **Practice Mode Polish:** Stage 0.2 hygiene landed; waveform view, blur shader, and hit-lighting are the next desktop polish tasks.
+- **Performance Mode Exploration:** low-risk design spikes for optional scoring overlays are underway; no runtime changes until accuracy metrics and hardware input plans solidify.
 
 ## Reference Map
 - Deep status log (Nov 2025): [`docs/archive/current_status_2025-11-12.md`](../archive/current_status_2025-11-12.md)

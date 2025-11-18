@@ -4,11 +4,16 @@ using System.Linq;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
+using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Threading;
 using osu.Framework.Logging;
+using osu.Framework.Utils;
 using osuTK;
+using osuTK.Graphics;
+using osuTK.Input;
+using osu.Framework.Graphics.Shapes;
 
 namespace BeatSight.Game.UI.Components
 {
@@ -62,6 +67,9 @@ namespace BeatSight.Game.UI.Components
             return dropdownHeader;
         }
 
+        internal Colour4 GetHeaderBackgroundColour()
+            => dropdownHeader?.GetCurrentBackgroundColour() ?? Colour4.Black;
+
         protected override void LoadComplete()
         {
             base.LoadComplete();
@@ -97,6 +105,33 @@ namespace BeatSight.Game.UI.Components
             {
                 Masking = true;
                 CornerRadius = header_corner_radius;
+                MaskingSmoothness = 1.5f;
+                applyBackgroundMasking();
+            }
+
+            protected override void Update()
+            {
+                base.Update();
+                enforceRoundedMask();
+            }
+
+            private void enforceRoundedMask()
+            {
+                // Keep header edges rounded even when the base class toggles state-specific masks.
+                if (!Masking)
+                    Masking = true;
+
+                if (!Precision.AlmostEquals(CornerRadius, header_corner_radius))
+                    CornerRadius = header_corner_radius;
+
+                applyBackgroundMasking();
+            }
+
+            private void applyBackgroundMasking()
+            {
+                Background.Masking = true;
+                Background.CornerRadius = header_corner_radius;
+                Background.MaskingSmoothness = 1.5f;
             }
 
             protected override DropdownSearchBar CreateSearchBar()
@@ -104,12 +139,37 @@ namespace BeatSight.Game.UI.Components
 
             public void SetSearchEnabled(bool enabled)
                 => searchBar?.SetSearchEnabled(enabled);
+
+            public Colour4 GetCurrentBackgroundColour() => Background.Colour;
         }
 
         protected sealed partial class DropdownSearchBar : BasicDropdownHeader.BasicDropdownSearchBar
         {
             private DropdownSearchTextBox? textBox;
             private bool searchAllowed;
+            private const float search_corner_radius = 8f;
+
+            public DropdownSearchBar()
+            {
+                Masking = true;
+                CornerRadius = search_corner_radius;
+                MaskingSmoothness = 1.5f;
+            }
+
+            protected override void Update()
+            {
+                base.Update();
+                enforceRoundedMask();
+            }
+
+            private void enforceRoundedMask()
+            {
+                if (!Masking)
+                    Masking = true;
+
+                if (!Precision.AlmostEquals(CornerRadius, search_corner_radius))
+                    CornerRadius = search_corner_radius;
+            }
 
             protected override TextBox CreateTextBox()
                 => textBox = new DropdownSearchTextBox();
@@ -180,6 +240,9 @@ namespace BeatSight.Game.UI.Components
             private bool suppressNextClose;
             private float? forcedOverlayWidth;
             private const float menu_corner_radius = 10f;
+            private const float seam_cover_thickness = 2f;
+            private readonly Box attachmentSeamCover;
+            private bool pointerButtonHeld;
 
             public DropdownMenu(Dropdown<T> owner)
             {
@@ -188,6 +251,56 @@ namespace BeatSight.Game.UI.Components
                 Masking = true;
                 CornerRadius = menu_corner_radius;
                 StateChanged += onStateChanged;
+                MaskingContainer.CornerRadius = menu_corner_radius;
+                MaskingContainer.Masking = true;
+                MaskingContainer.MaskingSmoothness = 1.5f;
+                attachmentSeamCover = new Box
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Height = seam_cover_thickness,
+                    Anchor = Anchor.TopLeft,
+                    Origin = Anchor.TopLeft,
+                    Depth = float.MinValue
+                };
+                MaskingContainer.Add(attachmentSeamCover);
+            }
+
+            protected override void Update()
+            {
+                // Lock scroll position to prevent hover-based scrolling
+                if (scrollCompleted && isOpen)
+                {
+                    var scrollBefore = ContentContainer.Current;
+                    base.Update();
+
+                    // Restore locked scroll position if it changed
+                    if (!Precision.AlmostEquals(ContentContainer.Current, scrollBefore))
+                        ContentContainer.ScrollTo((float)scrollBefore, false);
+                }
+                else
+                {
+                    base.Update();
+                }
+
+                enforceRoundedMask();
+                updateSeamCoverAppearance();
+            }
+
+            private void enforceRoundedMask()
+            {
+                // Maintain rounded list edges regardless of overlay parenting or framework state changes.
+                if (!Masking)
+                    Masking = true;
+                MaskingSmoothness = 1.5f;
+
+                if (!Precision.AlmostEquals(CornerRadius, menu_corner_radius))
+                    CornerRadius = menu_corner_radius;
+
+                if (!Precision.AlmostEquals(MaskingContainer.CornerRadius, menu_corner_radius))
+                    MaskingContainer.CornerRadius = menu_corner_radius;
+                if (!MaskingContainer.Masking)
+                    MaskingContainer.Masking = true;
+                MaskingContainer.MaskingSmoothness = 1.5f;
             }
 
             private void onStateChanged(MenuState state)
@@ -209,6 +322,7 @@ namespace BeatSight.Game.UI.Components
                     isOpen = false;
                     pendingScrollFrames = 0;
                     scrollCompleted = false;
+                    pointerButtonHeld = false;
                     restoreParent();
                     owner.SetTooltipSuppression(false);
                     return;
@@ -275,18 +389,7 @@ namespace BeatSight.Game.UI.Components
                 overlayRoot = overlay;
                 overlayParent = targetOverlayParent;
 
-                var headerTopLeft = targetOverlayParent.ToLocalSpace(owner.ScreenSpaceDrawQuad.TopLeft);
-                var headerTopRight = targetOverlayParent.ToLocalSpace(owner.ScreenSpaceDrawQuad.TopRight);
-                var headerBottomLeft = targetOverlayParent.ToLocalSpace(owner.ScreenSpaceDrawQuad.BottomLeft);
-                var headerWidth = headerTopRight.X - headerTopLeft.X;
-
-                var menuTop = headerBottomLeft.Y;
-                var availableHeight = Math.Max(0, targetOverlayParent.DrawSize.Y - menuTop);
-                var menuHeight = computeOverlayMenuHeight(availableHeight, targetOverlayParent.DrawSize.Y);
-
-                Size = new Vector2(headerWidth, menuHeight);
-                forcedOverlayWidth = headerWidth;
-                Position = new Vector2(headerTopLeft.X, menuTop);
+                applyMenuPlacement(targetOverlayParent);
 
                 usingOverlay = true;
                 updateOverlayBounds();
@@ -405,7 +508,77 @@ namespace BeatSight.Game.UI.Components
             protected override void OnFocusLost(FocusLostEvent e) => base.OnFocusLost(e);
 
             protected override DrawableDropdownMenuItem CreateDrawableDropdownMenuItem(MenuItem item)
-                => new HoverStableDropdownMenuItem(item);
+                => new HoverStableDropdownMenuItem(this, item);
+
+            protected override bool OnHover(HoverEvent e)
+            {
+                // Capture scroll position before hover handling
+                var scrollBefore = ContentContainer.Current;
+                cancelPendingAutoScrollFromPointer();
+                var handled = base.OnHover(e);
+
+                // Restore scroll position if it changed due to hover
+                if (!Precision.AlmostEquals(ContentContainer.Current, scrollBefore))
+                    ContentContainer.ScrollTo((float)scrollBefore, false);
+
+                return handled;
+            }
+
+            protected override bool OnMouseMove(MouseMoveEvent e)
+            {
+                var scrollBefore = ContentContainer.Current;
+                cancelPendingAutoScrollFromPointer();
+                var handled = base.OnMouseMove(e);
+
+                // Always restore scroll position after mouse movement to prevent hover-induced scrolling
+                if (!Precision.AlmostEquals(ContentContainer.Current, scrollBefore))
+                    ContentContainer.ScrollTo((float)scrollBefore, false);
+
+                return handled;
+            }
+
+            protected override bool OnScroll(ScrollEvent e)
+            {
+                cancelPendingAutoScrollFromPointer();
+                return base.OnScroll(e);
+            }
+
+            protected override bool OnMouseDown(MouseDownEvent e)
+            {
+                if (isManualScrollButton(e.Button))
+                    pointerButtonHeld = true;
+
+                cancelPendingAutoScrollFromPointer();
+                return base.OnMouseDown(e);
+            }
+
+            protected override void OnMouseUp(MouseUpEvent e)
+            {
+                if (isManualScrollButton(e.Button))
+                    pointerButtonHeld = false;
+
+                base.OnMouseUp(e);
+            }
+
+            private bool shouldBlockHoverEdgeScroll(double priorScrollPosition)
+            {
+                if (!isOpen || pointerButtonHeld)
+                    return false;
+
+                return !Precision.AlmostEquals(ContentContainer.Current, priorScrollPosition);
+            }
+
+            private static bool isManualScrollButton(MouseButton button)
+                => button is MouseButton.Left or MouseButton.Middle or MouseButton.Right;
+
+            private void cancelPendingAutoScrollFromPointer()
+            {
+                if (!isOpen || scrollCompleted)
+                    return;
+
+                pendingScrollFrames = 0;
+                scrollCompleted = true;
+            }
 
             private void ensureOverlayAttachment()
             {
@@ -432,31 +605,69 @@ namespace BeatSight.Game.UI.Components
                 if (parentContainer == null)
                     return;
 
+                enforceViewportMaskRounding();
+
                 if (viewportMaskContainer != null && overlayRoot != null)
                     updateViewportMaskBounds(overlayRoot);
 
-                var headerQuad = owner.ScreenSpaceDrawQuad;
-                var headerTopLeft = parentContainer.ToLocalSpace(headerQuad.TopLeft);
-                var headerTopRight = parentContainer.ToLocalSpace(headerQuad.TopRight);
-                var headerBottomLeft = parentContainer.ToLocalSpace(headerQuad.BottomLeft);
-
-                var headerWidth = headerTopRight.X - headerTopLeft.X;
-                var menuTop = headerBottomLeft.Y;
-                var availableHeight = Math.Max(0, parentContainer.DrawSize.Y - menuTop);
-                var menuHeight = computeOverlayMenuHeight(availableHeight, parentContainer.DrawSize.Y);
-
-                forcedOverlayWidth = headerWidth;
-                Size = new Vector2(headerWidth, menuHeight);
-                Position = new Vector2(headerTopLeft.X, menuTop);
+                applyMenuPlacement(parentContainer);
             }
 
             private float computeOverlayMenuHeight(float availableHeight, float overlayHeight)
             {
-                var contentHeight = Math.Max(ContentContainer.BoundingBox.Height, DrawSize.Y);
+                var contentHeight = getActualContentHeight();
                 var maxHeight = owner.MenuMaxHeight ?? contentHeight;
                 var desiredHeight = Math.Min(contentHeight, maxHeight);
+                var height = Math.Min(availableHeight, desiredHeight);
 
-                return Math.Clamp(Math.Min(availableHeight, desiredHeight), 0, overlayHeight);
+                return Math.Clamp(height, 0, overlayHeight);
+            }
+
+            private float getActualContentHeight()
+            {
+                float totalHeight = ContentContainer.Padding.Top + ContentContainer.Padding.Bottom;
+
+                foreach (var child in ContentContainer.Children)
+                    totalHeight += child.BoundingBox.Height;
+
+                // When the menu has fewer items than the maximum displayable count we want to
+                // collapse the container to match the visible content rather than keeping the
+                // previous (larger) scrollable height, which manifests as the black block seen in
+                // the attached screenshot. Fall back to the bounding box only when no content has
+                // been computed yet so the caller still gets a sensible non-zero value.
+                if (Precision.AlmostEquals(totalHeight, 0))
+                    totalHeight = ContentContainer.BoundingBox.Height;
+
+                return totalHeight;
+            }
+
+            private void applyMenuPlacement(Container parentContainer)
+            {
+                var headerQuad = owner.ScreenSpaceDrawQuad;
+                var headerTopLeft = parentContainer.ToLocalSpace(headerQuad.TopLeft);
+                var headerTopRight = parentContainer.ToLocalSpace(headerQuad.TopRight);
+                var headerBottomLeft = parentContainer.ToLocalSpace(headerQuad.BottomLeft);
+                var headerWidth = headerTopRight.X - headerTopLeft.X;
+
+                var menuTop = headerBottomLeft.Y - seam_cover_thickness;
+                var availableHeight = Math.Max(0, parentContainer.DrawSize.Y - menuTop);
+                var menuHeight = computeOverlayMenuHeight(availableHeight, parentContainer.DrawSize.Y);
+
+                forcedOverlayWidth = headerWidth;
+                Size = new Vector2(headerWidth, menuHeight + seam_cover_thickness);
+                Position = new Vector2(headerTopLeft.X, menuTop);
+                ensureAttachmentPadding();
+            }
+
+            private void ensureAttachmentPadding()
+            {
+                var padding = ContentContainer.Padding;
+
+                if (Precision.AlmostEquals(padding.Top, seam_cover_thickness))
+                    return;
+
+                padding.Top = seam_cover_thickness;
+                ContentContainer.Padding = padding;
             }
             private Container getOverlayParent(Container overlay)
             {
@@ -478,10 +689,13 @@ namespace BeatSight.Game.UI.Components
                 viewportMaskContainer ??= new Container
                 {
                     Masking = true,
+                    CornerRadius = menu_corner_radius,
+                    MaskingSmoothness = 1.5f,
                     RelativeSizeAxes = Axes.None,
                     Anchor = Anchor.TopLeft,
                     Origin = Anchor.TopLeft
                 };
+                enforceViewportMaskRounding();
 
                 if (viewportMaskContainer.Parent != overlay)
                     overlay.Add(viewportMaskContainer);
@@ -514,11 +728,28 @@ namespace BeatSight.Game.UI.Components
                 viewportMaskContainer.Size = new Vector2(overlaySize.X, height);
             }
 
+            private void enforceViewportMaskRounding()
+            {
+                if (viewportMaskContainer == null)
+                    return;
+
+                if (!viewportMaskContainer.Masking)
+                    viewportMaskContainer.Masking = true;
+
+                if (!Precision.AlmostEquals(viewportMaskContainer.CornerRadius, menu_corner_radius))
+                    viewportMaskContainer.CornerRadius = menu_corner_radius;
+
+                viewportMaskContainer.MaskingSmoothness = 1.5f;
+            }
+
             private sealed partial class HoverStableDropdownMenuItem : DropdownMenu.DrawableDropdownMenuItem
             {
-                public HoverStableDropdownMenuItem(MenuItem item)
+                private readonly DropdownMenu menu;
+
+                public HoverStableDropdownMenuItem(DropdownMenu menu, MenuItem item)
                     : base(item)
                 {
+                    this.menu = menu;
                     AutoSizeAxes = Axes.Y;
                     RelativeSizeAxes = Axes.X;
                     Width = 1;
@@ -540,10 +771,27 @@ namespace BeatSight.Game.UI.Components
 
                 protected override bool OnHover(HoverEvent e)
                 {
+                    // Capture scroll position before hover handling to prevent automatic scrolling
+                    var scrollBefore = menu.ContentContainer.Current;
+                    menu.cancelPendingAutoScrollFromPointer();
+                    var handled = base.OnHover(e);
+
+                    // Restore scroll position if it changed due to hover
+                    if (!Precision.AlmostEquals(menu.ContentContainer.Current, scrollBefore))
+                        menu.ContentContainer.ScrollTo((float)scrollBefore, false);
+
                     Scheduler.AddOnce(UpdateBackgroundColour);
                     Scheduler.AddOnce(UpdateForegroundColour);
 
-                    return false;
+                    return handled;
+                }
+
+                protected override void OnHoverLost(HoverLostEvent e)
+                {
+                    menu.cancelPendingAutoScrollFromPointer();
+                    base.OnHoverLost(e);
+                    Scheduler.AddOnce(UpdateBackgroundColour);
+                    Scheduler.AddOnce(UpdateForegroundColour);
                 }
             }
 
@@ -553,6 +801,12 @@ namespace BeatSight.Game.UI.Components
                     newSize.X = forcedOverlayWidth.Value;
 
                 base.UpdateSize(newSize);
+            }
+
+            private void updateSeamCoverAppearance()
+            {
+                attachmentSeamCover.Colour = owner.GetHeaderBackgroundColour();
+                attachmentSeamCover.Alpha = State == MenuState.Open ? 1 : 0;
             }
         }
     }

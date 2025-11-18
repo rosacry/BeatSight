@@ -13,12 +13,14 @@ using BeatSight.Game.Mapping;
 using BeatSight.Game.Screens.Editor;
 using BeatSight.Game.Services.Generation;
 using BeatSight.Game.UI.Components;
+using BeatSight.Game.UI.Theming;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Graphics.Transforms;
 using osu.Framework.Logging;
@@ -148,11 +150,10 @@ namespace BeatSight.Game.Screens.Mapping
                     RelativeSizeAxes = Axes.Both,
                     Colour = new Color4(17, 19, 28, 255)
                 },
-                new Container
+                new ScreenEdgeContainer
                 {
-                    RelativeSizeAxes = Axes.Both,
-                    Padding = new MarginPadding { Horizontal = 60, Vertical = 40 },
-                    Child = new FillFlowContainer
+                    EdgePadding = new MarginPadding { Horizontal = 60, Vertical = 40 },
+                    Content = new FillFlowContainer
                     {
                         RelativeSizeAxes = Axes.X,
                         AutoSizeAxes = Axes.Y,
@@ -163,7 +164,7 @@ namespace BeatSight.Game.Screens.Mapping
                             new SpriteText
                             {
                                 Text = "AI Beatmap Generation",
-                                Font = new FontUsage(size: 36, weight: "Bold"),
+                                Font = BeatSightFont.Title(36f),
                                 Colour = Color4.White
                             },
                             createSummaryBox(),
@@ -334,13 +335,13 @@ namespace BeatSight.Game.Screens.Mapping
                                 new SpriteText
                                 {
                                     Text = importedTrack.DisplayName,
-                                    Font = new FontUsage(size: 26, weight: "Medium"),
+                                    Font = BeatSightFont.Section(26f),
                                     Colour = Color4.White
                                 },
                                 new SpriteText
                                 {
                                     Text = $"Length: {importedTrack.FormatDuration()} • Size: {importedTrack.FormatFileSize()}",
-                                    Font = new FontUsage(size: 18),
+                                    Font = BeatSightFont.Body(18f),
                                     Colour = new Color4(180, 185, 205, 255)
                                 }
                             }
@@ -448,7 +449,7 @@ namespace BeatSight.Game.Screens.Mapping
 
             livePlaybackStatusText = new SpriteText
             {
-                Font = new FontUsage(size: 12),
+                Font = BeatSightFont.Caption(12f),
                 Colour = new Color4(170, 200, 240, 255),
                 Text = string.Empty
             };
@@ -464,13 +465,13 @@ namespace BeatSight.Game.Screens.Mapping
                     new SpriteText
                     {
                         Text = "Live Playback Controls",
-                        Font = new FontUsage(size: 22, weight: "Medium"),
+                        Font = BeatSightFont.Section(22f),
                         Colour = new Color4(190, 200, 220, 255)
                     },
                     new SpriteText
                     {
                         Text = "Adjust metronome, drum isolation, and note skin without leaving the workflow.",
-                        Font = new FontUsage(size: 14),
+                        Font = BeatSightFont.Caption(14f),
                         Colour = new Color4(170, 175, 195, 255)
                     },
                     livePlaybackStatusText,
@@ -497,7 +498,7 @@ namespace BeatSight.Game.Screens.Mapping
                             new SpriteText
                             {
                                 Text = "Metronome Sound",
-                                Font = new FontUsage(size: 16),
+                                Font = BeatSightFont.Body(16f),
                                 Colour = new Color4(170, 180, 205, 255)
                             },
                             metronomeSoundDropdown
@@ -514,7 +515,7 @@ namespace BeatSight.Game.Screens.Mapping
                             new SpriteText
                             {
                                 Text = "Note Skin",
-                                Font = new FontUsage(size: 16),
+                                Font = BeatSightFont.Body(16f),
                                 Colour = new Color4(170, 180, 205, 255)
                             },
                             noteSkinDropdown
@@ -658,7 +659,7 @@ namespace BeatSight.Game.Screens.Mapping
                     new SpriteText
                     {
                         Text = "Detection Controls",
-                        Font = new FontUsage(size: 22, weight: "Medium"),
+                        Font = BeatSightFont.Section(22f),
                         Colour = new Color4(180, 190, 210, 255)
                     },
                     new FillFlowContainer
@@ -672,14 +673,14 @@ namespace BeatSight.Game.Screens.Mapping
                             new SpriteText
                             {
                                 Text = "Detection Sensitivity",
-                                Font = new FontUsage(size: 16),
+                                Font = BeatSightFont.Body(16f),
                                 Colour = new Color4(170, 180, 205, 255)
                             },
                             sensitivitySlider,
                             sensitivityLockNote = new SpriteText
                             {
                                 Text = "Locked while generation is running",
-                                Font = new FontUsage(size: 12),
+                                Font = BeatSightFont.Caption(12f),
                                 Colour = new Color4(210, 110, 110, 255),
                                 Alpha = 0
                             }
@@ -696,7 +697,7 @@ namespace BeatSight.Game.Screens.Mapping
                             new SpriteText
                             {
                                 Text = "Quantization Grid",
-                                Font = new FontUsage(size: 16),
+                                Font = BeatSightFont.Body(16f),
                                 Colour = new Color4(170, 180, 205, 255)
                             },
                             new Container
@@ -719,7 +720,7 @@ namespace BeatSight.Game.Screens.Mapping
                             debugOverlayNote = new SpriteText
                             {
                                 Text = "Available after onset detection",
-                                Font = new FontUsage(size: 12),
+                                Font = BeatSightFont.Caption(12f),
                                 Colour = new Color4(180, 190, 205, 255),
                                 Alpha = 1
                             }
@@ -738,14 +739,14 @@ namespace BeatSight.Game.Screens.Mapping
             statusText = new SpriteText
             {
                 Text = "Preparing analysis pipeline...",
-                Font = new FontUsage(size: 20),
+                Font = BeatSightFont.Section(20f),
                 Colour = new Color4(190, 195, 210, 255)
             };
 
             stageLabelText = new SpriteText
             {
                 Text = string.Empty,
-                Font = new FontUsage(size: 16),
+                Font = BeatSightFont.Body(16f),
                 Colour = new Color4(140, 180, 255, 255),
                 Alpha = 0
             };
@@ -753,7 +754,7 @@ namespace BeatSight.Game.Screens.Mapping
             stageProgressText = new SpriteText
             {
                 Text = string.Empty,
-                Font = new FontUsage(size: 14),
+                Font = BeatSightFont.Caption(14f),
                 Colour = new Color4(160, 170, 200, 255),
                 Alpha = 0
             };
@@ -761,7 +762,7 @@ namespace BeatSight.Game.Screens.Mapping
             summaryText = new SpriteText
             {
                 Text = string.Empty,
-                Font = new FontUsage(size: 16),
+                Font = BeatSightFont.Body(16f),
                 Colour = new Color4(170, 175, 195, 255),
                 Alpha = 0,
                 AllowMultiline = true,
@@ -771,7 +772,7 @@ namespace BeatSight.Game.Screens.Mapping
             var description = new SpriteText
             {
                 Text = "The AI workflow will separate drum stems, detect peaks, and draft hit objects aligned with the guitar-hero style lane view.",
-                Font = new FontUsage(size: 16),
+                Font = BeatSightFont.Body(16f),
                 Colour = new Color4(170, 175, 195, 255),
                 RelativeSizeAxes = Axes.X
             };
@@ -792,7 +793,7 @@ namespace BeatSight.Game.Screens.Mapping
             heartbeatStatusText = new SpriteText
             {
                 Text = string.Empty,
-                Font = new FontUsage(size: 12),
+                Font = BeatSightFont.Caption(12f),
                 Colour = new Color4(150, 155, 175, 255),
                 Alpha = 0,
                 AllowMultiline = true,
@@ -802,7 +803,7 @@ namespace BeatSight.Game.Screens.Mapping
             offlineStatusText = new SpriteText
             {
                 Text = BeatSightStrings.OfflinePlaybackDisabled,
-                Font = new FontUsage(size: 14),
+                Font = BeatSightFont.Caption(14f),
                 Colour = new Color4(160, 165, 185, 255)
             };
 
@@ -818,7 +819,7 @@ namespace BeatSight.Game.Screens.Mapping
             infoToastText = new SpriteText
             {
                 Text = string.Empty,
-                Font = new FontUsage(size: 15),
+                Font = BeatSightFont.Caption(15f),
                 Colour = new Color4(215, 225, 245, 255)
             };
 
@@ -850,7 +851,7 @@ namespace BeatSight.Game.Screens.Mapping
             warningText = new SpriteText
             {
                 Text = string.Empty,
-                Font = new FontUsage(size: 16),
+                Font = BeatSightFont.Body(16f),
                 Colour = new Color4(255, 230, 180, 255),
                 RelativeSizeAxes = Axes.X
             };
@@ -882,7 +883,7 @@ namespace BeatSight.Game.Screens.Mapping
             errorNotificationText = new SpriteText
             {
                 Text = string.Empty,
-                Font = new FontUsage(size: 16),
+                Font = BeatSightFont.Body(16f),
                 Colour = new Color4(255, 205, 215, 255),
                 RelativeSizeAxes = Axes.X
             };

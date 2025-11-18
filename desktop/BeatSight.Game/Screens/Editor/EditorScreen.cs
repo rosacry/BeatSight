@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -47,15 +49,12 @@ namespace BeatSight.Game.Screens.Editor
         public static Color4 AccentSave => UITheme.AccentPrimary;
         public static Color4 AccentUndo => UITheme.SurfaceAlt;
         public static Color4 AccentRedo => UITheme.SurfaceAlt;
-
         public static Color4 Warning => UITheme.AccentWarning;
-
         public static Color4 TextPrimary => UITheme.TextPrimary;
         public static Color4 TextSecondary => UITheme.TextSecondary;
         public static Color4 TextMuted => UITheme.TextMuted;
 
         public static Color4 Lighten(Color4 colour, float factor) => UITheme.Emphasise(colour, factor);
-
         public static Color4 WithAlpha(Color4 colour, float alpha) => new Color4(colour.R, colour.G, colour.B, colour.A * alpha);
     }
 
@@ -89,6 +88,19 @@ namespace BeatSight.Game.Screens.Editor
         private EditorButton undoButton = null!;
         private EditorButton redoButton = null!;
         private BackButton backButton = null!;
+
+        private BasicTextBox titleInput = null!;
+        private BasicTextBox artistInput = null!;
+        private BasicTextBox creatorInput = null!;
+        private BasicTextBox sourceInput = null!;
+        private BasicTextBox tagsInput = null!;
+        private BasicTextBox bpmInput = null!;
+        private BasicTextBox offsetInput = null!;
+        private SpriteText selectionSummaryText = null!;
+        private SpriteText noteCountValue = null!;
+        private SpriteText mapLengthValue = null!;
+        private SpriteText densityValue = null!;
+        private SpriteText bpmStatValue = null!;
 
         private bool isPlaying;
         private double currentTime;
@@ -127,6 +139,10 @@ namespace BeatSight.Game.Screens.Editor
         private Bindable<double> editorTimelineZoomDefault = null!;
         private Bindable<double> editorWaveformScaleDefault = null!;
         private Bindable<bool> editorBeatGridVisibleDefault = null!;
+
+        private bool suppressInspectorFieldSync;
+        private HitObject? selectedHitObject;
+        private double? initialBeatmapBpm;
 
         private const int maxUndoSteps = 50;
         private const int historyPreviewCount = 5;
@@ -339,14 +355,18 @@ namespace BeatSight.Game.Screens.Editor
                 Action = () => this.Exit()
             };
 
-            InternalChildren = new Drawable[]
+            var editorEdgePadding = new MarginPadding
             {
-                new Box
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Colour = EditorColours.ScreenBackground
-                },
-                new GridContainer
+                Left = UITheme.ScreenPadding.Left + 20,
+                Right = UITheme.ScreenPadding.Right + 20,
+                Top = UITheme.ScreenPadding.Top + 12,
+                Bottom = UITheme.ScreenPadding.Bottom + 12
+            };
+
+            var paddedLayout = new ScreenEdgeContainer(scrollable: false)
+            {
+                EdgePadding = editorEdgePadding,
+                Content = new GridContainer
                 {
                     RelativeSizeAxes = Axes.Both,
                     RowDimensions = new[]
@@ -361,8 +381,25 @@ namespace BeatSight.Game.Screens.Editor
                         new Drawable[] { createEditor() },
                         new Drawable[] { createFooter() }
                     }
+                }
+            };
+
+            var backButtonOverlay = new SafeAreaContainer
+            {
+                RelativeSizeAxes = Axes.Both,
+                Padding = BackButton.DefaultMargin,
+                Child = backButton
+            };
+
+            InternalChildren = new Drawable[]
+            {
+                new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = EditorColours.ScreenBackground
                 },
-                backButton
+                paddedLayout,
+                backButtonOverlay
             };
 
             if (!string.IsNullOrEmpty(beatmapPath))
@@ -438,7 +475,7 @@ namespace BeatSight.Game.Screens.Editor
                 }
             };
 
-            float safeLeftPadding = BackButton.DefaultMargin.Left + (backButton?.Width ?? 120) + 16;
+            float safeLeftPadding = (backButton?.Margin.Left ?? 0) + (backButton?.Width ?? 120) + 16;
 
             timeText = new SpriteText
             {
@@ -695,50 +732,130 @@ namespace BeatSight.Game.Screens.Editor
                 RelativeSizeAxes = Axes.Both
             };
 
-            var timelineSection = new Container
+            var previewSurface = new Container
             {
                 RelativeSizeAxes = Axes.Both,
-                Padding = new MarginPadding { Horizontal = 30, Vertical = 10 },
-                Child = new GridContainer
+                Masking = true,
+                CornerRadius = 18,
+                Children = new Drawable[]
                 {
-                    RelativeSizeAxes = Axes.Both,
-                    RowDimensions = new[]
+                    new Box
                     {
-                        new Dimension(GridSizeMode.Absolute, 70),
-                        new Dimension()
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = EditorColours.PreviewBackground
                     },
-                    Content = new[]
+                    new Container
                     {
-                        new Drawable[] { createTimelineToolbox() },
-                        new Drawable[] { timeline }
+                        RelativeSizeAxes = Axes.Both,
+                        Padding = new MarginPadding { Horizontal = 36, Vertical = 26 },
+                        Child = gameplayPreview
                     }
                 }
             };
 
-            return new GridContainer
+            var inspectorPanel = createInspectorPanel();
+
+            var inspectorContainer = new Container
+            {
+                RelativeSizeAxes = Axes.Y,
+                Width = 420,
+                Margin = new MarginPadding { Left = 32 },
+                Padding = new MarginPadding { Top = 10, Bottom = 10 },
+                Anchor = Anchor.TopRight,
+                Origin = Anchor.TopRight,
+                Child = inspectorPanel
+            };
+
+            var previewAndInspectorRow = new GridContainer
+            {
+                RelativeSizeAxes = Axes.Both,
+                ColumnDimensions = new[]
+                {
+                    new Dimension(),
+                    new Dimension(GridSizeMode.Absolute, 420)
+                },
+                Content = new[]
+                {
+                    new Drawable[]
+                    {
+                        new Container
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Padding = new MarginPadding { Right = 24 },
+                            Child = previewSurface
+                        },
+                        inspectorContainer
+                    }
+                }
+            };
+
+            var timelineGrid = new GridContainer
             {
                 RelativeSizeAxes = Axes.Both,
                 RowDimensions = new[]
                 {
-                    new Dimension(GridSizeMode.Absolute, 260),
+                    new Dimension(GridSizeMode.Absolute, 74),
+                    new Dimension()
+                },
+                Content = new[]
+                {
+                    new Drawable[] { createTimelineToolbox() },
+                    new Drawable[] { timeline }
+                }
+            };
+
+            var timelineSurface = new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                Masking = true,
+                CornerRadius = 18,
+                Children = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = EditorColours.TimelineBackground
+                    },
+                    new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Padding = new MarginPadding { Horizontal = 26, Vertical = 18 },
+                        Child = timelineGrid
+                    }
+                }
+            };
+
+            var editorGrid = new GridContainer
+            {
+                RelativeSizeAxes = Axes.Both,
+                RowDimensions = new[]
+                {
+                    new Dimension(GridSizeMode.Absolute, 300),
                     new Dimension()
                 },
                 Content = new[]
                 {
                     new Drawable[]
                     {
-                        timelineSection
-                    },
-                    new Drawable[]
-                    {
                         new Container
                         {
                             RelativeSizeAxes = Axes.Both,
-                            Padding = new MarginPadding { Horizontal = 40, Vertical = 20 },
-                            Child = gameplayPreview
+                            Padding = new MarginPadding { Bottom = 24 },
+                            Child = timelineSurface
                         }
+                    },
+                    new Drawable[]
+                    {
+                        previewAndInspectorRow
                     }
                 }
+            };
+
+            return new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                Padding = new MarginPadding { Horizontal = 12, Vertical = 8 },
+                Child = editorGrid
             };
         }
 
@@ -747,7 +864,7 @@ namespace BeatSight.Game.Screens.Editor
             timelineZoomValueText = new SpriteText
             {
                 Text = $"{timelineZoom:0.00}x",
-                Font = new FontUsage(size: 14, weight: "Bold"),
+                Font = BeatSightFont.Title(14f),
                 Colour = EditorColours.TextPrimary,
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft
@@ -783,7 +900,7 @@ namespace BeatSight.Game.Screens.Editor
             waveformScaleValueText = new SpriteText
             {
                 Text = $"{waveformScale:0.00}x",
-                Font = new FontUsage(size: 14, weight: "Bold"),
+                Font = BeatSightFont.Title(14f),
                 Colour = EditorColours.TextPrimary,
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft
@@ -819,7 +936,7 @@ namespace BeatSight.Game.Screens.Editor
             snapDivisorText = new SpriteText
             {
                 Text = $"1/{snapDivisor}",
-                Font = new FontUsage(size: 14, weight: "Bold"),
+                Font = BeatSightFont.Title(14f),
                 Colour = EditorColours.TextPrimary,
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft
@@ -898,6 +1015,560 @@ namespace BeatSight.Game.Screens.Editor
             return container;
         }
 
+        private Drawable createInspectorPanel()
+        {
+            titleInput = createInspectorTextBox("Song title");
+            titleInput.Current.ValueChanged += e => applyMetadataChange(meta => meta.Title = e.NewValue ?? string.Empty, refreshStatus: true);
+
+            artistInput = createInspectorTextBox("Artist");
+            artistInput.Current.ValueChanged += e => applyMetadataChange(meta => meta.Artist = e.NewValue ?? string.Empty, refreshStatus: true);
+
+            creatorInput = createInspectorTextBox("Mapper");
+            creatorInput.Current.ValueChanged += e => applyMetadataChange(meta => meta.Creator = e.NewValue ?? string.Empty);
+
+            sourceInput = createInspectorTextBox("Source/Album");
+            sourceInput.Current.ValueChanged += e => applyMetadataChange(meta => meta.Source = string.IsNullOrWhiteSpace(e.NewValue) ? null : e.NewValue);
+
+            tagsInput = createInspectorTextBox("tag1, tag2");
+            tagsInput.Current.ValueChanged += e => applyMetadataChange(meta =>
+            {
+                meta.Tags = string.IsNullOrWhiteSpace(e.NewValue)
+                    ? new List<string>()
+                    : e.NewValue!.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                        .Select(tag => tag.ToLowerInvariant())
+                        .ToList();
+            });
+
+            bpmInput = createInspectorTextBox("e.g. 174");
+            bpmInput.Current.ValueChanged += e => applyBpmText(e.NewValue);
+
+            offsetInput = createInspectorTextBox("0");
+            offsetInput.Current.ValueChanged += e => applyOffsetText(e.NewValue);
+
+            var metadataSection = createInspectorSection("Song Details", 360,
+                createInspectorField("Title", titleInput),
+                createInspectorField("Artist", artistInput),
+                createInspectorField("Creator", creatorInput),
+                createInspectorField("Source", sourceInput),
+                createInspectorField("Tags", tagsInput));
+
+            var timingSection = createInspectorSection("Timing & Selection", 320,
+                createInspectorField("BPM", bpmInput),
+                createInspectorButtonRow(("½ BPM", () => adjustBpmByFactor(0.5)), ("×2 BPM", () => adjustBpmByFactor(2)), ("Reset", resetBpmToDefault)),
+                createInspectorField("Offset (ms)", offsetInput),
+                createInspectorField("Selection", createSelectionPanel()));
+
+            var statsSection = createInspectorSection("Map Stats", 220,
+                createInspectorStatBadge("Notes", out noteCountValue),
+                createInspectorStatBadge("Length", out mapLengthValue),
+                createInspectorStatBadge("Density", out densityValue),
+                createInspectorStatBadge("Active BPM", out bpmStatValue));
+
+            return new Container
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Padding = new MarginPadding { Horizontal = 30, Vertical = 12 },
+                Child = new Container
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    CornerRadius = 12,
+                    Masking = true,
+                    Children = new Drawable[]
+                    {
+                        new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Colour = EditorColours.TimelineBackground
+                        },
+                        new FillFlowContainer
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            AutoSizeAxes = Axes.Y,
+                            Direction = FillDirection.Horizontal,
+                            Spacing = new Vector2(28, 0),
+                            Padding = new MarginPadding { Horizontal = 20, Vertical = 16 },
+                            Children = new Drawable[]
+                            {
+                                metadataSection,
+                                timingSection,
+                                statsSection
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        private Drawable createSelectionPanel()
+        {
+            selectionSummaryText = new SpriteText
+            {
+                Text = "No note selected",
+                Font = BeatSightFont.Caption(13f),
+                Colour = EditorColours.TextSecondary
+            };
+
+            var navigationRow = createInspectorButtonRow(("Prev", () => jumpToAdjacentNote(false)), ("Next", () => jumpToAdjacentNote(true)), ("Center", centerOnSelection));
+            var editRow = createInspectorButtonRow(("Duplicate", duplicateSelectedNote), ("Delete", deleteSelectedNote));
+            var nudgeRow = createInspectorButtonRow(("Nudge -", () => nudgeSelectedNote(false)), ("Nudge +", () => nudgeSelectedNote(true)));
+
+            return new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(6),
+                Children = new Drawable[]
+                {
+                    selectionSummaryText,
+                    navigationRow,
+                    editRow,
+                    nudgeRow
+                }
+            };
+        }
+
+        private BasicTextBox createInspectorTextBox(string placeholder)
+        {
+            return new BasicTextBox
+            {
+                RelativeSizeAxes = Axes.X,
+                Height = 34,
+                PlaceholderText = placeholder,
+                Masking = true,
+                CornerRadius = 6
+            };
+        }
+
+        private Drawable createInspectorSection(string title, float width, params Drawable[] children)
+        {
+            return new Container
+            {
+                Width = width,
+                AutoSizeAxes = Axes.Y,
+                Child = new FillFlowContainer
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Direction = FillDirection.Vertical,
+                    Spacing = new Vector2(10),
+                    Children = new Drawable[]
+                    {
+                        new SpriteText
+                        {
+                            Text = title,
+                            Font = BeatSightFont.Section(18f),
+                            Colour = EditorColours.TextPrimary
+                        }
+                    }.Concat(children).ToArray()
+                }
+            };
+        }
+
+        private Drawable createInspectorField(string label, Drawable control)
+        {
+            return new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(4),
+                Children = new Drawable[]
+                {
+                    new SpriteText
+                    {
+                        Text = label,
+                        Font = BeatSightFont.Caption(12f),
+                        Colour = EditorColours.TextSecondary
+                    },
+                    control
+                }
+            };
+        }
+
+        private Drawable createInspectorButtonRow(params (string label, Action action)[] buttons)
+        {
+            return new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Horizontal,
+                Spacing = new Vector2(6, 0),
+                Children = buttons.Select(b => createInspectorButton(b.label, b.action)).ToArray()
+            };
+        }
+
+        private Drawable createInspectorButton(string text, Action action)
+        {
+            return new BasicButton
+            {
+                Size = new Vector2(90, 30),
+                Masking = true,
+                CornerRadius = 6,
+                BackgroundColour = EditorColours.Lighten(EditorColours.ControlsBackground, 1.08f),
+                Action = action,
+                Child = new SpriteText
+                {
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    Text = text,
+                    Font = BeatSightFont.Body(14f),
+                    Colour = EditorColours.TextPrimary
+                }
+            };
+        }
+
+        private Drawable createInspectorStatBadge(string label, out SpriteText valueLabel)
+        {
+            valueLabel = new SpriteText
+            {
+                Text = "--",
+                Font = BeatSightFont.Title(16f),
+                Colour = EditorColours.TextPrimary
+            };
+
+            return new FillFlowContainer
+            {
+                AutoSizeAxes = Axes.Y,
+                Width = 200,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(4),
+                Children = new Drawable[]
+                {
+                    new SpriteText
+                    {
+                        Text = label,
+                        Font = BeatSightFont.Caption(12f),
+                        Colour = EditorColours.TextSecondary
+                    },
+                    valueLabel
+                }
+            };
+        }
+
+        private void applyMetadataChange(Action<BeatmapMetadata> mutation, bool refreshStatus = false)
+        {
+            if (beatmap == null || suppressInspectorFieldSync)
+                return;
+
+            mutation(beatmap.Metadata);
+            beatmap.Metadata.ModifiedAt = DateTime.UtcNow;
+            markUnsaved();
+
+            if (refreshStatus)
+                refreshMetadataStatus();
+        }
+
+        private void refreshMetadataStatus()
+        {
+            if (beatmap == null)
+                return;
+
+            string artist = string.IsNullOrWhiteSpace(beatmap.Metadata.Artist) ? "Unknown Artist" : beatmap.Metadata.Artist;
+            string title = string.IsNullOrWhiteSpace(beatmap.Metadata.Title) ? "Untitled" : beatmap.Metadata.Title;
+            setStatusBase($"Editing: {artist} — {title}");
+        }
+
+        private void applyBpmText(string? value)
+        {
+            if (beatmap == null || suppressInspectorFieldSync)
+                return;
+
+            if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double bpm) && bpm > 0)
+            {
+                setBpm(bpm);
+            }
+            else if (!string.IsNullOrWhiteSpace(value))
+            {
+                bpmInput?.FlashColour(EditorColours.Warning, 200);
+            }
+        }
+
+        private void applyOffsetText(string? value)
+        {
+            if (beatmap == null || suppressInspectorFieldSync)
+                return;
+
+            if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double offset))
+            {
+                beatmap.Timing.Offset = (int)Math.Round(offset);
+                beatmap.Metadata.ModifiedAt = DateTime.UtcNow;
+                markUnsaved();
+            }
+            else if (!string.IsNullOrWhiteSpace(value))
+            {
+                offsetInput?.FlashColour(EditorColours.Warning, 200);
+            }
+        }
+
+        private void setBpm(double bpm)
+        {
+            if (beatmap == null)
+                return;
+
+            beatmap.Timing.Bpm = Math.Clamp(bpm, 20, 400);
+            beatmap.Metadata.ModifiedAt = DateTime.UtcNow;
+            timeline?.SetSnap(snapDivisor, beatmap.Timing.Bpm);
+            bpmStatValue.Text = $"{beatmap.Timing.Bpm:0.##} BPM";
+            markUnsaved();
+            updateInspectorStats();
+        }
+
+        private void updateInspectorStats()
+        {
+            if (noteCountValue == null)
+                return;
+
+            int noteCount = beatmap?.HitObjects.Count ?? 0;
+            double duration = trackLength > 0
+                ? trackLength
+                : beatmap?.Audio.Duration ?? 0;
+
+            double minutes = duration > 0 ? duration / 60000.0 : 0;
+            double density = minutes > 0 ? noteCount / minutes : 0;
+
+            noteCountValue.Text = noteCount.ToString();
+            mapLengthValue.Text = duration > 0 ? formatSongLength(duration) : "--";
+            densityValue.Text = density > 0 ? $"{density:0.0} notes/min" : "--";
+            bpmStatValue.Text = beatmap != null ? $"{beatmap.Timing.Bpm:0.##} BPM" : "--";
+        }
+
+        private static string formatSongLength(double milliseconds)
+        {
+            var span = TimeSpan.FromMilliseconds(Math.Max(0, milliseconds));
+            if (span.TotalHours >= 1)
+                return $"{(int)span.TotalHours}:{span.Minutes:00}:{span.Seconds:00}";
+            return $"{(int)span.TotalMinutes:00}:{span.Seconds:00}";
+        }
+
+        private void updateInspectorEnabledState(bool enabled)
+        {
+            setTextBoxEnabled(titleInput, enabled);
+            setTextBoxEnabled(artistInput, enabled);
+            setTextBoxEnabled(creatorInput, enabled);
+            setTextBoxEnabled(sourceInput, enabled);
+            setTextBoxEnabled(tagsInput, enabled);
+            setTextBoxEnabled(bpmInput, enabled);
+            setTextBoxEnabled(offsetInput, enabled);
+        }
+
+        private void setTextBoxEnabled(BasicTextBox? textBox, bool enabled)
+        {
+            if (textBox == null)
+                return;
+
+            textBox.ReadOnly = !enabled;
+            textBox.FadeTo(enabled ? 1f : 0.4f, 120, Easing.OutQuint);
+        }
+
+        private void populateInspectorFromBeatmap()
+        {
+            if (titleInput == null)
+                return;
+
+            suppressInspectorFieldSync = true;
+
+            if (beatmap == null)
+            {
+                titleInput.Current.Value = string.Empty;
+                artistInput.Current.Value = string.Empty;
+                creatorInput.Current.Value = string.Empty;
+                sourceInput.Current.Value = string.Empty;
+                tagsInput.Current.Value = string.Empty;
+                bpmInput.Current.Value = string.Empty;
+                offsetInput.Current.Value = string.Empty;
+            }
+            else
+            {
+                titleInput.Current.Value = beatmap.Metadata.Title ?? string.Empty;
+                artistInput.Current.Value = beatmap.Metadata.Artist ?? string.Empty;
+                creatorInput.Current.Value = beatmap.Metadata.Creator ?? string.Empty;
+                sourceInput.Current.Value = beatmap.Metadata.Source ?? string.Empty;
+                tagsInput.Current.Value = beatmap.Metadata.Tags != null && beatmap.Metadata.Tags.Count > 0
+                    ? string.Join(", ", beatmap.Metadata.Tags)
+                    : string.Empty;
+                bpmInput.Current.Value = beatmap.Timing.Bpm.ToString("0.##", CultureInfo.InvariantCulture);
+                offsetInput.Current.Value = beatmap.Timing.Offset.ToString(CultureInfo.InvariantCulture);
+            }
+
+            suppressInspectorFieldSync = false;
+
+            refreshMetadataStatus();
+            updateInspectorEnabledState(beatmap != null);
+            updateInspectorStats();
+            updateSelectionSummary();
+        }
+
+        private void updateSelectionSummary()
+        {
+            if (selectionSummaryText == null)
+                return;
+
+            if (selectedHitObject == null)
+            {
+                selectionSummaryText.Text = "No note selected";
+                selectionSummaryText.Colour = EditorColours.TextSecondary;
+            }
+            else
+            {
+                string laneText = selectedHitObject.Lane.HasValue ? (selectedHitObject.Lane.Value + 1).ToString() : "?";
+                selectionSummaryText.Text = $"{selectedHitObject.Component} • Lane {laneText} @ {formatTime(selectedHitObject.Time)}";
+                selectionSummaryText.Colour = EditorColours.TextPrimary;
+            }
+        }
+
+        private void adjustBpmByFactor(double factor)
+        {
+            if (beatmap == null)
+                return;
+
+            setBpm(beatmap.Timing.Bpm * factor);
+            suppressInspectorFieldSync = true;
+            bpmInput.Current.Value = beatmap.Timing.Bpm.ToString("0.##", CultureInfo.InvariantCulture);
+            suppressInspectorFieldSync = false;
+        }
+
+        private void resetBpmToDefault()
+        {
+            double target = initialBeatmapBpm ?? 120;
+            setBpm(target);
+            suppressInspectorFieldSync = true;
+            bpmInput.Current.Value = target.ToString("0.##", CultureInfo.InvariantCulture);
+            suppressInspectorFieldSync = false;
+        }
+
+        private void jumpToAdjacentNote(bool forward)
+        {
+            if (beatmap == null || beatmap.HitObjects.Count == 0)
+            {
+                appendStatusDetail("No notes available");
+                return;
+            }
+
+            int index = selectedHitObject != null ? beatmap.HitObjects.IndexOf(selectedHitObject) : -1;
+            if (index < 0)
+            {
+                index = beatmap.HitObjects.FindLastIndex(h => h.Time <= currentTime);
+            }
+
+            if (index < 0)
+                index = forward ? 0 : beatmap.HitObjects.Count - 1;
+            else
+                index = Math.Clamp(index + (forward ? 1 : -1), 0, beatmap.HitObjects.Count - 1);
+
+            var target = beatmap.HitObjects[index];
+            if (timeline?.TrySelectHitObject(target) != true)
+                onTimelineNoteSelected(target);
+
+            seekToTime(target.Time);
+        }
+
+        private void centerOnSelection()
+        {
+            if (selectedHitObject == null)
+            {
+                appendStatusDetail("No selection to center");
+                return;
+            }
+
+            if (timeline?.TrySelectHitObject(selectedHitObject) != true)
+                seekToTime(selectedHitObject.Time);
+        }
+
+        private void duplicateSelectedNote()
+        {
+            if (beatmap == null || selectedHitObject == null)
+            {
+                appendStatusDetail("Select a note to duplicate");
+                return;
+            }
+
+            prepareUndoSnapshot();
+
+            var clone = new HitObject
+            {
+                Component = selectedHitObject.Component,
+                Lane = selectedHitObject.Lane,
+                Velocity = selectedHitObject.Velocity,
+                Duration = selectedHitObject.Duration,
+                Time = selectedHitObject.Time + (int)Math.Round(getSnapIntervalMs())
+            };
+
+            beatmap.HitObjects.Add(clone);
+            beatmap.HitObjects.Sort((a, b) => a.Time.CompareTo(b.Time));
+            beatmap.Metadata.ModifiedAt = DateTime.UtcNow;
+            markUnsaved();
+            reloadTimeline();
+            timeline?.TrySelectHitObject(clone);
+            selectedHitObject = clone;
+            updateSelectionSummary();
+            updateInspectorStats();
+            seekToTime(clone.Time);
+        }
+
+        private void deleteSelectedNote()
+        {
+            if (beatmap == null || selectedHitObject == null)
+            {
+                appendStatusDetail("Select a note to delete");
+                return;
+            }
+
+            prepareUndoSnapshot();
+
+            if (timeline?.TryDeleteHitObject(selectedHitObject) == true)
+            {
+                selectedHitObject = null;
+                updateSelectionSummary();
+                updateInspectorStats();
+                appendStatusDetail("Note deleted");
+            }
+            else
+            {
+                appendStatusDetail("Unable to delete selected note");
+            }
+        }
+
+        private void nudgeSelectedNote(bool forward)
+        {
+            if (beatmap == null || selectedHitObject == null)
+            {
+                appendStatusDetail("Select a note to nudge");
+                return;
+            }
+
+            prepareUndoSnapshot();
+
+            double delta = forward ? getSnapIntervalMs() : -getSnapIntervalMs();
+            int newTime = (int)Math.Round(Math.Clamp(selectedHitObject.Time + delta, 0, trackLength > 0 ? trackLength : selectedHitObject.Time + delta));
+            selectedHitObject.Time = newTime;
+            beatmap.HitObjects.Sort((a, b) => a.Time.CompareTo(b.Time));
+            beatmap.Metadata.ModifiedAt = DateTime.UtcNow;
+            markUnsaved();
+            timeline?.RefreshHitObject(selectedHitObject);
+            seekToTime(newTime);
+            updateSelectionSummary();
+        }
+
+        private double getSnapIntervalMs()
+        {
+            if (beatmap == null || beatmap.Timing.Bpm <= 0 || snapDivisor <= 0)
+                return 100;
+
+            return 60000.0 / beatmap.Timing.Bpm / snapDivisor;
+        }
+
+        private void seekToTime(double timeMs)
+        {
+            double target = Math.Clamp(timeMs, 0, trackLength > 0 ? trackLength : Math.Max(timeMs, 0));
+            currentTime = target;
+            track?.Seek(target);
+            timeText.Text = formatTime(currentTime);
+            timeline?.SetCurrentTime(currentTime);
+        }
+
         private Drawable createTimelineSection(string title, params Drawable[] controls)
         {
             return new FillFlowContainer
@@ -910,7 +1581,7 @@ namespace BeatSight.Game.Screens.Editor
                     new SpriteText
                     {
                         Text = title,
-                        Font = new FontUsage(size: 13, weight: "Bold"),
+                        Font = BeatSightFont.Title(13f),
                         Colour = EditorColours.TextSecondary
                     },
                     new FillFlowContainer
@@ -940,7 +1611,7 @@ namespace BeatSight.Game.Screens.Editor
             button.Add(new SpriteText
             {
                 Text = text,
-                Font = new FontUsage(size: text.Length > 2 ? 13 : 16, weight: "Bold"),
+                Font = BeatSightFont.Title(18f),
                 Colour = EditorColours.TextPrimary,
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre
@@ -1162,10 +1833,55 @@ namespace BeatSight.Game.Screens.Editor
 
         private Drawable createFooter()
         {
+            var tips = new (string key, string action)[]
+            {
+                ("Space", "Play/Pause"),
+                ("Shift+Space", "Rewind to start"),
+                ("←/→", "Seek"),
+                ("Ctrl +/-", "Zoom timeline"),
+                ("Ctrl+Alt +/-", "Scale waveform"),
+                ("[ / ]", "Change snap"),
+                ("G", "Toggle beat grid"),
+                (", / .", "Previous/next note"),
+                ("Alt+←/→", "Nudge selected note"),
+                ("Delete", "Remove selected note"),
+                ("Ctrl+D", "Duplicate selected note"),
+                ("Ctrl+S", "Save"),
+                ("Ctrl+Z", "Undo"),
+                ("Ctrl+Y / Ctrl+Shift+Z", "Redo")
+            };
+
+            const int tipsPerRow = 3;
+
+            var rows = new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(0, 8)
+            };
+
+            for (int i = 0; i < tips.Length; i += tipsPerRow)
+            {
+                var row = new FillFlowContainer
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Direction = FillDirection.Horizontal,
+                    Spacing = new Vector2(28, 6)
+                };
+
+                for (int j = i; j < Math.Min(i + tipsPerRow, tips.Length); j++)
+                    row.Add(createTip(tips[j].key, tips[j].action));
+
+                rows.Add(row);
+            }
+
             return new Container
             {
-                RelativeSizeAxes = Axes.Both,
-                Padding = new MarginPadding { Horizontal = 30 },
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Padding = new MarginPadding { Horizontal = 30, Vertical = 16 },
                 Children = new Drawable[]
                 {
                     new Box
@@ -1173,27 +1889,7 @@ namespace BeatSight.Game.Screens.Editor
                         RelativeSizeAxes = Axes.Both,
                         Colour = EditorColours.HeaderBackground
                     },
-                    new FillFlowContainer
-                    {
-                        AutoSizeAxes = Axes.Both,
-                        Direction = FillDirection.Horizontal,
-                        Anchor = Anchor.CentreLeft,
-                        Origin = Anchor.CentreLeft,
-                        Spacing = new Vector2(30, 0),
-                        Children = new Drawable[]
-                        {
-                            createTip("Space", "Play/Pause"),
-                            createTip("Shift+Space", "Rewind to start"),
-                            createTip("←/→", "Seek"),
-                            createTip("Ctrl +/-", "Zoom timeline"),
-                            createTip("Ctrl+Alt +/-", "Scale waveform"),
-                            createTip("[ / ]", "Change snap"),
-                            createTip("G", "Toggle beat grid"),
-                            createTip("Ctrl+S", "Save"),
-                            createTip("Ctrl+Z", "Undo"),
-                            createTip("Ctrl+Y / Ctrl+Shift+Z", "Redo")
-                        }
-                    }
+                    rows
                 }
             };
         }
@@ -1222,7 +1918,7 @@ namespace BeatSight.Game.Screens.Editor
                             new SpriteText
                             {
                                 Text = key,
-                                Font = new FontUsage(size: 16, weight: "Bold"),
+                                Font = BeatSightFont.Title(16f),
                                 Colour = EditorColours.TextPrimary,
                                 Margin = new MarginPadding { Horizontal = 8, Vertical = 4 }
                             }
@@ -1231,7 +1927,7 @@ namespace BeatSight.Game.Screens.Editor
                     new SpriteText
                     {
                         Text = action,
-                        Font = new FontUsage(size: 16),
+                        Font = BeatSightFont.Body(16f),
                         Colour = EditorColours.TextSecondary,
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft
@@ -1245,7 +1941,7 @@ namespace BeatSight.Game.Screens.Editor
             headerText = new SpriteText
             {
                 Text = title,
-                Font = new FontUsage(size: 15, weight: "Bold"),
+                Font = BeatSightFont.Title(15f),
                 Colour = EditorColours.TextPrimary
             };
 
@@ -1323,13 +2019,13 @@ namespace BeatSight.Game.Screens.Editor
                     new SpriteText
                     {
                         Text = title,
-                        Font = new FontUsage(size: emphasise ? 13 : 12, weight: emphasise ? "Bold" : "Medium"),
+                        Font = BeatSightFont.Body(18f),
                         Colour = emphasise ? EditorColours.TextPrimary : EditorColours.TextSecondary
                     },
                     new SpriteText
                     {
                         Text = details,
-                        Font = new FontUsage(size: 11),
+                        Font = BeatSightFont.Caption(11f),
                         Colour = EditorColours.TextMuted
                     }
                 }
@@ -1341,7 +2037,7 @@ namespace BeatSight.Game.Screens.Editor
             return new SpriteText
             {
                 Text = "No entries yet",
-                Font = new FontUsage(size: 11),
+                Font = BeatSightFont.Caption(11f),
                 Colour = EditorColours.TextMuted
             };
         }
@@ -1359,7 +2055,10 @@ namespace BeatSight.Game.Screens.Editor
 
         private void onTimelineNoteSelected(HitObject hit)
         {
+            selectedHitObject = hit;
             setStatusDetail($"Selected {hit.Component} @ {formatTime(hit.Time)}");
+            updateSelectionSummary();
+            seekToTime(hit.Time);
         }
 
         private void onTimelineNoteChanged(HitObject hit)
@@ -1372,6 +2071,12 @@ namespace BeatSight.Game.Screens.Editor
             gameplayPreview?.RefreshBeatmap();
             markUnsaved();
             refreshUnsavedState();
+
+            if (selectedHitObject != null && !beatmap.HitObjects.Contains(selectedHitObject))
+                selectedHitObject = null;
+
+            updateSelectionSummary();
+            updateInspectorStats();
         }
 
         private void onTimelineEditBegan()
@@ -1897,6 +2602,11 @@ namespace BeatSight.Game.Screens.Editor
                 timeline.SetBeatGridVisible(beatGridVisible);
                 timeline.SetCurrentTime(currentTime);
                 gameplayPreview?.SetBeatmap(null);
+                updateInspectorEnabledState(false);
+                selectedHitObject = null;
+                updateSelectionSummary();
+                updateInspectorStats();
+                populateInspectorFromBeatmap();
                 updatePlaybackAvailabilityUI();
                 return;
             }
@@ -1914,6 +2624,11 @@ namespace BeatSight.Game.Screens.Editor
             timeline.SetBeatGridVisible(beatGridVisible);
             timeline.SetCurrentTime(currentTime);
             gameplayPreview?.SetBeatmap(beatmap);
+            if (selectedHitObject != null && !beatmap.HitObjects.Contains(selectedHitObject))
+                selectedHitObject = null;
+            updateSelectionSummary();
+            updateInspectorEnabledState(true);
+            updateInspectorStats();
             updatePlaybackAvailabilityUI();
         }
         private void queueWaveformLoad(string absolutePath)
@@ -1979,6 +2694,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 beatmap = BeatmapLoader.LoadFromFile(path);
                 beatmapPath = path;
+                initialBeatmapBpm = beatmap.Timing.Bpm;
 
                 // Set clean status with just artist and title
                 string artist = beatmap.Metadata.Artist ?? "Unknown Artist";
@@ -2017,6 +2733,7 @@ namespace BeatSight.Game.Screens.Editor
                 editorInfo.BeatGridVisible = beatGridVisible;
                 refreshTimelineToolboxState();
                 lastSavedSnapshot = serializeBeatmap(beatmap);
+                populateInspectorFromBeatmap();
 
                 // Load audio track
                 loadAudioTrackFromBeatmap();
@@ -2031,6 +2748,9 @@ namespace BeatSight.Game.Screens.Editor
                 setStatusDetail($"Failed to load beatmap: {ex.Message}");
                 reloadTimeline();
                 updateActionButtons();
+                beatmap = null;
+                initialBeatmapBpm = null;
+                populateInspectorFromBeatmap();
             }
         }
 
@@ -2064,6 +2784,8 @@ namespace BeatSight.Game.Screens.Editor
                 }
             };
 
+            initialBeatmapBpm = beatmap.Timing.Bpm;
+
             setStatusBase("Editing: Unknown Artist — Untitled");
             setStatusDetail(playbackAvailable ? "Ready to map" : offlinePlaybackMessage);
             hasUnsavedChanges = true;
@@ -2080,6 +2802,7 @@ namespace BeatSight.Game.Screens.Editor
             reloadTimeline();
             ensureEditorInfo();
             refreshTimelineToolboxState();
+            populateInspectorFromBeatmap();
             loadAudioTrackFromStorage(trackInfo.RelativeStoragePath);
             if (!playbackAvailable)
                 appendStatusDetail(offlinePlaybackMessage);
@@ -2329,6 +3052,39 @@ namespace BeatSight.Game.Screens.Editor
                 return true;
             }
 
+            if (e.AltPressed)
+            {
+                if (e.Key == osuTK.Input.Key.Left)
+                {
+                    nudgeSelectedNote(false);
+                    return true;
+                }
+
+                if (e.Key == osuTK.Input.Key.Right)
+                {
+                    nudgeSelectedNote(true);
+                    return true;
+                }
+            }
+
+            if (e.Key == osuTK.Input.Key.Comma)
+            {
+                jumpToAdjacentNote(false);
+                return true;
+            }
+
+            if (e.Key == osuTK.Input.Key.Period)
+            {
+                jumpToAdjacentNote(true);
+                return true;
+            }
+
+            if (e.Key == osuTK.Input.Key.Delete || e.Key == osuTK.Input.Key.BackSpace)
+            {
+                deleteSelectedNote();
+                return true;
+            }
+
             if (e.Key == osuTK.Input.Key.Left)
             {
                 seekRelative(-5000);
@@ -2403,6 +3159,12 @@ namespace BeatSight.Game.Screens.Editor
             if (isControlOrSuper(e) && e.Key == osuTK.Input.Key.S)
             {
                 saveBeatmap();
+                return true;
+            }
+
+            if (isControlOrSuper(e) && e.Key == osuTK.Input.Key.D)
+            {
+                duplicateSelectedNote();
                 return true;
             }
 
@@ -2506,7 +3268,7 @@ namespace BeatSight.Game.Screens.Editor
                             {
                                 Anchor = Anchor.Centre,
                                 Origin = Anchor.Centre,
-                                Font = new FontUsage(size: 16, weight: "SemiBold"),
+                                Font = BeatSightFont.Title(16f),
                                 Colour = EditorColours.TextPrimary,
                                 Text = "2D View"
                             }
@@ -2612,7 +3374,7 @@ namespace BeatSight.Game.Screens.Editor
                 AddInternal(label = new SpriteText
                 {
                     Text = text,
-                    Font = new FontUsage(size: 20),
+                    Font = BeatSightFont.Section(20f),
                     Colour = EditorColours.TextPrimary,
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre

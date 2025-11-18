@@ -6,6 +6,7 @@ using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
 using BeatSight.Game.UI.Components;
+using BeatSight.Game.UI.Theming;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Audio.Track;
@@ -14,6 +15,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.IO.Stores;
 using osu.Framework.Logging;
@@ -86,11 +88,10 @@ namespace BeatSight.Game.Screens.Playback
                     RelativeSizeAxes = Axes.Both,
                     Colour = new Color4(18, 21, 30, 255)
                 },
-                new Container
+                new ScreenEdgeContainer
                 {
-                    RelativeSizeAxes = Axes.Both,
-                    Padding = new MarginPadding { Horizontal = 60, Vertical = 40 },
-                    Child = new FillFlowContainer
+                    EdgePadding = new MarginPadding { Horizontal = 60, Vertical = 40 },
+                    Content = new FillFlowContainer
                     {
                         RelativeSizeAxes = Axes.X,
                         AutoSizeAxes = Axes.Y,
@@ -100,17 +101,17 @@ namespace BeatSight.Game.Screens.Playback
                         {
                             titleText = new SpriteText
                             {
-                                Font = new FontUsage(size: 42, weight: "Bold"),
+                                Font = BeatSightFont.Title(42f),
                                 Colour = Color4.White
                             },
                             subtitleText = new SpriteText
                             {
-                                Font = new FontUsage(size: 20),
+                                Font = BeatSightFont.Subtitle(20f),
                                 Colour = new Color4(200, 205, 220, 255)
                             },
                             metadataText = new SpriteText
                             {
-                                Font = new FontUsage(size: 18),
+                                Font = BeatSightFont.Body(18f),
                                 Colour = new Color4(170, 175, 195, 255)
                             },
                             timeline = new PlaybackTimeline
@@ -161,7 +162,7 @@ namespace BeatSight.Game.Screens.Playback
                             },
                             statusText = new SpriteText
                             {
-                                Font = new FontUsage(size: 18),
+                                Font = BeatSightFont.Caption(18f),
                                 Colour = new Color4(180, 190, 210, 255)
                             }
                         }
@@ -804,7 +805,7 @@ namespace BeatSight.Game.Screens.Playback
                                 Anchor = Anchor.TopCentre,
                                 Origin = Anchor.TopCentre,
                                 Y = 6,
-                                Font = new FontUsage(size: 16, weight: "Medium"),
+                                Font = BeatSightFont.Button(16f),
                                 Colour = new Color4(210, 215, 230, 255),
                                 Text = labels[i]
                             }

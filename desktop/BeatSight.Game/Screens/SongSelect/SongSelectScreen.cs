@@ -9,6 +9,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using BeatSight.Game.UI.Theming;
 using osu.Framework.Graphics.Sprites;
+using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Screens;
@@ -47,15 +48,13 @@ namespace BeatSight.Game.Screens.SongSelect
                     RelativeSizeAxes = Axes.Both,
                     Colour = UITheme.Background
                 },
-                new Container
+                new ScreenEdgeContainer(scrollable: false)
                 {
-                    RelativeSizeAxes = Axes.Both,
-                    Child = new FillFlowContainer
+                    Content = new FillFlowContainer
                     {
                         RelativeSizeAxes = Axes.Both,
                         Direction = FillDirection.Vertical,
                         Spacing = new Vector2(0, 24),
-                        Padding = UITheme.ScreenPadding,
                         Children = new Drawable[]
                         {
                             createHeader(),
@@ -63,7 +62,12 @@ namespace BeatSight.Game.Screens.SongSelect
                         }
                     }
                 },
-                backButton
+                new SafeAreaContainer
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Padding = BackButton.DefaultMargin,
+                    Child = backButton
+                }
             };
 
             backButton.Action = () => this.Exit();
@@ -74,7 +78,7 @@ namespace BeatSight.Game.Screens.SongSelect
         {
             titleText = new SpriteText
             {
-                Font = new FontUsage(size: 48, weight: "Bold"),
+                Font = BeatSightFont.Title(50f),
                 Colour = UITheme.TextPrimary,
                 Anchor = Anchor.TopCentre,
                 Origin = Anchor.TopCentre
@@ -216,7 +220,7 @@ namespace BeatSight.Game.Screens.SongSelect
                 var title = new SpriteText
                 {
                     Text = buildDisplayTitle(metadata),
-                    Font = new FontUsage(size: 32, weight: "SemiBold"),
+                    Font = BeatSightFont.Title(32f),
                     Colour = UITheme.TextPrimary,
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
@@ -224,11 +228,12 @@ namespace BeatSight.Game.Screens.SongSelect
                     MaxWidth = 760,
                     Truncate = false
                 };
+                disableShadow(title);
 
                 var mapper = new SpriteText
                 {
                     Text = buildMapperLabel(metadata),
-                    Font = new FontUsage(size: 19),
+                    Font = BeatSightFont.Label(18f),
                     Colour = UITheme.TextSecondary,
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
@@ -236,6 +241,30 @@ namespace BeatSight.Game.Screens.SongSelect
                     AllowMultiline = false,
                     Truncate = true
                 };
+                disableShadow(mapper);
+
+                var audioSummary = new SpriteText
+                {
+                    Text = buildAudioSummary(entry),
+                    Font = BeatSightFont.Body(17f),
+                    Colour = UITheme.TextSecondary,
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    MaxWidth = 520,
+                    AllowMultiline = true,
+                    Truncate = false
+                };
+                disableShadow(audioSummary);
+
+                var actionLabel = new SpriteText
+                {
+                    Text = destination == SongSelectDestination.Gameplay ? "Play" : "Preview",
+                    Font = BeatSightFont.Button(17f),
+                    Colour = UITheme.Emphasise(accentColour, 1.05f),
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre
+                };
+                disableShadow(actionLabel);
 
                 var summaryRow = new FillFlowContainer
                 {
@@ -247,25 +276,8 @@ namespace BeatSight.Game.Screens.SongSelect
                     Spacing = new Vector2(16, 0),
                     Children = new Drawable[]
                     {
-                        new SpriteText
-                        {
-                            Text = buildAudioSummary(entry),
-                            Font = new FontUsage(size: 16),
-                            Colour = UITheme.TextSecondary,
-                            Anchor = Anchor.Centre,
-                            Origin = Anchor.Centre,
-                            MaxWidth = 520,
-                            AllowMultiline = true,
-                            Truncate = false
-                        },
-                        new SpriteText
-                        {
-                            Text = destination == SongSelectDestination.Gameplay ? "Play" : "Preview",
-                            Font = new FontUsage(size: 16, weight: "Medium"),
-                            Colour = UITheme.Emphasise(accentColour, 1.05f),
-                            Anchor = Anchor.Centre,
-                            Origin = Anchor.Centre
-                        }
+                        audioSummary,
+                        actionLabel
                     }
                 };
 
@@ -325,6 +337,13 @@ namespace BeatSight.Game.Screens.SongSelect
                     return secondary;
 
                 return fallback;
+            }
+
+            private static void disableShadow(SpriteText text)
+            {
+                text.Shadow = false;
+                text.ShadowColour = Color4.Transparent;
+                text.ShadowOffset = Vector2.Zero;
             }
 
             protected override bool OnHover(HoverEvent e)
@@ -391,7 +410,7 @@ namespace BeatSight.Game.Screens.SongSelect
                 message.AddText("No beatmaps found. Copy your .bsm files into BeatSight/Beatmaps or shared/formats.",
                     text =>
                     {
-                        text.Font = new FontUsage(size: 22);
+                        text.Font = BeatSightFont.Section(22f);
                         text.Colour = new Color4(200, 205, 220, 255);
                     });
 

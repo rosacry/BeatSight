@@ -1,13 +1,15 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using BeatSight.Game;
+using Microsoft.Win32.SafeHandles;
 using osu.Framework;
 using osu.Framework.Logging;
-using System.Threading.Tasks;
 using osu.Framework.Platform;
-using BeatSight.Game;
-using System.Linq;
-using Microsoft.Win32.SafeHandles;
 
 namespace BeatSight.Desktop
 {
@@ -46,34 +48,20 @@ namespace BeatSight.Desktop
         private const uint OPEN_EXISTING = 3;
         private static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
 
+        private static TextWriter? attachedStdOutWriter;
+        private static TextWriter? attachedStdErrWriter;
+
         public static void Main(string[] args)
         {
-            bool verboseLogsRequested = true;
-
-            foreach (string argument in args)
-            {
-                if (argument.Equals("--verbose-logs", StringComparison.OrdinalIgnoreCase)
-                    || argument.Equals("--verbose", StringComparison.OrdinalIgnoreCase))
-                {
-                    verboseLogsRequested = true;
-                }
-
-                if (argument.Equals("--quiet", StringComparison.OrdinalIgnoreCase)
-                    || argument.Equals("--no-verbose", StringComparison.OrdinalIgnoreCase)
-                    || argument.Equals("--no-verbose-logs", StringComparison.OrdinalIgnoreCase))
-                {
-                    verboseLogsRequested = false;
-                    break;
-                }
-            }
-
             ensureConsoleAttachment();
+            disableFrameworkConsoleEcho();
 
-            // Default to debug-level logging unless verbose logs are explicitly requested.
-            Logger.Level = verboseLogsRequested ? LogLevel.Verbose : LogLevel.Debug;
+            var loggingOptions = resolveLoggingOptions(args);
+
+            Logger.Level = loggingOptions.MinimumLevel;
 
             initialiseGlobalDiagnostics();
-            configureLogging(verboseLogsRequested);
+            configureLogging(loggingOptions);
 
             using GameHost host = Host.GetSuitableDesktopHost("BeatSight");
             ensureCookieFile(host);
@@ -89,6 +77,89 @@ namespace BeatSight.Desktop
                 logFatalException(ex);
                 throw;
             }
+        }
+
+        private static LoggingOptions resolveLoggingOptions(string[] args)
+        {
+            LogLevel minimumLevel = osu.Framework.Development.DebugUtils.IsDebugBuild ? LogLevel.Debug : LogLevel.Important;
+            bool forwardFrameworkNoise = false;
+            bool forwardTabletLogs = false;
+
+            for (int i = 0; i < args.Length; i++)
+            {
+                string argument = args[i];
+
+                if (argument.Equals("--quiet", StringComparison.OrdinalIgnoreCase)
+                    || argument.Equals("--no-verbose", StringComparison.OrdinalIgnoreCase)
+                    || argument.Equals("--no-verbose-logs", StringComparison.OrdinalIgnoreCase))
+                {
+                    minimumLevel = LogLevel.Important;
+                    forwardFrameworkNoise = false;
+                    continue;
+                }
+
+                if (argument.Equals("--verbose", StringComparison.OrdinalIgnoreCase)
+                    || argument.Equals("--verbose-logs", StringComparison.OrdinalIgnoreCase))
+                {
+                    minimumLevel = LogLevel.Verbose;
+                    forwardFrameworkNoise = true;
+                    forwardTabletLogs = true;
+                    continue;
+                }
+
+                if (argument.Equals("--raw-framework-logs", StringComparison.OrdinalIgnoreCase))
+                {
+                    forwardFrameworkNoise = true;
+                    forwardTabletLogs = true;
+                    continue;
+                }
+
+                if (argument.Equals("--include-tablet-logs", StringComparison.OrdinalIgnoreCase))
+                {
+                    forwardTabletLogs = true;
+                    continue;
+                }
+
+                if (argument.Equals("--suppress-tablet-logs", StringComparison.OrdinalIgnoreCase)
+                    || argument.Equals("--no-tablet-logs", StringComparison.OrdinalIgnoreCase))
+                {
+                    forwardTabletLogs = false;
+                    continue;
+                }
+
+                if (argument.Equals("--log-level", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (i + 1 >= args.Length)
+                    {
+                        writeConsoleLine("WARNING: --log-level expects a value (e.g. --log-level debug). Keeping previous level.", true);
+                        continue;
+                    }
+
+                    argument = $"--log-level={args[++i]}";
+                }
+
+                if (argument.StartsWith("--log-level=", StringComparison.OrdinalIgnoreCase))
+                {
+                    string candidate = argument.Substring(argument.IndexOf('=') + 1);
+                    if (!tryParseLogLevel(candidate, out var parsed))
+                    {
+                        writeConsoleLine($"WARNING: Unknown log level '{candidate}'. Valid values: {string.Join(", ", Enum.GetNames(typeof(LogLevel)))}", true);
+                        continue;
+                    }
+
+                    minimumLevel = parsed;
+
+                    if (parsed == LogLevel.Verbose)
+                    {
+                        forwardFrameworkNoise = true;
+                        forwardTabletLogs = true;
+                    }
+
+                    continue;
+                }
+            }
+
+            return new LoggingOptions(minimumLevel, forwardFrameworkNoise, forwardTabletLogs);
         }
 
         private static void initialiseGlobalDiagnostics()
@@ -118,8 +189,6 @@ namespace BeatSight.Desktop
                 return;
             }
 
-            // If stdout/stderr are already redirected (e.g. running from Mintty/Git Bash),
-            // avoid allocating a second console window but make sure the writers flush.
             if (Console.IsOutputRedirected || Console.IsErrorRedirected)
             {
                 configureConsoleWriters();
@@ -134,11 +203,18 @@ namespace BeatSight.Desktop
         {
             try
             {
-                redirectStream(STD_OUTPUT_HANDLE, writer => Console.SetOut(writer));
-                redirectStream(STD_ERROR_HANDLE, writer => Console.SetError(writer));
+                attachedStdOutWriter = redirectStream(STD_OUTPUT_HANDLE);
+                attachedStdErrWriter = redirectStream(STD_ERROR_HANDLE);
 
-                // Fire a bootstrap log so the user can quickly confirm attachment succeeded.
-                Console.WriteLine("[bootstrap] Console attached for BeatSight.Desktop diagnostics.");
+                if (attachedStdOutWriter != null)
+                    Console.SetOut(attachedStdOutWriter);
+                if (attachedStdErrWriter != null)
+                    Console.SetError(attachedStdErrWriter);
+
+                writeConsoleLine("[bootstrap] Console attached for BeatSight.Desktop diagnostics.");
+
+                Console.SetOut(TextWriter.Null);
+                Console.SetError(TextWriter.Null);
             }
             catch
             {
@@ -146,7 +222,25 @@ namespace BeatSight.Desktop
             }
         }
 
-        private static void redirectStream(int stdHandle, Action<TextWriter> applyWriter)
+        private static void disableFrameworkConsoleEcho()
+        {
+            try
+            {
+                var field = typeof(osu.Framework.Development.DebugUtils).GetField("is_debug_build", BindingFlags.NonPublic | BindingFlags.Static);
+
+                if (field == null)
+                    return;
+
+                var forcedFalse = new Lazy<bool>(() => false);
+                field.SetValue(null, forcedFalse);
+            }
+            catch
+            {
+                // If reflection fails, fall back to the framework's default behaviour.
+            }
+        }
+
+        private static TextWriter? redirectStream(int stdHandle)
         {
             IntPtr handle = GetStdHandle(stdHandle);
 
@@ -155,23 +249,18 @@ namespace BeatSight.Desktop
                 handle = CreateFile("CONOUT$", GENERIC_WRITE | GENERIC_READ, FILE_SHARE_WRITE | FILE_SHARE_READ, IntPtr.Zero, OPEN_EXISTING, 0, IntPtr.Zero);
 
                 if (handle == IntPtr.Zero || handle == INVALID_HANDLE_VALUE)
-                    return;
+                    return null;
 
                 SetStdHandle(stdHandle, handle);
             }
 
             var safeHandle = new SafeFileHandle(handle, ownsHandle: false);
             var stream = new FileStream(safeHandle, FileAccess.Write);
-            var writer = new StreamWriter(stream) { AutoFlush = true };
-
-            applyWriter(writer);
+            return new StreamWriter(stream) { AutoFlush = true };
         }
 
-        private static void configureLogging(bool includeRawFrameworkLogs)
+        private static void configureLogging(LoggingOptions options)
         {
-            var inputLogger = Logger.GetLogger(LoggingTarget.Input);
-            inputLogger.OutputToListeners = true;
-
             foreach (LoggingTarget target in Enum.GetValues(typeof(LoggingTarget)))
             {
                 try
@@ -184,29 +273,106 @@ namespace BeatSight.Desktop
                 }
             }
 
+            var throttler = options.ForwardFrameworkNoise ? null : LogMessageThrottler.CreateDefault();
+
             Logger.NewEntry += entry =>
             {
-                if (!includeRawFrameworkLogs)
-                {
-                    bool isInputLog = entry.Target == LoggingTarget.Input ||
-                                       (entry.Target == null && string.Equals(entry.LoggerName, "input", StringComparison.OrdinalIgnoreCase));
+                if (entry == null)
+                    return;
 
-                    if (isInputLog)
-                    {
-                        var message = entry.Message?.ToString();
-                        if (!string.IsNullOrEmpty(message) && message.Contains("[Tablet]", StringComparison.OrdinalIgnoreCase))
-                            return;
-                    }
-                }
+                if (!options.ForwardFrameworkNoise && shouldFilterFrameworkNoise(entry, options))
+                    return;
+
+                LogThrottleSummary? summary = null;
+
+                if (throttler != null && !throttler.ShouldForward(entry, out summary))
+                    return;
+
+                if (summary.HasValue)
+                    emitSuppressionSummary(entry, summary.Value);
 
                 forwardLogToConsole(entry);
             };
 
-            Logger.Log(includeRawFrameworkLogs
-                ? "Verbose framework logging enabled."
-                : "Verbose framework logging suppressed (tablet spam hidden). Use --quiet/--no-verbose to skip framework spam.",
-                LoggingTarget.Runtime,
-                LogLevel.Important);
+            Logger.Log(buildLoggingBanner(options), LoggingTarget.Runtime, LogLevel.Important);
+        }
+
+        private static string buildLoggingBanner(LoggingOptions options)
+        {
+            string levelText = options.MinimumLevel.ToString();
+            string frameworkStatus = options.ForwardFrameworkNoise
+                ? "Raw framework noise enabled; expect renderer/input spam."
+                : "Framework noise filtered; pass --raw-framework-logs to inspect renderer spam.";
+            string tabletStatus = options.ForwardFrameworkNoise || options.ForwardTabletLogs
+                ? "Tablet input logs forwarded."
+                : "Tablet input spam filtered (use --include-tablet-logs to inspect).";
+
+            return $"Logging initialised at level {levelText}. {frameworkStatus} {tabletStatus} Override via --log-level=<level>.";
+        }
+
+        private static bool shouldFilterFrameworkNoise(LogEntry entry, LoggingOptions options)
+        {
+            if (!options.ForwardTabletLogs && isTabletLog(entry))
+                return true;
+
+            return false;
+        }
+
+        private static bool isTabletLog(LogEntry entry)
+        {
+            bool isInputLog = entry.Target == LoggingTarget.Input
+                               || (entry.Target == null && string.Equals(entry.LoggerName, "input", StringComparison.OrdinalIgnoreCase));
+
+            if (!isInputLog)
+                return false;
+
+            var message = entry.Message?.ToString();
+            return !string.IsNullOrEmpty(message) && message.Contains("[Tablet]", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void emitSuppressionSummary(LogEntry entry, LogThrottleSummary summary)
+        {
+            string channel = entry.Target?.ToString() ?? entry.LoggerName ?? "log";
+            string level = LogLevel.Debug.ToString().ToLowerInvariant();
+            string timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+            double durationSeconds = summary.DurationSeconds;
+            string message = $"Suppressed {summary.SuppressedCount} '{summary.RuleName}' logs over {durationSeconds:0.###}s.";
+
+            writeConsoleLine($"[{channel}] {timestamp} [{level}]: {message}");
+        }
+
+        private static bool tryParseLogLevel(string? candidate, out LogLevel level)
+        {
+            level = LogLevel.Debug;
+
+            if (string.IsNullOrWhiteSpace(candidate))
+                return false;
+
+            candidate = candidate.Trim();
+
+            if (candidate.Equals("trace", StringComparison.OrdinalIgnoreCase)
+                || candidate.Equals("info", StringComparison.OrdinalIgnoreCase)
+                || candidate.Equals("information", StringComparison.OrdinalIgnoreCase))
+            {
+                level = LogLevel.Verbose;
+                return true;
+            }
+
+            if (candidate.Equals("warn", StringComparison.OrdinalIgnoreCase)
+                || candidate.Equals("warning", StringComparison.OrdinalIgnoreCase))
+            {
+                level = LogLevel.Important;
+                return true;
+            }
+
+            if (candidate.Equals("fatal", StringComparison.OrdinalIgnoreCase)
+                || candidate.Equals("critical", StringComparison.OrdinalIgnoreCase))
+            {
+                level = LogLevel.Error;
+                return true;
+            }
+
+            return Enum.TryParse(candidate, true, out level);
         }
 
         private static void ensureCookieFile(GameHost host)
@@ -254,13 +420,13 @@ namespace BeatSight.Desktop
                     writer.WriteLine();
                 }
 
-                Console.WriteLine();
-                Console.WriteLine("========================================");
-                Console.WriteLine("BeatSight encountered a fatal error.");
-                Console.WriteLine($"Details written to: {logPath}");
-                Console.WriteLine(exception);
-                Console.WriteLine("========================================");
-                Console.WriteLine();
+                writeConsoleLine(string.Empty, true);
+                writeConsoleLine("========================================", true);
+                writeConsoleLine("BeatSight encountered a fatal error.", true);
+                writeConsoleLine($"Details written to: {logPath}", true);
+                writeConsoleLine(exception.ToString(), true);
+                writeConsoleLine("========================================", true);
+                writeConsoleLine(string.Empty, true);
             }
             catch
             {
@@ -286,7 +452,7 @@ namespace BeatSight.Desktop
                     if (trimmed.Length == 0)
                         continue;
 
-                    Console.WriteLine($"[{channel}] {timestamp} [{level}]: {trimmed}");
+                    writeConsoleLine($"[{channel}] {timestamp} [{level}]: {trimmed}", entry.Level >= LogLevel.Error);
                 }
             }
 
@@ -298,9 +464,115 @@ namespace BeatSight.Desktop
                     if (trimmed.Length == 0)
                         continue;
 
-                    Console.WriteLine($"[{channel}] {timestamp} [{level}]: {trimmed}");
+                    writeConsoleLine($"[{channel}] {timestamp} [{level}]: {trimmed}", true);
                 }
             }
+        }
+
+        private static void writeConsoleLine(string message, bool isError = false)
+        {
+            var targetWriter = isError ? attachedStdErrWriter ?? attachedStdOutWriter : attachedStdOutWriter ?? attachedStdErrWriter;
+
+            if (targetWriter != null)
+            {
+                targetWriter.WriteLine(message);
+                return;
+            }
+
+            if (isError)
+                Console.Error.WriteLine(message);
+            else
+                Console.Out.WriteLine(message);
+        }
+
+        private readonly record struct LoggingOptions(LogLevel MinimumLevel, bool ForwardFrameworkNoise, bool ForwardTabletLogs);
+
+        private sealed class LogMessageThrottler
+        {
+            private readonly IReadOnlyList<LogThrottleRule> rules;
+            private readonly Dictionary<string, ThrottleState> states = new Dictionary<string, ThrottleState>();
+
+            private LogMessageThrottler(IReadOnlyList<LogThrottleRule> rules)
+            {
+                this.rules = rules;
+            }
+
+            public static LogMessageThrottler CreateDefault() => new LogMessageThrottler(new[]
+            {
+                new LogThrottleRule(
+                    "texture-upload-queue",
+                    new Regex("Texture.+upload queue is large", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase),
+                    LogLevel.Verbose,
+                    TimeSpan.FromSeconds(1))
+            });
+
+            public bool ShouldForward(LogEntry entry, out LogThrottleSummary? summary)
+            {
+                summary = null;
+
+                string? message = entry.Message?.ToString();
+                if (string.IsNullOrEmpty(message))
+                    return true;
+
+                foreach (var rule in rules)
+                {
+                    if (entry.Level < rule.MinimumLevel)
+                        continue;
+
+                    if (!rule.Pattern.IsMatch(message))
+                        continue;
+
+                    var now = DateTime.UtcNow;
+
+                    lock (states)
+                    {
+                        if (!states.TryGetValue(rule.Name, out var current))
+                            current = new ThrottleState();
+
+                        if (current.LastEmissionUtc != default && now - current.LastEmissionUtc < rule.RestPeriod)
+                        {
+                            current.SuppressedCount++;
+
+                            if (current.SuppressedCount == 1)
+                                current.FirstSuppressedUtc = now;
+
+                            current.LastSuppressedUtc = now;
+                            states[rule.Name] = current;
+                            return false;
+                        }
+
+                        if (current.SuppressedCount > 0 && current.FirstSuppressedUtc != default)
+                            summary = new LogThrottleSummary(rule.Name, current.SuppressedCount, current.FirstSuppressedUtc, current.LastSuppressedUtc);
+
+                        current.LastEmissionUtc = now;
+                        current.SuppressedCount = 0;
+                        current.FirstSuppressedUtc = default;
+                        current.LastSuppressedUtc = default;
+                        states[rule.Name] = current;
+                    }
+
+                    return true;
+                }
+
+                return true;
+            }
+        }
+
+        private readonly record struct LogThrottleRule(string Name, Regex Pattern, LogLevel MinimumLevel, TimeSpan RestPeriod);
+
+        private readonly record struct LogThrottleSummary(string RuleName, int SuppressedCount, DateTime FirstSuppressedUtc, DateTime LastSuppressedUtc)
+        {
+            public double DurationSeconds => FirstSuppressedUtc == default || LastSuppressedUtc == default
+                ? 0
+                : Math.Max(0, (LastSuppressedUtc - FirstSuppressedUtc).TotalSeconds);
+        }
+
+        private struct ThrottleState
+        {
+            public DateTime LastEmissionUtc;
+            public int SuppressedCount;
+            public DateTime FirstSuppressedUtc;
+            public DateTime LastSuppressedUtc;
         }
     }
 }

@@ -88,6 +88,17 @@ dotnet run
 ```
 Use `dotnet watch run` for rapid UI iteration. The client stores configuration under the host storage path; see `SETTINGS_REFERENCE.md` for defaults.
 
+#### Logging controls
+
+Runtime logging now defaults to a filtered `LogLevel.Debug` output (tablet/input spam and renderer bursts are hidden). Override it per run:
+
+- `--log-level <debug|verbose|important|error>` – choose the framework log level (aliases: trace/info→verbose, warn→important, fatal/critical→error).
+- `--raw-framework-logs` – forward every framework entry (enables renderer/texture spam throttling bypass; implied by `--log-level verbose`).
+- `--include-tablet-logs` / `--no-tablet-logs` – force tablet handler logs on or off regardless of other filtering.
+- `--quiet` – convenience alias for `--log-level important --no-tablet-logs`.
+
+When verbose output is enabled, repetitive framework spam (like the "Texture upload queue is large" flood) is throttled and summarized once per burst to keep the console readable.
+
 ### AI pipeline
 ```bash
 cd ai-pipeline

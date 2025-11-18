@@ -4,11 +4,13 @@ using System.Linq;
 using BeatSight.Game.AI.Generation;
 using BeatSight.Game.Audio;
 using BeatSight.Game.Audio.Analysis;
+using BeatSight.Game.UI.Theming;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osuTK;
@@ -96,7 +98,7 @@ namespace BeatSight.Game.Screens.Mapping
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
                     Text = "No analyzer data yet...",
-                    Font = new FontUsage(size: 18),
+                    Font = BeatSightFont.Body(18f),
                     Colour = new Color4(200, 205, 220, 200),
                     Alpha = 0
                 },
@@ -267,13 +269,13 @@ namespace BeatSight.Game.Screens.Mapping
                             new SpriteText
                             {
                                 Text = "Legend & Layers",
-                                Font = new FontUsage(size: 16, weight: "Medium"),
+                                Font = BeatSightFont.Section(16f),
                                 Colour = new Color4(210, 218, 235, 255)
                             },
                             legendSummaryText = new SpriteText
                             {
                                 Text = "No detection stats yet.",
-                                Font = new FontUsage(size: 14),
+                                Font = BeatSightFont.Caption(14f),
                                 Colour = new Color4(190, 195, 210, 255),
                                 Alpha = 0.7f
                             },
@@ -410,7 +412,7 @@ namespace BeatSight.Game.Screens.Mapping
                 sectionSummaryFlow.Add(new SpriteText
                 {
                     Text = $"Section {section.Index}: {section.Count} hits ({section.Density:0.00}/s)",
-                    Font = new FontUsage(size: 18),
+                    Font = BeatSightFont.Body(18f),
                     Colour = new Color4(180, 190, 215, 255)
                 });
             }

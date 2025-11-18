@@ -3,6 +3,7 @@ using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
 using BeatSight.Game.Screens.Gameplay;
+using BeatSight.Game.UI.Theming;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -10,6 +11,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osuTK;
 using osuTK.Graphics;
 
@@ -58,7 +60,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
-                Font = new FontUsage(size: 18, weight: "Medium"),
+                Font = BeatSightFont.Section(18f),
                 Colour = new Color4(198, 205, 224, 255),
                 Text = "Load or create a beatmap to preview gameplay",
                 Alpha = 0

@@ -1,10 +1,13 @@
 using BeatSight.Game.Mapping;
 using BeatSight.Game.Screens.Editor;
+using BeatSight.Game.UI.Components;
+using BeatSight.Game.UI.Theming;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Screens;
@@ -36,11 +39,10 @@ namespace BeatSight.Game.Screens.Mapping
                     RelativeSizeAxes = Axes.Both,
                     Colour = new Color4(18, 18, 28, 255)
                 },
-                new Container
+                new ScreenEdgeContainer
                 {
-                    RelativeSizeAxes = Axes.Both,
-                    Padding = new MarginPadding { Horizontal = 60, Vertical = 40 },
-                    Child = new FillFlowContainer
+                    EdgePadding = new MarginPadding { Horizontal = 60, Vertical = 40 },
+                    Content = new FillFlowContainer
                     {
                         RelativeSizeAxes = Axes.X,
                         AutoSizeAxes = Axes.Y,
@@ -70,13 +72,13 @@ namespace BeatSight.Game.Screens.Mapping
                     new SpriteText
                     {
                         Text = "Audio Imported",
-                        Font = new FontUsage(size: 36, weight: "Bold"),
+                        Font = BeatSightFont.Title(36f),
                         Colour = Color4.White
                     },
                     new SpriteText
                     {
                         Text = "Choose how you want to build the chart.",
-                        Font = new FontUsage(size: 20),
+                        Font = BeatSightFont.Section(20f),
                         Colour = new Color4(190, 195, 210, 255)
                     }
                 }
@@ -126,7 +128,7 @@ namespace BeatSight.Game.Screens.Mapping
             statusText = new SpriteText
             {
                 Text = "Manual authoring lets you place every hit yourself.\nAI generation analyses the track to suggest a beatmap.",
-                Font = new FontUsage(size: 18),
+                Font = BeatSightFont.Body(18f),
                 Colour = new Color4(180, 185, 205, 255),
                 RelativeSizeAxes = Axes.X
             };
@@ -168,13 +170,13 @@ namespace BeatSight.Game.Screens.Mapping
                     new SpriteText
                     {
                         Text = label,
-                        Font = new FontUsage(size: 16, weight: "Medium"),
+                        Font = BeatSightFont.Section(16f),
                         Colour = new Color4(160, 170, 190, 255)
                     },
                     new SpriteText
                     {
                         Text = value,
-                        Font = new FontUsage(size: 22),
+                        Font = BeatSightFont.Section(22f),
                         Colour = Color4.White
                     }
                 }

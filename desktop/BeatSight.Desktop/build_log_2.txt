@@ -1,0 +1,23 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\Screens\Editor\EditorScreen.cs(2818,39): warning CS8602: Dereference of a possibly null reference. [C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\BeatSight.Game.csproj]
+C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\Screens\SongSelect\SongSelectScreen.cs(50,24): warning CS0649: Field 'SongSelectScreen.currentTrack' is never assigned to, and will always have its default value null [C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\BeatSight.Game.csproj]
+C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\Screens\Playback\PlaybackScreen.cs(175,28): warning CS0414: The field 'PlaybackScreen.backButton' is assigned but its value is never used [C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\BeatSight.Game.csproj]
+C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\Screens\SongSelect\SongSelectScreen.cs(44,28): warning CS0414: The field 'SongSelectScreen.backButton' is assigned but its value is never used [C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\BeatSight.Game.csproj]
+C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\Screens\Playback\PlaybackScreen.cs(177,21): warning CS0414: The field 'PlaybackScreen.backgroundBase' is assigned but its value is never used [C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\BeatSight.Game.csproj]
+  BeatSight.Game -> C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\bin\Debug\net8.0\BeatSight.Game.dll
+  BeatSight.Desktop -> C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Desktop\bin\Debug\net8.0\BeatSight.Desktop.dll
+
+Build succeeded.
+
+C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\Screens\Editor\EditorScreen.cs(2818,39): warning CS8602: Dereference of a possibly null reference. [C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\BeatSight.Game.csproj]
+C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\Screens\SongSelect\SongSelectScreen.cs(50,24): warning CS0649: Field 'SongSelectScreen.currentTrack' is never assigned to, and will always have its default value null [C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\BeatSight.Game.csproj]
+C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\Screens\Playback\PlaybackScreen.cs(175,28): warning CS0414: The field 'PlaybackScreen.backButton' is assigned but its value is never used [C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\BeatSight.Game.csproj]
+C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\Screens\SongSelect\SongSelectScreen.cs(44,28): warning CS0414: The field 'SongSelectScreen.backButton' is assigned but its value is never used [C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\BeatSight.Game.csproj]
+C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\Screens\Playback\PlaybackScreen.cs(177,21): warning CS0414: The field 'PlaybackScreen.backgroundBase' is assigned but its value is never used [C:\Users\10ros\OneDrive\Documents\github\BeatSight\desktop\BeatSight.Game\BeatSight.Game.csproj]
+    5 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.62
+
+Workload updates are available. Run `dotnet workload list` for more information.

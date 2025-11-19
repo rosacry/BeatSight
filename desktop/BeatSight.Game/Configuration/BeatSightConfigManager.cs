@@ -22,7 +22,24 @@ namespace BeatSight.Game.Configuration
         public BeatSightConfigManager(Storage storage)
             : base(storage)
         {
+            performMigrations();
             ensureAllSettingsTracked();
+        }
+
+        private void performMigrations()
+        {
+            // Migration: SpeedAdjustmentMin default changed from 0.25 to 0.0.
+            // Users with old config files will have 0.25 persisted.
+            // Also catch cases where it might be slightly off or user set it to something else that breaks balance if Max is 2.0.
+            double currentMin = Get<double>(BeatSightSetting.SpeedAdjustmentMin);
+            double currentMax = Get<double>(BeatSightSetting.SpeedAdjustmentMax);
+
+            // If Max is default (2.0) and Min is NOT default (0.0), reset Min to 0.0 to ensure balance.
+            // This covers 0.25 and any other unbalanced value.
+            if (Math.Abs(currentMax - 2.0) < 0.0001 && Math.Abs(currentMin - 0.0) > 0.0001)
+            {
+                GetBindable<double>(BeatSightSetting.SpeedAdjustmentMin).Value = 0.0;
+            }
         }
 
         protected override void InitialiseDefaults()
@@ -35,7 +52,7 @@ namespace BeatSight.Game.Configuration
 
             // Playback Settings
             setDefault(BeatSightSetting.GameplayMode, GameplayMode.Manual);
-            setDefault(BeatSightSetting.SpeedAdjustmentMin, 0.25);
+            setDefault(BeatSightSetting.SpeedAdjustmentMin, 0.0);
             setDefault(BeatSightSetting.SpeedAdjustmentMax, 2.0);
             setDefault(BeatSightSetting.PlaybackZoomLevel, 1.0);
             setDefault(BeatSightSetting.PlaybackNoteWidth, 1.0);

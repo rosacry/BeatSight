@@ -413,6 +413,8 @@ namespace BeatSight.Game.Screens.Editor
             }
             else
             {
+                // Initialize a blank project if no beatmap or audio is provided
+                initializeNewProject(null);
                 reloadTimeline();
                 updateActionButtons();
                 refreshTimelineToolboxState();
@@ -1344,8 +1346,8 @@ namespace BeatSight.Game.Screens.Editor
         {
             var span = TimeSpan.FromMilliseconds(Math.Max(0, milliseconds));
             if (span.TotalHours >= 1)
-                return $"{(int)span.TotalHours}:{span.Minutes:00}:{span.Seconds:00}";
-            return $"{(int)span.TotalMinutes:00}:{span.Seconds:00}";
+                return $"{(int)span.TotalHours}:{span.Minutes:00}:{span.Seconds:00}.{span.Milliseconds:000}";
+            return $"{(int)span.TotalMinutes:00}:{span.Seconds:00}.{span.Milliseconds:000}";
         }
 
         private void updateInspectorEnabledState(bool enabled)
@@ -2764,7 +2766,7 @@ namespace BeatSight.Game.Screens.Editor
             }
         }
 
-        private void initializeNewProject(ImportedAudioTrack trackInfo)
+        private void initializeNewProject(ImportedAudioTrack? trackInfo)
         {
             beatmap = new Beatmap
             {
@@ -2779,10 +2781,10 @@ namespace BeatSight.Game.Screens.Editor
                 },
                 Audio =
                 {
-                    Filename = trackInfo.RelativeStoragePath,
-                    Duration = trackInfo.DurationMilliseconds.HasValue
+                    Filename = trackInfo?.RelativeStoragePath ?? string.Empty,
+                    Duration = trackInfo?.DurationMilliseconds.HasValue == true
                         ? (int)Math.Round(trackInfo.DurationMilliseconds.Value)
-                        : 0
+                        : 60000 // Default 1 minute for blank projects
                 },
                 Editor = new EditorInfo
                 {

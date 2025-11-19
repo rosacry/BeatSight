@@ -90,13 +90,14 @@ namespace BeatSight.Game.Screens.Playback
         };
         private readonly BindableDouble speedAdjustment = new BindableDouble
         {
-            MinValue = 0.25,
+            MinValue = 0.0,
             MaxValue = 2.0,
             Default = 1.0,
-            Precision = 0.05
+            Precision = 0.01
         };
         private double offsetMilliseconds;
         private double playbackSpeed = 1.0;
+        private bool pausedByZeroSpeed;
         private BasicButton playPauseButton = null!;
         private BasicButton viewModeToggleButton = null!;
         private BasicButton kickLayoutToggleButton = null!;
@@ -183,6 +184,8 @@ namespace BeatSight.Game.Screens.Playback
         private readonly BindableDouble playbackProgress = new BindableDouble { MinValue = 0, MaxValue = 1, Precision = 0.0001 };
         private bool suppressPlaybackProgressUpdate;
         private bool isScrubbingPlayback;
+        private bool wasPlayingBeforeScrub;
+        private double? pendingSeekNormalized;
         private double cachedTrackDurationMs;
 
         private LaneLayout currentLaneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
@@ -402,8 +405,64 @@ namespace BeatSight.Game.Screens.Playback
             speedAdjustment.BindValueChanged(value =>
             {
                 playbackSpeed = value.NewValue;
-                if (track != null)
-                    track.Tempo.Value = playbackSpeed;
+
+                if (playbackSpeed <= 0.001)
+                {
+                    if (isPlaybackActive())
+                    {
+                        stopPlayback();
+                        pausedByZeroSpeed = true;
+                    }
+                }
+                else
+                {
+                    if (pausedByZeroSpeed)
+                    {
+                        startPlayback(false);
+                        pausedByZeroSpeed = false;
+                    }
+
+                    if (track != null)
+                    {
+                        // Ensure track is running if it should be
+                        if (!isTrackRunning && isPlaybackActive())
+                        {
+                            // If we were in fallback mode, sync track to fallback time
+                            if (fallbackRunning)
+                            {
+                                track.Seek(fallbackElapsed);
+                                fallbackRunning = false;
+                            }
+
+                            track.Start();
+                            isTrackRunning = true;
+                        }
+
+                        try
+                        {
+                            if (playbackSpeed < 0.05)
+                            {
+                                // For very low speeds, we combine Tempo and Frequency to maintain audibility.
+                                // Tempo (Time Stretch) is limited to 0.05x to avoid exceptions/limits.
+                                // We use Frequency (Pitch Shift) to achieve the remaining slowdown.
+                                track.Tempo.Value = 0.05;
+                                track.Frequency.Value = playbackSpeed / 0.05;
+                            }
+                            else
+                            {
+                                // Use Tempo (Time Stretch) for normal speeds
+                                track.Frequency.Value = 1.0;
+                                track.Tempo.Value = playbackSpeed;
+                            }
+                        }
+                        catch
+                        {
+                            // Fallback safety
+                            track.Tempo.Value = Math.Max(0.05, playbackSpeed);
+                        }
+                    }
+                }
+
                 if (speedValueText != null)
                     speedValueText.Text = formatSpeedLabel(value.NewValue);
             }, true);
@@ -468,14 +527,16 @@ namespace BeatSight.Game.Screens.Playback
             {
                 Text = "0:00",
                 Font = BeatSightFont.Section(14f),
-                Colour = new Color4(200, 205, 220, 255)
+                Colour = new Color4(200, 205, 220, 255),
+                Shadow = false
             };
 
             timelineTotalText = new SpriteText
             {
                 Text = "--:--",
                 Font = BeatSightFont.Section(14f),
-                Colour = new Color4(150, 160, 185, 255)
+                Colour = new Color4(150, 160, 185, 255),
+                Shadow = false
             };
 
             var buttonFlow = new FillFlowContainer
@@ -506,6 +567,7 @@ namespace BeatSight.Game.Screens.Playback
                         Origin = Anchor.BottomRight,
                         Direction = FillDirection.Horizontal,
                         Spacing = new Vector2(6, 0),
+                        Margin = new MarginPadding { Top = 20 },
                         Children = new Drawable[]
                         {
                             timelineCurrentText,
@@ -513,7 +575,8 @@ namespace BeatSight.Game.Screens.Playback
                             {
                                 Text = "/",
                                 Font = BeatSightFont.Caption(14f),
-                                Colour = new Color4(150, 160, 185, 255)
+                                Colour = new Color4(150, 160, 185, 255),
+                                Shadow = false
                             },
                             timelineTotalText
                         }
@@ -644,10 +707,20 @@ namespace BeatSight.Game.Screens.Playback
         {
             isScrubbingPlayback = scrubbing;
 
-            if (!scrubbing)
+            if (scrubbing)
             {
+                wasPlayingBeforeScrub = isTrackRunning;
+                if (isTrackRunning)
+                    stopPlayback();
+            }
+            else
+            {
+                pendingSeekNormalized = null; // Cancel any pending throttled seek
                 seekToNormalized(playbackProgress.Value, allowStateReset: true);
                 updatePlaybackProgressUI();
+
+                if (wasPlayingBeforeScrub)
+                    startPlayback(restart: false);
             }
         }
 
@@ -656,8 +729,26 @@ namespace BeatSight.Game.Screens.Playback
             if (suppressPlaybackProgressUpdate)
                 return;
 
-            seekToNormalized(value.NewValue, allowStateReset: !isScrubbingPlayback);
-            updatePlaybackProgressUI();
+            if (isScrubbingPlayback)
+            {
+                pendingSeekNormalized = value.NewValue;
+                Scheduler.AddOnce(performPendingSeek);
+            }
+            else
+            {
+                seekToNormalized(value.NewValue, allowStateReset: !isScrubbingPlayback);
+                updatePlaybackProgressUI();
+            }
+        }
+
+        private void performPendingSeek()
+        {
+            if (pendingSeekNormalized.HasValue)
+            {
+                seekToNormalized(pendingSeekNormalized.Value, allowStateReset: false);
+                updatePlaybackProgressUI();
+                pendingSeekNormalized = null;
+            }
         }
 
         private void updatePlaybackProgressUI()
@@ -762,10 +853,8 @@ namespace BeatSight.Game.Screens.Playback
             if (ms < 0)
                 ms = 0;
 
-            int totalSeconds = (int)Math.Round(ms / 1000.0);
-            int minutes = totalSeconds / 60;
-            int seconds = totalSeconds % 60;
-            return $"{minutes}:{seconds:D2}";
+            TimeSpan t = TimeSpan.FromMilliseconds(ms);
+            return $"{(int)t.TotalMinutes}:{t.Seconds:D2}.{t.Milliseconds:D3}";
         }
 
         private Drawable createMainContent()
@@ -814,7 +903,7 @@ namespace BeatSight.Game.Screens.Playback
                 Text = "1.0x"
             };
 
-            zoomLevel.BindValueChanged(v => zoomText.Text = $"{v.NewValue:0.0}x", true);
+            zoomLevel.BindValueChanged(v => zoomText.Text = $"{v.NewValue:0.00}x", true);
 
             var zoomSlider = new BeatSightSliderBar
             {
@@ -888,7 +977,7 @@ namespace BeatSight.Game.Screens.Playback
             if (speedMinSetting == null || speedMaxSetting == null)
                 return;
 
-            double min = Math.Clamp(speedMinSetting.Value, 0.1, 5.0);
+            double min = Math.Clamp(speedMinSetting.Value, 0.0, 5.0);
             double max = Math.Clamp(speedMaxSetting.Value, min + 0.05, 5.0);
 
             speedAdjustment.MinValue = min;
@@ -1126,6 +1215,9 @@ namespace BeatSight.Game.Screens.Playback
             }
             else
             {
+                if (playbackSpeed <= 0.001)
+                    speedAdjustment.Value = 0.05;
+
                 bool restart = isAtPlaybackEnd();
                 startPlayback(restart);
             }
@@ -1136,7 +1228,7 @@ namespace BeatSight.Game.Screens.Playback
         private bool isPlaybackActive()
         {
             if (track != null)
-                return isTrackRunning || track.IsRunning;
+                return isTrackRunning || track.IsRunning || fallbackRunning;
 
             return fallbackRunning;
         }
@@ -1333,7 +1425,33 @@ namespace BeatSight.Game.Screens.Playback
             if (track != null)
             {
                 if (restart)
+                {
                     track.Seek(0);
+                    fallbackElapsed = 0;
+                }
+                else
+                {
+                    // Ensure sync when resuming
+                    track.Seek(fallbackElapsed);
+                }
+
+                try
+                {
+                    if (playbackSpeed < 0.05)
+                    {
+                        track.Tempo.Value = 0.05;
+                        track.Frequency.Value = playbackSpeed / 0.05;
+                    }
+                    else
+                    {
+                        track.Frequency.Value = 1.0;
+                        track.Tempo.Value = playbackSpeed;
+                    }
+                }
+                catch
+                {
+                    track.Tempo.Value = Math.Max(0.05, playbackSpeed);
+                }
 
                 track.Start();
                 isTrackRunning = true;
@@ -1357,6 +1475,7 @@ namespace BeatSight.Game.Screens.Playback
             {
                 track.Stop();
                 isTrackRunning = false;
+                fallbackElapsed = track.CurrentTime;
             }
             fallbackRunning = false;
             pendingMetronomePulse = false;
@@ -1468,7 +1587,7 @@ namespace BeatSight.Game.Screens.Playback
             base.Update();
 
             if (fallbackRunning && track == null)
-                fallbackElapsed += Time.Elapsed;
+                fallbackElapsed += Time.Elapsed * playbackSpeed;
 
             handleMetronome();
 
@@ -1668,7 +1787,23 @@ namespace BeatSight.Game.Screens.Playback
             track = loadedTrack;
             track.Completed += onTrackCompleted;
             updateMusicVolumeOutput();
-            track.Tempo.Value = playbackSpeed;
+            try
+            {
+                if (playbackSpeed < 0.05)
+                {
+                    track.Tempo.Value = 0.05;
+                    track.Frequency.Value = playbackSpeed / 0.05;
+                }
+                else
+                {
+                    track.Frequency.Value = 1.0;
+                    track.Tempo.Value = playbackSpeed;
+                }
+            }
+            catch
+            {
+                track.Tempo.Value = Math.Max(0.05, playbackSpeed);
+            }
             fallbackRunning = false;
             isTrackRunning = false;
             cachedTrackDurationMs = track.Length;
@@ -2105,9 +2240,10 @@ namespace BeatSight.Game.Screens.Playback
 
             protected override bool OnMouseDown(MouseDownEvent e)
             {
+                setScrubbing(true);
                 var handled = base.OnMouseDown(e);
-                if (handled)
-                    setScrubbing(true);
+                if (!handled)
+                    setScrubbing(false);
                 return handled;
             }
 
@@ -2184,14 +2320,25 @@ namespace BeatSight.Game.Screens.Playback
                 if (!initialLayoutDone && DrawHeight > PEEK_HEIGHT)
                 {
                     initialLayoutDone = true;
-                    float hideOffset = Math.Max(0, DrawHeight - PEEK_HEIGHT);
-                    this.Y = hideOffset;
-                    this.FadeTo(0f, 500, Easing.OutQuint);
+                    if (!IsHovered)
+                    {
+                        float hideOffset = Math.Max(0, DrawHeight - PEEK_HEIGHT);
+                        this.Y = hideOffset;
+                        this.FadeTo(0f, 500, Easing.OutQuint);
+                    }
                 }
             }
 
             protected override bool OnHover(HoverEvent e)
             {
+                // Ensure we start from the hidden position if this is the first interaction
+                if (!initialLayoutDone && DrawHeight > PEEK_HEIGHT)
+                {
+                    initialLayoutDone = true;
+                    float hideOffset = Math.Max(0, DrawHeight - PEEK_HEIGHT);
+                    this.Y = hideOffset;
+                }
+
                 this.MoveToY(0, 300, Easing.OutQuint);
                 this.FadeTo(1f, 300, Easing.OutQuint);
                 return true;

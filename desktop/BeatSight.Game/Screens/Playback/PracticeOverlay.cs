@@ -185,10 +185,8 @@ namespace BeatSight.Game.Screens.Playback
             if (ms < 0)
                 ms = 0;
 
-            int totalSeconds = (int)Math.Round(ms / 1000.0);
-            int minutes = totalSeconds / 60;
-            int seconds = totalSeconds % 60;
-            return $"{minutes}:{seconds:D2}";
+            TimeSpan t = TimeSpan.FromMilliseconds(ms);
+            return $"{(int)t.TotalMinutes}:{t.Seconds:D2}.{t.Milliseconds:D3}";
         }
 
         private static string formatDuration(double ms)

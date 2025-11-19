@@ -88,7 +88,7 @@ namespace BeatSight.Game.Screens
                             },
                             new MenuButton("Editor", Color4.Blue)
                             {
-                                Action = () => this.Push(new EditorScreen())
+                                Action = () => this.Push(new SongSelectScreen(editorMode: true))
                             },
                             new MenuButton("Settings", Color4.Orange)
                             {

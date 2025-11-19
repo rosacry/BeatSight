@@ -163,6 +163,7 @@ namespace BeatSight.Game.UI.Components
             suppressPointerSnap = true;
             Current.Value = snapped;
             suppressPointerSnap = false;
+            UserChange?.Invoke();
         }
 
         private void applyKeyboardDelta(double delta)

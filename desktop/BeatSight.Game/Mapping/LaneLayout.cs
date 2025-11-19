@@ -164,6 +164,87 @@ namespace BeatSight.Game.Mapping
             }
         }
 
+        public static LaneLayout CreateCustom(LanePreset preset, int laneCount, Dictionary<DrumComponentCategory, int[]> categoryMap)
+        {
+            if (categoryMap == null)
+                throw new ArgumentNullException(nameof(categoryMap));
+
+            if (laneCount <= 0)
+                throw new ArgumentOutOfRangeException(nameof(laneCount));
+
+            return new LaneLayout(preset, categoryMap, laneCount);
+        }
+
+        public static LaneLayout CreateFromComponents(List<string> components)
+        {
+            // 1. Identify unique categories from components
+            var categories = new HashSet<DrumComponentCategory>();
+            foreach (var comp in components)
+            {
+                if (Enum.TryParse<DrumComponentCategory>(comp, true, out var category))
+                    categories.Add(category);
+                else
+                    categories.Add(DrumComponentCategory.Unknown);
+            }
+
+            // 2. Determine lane count (N instruments -> N lanes)
+            // For a simple 1-to-1 mapping, we can just assign each component to a lane.
+            // However, we might want to group similar instruments (e.g. Toms) if we want to stick to a standard layout,
+            // but the user asked for "n many lanes/tracks as there are instruments".
+            // So let's try to map each unique instrument to a lane.
+
+            // If we have standard components, we try to arrange them in a standard drum kit order:
+            // HiHat | Snare | Kick | Tom1 | Tom2 | Tom3 | Ride | Crash
+
+            var standardOrder = new[]
+            {
+                DrumComponentCategory.HiHatPedal,
+                DrumComponentCategory.HiHatClosed,
+                DrumComponentCategory.HiHatOpen,
+                DrumComponentCategory.Snare,
+                DrumComponentCategory.Rimshot,
+                DrumComponentCategory.CrossStick,
+                DrumComponentCategory.Kick,
+                DrumComponentCategory.TomHigh,
+                DrumComponentCategory.TomMid,
+                DrumComponentCategory.TomLow,
+                DrumComponentCategory.Ride,
+                DrumComponentCategory.Crash,
+                DrumComponentCategory.China,
+                DrumComponentCategory.Splash,
+                DrumComponentCategory.Cowbell,
+                DrumComponentCategory.Percussion
+            };
+
+            var presentCategories = standardOrder.Where(c => categories.Contains(c)).ToList();
+            var unknownCategories = categories.Where(c => !standardOrder.Contains(c)).ToList();
+
+            var allCategories = presentCategories.Concat(unknownCategories).ToList();
+            int laneCount = allCategories.Count;
+
+            if (laneCount == 0)
+                return Create(LanePreset.DrumFourLane); // Fallback
+
+            var map = new Dictionary<DrumComponentCategory, int[]>();
+
+            for (int i = 0; i < laneCount; i++)
+            {
+                var category = allCategories[i];
+                map[category] = new[] { i };
+
+                // Also map related categories to the same lane if they are not explicitly present?
+                // For now, let's just map the exact categories.
+            }
+
+            // Ensure Kick is mapped if present
+            if (!map.ContainsKey(DrumComponentCategory.Kick) && categories.Contains(DrumComponentCategory.Kick))
+            {
+                // Should have been handled above
+            }
+
+            return new LaneLayout(LanePreset.Custom, map, laneCount);
+        }
+
         private static LanePresetDefinition BuildFourLane()
         {
             var map = new Dictionary<DrumComponentCategory, int[]>

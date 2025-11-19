@@ -1544,6 +1544,12 @@ namespace BeatSight.Game.Screens.Settings
                         "Switch between classic 2D lanes and the new 3D runway view.",
                         formatLaneViewMode
                     ),
+                    CreateEnumDropdown(
+                        "Lane Preset",
+                        config.GetBindable<LanePreset>(BeatSightSetting.LanePreset),
+                        "Choose a fixed lane count or let BeatSight match your detected drum kit automatically.",
+                        formatLanePreset
+                    ),
                     CreateSlider(
                         "Background Dim",
                         config.GetBindable<double>(BeatSightSetting.BackgroundDim),
@@ -1627,6 +1633,18 @@ namespace BeatSight.Game.Screens.Settings
             LaneViewMode.TwoDimensional => "2D",
             LaneViewMode.ThreeDimensional => "3D",
             _ => mode.ToString()
+        };
+
+        private static string formatLanePreset(LanePreset preset) => preset switch
+        {
+            LanePreset.DrumFourLane => "4 lanes",
+            LanePreset.DrumFiveLane => "5 lanes",
+            LanePreset.DrumSixLane => "6 lanes",
+            LanePreset.DrumSevenLane => "7 lanes",
+            LanePreset.DrumEightLane => "8 lanes",
+            LanePreset.DrumNineLane => "9 lanes",
+            LanePreset.AutoDynamic => "Auto (match drum kit)",
+            _ => preset.ToString()
         };
 
         private static string formatKickLaneMode(KickLaneMode mode) => mode switch

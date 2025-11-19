@@ -21,6 +21,7 @@ namespace BeatSight.Game.UI.Components
         private bool suppressPointerSnap;
 
         public event Action<bool>? TooltipSuppressionChanged;
+        public event Action? UserChange;
 
         public bool IsTooltipSuppressed => pointerAdjusting;
 
@@ -138,6 +139,7 @@ namespace BeatSight.Game.UI.Components
             suppressPointerSnap = true;
             Current.Value = snapped;
             suppressPointerSnap = false;
+            UserChange?.Invoke();
         }
 
         private void adjustValueFromPointer(Vector2 screenSpacePosition)
@@ -169,6 +171,7 @@ namespace BeatSight.Game.UI.Components
             double max = CurrentNumber?.MaxValue ?? double.MaxValue;
             double target = Math.Clamp(Current.Value + delta, min, max);
             Current.Value = target;
+            UserChange?.Invoke();
         }
 
         private double snapToDragStep(double value)

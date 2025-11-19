@@ -13,6 +13,8 @@ namespace BeatSight.Game.Mapping
     {
         private const int maxCategoryDepth = 8;
 
+        public readonly record struct DrumComponentClassification(DrumComponentCategory PrimaryCategory, SidePreference Side, DrumComponentCategory[] Categories);
+
         /// <summary>
         /// Resolves a detected component string to a lane using the provided layout.
         /// </summary>
@@ -207,6 +209,27 @@ namespace BeatSight.Game.Mapping
             };
 
             ApplyToBeatmap(beatmap, LaneLayoutFactory.Create(preset));
+        }
+
+        /// <summary>
+        /// Provides classification details for a detected drum component without resolving it to a concrete lane.
+        /// </summary>
+        public static DrumComponentClassification ClassifyComponent(string? component)
+        {
+            Span<DrumComponentCategory> categories = stackalloc DrumComponentCategory[maxCategoryDepth];
+            var side = buildCategoryPriority(component, categories, out int length);
+
+            if (length == 0)
+            {
+                categories[0] = DrumComponentCategory.Unknown;
+                length = 1;
+            }
+
+            var captured = new DrumComponentCategory[length];
+            for (int i = 0; i < length; i++)
+                captured[i] = categories[i];
+
+            return new DrumComponentClassification(captured[0], side, captured);
         }
 
         private static SidePreference buildCategoryPriority(string? component, Span<DrumComponentCategory> buffer, out int length)

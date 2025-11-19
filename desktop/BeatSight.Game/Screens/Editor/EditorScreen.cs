@@ -152,7 +152,8 @@ namespace BeatSight.Game.Screens.Editor
         private enum EditorPreviewMode
         {
             Playfield2D,
-            Playfield3D
+            Playfield3D,
+            Manuscript
         }
 
         [Resolved]
@@ -872,12 +873,14 @@ namespace BeatSight.Game.Screens.Editor
 
             timelineZoomSlider = new BeatSightSliderBar
             {
-                RelativeSizeAxes = Axes.Both
+                RelativeSizeAxes = Axes.Both,
+                DragStepMultiplier = 0.5 // Smoother dragging
             };
             var zoomBindable = new BindableDouble(timelineZoom)
             {
                 MinValue = EditorTimeline.MinZoom,
-                MaxValue = EditorTimeline.MaxZoom
+                MaxValue = EditorTimeline.MaxZoom,
+                Precision = 0.01
             };
             timelineZoomSlider.Current = zoomBindable;
             timelineZoomSlider.Current.ValueChanged += e =>
@@ -908,12 +911,14 @@ namespace BeatSight.Game.Screens.Editor
 
             waveformScaleSlider = new BeatSightSliderBar
             {
-                RelativeSizeAxes = Axes.Both
+                RelativeSizeAxes = Axes.Both,
+                DragStepMultiplier = 0.5 // Smoother dragging
             };
             var waveformBindable = new BindableDouble(waveformScale)
             {
                 MinValue = EditorTimeline.MinWaveformScale,
-                MaxValue = EditorTimeline.MaxWaveformScale
+                MaxValue = EditorTimeline.MaxWaveformScale,
+                Precision = 0.01
             };
             waveformScaleSlider.Current = waveformBindable;
             waveformScaleSlider.Current.ValueChanged += e =>
@@ -2102,6 +2107,11 @@ namespace BeatSight.Game.Screens.Editor
                     setStatusDetail("2D view");
                     break;
 
+                case EditorPreviewMode.Manuscript:
+                    laneViewModeBindable.Value = LaneViewMode.Manuscript;
+                    setStatusDetail("Manuscript view");
+                    break;
+
                 case EditorPreviewMode.Playfield3D:
                 default:
                     laneViewModeBindable.Value = LaneViewMode.ThreeDimensional;
@@ -3283,17 +3293,35 @@ namespace BeatSight.Game.Screens.Editor
 
             private void toggleMode()
             {
-                previewMode.Value = previewMode.Value == EditorPreviewMode.Playfield2D
-                    ? EditorPreviewMode.Playfield3D
-                    : EditorPreviewMode.Playfield2D;
+                if (previewMode.Value == EditorPreviewMode.Playfield2D)
+                    previewMode.Value = EditorPreviewMode.Playfield3D;
+                else if (previewMode.Value == EditorPreviewMode.Playfield3D)
+                    previewMode.Value = EditorPreviewMode.Manuscript;
+                else
+                    previewMode.Value = EditorPreviewMode.Playfield2D;
             }
 
             private void updateState(ValueChangedEvent<EditorPreviewMode> state)
             {
-                bool is3D = state.NewValue == EditorPreviewMode.Playfield3D;
-                icon.Icon = is3D ? FontAwesome.Solid.Cube : FontAwesome.Solid.LayerGroup;
-                modeLabel.Text = is3D ? "3D View" : "2D View";
-                currentBaseColour = is3D ? colour3D : colour2D;
+                switch (state.NewValue)
+                {
+                    case EditorPreviewMode.Playfield3D:
+                        icon.Icon = FontAwesome.Solid.Cube;
+                        modeLabel.Text = "3D View";
+                        currentBaseColour = colour3D;
+                        break;
+                    case EditorPreviewMode.Manuscript:
+                        icon.Icon = FontAwesome.Solid.Music;
+                        modeLabel.Text = "Manuscript";
+                        currentBaseColour = Color4.Goldenrod;
+                        break;
+                    case EditorPreviewMode.Playfield2D:
+                    default:
+                        icon.Icon = FontAwesome.Solid.LayerGroup;
+                        modeLabel.Text = "2D View";
+                        currentBaseColour = colour2D;
+                        break;
+                }
                 updateBackgroundForAvailability();
             }
 
@@ -3301,13 +3329,17 @@ namespace BeatSight.Game.Screens.Editor
             {
                 if (!Enabled.Value)
                 {
-                    HoverHintChanged?.Invoke(availabilityMessage ?? "Load or create a beatmap to enable 2D/3D switching.");
+                    HoverHintChanged?.Invoke(availabilityMessage ?? "Load or create a beatmap to enable view switching.");
                     return base.OnHover(e);
                 }
 
-                string tooltip = previewMode.Value == EditorPreviewMode.Playfield3D
-                    ? "Switch to 2D flat osu!mania-style lane view"
-                    : "Switch to 3D Guitar Hero-style lane view";
+                string tooltip = "";
+                switch (previewMode.Value)
+                {
+                    case EditorPreviewMode.Playfield2D: tooltip = "Switch to 3D Guitar Hero-style lane view"; break;
+                    case EditorPreviewMode.Playfield3D: tooltip = "Switch to Manuscript view"; break;
+                    case EditorPreviewMode.Manuscript: tooltip = "Switch to 2D flat osu!mania-style lane view"; break;
+                }
                 HoverHintChanged?.Invoke(tooltip);
 
                 var targetColour = EditorColours.Lighten(currentBaseColour, 1.15f);

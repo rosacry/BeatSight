@@ -37,6 +37,8 @@ namespace BeatSight.Game.Configuration
             setDefault(BeatSightSetting.GameplayMode, GameplayMode.Manual);
             setDefault(BeatSightSetting.SpeedAdjustmentMin, 0.25);
             setDefault(BeatSightSetting.SpeedAdjustmentMax, 2.0);
+            setDefault(BeatSightSetting.PlaybackZoomLevel, 1.0);
+            setDefault(BeatSightSetting.PlaybackNoteWidth, 1.0);
             setDefault(BeatSightSetting.BackgroundDim, 0.8);
             setDefault(BeatSightSetting.BackgroundBlur, 0.0);
             setDefault(BeatSightSetting.HitLighting, true);
@@ -144,6 +146,8 @@ namespace BeatSight.Game.Configuration
         GameplayMode,
         SpeedAdjustmentMin,
         SpeedAdjustmentMax,
+        PlaybackZoomLevel,
+        PlaybackNoteWidth,
         BackgroundDim,
         BackgroundBlur,
         HitLighting,
@@ -210,7 +214,8 @@ namespace BeatSight.Game.Configuration
     public enum LaneViewMode
     {
         TwoDimensional,
-        ThreeDimensional
+        ThreeDimensional,
+        Manuscript
     }
 
     public enum KickLaneMode
@@ -226,7 +231,9 @@ namespace BeatSight.Game.Configuration
         DrumSixLane,
         DrumSevenLane,
         DrumEightLane,
-        DrumNineLane
+        DrumNineLane,
+        AutoDynamic,
+        Custom
     }
 
     public enum FrameLimiterMode

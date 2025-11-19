@@ -150,6 +150,9 @@ namespace BeatSight.Game
             var config = new BeatSightConfigManager(Host.Storage);
             dependencies.Cache(config);
 
+            var mapPlaybackSettings = new MapPlaybackSettingsManager(Host.Storage);
+            dependencies.Cache(mapPlaybackSettings);
+
             var aiGenerator = new AiBeatmapGenerator(Host);
             dependencies.Cache(aiGenerator);
 

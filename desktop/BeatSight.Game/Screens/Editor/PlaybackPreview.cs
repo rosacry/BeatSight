@@ -3,6 +3,7 @@ using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
 using BeatSight.Game.Screens.Playback;
+using BeatSight.Game.Screens.Playback.Playfield;
 using BeatSight.Game.UI.Theming;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -110,6 +111,20 @@ namespace BeatSight.Game.Screens.Editor
             if (playfield == null)
                 return;
 
+            // Update layout if AutoDynamic
+            if (lanePresetSetting.Value == LanePreset.AutoDynamic)
+            {
+                if (beatmap != null && beatmap.DrumKit.Components.Count > 0)
+                {
+                    currentLaneLayout = LaneLayoutFactory.CreateFromComponents(beatmap.DrumKit.Components);
+                }
+                else
+                {
+                    currentLaneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
+                }
+                playfield.SetLaneLayout(currentLaneLayout);
+            }
+
             if (beatmap != null)
             {
                 playfield.LoadBeatmap(beatmap);
@@ -124,7 +139,19 @@ namespace BeatSight.Game.Screens.Editor
 
         private void onLanePresetChanged(ValueChangedEvent<LanePreset> preset)
         {
-            currentLaneLayout = LaneLayoutFactory.Create(preset.NewValue);
+            if (preset.NewValue == LanePreset.AutoDynamic && beatmap != null && beatmap.DrumKit.Components.Count > 0)
+            {
+                currentLaneLayout = LaneLayoutFactory.CreateFromComponents(beatmap.DrumKit.Components);
+            }
+            else if (preset.NewValue == LanePreset.AutoDynamic)
+            {
+                currentLaneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
+            }
+            else
+            {
+                currentLaneLayout = LaneLayoutFactory.Create(preset.NewValue);
+            }
+
             playfield?.SetLaneLayout(currentLaneLayout);
         }
 

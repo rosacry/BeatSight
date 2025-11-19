@@ -92,7 +92,11 @@ namespace BeatSight.Game.Screens.Editor
 
         private partial class TimelineContent : CompositeDrawable
         {
-            private const int laneCount = 7;
+            private int laneCount = 7;
+            private List<string> laneMapping = new List<string>
+            {
+                "kick", "hihat_pedal", "snare", "hihat_closed", "tom_high", "tom_mid", "crash"
+            };
             private const double basePixelsPerSecond = 220;
             private static readonly int[] allowedSnapDivisors = { 1, 2, 3, 4, 6, 8, 12, 16, 24, 32 };
             private static readonly double[] rulerStepCandidatesSeconds = { 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 180, 240, 300, 600 };
@@ -225,6 +229,18 @@ namespace BeatSight.Game.Screens.Editor
                 this.beatmap = beatmap;
                 this.durationMs = Math.Max(durationMs, Math.Max(beatmap.Audio.Duration, 60000));
                 this.waveform = waveform;
+
+                if (beatmap.DrumKit != null && beatmap.DrumKit.Components.Count > 0)
+                {
+                    laneMapping = new List<string>(beatmap.DrumKit.Components);
+                    laneCount = laneMapping.Count;
+                }
+                else
+                {
+                    // Fallback to default 7-lane layout
+                    laneMapping = new List<string> { "kick", "hihat_pedal", "snare", "hihat_closed", "tom_high", "tom_mid", "crash" };
+                    laneCount = 7;
+                }
 
                 rebuildLaneBackgrounds();
                 rebuildWaveform();
@@ -762,7 +778,7 @@ namespace BeatSight.Game.Screens.Editor
 
                 float clampedY = Math.Clamp(yPosition, 0, laneAreaHeight);
                 int lane = Math.Clamp((int)(clampedY / Math.Max(1, laneAreaHeight) * laneCount), 0, laneCount - 1);
-                string component = LaneComponentMapping[lane];
+                string component = laneMapping[lane];
 
                 var hit = new HitObject
                 {
@@ -888,16 +904,6 @@ namespace BeatSight.Game.Screens.Editor
                 waveformDrawable.SetAmplitudeScale(waveformScale);
             }
 
-            private static readonly string[] LaneComponentMapping =
-            {
-                "kick",
-                "hihat_pedal",
-                "snare",
-                "hihat_closed",
-                "tom_high",
-                "tom_mid",
-                "crash"
-            };
         }
 
         private partial class WaveformDrawable : CompositeDrawable

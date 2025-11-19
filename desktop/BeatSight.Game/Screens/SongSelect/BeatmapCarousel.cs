@@ -13,6 +13,7 @@ using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osuTK;
 using osuTK.Graphics;
+using osu.Framework.Graphics.Effects;
 
 namespace BeatSight.Game.Screens.SongSelect
 {
@@ -43,7 +44,7 @@ namespace BeatSight.Game.Screens.SongSelect
                     AutoSizeAxes = Axes.Y,
                     Direction = FillDirection.Vertical,
                     Spacing = new Vector2(0, 10),
-                    Padding = new MarginPadding { Top = 10, Bottom = 10, Right = 20 } // Padding for scrollbar
+                    Padding = new MarginPadding { Top = 10, Bottom = 10, Right = 20, Left = 20 } // Padding for scrollbar and left side
                 }
             };
         }
@@ -107,6 +108,14 @@ namespace BeatSight.Game.Screens.SongSelect
             }
         }
 
+        public void SelectRandom()
+        {
+            if (flow.Children.Count == 0) return;
+            var random = new Random();
+            var panel = flow.Children[random.Next(flow.Children.Count)];
+            panel.TriggerClick();
+        }
+
         private bool matchesFilter(BeatmapLibrary.BeatmapEntry entry, string query)
         {
             return entry.Beatmap.Metadata.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
@@ -140,10 +149,12 @@ namespace BeatSight.Game.Screens.SongSelect
             public readonly Bindable<PanelState> State = new(PanelState.NotSelected);
 
             private Box background = null!;
+            private Box leftBar = null!;
             private Box flash = null!;
             private Container content = null!;
             private SpriteText title = null!;
             private SpriteText artist = null!;
+            private SpriteText difficulty = null!;
 
             public enum PanelState
             {
@@ -160,6 +171,13 @@ namespace BeatSight.Game.Screens.SongSelect
                 CornerRadius = 10;
                 BorderThickness = 3;
                 BorderColour = Color4.Transparent;
+                EdgeEffect = new EdgeEffectParameters
+                {
+                    Type = EdgeEffectType.Shadow,
+                    Colour = Color4.Black.Opacity(0.2f),
+                    Radius = 5,
+                    Offset = new Vector2(0, 2),
+                };
 
                 Children = new Drawable[]
                 {
@@ -168,32 +186,47 @@ namespace BeatSight.Game.Screens.SongSelect
                         RelativeSizeAxes = Axes.Both,
                         Colour = UITheme.Surface
                     },
+                    leftBar = new Box
+                    {
+                        RelativeSizeAxes = Axes.Y,
+                        Width = 8,
+                        Colour = UITheme.AccentPrimary,
+                        Alpha = 0 // Hidden by default
+                    },
                     content = new Container
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Padding = new MarginPadding { Horizontal = 20, Vertical = 10 },
+                        Padding = new MarginPadding { Horizontal = 25, Vertical = 10 }, // Increased left padding for bar
                         Children = new Drawable[]
                         {
                             new FillFlowContainer
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Direction = FillDirection.Vertical,
-                                Spacing = new Vector2(0, 5),
+                                Spacing = new Vector2(0, 2),
                                 Children = new Drawable[]
                                 {
                                     title = new BeatSight.Game.UI.Components.BeatSightSpriteText
                                     {
                                         Text = entry.Beatmap.Metadata.Title,
-                                        Font = BeatSightFont.Section(24f),
+                                        Font = BeatSightFont.Section(22f),
                                         Colour = UITheme.TextPrimary,
                                         Truncate = true,
                                         RelativeSizeAxes = Axes.X
                                     },
                                     artist = new BeatSight.Game.UI.Components.BeatSightSpriteText
                                     {
-                                        Text = $"{entry.Beatmap.Metadata.Artist} // {entry.Beatmap.Metadata.Creator}",
-                                        Font = BeatSightFont.Caption(16f),
+                                        Text = entry.Beatmap.Metadata.Artist,
+                                        Font = BeatSightFont.Body(16f),
                                         Colour = UITheme.TextSecondary,
+                                        Truncate = true,
+                                        RelativeSizeAxes = Axes.X
+                                    },
+                                    difficulty = new BeatSight.Game.UI.Components.BeatSightSpriteText
+                                    {
+                                        Text = $"[{entry.Beatmap.Metadata.Difficulty:F1}★] mapped by {entry.Beatmap.Metadata.Creator}",
+                                        Font = BeatSightFont.Caption(14f),
+                                        Colour = UITheme.TextMuted,
                                         Truncate = true,
                                         RelativeSizeAxes = Axes.X
                                     }
@@ -220,13 +253,15 @@ namespace BeatSight.Game.Screens.SongSelect
                     case PanelState.Selected:
                         BorderColour = UITheme.AccentPrimary;
                         background.FadeColour(UITheme.SurfaceAlt, 200, Easing.OutQuint);
-                        this.ResizeTo(new Vector2(1.05f, 90), 200, Easing.OutQuint); // Expand slightly
+                        this.ResizeTo(new Vector2(1.02f, 100), 300, Easing.OutElastic); // Elastic expand
+                        leftBar.FadeIn(200);
                         break;
 
                     case PanelState.NotSelected:
                         BorderColour = Color4.Transparent;
                         background.FadeColour(UITheme.Surface, 200, Easing.OutQuint);
                         this.ResizeTo(new Vector2(1.0f, 80), 200, Easing.OutQuint);
+                        leftBar.FadeOut(200);
                         break;
                 }
             }

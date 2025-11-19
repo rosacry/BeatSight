@@ -254,67 +254,51 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
         private void updateApproachDuration(double currentTime)
         {
-            double baseDuration = 5000;
-
-            if (AutoZoom.Value)
+            // Always calculate BPM-based duration to ensure 1.0x matches the map's pacing
+            if (loadedBeatmap?.Timing?.TimingPoints != null)
             {
-                // Auto Zoom: Scale based on BPM to keep visual density constant
-                // We aim for a certain number of beats to be visible
+                var timingPoints = loadedBeatmap.Timing.TimingPoints;
 
-                // Optimize: Only search for timing point if we moved significantly or don't have one
-                if (loadedBeatmap?.Timing?.TimingPoints != null)
+                // Simple optimization: check if next point is reached
+                if (lastTimingPointIndex >= 0 && lastTimingPointIndex < timingPoints.Count - 1)
                 {
-                    var timingPoints = loadedBeatmap.Timing.TimingPoints;
-
-                    // Simple optimization: check if next point is reached
-                    if (lastTimingPointIndex >= 0 && lastTimingPointIndex < timingPoints.Count - 1)
+                    if (currentTime >= timingPoints[lastTimingPointIndex + 1].Time)
                     {
-                        if (currentTime >= timingPoints[lastTimingPointIndex + 1].Time)
-                        {
-                            lastTimingPointIndex++;
-                            updateCachedTiming(timingPoints[lastTimingPointIndex]);
-                        }
-                    }
-
-                    // If we jumped back or don't have an index, search
-                    if (lastTimingPointIndex == -1 || (lastTimingPointIndex < timingPoints.Count && currentTime < timingPoints[lastTimingPointIndex].Time))
-                    {
-                        // Binary search or linear search from start
-                        var timingPoint = timingPoints.LastOrDefault(tp => tp.Time <= currentTime);
-                        if (timingPoint != null)
-                        {
-                            lastTimingPointIndex = timingPoints.IndexOf(timingPoint);
-                            updateCachedTiming(timingPoint);
-                        }
-                        else
-                        {
-                            lastTimingPointIndex = -1;
-                            cachedBpm = loadedBeatmap.Timing.Bpm;
-                            cachedBeatsPerMeasure = 4; // Default
-                        }
+                        lastTimingPointIndex++;
+                        updateCachedTiming(timingPoints[lastTimingPointIndex]);
                     }
                 }
 
-                double beatDuration = 60000.0 / cachedBpm;
-
-                // Default to showing 10 beats (2.5 measures in 4/4) at 1.0 zoom to match original ~5000ms feel
-                // Adjust based on ZoomLevel (higher zoom = fewer beats visible = shorter duration)
-                double targetVisibleBeats = 10 * cachedBeatsPerMeasure / 4.0;
-
-                // Apply ZoomLevel: Zooming In (Value > 1) means seeing LESS time (shorter duration)
-                // Zooming Out (Value < 1) means seeing MORE time (longer duration)
-                // So we divide by ZoomLevel
-                double zoomFactor = Math.Max(0.1, ZoomLevel.Value);
-
-                ApproachDuration = (targetVisibleBeats * beatDuration) / zoomFactor;
+                // If we jumped back or don't have an index, search
+                if (lastTimingPointIndex == -1 || (lastTimingPointIndex < timingPoints.Count && currentTime < timingPoints[lastTimingPointIndex].Time))
+                {
+                    // Binary search or linear search from start
+                    var timingPoint = timingPoints.LastOrDefault(tp => tp.Time <= currentTime);
+                    if (timingPoint != null)
+                    {
+                        lastTimingPointIndex = timingPoints.IndexOf(timingPoint);
+                        updateCachedTiming(timingPoint);
+                    }
+                    else
+                    {
+                        lastTimingPointIndex = -1;
+                        cachedBpm = loadedBeatmap.Timing.Bpm;
+                        cachedBeatsPerMeasure = 4; // Default
+                    }
+                }
             }
-            else
-            {
-                // Manual Zoom: Just scale the base duration
-                // Zoom In (Value > 1) -> Shorter duration
-                double zoomFactor = Math.Max(0.1, ZoomLevel.Value);
-                ApproachDuration = baseDuration / zoomFactor;
-            }
+
+            double beatDuration = 60000.0 / cachedBpm;
+
+            // Default to showing 10 beats (2.5 measures in 4/4) at 1.0 zoom to match original ~5000ms feel
+            double targetVisibleBeats = 10 * cachedBeatsPerMeasure / 4.0;
+
+            // Apply ZoomLevel: Zooming In (Value > 1) means seeing LESS time (shorter duration)
+            // Zooming Out (Value < 1) means seeing MORE time (longer duration)
+            // So we divide by ZoomLevel
+            double zoomFactor = Math.Max(0.1, ZoomLevel.Value);
+
+            ApproachDuration = (targetVisibleBeats * beatDuration) / zoomFactor;
         }
 
         private void updateCachedTiming(TimingPoint timingPoint)

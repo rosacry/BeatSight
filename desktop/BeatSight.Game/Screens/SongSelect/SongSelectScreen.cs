@@ -18,11 +18,26 @@ using osu.Framework.Input.Events;
 using osu.Framework.Screens;
 using osuTK;
 using osuTK.Graphics;
+using osu.Framework.Audio;
+using osu.Framework.Audio.Track;
+using osu.Framework.Input;
+using osu.Framework.Graphics.Rendering;
+using osu.Framework.Graphics.Textures;
 
 namespace BeatSight.Game.Screens.SongSelect
 {
     public partial class SongSelectScreen : Screen
     {
+        // Note: As per the pivot to a learning tool, this screen serves as the hub for 
+        // selecting verified maps or creating new ones via AI/Manual entry.
+        // Future integration: Show "Verified" status on BeatmapPanels.
+
+        [Resolved]
+        private AudioManager audio { get; set; } = null!;
+
+        [Resolved]
+        private IRenderer renderer { get; set; } = null!;
+
         private readonly bool editorMode;
         private BeatmapCarousel carousel = null!;
         private Container leftContent = null!;
@@ -30,6 +45,9 @@ namespace BeatSight.Game.Screens.SongSelect
         private BeatmapLibrary.BeatmapEntry? selectedBeatmap;
         private BasicTextBox searchBox = null!;
         private BeatSight.Game.UI.Components.Dropdown<BeatmapCarousel.SortMode> sortDropdown = null!;
+        private Box backgroundDim = null!;
+        private Sprite backgroundSprite = null!;
+        private Track? currentTrack;
 
         public SongSelectScreen(bool editorMode = false)
         {
@@ -46,35 +64,385 @@ namespace BeatSight.Game.Screens.SongSelect
                     RelativeSizeAxes = Axes.Both,
                     Colour = UITheme.Background
                 },
-                new GridContainer
+                backgroundSprite = new Sprite
                 {
                     RelativeSizeAxes = Axes.Both,
-                    ColumnDimensions = new[]
-                    {
-                        new Dimension(GridSizeMode.Relative, 0.4f), // Left side (Details / Drop)
-                        new Dimension(GridSizeMode.Relative, 0.6f)  // Right side (Carousel)
-                    },
-                    Content = new[]
-                    {
-                        new Drawable[]
-                        {
-                            createLeftArea(),
-                            createRightArea()
-                        }
-                    }
+                    FillMode = FillMode.Fill,
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    Alpha = 0.5f
+                },
+                backgroundDim = new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = Color4.Black,
+                    Alpha = 0.6f // Darker dim for better readability
                 },
                 new SafeAreaContainer
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Padding = BackButton.DefaultMargin,
-                    Child = backButton = new BackButton
+                    Child = new GridContainer
                     {
-                        Action = () => this.Exit()
+                        RelativeSizeAxes = Axes.Both,
+                        RowDimensions = new[]
+                        {
+                            new Dimension(GridSizeMode.Distributed), // Main content
+                            new Dimension(GridSizeMode.Absolute, 60) // Footer
+                        },
+                        Content = new[]
+                        {
+                            new Drawable[]
+                            {
+                                new GridContainer
+                                {
+                                    RelativeSizeAxes = Axes.Both,
+                                    ColumnDimensions = new[]
+                                    {
+                                        new Dimension(GridSizeMode.Relative, 0.4f), // Left side (Details / Drop)
+                                        new Dimension(GridSizeMode.Relative, 0.6f)  // Right side (Carousel)
+                                    },
+                                    Content = new[]
+                                    {
+                                        new Drawable[]
+                                        {
+                                            createLeftArea(),
+                                            createRightArea()
+                                        }
+                                    }
+                                }
+                            },
+                            new Drawable[]
+                            {
+                                createFooter()
+                            }
+                        }
                     }
                 }
             };
 
             populateBeatmaps();
+        }
+
+        private Drawable createFooter()
+        {
+            return new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                Children = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = UITheme.SurfaceAlt
+                    },
+                    new FillFlowContainer
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Direction = FillDirection.Horizontal,
+                        Spacing = new Vector2(10),
+                        Padding = new MarginPadding { Horizontal = 20 },
+                        Children = new Drawable[]
+                        {
+                            new BeatSightButton
+                            {
+                                Text = "Back",
+                                Width = 100,
+                                Height = 40,
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
+                                Action = this.Exit
+                            },
+                            new BeatSightButton
+                            {
+                                Text = "Random (F2)",
+                                Width = 150,
+                                Height = 40,
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
+                                Action = selectRandom
+                            },
+                            new BeatSightButton
+                            {
+                                Text = "Options",
+                                Width = 120,
+                                Height = 40,
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
+                                Action = () => { /* TODO: Options overlay */ }
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        private void populateBeatmaps()
+        {
+            var beatmaps = BeatmapLibrary.GetAvailableBeatmaps();
+            carousel.SetBeatmaps(beatmaps);
+        }
+
+        private void selectBeatmap(BeatmapLibrary.BeatmapEntry entry)
+        {
+            if (selectedBeatmap == entry) return;
+
+            selectedBeatmap = entry;
+
+            if (leftContent.Child is BeatmapDetailsPanel details)
+            {
+                details.UpdateBeatmap(entry.Beatmap);
+            }
+
+            // Play preview
+            currentTrack?.Stop();
+
+            // Load background
+            if (!string.IsNullOrEmpty(entry.Beatmap.Metadata.BackgroundFile))
+            {
+                string bgPath = Path.Combine(Path.GetDirectoryName(entry.Path)!, entry.Beatmap.Metadata.BackgroundFile);
+                if (File.Exists(bgPath))
+                {
+                    try
+                    {
+                        using var stream = File.OpenRead(bgPath);
+                        var texture = Texture.FromStream(renderer, stream);
+                        backgroundSprite.Texture = texture;
+                        backgroundSprite.FadeInFromZero(500);
+                    }
+                    catch
+                    {
+                        backgroundSprite.FadeOut(500);
+                    }
+                }
+                else
+                {
+                    backgroundSprite.FadeOut(500);
+                }
+            }
+            else
+            {
+                backgroundSprite.FadeOut(500);
+            }
+
+            // In a real implementation, we would load the track from the beatmap path.
+            // For now, we'll just simulate or try to load if possible.
+            // Since we don't have a robust track loader here yet, we will skip actual audio playback 
+            // to avoid crashes, but the structure is here.
+            // To fully implement, we need a TrackStore that can load from files.
+            // var trackPath = Path.Combine(Path.GetDirectoryName(entry.Path), entry.Beatmap.Audio.Filename);
+            // currentTrack = audio.Tracks.Get(trackPath); // This requires the track to be in the store.
+        }
+
+        public override void OnEntering(ScreenTransitionEvent e)
+        {
+            base.OnEntering(e);
+            this.FadeInFromZero(200);
+        }
+
+        public override void OnSuspending(ScreenTransitionEvent e)
+        {
+            base.OnSuspending(e);
+            currentTrack?.Stop();
+        }
+
+        public override void OnResuming(ScreenTransitionEvent e)
+        {
+            base.OnResuming(e);
+            this.FadeIn(200);
+            if (selectedBeatmap != null)
+                selectBeatmap(selectedBeatmap);
+        }
+
+        protected override bool OnKeyDown(KeyDownEvent e)
+        {
+            switch (e.Key)
+            {
+                case osuTK.Input.Key.F2:
+                    selectRandom();
+                    return true;
+            }
+            return base.OnKeyDown(e);
+        }
+
+        private void selectRandom()
+        {
+            carousel.SelectRandom();
+        }
+
+        public void StartPlayback()
+        {
+            if (selectedBeatmap != null)
+            {
+                this.Push(new PlaybackScreen(selectedBeatmap.Path));
+            }
+        }
+
+        private partial class BeatmapDetailsPanel : CompositeDrawable
+        {
+            public Action? CreateNewAction;
+
+            private readonly bool editorMode;
+            private FillFlowContainer contentFlow = null!;
+
+            // Details view
+            private Container detailsContainer = null!;
+            private SpriteText title = null!;
+            private SpriteText artist = null!;
+            private SpriteText creator = null!;
+            private SpriteText difficulty = null!;
+            private SpriteText bpm = null!;
+            private SpriteText duration = null!;
+            private BeatSightButton actionButton = null!;
+
+            // Empty view
+            private Container emptyContainer = null!;
+
+            public BeatmapDetailsPanel(bool editorMode)
+            {
+                this.editorMode = editorMode;
+                RelativeSizeAxes = Axes.Both;
+
+                InternalChildren = new Drawable[]
+                {
+                    emptyContainer = new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Children = new Drawable[]
+                        {
+                            new FillFlowContainer
+                            {
+                                AutoSizeAxes = Axes.Both,
+                                Direction = FillDirection.Vertical,
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre,
+                                Spacing = new Vector2(0, 20),
+                                Children = new Drawable[]
+                                {
+                                    new SpriteText
+                                    {
+                                        Text = editorMode ? "Select a beatmap to edit\nor create a new one" : "Select a song to play",
+                                        Font = BeatSightFont.Title(24f),
+                                        Colour = UITheme.TextSecondary,
+                                        Anchor = Anchor.Centre,
+                                        Origin = Anchor.Centre
+                                    },
+                                    new BeatSightButton
+                                    {
+                                        Text = "Create New Beatmap",
+                                        Width = 250,
+                                        Height = 50,
+                                        BackgroundColour = UITheme.AccentPrimary,
+                                        Action = () => CreateNewAction?.Invoke(),
+                                        Alpha = editorMode ? 1 : 0,
+                                        Anchor = Anchor.Centre,
+                                        Origin = Anchor.Centre
+                                    },
+                                    new SpriteText
+                                    {
+                                        Text = "You can also drag & drop audio files",
+                                        Font = BeatSightFont.Body(16f),
+                                        Colour = UITheme.TextMuted,
+                                        Anchor = Anchor.Centre,
+                                        Origin = Anchor.Centre,
+                                        Alpha = editorMode ? 1 : 0
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    detailsContainer = new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Alpha = 0, // Hidden initially
+                        Child = contentFlow = new FillFlowContainer
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            AutoSizeAxes = Axes.Y,
+                            Direction = FillDirection.Vertical,
+                            Spacing = new Vector2(0, 10),
+                            Children = new Drawable[]
+                            {
+                                title = new SpriteText
+                                {
+                                    Font = BeatSightFont.Title(40f),
+                                    Colour = UITheme.TextPrimary,
+                                    AllowMultiline = true,
+                                    RelativeSizeAxes = Axes.X
+                                },
+                                artist = new SpriteText
+                                {
+                                    Font = BeatSightFont.Section(24f),
+                                    Colour = UITheme.TextSecondary,
+                                    AllowMultiline = true,
+                                    RelativeSizeAxes = Axes.X
+                                },
+                                new Box { RelativeSizeAxes = Axes.X, Height = 2, Colour = UITheme.Divider, Margin = new MarginPadding { Vertical = 10 } },
+                                creator = new SpriteText
+                                {
+                                    Font = BeatSightFont.Body(18f),
+                                    Colour = UITheme.TextMuted
+                                },
+                                new FillFlowContainer
+                                {
+                                    AutoSizeAxes = Axes.Both,
+                                    Direction = FillDirection.Horizontal,
+                                    Spacing = new Vector2(20, 0),
+                                    Children = new Drawable[]
+                                    {
+                                        bpm = new SpriteText { Font = BeatSightFont.Body(18f), Colour = UITheme.TextPrimary },
+                                        duration = new SpriteText { Font = BeatSightFont.Body(18f), Colour = UITheme.TextPrimary }
+                                    }
+                                },
+                                difficulty = new SpriteText
+                                {
+                                    Font = BeatSightFont.Body(18f),
+                                    Colour = UITheme.AccentWarning
+                                },
+                                new Container { Height = 40 }, // Spacer
+                                actionButton = new BeatSightButton
+                                {
+                                    Text = editorMode ? "Edit Beatmap" : "Play Beatmap",
+                                    Width = 200,
+                                    Height = 50,
+                                    BackgroundColour = UITheme.AccentPrimary,
+                                    Action = () => { /* Logic to start play/edit */ }
+                                }
+                            }
+                        }
+                    }
+                };
+            }
+
+            public void UpdateBeatmap(Beatmap beatmap)
+            {
+                emptyContainer.FadeOut(200);
+                detailsContainer.FadeIn(200);
+
+                title.Text = beatmap.Metadata.Title;
+                artist.Text = beatmap.Metadata.Artist;
+                creator.Text = $"Mapped by {beatmap.Metadata.Creator}";
+
+                bpm.Text = $"BPM: {beatmap.Timing.Bpm:F0}";
+                duration.Text = $"Length: {TimeSpan.FromMilliseconds(beatmap.Audio.Duration):mm\\:ss}";
+
+                difficulty.Text = $"Difficulty: {beatmap.Metadata.Difficulty:F1} stars";
+
+                actionButton.Action = () =>
+                {
+                    if (this.FindClosestParent<SongSelectScreen>() is SongSelectScreen screen)
+                    {
+                        if (editorMode)
+                            screen.Push(new EditorScreen(screen.selectedBeatmap?.Path));
+                        else
+                            screen.StartPlayback();
+                    }
+                };
+            }
+        }
+
+        private void startNewProject(string? audioPath)
+        {
+            this.Push(new EditorScreen(audioPath));
         }
 
         private Drawable createLeftArea()
@@ -85,21 +453,9 @@ namespace BeatSight.Game.Screens.SongSelect
                 Padding = new MarginPadding { Top = 80, Left = 40, Right = 20, Bottom = 40 }
             };
 
-            if (editorMode)
-            {
-                leftContent.Child = new DropZone
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    Action = onFileDropped
-                };
-            }
-            else
-            {
-                // Play mode: Show details of selected beatmap
-                leftContent.Child = new BeatmapDetailsPanel();
-            }
+            var details = new BeatmapDetailsPanel(editorMode);
+            details.CreateNewAction = () => startNewProject(null);
+            leftContent.Child = details;
 
             return new Container
             {
@@ -109,7 +465,7 @@ namespace BeatSight.Game.Screens.SongSelect
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = UITheme.Surface.Opacity(0.5f)
+                        Colour = UITheme.Surface.Opacity(0.95f)
                     },
                     leftContent
                 }
@@ -131,13 +487,13 @@ namespace BeatSight.Game.Screens.SongSelect
                     new Container
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Padding = new MarginPadding { Top = 100, Bottom = 0, Right = 0 }, // Top padding for header
+                        Padding = new MarginPadding { Top = 100, Bottom = 0, Right = 0 },
                         Child = carousel = new BeatmapCarousel
                         {
                             BeatmapSelected = selectBeatmap
                         }
                     },
-                    createHeader() // Overlay header on top right
+                    createHeader()
                 }
             };
         }
@@ -198,174 +554,6 @@ namespace BeatSight.Game.Screens.SongSelect
                     }
                 }
             };
-        }
-
-        private void populateBeatmaps()
-        {
-            var beatmaps = BeatmapLibrary.GetAvailableBeatmaps();
-            carousel.SetBeatmaps(beatmaps);
-        }
-
-        private void selectBeatmap(BeatmapLibrary.BeatmapEntry entry)
-        {
-            selectedBeatmap = entry;
-
-            if (!editorMode)
-            {
-                if (leftContent.Child is BeatmapDetailsPanel details)
-                {
-                    details.UpdateBeatmap(entry.Beatmap);
-                }
-
-                // In a real scenario, we might want to wait for a "Play" button click
-                // But for now, let's just update details. 
-                // To actually play, maybe double click or a play button in details?
-                // Let's add a Play button to the details panel.
-            }
-            else
-            {
-                this.Push(new EditorScreen(entry.Path));
-            }
-        }
-
-        private void onFileDropped(string path)
-        {
-            this.Push(new EditorScreen(null));
-        }
-
-        private partial class BeatmapDetailsPanel : CompositeDrawable
-        {
-            private SpriteText title = null!;
-            private SpriteText artist = null!;
-            private SpriteText creator = null!;
-            private SpriteText difficulty = null!;
-            private SpriteText bpm = null!;
-            private SpriteText duration = null!;
-
-            private BeatSightButton playButton = null!;
-
-            public BeatmapDetailsPanel()
-            {
-                RelativeSizeAxes = Axes.Both;
-
-                InternalChild = new FillFlowContainer
-                {
-                    RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y,
-                    Direction = FillDirection.Vertical,
-                    Spacing = new Vector2(0, 10),
-                    Children = new Drawable[]
-                    {
-                        title = new SpriteText
-                        {
-                            Font = BeatSightFont.Title(40f),
-                            Colour = UITheme.TextPrimary,
-                            AllowMultiline = true,
-                            RelativeSizeAxes = Axes.X
-                        },
-                        artist = new SpriteText
-                        {
-                            Font = BeatSightFont.Section(24f),
-                            Colour = UITheme.TextSecondary,
-                            AllowMultiline = true,
-                            RelativeSizeAxes = Axes.X
-                        },
-                        new Box { RelativeSizeAxes = Axes.X, Height = 2, Colour = UITheme.Divider, Margin = new MarginPadding { Vertical = 10 } },
-                        creator = new SpriteText
-                        {
-                            Font = BeatSightFont.Body(18f),
-                            Colour = UITheme.TextMuted
-                        },
-                        new FillFlowContainer
-                        {
-                            AutoSizeAxes = Axes.Both,
-                            Direction = FillDirection.Horizontal,
-                            Spacing = new Vector2(20, 0),
-                            Children = new Drawable[]
-                            {
-                                bpm = new SpriteText { Font = BeatSightFont.Body(18f), Colour = UITheme.TextPrimary },
-                                duration = new SpriteText { Font = BeatSightFont.Body(18f), Colour = UITheme.TextPrimary }
-                            }
-                        },
-                        difficulty = new SpriteText
-                        {
-                            Font = BeatSightFont.Body(18f),
-                            Colour = UITheme.AccentWarning
-                        },
-                        new Container { Height = 40 }, // Spacer
-                        playButton = new BeatSightButton
-                        {
-                            Text = "Play Beatmap",
-                            Width = 200,
-                            Height = 50,
-                            BackgroundColour = UITheme.AccentPrimary,
-                            Action = () => { /* Logic to start play */ },
-                            Alpha = 0 // Hidden until beatmap selected
-                        }
-                    }
-                };
-            }
-
-            public void UpdateBeatmap(Beatmap beatmap)
-            {
-                title.Text = beatmap.Metadata.Title;
-                artist.Text = beatmap.Metadata.Artist;
-                creator.Text = $"Mapped by {beatmap.Metadata.Creator}";
-
-                // Assuming BPM and Duration are available or calculable
-                bpm.Text = $"BPM: {beatmap.Timing.Bpm:F0}";
-                duration.Text = $"Length: {TimeSpan.FromMilliseconds(beatmap.Audio.Duration):mm\\:ss}";
-
-                difficulty.Text = $"Difficulty: {beatmap.Metadata.Difficulty:F1} stars";
-
-                playButton.Alpha = 1;
-                playButton.Action = () =>
-                {
-                    // Find parent screen and push playback
-                    if (this.FindClosestParent<SongSelectScreen>() is SongSelectScreen screen)
-                    {
-                        screen.StartPlayback();
-                    }
-                };
-            }
-        }
-
-        public void StartPlayback()
-        {
-            if (selectedBeatmap != null)
-            {
-                this.Push(new PlaybackScreen(selectedBeatmap.Path));
-            }
-        }
-
-        private partial class DropZone : Container
-        {
-            public Action<string>? Action;
-
-            public DropZone()
-            {
-                Masking = true;
-                CornerRadius = 20;
-                BorderColour = UITheme.AccentPrimary;
-                BorderThickness = 4;
-
-                Children = new Drawable[]
-                {
-                    new Box
-                    {
-                        RelativeSizeAxes = Axes.Both,
-                        Colour = UITheme.Surface.Opacity(0.2f)
-                    },
-                    new SpriteText
-                    {
-                        Text = "Drop Audio File Here\nto create new beatmap",
-                        Font = BeatSightFont.Title(24f),
-                        Anchor = Anchor.Centre,
-                        Origin = Anchor.Centre,
-                        Colour = UITheme.TextPrimary
-                    }
-                };
-            }
         }
     }
 }

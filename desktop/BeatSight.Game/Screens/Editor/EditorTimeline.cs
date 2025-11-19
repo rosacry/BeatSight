@@ -624,9 +624,9 @@ namespace BeatSight.Game.Screens.Editor
                 var span = TimeSpan.FromMilliseconds(Math.Max(0, timeMs));
 
                 if (span.TotalHours >= 1)
-                    return $"{(int)span.TotalHours}:{span.Minutes:00}:{span.Seconds:00}";
+                    return $"{(int)span.TotalHours}:{span.Minutes:00}:{span.Seconds:00}.{span.Milliseconds:000}";
 
-                return $"{(int)span.TotalMinutes:00}:{span.Seconds:00}";
+                return $"{(int)span.TotalMinutes:00}:{span.Seconds:00}.{span.Milliseconds:000}";
             }
 
             private partial class TimelineScrollContainer : BasicScrollContainer

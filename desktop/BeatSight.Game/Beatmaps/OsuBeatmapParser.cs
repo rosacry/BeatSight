@@ -58,6 +58,9 @@ namespace BeatSight.Game.Beatmaps
                     case "TimingPoints":
                         parseTimingPoint(line, beatmap);
                         break;
+                    case "Events":
+                        parseEvent(line, beatmap);
+                        break;
                     case "HitObjects":
                         var hitObject = parseHitObject(line);
                         if (hitObject.HasValue)
@@ -80,6 +83,18 @@ namespace BeatSight.Game.Beatmaps
             beatmap.Metadata.ModifiedAt = DateTime.UtcNow;
 
             return beatmap;
+        }
+
+        private static void parseEvent(string line, Beatmap beatmap)
+        {
+            var parts = line.Split(',');
+            if (parts.Length < 3) return;
+
+            if (parts[0] == "0" && parts[1] == "0")
+            {
+                string filename = parts[2].Trim('"');
+                beatmap.Metadata.BackgroundFile = filename;
+            }
         }
 
         private static void parseGeneralSection(string line, Beatmap beatmap)

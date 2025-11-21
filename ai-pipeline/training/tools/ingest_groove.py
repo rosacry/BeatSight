@@ -34,10 +34,10 @@ HIHAT_BARK_WINDOW = 0.2
 NOTE_MAP: Dict[int, Tuple[str, Dict[str, str]]] = {
     36: ("kick", {}),
     35: ("kick", {"instrument_variant": "sub"}),
-    38: ("snare", {}),
-    40: ("snare", {"strike_position": "rimshot"}),
-    37: ("cross_stick", {}),
-    39: ("rimshot", {}),
+    38: ("snare_center", {}),
+    40: ("snare_rimshot", {}),
+    37: ("snare_cross_stick", {}),
+    39: ("snare_rimshot", {}),
     48: ("tom_high", {}),
     50: ("tom_high", {}),
     47: ("tom_mid", {}),
@@ -46,20 +46,20 @@ NOTE_MAP: Dict[int, Tuple[str, Dict[str, str]]] = {
     42: ("hihat_closed", {}),
     44: ("hihat_pedal", {}),
     46: ("hihat_open", {}),
-    26: ("hihat_foot_splash", {}),
+    26: ("hihat_splash", {}),
     51: ("ride_bow", {}),
-    53: ("ride_bell", {"strike_position": "bell"}),
-    59: ("ride_bell", {"strike_position": "bell"}),
-    49: ("crash", {"instrument_variant": "high"}),
-    57: ("crash", {"instrument_variant": "low"}),
+    53: ("ride_bell", {}),
+    59: ("ride_bell", {}),
+    49: ("crash_1", {}),
+    57: ("crash_2", {}),
     55: ("splash", {}),
-    52: ("china", {"instrument_variant": "high"}),
-    54: ("china", {"instrument_variant": "low"}),
-    56: ("aux_percussion", {"instrument_variant": "cowbell", "technique": "cowbell"}),
+    52: ("china", {}),
+    54: ("china", {}),
+    56: ("cowbell", {}),
     58: ("aux_percussion", {"instrument_variant": "vibraslap"})
 }
 
-CYMBAL_MULTI_LABELS = {"crash", "splash", "china"}
+CYMBAL_MULTI_LABELS = {"crash_1", "crash_2", "splash", "china"}
 
 
 class EventContext:

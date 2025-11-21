@@ -22,17 +22,29 @@ class DrumDataCollector:
     
     DRUM_COMPONENTS = [
         "kick",
-        "snare",
+        "snare_center",
+        "snare_rimshot",
+        "snare_cross_stick",
+        "snare_off",
         "hihat_closed",
         "hihat_open",
-        "crash",
-        "ride",
+        "hihat_half",
+        "hihat_pedal",
+        "hihat_splash",
         "tom_high",
         "tom_mid",
         "tom_low",
-        "crash2",
+        "ride_bow",
         "ride_bell",
-        "china"
+        "ride_edge",
+        "crash_1",
+        "crash_2",
+        "china",
+        "splash",
+        "cowbell",
+        "tambourine",
+        "clap",
+        "shaker"
     ]
     
     def __init__(self, data_dir: str = "training_data"):

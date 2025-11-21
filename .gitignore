@@ -98,7 +98,10 @@ data/tmp/
 # Dataset health artifacts
 ai-pipeline/training/reports/health/**
 !ai-pipeline/training/reports/health/
-!ai-pipeline/training/reports/health/README.md
+
+# Sampling Weights (Generated)
+ai-pipeline/training/reports/sampling/*.json
+ai-pipeline/training/sampling/*.json
 
 # Audio files (large)
 *.mp3

@@ -30,6 +30,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.Cursor;
 using osu.Framework.Logging;
 using osu.Framework.Screens;
 using osuTK;
@@ -147,7 +148,36 @@ namespace BeatSight.Game
         private void load()
         {
             // Initialize configuration
+            bool isFirstRun = !Host.Storage.Exists("beatsight.ini");
             var config = new BeatSightConfigManager(Host.Storage);
+
+            if (isFirstRun)
+            {
+                try
+                {
+                    var display = Host.Window?.PrimaryDisplay;
+                    if (display != null)
+                    {
+                        var bounds = display.Bounds;
+                        // Target 80% of screen size, but at least 1280x720
+                        int targetWidth = Math.Max(1280, (int)(bounds.Width * 0.8f));
+                        int targetHeight = Math.Max(720, (int)(bounds.Height * 0.8f));
+
+                        // Ensure we don't exceed screen size
+                        targetWidth = Math.Min(targetWidth, bounds.Width);
+                        targetHeight = Math.Min(targetHeight, bounds.Height);
+
+                        config.SetValue(BeatSightSetting.WindowWidth, targetWidth);
+                        config.SetValue(BeatSightSetting.WindowHeight, targetHeight);
+                        config.Save();
+                    }
+                }
+                catch (Exception e)
+                {
+                    Logger.Log($"Failed to detect screen resolution on first run: {e.Message}", LoggingTarget.Runtime, LogLevel.Important);
+                }
+            }
+
             dependencies.Cache(config);
 
             var mapPlaybackSettings = new MapPlaybackSettingsManager(Host.Storage);
@@ -159,7 +189,7 @@ namespace BeatSight.Game
             audioEngine = new AudioEngine();
             dependencies.Cache(audioEngine);
 
-            embeddedResourceStore = new NamespacedResourceStore<byte[]>(new DllResourceStore(typeof(BeatSightGame).Assembly), "BeatSight.Game.Resources");
+            embeddedResourceStore = new NamespacedResourceStore<byte[]>(new DllResourceStore(typeof(BeatSightGame).Assembly), "Resources");
             Resources.AddStore(embeddedResourceStore);
             registerFonts();
 
@@ -179,12 +209,16 @@ namespace BeatSight.Game
             // Initialize the game
             Children = new Drawable[]
             {
-                uiScaleRoot = new Container
+                new TooltipContainer
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    Child = screenStack = new ScreenStack { RelativeSizeAxes = Axes.Both }
+                    Child = uiScaleRoot = new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        Child = screenStack = new ScreenStack { RelativeSizeAxes = Axes.Both }
+                    }
                 },
                 fpsCounter = new FpsCounter()
             };

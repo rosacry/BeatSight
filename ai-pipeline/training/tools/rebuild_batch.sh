@@ -21,7 +21,7 @@ AUDIO_MAP_ARGS=(
   "--audio-root-map" "enst_drums=E:/data/raw/ENST-Drums"
   "--audio-root-map" "idmt_smt_drums_v2=E:/data/raw/idmt_smt_drums_v2"
   "--audio-root-map" "cambridge_multitrack=E:/data/raw/cambridge"
-  "--audio-root-map" "musdb18_hq=E:/data/raw/musdb18s"
+  "--audio-root-map" "musdb18_hq=E:/data/raw/musdb18_hq"
   "--audio-root-map" "signaturesounds=E:/data/raw/signaturesounds"
   "--audio-root-map" "telefunken_sessions=E:/data/raw/telefunken"
   "--audio-root-map" "medleydb=E:/data/raw/MedleyDB"
@@ -31,88 +31,101 @@ echo "========================================="
 echo "   Batch Dataset Rebuild (24-Class Schema)"
 echo "========================================="
 
+# Helper function to run ingestion steps safely
+run_ingest_step() {
+    local step_name="$1"
+    local marker_file="${MANIFEST_DIR}/.${step_name}_done"
+    shift
+    if [ -f "$marker_file" ]; then
+        echo ">>> Step ${step_name} marked complete. Skipping."
+    else
+        # Run the command passed as remaining args
+        "$@"
+        # If successful, touch marker
+        touch "$marker_file"
+    fi
+}
+
 # 1. Ingest MedleyDB
-echo ">>> Step 1: Ingesting MedleyDB..."
-python "${TOOLS_DIR}/ingest_medleydb.py" \
+run_ingest_step "medleydb" python "${TOOLS_DIR}/ingest_medleydb.py" \
     --medleydb-root "E:/data/raw/MedleyDB" \
     --output-events "${MANIFEST_DIR}/medleydb_events.jsonl" \
     --output-provenance "${PROVENANCE_DIR}/medleydb_provenance.jsonl"
 
 # 2. Ingest Groove MIDI Dataset
-echo ">>> Step 2: Ingesting Groove MIDI Dataset..."
-python "${TOOLS_DIR}/ingest_groove.py" \
+run_ingest_step "groove_mididataset" python "${TOOLS_DIR}/ingest_groove.py" \
     --root "E:/data/raw/groove_midi" \
     --output-events "${MANIFEST_DIR}/groove_mididataset_events.jsonl" \
     --output-provenance "${PROVENANCE_DIR}/groove_mididataset_provenance.jsonl"
 
-# 3. Ingest Slakh2100
-echo ">>> Step 3: Ingesting Slakh2100..."
-python "${TOOLS_DIR}/ingest_slakh.py" \
+# 3. Ingest Extended Groove MIDI Dataset (EGMD)
+run_ingest_step "egmd" python "${TOOLS_DIR}/ingest_egmd.py" \
+    --root "E:/data/raw/egmd" \
+    --output-events "${MANIFEST_DIR}/egmd_events.jsonl" \
+    --output-provenance "${PROVENANCE_DIR}/egmd_provenance.jsonl"
+
+# 4. Ingest Slakh2100
+run_ingest_step "slakh2100" python "${TOOLS_DIR}/ingest_slakh.py" \
     --root "E:/data/raw/slakh2100" \
     --output-events "${MANIFEST_DIR}/slakh2100_events.jsonl" \
     --output-provenance "${PROVENANCE_DIR}/slakh2100_provenance.jsonl"
 
-# 4. Ingest ENST Drums
-echo ">>> Step 4: Ingesting ENST Drums..."
-python "${TOOLS_DIR}/ingest_enst.py" \
+# 5. Ingest ENST Drums
+run_ingest_step "enst_drums" python "${TOOLS_DIR}/ingest_enst.py" \
     --root "E:/data/raw/ENST-Drums" \
     --output-events "${MANIFEST_DIR}/enst_drums_events.jsonl" \
     --output-provenance "${PROVENANCE_DIR}/enst_drums_provenance.jsonl"
 
-# 5. Ingest Cambridge Multitrack
-echo ">>> Step 5: Ingesting Cambridge Multitrack..."
-python "${TOOLS_DIR}/ingest_cambridge.py" \
-    --root "E:/data/raw/cambridge" \
-    --output-events "${MANIFEST_DIR}/cambridge_multitrack_events.jsonl" \
-    --output-provenance "${PROVENANCE_DIR}/cambridge_multitrack_provenance.jsonl"
+# 6. Ingest Cambridge Multitrack
+run_ingest_step "cambridge_multitrack" python "${TOOLS_DIR}/ingest_cambridge.py" \
+    --roots "E:/data/raw/cambridge" \
+    --events-output "${MANIFEST_DIR}/cambridge_multitrack_events.jsonl" \
+    --provenance-output "${PROVENANCE_DIR}/cambridge_multitrack_provenance.jsonl" \
+    --workers 16
 
-# 6. Ingest IDMT-SMT-Drums
-echo ">>> Step 6: Ingesting IDMT-SMT-Drums..."
-python "${TOOLS_DIR}/ingest_idmt.py" \
+# 7. Ingest IDMT-SMT-Drums
+run_ingest_step "idmt_smt_drums_v2" python "${TOOLS_DIR}/ingest_idmt.py" \
     --root "E:/data/raw/idmt_smt_drums_v2" \
     --output-events "${MANIFEST_DIR}/idmt_smt_drums_v2_events.jsonl" \
     --output-provenance "${PROVENANCE_DIR}/idmt_smt_drums_v2_provenance.jsonl"
 
-# 7. Ingest Signature Sounds
-echo ">>> Step 7: Ingesting Signature Sounds..."
-python "${TOOLS_DIR}/ingest_signaturesounds.py" \
+# 8. Ingest Signature Sounds
+run_ingest_step "signaturesounds" python "${TOOLS_DIR}/ingest_signaturesounds.py" \
     --root "E:/data/raw/signaturesounds" \
     --output-events "${MANIFEST_DIR}/signaturesounds_events.jsonl" \
     --output-provenance "${PROVENANCE_DIR}/signaturesounds_provenance.jsonl"
 
-# 8. Ingest Telefunken
-echo ">>> Step 8: Ingesting Telefunken..."
-python "${TOOLS_DIR}/ingest_telefunken.py" \
+# 9. Ingest Telefunken
+run_ingest_step "telefunken_sessions" python "${TOOLS_DIR}/ingest_telefunken.py" \
     --root "E:/data/raw/telefunken" \
     --output-events "${MANIFEST_DIR}/telefunken_sessions_events.jsonl" \
     --output-provenance "${PROVENANCE_DIR}/telefunken_sessions_provenance.jsonl"
 
-# 9. Ingest MUSDB18 (HQ)
-echo ">>> Step 9: Ingesting MUSDB18..."
-python "${TOOLS_DIR}/ingest_musdb.py" \
-    --root "E:/data/raw/musdb18s" \
-    --output-events "${MANIFEST_DIR}/musdb18_hq_events.jsonl" \
-    --output-provenance "${PROVENANCE_DIR}/musdb18_hq_provenance.jsonl"
+# 10. Ingest MUSDB18 (HQ)
+run_ingest_step "musdb_hq" python "${TOOLS_DIR}/ingest_musdb.py" \
+    --hq-root "E:/data/raw/musdb18_hq" \
+    --output-events "${MANIFEST_DIR}/musdb_hq_events.jsonl" \
+    --output-provenance "${PROVENANCE_DIR}/musdb_hq_provenance.jsonl"
 
-# 10. Merge Manifests
-echo ">>> Step 10: Merging Manifests..."
+# 11. Merge Manifests
+echo ">>> Step 11: Merging Manifests..."
 TARGET_MANIFEST="${MANIFEST_DIR}/prod_combined_events.jsonl"
 python "${TOOLS_DIR}/merge_manifests.py" \
     --input "${MANIFEST_DIR}/medleydb_events.jsonl" \
     --input "${MANIFEST_DIR}/groove_mididataset_events.jsonl" \
+    --input "${MANIFEST_DIR}/egmd_events.jsonl" \
     --input "${MANIFEST_DIR}/slakh2100_events.jsonl" \
     --input "${MANIFEST_DIR}/enst_drums_events.jsonl" \
     --input "${MANIFEST_DIR}/cambridge_multitrack_events.jsonl" \
     --input "${MANIFEST_DIR}/idmt_smt_drums_v2_events.jsonl" \
     --input "${MANIFEST_DIR}/signaturesounds_events.jsonl" \
     --input "${MANIFEST_DIR}/telefunken_sessions_events.jsonl" \
-    --input "${MANIFEST_DIR}/musdb18_hq_events.jsonl" \
+    --input "${MANIFEST_DIR}/musdb_hq_events.jsonl" \
     --output "${TARGET_MANIFEST}"
-
 echo "Merged manifest created at: ${TARGET_MANIFEST}"
 
-# 11. Build Dataset
-echo ">>> Step 11: Building Training Dataset..."
+# 12. Build Dataset
+echo ">>> Step 12: Building Training Dataset..."
 echo "Output Directory: ${DATASET_OUTPUT_DIR}"
 
 # Check if we can resume (though usually we want a fresh build here)

@@ -11,7 +11,7 @@ using BeatSight.Game.Audio;
 using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
-using BeatSight.Game.Screens.Playback;
+using BeatSight.Game.Screens;
 using BeatSight.Game.UI.Components;
 using BeatSight.Game.UI.Theming;
 using Newtonsoft.Json;
@@ -23,6 +23,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.IO.Stores;
@@ -58,7 +59,7 @@ namespace BeatSight.Game.Screens.Editor
         public static Color4 WithAlpha(Color4 colour, float alpha) => new Color4(colour.R, colour.G, colour.B, colour.A * alpha);
     }
 
-    public partial class EditorScreen : Screen
+    public partial class EditorScreen : BeatSightScreen
     {
         private Beatmap? beatmap;
         private string? beatmapPath;
@@ -2810,12 +2811,13 @@ namespace BeatSight.Game.Screens.Editor
             applyEditorDefaultsFromConfig();
             suppressEditorDefaultPersistence = false;
             updateStatusText();
-            trackLength = beatmap.Audio.Duration;
+            trackLength = beatmap?.Audio.Duration ?? 0;
             reloadTimeline();
             ensureEditorInfo();
             refreshTimelineToolboxState();
             populateInspectorFromBeatmap();
-            loadAudioTrackFromStorage(trackInfo.RelativeStoragePath);
+            if (trackInfo != null)
+                loadAudioTrackFromStorage(trackInfo.RelativeStoragePath);
             if (!playbackAvailable)
                 appendStatusDetail(offlinePlaybackMessage);
             updateActionButtons();

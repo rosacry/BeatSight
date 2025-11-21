@@ -201,9 +201,12 @@ namespace BeatSight.Game.Screens.SongSelect
                         {
                             new FillFlowContainer
                             {
-                                RelativeSizeAxes = Axes.Both,
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
                                 Direction = FillDirection.Vertical,
-                                Spacing = new Vector2(0, 2),
+                                Spacing = new Vector2(0, 10),
                                 Children = new Drawable[]
                                 {
                                     title = new BeatSight.Game.UI.Components.BeatSightSpriteText

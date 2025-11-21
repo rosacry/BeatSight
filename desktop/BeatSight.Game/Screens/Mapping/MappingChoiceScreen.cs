@@ -1,4 +1,5 @@
 using BeatSight.Game.Mapping;
+using BeatSight.Game.Screens;
 using BeatSight.Game.Screens.Editor;
 using BeatSight.Game.UI.Components;
 using BeatSight.Game.UI.Theming;
@@ -16,7 +17,7 @@ using osuTK.Graphics;
 
 namespace BeatSight.Game.Screens.Mapping
 {
-    public partial class MappingChoiceScreen : Screen
+    public partial class MappingChoiceScreen : BeatSightScreen
     {
         private readonly ImportedAudioTrack importedTrack;
 

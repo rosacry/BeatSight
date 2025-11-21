@@ -23,10 +23,11 @@ using osu.Framework.Audio.Track;
 using osu.Framework.Input;
 using osu.Framework.Graphics.Rendering;
 using osu.Framework.Graphics.Textures;
+using BeatSight.Game.Screens;
 
 namespace BeatSight.Game.Screens.SongSelect
 {
-    public partial class SongSelectScreen : Screen
+    public partial class SongSelectScreen : BeatSightScreen
     {
         // Note: As per the pivot to a learning tool, this screen serves as the hub for 
         // selecting verified maps or creating new ones via AI/Manual entry.
@@ -41,13 +42,12 @@ namespace BeatSight.Game.Screens.SongSelect
         private readonly bool editorMode;
         private BeatmapCarousel carousel = null!;
         private Container leftContent = null!;
-        private BackButton backButton = null!;
         private BeatmapLibrary.BeatmapEntry? selectedBeatmap;
-        private BasicTextBox searchBox = null!;
+        private BeatSightTextBox searchBox = null!;
         private BeatSight.Game.UI.Components.Dropdown<BeatmapCarousel.SortMode> sortDropdown = null!;
         private Box backgroundDim = null!;
         private Sprite backgroundSprite = null!;
-        private Track? currentTrack;
+        private BackButton backButton = null!;
 
         public SongSelectScreen(bool editorMode = false)
         {
@@ -57,6 +57,12 @@ namespace BeatSight.Game.Screens.SongSelect
         [BackgroundDependencyLoader]
         private void load()
         {
+            backButton = new BackButton
+            {
+                Action = this.Exit,
+                Margin = BackButton.DefaultMargin
+            };
+
             InternalChildren = new Drawable[]
             {
                 new Box
@@ -117,6 +123,12 @@ namespace BeatSight.Game.Screens.SongSelect
                             }
                         }
                     }
+                },
+                new SafeAreaContainer
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Padding = BackButton.DefaultMargin,
+                    Child = backButton
                 }
             };
 
@@ -143,15 +155,6 @@ namespace BeatSight.Game.Screens.SongSelect
                         Padding = new MarginPadding { Horizontal = 20 },
                         Children = new Drawable[]
                         {
-                            new BeatSightButton
-                            {
-                                Text = "Back",
-                                Width = 100,
-                                Height = 40,
-                                Anchor = Anchor.CentreLeft,
-                                Origin = Anchor.CentreLeft,
-                                Action = this.Exit
-                            },
                             new BeatSightButton
                             {
                                 Text = "Random (F2)",
@@ -194,7 +197,7 @@ namespace BeatSight.Game.Screens.SongSelect
             }
 
             // Play preview
-            currentTrack?.Stop();
+            // currentTrack?.Stop();
 
             // Load background
             if (!string.IsNullOrEmpty(entry.Beatmap.Metadata.BackgroundFile))
@@ -236,19 +239,17 @@ namespace BeatSight.Game.Screens.SongSelect
         public override void OnEntering(ScreenTransitionEvent e)
         {
             base.OnEntering(e);
-            this.FadeInFromZero(200);
         }
 
         public override void OnSuspending(ScreenTransitionEvent e)
         {
             base.OnSuspending(e);
-            currentTrack?.Stop();
+            // currentTrack?.Stop();
         }
 
         public override void OnResuming(ScreenTransitionEvent e)
         {
             base.OnResuming(e);
-            this.FadeIn(200);
             if (selectedBeatmap != null)
                 selectBeatmap(selectedBeatmap);
         }
@@ -257,6 +258,9 @@ namespace BeatSight.Game.Screens.SongSelect
         {
             switch (e.Key)
             {
+                case osuTK.Input.Key.Escape:
+                    this.Exit();
+                    return true;
                 case osuTK.Input.Key.F2:
                     selectRandom();
                     return true;
@@ -318,13 +322,17 @@ namespace BeatSight.Game.Screens.SongSelect
                                 Spacing = new Vector2(0, 20),
                                 Children = new Drawable[]
                                 {
-                                    new SpriteText
+                                    new TextFlowContainer(t =>
                                     {
-                                        Text = editorMode ? "Select a beatmap to edit\nor create a new one" : "Select a song to play",
-                                        Font = BeatSightFont.Title(24f),
-                                        Colour = UITheme.TextSecondary,
+                                        t.Font = BeatSightFont.Title(24f);
+                                        t.Colour = UITheme.TextSecondary;
+                                    })
+                                    {
+                                        AutoSizeAxes = Axes.Both,
                                         Anchor = Anchor.Centre,
-                                        Origin = Anchor.Centre
+                                        Origin = Anchor.Centre,
+                                        TextAnchor = Anchor.TopCentre,
+                                        Text = editorMode ? "Select a beatmap to edit\nor create a new one" : "Select a song to play"
                                     },
                                     new BeatSightButton
                                     {
@@ -359,6 +367,8 @@ namespace BeatSight.Game.Screens.SongSelect
                             RelativeSizeAxes = Axes.X,
                             AutoSizeAxes = Axes.Y,
                             Direction = FillDirection.Vertical,
+                            Anchor = Anchor.Centre,
+                            Origin = Anchor.Centre,
                             Spacing = new Vector2(0, 10),
                             Children = new Drawable[]
                             {
@@ -367,25 +377,33 @@ namespace BeatSight.Game.Screens.SongSelect
                                     Font = BeatSightFont.Title(40f),
                                     Colour = UITheme.TextPrimary,
                                     AllowMultiline = true,
-                                    RelativeSizeAxes = Axes.X
+                                    RelativeSizeAxes = Axes.X,
+                                    Anchor = Anchor.TopCentre,
+                                    Origin = Anchor.TopCentre,
                                 },
                                 artist = new SpriteText
                                 {
                                     Font = BeatSightFont.Section(24f),
                                     Colour = UITheme.TextSecondary,
                                     AllowMultiline = true,
-                                    RelativeSizeAxes = Axes.X
+                                    RelativeSizeAxes = Axes.X,
+                                    Anchor = Anchor.TopCentre,
+                                    Origin = Anchor.TopCentre,
                                 },
                                 new Box { RelativeSizeAxes = Axes.X, Height = 2, Colour = UITheme.Divider, Margin = new MarginPadding { Vertical = 10 } },
                                 creator = new SpriteText
                                 {
                                     Font = BeatSightFont.Body(18f),
-                                    Colour = UITheme.TextMuted
+                                    Colour = UITheme.TextMuted,
+                                    Anchor = Anchor.TopCentre,
+                                    Origin = Anchor.TopCentre,
                                 },
                                 new FillFlowContainer
                                 {
                                     AutoSizeAxes = Axes.Both,
                                     Direction = FillDirection.Horizontal,
+                                    Anchor = Anchor.TopCentre,
+                                    Origin = Anchor.TopCentre,
                                     Spacing = new Vector2(20, 0),
                                     Children = new Drawable[]
                                     {
@@ -396,7 +414,9 @@ namespace BeatSight.Game.Screens.SongSelect
                                 difficulty = new SpriteText
                                 {
                                     Font = BeatSightFont.Body(18f),
-                                    Colour = UITheme.AccentWarning
+                                    Colour = UITheme.AccentWarning,
+                                    Anchor = Anchor.TopCentre,
+                                    Origin = Anchor.TopCentre,
                                 },
                                 new Container { Height = 40 }, // Spacer
                                 actionButton = new BeatSightButton
@@ -405,6 +425,8 @@ namespace BeatSight.Game.Screens.SongSelect
                                     Width = 200,
                                     Height = 50,
                                     BackgroundColour = UITheme.AccentPrimary,
+                                    Anchor = Anchor.TopCentre,
+                                    Origin = Anchor.TopCentre,
                                     Action = () => { /* Logic to start play/edit */ }
                                 }
                             }
@@ -500,7 +522,7 @@ namespace BeatSight.Game.Screens.SongSelect
 
         private Drawable createHeader()
         {
-            searchBox = new BasicTextBox
+            searchBox = new BeatSightTextBox
             {
                 Height = 40,
                 Width = 300,

@@ -29,13 +29,14 @@ using osu.Framework.Screens;
 using osu.Framework.Threading;
 using osuTK;
 using osuTK.Graphics;
+using BeatSight.Game.Screens;
 
 namespace BeatSight.Game.Screens.Mapping
 {
     /// <summary>
     /// Placeholder screen that will host AI-assisted beatmap generation workflows.
     /// </summary>
-    public partial class MappingGenerationScreen : Screen
+    public partial class MappingGenerationScreen : BeatSightScreen
     {
         private readonly ImportedAudioTrack importedTrack;
 

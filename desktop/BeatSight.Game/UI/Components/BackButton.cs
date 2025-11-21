@@ -1,4 +1,6 @@
+using BeatSight.Game.UI.Theming;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osuTK.Graphics;
@@ -26,6 +28,15 @@ namespace BeatSight.Game.UI.Components
             BackgroundColour = idleColour;
             Text = "Back";
         }
+
+        protected override SpriteText CreateText() => new BeatSightSpriteText
+        {
+            Depth = -1,
+            Origin = Anchor.Centre,
+            Anchor = Anchor.Centre,
+            Font = BeatSightFont.Button(20f),
+            UseFullGlyphHeight = false
+        };
 
         protected override bool OnHover(HoverEvent e)
         {

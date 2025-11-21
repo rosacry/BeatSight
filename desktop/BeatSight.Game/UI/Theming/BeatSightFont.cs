@@ -13,14 +13,14 @@ namespace BeatSight.Game.UI.Theming
         private const float scaleMultiplier = 1.2f;
         private const float pixel_snap = 0.25f;
 
-        public static FontUsage Title(float size = 72f) => createPrimary(size, "Bold");
-        public static FontUsage Subtitle(float size = 40f) => createPrimary(size, "SemiBold");
-        public static FontUsage Section(float size = 32f) => createPrimary(size, "SemiBold");
-        public static FontUsage Body(float size = 24f) => createSecondary(size, "SemiBold");
-        public static FontUsage Caption(float size = 20f) => createSecondary(size, "Regular");
-        public static FontUsage Numeral(float size = 28f) => createPrimary(size, "Bold");
-        public static FontUsage Button(float size = 26f) => createPrimary(size, "Bold");
-        public static FontUsage Label(float size = 22f) => createSecondary(size, "SemiBold");
+        public static FontUsage Title(float size = 80f) => createPrimary(size, "Bold");
+        public static FontUsage Subtitle(float size = 48f) => createPrimary(size, "SemiBold");
+        public static FontUsage Section(float size = 36f) => createPrimary(size, "SemiBold");
+        public static FontUsage Body(float size = 28f) => createSecondary(size, "SemiBold");
+        public static FontUsage Caption(float size = 24f) => createSecondary(size, "Regular");
+        public static FontUsage Numeral(float size = 32f) => createPrimary(size, "Bold");
+        public static FontUsage Button(float size = 16f) => createPrimary(size, "Bold");
+        public static FontUsage Label(float size = 26f) => createSecondary(size, "SemiBold");
 
         private static FontUsage createPrimary(float size, string weight) => create(size, weight, useSecondary: false);
         private static FontUsage createSecondary(float size, string weight) => create(size, weight, useSecondary: true);

@@ -30,10 +30,11 @@ using osu.Framework.Screens;
 using osu.Framework.Timing;
 using osuTK;
 using osuTK.Graphics;
+using BeatSight.Game.Screens;
 
 namespace BeatSight.Game.Screens.Playback
 {
-    public partial class PlaybackScreen : Screen
+    public partial class PlaybackScreen : BeatSightScreen
     {
         private static readonly Dictionary<osuTK.Input.Key, int> laneKeyBindings = new()
         {
@@ -526,7 +527,7 @@ namespace BeatSight.Game.Screens.Playback
             timelineCurrentText = new SpriteText
             {
                 Text = "0:00",
-                Font = BeatSightFont.Section(14f),
+                Font = BeatSightFont.Section(18f),
                 Colour = new Color4(200, 205, 220, 255),
                 Shadow = false
             };
@@ -534,7 +535,7 @@ namespace BeatSight.Game.Screens.Playback
             timelineTotalText = new SpriteText
             {
                 Text = "--:--",
-                Font = BeatSightFont.Section(14f),
+                Font = BeatSightFont.Section(18f),
                 Colour = new Color4(150, 160, 185, 255),
                 Shadow = false
             };
@@ -574,7 +575,7 @@ namespace BeatSight.Game.Screens.Playback
                             new SpriteText
                             {
                                 Text = "/",
-                                Font = BeatSightFont.Caption(14f),
+                                Font = BeatSightFont.Caption(18f),
                                 Colour = new Color4(150, 160, 185, 255),
                                 Shadow = false
                             },
@@ -688,13 +689,13 @@ namespace BeatSight.Game.Screens.Playback
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
                     Direction = FillDirection.Vertical,
-                    Spacing = new Vector2(5, 0),
+                    Spacing = new Vector2(8, 4),
                     Children = new Drawable[]
                     {
                         new SpriteText
                         {
                             Text = title,
-                            Font = BeatSightFont.Section(15f),
+                            Font = BeatSightFont.Section(18f),
                             Colour = Color4.White
                         },
                         content
@@ -898,7 +899,7 @@ namespace BeatSight.Game.Screens.Playback
         {
             var zoomText = new SpriteText
             {
-                Font = BeatSightFont.Section(16f),
+                Font = BeatSightFont.Section(18f),
                 Colour = new Color4(220, 225, 240, 255),
                 Text = "1.0x"
             };
@@ -918,7 +919,7 @@ namespace BeatSight.Game.Screens.Playback
 
             var noteWidthText = new SpriteText
             {
-                Font = BeatSightFont.Section(16f),
+                Font = BeatSightFont.Section(18f),
                 Colour = new Color4(220, 225, 240, 255),
                 Text = "1.0x"
             };
@@ -957,7 +958,7 @@ namespace BeatSight.Game.Screens.Playback
         {
             speedValueText = new SpriteText
             {
-                Font = BeatSightFont.Section(16f),
+                Font = BeatSightFont.Section(18f),
                 Colour = new Color4(220, 225, 240, 255),
                 Text = formatSpeedLabel(speedAdjustment.Value)
             };
@@ -991,7 +992,7 @@ namespace BeatSight.Game.Screens.Playback
         {
             offsetValueText = new SpriteText
             {
-                Font = BeatSightFont.Section(16f),
+                Font = BeatSightFont.Section(18f),
                 Colour = new Color4(220, 225, 240, 255),
                 Text = formatOffsetLabel(offsetAdjustment.Value)
             };
@@ -1059,7 +1060,7 @@ namespace BeatSight.Game.Screens.Playback
                                 new SpriteText
                                 {
                                     Text = label,
-                                    Font = BeatSightFont.Body(16f),
+                                    Font = BeatSightFont.Body(18f),
                                     Colour = new Color4(190, 196, 220, 255),
                                     Anchor = Anchor.CentreLeft,
                                     Origin = Anchor.CentreLeft

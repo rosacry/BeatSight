@@ -23,6 +23,8 @@ using osu.Framework.Graphics.Shapes;
 using FrameworkRectangleF = osu.Framework.Graphics.Primitives.RectangleF;
 using osu.Framework.Graphics.Sprites;
 using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
+using osu.Framework.Graphics.Cursor;
+using osu.Framework.Localisation;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input;
 using osu.Framework.Input.Events;
@@ -35,10 +37,11 @@ using osu.Framework.Threading;
 using osuTK;
 using osuTK.Graphics;
 using osuTK.Input;
+using BeatSight.Game.Screens;
 
 namespace BeatSight.Game.Screens.Settings
 {
-    public partial class SettingsScreen : Screen
+    public partial class SettingsScreen : BeatSightScreen
     {
         private BeatSightConfigManager config = null!;
         private GameHost host = null!;
@@ -227,7 +230,7 @@ namespace BeatSight.Game.Screens.Settings
             switch (category)
             {
                 case SettingsCategory.Playback:
-                    return new PlaybackSettingsSection(config, dropdownOverlay, tooltipOverlay);
+                    return new PlaybackSettingsSection(config, host, dropdownOverlay, tooltipOverlay);
                 case SettingsCategory.Audio:
                     return new AudioSettingsSection(config, host, dropdownOverlay, tooltipOverlay);
                 case SettingsCategory.Graphics:
@@ -575,6 +578,9 @@ namespace BeatSight.Game.Screens.Settings
                 }
             });
 
+            setting.SetDefaultValue(bindable.Default ? "Enabled" : "Disabled");
+            bindable.BindValueChanged(_ => setting.SetModified(!bindable.IsDefault), true);
+
             setting.EnableRowToggle(bindable);
             return setting;
         }
@@ -596,7 +602,10 @@ namespace BeatSight.Game.Screens.Settings
                 directDropdown.Current = bindable;
                 directDropdown.Items = Enum.GetValues(typeof(T)).Cast<T>().ToArray();
 
-                return CreateSettingItem(label, description, directDropdown);
+                var directSetting = CreateSettingItem(label, description, directDropdown);
+                directSetting.SetDefaultValue(bindable.Default.ToString());
+                bindable.BindValueChanged(_ => directSetting.SetModified(!bindable.IsDefault), true);
+                return directSetting;
             }
 
             var items = Enum.GetValues(typeof(T)).Cast<T>().Select(value => new EnumChoice<T>(formatter(value), value)).ToArray();
@@ -625,7 +634,10 @@ namespace BeatSight.Game.Screens.Settings
                     mappedDropdown.Current.Value = target;
             }, true);
 
-            return CreateSettingItem(label, description, mappedDropdown);
+            var setting = CreateSettingItem(label, description, mappedDropdown);
+            setting.SetDefaultValue(formatter(bindable.Default));
+            bindable.BindValueChanged(_ => setting.SetModified(!bindable.IsDefault), true);
+            return setting;
         }
 
         protected SettingItem CreateSlider(string label, Bindable<double> bindable, double min, double max, double precision, string? description = null, Func<double, string>? valueFormatter = null, Bindable<bool>? toggleBindable = null, Action<bool>? toggleStateChanged = null, string? toggleLabelText = null, SliderToggleMode toggleMode = SliderToggleMode.DisableSlider)
@@ -841,7 +853,7 @@ namespace BeatSight.Game.Screens.Settings
                         }
 
                         toggleStateChanged?.Invoke(e.NewValue);
-                    }, true);
+                    });
 
                     sliderBindable.BindValueChanged(e =>
                     {
@@ -871,6 +883,9 @@ namespace BeatSight.Game.Screens.Settings
             };
 
             var setting = CreateSettingItem(label, description, controlContainer, sliderBar);
+
+            setting.SetDefaultValue(formatter(bindable.Default));
+            bindable.BindValueChanged(_ => setting.SetModified(!bindable.IsDefault), true);
 
             if (toggleBindable != null)
                 setting.EnableRowToggle(toggleBindable);
@@ -986,6 +1001,11 @@ namespace BeatSight.Game.Screens.Settings
         private readonly Container hoverHighlight;
         private Bindable<bool>? rowToggleBindable;
         private readonly List<(ISettingsTooltipSuppressionSource source, Action<bool> handler)> suppressionSubscriptions = new();
+        private readonly Circle modifiedIndicator;
+        private LabelTooltipContainer labelContainer = null!;
+        private SpriteText labelText = null!;
+        private string? defaultValueText;
+        private string? currentTooltipText;
 
         public SettingItem(string label, string? description, Drawable control, SettingsTooltipOverlay? tooltipOverlay)
         {
@@ -995,6 +1015,16 @@ namespace BeatSight.Game.Screens.Settings
 
             RelativeSizeAxes = Axes.X;
             AutoSizeAxes = Axes.Y;
+
+            modifiedIndicator = new Circle
+            {
+                Size = new Vector2(6),
+                Colour = UITheme.AccentPrimary,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreRight,
+                Margin = new MarginPadding { Right = 8 },
+                Alpha = 0
+            };
 
             backgroundBox = new Box
             {
@@ -1047,9 +1077,23 @@ namespace BeatSight.Game.Screens.Settings
             };
         }
 
+        public void SetModified(bool modified)
+        {
+            modifiedIndicator.Alpha = modified ? 1 : 0;
+        }
+
+        public void SetDefaultValue(string text)
+        {
+            defaultValueText = $"Default: {text}";
+        }
+
+        private partial class LabelTooltipContainer : FillFlowContainer
+        {
+        }
+
         private Drawable createTextColumn(string label)
         {
-            var labelText = new SpriteText
+            labelText = new SpriteText
             {
                 Text = label,
                 Font = BeatSightFont.Section(26f),
@@ -1058,7 +1102,7 @@ namespace BeatSight.Game.Screens.Settings
                 Origin = Anchor.CentreLeft
             };
 
-            return new FillFlowContainer
+            labelContainer = new LabelTooltipContainer
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
@@ -1066,8 +1110,23 @@ namespace BeatSight.Game.Screens.Settings
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft,
                 Spacing = new Vector2(0, 6),
-                Children = new Drawable[] { labelText }
+                Children = new Drawable[]
+                {
+                    new FillFlowContainer
+                    {
+                        AutoSizeAxes = Axes.Both,
+                        Direction = FillDirection.Horizontal,
+                        Spacing = new Vector2(8, 0),
+                        Children = new Drawable[]
+                        {
+                            modifiedIndicator,
+                            labelText
+                        }
+                    }
+                }
             };
+
+            return labelContainer;
         }
 
         private Drawable createRowContent(Drawable textColumn, Drawable control)
@@ -1135,24 +1194,48 @@ namespace BeatSight.Game.Screens.Settings
             hoverHighlight.FadeTo(0.85f, hover_transition_duration, Easing.OutQuint);
             hoverHighlight.ScaleTo(1f, hover_transition_duration, Easing.OutQuint);
 
-            if (hasDescription)
-                tooltipOverlay?.BeginHover(this, descriptionText!, e.ScreenSpaceMousePosition);
+            updateTooltip(e.ScreenSpaceMousePosition);
 
             return base.OnHover(e);
         }
 
         protected override bool OnMouseMove(MouseMoveEvent e)
         {
-            if (hasDescription)
-                tooltipOverlay?.UpdateHoverPosition(this, e.ScreenSpaceMousePosition);
-
+            updateTooltip(e.ScreenSpaceMousePosition);
             return base.OnMouseMove(e);
+        }
+
+        private void updateTooltip(Vector2 screenSpacePosition)
+        {
+            bool hoveringIndicator = screenSpacePosition.X < labelText.ScreenSpaceDrawQuad.TopLeft.X;
+            bool isModified = modifiedIndicator.Alpha > 0;
+
+            string? targetText = null;
+
+            if (hoveringIndicator && isModified)
+                targetText = defaultValueText;
+            else if (hasDescription)
+                targetText = descriptionText;
+
+            if (targetText != currentTooltipText)
+            {
+                if (!string.IsNullOrEmpty(targetText))
+                    tooltipOverlay?.BeginHover(this, targetText!, screenSpacePosition);
+                else
+                    tooltipOverlay?.EndHover(this);
+
+                currentTooltipText = targetText;
+            }
+
+            if (!string.IsNullOrEmpty(targetText))
+                tooltipOverlay?.UpdateHoverPosition(this, screenSpacePosition);
         }
 
         protected override void OnHoverLost(HoverLostEvent e)
         {
             base.OnHoverLost(e);
             tooltipOverlay?.EndHover(this);
+            currentTooltipText = null;
             backgroundBox.FadeColour(UITheme.Surface, hover_transition_duration, Easing.OutQuint);
             hoverHighlight.FadeOut(hover_transition_duration, Easing.OutQuint);
         }
@@ -1196,7 +1279,7 @@ namespace BeatSight.Game.Screens.Settings
         private const float tooltip_margin = 10;
         private const float tooltip_offset_x = 18;
         private const float tooltip_offset_y = 12;
-        private const float tooltip_max_width = 420;
+        private const float tooltip_max_width = 320;
 
         private readonly Container tooltipBody;
         private readonly TooltipTextFlow tooltipText;
@@ -1242,8 +1325,12 @@ namespace BeatSight.Game.Screens.Settings
                         new Container
                         {
                             AutoSizeAxes = Axes.Both,
-                            Padding = new MarginPadding { Horizontal = 14, Vertical = 10 },
+                            Padding = new MarginPadding { Horizontal = 12, Vertical = 10 },
                             Child = tooltipText = new TooltipTextFlow(tooltip_max_width)
+                            {
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre
+                            }
                         }
                     }
                 }
@@ -1350,63 +1437,53 @@ namespace BeatSight.Game.Screens.Settings
                 bool canPlaceBelow = belowY + tooltipSize.Y <= DrawHeight - tooltip_margin;
                 bool canPlaceAbove = aboveY >= tooltip_margin;
 
+                // Prefer placing above or below, centered horizontally
+                bool placedVertically = false;
                 if (canPlaceAbove)
-                    local.Y = Math.Max(tooltip_margin, aboveY);
-                else if (canPlaceBelow)
-                    local.Y = belowY;
-
-                float rightAlignedX = ownerBounds.Value.Right + tooltip_margin;
-                float leftAlignedX = ownerBounds.Value.Left - tooltip_margin - tooltipSize.X;
-
-                bool canPlaceRight = rightAlignedX + tooltipSize.X <= DrawWidth - tooltip_margin;
-                bool canPlaceLeft = leftAlignedX >= tooltip_margin;
-
-                var tooltipBounds = new FrameworkRectangleF(local.X, local.Y, tooltipSize.X, tooltipSize.Y);
-                if (rectanglesOverlap(ownerBounds.Value, tooltipBounds))
                 {
-                    bool pointerPrefersRight = pendingPosition.X >= ownerBounds.Value.Centre.X;
-                    bool placed = false;
+                    local.Y = aboveY;
+                    placedVertically = true;
+                }
+                else if (canPlaceBelow)
+                {
+                    local.Y = belowY;
+                    placedVertically = true;
+                }
 
-                    if (pointerPrefersRight && canPlaceRight)
-                    {
+                if (placedVertically)
+                {
+                    // Center horizontally relative to owner
+                    float ownerCentreX = ownerBounds.Value.Centre.X;
+                    float centeredX = ownerCentreX - tooltipSize.X / 2;
+
+                    // Clamp to screen bounds
+                    centeredX = Math.Clamp(centeredX, tooltip_margin, DrawWidth - tooltip_margin - tooltipSize.X);
+                    local.X = centeredX;
+                }
+                else
+                {
+                    // Fallback to side placement if vertical space is tight
+                    float rightAlignedX = ownerBounds.Value.Right + tooltip_margin;
+                    float leftAlignedX = ownerBounds.Value.Left - tooltip_margin - tooltipSize.X;
+
+                    bool canPlaceRight = rightAlignedX + tooltipSize.X <= DrawWidth - tooltip_margin;
+                    bool canPlaceLeft = leftAlignedX >= tooltip_margin;
+
+                    if (canPlaceRight)
                         local.X = rightAlignedX;
-                        placed = true;
-                    }
-                    else if (!pointerPrefersRight && canPlaceLeft)
-                    {
+                    else if (canPlaceLeft)
                         local.X = leftAlignedX;
-                        placed = true;
-                    }
 
-                    if (!placed)
-                    {
-                        if (pointerPrefersRight && canPlaceLeft)
-                        {
-                            local.X = leftAlignedX;
-                            placed = true;
-                        }
-                        else if (!pointerPrefersRight && canPlaceRight)
-                        {
-                            local.X = rightAlignedX;
-                            placed = true;
-                        }
-                    }
-
-                    if (!placed)
-                    {
-                        if (canPlaceRight)
-                            local.X = rightAlignedX;
-                        else if (canPlaceLeft)
-                            local.X = leftAlignedX;
-                    }
+                    // Align Y with top of owner, clamped
+                    local.Y = Math.Clamp(ownerBounds.Value.Top, tooltip_margin, DrawHeight - tooltip_margin - tooltipSize.Y);
                 }
             }
-
-            float maxX = DrawWidth - tooltipSize.X - tooltip_margin;
-            float maxY = DrawHeight - tooltipSize.Y - tooltip_margin;
-
-            local.X = Math.Clamp(local.X, tooltip_margin, Math.Max(tooltip_margin, maxX));
-            local.Y = Math.Clamp(local.Y, tooltip_margin, Math.Max(tooltip_margin, maxY));
+            else
+            {
+                // No owner, just clamp to screen
+                local.X = Math.Clamp(local.X, tooltip_margin, DrawWidth - tooltip_margin - tooltipSize.X);
+                local.Y = Math.Clamp(local.Y, tooltip_margin, DrawHeight - tooltip_margin - tooltipSize.Y);
+            }
 
             if (instant)
                 tooltipBody.Position = local;
@@ -1423,24 +1500,47 @@ namespace BeatSight.Game.Screens.Settings
         private sealed partial class TooltipTextFlow : TextFlowContainer
         {
             private readonly FontUsage fontUsage = BeatSightFont.Body(16f);
+            private readonly float maxWidth;
 
             public TooltipTextFlow(float maxWidth)
             {
+                this.maxWidth = maxWidth;
                 AutoSizeAxes = Axes.Y;
                 RelativeSizeAxes = Axes.None;
                 Width = maxWidth;
-                TextAnchor = Anchor.TopLeft;
+                TextAnchor = Anchor.Centre;
             }
 
             public void SetText(string text)
             {
                 Clear();
+
+                // Heuristic: if text is short, use AutoSize.
+                if (text.Length < 65 && !text.Contains('\n'))
+                {
+                    AutoSizeAxes = Axes.Both;
+                    TextAnchor = Anchor.TopCentre;
+                }
+                else
+                {
+                    AutoSizeAxes = Axes.Y;
+                    Width = maxWidth;
+                    TextAnchor = Anchor.TopCentre;
+                }
+
                 AddParagraph(text, t =>
                 {
                     t.Font = fontUsage;
-                    t.Colour = UITheme.TextSecondary;
+                    t.Colour = UITheme.TextPrimary;
                 });
             }
+
+            protected override osu.Framework.Graphics.Sprites.SpriteText CreateSpriteText()
+                => new BeatSightSpriteText
+                {
+                    UseFullGlyphHeight = false,
+                    Shadow = false
+                };
         }
 
         protected override void Update()
@@ -1515,11 +1615,13 @@ namespace BeatSight.Game.Screens.Settings
     public partial class PlaybackSettingsSection : SettingsSection
     {
         private readonly BeatSightConfigManager config;
+        private readonly GameHost host;
 
-        public PlaybackSettingsSection(BeatSightConfigManager config, Container dropdownOverlay, SettingsTooltipOverlay tooltipOverlay)
+        public PlaybackSettingsSection(BeatSightConfigManager config, GameHost host, Container dropdownOverlay, SettingsTooltipOverlay tooltipOverlay)
             : base("Playback Settings", dropdownOverlay, tooltipOverlay)
         {
             this.config = config;
+            this.host = host;
         }
 
         protected override Drawable createContent()
@@ -1611,6 +1713,29 @@ namespace BeatSight.Game.Screens.Settings
                 resetButton.BackgroundColour = defaultColour;
 
                 config.ResetToDefaults();
+
+                // Apply smart defaults for resolution after reset
+                try
+                {
+                    var display = host.Window?.PrimaryDisplay;
+                    if (display != null)
+                    {
+                        var bounds = display.Bounds;
+                        int targetWidth = Math.Max(1280, (int)(bounds.Width * 0.8f));
+                        int targetHeight = Math.Max(720, (int)(bounds.Height * 0.8f));
+
+                        targetWidth = Math.Min(targetWidth, bounds.Width);
+                        targetHeight = Math.Min(targetHeight, bounds.Height);
+
+                        config.SetValue(BeatSightSetting.WindowWidth, targetWidth);
+                        config.SetValue(BeatSightSetting.WindowHeight, targetHeight);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Logger.Log($"Failed to detect screen resolution on reset: {e.Message}", LoggingTarget.Runtime, LogLevel.Important);
+                }
+
                 Logger.Log("[Settings] User reset configuration to defaults.", LoggingTarget.Runtime, LogLevel.Important);
             };
 
@@ -1816,11 +1941,16 @@ namespace BeatSight.Game.Screens.Settings
                 }
             };
 
-            return CreateSettingItem(
+            var setting = CreateSettingItem(
                 "Metronome Sound",
                 "Select the tone used for the metronome click. Use the play button to preview it immediately.",
                 control,
                 dropdown);
+
+            setting.SetDefaultValue(metronomeSound.Default.ToString());
+            metronomeSound.BindValueChanged(_ => setting.SetModified(!metronomeSound.IsDefault), true);
+
+            return setting;
         }
 
         private SettingItem createMetronomeAssetSetting()
@@ -2138,10 +2268,18 @@ namespace BeatSight.Game.Screens.Settings
 
             updateMonitorDropdownItems();
 
-            return CreateSettingItem(
+            var setting = CreateSettingItem(
                 "Monitor",
                 "Choose which display BeatSight launches on.",
                 monitorDropdown);
+
+            if (windowDisplay != null)
+            {
+                setting.SetDefaultValue("Primary"); // Assuming default is primary, or we can try to fetch it
+                windowDisplay.BindValueChanged(_ => setting.SetModified(!windowDisplay.IsDefault), true);
+            }
+
+            return setting;
         }
 
         private SettingItem createResolutionSetting()
@@ -2171,10 +2309,24 @@ namespace BeatSight.Game.Screens.Settings
 
             updateResolutionDropdownItems();
 
-            return CreateSettingItem(
+            var setting = CreateSettingItem(
                 "Resolution",
                 "Choose the render resolution. Fullscreen selects the display mode; windowed uses it for the window size.",
                 resolutionDropdown);
+
+            void updateModified()
+            {
+                bool modified = (windowWidth != null && !windowWidth.IsDefault) || (windowHeight != null && !windowHeight.IsDefault);
+                setting.SetModified(modified);
+            }
+
+            if (windowWidth != null) windowWidth.BindValueChanged(_ => updateModified(), true);
+            if (windowHeight != null) windowHeight.BindValueChanged(_ => updateModified(), true);
+
+            // Resolution default is complex (depends on screen), skipping explicit default text for now or set generic
+            setting.SetDefaultValue("Native");
+
+            return setting;
         }
 
         private SettingItem createFrameLimiterSetting()
@@ -2380,8 +2532,25 @@ namespace BeatSight.Game.Screens.Settings
                 control,
                 frameLimiterSlider);
 
+            void updateModified()
+            {
+                bool modified = (frameLimiterEnabled != null && !frameLimiterEnabled.IsDefault) ||
+                                (frameLimiterTarget != null && !frameLimiterTarget.IsDefault);
+                frameLimiterSetting.SetModified(modified);
+            }
+
+            if (frameLimiterEnabled != null) frameLimiterEnabled.BindValueChanged(_ => updateModified(), true);
+            if (frameLimiterTarget != null) frameLimiterTarget.BindValueChanged(_ => updateModified(), true);
+
             if (frameLimiterEnabled != null)
                 frameLimiterSetting.EnableRowToggle(frameLimiterEnabled);
+
+            string defaultText = "Default";
+            if (frameLimiterEnabled != null && frameLimiterTarget != null)
+            {
+                defaultText = frameLimiterEnabled.Default ? $"{frameLimiterTarget.Default:F0} FPS" : "VSync / Unlimited";
+            }
+            frameLimiterSetting.SetDefaultValue(defaultText);
 
             return frameLimiterSetting;
         }

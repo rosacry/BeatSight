@@ -45,8 +45,8 @@ namespace BeatSight.Game.Configuration
         protected override void InitialiseDefaults()
         {
             // Window / Display
-            setDefault(BeatSightSetting.WindowWidth, 1024);
-            setDefault(BeatSightSetting.WindowHeight, 576);
+            setDefault(BeatSightSetting.WindowWidth, 1280);
+            setDefault(BeatSightSetting.WindowHeight, 720);
             setDefault(BeatSightSetting.WindowFullscreen, false);
             setDefault(BeatSightSetting.WindowDisplayIndex, 0);
 

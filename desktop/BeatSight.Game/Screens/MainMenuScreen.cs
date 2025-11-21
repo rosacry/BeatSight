@@ -19,7 +19,7 @@ using osuTK.Graphics;
 
 namespace BeatSight.Game.Screens
 {
-    public partial class MainMenuScreen : Screen
+    public partial class MainMenuScreen : BeatSightScreen
     {
         private GameHost host = null!;
 
@@ -147,6 +147,9 @@ namespace BeatSight.Game.Screens
                             Colour = Color4.White,
                             Anchor = Anchor.Centre,
                             Origin = Anchor.Centre,
+                            Shadow = false,
+                            ShadowColour = new Color4(0, 0, 0, 64),
+                            ShadowOffset = new Vector2(1, 1)
                         }
                     }
                 }

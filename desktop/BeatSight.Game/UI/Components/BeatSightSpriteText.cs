@@ -10,21 +10,19 @@ namespace BeatSight.Game.UI.Components
     /// </summary>
     public partial class BeatSightSpriteText : SpriteText
     {
-        private static readonly Vector2 default_spacing = new Vector2(0.6f, 0f);
-        private static readonly MarginPadding default_padding = new MarginPadding { Top = 2, Bottom = 4 };
-        private static readonly Vector2 shadow_offset = new Vector2(0f, 1.5f);
+        private static readonly Vector2 default_spacing = new Vector2(0.1f, 0f);
+        private static readonly Vector2 shadow_offset = new Vector2(1f, 1f);
 
         public BeatSightSpriteText()
         {
             Font = BeatSightFont.Body();
             Colour = UITheme.TextPrimary;
             Spacing = default_spacing;
-            Padding = default_padding;
             Truncate = false;
             AllowMultiline = true;
-            UseFullGlyphHeight = true;
-            Shadow = true;
-            ShadowColour = UITheme.Background.Opacity(0.55f);
+            UseFullGlyphHeight = false; // Disabled to fix vertical centering issues in buttons
+            Shadow = false;
+            ShadowColour = new osuTK.Graphics.Color4(0, 0, 0, 128); // Standard semi-transparent black
             ShadowOffset = shadow_offset;
         }
     }

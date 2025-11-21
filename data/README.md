@@ -13,7 +13,6 @@
 | Groove MIDI Dataset | ~6 GB | `data/raw/groove` | pair with audio where available |
 | Extended Groove MIDI Dataset (E-GMD) | ~131 GB | `data/raw/egmd` | includes velocity + kit metadata |
 | IDMT-SMT-Drums V2 | ~1 GB | `data/raw/idmt_smt_drums` | labeled single hits + grooves |
-| MUSDB18 (compressed) | ~6 GB | `data/raw/musdb18` | keep original archives under `data/archives/` |
 | MUSDB18 HQ | ~29 GB | `data/raw/musdb18_hq` | high-resolution stems, align sample rate |
 | Telefunken Multitracks (23 projects) | ~26 GB | `data/raw/telefunken` | capture mic layouts in provenance |
 | ENST-Drums | ~10 GB | `data/raw/enst` | new access credentials on 2025-11-07 |

@@ -14,6 +14,9 @@ using osuTK;
 using osuTK.Graphics;
 using osuTK.Input;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Primitives;
+using osu.Framework.Graphics.Effects;
+using BeatSight.Game.UI.Theming;
 
 namespace BeatSight.Game.UI.Components
 {
@@ -68,7 +71,12 @@ namespace BeatSight.Game.UI.Components
         }
 
         internal Colour4 GetHeaderBackgroundColour()
-            => dropdownHeader?.GetCurrentBackgroundColour() ?? Colour4.Black;
+        {
+            if (dropdownHeader == null)
+                return Colour4.Black;
+
+            return (Colour4)dropdownHeader.Colour.AverageColour * dropdownHeader.GetCurrentBackgroundColour();
+        }
 
         protected override void LoadComplete()
         {
@@ -107,6 +115,22 @@ namespace BeatSight.Game.UI.Components
                 CornerRadius = header_corner_radius;
                 MaskingSmoothness = 1.5f;
                 applyBackgroundMasking();
+                Foreground.Padding = new MarginPadding { Horizontal = 10, Top = 10, Bottom = 2 };
+            }
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+                foreach (var child in Foreground.Children)
+                {
+                    if (child is osu.Framework.Graphics.Sprites.SpriteText text)
+                    {
+                        text.Font = BeatSightFont.Button();
+                        text.Anchor = Anchor.CentreLeft;
+                        text.Origin = Anchor.CentreLeft;
+                        text.UseFullGlyphHeight = false;
+                        text.Truncate = true;
+                    }
+                }
             }
 
             protected override void Update()
@@ -135,12 +159,25 @@ namespace BeatSight.Game.UI.Components
             }
 
             protected override DropdownSearchBar CreateSearchBar()
-                => searchBar = new DropdownSearchBar();
+            {
+                searchBar = new DropdownSearchBar();
+                searchBar.SearchActive += active =>
+                {
+                    foreach (var child in Foreground.Children)
+                    {
+                        if (child != searchBar)
+                            child.Alpha = active ? 0 : 1;
+                    }
+                };
+                return searchBar;
+            }
 
             public void SetSearchEnabled(bool enabled)
                 => searchBar?.SetSearchEnabled(enabled);
 
             public Colour4 GetCurrentBackgroundColour() => Background.Colour;
+
+            public Quad BackgroundScreenSpaceDrawQuad => Background.ScreenSpaceDrawQuad;
         }
 
         protected sealed partial class DropdownSearchBar : BasicDropdownHeader.BasicDropdownSearchBar
@@ -148,12 +185,22 @@ namespace BeatSight.Game.UI.Components
             private DropdownSearchTextBox? textBox;
             private bool searchAllowed;
             private const float search_corner_radius = 8f;
+            private readonly Box background;
+
+            public Action<bool>? SearchActive;
 
             public DropdownSearchBar()
             {
                 Masking = true;
                 CornerRadius = search_corner_radius;
                 MaskingSmoothness = 1.5f;
+
+                AddInternal(background = new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = UITheme.Surface,
+                    Depth = 1
+                });
             }
 
             protected override void Update()
@@ -172,7 +219,12 @@ namespace BeatSight.Game.UI.Components
             }
 
             protected override TextBox CreateTextBox()
-                => textBox = new DropdownSearchTextBox();
+            {
+                textBox = new DropdownSearchTextBox();
+                textBox.OnFocusAction = () => SearchActive?.Invoke(true);
+                textBox.OnFocusLostAction = () => SearchActive?.Invoke(false);
+                return textBox;
+            }
 
             public void SetSearchEnabled(bool enabled)
             {
@@ -204,6 +256,15 @@ namespace BeatSight.Game.UI.Components
             {
                 private bool typingEnabled = true;
 
+                public Action? OnFocusAction;
+                public Action? OnFocusLostAction;
+
+                public DropdownSearchTextBox()
+                {
+                    BackgroundUnfocused = Color4.Transparent;
+                    BackgroundFocused = Color4.Transparent;
+                }
+
                 public void SetTypingEnabled(bool enabled)
                 {
                     typingEnabled = enabled;
@@ -215,6 +276,20 @@ namespace BeatSight.Game.UI.Components
 
                 public override bool AcceptsFocus => typingEnabled && base.AcceptsFocus;
                 public override bool HandleNonPositionalInput => typingEnabled && base.HandleNonPositionalInput;
+
+                protected override void OnFocus(FocusEvent e)
+                {
+                    base.OnFocus(e);
+                    OnFocusAction?.Invoke();
+                    if (typingEnabled)
+                        Schedule(() => Text = string.Empty);
+                }
+
+                protected override void OnFocusLost(FocusLostEvent e)
+                {
+                    base.OnFocusLost(e);
+                    OnFocusLostAction?.Invoke();
+                }
             }
         }
 
@@ -239,30 +314,25 @@ namespace BeatSight.Game.UI.Components
             private float originalDepth;
             private bool suppressNextClose;
             private float? forcedOverlayWidth;
-            private const float menu_corner_radius = 10f;
-            private const float seam_cover_thickness = 2f;
-            private readonly Box attachmentSeamCover;
+            private const float menu_corner_radius = 8f;
             private bool pointerButtonHeld;
 
             public DropdownMenu(Dropdown<T> owner)
             {
                 this.owner = owner;
                 BypassAutoSizeAxes = Axes.Both;
+
+                // Match the header's masking settings to ensure visual width alignment
                 Masking = true;
-                CornerRadius = menu_corner_radius;
+                CornerRadius = 0;
+                MaskingSmoothness = 1.5f;
+                BorderThickness = 0;
+
                 StateChanged += onStateChanged;
                 MaskingContainer.CornerRadius = menu_corner_radius;
                 MaskingContainer.Masking = true;
                 MaskingContainer.MaskingSmoothness = 1.5f;
-                attachmentSeamCover = new Box
-                {
-                    RelativeSizeAxes = Axes.X,
-                    Height = seam_cover_thickness,
-                    Anchor = Anchor.TopLeft,
-                    Origin = Anchor.TopLeft,
-                    Depth = float.MinValue
-                };
-                MaskingContainer.Add(attachmentSeamCover);
+                MaskingContainer.EdgeEffect = new EdgeEffectParameters { Type = EdgeEffectType.None };
             }
 
             protected override void Update()
@@ -283,7 +353,6 @@ namespace BeatSight.Game.UI.Components
                 }
 
                 enforceRoundedMask();
-                updateSeamCoverAppearance();
             }
 
             private void enforceRoundedMask()
@@ -291,10 +360,9 @@ namespace BeatSight.Game.UI.Components
                 // Maintain rounded list edges regardless of overlay parenting or framework state changes.
                 if (!Masking)
                     Masking = true;
+                if (CornerRadius != 0)
+                    CornerRadius = 0;
                 MaskingSmoothness = 1.5f;
-
-                if (!Precision.AlmostEquals(CornerRadius, menu_corner_radius))
-                    CornerRadius = menu_corner_radius;
 
                 if (!Precision.AlmostEquals(MaskingContainer.CornerRadius, menu_corner_radius))
                     MaskingContainer.CornerRadius = menu_corner_radius;
@@ -643,31 +711,23 @@ namespace BeatSight.Game.UI.Components
 
             private void applyMenuPlacement(Container parentContainer)
             {
-                var headerQuad = owner.ScreenSpaceDrawQuad;
+                var header = owner.dropdownHeader;
+                if (header == null)
+                    return;
+
+                var headerQuad = header.BackgroundScreenSpaceDrawQuad;
                 var headerTopLeft = parentContainer.ToLocalSpace(headerQuad.TopLeft);
                 var headerTopRight = parentContainer.ToLocalSpace(headerQuad.TopRight);
                 var headerBottomLeft = parentContainer.ToLocalSpace(headerQuad.BottomLeft);
                 var headerWidth = headerTopRight.X - headerTopLeft.X;
 
-                var menuTop = headerBottomLeft.Y - seam_cover_thickness;
+                var menuTop = headerBottomLeft.Y;
                 var availableHeight = Math.Max(0, parentContainer.DrawSize.Y - menuTop);
                 var menuHeight = computeOverlayMenuHeight(availableHeight, parentContainer.DrawSize.Y);
 
                 forcedOverlayWidth = headerWidth;
-                Size = new Vector2(headerWidth, menuHeight + seam_cover_thickness);
+                Size = new Vector2(forcedOverlayWidth.Value, menuHeight);
                 Position = new Vector2(headerTopLeft.X, menuTop);
-                ensureAttachmentPadding();
-            }
-
-            private void ensureAttachmentPadding()
-            {
-                var padding = ContentContainer.Padding;
-
-                if (Precision.AlmostEquals(padding.Top, seam_cover_thickness))
-                    return;
-
-                padding.Top = seam_cover_thickness;
-                ContentContainer.Padding = padding;
             }
             private Container getOverlayParent(Container overlay)
             {
@@ -758,7 +818,7 @@ namespace BeatSight.Game.UI.Components
                     Foreground.RelativeSizeAxes = Axes.X;
 
                     Background.RelativeSizeAxes = Axes.Both;
-                    Foreground.Padding = new MarginPadding(2);
+                    Foreground.Padding = new MarginPadding { Horizontal = 10, Vertical = 5 };
                     BackgroundColour = FrameworkColour.BlueGreen;
                     BackgroundColourHover = FrameworkColour.Green;
                     BackgroundColourSelected = FrameworkColour.GreenDark;
@@ -766,7 +826,7 @@ namespace BeatSight.Game.UI.Components
 
                 protected override Drawable CreateContent() => new SpriteText
                 {
-                    Font = FrameworkFont.Condensed
+                    Font = BeatSightFont.Button()
                 };
 
                 protected override bool OnHover(HoverEvent e)
@@ -803,11 +863,7 @@ namespace BeatSight.Game.UI.Components
                 base.UpdateSize(newSize);
             }
 
-            private void updateSeamCoverAppearance()
-            {
-                attachmentSeamCover.Colour = owner.GetHeaderBackgroundColour();
-                attachmentSeamCover.Alpha = State == MenuState.Open ? 1 : 0;
-            }
+
         }
     }
 }

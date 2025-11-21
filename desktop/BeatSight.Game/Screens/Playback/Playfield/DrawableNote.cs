@@ -52,6 +52,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private readonly int originalLane;
         private bool kickGlobalMode;
         private float lastAppliedDepth = float.NaN;
+        private readonly float velocityAlpha;
 
         public DrawableNote(HitObject hitObject, int lane, Bindable<bool> showApproach, Bindable<bool> showGlow, Bindable<bool> showParticles)
         {
@@ -63,6 +64,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             showGlowEffects = showGlow;
             showParticleEffects = showParticles;
             isKickNote = !string.IsNullOrEmpty(hitObject.Component) && hitObject.Component.IndexOf("kick", StringComparison.OrdinalIgnoreCase) >= 0;
+
+            // Calculate opacity based on velocity (0.0 - 1.0)
+            // Map 0.0 -> 0.4 (ghost note)
+            // Map 1.0 -> 1.0 (accent)
+            float velocity = (float)Math.Clamp(hitObject.Velocity, 0.0, 1.0);
+            velocityAlpha = 0.4f + 0.6f * velocity;
 
             Size = new Vector2(60, 26);
             Origin = Anchor.Centre;
@@ -84,7 +91,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 {
                     RelativeSizeAxes = Axes.Both,
                     Colour = AccentColour,
-                    Alpha = 0.3f,
+                    Alpha = 0.3f * velocityAlpha,
                     Blending = BlendingParameters.Additive,
                 };
                 children.Add(glowBox);
@@ -94,7 +101,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             mainBox = new Box
             {
                 RelativeSizeAxes = Axes.Both,
-                Colour = AccentColour
+                Colour = AccentColour,
+                Alpha = velocityAlpha
             };
             children.Add(mainBox);
 
@@ -180,10 +188,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 CornerRadius = 10;
                 Size = new Vector2(20, 20);
                 highlightStrip.Alpha = 0;
-                stem.Alpha = 1;
+                stem.Alpha = 1 * velocityAlpha;
 
                 if (glowBox != null)
-                    glowBox.Alpha = 0.2f;
+                    glowBox.Alpha = 0.2f * velocityAlpha;
 
                 return;
             }
@@ -201,16 +209,16 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     highlightStrip.Origin = Anchor.Centre;
                     highlightStrip.Width = 1f;
                     highlightStrip.Height = Math.Clamp(assumedHeight * 0.3f, 3f, 8f);
-                    highlightStrip.Alpha = 0.55f;
+                    highlightStrip.Alpha = 0.55f * velocityAlpha;
                     highlightStrip.Colour = new Color4(255, 244, 255, 180);
                     if (glowBox != null)
-                        glowBox.Alpha = 0.4f;
+                        glowBox.Alpha = 0.4f * velocityAlpha;
                     return;
                 }
 
                 CornerRadius = 6;
                 Size = new Vector2(60, 20);
-                highlightStrip.Alpha = 0.3f;
+                highlightStrip.Alpha = 0.3f * velocityAlpha;
                 highlightStrip.Width = 0.75f;
                 highlightStrip.Height = 4;
                 highlightStrip.Anchor = Anchor.TopCentre;
@@ -233,11 +241,11 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     highlightStrip.Origin = Anchor.Centre;
                     highlightStrip.Width = 1f;
                     highlightStrip.Height = Math.Clamp(assumedHeight * 0.24f, 2f, 6f);
-                    highlightStrip.Alpha = 0.6f;
+                    highlightStrip.Alpha = 0.6f * velocityAlpha;
                     highlightStrip.Y = -assumedHeight * 0.14f;
                     highlightStrip.Colour = new Color4(255, 230, 210, 210);
                     if (glowBox != null)
-                        glowBox.Alpha = 0.5f;
+                        glowBox.Alpha = 0.5f * velocityAlpha;
                     return;
                 }
 
@@ -247,10 +255,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 highlightStrip.Width = 1f;
                 highlightStrip.Height = Math.Clamp(Height * 0.26f, 2f, 6f);
                 highlightStrip.Y = -Height * 0.16f;
-                highlightStrip.Alpha = 0.64f;
+                highlightStrip.Alpha = 0.64f * velocityAlpha;
                 highlightStrip.Colour = new Color4(255, 228, 205, 210);
                 if (glowBox != null)
-                    glowBox.Alpha = 0.5f;
+                    glowBox.Alpha = 0.5f * velocityAlpha;
             }
         }
 
@@ -284,10 +292,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 highlightStrip.Width = 1f;
                 highlightStrip.Height = Math.Clamp(height * 0.32f, 3f, 8f);
                 highlightStrip.Y = -height * 0.1f;
-                highlightStrip.Alpha = 0.58f;
+                highlightStrip.Alpha = 0.58f * velocityAlpha;
                 highlightStrip.Colour = new Color4(255, 244, 255, 190);
                 if (glowBox != null)
-                    glowBox.Alpha = 0.42f;
+                    glowBox.Alpha = 0.42f * velocityAlpha;
             }
             else
             {
@@ -297,7 +305,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 highlightStrip.Width = 1f;
                 highlightStrip.Height = Math.Clamp(height * 0.26f, 2f, 6f);
                 highlightStrip.Y = -height * 0.16f;
-                highlightStrip.Alpha = 0.64f;
+                highlightStrip.Alpha = 0.64f * velocityAlpha;
                 highlightStrip.Colour = new Color4(255, 228, 205, 210);
                 if (glowBox != null)
                     glowBox.Alpha = 0.5f;

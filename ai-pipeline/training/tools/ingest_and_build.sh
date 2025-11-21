@@ -17,7 +17,7 @@ AUDIO_MAP_ARGS=(
   "--audio-root-map" "enst_drums=E:/data/raw/ENST-Drums"
   "--audio-root-map" "idmt_smt_drums_v2=E:/data/raw/idmt_smt_drums_v2"
   "--audio-root-map" "cambridge_multitrack=E:/data/raw/cambridge"
-  "--audio-root-map" "musdb18_hq=E:/data/raw/musdb18s"
+  "--audio-root-map" "musdb18_hq=E:/data/raw/musdb18_hq"
   "--audio-root-map" "signaturesounds=E:/data/raw/signaturesounds"
   "--audio-root-map" "telefunken_sessions=E:/data/raw/telefunken"
   "--audio-root-map" "medleydb=E:/data/raw/MedleyDB"
@@ -31,7 +31,7 @@ get_default_root() {
         "enst_drums") echo "E:/data/raw/ENST-Drums" ;;
         "idmt_smt_drums_v2") echo "E:/data/raw/idmt_smt_drums_v2" ;;
         "cambridge_multitrack") echo "E:/data/raw/cambridge" ;;
-        "musdb18_hq") echo "E:/data/raw/musdb18s" ;;
+        "musdb18_hq") echo "E:/data/raw/musdb18_hq" ;;
         "signaturesounds") echo "E:/data/raw/signaturesounds" ;;
         "telefunken_sessions") echo "E:/data/raw/telefunken" ;;
         "medleydb") echo "E:/data/raw/MedleyDB" ;;

@@ -66,8 +66,7 @@ namespace BeatSight.Game
         private Bindable<int>? windowHeightSetting;
         private Bindable<bool>? windowFullscreenSetting;
         private Bindable<int>? windowDisplaySetting;
-        private Bindable<bool>? frameLimiterEnabledSetting;
-        private Bindable<double>? frameLimiterTargetSetting;
+        private Bindable<FrameLimiterMode>? frameLimiterModeSetting;
         private Bindable<double>? uiScaleSetting;
         private Bindable<Display>? hostDisplayBindable;
         private Bindable<WindowMode>? hostWindowModeBindable;
@@ -295,11 +294,46 @@ namespace BeatSight.Game
 
         private void onUiScaleChanged(ValueChangedEvent<double> scaleEvent)
         {
-            if (uiScaleRoot == null)
-                return;
+            updateUIScale();
+        }
 
-            float clamped = (float)Math.Clamp(scaleEvent.NewValue, 0.5, 1.5);
-            uiScaleRoot.ScaleTo(clamped, 500, Easing.OutQuint);
+        private void updateUIScale()
+        {
+            Schedule(() =>
+            {
+                if (uiScaleRoot == null || uiScaleSetting == null)
+                    return;
+
+                float userScale = (float)uiScaleSetting.Value * 1.15f;
+                float resolutionScale = 1.0f;
+
+                int height = 0;
+                if (boundWindow != null)
+                    height = boundWindow.ClientSize.Height;
+
+                // If in fullscreen, prefer the configured height as it might be more up-to-date during transitions
+                // or if the window hasn't fully resized yet.
+                if (windowFullscreenSetting?.Value == true && windowHeightSetting != null)
+                {
+                    height = Math.Max(height, windowHeightSetting.Value);
+                }
+
+                if (height > 0)
+                {
+                    // If resolution is significantly higher than 1440p, scale up to match 1440p physical size roughly.
+                    // This ensures that on 4k monitors (2160p), the UI isn't tiny.
+                    if (height > 1440)
+                    {
+                        resolutionScale = height / 1440f;
+                    }
+                }
+
+                float finalScale = userScale * resolutionScale;
+                // Clamp to reasonable values, extending the range to allow for high DPI scaling
+                finalScale = Math.Clamp(finalScale, 0.5f, 4.0f);
+
+                uiScaleRoot.ScaleTo(finalScale, 500, Easing.OutQuint);
+            });
         }
 
         public void ForceExit()
@@ -512,8 +546,7 @@ namespace BeatSight.Game
             windowHeightSetting = config.GetBindable<int>(BeatSightSetting.WindowHeight);
             windowFullscreenSetting = config.GetBindable<bool>(BeatSightSetting.WindowFullscreen);
             windowDisplaySetting = config.GetBindable<int>(BeatSightSetting.WindowDisplayIndex);
-            frameLimiterEnabledSetting = config.GetBindable<bool>(BeatSightSetting.FrameLimiterEnabled);
-            frameLimiterTargetSetting = config.GetBindable<double>(BeatSightSetting.FrameLimiterTarget);
+            frameLimiterModeSetting = config.GetBindable<FrameLimiterMode>(BeatSightSetting.FrameLimiter);
             frameworkFullscreenSizeSetting ??= frameworkConfig.GetBindable<Size>(FrameworkSetting.SizeFullscreen);
             lastRequestedFullscreen = windowFullscreenSetting.Value;
 
@@ -533,8 +566,7 @@ namespace BeatSight.Game
             windowHeightSetting.BindValueChanged(_ => applyWindowSize());
             windowFullscreenSetting.BindValueChanged(_ => applyWindowMode());
             windowDisplaySetting.BindValueChanged(_ => applyMonitorSelection());
-            frameLimiterEnabledSetting.BindValueChanged(_ => applyFrameLimiter());
-            frameLimiterTargetSetting.BindValueChanged(_ => applyFrameLimiter());
+            frameLimiterModeSetting.BindValueChanged(_ => applyFrameLimiter());
 
             hostDisplayBindable = boundWindow.CurrentDisplayBindable;
             hostDisplayBindable.BindValueChanged(onHostDisplayChanged);
@@ -556,6 +588,8 @@ namespace BeatSight.Game
                 applyWindowSize();
 
             applyFrameLimiter();
+
+            updateUIScale();
         }
 
         private void ensureUserDirectory(string relativePath)
@@ -872,6 +906,7 @@ namespace BeatSight.Game
 
                 if (windowFullscreenSetting?.Value == true)
                 {
+                    applyNativeFullscreenResolution();
                     applyFullscreenResolution();
 
                     if (hostWindowModeBindable?.Value == WindowMode.Borderless)
@@ -881,25 +916,33 @@ namespace BeatSight.Game
                 {
                     centerWindowOnCurrentDisplay(boundWindow.ClientSize, applySize: false);
                 }
+
+                updateUIScale();
             });
         }
 
         private void applyFrameLimiter()
         {
-            if (frameLimiterEnabledSetting == null || frameLimiterTargetSetting == null)
+            if (frameLimiterModeSetting == null)
                 return;
 
-            double target = Math.Clamp(frameLimiterTargetSetting.Value, 30, 1000);
-
-            if (frameLimiterEnabledSetting.Value)
+            switch (frameLimiterModeSetting.Value)
             {
-                Host.MaximumDrawHz = target;
-                Host.MaximumUpdateHz = target;
-            }
-            else
-            {
-                Host.MaximumDrawHz = defaultMaxDrawHz;
-                Host.MaximumUpdateHz = defaultMaxUpdateHz;
+                case FrameLimiterMode.VSync:
+                    frameworkConfig.SetValue(FrameworkSetting.FrameSync, FrameSync.VSync);
+                    break;
+                case FrameLimiterMode.Twice:
+                    frameworkConfig.SetValue(FrameworkSetting.FrameSync, FrameSync.Limit2x);
+                    break;
+                case FrameLimiterMode.FourTimes:
+                    frameworkConfig.SetValue(FrameworkSetting.FrameSync, FrameSync.Limit4x);
+                    break;
+                case FrameLimiterMode.EightTimes:
+                    frameworkConfig.SetValue(FrameworkSetting.FrameSync, FrameSync.Limit8x);
+                    break;
+                case FrameLimiterMode.BasicallyUnlimited:
+                    frameworkConfig.SetValue(FrameworkSetting.FrameSync, FrameSync.Unlimited);
+                    break;
             }
         }
 
@@ -950,6 +993,8 @@ namespace BeatSight.Game
 
         private void onWindowResized()
         {
+            updateUIScale();
+
             if (boundWindow == null || windowWidthSetting == null || windowHeightSetting == null)
                 return;
 

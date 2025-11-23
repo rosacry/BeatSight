@@ -10,6 +10,7 @@ on-the-fly feature extraction overhead.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import os
 from pathlib import Path
 from typing import Iterable, Optional
@@ -73,6 +74,40 @@ def _build_dataset(
     return dataset
 
 
+def _filter_existing_cache(dataset: DrumSampleDataset) -> None:
+    """Filter out dataset items that already have a cache file on disk."""
+    if dataset.cache_dir is None:
+        return
+
+    initial_count = len(dataset)
+    missing_labels = []
+
+    # Helper function for parallel checking
+    def _check_item(item):
+        audio_path = dataset.data_dir / item["file"]
+        cache_path = dataset._cache_path(audio_path)
+        return item if not cache_path.exists() else None
+
+    # Iterate and check existence in parallel.
+    # This is much faster than loading the dataset or checking sequentially.
+    print(f"Checking existing cache for {initial_count} items using {os.cpu_count()} threads...")
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        results = list(tqdm(
+            executor.map(_check_item, dataset.labels),
+            total=initial_count,
+            desc="Checking existing cache"
+        ))
+    
+    missing_labels = [item for item in results if item is not None]
+
+    skipped = initial_count - len(missing_labels)
+    if skipped > 0:
+        print(f"Skipping {skipped} items that are already cached. {len(missing_labels)} items remaining.")
+        dataset.labels = missing_labels
+    else:
+        print("No existing cache files found (or cache check failed). Processing all items.")
+
+
 def _iter_dataloader(dataset: DrumSampleDataset, batch_size: int, num_workers: int, persistent: bool) -> Iterable:
     loader = torch.utils.data.DataLoader(
         dataset,
@@ -92,9 +127,8 @@ def _precompute_split(dataset: DrumSampleDataset, *, batch_size: int, num_worker
     with torch.no_grad():
         with tqdm(total=total, desc=f"Caching {dataset.data_dir.name}") as progress:
             for features, _ in loader:
-                # Touch the tensor to ensure it is realised. The dataset has
-                # already written the cache files during __getitem__.
-                _ = features.sum().item()  # noqa: F841 - side-effect only
+                # The dataset has already written the cache files during __getitem__.
+                # We don't need to touch the features.
                 progress.update(features.size(0))
 
 
@@ -162,6 +196,7 @@ def main() -> None:
             prefer_torchaudio=not args.no_torchaudio,
             cache_dtype=args.cache_dtype,
         )
+        _filter_existing_cache(dataset)
         _precompute_split(
             dataset,
             batch_size=args.batch_size,

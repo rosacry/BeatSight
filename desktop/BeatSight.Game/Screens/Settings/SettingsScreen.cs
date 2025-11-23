@@ -389,7 +389,7 @@ namespace BeatSight.Game.Screens.Settings
         private partial class SettingsButton : CompositeDrawable
         {
             private const float button_corner_radius = 10f;
-            private const float button_hover_scale = 1.015f;
+            private const float button_hover_scale = 1.05f;
             private const float button_masking_smoothness = 1.5f;
 
             private readonly Box background;
@@ -399,6 +399,10 @@ namespace BeatSight.Game.Screens.Settings
             private readonly Action action;
             private bool isSelected;
             private readonly Container buttonBody;
+            private Box flash = null!;
+
+            [Resolved]
+            private UIAudioController uiAudio { get; set; } = null!;
 
             public SettingsButton(string text, Action action)
             {
@@ -460,6 +464,13 @@ namespace BeatSight.Game.Screens.Settings
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
                         Padding = new MarginPadding { Left = 24 }
+                    },
+                    flash = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = Color4.White,
+                        Alpha = 0,
+                        Blending = BlendingParameters.Additive
                     }
                 });
             }
@@ -478,12 +489,15 @@ namespace BeatSight.Game.Screens.Settings
 
             protected override bool OnClick(ClickEvent e)
             {
+                uiAudio.PlayClick();
+                flash.FadeTo(0.5f).FadeOut(500, Easing.OutQuint);
                 action?.Invoke();
                 return true;
             }
 
             protected override bool OnHover(HoverEvent e)
             {
+                uiAudio.PlayHover(e.ScreenSpaceMousePosition.X / GetContainingInputManager().DrawSize.X);
                 updateVisualState(true);
                 return base.OnHover(e);
             }
@@ -492,6 +506,18 @@ namespace BeatSight.Game.Screens.Settings
             {
                 base.OnHoverLost(e);
                 updateVisualState();
+            }
+
+            protected override bool OnMouseDown(MouseDownEvent e)
+            {
+                buttonBody.ScaleTo(0.95f, 50, Easing.OutQuint);
+                return base.OnMouseDown(e);
+            }
+
+            protected override void OnMouseUp(MouseUpEvent e)
+            {
+                updateVisualState(IsHovered);
+                base.OnMouseUp(e);
             }
 
             private void updateVisualState(bool hovering = false)
@@ -515,7 +541,7 @@ namespace BeatSight.Game.Screens.Settings
                 var targetLabelColour = (isSelected || hovering) ? UITheme.TextPrimary : UITheme.TextSecondary;
                 label.FadeColour(targetLabelColour, 200, Easing.OutQuint);
 
-                buttonBody.ScaleTo(hovering ? button_hover_scale : 1f, 200, Easing.OutQuint);
+                buttonBody.ScaleTo(hovering ? button_hover_scale : 1f, 400, Easing.OutElastic);
             }
         }
     }
@@ -2166,16 +2192,10 @@ namespace BeatSight.Game.Screens.Settings
         private Bindable<int>? windowHeight;
         private Bindable<bool>? windowFullscreen;
         private Bindable<int>? windowDisplay;
-        private Bindable<bool>? frameLimiterEnabled;
-        private Bindable<double>? frameLimiterTarget;
         private SettingsDropdown<MonitorChoice>? monitorDropdown;
         private SettingsDropdown<ResolutionOptionChoice>? resolutionDropdown;
         private MonitorChoice[] monitorChoices = Array.Empty<MonitorChoice>();
         private ResolutionOptionChoice[] resolutionChoices = Array.Empty<ResolutionOptionChoice>();
-        private BeatSightSliderBar? frameLimiterSlider;
-        private SpriteText? frameLimiterValueText;
-        private BindableDouble? frameLimiterSliderBindable;
-        private bool frameLimiterValueSync;
         private bool suppressMonitorSync;
         private bool suppressResolutionSync;
         private bool monitorRefreshScheduled;
@@ -2195,8 +2215,6 @@ namespace BeatSight.Game.Screens.Settings
             windowHeight ??= config.GetBindable<int>(BeatSightSetting.WindowHeight);
             windowFullscreen ??= config.GetBindable<bool>(BeatSightSetting.WindowFullscreen);
             windowDisplay ??= config.GetBindable<int>(BeatSightSetting.WindowDisplayIndex);
-            frameLimiterEnabled ??= config.GetBindable<bool>(BeatSightSetting.FrameLimiterEnabled);
-            frameLimiterTarget ??= config.GetBindable<double>(BeatSightSetting.FrameLimiterTarget);
 
             return new FillFlowContainer
             {
@@ -2396,228 +2414,23 @@ namespace BeatSight.Game.Screens.Settings
 
         private SettingItem createFrameLimiterSetting()
         {
-            frameLimiterSliderBindable = new BindableDouble
-            {
-                MinValue = 60,
-                MaxValue = computeFrameLimiterCeiling(),
-                Precision = 1
-            };
-
-            if (frameLimiterTarget != null)
-            {
-                frameLimiterSliderBindable.Value = Math.Clamp(
-                    frameLimiterTarget.Value,
-                    frameLimiterSliderBindable.MinValue,
-                    frameLimiterSliderBindable.MaxValue);
-            }
-            else
-            {
-                frameLimiterSliderBindable.Value = frameLimiterSliderBindable.MinValue;
-            }
-
-            frameLimiterSlider = new BeatSightSliderBar
-            {
-                RelativeSizeAxes = Axes.X,
-                Height = 16,
-                Current = frameLimiterSliderBindable,
-                Anchor = Anchor.CentreLeft,
-                Origin = Anchor.CentreLeft
-            };
-
-            var frameLimiterSliderBlocker = new SliderInputBlocker
-            {
-                RelativeSizeAxes = Axes.Both,
-                Blocking = false,
-                Anchor = Anchor.CentreLeft,
-                Origin = Anchor.CentreLeft
-            };
-
-            frameLimiterValueText = new SpriteText
-            {
-                Font = BeatSightFont.Label(16f),
-                Colour = UITheme.TextSecondary,
-                Anchor = Anchor.CentreRight,
-                Origin = Anchor.CentreRight
-            };
-
-            frameLimiterSliderBindable.BindValueChanged(e =>
-            {
-                frameLimiterValueText.Text = $"{Math.Round(e.NewValue)}";
-
-                if (frameLimiterTarget == null || frameLimiterValueSync)
-                    return;
-
-                frameLimiterValueSync = true;
-                try
-                {
-                    frameLimiterTarget.Value = e.NewValue;
-                }
-                finally
-                {
-                    frameLimiterValueSync = false;
-                }
-            }, true);
-
-            if (frameLimiterTarget != null)
-            {
-                frameLimiterTarget.BindValueChanged(e =>
-                {
-                    if (frameLimiterSliderBindable == null || frameLimiterValueSync)
-                        return;
-
-                    frameLimiterValueSync = true;
-                    try
-                    {
-                        frameLimiterSliderBindable.Value = e.NewValue;
-                    }
-                    finally
-                    {
-                        frameLimiterValueSync = false;
-                    }
-                }, true);
-            }
-
-            if (frameLimiterEnabled != null)
-            {
-                void applyFrameLimiterState(bool enabled, bool instant)
-                {
-                    frameLimiterSliderBlocker.Blocking = !enabled;
-                    if (instant)
-                    {
-                        frameLimiterSlider.Alpha = enabled ? 1f : 0.5f;
-                        frameLimiterValueText.Colour = enabled ? UITheme.TextSecondary : UITheme.TextMuted;
-                    }
-                    else
-                    {
-                        frameLimiterSlider.FadeTo(enabled ? 1f : 0.5f, 200, Easing.OutQuint);
-                        frameLimiterValueText.FadeColour(enabled ? UITheme.TextSecondary : UITheme.TextMuted, 200, Easing.OutQuint);
-                    }
-                }
-
-                applyFrameLimiterState(frameLimiterEnabled.Value, true);
-                frameLimiterEnabled.BindValueChanged(e => applyFrameLimiterState(e.NewValue, false), true);
-            }
-
-            updateFrameLimiterSliderRange();
-
-            var checkbox = new BeatSightCheckbox
-            {
-                Current = frameLimiterEnabled!,
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre
-            };
-
-            var valueContainer = new Container
-            {
-                Width = 64,
-                Height = 24,
-                Anchor = Anchor.CentreLeft,
-                Origin = Anchor.CentreLeft,
-                Child = new Container
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Anchor = Anchor.CentreRight,
-                    Origin = Anchor.CentreRight,
-                    Child = frameLimiterValueText
-                }
-            };
-
-            const float rowSpacing = 8;
-            const float controlWidthWithToggle = 360;
-            const float sliderToggleSpacing = 16;
-            const float toggleAreaWidth = 24;
-
-            float sliderWidth = Math.Max(120, controlWidthWithToggle - valueContainer.Width - rowSpacing - toggleAreaWidth - sliderToggleSpacing);
-
-            var sliderContainer = new Container
-            {
-                Width = sliderWidth,
-                Height = 18,
-                Anchor = Anchor.CentreLeft,
-                Origin = Anchor.CentreLeft,
-                Children = new Drawable[]
-                {
-                    frameLimiterSlider,
-                    frameLimiterSliderBlocker
-                }
-            };
-
-            var sliderCluster = new FillFlowContainer
-            {
-                AutoSizeAxes = Axes.Y,
-                Direction = FillDirection.Horizontal,
-                Anchor = Anchor.CentreLeft,
-                Origin = Anchor.CentreLeft,
-                Spacing = new Vector2(sliderToggleSpacing, 0)
-            };
-
-            sliderCluster.Add(sliderContainer);
-
-            var toggleContainer = new Container
-            {
-                Width = toggleAreaWidth,
-                Height = 24,
-                Anchor = Anchor.CentreLeft,
-                Origin = Anchor.CentreLeft,
-                Child = new Container
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Anchor = Anchor.CentreRight,
-                    Origin = Anchor.CentreRight,
-                    Child = checkbox
-                }
-            };
-
-            sliderCluster.Add(toggleContainer);
-
-            var rowFlow = new FillFlowContainer
-            {
-                AutoSizeAxes = Axes.Y,
-                Direction = FillDirection.Horizontal,
-                Spacing = new Vector2(rowSpacing, 0),
-                Anchor = Anchor.CentreRight,
-                Origin = Anchor.CentreRight
-            };
-
-            rowFlow.AddRange(new Drawable[] { valueContainer, sliderCluster });
-            rowFlow.Width = controlWidthWithToggle;
-
-            var control = new Container
-            {
-                Width = controlWidthWithToggle,
-                AutoSizeAxes = Axes.Y,
-                Anchor = Anchor.CentreRight,
-                Origin = Anchor.CentreRight,
-                Child = rowFlow
-            };
-
-            var frameLimiterSetting = CreateSettingItem(
+            return CreateEnumDropdown(
                 "Frame Limiter",
-                "Throttle BeatSight's rendering speed to save power or match your monitor.",
-                control,
-                frameLimiterSlider);
-
-            void updateModified()
-            {
-                bool modified = (frameLimiterEnabled != null && !frameLimiterEnabled.IsDefault) ||
-                                (frameLimiterTarget != null && !frameLimiterTarget.IsDefault);
-                frameLimiterSetting.SetModified(modified);
-            }
-
-            if (frameLimiterEnabled != null) frameLimiterEnabled.BindValueChanged(_ => updateModified(), true);
-            if (frameLimiterTarget != null) frameLimiterTarget.BindValueChanged(_ => updateModified(), true);
-
-            if (frameLimiterEnabled != null)
-                frameLimiterSetting.EnableRowToggle(frameLimiterEnabled);
-
-            string defaultText = "Default";
-            if (frameLimiterEnabled != null && frameLimiterTarget != null)
-            {
-                defaultText = frameLimiterEnabled.Default ? $"{frameLimiterTarget.Default:F0} FPS" : "VSync / Unlimited";
-            }
-            frameLimiterSetting.SetDefaultValue(defaultText);
-
-            return frameLimiterSetting;
+                config.GetBindable<FrameLimiterMode>(BeatSightSetting.FrameLimiter),
+                "Limit the frame rate to reduce power consumption or latency.",
+                val =>
+                {
+                    switch (val)
+                    {
+                        case FrameLimiterMode.VSync: return "VSync";
+                        case FrameLimiterMode.Twice: return "2x refresh rate";
+                        case FrameLimiterMode.FourTimes: return "4x refresh rate";
+                        case FrameLimiterMode.EightTimes: return "8x refresh rate";
+                        case FrameLimiterMode.BasicallyUnlimited: return "Basically Unlimited";
+                        default: return val.ToString();
+                    }
+                }
+            );
         }
 
         protected override void LoadComplete()
@@ -2629,7 +2442,6 @@ namespace BeatSight.Game.Screens.Settings
 
             updateMonitorDropdownItems();
             updateResolutionDropdownItems();
-            updateFrameLimiterSliderRange();
         }
 
         protected override void Dispose(bool isDisposing)
@@ -2680,11 +2492,11 @@ namespace BeatSight.Game.Screens.Settings
             if (monitorChoices.Length == 0)
                 monitorChoices = new[] { new MonitorChoice(0, "Primary Display") };
 
-            monitorDropdown.Items = monitorChoices;
-
             suppressMonitorSync = true;
             try
             {
+                monitorDropdown.Items = monitorChoices;
+
                 int targetIndex = windowDisplay?.Value ?? 0;
                 var selection = monitorChoices.FirstOrDefault(choice => choice.Index == targetIndex);
                 if (!selection.IsValid)
@@ -2698,7 +2510,6 @@ namespace BeatSight.Game.Screens.Settings
             }
 
             updateResolutionDropdownItems();
-            updateFrameLimiterSliderRange();
         }
 
         private void updateResolutionDropdownItems()
@@ -2771,45 +2582,9 @@ namespace BeatSight.Game.Screens.Settings
                 resolutionDropdown.Current.Disabled = targetDisabledState;
                 suppressResolutionSync = false;
             }
-
-            updateFrameLimiterSliderRange();
         }
 
-        private void updateFrameLimiterSliderRange()
-        {
-            if (frameLimiterSliderBindable == null)
-                return;
 
-            double ceiling = Math.Max(60, computeFrameLimiterCeiling());
-            frameLimiterSliderBindable.MinValue = 60;
-            frameLimiterSliderBindable.MaxValue = ceiling;
-
-            if (frameLimiterTarget != null && frameLimiterTarget.Value > ceiling)
-                frameLimiterTarget.Value = ceiling;
-
-            if (frameLimiterSliderBindable.Value > ceiling)
-                frameLimiterSliderBindable.Value = ceiling;
-
-            if (frameLimiterSliderBindable.Value < frameLimiterSliderBindable.MinValue)
-                frameLimiterSliderBindable.Value = frameLimiterSliderBindable.MinValue;
-        }
-
-        private double computeFrameLimiterCeiling()
-        {
-            var display = getDisplayByIndex(windowDisplay?.Value ?? 0);
-
-            if (display is Display displayValue)
-            {
-                double maxRefresh = 0;
-                foreach (var mode in displayValue.DisplayModes)
-                    maxRefresh = Math.Max(maxRefresh, mode.RefreshRate);
-
-                if (maxRefresh >= 30)
-                    return Math.Clamp(maxRefresh, 60, 1000);
-            }
-
-            return 240;
-        }
 
         private Display? getDisplayByIndex(int index)
         {

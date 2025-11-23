@@ -330,7 +330,40 @@ namespace BeatSight.Game.UI.Components
                     Margin = new MarginPadding { Horizontal = 5 };
                 }
 
-                protected override Drawable GetDrawableCharacter(char c) => new SpriteText { Text = c.ToString(), Font = BeatSightFont.Button() };
+                protected override Drawable GetDrawableCharacter(char c)
+                {
+                    var font = BeatSightFont.Button();
+                    var text = new SpriteText
+                    {
+                        Text = c.ToString(),
+                        Font = font,
+                        UseFullGlyphHeight = false
+                    };
+                    float fontSize = font.Size;
+
+                    // Manually align text to a fixed baseline to prevent vertical jumping between characters
+                    // of different heights (like 'o' vs 'h'), without enabling UseFullGlyphHeight.
+                    text.Anchor = Anchor.BottomLeft;
+                    text.Origin = Anchor.BottomLeft;
+
+                    float yOffset = -fontSize * 0.25f; // Baseline offset estimate (25% from bottom)
+
+                    // Fix for descenders (g, j, p, q, y) being pushed up
+                    // Their bounding box bottom is the descender bottom, not the baseline.
+                    if ("gjpqy".IndexOf(c) != -1)
+                        yOffset += fontSize * 0.15f; // Push down by estimated descender height
+
+                    text.Y = yOffset;
+
+                    return new Container
+                    {
+                        AutoSizeAxes = Axes.X,
+                        Height = fontSize,
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        Child = text
+                    };
+                }
 
                 public void SetTypingEnabled(bool enabled)
                 {

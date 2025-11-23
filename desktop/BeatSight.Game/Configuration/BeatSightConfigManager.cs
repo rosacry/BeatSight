@@ -74,7 +74,7 @@ namespace BeatSight.Game.Configuration
             setDefault(BeatSightSetting.UIScale, 1.0, 0.5, 1.5, 0.01);
             setDefault(BeatSightSetting.NoteSkin, NoteSkinOption.Classic);
             setDefault(BeatSightSetting.ShowGlobalBackground, true);
-            setDefault(BeatSightSetting.GlobalBackgroundOpacity, 0.2);
+            setDefault(BeatSightSetting.GlobalBackgroundOpacity, 0.5);
 
             // Audio Settings
             setDefault(BeatSightSetting.MasterVolume, 1.0);
@@ -107,7 +107,7 @@ namespace BeatSight.Game.Configuration
             // Performance Settings
             setDefault(BeatSightSetting.FrameLimiterEnabled, false);
             setDefault(BeatSightSetting.FrameLimiterTarget, 144.0);
-            setDefault(BeatSightSetting.FrameLimiter, FrameLimiterMode.Unlimited);
+            setDefault(BeatSightSetting.FrameLimiter, FrameLimiterMode.BasicallyUnlimited);
         }
 
         public void ResetToDefaults()
@@ -282,11 +282,11 @@ namespace BeatSight.Game.Configuration
 
     public enum FrameLimiterMode
     {
-        Unlimited,
         VSync,
-        Limit60,
-        Limit120,
-        Limit240
+        Twice,
+        FourTimes,
+        EightTimes,
+        BasicallyUnlimited
     }
 
     public enum QuantizationGridSetting

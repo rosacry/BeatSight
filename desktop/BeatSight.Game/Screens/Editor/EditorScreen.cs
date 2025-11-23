@@ -3292,6 +3292,12 @@ namespace BeatSight.Game.Screens.Editor
             private Color4 currentBaseColour;
             private string? availabilityMessage;
 
+            private Box hoverGlow = null!;
+            private Box flash = null!;
+
+            [Resolved]
+            private UIAudioController uiAudio { get; set; } = null!;
+
             public event Action<string?>? HoverHintChanged;
 
             public PreviewToggleButton(Bindable<EditorPreviewMode> previewMode)
@@ -3308,6 +3314,13 @@ namespace BeatSight.Game.Screens.Editor
                     background = new Box
                     {
                         RelativeSizeAxes = Axes.Both
+                    },
+                    hoverGlow = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = Color4.White,
+                        Alpha = 0,
+                        Blending = BlendingParameters.Additive
                     },
                     new FillFlowContainer
                     {
@@ -3335,6 +3348,13 @@ namespace BeatSight.Game.Screens.Editor
                                 Text = "2D View"
                             }
                         }
+                    },
+                    flash = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = Color4.White,
+                        Alpha = 0,
+                        Blending = BlendingParameters.Additive
                     }
                 });
 
@@ -3377,6 +3397,16 @@ namespace BeatSight.Game.Screens.Editor
                 updateBackgroundForAvailability();
             }
 
+            protected override bool OnClick(ClickEvent e)
+            {
+                if (Enabled.Value)
+                {
+                    uiAudio.PlayClick();
+                    flash.FadeTo(0.5f).FadeOut(500, Easing.OutQuint);
+                }
+                return base.OnClick(e);
+            }
+
             protected override bool OnHover(HoverEvent e)
             {
                 if (!Enabled.Value)
@@ -3384,6 +3414,8 @@ namespace BeatSight.Game.Screens.Editor
                     HoverHintChanged?.Invoke(availabilityMessage ?? "Load or create a beatmap to enable view switching.");
                     return base.OnHover(e);
                 }
+
+                uiAudio.PlayHover(e.ScreenSpaceMousePosition.X / GetContainingInputManager().DrawSize.X);
 
                 string tooltip = "";
                 switch (previewMode.Value)
@@ -3396,7 +3428,8 @@ namespace BeatSight.Game.Screens.Editor
 
                 var targetColour = EditorColours.Lighten(currentBaseColour, 1.15f);
                 background.FadeColour(targetColour, 140, Easing.OutQuint);
-                this.ScaleTo(1.05f, 140, Easing.OutQuint);
+                this.ScaleTo(1.05f, 400, Easing.OutElastic);
+                hoverGlow.FadeTo(0.2f, 200, Easing.OutQuint);
                 return base.OnHover(e);
             }
 
@@ -3405,7 +3438,20 @@ namespace BeatSight.Game.Screens.Editor
                 base.OnHoverLost(e);
                 HoverHintChanged?.Invoke(null);
                 updateBackgroundForAvailability();
-                this.ScaleTo(1f, 180, Easing.OutQuint);
+                this.ScaleTo(1f, 400, Easing.OutElastic);
+                hoverGlow.FadeOut(200);
+            }
+
+            protected override bool OnMouseDown(MouseDownEvent e)
+            {
+                this.ScaleTo(0.95f, 50, Easing.OutQuint);
+                return base.OnMouseDown(e);
+            }
+
+            protected override void OnMouseUp(MouseUpEvent e)
+            {
+                this.ScaleTo(IsHovered ? 1.05f : 1f, 800, Easing.OutElastic);
+                base.OnMouseUp(e);
             }
 
             public void SetAvailability(bool available, string? reason)
@@ -3436,6 +3482,12 @@ namespace BeatSight.Game.Screens.Editor
             private readonly SpriteText label;
             private string baseText;
 
+            private Box hoverGlow = null!;
+            private Box flash = null!;
+
+            [Resolved]
+            private UIAudioController uiAudio { get; set; } = null!;
+
             public string StatusMessage { get; private set; } = string.Empty;
             public event Action<string?>? HoverHintChanged;
 
@@ -3455,6 +3507,14 @@ namespace BeatSight.Game.Screens.Editor
                     Colour = idleColour
                 });
 
+                AddInternal(hoverGlow = new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = Color4.White,
+                    Alpha = 0,
+                    Blending = BlendingParameters.Additive
+                });
+
                 AddInternal(label = new SpriteText
                 {
                     Text = text,
@@ -3462,6 +3522,14 @@ namespace BeatSight.Game.Screens.Editor
                     Colour = EditorColours.TextPrimary,
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre
+                });
+
+                AddInternal(flash = new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = Color4.White,
+                    Alpha = 0,
+                    Blending = BlendingParameters.Additive
                 });
 
                 Enabled.BindValueChanged(e => updateEnabledState(e.NewValue), true);
@@ -3487,6 +3555,16 @@ namespace BeatSight.Game.Screens.Editor
                     HoverHintChanged?.Invoke(StatusMessage);
             }
 
+            protected override bool OnClick(ClickEvent e)
+            {
+                if (Enabled.Value)
+                {
+                    uiAudio.PlayClick();
+                    flash.FadeTo(0.5f).FadeOut(500, Easing.OutQuint);
+                }
+                return base.OnClick(e);
+            }
+
             protected override bool OnHover(HoverEvent e)
             {
                 HoverHintChanged?.Invoke(StatusMessage);
@@ -3494,8 +3572,10 @@ namespace BeatSight.Game.Screens.Editor
                 if (!Enabled.Value)
                     return false;
 
+                uiAudio.PlayHover(e.ScreenSpaceMousePosition.X / GetContainingInputManager().DrawSize.X);
                 background.FadeColour(hoverColour, 200, Easing.OutQuint);
-                this.ScaleTo(1.05f, 200, Easing.OutQuint);
+                this.ScaleTo(1.05f, 400, Easing.OutElastic);
+                hoverGlow.FadeTo(0.2f, 200, Easing.OutQuint);
                 return base.OnHover(e);
             }
 
@@ -3503,8 +3583,21 @@ namespace BeatSight.Game.Screens.Editor
             {
                 base.OnHoverLost(e);
                 background.FadeColour(Enabled.Value ? idleColour : disabledColour, 200, Easing.OutQuint);
-                this.ScaleTo(1f, 200, Easing.OutQuint);
+                this.ScaleTo(1f, 400, Easing.OutElastic);
+                hoverGlow.FadeOut(200);
                 HoverHintChanged?.Invoke(null);
+            }
+
+            protected override bool OnMouseDown(MouseDownEvent e)
+            {
+                this.ScaleTo(0.95f, 50, Easing.OutQuint);
+                return base.OnMouseDown(e);
+            }
+
+            protected override void OnMouseUp(MouseUpEvent e)
+            {
+                this.ScaleTo(IsHovered ? 1.05f : 1f, 800, Easing.OutElastic);
+                base.OnMouseUp(e);
             }
 
             private void updateEnabledState(bool enabled)

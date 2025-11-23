@@ -9,21 +9,34 @@ namespace BeatSight.Game.UI.Theming
     /// </summary>
     public static class UITheme
     {
-        public static readonly Color4 Background = new Color4(12, 14, 24, 255);
-        public static readonly Color4 BackgroundLayer = new Color4(18, 20, 32, 255);
-        public static readonly Color4 Surface = new Color4(24, 28, 44, 255);
-        public static readonly Color4 SurfaceAlt = new Color4(32, 36, 56, 255);
-        public static readonly Color4 AccentPrimary = new Color4(92, 164, 255, 255);
-        public static readonly Color4 AccentSecondary = new Color4(140, 210, 120, 255);
-        public static readonly Color4 AccentWarning = new Color4(240, 128, 84, 255);
-        public static readonly Color4 TextPrimary = new Color4(236, 242, 255, 255);
-        public static readonly Color4 TextSecondary = new Color4(190, 198, 224, 255);
-        public static readonly Color4 TextMuted = new Color4(142, 152, 186, 255);
-        public static readonly Color4 Divider = new Color4(52, 60, 92, 160);
-        public static readonly Color4 KickGlobalFill = new Color4(160, 140, 230, 180);
-        public static readonly Color4 KickGlobalGlow = new Color4(255, 220, 255, 120);
+        // Modern Dark/Neon Theme
+        public static readonly Color4 Background = new Color4(5, 5, 10, 255); // Deep dark blue/black
+        public static readonly Color4 BackgroundLayer = new Color4(15, 15, 25, 255); // Slightly lighter layer
+        public static readonly Color4 Surface = new Color4(25, 25, 40, 255); // Card surface
+        public static readonly Color4 SurfaceAlt = new Color4(35, 35, 55, 255); // Alternate surface
 
-        public static readonly MarginPadding ScreenPadding = new MarginPadding { Horizontal = 40, Vertical = 32 };
+        public static readonly Color4 AccentPrimary = new Color4(0, 200, 255, 255); // Cyan Neon
+        public static readonly Color4 AccentSecondary = new Color4(255, 0, 128, 255); // Magenta Neon
+        public static readonly Color4 AccentWarning = new Color4(255, 165, 0, 255); // Orange Neon
+        public static readonly Color4 AccentSuccess = new Color4(0, 255, 128, 255); // Green Neon
+        public static readonly Color4 AccentError = new Color4(255, 50, 50, 255); // Red Neon
+
+        public static readonly Color4 TextPrimary = new Color4(255, 255, 255, 255);
+        public static readonly Color4 TextSecondary = new Color4(200, 200, 220, 255);
+        public static readonly Color4 TextMuted = new Color4(100, 100, 120, 255);
+
+        public static readonly Color4 Divider = new Color4(255, 255, 255, 30);
+        public static readonly Color4 Overlay = new Color4(0, 0, 0, 150); // Dark overlay for modals
+
+        // Layout Constants
+        public const float MainLogoTitleSize = 80f;
+        public const float MainLogoSubtitleSize = 24f;
+        public const float MainLogoSubtitleY = 60f; // Distance from center to subtitle
+
+        public static readonly Color4 KickGlobalFill = new Color4(0, 200, 255, 100);
+        public static readonly Color4 KickGlobalGlow = new Color4(0, 200, 255, 200);
+
+        public static readonly MarginPadding ScreenPadding = new MarginPadding { Horizontal = 50, Vertical = 40 };
 
         private static readonly Color4[] lanePalette =
         {

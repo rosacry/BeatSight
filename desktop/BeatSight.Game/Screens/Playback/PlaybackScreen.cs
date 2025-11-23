@@ -130,7 +130,7 @@ namespace BeatSight.Game.Screens.Playback
         {
             MinValue = 0,
             MaxValue = 1,
-            Precision = 0.05,
+            Precision = 0.01,
             Default = 0.6,
             Value = 0.6
         };
@@ -260,7 +260,7 @@ namespace BeatSight.Game.Screens.Playback
                 Child = backgroundBase = new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = new Color4(10, 10, 18, 255)
+                    Colour = new Color4(10, 10, 18, 255).Opacity(0.8f) // Semi-transparent
                 }
             };
 
@@ -287,6 +287,7 @@ namespace BeatSight.Game.Screens.Playback
 
             InternalChildren = new Drawable[]
             {
+                // Background is now global
                 backgroundBlurContainer,
                 backgroundDim,
                 new Container

@@ -12,7 +12,7 @@ namespace BeatSight.Game.UI.Components
     {
         private readonly SafeAreaContainer safeArea;
         private readonly Container contentContainer;
-        private readonly BasicScrollContainer? scrollContainer;
+        private readonly BeatSightScrollContainer? scrollContainer;
 
         public ScreenEdgeContainer(bool scrollable = true, Direction scrollDirection = Direction.Vertical)
         {
@@ -32,7 +32,7 @@ namespace BeatSight.Game.UI.Components
 
             if (scrollable)
             {
-                scrollContainer = new BasicScrollContainer(scrollDirection)
+                scrollContainer = new BeatSightScrollContainer(scrollDirection)
                 {
                     RelativeSizeAxes = Axes.Both,
                     Child = contentContainer

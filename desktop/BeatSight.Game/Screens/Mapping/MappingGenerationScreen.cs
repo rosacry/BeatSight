@@ -54,7 +54,7 @@ namespace BeatSight.Game.Screens.Mapping
         private DetectionDebugOverlay debugOverlay = null!;
         private BeatSightSliderBar sensitivitySlider = null!;
         private BeatSight.Game.UI.Components.Dropdown<QuantizationGridSetting> quantizationDropdown = null!;
-        private BasicCheckbox debugOverlayCheckbox = null!;
+        private BeatSightCheckbox debugOverlayCheckbox = null!;
         private Container progressBarContainer = null!;
         private WeightedProgressBar weightedProgressBar = null!;
         private Container dropdownOverlay = null!;
@@ -68,7 +68,10 @@ namespace BeatSight.Game.Screens.Mapping
         private readonly Bindable<int> detectionSensitivity = new Bindable<int>();
         private readonly Bindable<QuantizationGridSetting> quantizationGrid = new Bindable<QuantizationGridSetting>();
         private readonly Bindable<bool> debugOverlayEnabled = new Bindable<bool>();
-        private readonly BindableDouble sensitivityValue = new BindableDouble();
+        private readonly BindableDouble sensitivityValue = new BindableDouble
+        {
+            Precision = 1
+        };
         private readonly Bindable<bool> metronomeEnabled = new Bindable<bool>();
         private readonly Bindable<MetronomeSoundOption> metronomeSound = new Bindable<MetronomeSoundOption>();
         private readonly Bindable<bool> drumStemOnly = new Bindable<bool>();
@@ -92,9 +95,9 @@ namespace BeatSight.Game.Screens.Mapping
         private Container advancedSettingsContainer = null!;
         private FillFlowContainer advancedSettingsBody = null!;
         private FillFlowContainer livePlaybackSettingsContainer = null!;
-        private BasicCheckbox metronomeCheckbox = null!;
+        private BeatSightCheckbox metronomeCheckbox = null!;
         private BeatSight.Game.UI.Components.Dropdown<MetronomeSoundOption> metronomeSoundDropdown = null!;
-        private BasicCheckbox drumStemCheckbox = null!;
+        private BeatSightCheckbox drumStemCheckbox = null!;
         private BeatSight.Game.UI.Components.Dropdown<NoteSkinOption> noteSkinDropdown = null!;
         private SpriteText livePlaybackStatusText = null!;
         private IReadOnlyDictionary<GenerationStageId, double>? lastStageDurations;
@@ -418,13 +421,13 @@ namespace BeatSight.Game.Screens.Mapping
 
         private Drawable createLivePlaybackControls()
         {
-            metronomeCheckbox = new BasicCheckbox
+            metronomeCheckbox = new BeatSightCheckbox
             {
                 LabelText = "Metronome"
             };
             metronomeCheckbox.Current.BindTo(metronomeEnabled);
 
-            drumStemCheckbox = new BasicCheckbox
+            drumStemCheckbox = new BeatSightCheckbox
             {
                 LabelText = "Drum stem only"
             };
@@ -624,7 +627,7 @@ namespace BeatSight.Game.Screens.Mapping
                 QuantizationGridSetting.Quarter
             };
 
-            debugOverlayCheckbox = new BasicCheckbox
+            debugOverlayCheckbox = new BeatSightCheckbox
             {
                 LabelText = "Show Detection Debug Overlay"
             };

@@ -62,11 +62,27 @@ namespace BeatSight.Game.UI.Components
             TooltipSuppressionChanged?.Invoke(suppressed);
         }
 
+        internal void RemoveDropdownMenu(Drawable menu) => RemoveInternal(menu, false);
+        internal void AddDropdownMenu(Drawable menu) => AddInternal(menu);
+
         protected override DropdownMenu CreateMenu() => new DropdownMenu(this);
 
         protected override DropdownHeader CreateHeader()
         {
             dropdownHeader = new DropdownHeader();
+            dropdownHeader.SearchStarted += () =>
+            {
+                if (Menu != null && Menu.State != MenuState.Open)
+                    Menu.State = MenuState.Open;
+            };
+            dropdownHeader.SearchEnded += () =>
+            {
+                if (Menu != null && Menu.State == MenuState.Open)
+                {
+                    // Schedule the close to avoid race conditions with header clicks
+                    Scheduler.AddOnce(() => Menu.State = MenuState.Closed);
+                }
+            };
             return dropdownHeader;
         }
 
@@ -109,6 +125,9 @@ namespace BeatSight.Game.UI.Components
             private DropdownSearchBar? searchBar;
             private const float header_corner_radius = 8f;
 
+            public Action? SearchStarted;
+            public Action? SearchEnded;
+
             public DropdownHeader()
             {
                 Masking = true;
@@ -116,6 +135,9 @@ namespace BeatSight.Game.UI.Components
                 MaskingSmoothness = 1.5f;
                 applyBackgroundMasking();
                 Foreground.Padding = new MarginPadding { Horizontal = 10, Top = 10, Bottom = 2 };
+
+                BackgroundColour = UITheme.SurfaceAlt;
+                BackgroundColourHover = new Color4(50, 50, 70, 255);
             }
             protected override void LoadComplete()
             {
@@ -163,17 +185,41 @@ namespace BeatSight.Game.UI.Components
                 searchBar = new DropdownSearchBar();
                 searchBar.SearchActive += active =>
                 {
-                    foreach (var child in Foreground.Children)
-                    {
-                        if (child != searchBar)
-                            child.Alpha = active ? 0 : 1;
-                    }
+                    updateChildrenVisibility();
+
+                    if (active)
+                        SearchStarted?.Invoke();
+                    else
+                        SearchEnded?.Invoke();
                 };
+                searchBar.SearchTerm.BindValueChanged(_ => updateChildrenVisibility());
                 return searchBar;
+            }
+
+            private void updateChildrenVisibility()
+            {
+                if (searchBar == null) return;
+
+                bool active = searchBar.IsSearchFocused;
+                bool hasText = !string.IsNullOrEmpty(searchBar.SearchTerm.Value);
+                // Hide children only if search is active AND user has typed something.
+                // This allows the selected item text to remain visible when the search bar is focused but empty.
+                bool shouldHide = active && hasText;
+
+                foreach (var child in Foreground.Children)
+                {
+                    if (child != searchBar)
+                        child.Alpha = shouldHide ? 0 : 1;
+                }
             }
 
             public void SetSearchEnabled(bool enabled)
                 => searchBar?.SetSearchEnabled(enabled);
+
+            public void FocusSearchText()
+                => searchBar?.FocusSearchTextBox();
+
+            public bool IsSearchFocused => searchBar?.IsSearchFocused ?? false;
 
             public Colour4 GetCurrentBackgroundColour() => Background.Colour;
 
@@ -191,6 +237,7 @@ namespace BeatSight.Game.UI.Components
 
             public DropdownSearchBar()
             {
+                RelativeSizeAxes = Axes.Both;
                 Masking = true;
                 CornerRadius = search_corner_radius;
                 MaskingSmoothness = 1.5f;
@@ -198,7 +245,7 @@ namespace BeatSight.Game.UI.Components
                 AddInternal(background = new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = UITheme.Surface,
+                    Colour = UITheme.SurfaceAlt,
                     Depth = 1
                 });
             }
@@ -229,7 +276,7 @@ namespace BeatSight.Game.UI.Components
             public void SetSearchEnabled(bool enabled)
             {
                 searchAllowed = enabled;
-                AlwaysDisplayOnFocus = enabled;
+                AlwaysDisplayOnFocus = false;
                 Alpha = enabled ? 1 : 0;
                 Width = enabled ? 1 : 0;
                 AlwaysPresent = enabled;
@@ -252,6 +299,22 @@ namespace BeatSight.Game.UI.Components
             public override bool PropagateNonPositionalInputSubTree => searchAllowed && base.PropagateNonPositionalInputSubTree;
             public override bool PropagatePositionalInputSubTree => searchAllowed && base.PropagatePositionalInputSubTree;
 
+            protected override bool OnClick(ClickEvent e)
+            {
+                GetContainingFocusManager()?.ChangeFocus(textBox);
+                return true;
+            }
+
+            public void FocusSearchTextBox()
+            {
+                if (!searchAllowed || textBox == null)
+                    return;
+
+                Schedule(() => GetContainingFocusManager()?.ChangeFocus(textBox));
+            }
+
+            public bool IsSearchFocused => textBox?.HasFocus ?? false;
+
             private sealed partial class DropdownSearchTextBox : BasicTextBox
             {
                 private bool typingEnabled = true;
@@ -263,7 +326,11 @@ namespace BeatSight.Game.UI.Components
                 {
                     BackgroundUnfocused = Color4.Transparent;
                     BackgroundFocused = Color4.Transparent;
+                    Placeholder.Font = BeatSightFont.Button();
+                    Margin = new MarginPadding { Horizontal = 5 };
                 }
+
+                protected override Drawable GetDrawableCharacter(char c) => new SpriteText { Text = c.ToString(), Font = BeatSightFont.Button() };
 
                 public void SetTypingEnabled(bool enabled)
                 {
@@ -281,6 +348,9 @@ namespace BeatSight.Game.UI.Components
                 {
                     base.OnFocus(e);
                     OnFocusAction?.Invoke();
+                    // We clear the text on focus to ensure the search starts fresh,
+                    // but since we now keep the label visible until text is entered,
+                    // this clearing is invisible to the user until they type.
                     if (typingEnabled)
                         Schedule(() => Text = string.Empty);
                 }
@@ -316,6 +386,7 @@ namespace BeatSight.Game.UI.Components
             private float? forcedOverlayWidth;
             private const float menu_corner_radius = 8f;
             private bool pointerButtonHeld;
+            private bool isConstrained;
 
             public DropdownMenu(Dropdown<T> owner)
             {
@@ -325,15 +396,39 @@ namespace BeatSight.Game.UI.Components
                 // Match the header's masking settings to ensure visual width alignment
                 Masking = true;
                 CornerRadius = 0;
-                MaskingSmoothness = 1.5f;
-                BorderThickness = 0;
 
-                StateChanged += onStateChanged;
-                MaskingContainer.CornerRadius = menu_corner_radius;
-                MaskingContainer.Masking = true;
-                MaskingContainer.MaskingSmoothness = 1.5f;
-                MaskingContainer.EdgeEffect = new EdgeEffectParameters { Type = EdgeEffectType.None };
+                BackgroundColour = UITheme.SurfaceAlt;
             }
+
+            public override bool AcceptsFocus => !owner.SearchEnabled && base.AcceptsFocus;
+
+            protected override void AnimateOpen()
+            {
+                // If we have an overlay, moveToOverlay will handle the animation after reparenting.
+                if (owner.OverlayLayer != null)
+                    return;
+
+                AlwaysPresent = true;
+                this.ClearTransforms();
+                this.ScaleTo(new Vector2(1, 0)).ScaleTo(Vector2.One, 300, Easing.OutQuint);
+                this.FadeInFromZero(300, Easing.OutQuint);
+            }
+
+            protected override void AnimateClose()
+            {
+                // If we have an overlay, we want to hide immediately to avoid visual glitches during reparenting.
+                if (owner.OverlayLayer != null)
+                {
+                    this.Hide();
+                    AlwaysPresent = false;
+                    return;
+                }
+
+                this.FadeOut(300, Easing.OutQuint).OnComplete(_ => AlwaysPresent = false);
+                this.ScaleTo(new Vector2(1, 0), 300, Easing.OutQuint);
+            }
+
+            protected override ScrollContainer<Drawable> CreateScrollContainer(Direction direction) => new BeatSightScrollContainer(direction);
 
             protected override void Update()
             {
@@ -371,6 +466,19 @@ namespace BeatSight.Game.UI.Components
                 MaskingContainer.MaskingSmoothness = 1.5f;
             }
 
+            public override MenuState State
+            {
+                get => base.State;
+                set
+                {
+                    if (value == base.State)
+                        return;
+
+                    base.State = value;
+                    onStateChanged(value);
+                }
+            }
+
             private void onStateChanged(MenuState state)
             {
                 Logger.Log($"DropdownMenu state -> {state}", LoggingTarget.Runtime, LogLevel.Verbose);
@@ -381,7 +489,7 @@ namespace BeatSight.Game.UI.Components
                     {
                         Logger.Log("DropdownMenu ignoring close triggered during overlay transfer", LoggingTarget.Runtime, LogLevel.Verbose);
                         suppressNextClose = false;
-                        Scheduler.AddOnce(Open);
+                        owner.Scheduler.AddOnce(Open);
                         return;
                     }
 
@@ -397,9 +505,10 @@ namespace BeatSight.Game.UI.Components
                 }
 
                 isOpen = true;
-                pendingScrollFrames = 5;
+                pendingScrollFrames = 0;
                 scrollCompleted = false;
-                Scheduler.AddOnce(() =>
+
+                owner.Scheduler.AddOnce(() =>
                 {
                     suppressNextClose = true;
                     moveToOverlay();
@@ -422,11 +531,14 @@ namespace BeatSight.Game.UI.Components
                 if (parent == null)
                     return;
 
-                if (parent is not IContainerCollection<Drawable> parentCollection)
+                // Allow moving from Dropdown (CompositeDrawable) or any Container
+                if (parent != owner && parent is not IContainerCollection<Drawable>)
                     return;
 
                 originalParent = parent;
-                originalParentCollection = parentCollection;
+                if (parent is IContainerCollection<Drawable> collection)
+                    originalParentCollection = collection;
+
                 originalPosition = Position;
                 originalRelativePositionAxes = RelativePositionAxes;
                 originalRelativeSizeAxes = RelativeSizeAxes;
@@ -440,7 +552,11 @@ namespace BeatSight.Game.UI.Components
 
                 var targetOverlayParent = getOverlayParent(overlay);
 
-                parentCollection.Remove(this, false);
+                if (parent == owner)
+                    owner.RemoveDropdownMenu(this);
+                else if (parent is IContainerCollection<Drawable> collectionToRemove)
+                    collectionToRemove.Remove(this, false);
+
                 targetOverlayParent.Add(this);
 
                 if (targetOverlayParent == overlay)
@@ -451,7 +567,7 @@ namespace BeatSight.Game.UI.Components
                 RelativeSizeAxes = Axes.None;
                 Anchor = Anchor.TopLeft;
                 Origin = Anchor.TopLeft;
-                AlwaysPresent = false;
+                AlwaysPresent = true;
                 Alpha = 1;
                 Scale = Vector2.One;
                 overlayRoot = overlay;
@@ -459,11 +575,25 @@ namespace BeatSight.Game.UI.Components
 
                 applyMenuPlacement(targetOverlayParent);
 
+                this.ClearTransforms();
+                this.ScaleTo(new Vector2(1, 0)).ScaleTo(Vector2.One, 300, Easing.OutQuint);
+                this.FadeInFromZero(300, Easing.OutQuint);
+
                 usingOverlay = true;
                 updateOverlayBounds();
-                GetContainingFocusManager()?.ChangeFocus(this);
-                Logger.Log("DropdownMenu overlay placement complete", LoggingTarget.Runtime, LogLevel.Verbose);
+
+                if (owner.SearchEnabled)
+                {
+                    owner.Scheduler.AddOnce(() => owner.dropdownHeader?.FocusSearchText());
+                }
+                else
+                {
+                    GetContainingFocusManager()?.ChangeFocus(this);
+                }
+
                 suppressNextClose = false;
+
+                Logger.Log("DropdownMenu overlay placement complete", LoggingTarget.Runtime, LogLevel.Verbose);
             }
 
             private void restoreParent()
@@ -473,13 +603,10 @@ namespace BeatSight.Game.UI.Components
 
                 Logger.Log($"DropdownMenu restoring parent (ParentBefore={Parent?.GetType().Name})", LoggingTarget.Runtime, LogLevel.Verbose);
 
+                var parent = originalParent;
                 originalParent = null;
-                var parentCollection = originalParentCollection;
                 originalParentCollection = null;
                 usingOverlay = false;
-
-                if (parentCollection == null)
-                    return;
 
                 AlwaysPresent = true;
 
@@ -500,7 +627,11 @@ namespace BeatSight.Game.UI.Components
 
                 Depth = originalDepth;
 
-                parentCollection.Add(this);
+                if (parent == owner)
+                    owner.AddDropdownMenu(this);
+                else if (parent is IContainerCollection<Drawable> collection)
+                    collection.Add(this);
+
                 Logger.Log("DropdownMenu parent restored", LoggingTarget.Runtime, LogLevel.Verbose);
                 forcedOverlayWidth = null;
                 RelativePositionAxes = originalRelativePositionAxes;
@@ -529,19 +660,22 @@ namespace BeatSight.Game.UI.Components
                     updateOverlayBounds();
                 }
 
-                if (!isOpen || scrollCompleted)
+                if (!isOpen)
                     return;
 
                 if (pendingScrollFrames > 0)
                 {
                     pendingScrollFrames--;
-                    if (tryScrollSelectedIntoView(false))
-                        scrollCompleted = true;
+                    ContentContainer.ScrollbarVisible = false;
+                    if (!scrollCompleted)
+                        scrollCompleted = tryScrollSelectedIntoView(false);
                     return;
                 }
 
-                if (tryScrollSelectedIntoView(true))
-                    scrollCompleted = true;
+                ContentContainer.ScrollbarVisible = isConstrained && ContentContainer.ScrollContent.DrawHeight > ContentContainer.DrawHeight + Precision.FLOAT_EPSILON;
+
+                if (!scrollCompleted)
+                    scrollCompleted = tryScrollSelectedIntoView(true);
             }
 
             private bool tryScrollSelectedIntoView(bool allowFallback)
@@ -576,7 +710,27 @@ namespace BeatSight.Game.UI.Components
             protected override void OnFocusLost(FocusLostEvent e) => base.OnFocusLost(e);
 
             protected override DrawableDropdownMenuItem CreateDrawableDropdownMenuItem(MenuItem item)
-                => new HoverStableDropdownMenuItem(this, item);
+                => new DrawableBeatSightDropdownMenuItem(item);
+
+            private partial class DrawableBeatSightDropdownMenuItem : DrawableDropdownMenuItem
+            {
+                public DrawableBeatSightDropdownMenuItem(MenuItem item)
+                    : base(item)
+                {
+                    BackgroundColour = Color4.Transparent;
+                    BackgroundColourHover = new Color4(50, 50, 70, 255);
+                    BackgroundColourSelected = UITheme.AccentPrimary;
+                }
+
+                protected override Drawable CreateContent() => new SpriteText
+                {
+                    Text = Item.Text.Value.ToString(),
+                    Font = BeatSightFont.Button(),
+                    Colour = UITheme.TextPrimary,
+                    Margin = new MarginPadding { Horizontal = 10, Vertical = 5 },
+                    UseFullGlyphHeight = false,
+                };
+            }
 
             protected override bool OnHover(HoverEvent e)
             {
@@ -695,8 +849,8 @@ namespace BeatSight.Game.UI.Components
             {
                 float totalHeight = ContentContainer.Padding.Top + ContentContainer.Padding.Bottom;
 
-                foreach (var child in ContentContainer.Children)
-                    totalHeight += child.BoundingBox.Height;
+                foreach (var item in VisibleMenuItems)
+                    totalHeight += item.DrawHeight;
 
                 // When the menu has fewer items than the maximum displayable count we want to
                 // collapse the container to match the visible content rather than keeping the
@@ -704,7 +858,14 @@ namespace BeatSight.Game.UI.Components
                 // the attached screenshot. Fall back to the bounding box only when no content has
                 // been computed yet so the caller still gets a sensible non-zero value.
                 if (Precision.AlmostEquals(totalHeight, 0))
-                    totalHeight = ContentContainer.BoundingBox.Height;
+                {
+                    // If DrawHeight is not ready, try to estimate based on item count
+                    var count = VisibleMenuItems.Count();
+                    if (count > 0)
+                        totalHeight = count * 30f; // Approximate height per item
+                    else
+                        totalHeight = ContentContainer.BoundingBox.Height;
+                }
 
                 return totalHeight;
             }
@@ -724,6 +885,9 @@ namespace BeatSight.Game.UI.Components
                 var menuTop = headerBottomLeft.Y;
                 var availableHeight = Math.Max(0, parentContainer.DrawSize.Y - menuTop);
                 var menuHeight = computeOverlayMenuHeight(availableHeight, parentContainer.DrawSize.Y);
+                var contentHeight = getActualContentHeight();
+
+                isConstrained = menuHeight < contentHeight - Precision.FLOAT_EPSILON;
 
                 forcedOverlayWidth = headerWidth;
                 Size = new Vector2(forcedOverlayWidth.Value, menuHeight);
@@ -862,8 +1026,6 @@ namespace BeatSight.Game.UI.Components
 
                 base.UpdateSize(newSize);
             }
-
-
         }
     }
 }

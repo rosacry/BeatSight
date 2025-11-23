@@ -11,6 +11,16 @@ namespace BeatSight.Game.UI.Components
         {
             Masking = true;
             CornerRadius = default_corner_radius;
+            CheckedColor = BeatSight.Game.UI.Theming.UITheme.AccentPrimary;
+            UncheckedColor = BeatSight.Game.UI.Theming.UITheme.Surface;
+            BorderColour = BeatSight.Game.UI.Theming.UITheme.SurfaceAlt;
+            BorderThickness = 3;
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+            Current.TriggerChange();
         }
     }
 }

@@ -87,11 +87,19 @@ namespace BeatSight.Game.Screens.SongSelect
 
             flow.Clear();
 
+            int i = 0;
             foreach (var beatmap in filtered)
             {
                 var panel = new BeatmapPanel(beatmap);
                 panel.Action = () => select(beatmap, panel);
+
+                // Staggered animation
+                panel.Alpha = 0;
+                panel.X = 50;
+                panel.Delay(i * 30).FadeIn(300).MoveToX(0, 500, Easing.OutQuint);
+
                 flow.Add(panel);
+                i++;
             }
 
             // Reselect if possible, or clear selection
@@ -106,14 +114,6 @@ namespace BeatSight.Game.Screens.SongSelect
             {
                 selectedBeatmap.Value = null;
             }
-        }
-
-        public void SelectRandom()
-        {
-            if (flow.Children.Count == 0) return;
-            var random = new Random();
-            var panel = flow.Children[random.Next(flow.Children.Count)];
-            panel.TriggerClick();
         }
 
         private bool matchesFilter(BeatmapLibrary.BeatmapEntry entry, string query)
@@ -189,7 +189,7 @@ namespace BeatSight.Game.Screens.SongSelect
                     leftBar = new Box
                     {
                         RelativeSizeAxes = Axes.Y,
-                        Width = 8,
+                        Width = 0,
                         Colour = UITheme.AccentPrimary,
                         Alpha = 0 // Hidden by default
                     },
@@ -229,7 +229,7 @@ namespace BeatSight.Game.Screens.SongSelect
                                     {
                                         Text = $"[{entry.Beatmap.Metadata.Difficulty:F1}★] mapped by {entry.Beatmap.Metadata.Creator}",
                                         Font = BeatSightFont.Caption(14f),
-                                        Colour = UITheme.TextMuted,
+                                        Colour = getDifficultyColour((float)entry.Beatmap.Metadata.Difficulty),
                                         Truncate = true,
                                         RelativeSizeAxes = Axes.X
                                     }
@@ -257,6 +257,7 @@ namespace BeatSight.Game.Screens.SongSelect
                         BorderColour = UITheme.AccentPrimary;
                         background.FadeColour(UITheme.SurfaceAlt, 200, Easing.OutQuint);
                         this.ResizeTo(new Vector2(1.02f, 100), 300, Easing.OutElastic); // Elastic expand
+                        leftBar.ResizeWidthTo(8, 300, Easing.OutElastic);
                         leftBar.FadeIn(200);
                         break;
 
@@ -264,9 +265,18 @@ namespace BeatSight.Game.Screens.SongSelect
                         BorderColour = Color4.Transparent;
                         background.FadeColour(UITheme.Surface, 200, Easing.OutQuint);
                         this.ResizeTo(new Vector2(1.0f, 80), 200, Easing.OutQuint);
+                        leftBar.ResizeWidthTo(0, 200, Easing.OutQuint);
                         leftBar.FadeOut(200);
                         break;
                 }
+            }
+
+            private Color4 getDifficultyColour(float stars)
+            {
+                if (stars < 2.0f) return UITheme.AccentSuccess;
+                if (stars < 4.0f) return UITheme.AccentWarning;
+                if (stars < 5.5f) return UITheme.AccentError;
+                return UITheme.AccentSecondary;
             }
 
             protected override bool OnHover(HoverEvent e)

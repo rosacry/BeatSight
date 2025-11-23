@@ -28,7 +28,27 @@ namespace BeatSight.Game.UI.Components
         public BeatSightSliderBar()
         {
             Masking = true;
-            CornerRadius = 6;
+            CornerRadius = 10;
+        }
+
+        [osu.Framework.Allocation.BackgroundDependencyLoader]
+        private void load()
+        {
+            BackgroundColour = BeatSight.Game.UI.Theming.UITheme.SurfaceAlt;
+            SelectionColour = BeatSight.Game.UI.Theming.UITheme.AccentPrimary;
+        }
+
+        protected override void OnFocus(FocusEvent e)
+        {
+            base.OnFocus(e);
+            BorderThickness = 2;
+            BorderColour = BeatSight.Game.UI.Theming.UITheme.AccentPrimary;
+        }
+
+        protected override void OnFocusLost(FocusLostEvent e)
+        {
+            base.OnFocusLost(e);
+            BorderThickness = 0;
         }
 
         public double KeyboardStepMultiplier { get; set; } = defaultKeyboardMultiplier;

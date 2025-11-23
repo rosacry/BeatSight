@@ -39,10 +39,15 @@ using osuTK.Graphics;
 using osuTK.Input;
 using BeatSight.Game.Screens;
 
+using BeatSight.Game.UI.Overlays;
+
 namespace BeatSight.Game.Screens.Settings
 {
     public partial class SettingsScreen : BeatSightScreen
     {
+        [Resolved]
+        private UIScaleWizard uiScaleWizard { get; set; } = null!;
+
         private BeatSightConfigManager config = null!;
         private GameHost host = null!;
 
@@ -54,6 +59,10 @@ namespace BeatSight.Game.Screens.Settings
         private Container dropdownOverlay = null!;
         private SettingsTooltipOverlay tooltipOverlay = null!;
         private Container overlayRoot = null!;
+
+        private Bindable<bool> showGlobalBackground = null!;
+        private Bindable<double> globalBackgroundOpacity = null!;
+        private Box rightAreaBackground = null!;
 
         private enum SettingsCategory
         {
@@ -67,6 +76,12 @@ namespace BeatSight.Game.Screens.Settings
         {
             config = configManager;
             host = gameHost;
+
+            showGlobalBackground = config.GetBindable<bool>(BeatSightSetting.ShowGlobalBackground);
+            globalBackgroundOpacity = config.GetBindable<double>(BeatSightSetting.GlobalBackgroundOpacity);
+
+            showGlobalBackground.BindValueChanged(_ => updateBackgroundState());
+            globalBackgroundOpacity.BindValueChanged(_ => updateBackgroundState(), true);
 
             backButton = new BackButton
             {
@@ -107,51 +122,36 @@ namespace BeatSight.Game.Screens.Settings
 
             InternalChildren = new Drawable[]
             {
+                // Background matching SongSelectScreen
                 new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = UITheme.Background,
-                    Depth = 2 // Background at the very back
+                    Colour = Color4.Black,
+                    Alpha = 0.3f
                 },
-                new ScreenEdgeContainer(scrollable: false)
+                new SafeAreaContainer
                 {
-                    Content = new GridContainer
+                    RelativeSizeAxes = Axes.Both,
+                    Children = new Drawable[]
                     {
-                        RelativeSizeAxes = Axes.Both,
-                        Depth = 1, // Render below dropdowns
-                        RowDimensions = new[]
+                        new GridContainer
                         {
-                            new Dimension(GridSizeMode.Absolute, 80),
-                            new Dimension()
-                        },
-                        Content = new[]
-                        {
-                            new Drawable[] { createHeader() },
-                            new Drawable[]
+                            RelativeSizeAxes = Axes.Both,
+                            ColumnDimensions = new[]
                             {
-                                new GridContainer
+                                new Dimension(GridSizeMode.Absolute, 250),
+                                new Dimension()
+                            },
+                            Content = new[]
+                            {
+                                new Drawable[]
                                 {
-                                    RelativeSizeAxes = Axes.Both,
-                                    ColumnDimensions = new[]
-                                    {
-                                        new Dimension(GridSizeMode.Absolute, 250),
-                                        new Dimension()
-                                    },
-                                    Content = new[]
-                                    {
-                                        new Drawable[]
-                                        {
-                                            createSidebar(),
-                                            contentContainer = new Container
-                                            {
-                                                RelativeSizeAxes = Axes.Both,
-                                                Padding = UITheme.ScreenPadding
-                                            }
-                                        }
-                                    }
+                                    createSidebar(),
+                                    createRightArea()
                                 }
                             }
-                        }
+                        },
+                        createHeader()
                     }
                 },
                 overlayRoot
@@ -160,6 +160,8 @@ namespace BeatSight.Game.Screens.Settings
 
             // Show playback settings by default
             showSection(SettingsCategory.Playback);
+
+            updateBackgroundState();
         }
 
 
@@ -175,7 +177,7 @@ namespace BeatSight.Game.Screens.Settings
                         RelativeSizeAxes = Axes.Both,
                         Colour = UITheme.SurfaceAlt
                     },
-                    new BasicScrollContainer
+                    new BeatSightScrollContainer
                     {
                         RelativeSizeAxes = Axes.Both,
                         ClampExtension = 0,
@@ -185,7 +187,7 @@ namespace BeatSight.Game.Screens.Settings
                             AutoSizeAxes = Axes.Y,
                             Direction = FillDirection.Vertical,
                             Spacing = new Vector2(0, 4),
-                            Padding = new MarginPadding(20),
+                            Padding = new MarginPadding { Top = 110, Left = 20, Right = 20, Bottom = 40 },
                             Children = new Drawable[]
                             {
                                 createSectionButton(SettingsCategory.Playback, "Playback"),
@@ -234,13 +236,54 @@ namespace BeatSight.Game.Screens.Settings
                 case SettingsCategory.Audio:
                     return new AudioSettingsSection(config, host, dropdownOverlay, tooltipOverlay);
                 case SettingsCategory.Graphics:
-                    return new GraphicsSettingsSection(config, host, dropdownOverlay, tooltipOverlay);
+                    return new GraphicsSettingsSection(config, host, dropdownOverlay, tooltipOverlay, uiScaleWizard);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(category), category, null);
             }
         }
 
-        private Drawable createHeader()
+        private void updateBackgroundState()
+        {
+            if (rightAreaBackground == null) return;
+
+            if (showGlobalBackground.Value)
+            {
+                // Invert opacity: 100% background opacity = 0% overlay opacity
+                rightAreaBackground.Alpha = 1.0f - (float)globalBackgroundOpacity.Value;
+            }
+            else
+            {
+                rightAreaBackground.Alpha = 1.0f;
+            }
+        }
+
+        private Drawable createRightArea()
+        {
+            return new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                Children = new Drawable[]
+                {
+                    rightAreaBackground = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = UITheme.BackgroundLayer
+                    },
+                    new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Padding = new MarginPadding { Top = 100 },
+                        Child = contentContainer = new Container
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Padding = UITheme.ScreenPadding
+                        }
+                    }
+                }
+            };
+        }
+
+        private Drawable createFooter()
         {
             return new Container
             {
@@ -250,21 +293,39 @@ namespace BeatSight.Game.Screens.Settings
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = UITheme.Surface
+                        Colour = UITheme.SurfaceAlt
+                    }
+                }
+            };
+        }
+
+        private Drawable createHeader()
+        {
+            return new Container
+            {
+                RelativeSizeAxes = Axes.X,
+                Height = 100,
+                Children = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = UITheme.Surface,
+                        Alpha = 1f
                     },
                     new Container
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Padding = new MarginPadding { Horizontal = 30 },
+                        Padding = new MarginPadding { Horizontal = 40 },
                         Children = new Drawable[]
                         {
                             new SpriteText
                             {
-                                Text = "Settings",
-                                Font = BeatSightFont.Title(34f),
-                                Colour = UITheme.TextPrimary,
+                                Text = "SETTINGS",
+                                Font = BeatSightFont.Title(40f),
+                                Colour = UITheme.AccentPrimary,
                                 Anchor = Anchor.Centre,
-                                Origin = Anchor.Centre
+                                Origin = Anchor.Centre,
                             }
                         }
                     }
@@ -463,12 +524,12 @@ namespace BeatSight.Game.Screens.Settings
     {
         private readonly string title;
         protected Container DropdownOverlay { get; }
-        private BasicScrollContainer sectionScrollContainer = null!;
+        private BeatSightScrollContainer sectionScrollContainer = null!;
         private FillFlowContainer contentFlow = null!;
         private FillFlowContainer sectionBody = null!;
         protected SettingsTooltipOverlay TooltipOverlay { get; }
         protected const float dropdown_menu_max_height = 240;
-        protected BasicScrollContainer ScrollViewport => sectionScrollContainer;
+        protected BeatSightScrollContainer ScrollViewport => sectionScrollContainer;
         protected enum SliderToggleMode
         {
             DisableSlider,
@@ -514,7 +575,7 @@ namespace BeatSight.Game.Screens.Settings
                 sectionBody
             });
 
-            sectionScrollContainer = new BasicScrollContainer
+            sectionScrollContainer = new BeatSightScrollContainer
             {
                 RelativeSizeAxes = Axes.Both,
                 ClampExtension = 0,
@@ -1315,23 +1376,11 @@ namespace BeatSight.Game.Screens.Settings
                 Child = new Container
                 {
                     AutoSizeAxes = Axes.Both,
-                    Children = new Drawable[]
+                    Padding = new MarginPadding { Horizontal = 12, Vertical = 10 },
+                    Child = tooltipText = new TooltipTextFlow(tooltip_max_width)
                     {
-                        new Box
-                        {
-                            RelativeSizeAxes = Axes.Both,
-                            Colour = UITheme.SurfaceAlt.Opacity(0.94f)
-                        },
-                        new Container
-                        {
-                            AutoSizeAxes = Axes.Both,
-                            Padding = new MarginPadding { Horizontal = 12, Vertical = 10 },
-                            Child = tooltipText = new TooltipTextFlow(tooltip_max_width)
-                            {
-                                Anchor = Anchor.Centre,
-                                Origin = Anchor.Centre
-                            }
-                        }
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre
                     }
                 }
             };
@@ -1691,10 +1740,12 @@ namespace BeatSight.Game.Screens.Settings
                 Width = 220,
                 Height = 36,
                 Text = "Reset All Settings",
-                BackgroundColour = defaultColour,
                 Anchor = Anchor.CentreRight,
                 Origin = Anchor.CentreRight
             };
+
+            // Override the default theme colour applied in Load
+            resetButton.OnLoadComplete += _ => resetButton.BackgroundColour = defaultColour;
 
             bool awaitingConfirmation = false;
 
@@ -2110,6 +2161,7 @@ namespace BeatSight.Game.Screens.Settings
     {
         private readonly BeatSightConfigManager config;
         private readonly GameHost host;
+        private readonly UIScaleWizard uiScaleWizard;
         private Bindable<int>? windowWidth;
         private Bindable<int>? windowHeight;
         private Bindable<bool>? windowFullscreen;
@@ -2129,11 +2181,12 @@ namespace BeatSight.Game.Screens.Settings
         private bool monitorRefreshScheduled;
         private bool resolutionRefreshScheduled;
 
-        public GraphicsSettingsSection(BeatSightConfigManager config, GameHost host, Container dropdownOverlay, SettingsTooltipOverlay tooltipOverlay)
+        public GraphicsSettingsSection(BeatSightConfigManager config, GameHost host, Container dropdownOverlay, SettingsTooltipOverlay tooltipOverlay, UIScaleWizard uiScaleWizard)
             : base("Graphics Settings", dropdownOverlay, tooltipOverlay)
         {
             this.config = config;
             this.host = host;
+            this.uiScaleWizard = uiScaleWizard;
         }
 
         protected override Drawable createContent()
@@ -2160,6 +2213,15 @@ namespace BeatSight.Game.Screens.Settings
                         windowFullscreen!,
                         "Toggle fullscreen rendering. When off, BeatSight uses the resolution specified above."
                     ),
+                    CreateSlider(
+                        "Background Opacity",
+                        config.GetBindable<double>(BeatSightSetting.GlobalBackgroundOpacity),
+                        0.0, 1.0, 0.01,
+                        "Adjust the visibility of the background particles.",
+                        val => $"{val:P0}",
+                        toggleBindable: config.GetBindable<bool>(BeatSightSetting.ShowGlobalBackground),
+                        toggleMode: SliderToggleMode.ZeroValue
+                    ),
                     createFrameLimiterSetting(),
                     CreateEnumDropdown(
                         "Skin",
@@ -2173,14 +2235,17 @@ namespace BeatSight.Game.Screens.Settings
                         config.GetBindable<bool>(BeatSightSetting.ShowFpsCounter),
                         "Display frames per second in the corner."
                     ),
-                    CreateSlider(
+                    CreateSettingItem(
                         "UI Scale",
-                        config.GetBindable<double>(BeatSightSetting.UIScale),
-                        0.5,
-                        1.5,
-                        0.01,
-                        "Adjust the size of all UI elements (50% - 150%).",
-                        valueFormatter: PercentageFormatter(0)
+                        "Adjust the size of all UI elements.",
+                        new BeatSightButton
+                        {
+                            Text = "Adjust...",
+                            Size = new Vector2(100, 30),
+                            Anchor = Anchor.CentreRight,
+                            Origin = Anchor.CentreRight,
+                            Action = () => uiScaleWizard.Show()
+                        }
                     ),
                     CreateCheckbox(
                         "Approach Circles",
@@ -2614,6 +2679,8 @@ namespace BeatSight.Game.Screens.Settings
                           .ToArray();
             if (monitorChoices.Length == 0)
                 monitorChoices = new[] { new MonitorChoice(0, "Primary Display") };
+
+            monitorDropdown.Items = monitorChoices;
 
             suppressMonitorSync = true;
             try

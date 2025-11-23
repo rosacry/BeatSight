@@ -159,7 +159,7 @@ namespace BeatSight.Game.UI.Overlays
             uiScale.BindValueChanged(e =>
             {
                 scaleText.Text = $"{e.NewValue:P0}";
-                float scale = (float)e.NewValue;
+                float scale = (float)e.NewValue * 1.15f;
                 if (scale < 0.1f) scale = 0.1f;
                 previewScaler.Scale = new Vector2(scale);
             }, true);

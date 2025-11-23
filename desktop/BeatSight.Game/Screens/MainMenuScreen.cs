@@ -192,7 +192,7 @@ namespace BeatSight.Game.Screens
                         button.Alpha = 0;
                         // Calculate delay based on position in flow
                         // Start after logo begins moving
-                        double delay = 200 + i * 100;
+                        double delay = i * 100;
 
                         Scheduler.AddDelayed(() => button.DecryptIn(300), delay);
                         i++;

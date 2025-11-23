@@ -46,7 +46,7 @@ namespace BeatSight.Game.Screens.SongSelect
         private BeatmapCarousel carousel = null!;
         private Container leftContent = null!;
         private BeatmapLibrary.BeatmapEntry? selectedBeatmap;
-        private BeatSightTextBox searchBox = null!;
+        private SearchTextBox searchBox = null!;
         private BeatSight.Game.UI.Components.Dropdown<BeatmapCarousel.SortMode> sortDropdown = null!;
         private Box backgroundDim = null!;
         private Sprite backgroundSprite = null!;
@@ -246,6 +246,37 @@ namespace BeatSight.Game.Screens.SongSelect
 
         protected override bool OnKeyDown(KeyDownEvent e)
         {
+            if (searchBox != null)
+            {
+                if (!searchBox.HasFocus)
+                {
+                    // Handle backspace when not focused
+                    if (e.Key == osuTK.Input.Key.BackSpace && searchBox.Text.Length > 0)
+                    {
+                        searchBox.SetTextWithoutAnimation(searchBox.Text.Remove(searchBox.Text.Length - 1));
+                        GetContainingFocusManager().ChangeFocus(searchBox);
+                        return true;
+                    }
+
+                    // Handle text input manually since OnTextInput/TextInputEvent is causing issues
+                    if (!e.ControlPressed && !e.AltPressed && !e.SuperPressed)
+                    {
+                        char? c = getCharFromKey(e.Key, e.ShiftPressed);
+                        if (c.HasValue)
+                        {
+                            searchBox.FocusAndAppend(c.Value);
+                            return true;
+                        }
+                    }
+                }
+
+                if (e.Key == osuTK.Input.Key.Escape && searchBox.Text.Length > 0)
+                {
+                    searchBox.Text = string.Empty;
+                    return true;
+                }
+            }
+
             switch (e.Key)
             {
                 case osuTK.Input.Key.Escape:
@@ -255,6 +286,39 @@ namespace BeatSight.Game.Screens.SongSelect
             return base.OnKeyDown(e);
         }
 
+        private char? getCharFromKey(osuTK.Input.Key key, bool shift)
+        {
+            if (key >= osuTK.Input.Key.A && key <= osuTK.Input.Key.Z)
+            {
+                char c = (char)('a' + (key - osuTK.Input.Key.A));
+                return shift ? char.ToUpper(c) : c;
+            }
+            if (key >= osuTK.Input.Key.Number0 && key <= osuTK.Input.Key.Number9)
+            {
+                if (shift)
+                {
+                    switch (key)
+                    {
+                        case osuTK.Input.Key.Number1: return '!';
+                        case osuTK.Input.Key.Number2: return '@';
+                        case osuTK.Input.Key.Number3: return '#';
+                        case osuTK.Input.Key.Number4: return '$';
+                        case osuTK.Input.Key.Number5: return '%';
+                        case osuTK.Input.Key.Number6: return '^';
+                        case osuTK.Input.Key.Number7: return '&';
+                        case osuTK.Input.Key.Number8: return '*';
+                        case osuTK.Input.Key.Number9: return '(';
+                        case osuTK.Input.Key.Number0: return ')';
+                    }
+                }
+                return (char)('0' + (key - osuTK.Input.Key.Number0));
+            }
+            if (key == osuTK.Input.Key.Space) return ' ';
+            if (key == osuTK.Input.Key.Minus) return shift ? '_' : '-';
+            if (key == osuTK.Input.Key.Period) return shift ? '>' : '.';
+            if (key == osuTK.Input.Key.Comma) return shift ? '<' : ',';
+            return null;
+        }
         public void StartPlayback()
         {
             if (selectedBeatmap != null)
@@ -277,8 +341,8 @@ namespace BeatSight.Game.Screens.SongSelect
 
             // Details view
             private Container detailsContainer = null!;
-            private SpriteText title = null!;
-            private SpriteText artist = null!;
+            private TextFlowContainer title = null!;
+            private TextFlowContainer artist = null!;
             private SpriteText creator = null!;
             private SpriteText difficulty = null!;
             private SpriteText bpm = null!;
@@ -359,23 +423,33 @@ namespace BeatSight.Game.Screens.SongSelect
                             Spacing = new Vector2(0, 10),
                             Children = new Drawable[]
                             {
-                                title = new SpriteText
+                                title = new TextFlowContainer(t =>
                                 {
-                                    Font = BeatSightFont.Title(40f),
-                                    Colour = UITheme.TextPrimary,
-                                    AllowMultiline = true,
+                                    t.Font = BeatSightFont.Title(40f);
+                                    t.Colour = UITheme.TextPrimary;
+                                    t.Spacing = new Vector2(0.1f, 0f);
+                                    t.UseFullGlyphHeight = true;
+                                })
+                                {
                                     RelativeSizeAxes = Axes.X,
+                                    AutoSizeAxes = Axes.Y,
                                     Anchor = Anchor.TopCentre,
                                     Origin = Anchor.TopCentre,
+                                    TextAnchor = Anchor.TopCentre,
                                 },
-                                artist = new SpriteText
+                                artist = new TextFlowContainer(t =>
                                 {
-                                    Font = BeatSightFont.Section(24f),
-                                    Colour = UITheme.TextSecondary,
-                                    AllowMultiline = true,
+                                    t.Font = BeatSightFont.Section(24f);
+                                    t.Colour = UITheme.TextSecondary;
+                                    t.Spacing = new Vector2(0.1f, 0f);
+                                    t.UseFullGlyphHeight = true;
+                                })
+                                {
                                     RelativeSizeAxes = Axes.X,
+                                    AutoSizeAxes = Axes.Y,
                                     Anchor = Anchor.TopCentre,
                                     Origin = Anchor.TopCentre,
+                                    TextAnchor = Anchor.TopCentre,
                                 },
                                 new Box { RelativeSizeAxes = Axes.X, Height = 2, Colour = UITheme.Divider, Margin = new MarginPadding { Vertical = 10 } },
                                 creator = new SpriteText
@@ -523,7 +597,7 @@ namespace BeatSight.Game.Screens.SongSelect
 
         private Drawable createHeader()
         {
-            searchBox = new BeatSightTextBox
+            searchBox = new SearchTextBox
             {
                 Height = 40,
                 Width = 300,

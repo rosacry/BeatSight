@@ -85,21 +85,51 @@ namespace BeatSight.Game.Screens.SongSelect
                     break;
             }
 
-            flow.Clear();
+            // Store existing panels to reuse them
+            var existingPanels = flow.Children.ToDictionary(p => p.Entry);
+
+            flow.Clear(false);
 
             int i = 0;
             foreach (var beatmap in filtered)
             {
-                var panel = new BeatmapPanel(beatmap);
-                panel.Action = () => select(beatmap, panel);
+                BeatmapPanel panel;
+                bool isNew = false;
 
-                // Staggered animation
-                panel.Alpha = 0;
-                panel.X = 50;
-                panel.Delay(i * 30).FadeIn(300).MoveToX(0, 500, Easing.OutQuint);
+                if (existingPanels.TryGetValue(beatmap, out var existing))
+                {
+                    panel = existing;
+                    existingPanels.Remove(beatmap);
+                }
+                else
+                {
+                    panel = new BeatmapPanel(beatmap);
+                    panel.Action = () => select(beatmap, panel);
+                    isNew = true;
+                }
+
+                if (isNew)
+                {
+                    // Staggered animation
+                    panel.Alpha = 0;
+                    panel.X = 50;
+                    panel.Delay(i * 30).FadeIn(300).MoveToX(0, 500, Easing.OutQuint);
+                }
+                else
+                {
+                    // Ensure visible if it was somehow hidden, but don't replay entrance animation
+                    panel.Alpha = 1;
+                    panel.X = 0;
+                }
 
                 flow.Add(panel);
                 i++;
+            }
+
+            // Dispose panels that are no longer needed
+            foreach (var panel in existingPanels.Values)
+            {
+                panel.Dispose();
             }
 
             // Reselect if possible, or clear selection
@@ -256,7 +286,7 @@ namespace BeatSight.Game.Screens.SongSelect
                     case PanelState.Selected:
                         BorderColour = UITheme.AccentPrimary;
                         background.FadeColour(UITheme.SurfaceAlt, 200, Easing.OutQuint);
-                        this.ResizeTo(new Vector2(1.02f, 100), 300, Easing.OutElastic); // Elastic expand
+                        this.ResizeTo(new Vector2(1.0f, 100), 300, Easing.OutElastic); // Elastic expand
                         leftBar.ResizeWidthTo(8, 300, Easing.OutElastic);
                         leftBar.FadeIn(200);
                         break;

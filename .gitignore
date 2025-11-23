@@ -126,6 +126,7 @@ data/prod_*/**
 !data/prod_*/**/.gitkeep
 data/pdf_and_text_data(not for training)
 data/signaturesounds_website
+data/feature_cache/
 
 
 # Beatmap files for testing (keep samples separate)
@@ -177,3 +178,6 @@ site/
 # Backup files
 *.bak
 *.backup
+
+# Experiments
+exp/

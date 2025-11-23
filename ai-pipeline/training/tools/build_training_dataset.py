@@ -698,6 +698,12 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
             "When resuming, rewrite clips whose audio files are missing. This may perform many disk checks."
         ),
     )
+    parser.add_argument(
+        "--max-pending-writes",
+        type=int,
+        default=MAX_PENDING_WRITES,
+        help=f"Maximum number of pending background writes before blocking (default: {MAX_PENDING_WRITES})",
+    )
     return parser.parse_args(argv)
 
 
@@ -1082,6 +1088,7 @@ def build_dataset(
     heal_missing_clips: bool = False,
     checkpoint_every: Optional[int] = None,
     clip_fanout: Optional[int] = None,
+    max_pending_writes: int = MAX_PENDING_WRITES,
 ) -> Dict[str, object]:
     requested_clip_fanout = clip_fanout
     clip_fanout = DEFAULT_CLIP_FANOUT if clip_fanout is None else max(0, int(clip_fanout))
@@ -1157,7 +1164,7 @@ def build_dataset(
                 prev_split_counts = loaded_metadata.get("split_counts")
                 if isinstance(prev_split_counts, Mapping):
                     for split in ("train", "val"):
-                        count_val = _coerce_int(prev_split_counts.get(split))
+                        count_val = _coerce_int(prev_splitCounts.get(split))
                         if count_val is not None:
                             split_counts[split] = count_val
                 prev_label_counts = loaded_metadata.get("label_counts")
@@ -1524,7 +1531,7 @@ def build_dataset(
             return
         fut = writer_executor.submit(sf.write, path, data, sr, "PCM_16")
         writer_futures.append(fut)
-        if len(writer_futures) >= MAX_PENDING_WRITES:
+        if len(writer_futures) >= max_pending_writes:
             wait_for_writer_futures()
 
     progress_context = (
@@ -1603,54 +1610,11 @@ def build_dataset(
                     clip_summary += f", {stats.healed_clips:,} healed"
                 heal_status = ""
                 if missing_clip_units_total:
-                    healed_so_far = missing_clip_units_total - missing_clip_units_remaining
-                    heal_status = (
-                        f", heal_remaining={missing_clip_units_remaining:,}"
-                        f" ({max(healed_so_far, 0):,} healed this run)"
-                    )
-                elif missing_clip_units_remaining:
-                    heal_status = f", heal_remaining={missing_clip_units_remaining:,}"
-                eta_status = ""
-                if current_overall_eta is not None:
-                    eta_status = f", overall_eta={_format_eta(current_overall_eta)}"
-                logger.print(
-                    f"Processed {stats.total_events:,} events -> {clip_summary} clips "
-                    f"(train={split_counts['train']:,}, val={split_counts['val']:,}, skipped={skipped:,}{heal_status}{eta_status})"
-                )
-            elif progress_updates_enabled and stats.total_events % text_update_interval == 0:
-                clip_summary = f"{stats.written_clips:,} new"
-                if stats.healed_clips:
-                    clip_summary += f", {stats.healed_clips:,} healed"
-                heal_status = ""
-                if missing_clip_units_total:
-                    healed_so_far = missing_clip_units_total - missing_clip_units_remaining
-                    heal_status = (
-                        f", heal_remaining={missing_clip_units_remaining:,}"
-                        f" ({max(healed_so_far, 0):,} healed this run)"
-                    )
-                elif missing_clip_units_remaining:
-                    heal_status = f", heal_remaining={missing_clip_units_remaining:,}"
-                eta_status = ""
-                if current_overall_eta is not None:
-                    eta_status = f", overall_eta={_format_eta(current_overall_eta)}"
-                logger.print(
-                    f"Processed {stats.total_events:,} events -> {clip_summary} clips "
-                    f"(train={split_counts['train']:,}, val={split_counts['val']:,}, skipped={skipped:,}{heal_status}{eta_status})"
-                )
-
-            live_display_manager.update(
-                stats=stats,
-                split_counts=split_counts,
-                split_durations=split_durations,
-                run_split_durations=_combined_run_split_durations(),
-                duration_by_source=duration_by_source,
-                run_duration_by_source=_combined_run_duration_by_source(),
-                resume_total_units=resume_total_units,
-                resume_units_completed=resume_units_completed,
-                missing_clips=missing_clip_units_remaining,
-                missing_clips_total=missing_clip_units_total,
-            )
-            refresh_eta_metrics()
+                    healed_so_far = max(total_missing_number - float(missing_clips_val), 0.0)
+                    summary_table.add_row("Healed this run", _format_count(healed_this_run))
+                heal_eta = data.get("heal_eta_seconds")
+                if heal_eta is not None:
+                    summary_table.add_row("Heal ETA", _format_eta(heal_eta))
 
         for event in iter_manifest_events(manifest_path):
             if limit is not None and stats.total_events >= limit:
@@ -1995,6 +1959,7 @@ def render_verification_summary(report: Mapping[str, object], *, logger: OutputL
     )
     top_duration_sources = sorted(
         duration_by_source.items(), key=lambda item: item[1], reverse=True
+
     )[:10]
 
     def fmt(value: object) -> str:
@@ -2682,6 +2647,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
             heal_missing_clips=args.heal_missing_clips,
             checkpoint_every=args.checkpoint_every,
             clip_fanout=args.clip_fanout,
+            max_pending_writes=args.max_pending_writes,
         )
 
         render_summary(metadata, logger=logger)

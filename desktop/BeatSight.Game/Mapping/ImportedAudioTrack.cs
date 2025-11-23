@@ -23,7 +23,9 @@ namespace BeatSight.Game.Mapping
         public string OriginalPath { get; }
         public string StoredPath { get; }
         public string RelativeStoragePath { get; }
-        public string DisplayName { get; }
+        public string DisplayName { get; set; }
+        public string? Artist { get; set; }
+        public string? Title { get; set; }
         public long FileSizeBytes { get; }
         public double? DurationMilliseconds { get; }
         public DateTime ImportedAt { get; }

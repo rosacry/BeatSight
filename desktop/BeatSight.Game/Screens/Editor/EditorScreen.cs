@@ -130,7 +130,7 @@ namespace BeatSight.Game.Screens.Editor
         private BeatSightSliderBar waveformScaleSlider = null!;
         private SpriteText waveformScaleValueText = null!;
         private SpriteText snapDivisorText = null!;
-        private BasicCheckbox beatGridCheckbox = null!;
+        private BeatSightCheckbox beatGridCheckbox = null!;
 
         private bool suppressTimelineZoomSync;
         private bool suppressWaveformScaleSync;
@@ -165,6 +165,9 @@ namespace BeatSight.Game.Screens.Editor
 
         [Resolved]
         private BeatSightConfigManager config { get; set; } = null!;
+
+        [Resolved]
+        private UIAudioController uiAudio { get; set; } = null!;
 
         public EditorScreen(string? beatmapPath = null, ImportedAudioTrack? importedAudio = null, bool playbackAvailable = true)
         {
@@ -336,8 +339,15 @@ namespace BeatSight.Game.Screens.Editor
             laneViewModeBindable = config.GetBindable<LaneViewMode>(BeatSightSetting.LaneViewMode);
             laneViewMode = laneViewModeBindable.GetBoundCopy();
 
-            // Initialize preview mode - default to 3D playfield
-            previewMode = new Bindable<EditorPreviewMode>(EditorPreviewMode.Playfield3D);
+            // Initialize preview mode based on current setting
+            var initialPreviewMode = EditorPreviewMode.Playfield3D;
+            switch (laneViewModeBindable.Value)
+            {
+                case LaneViewMode.TwoDimensional: initialPreviewMode = EditorPreviewMode.Playfield2D; break;
+                case LaneViewMode.Manuscript: initialPreviewMode = EditorPreviewMode.Manuscript; break;
+                case LaneViewMode.ThreeDimensional: initialPreviewMode = EditorPreviewMode.Playfield3D; break;
+            }
+            previewMode = new Bindable<EditorPreviewMode>(initialPreviewMode);
 
             editorTimelineZoomDefault = config.GetBindable<double>(BeatSightSetting.EditorTimelineZoomDefault);
             editorWaveformScaleDefault = config.GetBindable<double>(BeatSightSetting.EditorWaveformScaleDefault);
@@ -395,10 +405,11 @@ namespace BeatSight.Game.Screens.Editor
 
             InternalChildren = new Drawable[]
             {
+                // Background is now global
                 new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = EditorColours.ScreenBackground
+                    Colour = EditorColours.ScreenBackground.Opacity(0.9f) // High opacity to focus on editing
                 },
                 paddedLayout,
                 backButtonOverlay
@@ -876,8 +887,7 @@ namespace BeatSight.Game.Screens.Editor
 
             timelineZoomSlider = new BeatSightSliderBar
             {
-                RelativeSizeAxes = Axes.Both,
-                DragStepMultiplier = 0.5 // Smoother dragging
+                RelativeSizeAxes = Axes.Both
             };
             var zoomBindable = new BindableDouble(timelineZoom)
             {
@@ -914,8 +924,7 @@ namespace BeatSight.Game.Screens.Editor
 
             waveformScaleSlider = new BeatSightSliderBar
             {
-                RelativeSizeAxes = Axes.Both,
-                DragStepMultiplier = 0.5 // Smoother dragging
+                RelativeSizeAxes = Axes.Both
             };
             var waveformBindable = new BindableDouble(waveformScale)
             {
@@ -950,7 +959,7 @@ namespace BeatSight.Game.Screens.Editor
                 Origin = Anchor.CentreLeft
             };
 
-            beatGridCheckbox = new BasicCheckbox
+            beatGridCheckbox = new BeatSightCheckbox
             {
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft,
@@ -1138,14 +1147,13 @@ namespace BeatSight.Game.Screens.Editor
             };
         }
 
-        private BasicTextBox createInspectorTextBox(string placeholder)
+        private BeatSightTextBox createInspectorTextBox(string placeholder)
         {
-            return new BasicTextBox
+            return new BeatSightTextBox
             {
                 RelativeSizeAxes = Axes.X,
                 Height = 34,
                 PlaceholderText = placeholder,
-                Masking = true,
                 CornerRadius = 6
             };
         }
@@ -2125,6 +2133,23 @@ namespace BeatSight.Game.Screens.Editor
 
         private void onLaneViewModeChanged(ValueChangedEvent<LaneViewMode> change)
         {
+            // Sync previewMode to match the setting
+            switch (change.NewValue)
+            {
+                case LaneViewMode.TwoDimensional:
+                    if (previewMode.Value != EditorPreviewMode.Playfield2D)
+                        previewMode.Value = EditorPreviewMode.Playfield2D;
+                    break;
+                case LaneViewMode.ThreeDimensional:
+                    if (previewMode.Value != EditorPreviewMode.Playfield3D)
+                        previewMode.Value = EditorPreviewMode.Playfield3D;
+                    break;
+                case LaneViewMode.Manuscript:
+                    if (previewMode.Value != EditorPreviewMode.Manuscript)
+                        previewMode.Value = EditorPreviewMode.Manuscript;
+                    break;
+            }
+
             if (playbackPreview != null)
             {
                 Schedule(() => playbackPreview.RefreshBeatmap());
@@ -3020,6 +3045,28 @@ namespace BeatSight.Game.Screens.Editor
             playPauseButton.SetLabel(label);
         }
 
+        public override void OnEntering(ScreenTransitionEvent e)
+        {
+            base.OnEntering(e);
+            uiAudio.PlayTransition();
+
+            // Animate timeline from bottom
+            if (timeline != null)
+                timeline.MoveToY(100).FadeInFromZero(500).MoveToY(0, 800, Easing.OutQuint);
+
+            // Animate preview from top
+            if (playbackPreview != null)
+                playbackPreview.MoveToY(-100).FadeInFromZero(500).MoveToY(0, 800, Easing.OutQuint);
+
+            // Animate history panel from right
+            if (historyPanel != null)
+                historyPanel.MoveToX(100).FadeInFromZero(500).MoveToX(0, 800, Easing.OutQuint);
+
+            // Animate back button
+            if (backButton != null)
+                backButton.ScaleTo(0).Delay(200).ScaleTo(1, 600, Easing.OutElastic);
+        }
+
         protected override void Update()
         {
             base.Update();
@@ -3218,6 +3265,7 @@ namespace BeatSight.Game.Screens.Editor
 
         public override bool OnExiting(ScreenExitEvent e)
         {
+            uiAudio.PlayBack();
             stopPlayback(silent: true);
             disposeTrack();
             return base.OnExiting(e);

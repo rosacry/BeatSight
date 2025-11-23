@@ -16,12 +16,21 @@ using osu.Framework.Platform;
 using osu.Framework.Screens;
 using osuTK;
 using osuTK.Graphics;
+using osu.Framework.Utils;
 
 namespace BeatSight.Game.Screens
 {
     public partial class MainMenuScreen : BeatSightScreen
     {
         private GameHost host = null!;
+        private readonly bool fromIntro;
+        private Container logoParallax = null!;
+        private bool parallaxEnabled = false;
+
+        public MainMenuScreen(bool fromIntro = false)
+        {
+            this.fromIntro = fromIntro;
+        }
 
         [BackgroundDependencyLoader]
         private void load(GameHost host)
@@ -33,147 +42,293 @@ namespace BeatSight.Game.Screens
         {
             base.OnEntering(e);
 
+            FillFlowContainer buttonFlow;
+            Container logoContainer;
+            SpriteText titleText;
+            SpriteText subtitleText;
+            Box scannerBeam;
+
             InternalChildren = new Drawable[]
             {
-                new Box
+                // Logo Container - Independent (Moved out of ScreenEdgeContainer to match IntroScreen coordinates)
+                logoContainer = new Container
                 {
-                    RelativeSizeAxes = Axes.Both,
-                    Colour = new Color4(20, 20, 30, 255)
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    Y = -180, // Final position
+                    Children = new Drawable[]
+                    {
+                        logoParallax = new Container
+                        {
+                            Anchor = Anchor.Centre,
+                            Origin = Anchor.Centre,
+                            Children = new Drawable[]
+                            {
+                                titleText = new SpriteText
+                                {
+                                    Text = "BeatSight",
+                                    Font = BeatSightFont.Title(UITheme.MainLogoTitleSize),
+                                    Colour = UITheme.AccentPrimary,
+                                    Anchor = Anchor.Centre,
+                                    Origin = Anchor.Centre,
+                                    Shadow = true,
+                                    ShadowColour = UITheme.AccentPrimary.Opacity(0.5f),
+                                    ShadowOffset = new Vector2(0, 0),
+                                },
+                                subtitleText = new SpriteText
+                                {
+                                    Text = "Rhythm Game Analysis Tool",
+                                    Font = BeatSightFont.Subtitle(UITheme.MainLogoSubtitleSize),
+                                    Colour = UITheme.TextSecondary,
+                                    Anchor = Anchor.Centre,
+                                    Origin = Anchor.Centre,
+                                    Y = UITheme.MainLogoSubtitleY,
+                                    Spacing = new Vector2(5, 0),
+                                }
+                            }
+                        }
+                    }
                 },
+
+                // Background is now global
                 new ScreenEdgeContainer(scrollable: false)
                 {
-                    Content = new FillFlowContainer
+                    Content = new Container
                     {
-                        AutoSizeAxes = Axes.Both,
-                        Direction = FillDirection.Vertical,
-                        Anchor = Anchor.Centre,
-                        Origin = Anchor.Centre,
-                        Spacing = new Vector2(0, 20),
+                        RelativeSizeAxes = Axes.Both,
                         Children = new Drawable[]
                         {
-                            new SpriteText
+                            buttonFlow = new FillFlowContainer
                             {
-                                Text = "BeatSight",
-                                Font = BeatSightFont.Title(60f),
-                                Colour = Color4.White,
-                                Anchor = Anchor.TopCentre,
-                                Origin = Anchor.TopCentre,
-                                Shadow = false
+                                AutoSizeAxes = Axes.Both,
+                                Direction = FillDirection.Vertical,
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre,
+                                Y = 100, // Offset below center
+                                Spacing = new Vector2(0, 25),
+                                Children = new Drawable[]
+                                {
+                                    new MenuButton("Playback", UITheme.AccentPrimary)
+                                    {
+                                        Action = () => this.Push(new SongSelectScreen())
+                                    },
+                                    new MenuButton("Editor", UITheme.AccentSecondary)
+                                    {
+                                        Action = () => this.Push(new SongSelectScreen(editorMode: true))
+                                    },
+                                    new MenuButton("Settings", UITheme.AccentWarning)
+                                    {
+                                        Action = () => this.Push(new SettingsScreen())
+                                    },
+                                    new MenuButton("Exit", UITheme.AccentError)
+                                    {
+                                        Action = exitGame
+                                    },
+                                }
                             },
-                            new SpriteText
+                            scannerBeam = new Box
                             {
-                                Text = "Drag and drop a song to jump straight into playback.",
-                                Font = BeatSightFont.Subtitle(24f),
-                                Colour = new Color4(195, 205, 220, 255),
-                                Anchor = Anchor.TopCentre,
-                                Origin = Anchor.TopCentre,
-                                Shadow = false
-                            },
-                            new SpriteText
-                            {
-                                Text = "Or use the menu below to browse, edit, or tweak your setup.",
-                                Font = BeatSightFont.Body(18f),
-                                Colour = new Color4(160, 170, 190, 255),
-                                Anchor = Anchor.TopCentre,
-                                Origin = Anchor.TopCentre,
-                                Shadow = false
-                            },
-                            new Container
-                            {
-                                Height = 40
-                            },
-                            new MenuButton("Playback", UITheme.AccentPrimary)
-                            {
-                                Action = () => this.Push(new SongSelectScreen())
-                            },
-                            new MenuButton("Editor", Color4.Blue)
-                            {
-                                Action = () => this.Push(new SongSelectScreen(editorMode: true))
-                            },
-                            new MenuButton("Settings", Color4.Orange)
-                            {
-                                Action = () => this.Push(new SettingsScreen())
-                            },
-                            new MenuButton("Exit", Color4.Red)
-                            {
-                                Action = exitGame
-                            },
+                                RelativeSizeAxes = Axes.X,
+                                Height = 2,
+                                Colour = UITheme.AccentSecondary,
+                                Alpha = 0,
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre,
+                                Y = -400 // Start above
+                            }
                         }
                     }
                 }
             };
+
+            if (!fromIntro)
+            {
+                // Smooth entry animation only if not from intro
+                this.FadeInFromZero(800, Easing.OutQuint);
+            }
+            else
+            {
+                // Cancel base animations to ensure seamless transition
+                this.ClearTransforms();
+                this.Alpha = 1;
+                this.Y = 0;
+            }
+
+            // Breathing animation
+            Scheduler.AddDelayed(() =>
+            {
+                logoParallax.Loop(b => b.ScaleTo(1.02f, 2000, Easing.InOutSine).Then().ScaleTo(1f, 2000, Easing.InOutSine));
+            }, 2000);
+
+            if (fromIntro)
+            {
+                // Transition Sequence
+
+                // 1. Match Intro State
+                // Intro ends with Logo at -180 (moved during Intro)
+                // logoContainer.Y = -180; // Already set in constructor
+
+                // Show immediately as IntroScreen hides its logo
+                logoContainer.Alpha = 1;
+
+                // Intro Title is 80, Main is 80 -> Scale 1.0
+                titleText.Scale = Vector2.One;
+
+                // Intro Subtitle is 24, Main is 24 -> Scale 1.0
+                subtitleText.Scale = Vector2.One;
+
+                // 2. Animate to Final State
+                // Already at final state
+
+                // 3. Scanner Sweep
+                // Removed as per user request
+
+                // 4. Decrypt Buttons as scanner passes
+                int i = 0;
+                foreach (var child in buttonFlow.Children)
+                {
+                    if (child is MenuButton button)
+                    {
+                        button.Alpha = 0;
+                        // Calculate delay based on position in flow
+                        // Start after logo begins moving
+                        double delay = 200 + i * 100;
+
+                        Scheduler.AddDelayed(() => button.DecryptIn(300), delay);
+                        i++;
+                    }
+                }
+
+                // Enable parallax after transition
+                Scheduler.AddDelayed(() => parallaxEnabled = true, 1200);
+            }
+            else
+            {
+                parallaxEnabled = true;
+
+                // Full Title Animation
+                titleText.ScaleTo(1f).Then().ScaleTo(1.05f, 1000, Easing.OutQuint).Then().ScaleTo(1f, 1000, Easing.OutQuint);
+                titleText.FadeInFromZero(600);
+
+                // Subtitle Animation
+                subtitleText.Delay(500).FadeIn(600);
+
+                // Button Stagger Animation
+                int i = 0;
+                foreach (var child in buttonFlow.Children)
+                {
+                    if (child is MenuButton button)
+                    {
+                        button.Alpha = 0;
+                        button.Y = 100;
+                        button.Scale = new Vector2(0.5f);
+                        button.Rotation = RNG.NextSingle(-10, 10);
+
+                        double delay = 700 + i * 100; // Faster start if from intro
+
+                        button.Delay(delay)
+                              .FadeIn(400)
+                              .MoveToY(0, 1000, Easing.OutElastic)
+                              .ScaleTo(1f, 1000, Easing.OutElastic)
+                              .RotateTo(0, 1000, Easing.OutElastic);
+                        i++;
+                    }
+                }
+            }
+        }
+
+        protected override bool OnMouseMove(MouseMoveEvent e)
+        {
+            if (logoParallax != null && parallaxEnabled)
+            {
+                Vector2 relativeMouse = e.MousePosition - DrawSize / 2;
+                // Parallax effect: Move opposite to mouse or with mouse?
+                // Usually opposite gives depth (background), with mouse gives "floating" feel.
+                // User requested fix: make it more subtle and standard depth feel.
+                logoParallax.MoveTo(relativeMouse * -0.005f, 100, Easing.OutQuad);
+            }
+            return base.OnMouseMove(e);
         }
 
         private void exitGame()
         {
-            if (host != null)
-                host.Exit();
+            // Manually push OutroScreen for the button click
+            // This guarantees the animation plays even if OnExiting interception fails
+            this.Push(new OutroScreen());
         }
     }
 
-    public partial class MenuButton : Button
+    public partial class MenuButton : BeatSightButton
     {
-        private readonly Color4 baseColour;
-        private readonly Container content;
-        private readonly Box background;
+        private Color4 baseColour;
+        private BeatSightSpriteText spriteText = null!;
+        private string originalText = null!;
 
         public MenuButton(string text, Color4 colour)
         {
-            AutoSizeAxes = Axes.Both;
+            Text = text;
+            originalText = text;
+            baseColour = colour;
+            BackgroundColour = colour.Opacity(0.8f);
+            Size = new Vector2(320, 70);
             Anchor = Anchor.TopCentre;
             Origin = Anchor.TopCentre;
 
-            baseColour = colour;
+            BorderThickness = 3;
+            BorderColour = colour;
+        }
 
-            AddRangeInternal(new Drawable[]
+        [BackgroundDependencyLoader]
+        private void load()
+        {
+            // Re-apply the custom colour after the base load might have reset it
+            BackgroundColour = baseColour.Opacity(0.8f);
+        }
+
+        public void DecryptIn(double duration)
+        {
+            this.FadeInFromZero(duration);
+            this.ScaleTo(new Vector2(1.2f, 0.1f)).ScaleTo(1f, duration, Easing.OutExpo); // Stretch effect
+
+            // Restore text immediately (no scrambling)
+            if (spriteText != null)
             {
-                content = new Container
-                {
-                    Width = 300,
-                    Height = 60,
-                    Masking = true,
-                    CornerRadius = 10,
-                    Children = new Drawable[]
-                    {
-                        background = new Box
-                        {
-                            RelativeSizeAxes = Axes.Both,
-                            Colour = new Color4((byte)(colour.R * 0.6f), (byte)(colour.G * 0.6f), (byte)(colour.B * 0.6f), colour.A)
-                        },
-                        new SpriteText
-                        {
-                            Text = text,
-                            Font = BeatSightFont.Button(28f),
-                            Colour = Color4.White,
-                            Anchor = Anchor.Centre,
-                            Origin = Anchor.Centre,
-                            Shadow = false,
-                            ShadowColour = new Color4(0, 0, 0, 64),
-                            ShadowOffset = new Vector2(1, 1)
-                        }
-                    }
-                }
-            });
+                spriteText.Text = originalText;
+                spriteText.FlashColour(Color4.White, 200, Easing.OutQuint);
+            }
         }
 
         protected override bool OnHover(HoverEvent e)
         {
-            background.FadeColour(baseColour, 200, Easing.OutQuint);
-            content.ScaleTo(1.03f, 200, Easing.OutQuint);
+            BorderColour = Color4.White;
+            BackgroundColour = baseColour.Opacity(1f);
+            this.ScaleTo(1.05f, 400, Easing.OutElastic);
             return base.OnHover(e);
         }
 
         protected override void OnHoverLost(HoverLostEvent e)
         {
+            BorderColour = baseColour;
+            BackgroundColour = baseColour.Opacity(0.8f);
+            this.ScaleTo(1f, 400, Easing.OutQuint);
             base.OnHoverLost(e);
-            background.FadeColour(new Color4((byte)(baseColour.R * 0.6f), (byte)(baseColour.G * 0.6f), (byte)(baseColour.B * 0.6f), baseColour.A), 200, Easing.OutQuint);
-            content.ScaleTo(1f, 200, Easing.OutQuint);
         }
 
-        protected override bool OnClick(ClickEvent e)
+        protected override SpriteText CreateText()
         {
-            content.ScaleTo(0.97f, 80, Easing.OutQuad).Then().ScaleTo(1.02f, 120, Easing.OutQuad);
-            return base.OnClick(e);
+            spriteText = new BeatSightSpriteText
+            {
+                Depth = -1,
+                Origin = Anchor.Centre,
+                Anchor = Anchor.Centre,
+                Font = BeatSightFont.Button(30f),
+                UseFullGlyphHeight = false,
+                Colour = Color4.White,
+                Shadow = true,
+                ShadowColour = new Color4(0, 0, 0, 100),
+                ShadowOffset = new Vector2(2, 2)
+            };
+            return spriteText;
         }
     }
 
@@ -195,13 +350,13 @@ namespace BeatSight.Game.Screens
                 new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = new Color4(15, 15, 25, 255)
+                    Colour = UITheme.Background
                 },
                 new SpriteText
                 {
                     Text = $"{title} screen coming soon",
                     Font = BeatSightFont.Title(48f),
-                    Colour = Color4.White,
+                    Colour = UITheme.TextPrimary,
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre
                 },
@@ -209,7 +364,7 @@ namespace BeatSight.Game.Screens
                 {
                     Text = "Press Esc to return",
                     Font = BeatSightFont.Subtitle(24f),
-                    Colour = Color4.Gray,
+                    Colour = UITheme.TextMuted,
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
                     Y = 80

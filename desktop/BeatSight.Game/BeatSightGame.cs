@@ -20,7 +20,11 @@ using BeatSight.Game.Services.Analysis;
 using BeatSight.Game.Services.Decode;
 using BeatSight.Game.Services.Generation;
 using BeatSight.Game.Services.Separation;
+using BeatSight.Game.Services.Metadata;
+using BeatSight.Game.UI;
 using BeatSight.Game.UI.Theming;
+using BeatSight.Game.UI.Components;
+using BeatSight.Game.UI.Overlays;
 using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osu.Framework.Audio;
 using osu.Framework.Allocation;
@@ -44,7 +48,7 @@ namespace BeatSight.Game
     public partial class BeatSightGame : osu.Framework.Game
     {
         private ScreenStack screenStack = null!;
-        private Container uiScaleRoot = null!;
+        private ScalingContainer uiScaleRoot = null!;
         private DependencyContainer dependencies = null!;
         [Resolved(CanBeNull = true)]
         private AudioManager? audioManager { get; set; }
@@ -79,6 +83,7 @@ namespace BeatSight.Game
         private bool applyingWindowSizeInProgress;
         private bool windowSizeReapplyPending; // ensures batched setting updates (width/height) finish with latest size
         private bool lastRequestedFullscreen;
+        private bool isExiting;
 
         private static readonly BindingFlags windowReflectionFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy;
         private static readonly string[] windowSizePropertyPreferredNames =
@@ -144,6 +149,8 @@ namespace BeatSight.Game
             "Fonts/Nunito/Nunito-SemiBold"
         };
 
+        private DynamicBackground globalBackground = null!;
+
         [BackgroundDependencyLoader]
         private void load()
         {
@@ -189,9 +196,15 @@ namespace BeatSight.Game
             audioEngine = new AudioEngine();
             dependencies.Cache(audioEngine);
 
+            var uiAudio = new UIAudioController();
+            dependencies.Cache(uiAudio);
+
             embeddedResourceStore = new NamespacedResourceStore<byte[]>(new DllResourceStore(typeof(BeatSightGame).Assembly), "Resources");
             Resources.AddStore(embeddedResourceStore);
             registerFonts();
+
+            var metadataService = new MetadataDetectionService(Host);
+            dependencies.Cache(metadataService);
 
             var decodeService = new DecodeService();
             dependencies.Cache(decodeService);
@@ -206,22 +219,30 @@ namespace BeatSight.Game
             generationCoordinator = new GenerationCoordinator(generationPipeline, action => Schedule(action));
             dependencies.CacheAs<IGenerationCoordinator>(generationCoordinator);
 
+            var uiScaleWizard = new UIScaleWizard { State = { Value = Visibility.Hidden } };
+            dependencies.Cache(uiScaleWizard);
+
             // Initialize the game
             Children = new Drawable[]
             {
-                new TooltipContainer
+                uiAudio,
+                globalBackground = new DynamicBackground(),
+                uiScaleRoot = new ScalingContainer
                 {
-                    RelativeSizeAxes = Axes.Both,
-                    Child = uiScaleRoot = new Container
+                    RelativeSizeAxes = Axes.None,
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    Child = new TooltipContainer
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Anchor = Anchor.Centre,
-                        Origin = Anchor.Centre,
                         Child = screenStack = new ScreenStack { RelativeSizeAxes = Axes.Both }
                     }
                 },
+                uiScaleWizard,
                 fpsCounter = new FpsCounter()
             };
+
+            dependencies.Cache(globalBackground);
 
             uiScaleSetting = config.GetBindable<double>(BeatSightSetting.UIScale);
             uiScaleSetting.BindValueChanged(onUiScaleChanged, true);
@@ -278,9 +299,35 @@ namespace BeatSight.Game
                 return;
 
             float clamped = (float)Math.Clamp(scaleEvent.NewValue, 0.5, 1.5);
-            uiScaleRoot.Scale = new Vector2(clamped);
+            uiScaleRoot.ScaleTo(clamped, 500, Easing.OutQuint);
         }
 
+        public void ForceExit()
+        {
+            isExiting = true;
+            Exit();
+        }
+
+        protected override bool OnExiting()
+        {
+            // Console.WriteLine("DEBUG: OnExiting called in BeatSightGame");
+            // Logger.Log("OnExiting called", LoggingTarget.Runtime, LogLevel.Important);
+
+            if (!isExiting && screenStack != null)
+            {
+                // If we are already on the OutroScreen, don't intercept
+                if (screenStack.CurrentScreen is Screens.OutroScreen)
+                {
+                    return base.OnExiting();
+                }
+
+                // Otherwise, push OutroScreen and cancel exit
+                screenStack.Push(new Screens.OutroScreen());
+                return true;
+            }
+
+            return base.OnExiting();
+        }
         private static string getFontResourceKey(string font)
         {
             if (font.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase))
@@ -424,8 +471,8 @@ namespace BeatSight.Game
 
             Logger.Log("If you use a graphics tablet, lift the pen off the surface while BeatSight is running to prevent the cursor from being held in place.", LoggingTarget.Runtime, LogLevel.Important);
 
-            // Load the main menu
-            screenStack.Push(new Screens.MainMenuScreen());
+            // Load the intro screen
+            screenStack.Push(new Screens.IntroScreen());
         }
 
         private void bootstrapDefaultUserAssets()
@@ -1038,7 +1085,25 @@ namespace BeatSight.Game
                 try
                 {
                     var imported = await importAudioFileAsync(path, CancellationToken.None).ConfigureAwait(false);
-                    Schedule(() => screenStack.Push(new MappingChoiceScreen(imported)));
+
+                    var metadataService = dependencies.Get<MetadataDetectionService>();
+                    var metadata = await metadataService.DetectMetadataAsync(imported.StoredPath, CancellationToken.None);
+
+                    if (metadata != null && (metadata.Confidence > 0.8 || metadata.Provider == "acoustid"))
+                    {
+                        if (!string.IsNullOrEmpty(metadata.Title))
+                            imported.Title = metadata.Title;
+                        if (!string.IsNullOrEmpty(metadata.Artist))
+                            imported.Artist = metadata.Artist;
+                        if (!string.IsNullOrEmpty(metadata.Title))
+                            imported.DisplayName = metadata.Title;
+
+                        Schedule(() => screenStack.Push(new MappingChoiceScreen(imported)));
+                    }
+                    else
+                    {
+                        Schedule(() => screenStack.Push(new MetadataChoiceScreen(imported, metadata)));
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -1928,72 +1993,5 @@ namespace BeatSight.Game
         }
     }
 
-    public partial class FpsCounter : CompositeDrawable
-    {
-        private SpriteText fpsText = null!;
-        private int frameCount;
-        private double elapsed;
 
-        public FpsCounter()
-        {
-            Anchor = Anchor.TopRight;
-            Origin = Anchor.TopRight;
-            Margin = new MarginPadding(10);
-            AutoSizeAxes = Axes.Both;
-        }
-
-        [BackgroundDependencyLoader]
-        private void load()
-        {
-            InternalChildren = new Drawable[]
-            {
-                new Container
-                {
-                    AutoSizeAxes = Axes.Both,
-                    Masking = true,
-                    CornerRadius = 5,
-                    Children = new Drawable[]
-                    {
-                        new Box
-                        {
-                            RelativeSizeAxes = Axes.Both,
-                            Colour = new Color4(0, 0, 0, 180)
-                        },
-                        fpsText = new SpriteText
-                        {
-                            Text = "FPS: 0",
-                            Font = BeatSightFont.Caption(16f),
-                            Colour = UITheme.TextSecondary,
-                            Padding = new MarginPadding { Horizontal = 12, Vertical = 6 }
-                        }
-                    }
-                }
-            };
-        }
-
-        protected override void Update()
-        {
-            base.Update();
-
-            frameCount++;
-            elapsed += Clock.ElapsedFrameTime;
-
-            if (elapsed >= 500) // Update every 500ms
-            {
-                int fps = (int)(frameCount / (elapsed / 1000));
-                fpsText.Text = $"FPS: {fps}";
-
-                // Color code based on performance
-                if (fps >= 60)
-                    fpsText.Colour = new Color4(120, 255, 120, 255);
-                else if (fps >= 30)
-                    fpsText.Colour = new Color4(255, 215, 0, 255);
-                else
-                    fpsText.Colour = new Color4(255, 100, 100, 255);
-
-                frameCount = 0;
-                elapsed = 0;
-            }
-        }
-    }
 }

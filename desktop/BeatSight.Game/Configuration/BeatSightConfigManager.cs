@@ -71,8 +71,10 @@ namespace BeatSight.Game.Configuration
             setDefault(BeatSightSetting.ShowHitBurstAnimations, true);
             setDefault(BeatSightSetting.ShowComboMilestones, true);
             setDefault(BeatSightSetting.ShowFpsCounter, false);
-            setDefault(BeatSightSetting.UIScale, 1.0);
+            setDefault(BeatSightSetting.UIScale, 1.0, 0.5, 1.5, 0.01);
             setDefault(BeatSightSetting.NoteSkin, NoteSkinOption.Classic);
+            setDefault(BeatSightSetting.ShowGlobalBackground, true);
+            setDefault(BeatSightSetting.GlobalBackgroundOpacity, 0.2);
 
             // Audio Settings
             setDefault(BeatSightSetting.MasterVolume, 1.0);
@@ -149,6 +151,29 @@ namespace BeatSight.Game.Configuration
                 }
             });
         }
+
+        private void setDefault(BeatSightSetting setting, double value, double? min = null, double? max = null, double? precision = null)
+        {
+            SetDefault(setting, value, min, max, precision);
+
+            var capturedSetting = setting;
+            var capturedValue = value;
+
+            resetActions.Add(() =>
+            {
+                var bindable = GetBindable<double>(capturedSetting);
+                bindable.Value = capturedValue;
+            });
+
+            trackingInitialisers.Add(() =>
+            {
+                var bindable = GetBindable<double>(capturedSetting);
+                if (trackedSettings.Add(capturedSetting))
+                {
+                    var _ = bindable.Value;
+                }
+            });
+        }
     }
 
     public enum BeatSightSetting
@@ -182,6 +207,8 @@ namespace BeatSight.Game.Configuration
         ShowFpsCounter,
         UIScale,
         NoteSkin,
+        ShowGlobalBackground,
+        GlobalBackgroundOpacity,
 
         // Audio
         MasterVolume,

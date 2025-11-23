@@ -292,7 +292,7 @@ namespace BeatSight.Game.Screens.Mapping
 
         private Drawable createLegendToggle(string label, Color4 colour, BindableBool bindable)
         {
-            var checkbox = new BasicCheckbox
+            var checkbox = new BeatSight.Game.UI.Components.BeatSightCheckbox
             {
                 LabelText = label
             };

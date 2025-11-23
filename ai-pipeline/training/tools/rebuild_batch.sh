@@ -81,7 +81,7 @@ run_ingest_step "cambridge_multitrack" python "${TOOLS_DIR}/ingest_cambridge.py"
     --roots "E:/data/raw/cambridge" \
     --events-output "${MANIFEST_DIR}/cambridge_multitrack_events.jsonl" \
     --provenance-output "${PROVENANCE_DIR}/cambridge_multitrack_provenance.jsonl" \
-    --workers 16
+    --workers 4
 
 # 7. Ingest IDMT-SMT-Drums
 run_ingest_step "idmt_smt_drums_v2" python "${TOOLS_DIR}/ingest_idmt.py" \
@@ -146,7 +146,8 @@ python "${TOOLS_DIR}/build_training_dataset.py" \
     --checkpoint-every 300000 \
     --heal-missing-clips \
     --clip-fanout 2 \
-    --write-workers 16 \
+    --write-workers 4 \
+    --max-pending-writes 1024 \
     ${RESUME_FLAG} \
     --log-file "${BUILD_LOG}" \
     --summary-json "${BUILD_SUMMARY}"

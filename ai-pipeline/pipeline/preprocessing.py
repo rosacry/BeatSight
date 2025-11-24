@@ -10,13 +10,15 @@ import numpy as np
 from typing import Tuple
 
 
-def preprocess_audio(input_path: str, target_sr: int = 44100) -> Tuple[np.ndarray, int]:
+def preprocess_audio(input_path: str, target_sr: int = 44100, offset: float = 0.0, duration: float = None) -> Tuple[np.ndarray, int]:
     """
     Preprocess audio file to standard format.
     
     Args:
         input_path: Path to input audio file
         target_sr: Target sample rate (default 44100 Hz)
+        offset: Start time in seconds (default 0.0)
+        duration: Duration in seconds (default None = load until end)
         
     Returns:
         Tuple of (audio data as numpy array, sample rate)
@@ -25,7 +27,7 @@ def preprocess_audio(input_path: str, target_sr: int = 44100) -> Tuple[np.ndarra
     # Some decoders (notably libmpg123) can emit noisy stderr warnings for malformed
     # ID3 frames. Redirect stderr while loading to avoid alarming the user.
     with contextlib.redirect_stderr(io.StringIO()):
-        audio, sr = librosa.load(input_path, sr=target_sr, mono=False)
+        audio, sr = librosa.load(input_path, sr=target_sr, mono=False, offset=offset, duration=duration)
     
     # Convert stereo to mono if needed (mix down)
     if audio.ndim == 2:

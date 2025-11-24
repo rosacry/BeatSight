@@ -44,7 +44,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private BeatSightConfigManager config { get; set; } = null!;
 
         private Bindable<GameplayMode> gameplayMode = null!;
-        private Bindable<bool> showApproachCircles = null!;
         private Bindable<bool> showParticleEffects = null!;
         private Bindable<bool> showGlowEffects = null!;
         private Bindable<bool> showHitBurstAnimations = null!;
@@ -66,7 +65,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         public readonly Bindable<bool> AutoZoom = new Bindable<bool>(true);
         public readonly Bindable<double> NoteWidthScale = new Bindable<double>(1.0);
 
-        public event Action<HitResult, double, Color4>? ResultApplied;
+        public event Action<HitResult, double, Color4, string>? ResultApplied;
 
         private double cachedBpm = 120;
         private double cachedBeatsPerMeasure = 4;
@@ -85,7 +84,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private void load()
         {
             gameplayMode = config.GetBindable<GameplayMode>(BeatSightSetting.GameplayMode);
-            showApproachCircles = config.GetBindable<bool>(BeatSightSetting.ShowApproachCircles);
             showParticleEffects = config.GetBindable<bool>(BeatSightSetting.ShowParticleEffects);
             showGlowEffects = config.GetBindable<bool>(BeatSightSetting.ShowGlowEffects);
             showHitBurstAnimations = config.GetBindable<bool>(BeatSightSetting.ShowHitBurstAnimations);
@@ -205,7 +203,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             foreach (var hitObject in beatmap.HitObjects)
             {
                 int lane = resolveLane(hitObject);
-                var note = new DrawableNote(hitObject, lane, showApproachCircles, showGlowEffects, showParticleEffects);
+                var note = new DrawableNote(hitObject, lane, showGlowEffects, showParticleEffects);
                 notes.Add(note);
             }
 
@@ -346,12 +344,15 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float noteHeight = (float)(sixteenthDuration / ApproachDuration * travelDistance);
             noteHeight = Math.Max(10f, noteHeight * 0.6f); // Scale height down visually
 
-            // Prune passed notes
+            // Auto-trigger notes when they reach the hit line (this is a drum analysis tool)
             while (firstActiveNoteIndex < notes.Count && notes[firstActiveNoteIndex].HitTime < currentTime - pastVisibilityWindow)
             {
                 var note = notes[firstActiveNoteIndex];
                 if (!note.IsJudged && !isPreviewMode)
-                    applyResult(note, HitResult.Miss, currentTime - note.HitTime);
+                {
+                    // Auto-trigger as Perfect - this is a drum analysis/learning tool, not a game
+                    applyResult(note, HitResult.Perfect, 0);
+                }
 
                 if (note.Parent != null)
                     noteLayer.Remove(note, false);
@@ -389,7 +390,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         {
             // Use the dynamic ApproachDuration here
             float progress = 1 - (timeUntilHit / (float)ApproachDuration);
-            note.SetApproachProgress(progress);
 
             if (currentLaneViewMode == LaneViewMode.ThreeDimensional)
             {
@@ -409,12 +409,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         {
             float y = hitLineY - travelDistance * (1 - progress);
 
-            // Determine X position based on component (Staff position)
+            // Use the centralized staff position calculation from ManuscriptBackground
             float staffCenter = drawWidth / 2;
-            float lineSpacing = 40; // Must match ManuscriptBackground
-            float staffPos = getStaffPosition(note.ComponentName);
-
-            float x = staffCenter + staffPos * lineSpacing;
+            float x = staffCenter + ManuscriptBackground.GetStaffPositionForComponent(note.ComponentName);
 
             note.Position = new Vector2(x, y);
             note.Scale = Vector2.One;
@@ -427,28 +424,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 note.Alpha = 0;
             else
                 note.Alpha = 1;
-        }
-
-        private float getStaffPosition(string component)
-        {
-            // Map components to staff positions (0 = center line)
-            // Lines are at -2, -1, 0, 1, 2
-            // Spaces are at -1.5, -0.5, 0.5, 1.5
-
-            component = component.ToLowerInvariant();
-            if (component.Contains("kick")) return -2.5f; // Below bottom line
-            if (component.Contains("snare")) return 0f; // Middle line
-            if (component.Contains("hihat")) return 2.5f; // Above top line
-            if (component.Contains("tom_high")) return 1.5f; // Top space
-            if (component.Contains("tom_mid")) return 1f; // Top line
-            if (component.Contains("tom_low")) return 0.5f; // Upper middle space
-            if (component.Contains("ride")) return 3f; // Way above
-            if (component.Contains("crash")) return 3.5f; // Way way above
-            if (component.Contains("china")) return 3.5f;
-            if (component.Contains("splash")) return 3f;
-            if (component.Contains("cowbell")) return 2f;
-
-            return 0f;
         }
 
         private void updateNotePosition2D(DrawableNote note, float progress, float drawWidth, float drawHeight, float hitLineY, float travelDistance)
@@ -600,7 +575,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 return;
 
             note.ApplyResult(result);
-            ResultApplied?.Invoke(result, offset, note.AccentColour);
+            ResultApplied?.Invoke(result, offset, note.AccentColour, note.ComponentName);
         }
 
         public HitResult HandleInput(int lane, double currentTime)
@@ -644,28 +619,36 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 }
             }
 
-            if (targetNote != null && bestDiff <= missWindow)
+            if (targetNote != null)
             {
-                double offset = currentTime - targetNote.HitTime;
-                var result = getHitResult(Math.Abs(offset));
+                bool isGhostNote = targetNote.Velocity < 0.4;
+                double effectiveMissWindow = missWindow * (isGhostNote ? 1.5 : 1.0);
 
-                if (result != HitResult.None)
+                if (bestDiff <= effectiveMissWindow)
                 {
-                    applyResult(targetNote, result, offset);
-                    return result;
+                    double offset = currentTime - targetNote.HitTime;
+                    var result = getHitResult(Math.Abs(offset), isGhostNote);
+
+                    if (result != HitResult.None)
+                    {
+                        applyResult(targetNote, result, offset);
+                        return result;
+                    }
                 }
             }
 
             return HitResult.None;
         }
 
-        private HitResult getHitResult(double absOffset)
+        private HitResult getHitResult(double absOffset, bool isGhostNote = false)
         {
-            if (absOffset <= perfectWindow) return HitResult.Perfect;
-            if (absOffset <= greatWindow) return HitResult.Great;
-            if (absOffset <= goodWindow) return HitResult.Good;
-            if (absOffset <= mehWindow) return HitResult.Meh;
-            if (absOffset <= missWindow) return HitResult.Miss;
+            double multiplier = isGhostNote ? 1.5 : 1.0;
+
+            if (absOffset <= perfectWindow * multiplier) return HitResult.Perfect;
+            if (absOffset <= greatWindow * multiplier) return HitResult.Great;
+            if (absOffset <= goodWindow * multiplier) return HitResult.Good;
+            if (absOffset <= mehWindow * multiplier) return HitResult.Meh;
+            if (absOffset <= missWindow * multiplier) return HitResult.Miss;
             return HitResult.None;
         }
 
@@ -795,6 +778,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 firstActiveNoteIndex = 0;
                 noteLayer.Clear(false);
             }
+        }
+
+        public void RegisterInput(int lane)
+        {
+            double time = currentTimeProvider();
+            HandleInput(lane, time);
         }
     }
 }

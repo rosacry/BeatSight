@@ -77,11 +77,10 @@ namespace BeatSight.Game.Screens.Playback
         protected Beatmap? beatmap;
         protected string? beatmapPath;
         protected Track? track;
-
+        protected Track? drumTrack; // New
         protected PlaybackPlayfield? playfield;
-        private SpriteText statusText = null!;
-        private SpriteText offsetValueText = null!;
-        private SpriteText speedValueText = null!;
+        private ConfidenceHeatmap? confidenceHeatmap;
+
         private readonly BindableDouble offsetAdjustment = new BindableDouble
         {
             MinValue = -120,
@@ -96,14 +95,27 @@ namespace BeatSight.Game.Screens.Playback
             Default = 1.0,
             Precision = 0.01
         };
+
         private double offsetMilliseconds;
         private double playbackSpeed = 1.0;
+
+        private readonly BindableDouble drumVolume = new BindableDouble(1.0) { MinValue = 0, MaxValue = 1, Precision = 0.01 }; // New
+        private readonly BindableDouble backingVolume = new BindableDouble(1.0) { MinValue = 0, MaxValue = 1, Precision = 0.01 }; // New
+
+        private SpriteText statusText = null!;
+        private SpriteText offsetValueText = null!;
+        private SpriteText speedValueText = null!;
         private bool pausedByZeroSpeed;
         private BasicButton playPauseButton = null!;
         private BasicButton viewModeToggleButton = null!;
         private BasicButton kickLayoutToggleButton = null!;
         private BasicButton metronomeToggleButton = null!;
         private BasicButton mixToggleButton = null!;
+        private BasicButton loopLowConfidenceButton = null!; // New
+        private bool loopLowConfidenceEnabled;
+        private double? loopStart;
+        private double? loopEnd;
+        private MixerOverlay mixerOverlay = null!; // New
         private bool drumsOnlyMode;
         private Bindable<bool> drumStemPreferredSetting = null!;
         private bool drumStemAvailable;
@@ -285,6 +297,13 @@ namespace BeatSight.Game.Screens.Playback
                 Action = () => this.Exit()
             };
 
+            mixerOverlay = new MixerOverlay(backingVolume, drumVolume)
+            {
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                State = { Value = Visibility.Hidden }
+            };
+
             InternalChildren = new Drawable[]
             {
                 // Background is now global
@@ -321,7 +340,8 @@ namespace BeatSight.Game.Screens.Playback
                     Padding = BackButton.DefaultMargin,
                     Child = backButton
                 },
-                hitLightingOverlay
+                hitLightingOverlay,
+                mixerOverlay
             };
 
             backgroundDimSetting = config.GetBindable<double>(BeatSightSetting.BackgroundDim);
@@ -541,6 +561,13 @@ namespace BeatSight.Game.Screens.Playback
                 Shadow = false
             };
 
+            confidenceHeatmap = new ConfidenceHeatmap(1000) // Initial duration, will be updated
+            {
+                RelativeSizeAxes = Axes.X,
+                Height = 10,
+                Margin = new MarginPadding { Bottom = 5 }
+            };
+
             var buttonFlow = new FillFlowContainer
             {
                 RelativeSizeAxes = Axes.X,
@@ -550,7 +577,8 @@ namespace BeatSight.Game.Screens.Playback
                 Children = new Drawable[]
                 {
                     playPauseButton = createToolbarButton("Pause", togglePlayback),
-                    createToolbarButton("Restart", restartSessionFromUi)
+                    createToolbarButton("Restart", restartSessionFromUi),
+                    createToolbarButton("Mixer", () => mixerOverlay.ToggleVisibility())
                 }
             };
 
@@ -561,7 +589,17 @@ namespace BeatSight.Game.Screens.Playback
                 Padding = new MarginPadding { Left = 18, Right = 12, Top = 4, Bottom = 4 },
                 Children = new Drawable[]
                 {
-                    timelineSlider,
+                    new FillFlowContainer
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Vertical,
+                        Children = new Drawable[]
+                        {
+                            confidenceHeatmap,
+                            timelineSlider
+                        }
+                    },
                     new FillFlowContainer
                     {
                         AutoSizeAxes = Axes.Both,
@@ -800,7 +838,10 @@ namespace BeatSight.Game.Screens.Playback
             double previousTime = track?.CurrentTime ?? fallbackElapsed;
 
             if (track != null)
+            {
                 track.Seek(targetMs);
+                if (drumTrack != null) drumTrack.Seek(targetMs);
+            }
 
             fallbackElapsed = targetMs;
 
@@ -1082,6 +1123,7 @@ namespace BeatSight.Game.Screens.Playback
         {
             mixToggleButton = createSidebarButton("Audio: Full Mix", toggleDrumMix);
             metronomeToggleButton = createSidebarButton("Metronome: Off", toggleMetronome);
+            loopLowConfidenceButton = createSidebarButton("Loop Low Confidence: Off", toggleLoopLowConfidence); // New
 
             updateMixToggle();
             updateMetronomeToggle(metronomeEnabledSetting?.Value ?? false);
@@ -1097,7 +1139,8 @@ namespace BeatSight.Game.Screens.Playback
                     createSpeedControl(),
                     createOffsetControl(),
                     mixToggleButton,
-                    metronomeToggleButton
+                    metronomeToggleButton,
+                    loopLowConfidenceButton // New
                 }
             };
         }
@@ -1280,7 +1323,7 @@ namespace BeatSight.Game.Screens.Playback
             button.BackgroundColour = active ? sidebarButtonActive : sidebarButtonInactive;
         }
 
-        private void onPlayfieldResult(HitResult result, double offset, Color4 accentColour)
+        private void onPlayfieldResult(HitResult result, double offset, Color4 accentColour, string component)
         {
             if (hitLightingEnabled?.Value == true && (result == HitResult.Perfect || result == HitResult.Great))
             {
@@ -1290,6 +1333,10 @@ namespace BeatSight.Game.Screens.Playback
                     .FadeOut(260, Easing.OutQuad);
             }
 
+            if (result != HitResult.Miss && result != HitResult.None)
+            {
+                playHitsound(component);
+            }
         }
 
         private void loadBeatmap()
@@ -1302,7 +1349,10 @@ namespace BeatSight.Game.Screens.Playback
 
             try
             {
-                beatmap = BeatmapLoader.LoadFromFile(path!);
+                if (path == null) throw new InvalidOperationException("Path cannot be null.");
+                var loadedMap = BeatmapLoader.LoadFromFile(path);
+                if (loadedMap == null) throw new IOException($"Failed to load beatmap from {path}");
+                beatmap = loadedMap;
                 beatmapPath = path;
 
                 // Determine layout based on settings and beatmap
@@ -1324,12 +1374,31 @@ namespace BeatSight.Game.Screens.Playback
                 playfield?.LoadBeatmap(beatmap);
                 playfield?.SetKickLineMode(KickLineEnabled);
 
+                // Update heatmap duration
+                confidenceHeatmap?.SetDuration(beatmap.Audio.Duration);
+
+                // Load debug JSON if available
+                string debugPath = Path.ChangeExtension(path, ".debug.json");
+                if (File.Exists(debugPath))
+                {
+                    try
+                    {
+                        string json = File.ReadAllText(debugPath);
+                        confidenceHeatmap?.LoadFromDebugJson(json);
+                    }
+                    catch (Exception ex)
+                    {
+                        osu.Framework.Logging.Logger.Log($"Failed to load debug JSON: {ex.Message}");
+                    }
+                }
+
                 // Load per-map settings
                 var settings = mapSettings.Get(beatmap.Metadata.BeatmapId);
                 autoZoom.Value = settings.AutoZoom;
 
                 setStatusMessage($"Loaded: {beatmap.Metadata.Artist} — {beatmap.Metadata.Title}");
                 loadTrack();
+                loadCustomSamples();
                 fallbackElapsed = 0;
                 fallbackRunning = false;
             }
@@ -1429,12 +1498,14 @@ namespace BeatSight.Game.Screens.Playback
                 if (restart)
                 {
                     track.Seek(0);
+                    if (drumTrack != null) drumTrack.Seek(0);
                     fallbackElapsed = 0;
                 }
                 else
                 {
                     // Ensure sync when resuming
                     track.Seek(fallbackElapsed);
+                    if (drumTrack != null) drumTrack.Seek(fallbackElapsed);
                 }
 
                 try
@@ -1443,19 +1514,32 @@ namespace BeatSight.Game.Screens.Playback
                     {
                         track.Tempo.Value = 0.05;
                         track.Frequency.Value = playbackSpeed / 0.05;
+                        if (drumTrack != null)
+                        {
+                            drumTrack.Tempo.Value = 0.05;
+                            drumTrack.Frequency.Value = playbackSpeed / 0.05;
+                        }
                     }
                     else
                     {
                         track.Frequency.Value = 1.0;
                         track.Tempo.Value = playbackSpeed;
+                        if (drumTrack != null)
+                        {
+                            drumTrack.Frequency.Value = 1.0;
+                            drumTrack.Tempo.Value = playbackSpeed;
+                        }
                     }
                 }
                 catch
                 {
                     track.Tempo.Value = Math.Max(0.05, playbackSpeed);
+                    if (drumTrack != null) drumTrack.Tempo.Value = Math.Max(0.05, playbackSpeed);
                 }
 
                 track.Start();
+                if (drumTrack != null) drumTrack.Start();
+
                 isTrackRunning = true;
                 fallbackRunning = false;
             }
@@ -1476,6 +1560,7 @@ namespace BeatSight.Game.Screens.Playback
             if (track != null)
             {
                 track.Stop();
+                if (drumTrack != null) drumTrack.Stop();
                 isTrackRunning = false;
                 fallbackElapsed = track.CurrentTime;
             }
@@ -1486,13 +1571,19 @@ namespace BeatSight.Game.Screens.Playback
 
         private void disposeTrack()
         {
-            if (track == null)
-                return;
-
-            track.Stop();
-            track.Completed -= onTrackCompleted;
-            track.Dispose();
-            track = null;
+            if (track != null)
+            {
+                track.Stop();
+                track.Completed -= onTrackCompleted;
+                track.Dispose();
+                track = null;
+            }
+            if (drumTrack != null)
+            {
+                drumTrack.Stop();
+                drumTrack.Dispose();
+                drumTrack = null;
+            }
             isTrackRunning = false;
         }
 
@@ -1539,12 +1630,15 @@ namespace BeatSight.Game.Screens.Playback
 
         private void updateMusicVolumeOutput()
         {
-            if (track == null)
-                return;
-
             double value = musicVolumeSetting?.Value ?? 0;
             bool enabled = musicVolumeEnabledSetting?.Value ?? true;
-            track.Volume.Value = enabled ? value : 0;
+            double baseVol = enabled ? value : 0;
+
+            if (track != null)
+                track.Volume.Value = baseVol * backingVolume.Value;
+
+            if (drumTrack != null)
+                drumTrack.Volume.Value = baseVol * drumVolume.Value;
         }
 
         private double getEffectiveEffectVolume()
@@ -1595,6 +1689,32 @@ namespace BeatSight.Game.Screens.Playback
 
             if (!isScrubbingPlayback)
                 updatePlaybackProgressUI();
+
+            if (confidenceHeatmap != null)
+            {
+                double currentTime = track?.CurrentTime ?? fallbackElapsed;
+                confidenceHeatmap.UpdatePosition(currentTime);
+
+                if (loopLowConfidenceEnabled)
+                {
+                    if (loopStart == null || loopEnd == null)
+                    {
+                        var section = confidenceHeatmap.GetNextLowConfidenceSection(currentTime);
+                        if (section != null)
+                        {
+                            loopStart = section.Value.Start;
+                            loopEnd = section.Value.End;
+                            if (track != null) track.Seek(loopStart.Value);
+                            if (drumTrack != null) drumTrack.Seek(loopStart.Value);
+                        }
+                    }
+                    else if (currentTime > loopEnd.Value)
+                    {
+                        if (track != null) track.Seek(loopStart.Value);
+                        if (drumTrack != null) drumTrack.Seek(loopStart.Value);
+                    }
+                }
+            }
         }
 
         protected override void Dispose(bool isDisposing)
@@ -1624,15 +1744,8 @@ namespace BeatSight.Game.Screens.Playback
                 return true;
             }
 
-            if (!e.Repeat && playfield != null && laneKeyBindings.TryGetValue(e.Key, out int lane))
-            {
-                if (lane < currentLaneLayout.LaneCount)
-                {
-                    var result = playfield.HandleInput(lane, getCurrentTime());
-                    if (result != HitResult.None)
-                        return true;
-                }
-            }
+            // Note: Lane key bindings removed - this is a drum analysis tool, notes auto-trigger
+            // The HandleInput API is retained for potential future live drum input mode
 
             return base.OnKeyDown(e);
         }
@@ -1694,10 +1807,33 @@ namespace BeatSight.Game.Screens.Playback
 
         private void toggleDrumMix()
         {
-            if (!drumStemAvailable)
-                return;
+            setDrumMixMode(!drumsOnlyMode);
+        }
 
-            drumStemPreferredSetting.Value = !drumStemPreferredSetting.Value;
+        private void toggleLoopLowConfidence()
+        {
+            // Check if we have confidence data before enabling
+            if (!loopLowConfidenceEnabled && confidenceHeatmap != null && !confidenceHeatmap.HasConfidenceData)
+            {
+                osu.Framework.Logging.Logger.Log(
+                    "[Playback] Cannot enable Loop Low Confidence: No confidence data loaded. Re-generate the beatmap with debug output enabled.",
+                    osu.Framework.Logging.LoggingTarget.Runtime,
+                    osu.Framework.Logging.LogLevel.Important);
+                return;
+            }
+
+            loopLowConfidenceEnabled = !loopLowConfidenceEnabled;
+            if (loopLowConfidenceButton != null)
+            {
+                loopLowConfidenceButton.Text = loopLowConfidenceEnabled ? "Loop Low Confidence: On" : "Loop Low Confidence: Off";
+                setButtonState(loopLowConfidenceButton, loopLowConfidenceEnabled);
+            }
+
+            if (!loopLowConfidenceEnabled)
+            {
+                loopStart = null;
+                loopEnd = null;
+            }
         }
 
         private void prepareAudioCaches(string resolvedAudioPath)
@@ -1769,25 +1905,36 @@ namespace BeatSight.Game.Screens.Playback
 
             disposeTrack();
 
-            string? targetRelativePath = drumsOnlyMode && drumStemAvailable ? cachedDrumStemPath : cachedFullMixPath;
+            string? mainPath = cachedFullMixPath;
 
-            if (string.IsNullOrEmpty(targetRelativePath) || storageTrackStore == null)
+            if (string.IsNullOrEmpty(mainPath) || storageTrackStore == null)
             {
                 track = null;
                 return;
             }
 
-            var loadedTrack = storageTrackStore.Get(targetRelativePath);
+            var loadedTrack = storageTrackStore.Get(mainPath);
 
             if (loadedTrack == null)
             {
-                osu.Framework.Logging.Logger.Log($"[Playback] Unable to resolve cached track '{targetRelativePath}'", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Debug);
+                osu.Framework.Logging.Logger.Log($"[Playback] Unable to resolve cached track '{mainPath}'", osu.Framework.Logging.LoggingTarget.Runtime, osu.Framework.Logging.LogLevel.Debug);
                 track = null;
                 return;
             }
 
             track = loadedTrack;
             track.Completed += onTrackCompleted;
+
+            // Load drum stem if available
+            if (drumStemAvailable && !string.IsNullOrEmpty(cachedDrumStemPath))
+            {
+                drumTrack = storageTrackStore.Get(cachedDrumStemPath);
+            }
+            else
+            {
+                drumTrack = null;
+            }
+
             updateMusicVolumeOutput();
             try
             {
@@ -2234,6 +2381,96 @@ namespace BeatSight.Game.Screens.Playback
             return string.IsNullOrEmpty(filtered) ? string.Empty : filtered;
         }
 
+        private Dictionary<string, SampleChannel> customSampleChannels = new Dictionary<string, SampleChannel>();
+
+        private void loadCustomSamples()
+        {
+            customSampleChannels.Clear();
+            if (beatmap?.DrumKit?.CustomSamples == null) return;
+
+            string cacheFolder = "PlaybackAudio/Samples/" + sanitizeFileComponent(beatmap.Metadata.BeatmapId);
+            string absoluteCacheFolder = host.Storage.GetFullPath(cacheFolder);
+            if (!Directory.Exists(absoluteCacheFolder))
+                Directory.CreateDirectory(absoluteCacheFolder);
+
+            foreach (var kvp in beatmap.DrumKit.CustomSamples)
+            {
+                string component = kvp.Key;
+                string filename = kvp.Value;
+
+                string sourcePath = Path.IsPathRooted(filename)
+                    ? filename
+                    : Path.Combine(Path.GetDirectoryName(beatmapPath) ?? "", filename);
+
+                if (!File.Exists(sourcePath)) continue;
+
+                string extension = Path.GetExtension(filename);
+                string cachedName = $"{component}{extension}";
+                string relativePath = Path.Combine(cacheFolder, cachedName).Replace(Path.DirectorySeparatorChar, '/');
+                string absolutePath = Path.Combine(absoluteCacheFolder, cachedName);
+
+                try
+                {
+                    File.Copy(sourcePath, absolutePath, true);
+                    var sample = storageSampleStore?.Get(relativePath);
+                    if (sample != null)
+                    {
+                        customSampleChannels[component] = sample.GetChannel();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    osu.Framework.Logging.Logger.Log($"Failed to load custom sample for {component}: {ex.Message}");
+                }
+            }
+        }
+
+        private void playHitsound(string component)
+        {
+            if (hitsoundVolumeEnabledSetting?.Value == false) return;
+
+            double volume = hitsoundVolumeSetting?.Value ?? 1.0;
+            if (volume <= 0) return;
+
+            // Try custom sample first
+            if (customSampleChannels.TryGetValue(component, out var channel))
+            {
+                channel.Volume.Value = volume;
+                channel.Play();
+                return;
+            }
+
+            // Fallback to default samples
+            string sampleName = getSampleNameForComponent(component);
+            if (string.IsNullOrEmpty(sampleName)) return;
+
+            // Try embedded store first for defaults
+            var sample = embeddedSampleStore?.Get(sampleName);
+            if (sample != null)
+            {
+                var defaultChannel = sample.GetChannel();
+                defaultChannel.Volume.Value = volume;
+                defaultChannel.Play();
+            }
+        }
+
+        private string getSampleNameForComponent(string component)
+        {
+            return component switch
+            {
+                "kick" => "Gameplay/kick",
+                "snare" => "Gameplay/snare",
+                "hihat_closed" => "Gameplay/hihat-closed",
+                "hihat_open" => "Gameplay/hihat-open",
+                "crash" => "Gameplay/crash",
+                "ride" => "Gameplay/ride",
+                "tom_high" => "Gameplay/tom-high",
+                "tom_mid" => "Gameplay/tom-mid",
+                "tom_low" => "Gameplay/tom-low",
+                _ => "Gameplay/hit-normal"
+            };
+        }
+
         private partial class ScrubbableSliderBar : BeatSightSliderBar
         {
             public event Action<bool>? ScrubbingChanged;
@@ -2241,6 +2478,7 @@ namespace BeatSight.Game.Screens.Playback
             private bool scrubbing;
 
             protected override bool OnMouseDown(MouseDownEvent e)
+
             {
                 setScrubbing(true);
                 var handled = base.OnMouseDown(e);
@@ -2341,8 +2579,8 @@ namespace BeatSight.Game.Screens.Playback
                     this.Y = hideOffset;
                 }
 
-                this.MoveToY(0, 300, Easing.OutQuint);
-                this.FadeTo(1f, 300, Easing.OutQuint);
+                this.FadeIn(200, Easing.OutQuint);
+                this.MoveToY(0, 200, Easing.OutQuint);
                 return true;
             }
 
@@ -2350,12 +2588,13 @@ namespace BeatSight.Game.Screens.Playback
             {
                 float hideOffset = Math.Max(0, DrawHeight - PEEK_HEIGHT);
                 this.MoveToY(hideOffset, 500, Easing.OutQuint);
-                this.FadeTo(0f, 500, Easing.OutQuint);
+                this.FadeTo(0.6f, 500, Easing.OutQuint);
             }
         }
 
         private partial class ResponsivePlayfieldContainer : Container
         {
+
             private readonly Drawable playfieldContent;
             private MarginPadding cachedPadding;
 
@@ -2468,5 +2707,76 @@ namespace BeatSight.Game.Screens.Playback
             }
         }
 
+        private partial class MixerOverlay : VisibilityContainer
+        {
+            public MixerOverlay(BindableDouble backingVol, BindableDouble drumVol)
+            {
+                RelativeSizeAxes = Axes.Both;
+                Anchor = Anchor.Centre;
+                Origin = Anchor.Centre;
+                Alpha = 0;
+
+                Children = new Drawable[]
+                {
+                    new Box { RelativeSizeAxes = Axes.Both, Colour = Color4.Black.Opacity(0.8f) },
+                    new FillFlowContainer
+                    {
+                        AutoSizeAxes = Axes.Both,
+                        Direction = FillDirection.Vertical,
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        Spacing = new Vector2(0, 20),
+                        Children = new Drawable[]
+                        {
+                            new BeatSightSpriteText { Text = "Audio Mixer", Font = BeatSightFont.Title(24), Anchor = Anchor.TopCentre, Origin = Anchor.TopCentre },
+                            new BeatSightSpriteText { Text = "Backing Track", Font = BeatSightFont.Body(16), Anchor = Anchor.TopCentre, Origin = Anchor.TopCentre },
+                            new BeatSightSliderBar
+                            {
+                                Current = backingVol,
+                                Width = 300,
+                                Height = 20,
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre
+                            },
+                            new BeatSightSpriteText { Text = "Drum Stem", Font = BeatSightFont.Body(16), Anchor = Anchor.TopCentre, Origin = Anchor.TopCentre },
+                            new BeatSightSliderBar
+                            {
+                                Current = drumVol,
+                                Width = 300,
+                                Height = 20,
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre
+                            },
+                            new FillFlowContainer
+                            {
+                                AutoSizeAxes = Axes.Both,
+                                Direction = FillDirection.Horizontal,
+                                Spacing = new Vector2(10, 0),
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre,
+                                Children = new Drawable[]
+                                {
+                                    new BeatSightButton { Text = "Mute Backing", Width = 100, Height = 30, Action = () => backingVol.Value = 0 },
+                                    new BeatSightButton { Text = "Solo Drums", Width = 100, Height = 30, Action = () => { backingVol.Value = 0; drumVol.Value = 1; } },
+                                    new BeatSightButton { Text = "Reset", Width = 100, Height = 30, Action = () => { backingVol.Value = 1; drumVol.Value = 1; } }
+                                }
+                            },
+                            new BeatSightButton
+                            {
+                                Text = "Close",
+                                Width = 100,
+                                Height = 40,
+                                Action = Hide,
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre
+                            }
+                        }
+                    }
+                };
+            }
+
+            protected override void PopIn() => this.FadeIn(200);
+            protected override void PopOut() => this.FadeOut(200);
+        }
     }
 }

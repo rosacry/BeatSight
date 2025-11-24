@@ -54,6 +54,29 @@ BeatSight is designed as a modular, scalable system with clear separation betwee
   - `LoopController`: Handles sectional looping, rehearsal blocks, and preview ranges
   - `HitObjectManager`: Manages note timing and rendering pipelines for each view mode
 
+- **Enhanced Playfield Views** (November 2025):
+  - `TwoDimensionalLaneViewEnhanced`: Professional 2D lane rendering with improved note sizing, lane gradients, and better visual hierarchy
+  - `ThreeDimensionalHighwayViewEnhanced`: 3D highway view with depth-based perspective, scanline effects, and highway pulse animations
+  - `ManuscriptViewEnhanced`: Traditional drum notation view with staff lines, component-based positioning, and music notation styling
+  - `PlayfieldViewBaseEnhanced`: Shared base class providing coordinate system conventions, timing calculations, and common utilities
+  - `PlayfieldViewManager`: Coordinates view switching with support for enhanced view toggle
+  - `ViewTransitionManager`: Handles smooth animated transitions between view modes
+
+- **Enhanced UI Components**:
+  - `DesignSystem`: Centralized design constants (typography, spacing, colors, animations)
+  - `NoteRenderer`: Unified note rendering with velocity/dynamics visualization
+  - `TimingGridOverlayEnhanced`: Beat/measure grid lines with tempo-aware density
+  - `TimingStrikeZoneEnhanced`: Professional hit line visualization with judgment feedback
+  - `JudgmentFeedbackSystem`: Visual feedback for auto-hit timing display
+  - `PracticeOverlay`: Enhanced loop selection UI with progress visualization
+
+- **Data Models for AI**:
+  - `HitObjectExtended`: Extended hit objects with articulation data (ghost notes, accents, rimshots, etc.)
+  - `DrumArticulation`: Enum for detected articulation types
+  - `DynamicsLevel`: Musical dynamics (pp to fff)
+  - `DrumPattern`: Detected musical patterns (grooves, fills, transitions)
+  - `TranscriptionStatistics`: Statistics about AI transcription quality
+
 - **Audio System**:
   - `AudioEngine`: Playback with pitch-independent speed control
   - `MetronomeOverlay`: Configurable click track

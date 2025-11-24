@@ -3,22 +3,36 @@ using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
 using BeatSight.Game.UI.Theming;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osuTK;
 using osuTK.Graphics;
 
 namespace BeatSight.Game.Screens.Playback.Playfield
 {
+    /// <summary>
+    /// Visual indicator for the hit/judgement zone across all playfield view modes.
+    /// Adapts its appearance to match the active view (2D lanes, 3D highway, or manuscript).
+    /// </summary>
     internal sealed partial class TimingStrikeZone : CompositeDrawable
     {
         private readonly Container strikeBody;
         private readonly Box fill;
         private readonly Box glow;
         private readonly Box rim;
+        private readonly Box innerHighlight;
         private LaneViewMode viewMode = LaneViewMode.TwoDimensional;
         private bool useGlobalKick = true;
         private float baselineOffset;
         private float visualHeight;
+
+        // View-specific styling
+        private static readonly Color4 TwoDimensionalBorder = new Color4(100, 160, 255, 220);
+        private static readonly Color4 TwoDimensionalFill = new Color4(30, 50, 90, 140);
+        private static readonly Color4 ThreeDimensionalBorder = new Color4(255, 200, 160, 230);
+        private static readonly Color4 ThreeDimensionalFill = new Color4(50, 45, 80, 130);
+        private static readonly Color4 ManuscriptLine = new Color4(180, 60, 60, 180);
 
         public float VisualHitZoneHeight => visualHeight;
 
@@ -28,31 +42,40 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             Anchor = Anchor.BottomCentre;
             Origin = Anchor.BottomCentre;
             Width = 0.98f;
-            Height = 28f;
+            Height = 24f;
             AlwaysPresent = true;
-            Alpha = 0.92f;
+            Alpha = 0.95f;
 
             strikeBody = new Container
             {
                 RelativeSizeAxes = Axes.Both,
                 Masking = true,
-                CornerRadius = 14,
-                BorderThickness = 4,
-                BorderColour = new Color4(255, 220, 200, 220)
+                CornerRadius = 12,
+                BorderThickness = 3,
+                BorderColour = TwoDimensionalBorder
             };
 
             fill = new Box
             {
                 RelativeSizeAxes = Axes.Both,
-                Colour = new Color4(42, 46, 72, 120)
+                Colour = TwoDimensionalFill
             };
 
             glow = new Box
             {
                 RelativeSizeAxes = Axes.Both,
-                Colour = new Color4(255, 214, 170, 80),
-                Alpha = 0.35f,
+                Colour = UITheme.AccentPrimary,
+                Alpha = 0.3f,
                 Blending = BlendingParameters.Additive
+            };
+
+            innerHighlight = new Box
+            {
+                RelativeSizeAxes = Axes.X,
+                Height = 2,
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                Colour = new Color4(255, 255, 255, 60)
             };
 
             rim = new Box
@@ -61,11 +84,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 Height = 3,
                 Anchor = Anchor.TopCentre,
                 Origin = Anchor.TopCentre,
-                Colour = new Color4(255, 245, 230, 140)
+                Colour = TwoDimensionalBorder
             };
 
             strikeBody.Add(fill);
             strikeBody.Add(glow);
+            strikeBody.Add(innerHighlight);
 
             InternalChildren = new Drawable[]
             {
@@ -78,7 +102,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
         public void SetLaneLayout(LaneLayout layout)
         {
-            // Currently unused, but retained for future per-lane styling customisation.
+            // Reserved for future per-lane customization
             _ = layout;
         }
 
@@ -105,53 +129,100 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             useGlobalKick = globalKick;
             viewMode = mode;
 
-            float baseHeight = mode == LaneViewMode.ThreeDimensional
-                ? Math.Clamp(drawHeight * 0.058f, 20f, 50f)
-                : 20f;
+            // Adjust dimensions based on view mode
+            float baseHeight = mode switch
+            {
+                LaneViewMode.ThreeDimensional => Math.Clamp(drawHeight * 0.055f, 18f, 45f),
+                LaneViewMode.Manuscript => 8f,
+                _ => 22f // 2D default
+            };
 
             Height = baseHeight;
             visualHeight = baseHeight;
 
+            // Position relative to hit line
             float offsetFromBottom = Math.Clamp(drawHeight - hitLineY - baseHeight / 2f, 0f, drawHeight);
             baselineOffset = offsetFromBottom;
             Y = -baselineOffset;
 
-            float widthFactor = mode == LaneViewMode.ThreeDimensional ? 0.92f : 0.98f;
-            Width = Math.Clamp(widthFactor, 0.7f, 0.99f);
+            // Adjust width based on view mode
+            float widthFactor = mode switch
+            {
+                LaneViewMode.ThreeDimensional => 0.90f,
+                LaneViewMode.Manuscript => 0.55f,
+                _ => 0.98f
+            };
+            Width = Math.Clamp(widthFactor, 0.5f, 0.99f);
 
-            float cornerRadius = Math.Clamp(baseHeight * 0.48f, 6f, 28f);
+            // Adjust corner radius
+            float cornerRadius = mode switch
+            {
+                LaneViewMode.ThreeDimensional => Math.Clamp(baseHeight * 0.4f, 6f, 20f),
+                LaneViewMode.Manuscript => 2f,
+                _ => Math.Clamp(baseHeight * 0.5f, 6f, 14f)
+            };
             strikeBody.CornerRadius = cornerRadius;
-            strikeBody.BorderThickness = Math.Clamp(baseHeight * 0.28f, 3f, 6f);
-            rim.Height = mode == LaneViewMode.ThreeDimensional ? 4f : 3f;
-            rim.Alpha = mode == LaneViewMode.ThreeDimensional ? 0.9f : 0.75f;
+
+            // Adjust border thickness
+            strikeBody.BorderThickness = mode switch
+            {
+                LaneViewMode.ThreeDimensional => Math.Clamp(baseHeight * 0.22f, 2f, 5f),
+                LaneViewMode.Manuscript => 1f,
+                _ => 3f
+            };
+
+            rim.Height = mode == LaneViewMode.Manuscript ? 2f : 3f;
+            rim.Alpha = mode == LaneViewMode.Manuscript ? 0.8f : 0.85f;
 
             updatePalette();
         }
 
         private void updatePalette()
         {
-            if (viewMode == LaneViewMode.Manuscript)
+            Color4 borderColour;
+            Color4 fillColour;
+            float glowAlpha;
+
+            switch (viewMode)
             {
-                strikeBody.BorderColour = new Color4(0, 0, 0, 100);
-                fill.Colour = Color4.Transparent;
-                glow.Alpha = 0;
-                rim.Colour = new Color4(0, 0, 0, 100);
-                return;
+                case LaneViewMode.Manuscript:
+                    borderColour = ManuscriptLine;
+                    fillColour = Color4.Transparent;
+                    glowAlpha = 0f;
+                    strikeBody.BorderColour = borderColour;
+                    fill.Colour = fillColour;
+                    glow.Alpha = glowAlpha;
+                    rim.Colour = ManuscriptLine;
+                    innerHighlight.Alpha = 0f;
+                    return;
+
+                case LaneViewMode.ThreeDimensional:
+                    borderColour = useGlobalKick
+                        ? new Color4(255, 195, 150, 240)
+                        : new Color4(180, 200, 255, 240);
+                    fillColour = useGlobalKick
+                        ? new Color4(55, 40, 85, 120)
+                        : new Color4(40, 55, 90, 120);
+                    glowAlpha = 0.45f;
+                    break;
+
+                default: // 2D
+                    borderColour = useGlobalKick
+                        ? new Color4(200, 180, 255, 230)
+                        : TwoDimensionalBorder;
+                    fillColour = useGlobalKick
+                        ? new Color4(60, 45, 100, 130)
+                        : TwoDimensionalFill;
+                    glowAlpha = 0.35f;
+                    break;
             }
 
-            var border = useGlobalKick
-                ? new Color4(255, 210, 182, 230)
-                : new Color4(200, 220, 255, 230); // Made brighter
-
-            var fillColour = useGlobalKick
-                ? new Color4(52, 40, 90, 110)
-                : new Color4(40, 50, 80, 110);
-
-            strikeBody.BorderColour = border;
+            strikeBody.BorderColour = borderColour;
             fill.Colour = fillColour;
-            glow.Colour = UITheme.Emphasise(border, 1.25f);
-            glow.Alpha = 0.48f; // Consistent glow
-            rim.Colour = new Color4(border.R, border.G, border.B, 180);
+            glow.Colour = UITheme.Emphasise(borderColour, 1.2f);
+            glow.Alpha = glowAlpha;
+            rim.Colour = new Color4(borderColour.R, borderColour.G, borderColour.B, 180);
+            innerHighlight.Alpha = 0.4f;
         }
     }
 }

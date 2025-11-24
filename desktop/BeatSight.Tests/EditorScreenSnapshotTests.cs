@@ -1,8 +1,8 @@
 using System.Reflection;
 using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Screens.Editor;
+using BeatSight.Game.UI.Components;
 using osu.Framework.Bindables;
-using osu.Framework.Graphics.Sprites;
 using Xunit;
 
 namespace BeatSight.Tests
@@ -37,7 +37,7 @@ namespace BeatSight.Tests
             setPrivateField(screen, "snapDivisor", initialSnap);
             setPrivateField(screen, "beatGridVisible", initialGridVisible);
             setPrivateField(screen, "currentTime", initialTime);
-            setPrivateField(screen, "timeText", new SpriteText());
+            setPrivateField(screen, "timeText", new BeatSightSpriteText());
             setPrivateField(screen, "editorTimelineZoomDefault", new BindableDouble(initialZoom));
             setPrivateField(screen, "editorWaveformScaleDefault", new BindableDouble(initialWaveform));
             setPrivateField(screen, "editorBeatGridVisibleDefault", new BindableBool(initialGridVisible));

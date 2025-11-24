@@ -31,6 +31,8 @@ namespace BeatSight.Game.Beatmaps
         public DateTime ModifiedAt { get; set; } = DateTime.UtcNow;
         public string? Description { get; set; }
         public string? BackgroundFile { get; set; }
+        public string? ReleaseDate { get; set; }
+        public string? Provider { get; set; }
     }
 
     public class AudioInfo

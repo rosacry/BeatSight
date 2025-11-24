@@ -32,6 +32,8 @@ namespace BeatSight.Game.AI
         public bool ForceQuantization { get; set; }
         public double? DownbeatConfidence { get; set; }
         public IReadOnlyList<double>? TempoCandidates { get; set; }
+        public double? StartTime { get; set; }
+        public double? EndTime { get; set; }
     }
 
     public readonly struct AiGenerationProgress
@@ -452,6 +454,12 @@ namespace BeatSight.Game.AI
 
             if (options.ForceQuantization)
                 builder.Append(' ').Append("--force-quantization");
+
+            if (options.StartTime.HasValue)
+                builder.Append(' ').Append("--start-time ").Append(options.StartTime.Value.ToString("0.######", CultureInfo.InvariantCulture));
+
+            if (options.EndTime.HasValue)
+                builder.Append(' ').Append("--end-time ").Append(options.EndTime.Value.ToString("0.######", CultureInfo.InvariantCulture));
 
             return builder.ToString();
         }

@@ -25,6 +25,7 @@ using osu.Framework.Graphics.Rendering;
 using osu.Framework.Graphics.Textures;
 using BeatSight.Game.Screens;
 using osu.Framework.Bindables;
+using osu.Framework.Logging;
 using BeatSight.Game.Configuration;
 
 namespace BeatSight.Game.Screens.SongSelect
@@ -41,6 +42,9 @@ namespace BeatSight.Game.Screens.SongSelect
         [Resolved]
         private IRenderer renderer { get; set; } = null!;
 
+        [Resolved]
+        private BeatSightGame game { get; set; } = null!;
+
         private readonly bool editorMode;
         private readonly bool previewMode;
         private BeatmapCarousel carousel = null!;
@@ -48,6 +52,8 @@ namespace BeatSight.Game.Screens.SongSelect
         private BeatmapLibrary.BeatmapEntry? selectedBeatmap;
         private SearchTextBox searchBox = null!;
         private BeatSight.Game.UI.Components.Dropdown<BeatmapCarousel.SortMode> sortDropdown = null!;
+        private BeatSight.Game.UI.Components.Dropdown<string> genreDropdown = null!; // New
+        private BeatSightCheckbox confidenceFilter = null!; // New
         private Box backgroundDim = null!;
         private Sprite backgroundSprite = null!;
         private BackButton backButton = null!;
@@ -146,6 +152,21 @@ namespace BeatSight.Game.Screens.SongSelect
         {
             var beatmaps = BeatmapLibrary.GetAvailableBeatmaps();
             carousel.SetBeatmaps(beatmaps);
+
+            // Populate genre dropdown dynamically
+            if (genreDropdown != null)
+            {
+                var genres = new HashSet<string> { "All" };
+                foreach (var b in beatmaps)
+                {
+                    foreach (var tag in b.Beatmap.Metadata.Tags)
+                    {
+                        if (!string.IsNullOrWhiteSpace(tag))
+                            genres.Add(tag);
+                    }
+                }
+                genreDropdown.Items = genres.OrderBy(g => g == "All" ? "" : g).ToList();
+            }
         }
 
         private void selectBeatmap(BeatmapLibrary.BeatmapEntry entry)
@@ -335,6 +356,7 @@ namespace BeatSight.Game.Screens.SongSelect
         private partial class BeatmapDetailsPanel : CompositeDrawable
         {
             public Action? CreateNewAction;
+            public Action? ImportAudioAction; // New
 
             private readonly bool editorMode;
             private FillFlowContainer contentFlow = null!;
@@ -345,8 +367,15 @@ namespace BeatSight.Game.Screens.SongSelect
             private TextFlowContainer artist = null!;
             private SpriteText creator = null!;
             private SpriteText difficulty = null!;
+            private Container aiBadge = null!;
+            private SpriteText confidenceText = null!;
+            private SpriteText modelVersionText = null!;
             private SpriteText bpm = null!;
             private SpriteText duration = null!;
+            private SpriteText source = null!;
+            private SpriteText releaseDate = null!;
+            private SpriteText tags = null!;
+            private SpriteText provider = null!;
             private BeatSightButton actionButton = null!;
 
             // Empty view
@@ -392,6 +421,17 @@ namespace BeatSight.Game.Screens.SongSelect
                                         Height = 50,
                                         BackgroundColour = UITheme.AccentPrimary,
                                         Action = () => CreateNewAction?.Invoke(),
+                                        Alpha = editorMode ? 1 : 0,
+                                        Anchor = Anchor.Centre,
+                                        Origin = Anchor.Centre
+                                    },
+                                    new BeatSightButton
+                                    {
+                                        Text = "New from Audio (AI)",
+                                        Width = 250,
+                                        Height = 50,
+                                        BackgroundColour = UITheme.AccentSecondary,
+                                        Action = () => ImportAudioAction?.Invoke(),
                                         Alpha = editorMode ? 1 : 0,
                                         Anchor = Anchor.Centre,
                                         Origin = Anchor.Centre
@@ -479,6 +519,70 @@ namespace BeatSight.Game.Screens.SongSelect
                                     Anchor = Anchor.TopCentre,
                                     Origin = Anchor.TopCentre,
                                 },
+                                aiBadge = new Container
+                                {
+                                    AutoSizeAxes = Axes.Both,
+                                    Masking = true,
+                                    CornerRadius = 4,
+                                    Anchor = Anchor.TopCentre,
+                                    Origin = Anchor.TopCentre,
+                                    Alpha = 0,
+                                    Children = new Drawable[]
+                                    {
+                                        new Box { RelativeSizeAxes = Axes.Both, Colour = UITheme.AccentSecondary },
+                                        new SpriteText
+                                        {
+                                            Text = "AI Generated",
+                                            Font = BeatSightFont.Caption(12f),
+                                            Colour = Color4.White,
+                                            Padding = new MarginPadding { Horizontal = 8, Vertical = 2 }
+                                        }
+                                    }
+                                },
+                                confidenceText = new SpriteText
+                                {
+                                    Font = BeatSightFont.Caption(14f),
+                                    Colour = UITheme.TextMuted,
+                                    Anchor = Anchor.TopCentre,
+                                    Origin = Anchor.TopCentre,
+                                },
+                                modelVersionText = new SpriteText
+                                {
+                                    Font = BeatSightFont.Caption(12f),
+                                    Colour = UITheme.TextMuted,
+                                    Anchor = Anchor.TopCentre,
+                                    Origin = Anchor.TopCentre,
+                                    Alpha = 0.5f
+                                },
+                                source = new SpriteText
+                                {
+                                    Font = BeatSightFont.Body(16f),
+                                    Colour = UITheme.TextSecondary,
+                                    Anchor = Anchor.TopCentre,
+                                    Origin = Anchor.TopCentre,
+                                },
+                                releaseDate = new SpriteText
+                                {
+                                    Font = BeatSightFont.Body(16f),
+                                    Colour = UITheme.TextSecondary,
+                                    Anchor = Anchor.TopCentre,
+                                    Origin = Anchor.TopCentre,
+                                },
+                                tags = new SpriteText
+                                {
+                                    Font = BeatSightFont.Body(16f),
+                                    Colour = UITheme.TextMuted,
+                                    Anchor = Anchor.TopCentre,
+                                    Origin = Anchor.TopCentre,
+                                },
+                                provider = new SpriteText
+                                {
+                                    Font = BeatSightFont.Caption(14f),
+                                    Colour = UITheme.TextMuted,
+                                    Anchor = Anchor.TopCentre,
+                                    Origin = Anchor.TopCentre,
+                                    Alpha = 0.7f
+                                },
                                 new Container { Height = 40 }, // Spacer
                                 actionButton = new BeatSightButton
                                 {
@@ -510,6 +614,26 @@ namespace BeatSight.Game.Screens.SongSelect
 
                 difficulty.Text = $"Difficulty: {beatmap.Metadata.Difficulty:F1} stars";
 
+                var aiMeta = beatmap.Editor?.AiGenerationMetadata;
+                if (aiMeta != null)
+                {
+                    aiBadge.Alpha = 1;
+                    confidenceText.Text = aiMeta.Confidence.HasValue ? $"Confidence: {aiMeta.Confidence.Value:P0}" : "";
+                    modelVersionText.Text = !string.IsNullOrEmpty(aiMeta.ModelVersion) ? $"Model: {aiMeta.ModelVersion}" : "";
+                }
+                else
+                {
+                    aiBadge.Alpha = 0;
+                    confidenceText.Text = "";
+                    modelVersionText.Text = "";
+                }
+
+                source.Text = string.IsNullOrEmpty(beatmap.Metadata.Source) ? "" : $"Source: {beatmap.Metadata.Source}";
+                releaseDate.Text = string.IsNullOrEmpty(beatmap.Metadata.ReleaseDate) ? "" : $"Released: {beatmap.Metadata.ReleaseDate}";
+                tags.Text = beatmap.Metadata.Tags.Count > 0 ? $"Tags: {string.Join(", ", beatmap.Metadata.Tags)}" : "";
+                provider.Text = string.IsNullOrEmpty(beatmap.Metadata.Provider) ? "" : $"Metadata: {beatmap.Metadata.Provider}";
+
+
                 actionButton.Action = () =>
                 {
                     if (this.FindClosestParent<SongSelectScreen>() is SongSelectScreen screen)
@@ -528,6 +652,17 @@ namespace BeatSight.Game.Screens.SongSelect
             this.Push(new EditorScreen(audioPath));
         }
 
+        private void importAudioAndGenerate()
+        {
+            // In a full implementation, this would open a native file picker.
+            // For now, we rely on the Drag & Drop workflow which is fully implemented in BeatSightGame.
+            // We can show a notification or just log.
+            Logger.Log("Use Drag & Drop to import audio files.", LoggingTarget.Runtime, LogLevel.Important);
+
+            // If we had a file path from a picker:
+            // game.ImportAudio(path);
+        }
+
         private Drawable createLeftArea()
         {
             leftContent = new Container
@@ -538,6 +673,7 @@ namespace BeatSight.Game.Screens.SongSelect
 
             var details = new BeatmapDetailsPanel(editorMode);
             details.CreateNewAction = () => startNewProject(null);
+            details.ImportAudioAction = () => importAudioAndGenerate();
             leftContent.Child = details;
 
             return new Container
@@ -619,6 +755,29 @@ namespace BeatSight.Game.Screens.SongSelect
 
             sortDropdown.Current.BindValueChanged(e => carousel.Sort(e.NewValue));
 
+            genreDropdown = new BeatSight.Game.UI.Components.Dropdown<string>
+            {
+                Width = 150,
+                Items = new[] { "All", "Pop", "Rock", "Hip-Hop", "Electronic" }, // Example genres
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+            };
+
+            genreDropdown.Current.BindValueChanged(e =>
+            {
+                string val = e.NewValue == "All" ? "" : e.NewValue;
+                carousel.SetGenreFilter(val);
+            });
+
+            confidenceFilter = new BeatSightCheckbox
+            {
+                LabelText = "High Confidence Only",
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+            };
+
+            confidenceFilter.Current.BindValueChanged(e => carousel.SetConfidenceFilter(e.NewValue ? 0.8 : 0.0));
+
             return new Container
             {
                 RelativeSizeAxes = Axes.X,
@@ -655,7 +814,9 @@ namespace BeatSight.Game.Screens.SongSelect
                                 Children = new Drawable[]
                                 {
                                     sortDropdown,
-                                    searchBox
+                                    searchBox,
+                                    genreDropdown,
+                                    confidenceFilter
                                 }
                             }
                         }

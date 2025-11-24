@@ -530,6 +530,7 @@ def generate_beatmap(
     forced_offset: Optional[float] = None,
     forced_step: Optional[float] = None,
     force_quantization: bool = False,
+    start_time: float = 0.0,
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """
     Generate complete .bsm beatmap file.
@@ -661,7 +662,7 @@ def generate_beatmap(
     hit_objects = []
     for hit in hits_with_lanes:
         hit_objects.append({
-            "time": int(round(hit["time"] * 1000)),
+            "time": int(round((hit["time"] + start_time) * 1000)),
             "component": hit["component"],
             "velocity": 0.8,
             "lane": hit["lane"],
@@ -716,7 +717,7 @@ def generate_beatmap(
         },
         "timing": {
             "bpm": round(quantization_result["bpm"], 2),
-            "offset": int(round(quantization_result.get("offset", 0.0) * 1000.0)),
+            "offset": int(round((quantization_result.get("offset", 0.0) + start_time) * 1000.0)),
             "timeSignature": "4/4",
         },
         "drumKit": {
@@ -753,7 +754,7 @@ def generate_beatmap(
             "coverage": quantization_result["coverage"],
             "mean_error_ms": quantization_result["mean_error"] * 1000.0,
             "median_error_ms": quantization_result["median_error"] * 1000.0,
-            "offset": quantization_result.get("offset", 0.0),
+            "offset": quantization_result.get("offset", 0.0) + start_time,
             "step": quantization_result.get("step", 0.0),
             "candidates": quantization_result.get("candidates", []),
             "forced": quantization_result.get("forced", False),

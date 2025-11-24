@@ -36,6 +36,8 @@ def process_audio_file(
     use_ml_classifier: Optional[bool] = None,
     ml_model_path: Optional[str] = None,
     ml_device: Optional[str] = None,
+    start_time: Optional[float] = None,
+    end_time: Optional[float] = None,
 ) -> Dict[str, Any]:
     """
     Process an audio file and generate a beatmap.
@@ -57,6 +59,8 @@ def process_audio_file(
         use_ml_classifier: Optional override for ML classifier usage
         ml_model_path: Explicit path to trained ML model weights (.pth)
         ml_device: Torch device override for ML inference
+        start_time: Start time in seconds for partial processing
+        end_time: End time in seconds for partial processing
         
     Returns:
         Dictionary with processing results and statistics
@@ -66,11 +70,15 @@ def process_audio_file(
     debug_output_path = Path(debug_output_path) if debug_output_path else None
 
     print(f"🎵 Processing: {input_path}")
-    start_time = time.time()
+    start_time_overall = time.time()
 
     # Step 1: Preprocessing
     print("📊 Step 1/5: Preprocessing audio...")
-    audio_data, sample_rate = preprocess_audio(str(input_path))
+    duration = None
+    if end_time is not None and end_time > 0:
+        duration = end_time - start_time
+    
+    audio_data, sample_rate = preprocess_audio(str(input_path), offset=start_time, duration=duration)
 
     detected_metadata = detect_song_metadata(str(input_path))
     if detected_metadata.get("title") or detected_metadata.get("artist"):
@@ -227,7 +235,7 @@ def process_audio_file(
         analysis_audio=audio_data,
         analysis_sr=sample_rate,
         tempo_candidates=tempo_candidates,
-    tempo_hint_count=tempo_hint_count,
+        tempo_hint_count=tempo_hint_count,
         quantization_grid=quantization_grid,
         max_snap_error_ms=max_snap_error_ms,
         detection_debug=detection_result.to_debug_payload(),
@@ -235,6 +243,7 @@ def process_audio_file(
         forced_offset=forced_offset,
         forced_step=forced_step,
         force_quantization=force_quantization,
+        start_time=start_time,
     )
 
     # Save beatmap
@@ -270,7 +279,7 @@ def process_audio_file(
         with debug_output_path.open("w") as debug_file:
             json.dump(debug_payload, debug_file, indent=2)
 
-    elapsed = time.time() - start_time
+    elapsed = time.time() - start_time_overall
 
     print(f"✅ Complete! Saved to: {output_path}")
     print(f"⏱️  Processing time: {elapsed:.2f}s")
@@ -312,6 +321,8 @@ def main():
     parser.add_argument("--ml-device", type=str, help="Torch device for ML classifier (e.g. cuda)")
     parser.add_argument("--ml", action="store_true", help="Force ML classifier usage (overrides environment)")
     parser.add_argument("--no-ml", action="store_true", help="Disable ML classifier and use heuristics")
+    parser.add_argument("--start-time", type=float, help="Start time in seconds for partial processing")
+    parser.add_argument("--end-time", type=float, help="End time in seconds for partial processing")
     
     args = parser.parse_args()
 
@@ -365,6 +376,8 @@ def main():
             use_ml_classifier=ml_toggle,
             ml_model_path=args.ml_model,
             ml_device=args.ml_device,
+            start_time=args.start_time,
+            end_time=args.end_time,
         )
         return 0 if result["success"] else 1
     except Exception as e:

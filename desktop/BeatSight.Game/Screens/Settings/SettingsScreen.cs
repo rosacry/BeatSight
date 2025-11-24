@@ -68,7 +68,8 @@ namespace BeatSight.Game.Screens.Settings
         {
             Playback,
             Audio,
-            Graphics
+            Graphics,
+            AI
         }
 
         [BackgroundDependencyLoader]
@@ -192,7 +193,8 @@ namespace BeatSight.Game.Screens.Settings
                             {
                                 createSectionButton(SettingsCategory.Playback, "Playback"),
                                 createSectionButton(SettingsCategory.Audio, "Audio"),
-                                createSectionButton(SettingsCategory.Graphics, "Graphics")
+                                createSectionButton(SettingsCategory.Graphics, "Graphics"),
+                                createSectionButton(SettingsCategory.AI, "AI / Generation")
                             }
                         }
                     }
@@ -237,6 +239,8 @@ namespace BeatSight.Game.Screens.Settings
                     return new AudioSettingsSection(config, host, dropdownOverlay, tooltipOverlay);
                 case SettingsCategory.Graphics:
                     return new GraphicsSettingsSection(config, host, dropdownOverlay, tooltipOverlay, uiScaleWizard);
+                case SettingsCategory.AI:
+                    return new AISettingsSection(config, host, dropdownOverlay, tooltipOverlay);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(category), category, null);
             }
@@ -2266,14 +2270,9 @@ namespace BeatSight.Game.Screens.Settings
                         }
                     ),
                     CreateCheckbox(
-                        "Approach Circles",
-                        config.GetBindable<bool>(BeatSightSetting.ShowApproachCircles),
-                        "Show circles that scale down as notes approach."
-                    ),
-                    CreateCheckbox(
                         "Particle Effects",
                         config.GetBindable<bool>(BeatSightSetting.ShowParticleEffects),
-                        "Show burst animations when hitting notes."
+                        "Show burst animations when notes are triggered."
                     ),
                     CreateCheckbox(
                         "Glow Effects",
@@ -2283,7 +2282,7 @@ namespace BeatSight.Game.Screens.Settings
                     CreateCheckbox(
                         "Hit Burst Animations",
                         config.GetBindable<bool>(BeatSightSetting.ShowHitBurstAnimations),
-                        "Show explosion animations on perfect/great hits."
+                        "Show explosion animations on triggered notes."
                     )
                 }
             };
@@ -2512,6 +2511,10 @@ namespace BeatSight.Game.Screens.Settings
             updateResolutionDropdownItems();
         }
 
+
+
+
+
         private void updateResolutionDropdownItems()
         {
             if (resolutionDropdown == null || windowWidth == null || windowHeight == null)
@@ -2659,6 +2662,156 @@ namespace BeatSight.Game.Screens.Settings
                 string label = $"{Width} x {Height}";
                 return IsCustom ? label + " (Custom)" : label;
             }
+        }
+    }
+
+    public partial class AISettingsSection : SettingsSection
+    {
+        private readonly BeatSightConfigManager config;
+        private readonly GameHost host;
+
+        public AISettingsSection(BeatSightConfigManager config, GameHost host, Container dropdownOverlay, SettingsTooltipOverlay tooltipOverlay)
+            : base("AI / Generation", dropdownOverlay, tooltipOverlay)
+        {
+            this.config = config;
+            this.host = host;
+        }
+
+        protected override Drawable createContent()
+        {
+            return new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(0, 12),
+                Children = new Drawable[]
+                {
+                    createHeader("AI Pipeline Configuration"),
+                    createTextBox("Python Environment Path", config.GetBindable<string>(BeatSightSetting.PythonPath)),
+                    createDropdown("Model Checkpoints", config.GetBindable<string>(BeatSightSetting.ModelVersion), new[] { "v1.0", "v2.0" }),
+                    CreateCheckbox("Use GPU / CUDA", config.GetBindable<bool>(BeatSightSetting.UseGpu)),
+                    createTextBox("Custom Model Path", config.GetBindable<string>(BeatSightSetting.CustomModelPath)),
+
+                    createHeader("External Services"),
+                    createTextBox("AcoustID API Key", config.GetBindable<string>(BeatSightSetting.AcoustIdApiKey), masked: true),
+
+                    createHeader("Default Generation Settings"),
+                    createDropdown("Default Quantization", config.GetBindable<string>(BeatSightSetting.DefaultQuantization), new[] { "quarter", "eighth", "sixteenth" }),
+                    CreateSlider("Default Sensitivity", config.GetBindable<double>(BeatSightSetting.DefaultSensitivity), 0, 100, 1),
+                    CreateCheckbox("Auto-generate on Import", config.GetBindable<bool>(BeatSightSetting.AutoGenerateOnImport)),
+
+                    createHeader("Cache Management"),
+                    createButton("Clear Feature Cache", () =>
+                    {
+                        try
+                        {
+                            // Attempt to locate the feature cache relative to the execution path
+                            // In development, this is likely in the repo root.
+                            string currentDir = Directory.GetCurrentDirectory();
+                            string featureCachePath = Path.Combine(currentDir, "data", "feature_cache");
+
+                            // If not found, try walking up directories (dev environment)
+                            if (!Directory.Exists(featureCachePath))
+                            {
+                                var dir = new DirectoryInfo(currentDir);
+                                while (dir != null)
+                                {
+                                    string check = Path.Combine(dir.FullName, "data", "feature_cache");
+                                    if (Directory.Exists(check))
+                                    {
+                                        featureCachePath = check;
+                                        break;
+                                    }
+                                    dir = dir.Parent;
+                                }
+                            }
+
+                            if (Directory.Exists(featureCachePath))
+                            {
+                                Directory.Delete(featureCachePath, true);
+                                Directory.CreateDirectory(featureCachePath);
+                                Logger.Log($"Cleared feature cache at {featureCachePath}", LoggingTarget.Runtime, LogLevel.Important);
+                            }
+                            else
+                            {
+                                Logger.Log("Feature cache directory not found.", LoggingTarget.Runtime, LogLevel.Important);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Log($"Failed to clear feature cache: {ex.Message}", LoggingTarget.Runtime, LogLevel.Error);
+                        }
+                    }),
+                    createButton("Clear Separation Temp", () =>
+                    {
+                        try
+                        {
+                            string tempPath = Path.Combine(Path.GetTempPath(), "beatsight_demucs");
+                            if (Directory.Exists(tempPath))
+                            {
+                                Directory.Delete(tempPath, true);
+                                Logger.Log($"Cleared separation temp at {tempPath}", LoggingTarget.Runtime, LogLevel.Important);
+                            }
+                            else
+                            {
+                                Logger.Log("Separation temp directory not found.", LoggingTarget.Runtime, LogLevel.Important);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Log($"Failed to clear separation temp: {ex.Message}", LoggingTarget.Runtime, LogLevel.Error);
+                        }
+                    })
+                }
+            };
+        }
+
+        private Drawable createHeader(string text)
+        {
+            return new SpriteText
+            {
+                Text = text,
+                Font = BeatSightFont.Section(20f),
+                Colour = UITheme.AccentPrimary,
+                Margin = new MarginPadding { Top = 20, Bottom = 5 }
+            };
+        }
+
+        private SettingItem createTextBox(string label, Bindable<string> bindable, bool masked = false)
+        {
+            var textBox = new BasicTextBox
+            {
+                RelativeSizeAxes = Axes.X,
+                Height = 30,
+                Current = bindable
+            };
+
+            return CreateSettingItem(label, null, textBox);
+        }
+
+        private SettingItem createDropdown(string label, Bindable<string> bindable, IEnumerable<string> items)
+        {
+            var dropdown = new BeatSight.Game.UI.Components.Dropdown<string>
+            {
+                RelativeSizeAxes = Axes.X,
+                Items = items,
+                Current = bindable
+            };
+
+            return CreateSettingItem(label, null, dropdown);
+        }
+
+        private Drawable createButton(string text, Action action)
+        {
+            return new BeatSightButton
+            {
+                Text = text,
+                RelativeSizeAxes = Axes.X,
+                Height = 40,
+                Action = action,
+                BackgroundColour = UITheme.SurfaceAlt
+            };
         }
     }
 }

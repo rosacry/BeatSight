@@ -1,9 +1,64 @@
 #!/usr/bin/env bash
-# Handy checklist to run immediately after build_training_dataset.py completes.
-# Usage: bash ai-pipeline/training/tools/post_export_commands.sh
+# ============================================================================
+# BeatSight Post-Export Training Checklist
+# ============================================================================
+# Run immediately after build_training_dataset.py completes to validate the
+# dataset and begin training. Supports resumption on interruption.
+#
+# Usage:
+#   bash ai-pipeline/training/tools/post_export_commands.sh
+#
+# Prerequisites:
+#   - Python environment activated with ai-pipeline dependencies
+#   - CUDA available for GPU training
+#   - Optional: source beatsight_env.sh first to configure paths
+#
+# Hardware Profile: RTX 3080 Ti (12GB), Ryzen 9800X3D, 32GB DDR5, NVMe
+# ============================================================================
 
 set -euo pipefail
 
+# ============================================================================
+# LOGGING & ERROR HANDLING
+# ============================================================================
+SCRIPT_NAME="$(basename "${BASH_SOURCE[0]}")"
+LOG_DIR="${BEATSIGHT_LOG_DIR:-}"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+log_info() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] $*"
+    if [ -n "$LOG_DIR" ]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] $*" >> "${LOG_DIR}/post_export_${TIMESTAMP}.log"
+    fi
+}
+
+log_error() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] $*" >&2
+    if [ -n "$LOG_DIR" ]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] $*" >> "${LOG_DIR}/post_export_${TIMESTAMP}.log"
+    fi
+}
+
+log_success() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [✓] $*"
+    if [ -n "$LOG_DIR" ]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] [SUCCESS] $*" >> "${LOG_DIR}/post_export_${TIMESTAMP}.log"
+    fi
+}
+
+cleanup_on_error() {
+    local exit_code=$?
+    if [ $exit_code -ne 0 ]; then
+        log_error "Script failed with exit code $exit_code"
+        log_error "Last checkpoint can be resumed with --resume-from flag"
+    fi
+}
+
+trap cleanup_on_error EXIT
+
+# ============================================================================
+# ENVIRONMENT SETUP
+# ============================================================================
 if [ -z "${BEATSIGHT_REPO_ROOT:-}" ]; then
   if command -v git >/dev/null 2>&1; then
     BEATSIGHT_REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || true)

@@ -153,6 +153,8 @@ namespace BeatSight.Game
         [BackgroundDependencyLoader]
         private void load()
         {
+            dependencies.CacheAs(this);
+
             // Initialize configuration
             bool isFirstRun = !Host.Storage.Exists("beatsight.ini");
             var config = new BeatSightConfigManager(Host.Storage);
@@ -1107,6 +1109,8 @@ namespace BeatSight.Game
             generationPipeline?.Dispose();
             audioEngine?.Dispose();
         }
+
+        public void ImportAudio(string path) => handleFileDrop(path);
 
         private void onWindowDragDrop(string path)
         {

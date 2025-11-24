@@ -233,6 +233,44 @@ def _normalize_state_dict_keys(state_dict: Dict[str, torch.Tensor]) -> OrderedDi
     )
 
 
+def compute_class_weights(
+    labels: List[Dict[str, Any]],
+    num_classes: int,
+    strategy: str = "balanced",
+) -> torch.Tensor:
+    """Compute class weights for handling imbalanced datasets.
+    
+    Args:
+        labels: List of label dictionaries with 'component_idx' key
+        num_classes: Total number of classes
+        strategy: 'balanced' (inverse frequency) or 'sqrt' (sqrt of inverse)
+    
+    Returns:
+        Tensor of shape (num_classes,) with class weights
+    """
+    from collections import Counter
+    
+    class_counts = Counter(int(item.get("component_idx", 0)) for item in labels)
+    total_samples = len(labels)
+    
+    weights = torch.ones(num_classes, dtype=torch.float32)
+    
+    for class_idx in range(num_classes):
+        count = class_counts.get(class_idx, 0)
+        if count > 0:
+            if strategy == "balanced":
+                # Inverse frequency: n_samples / (n_classes * n_samples_for_class)
+                weights[class_idx] = total_samples / (num_classes * count)
+            elif strategy == "sqrt":
+                # Square root dampening for less aggressive weighting
+                weights[class_idx] = np.sqrt(total_samples / (num_classes * count))
+    
+    # Normalize so mean weight is 1.0
+    weights = weights / weights.mean()
+    
+    return weights
+
+
 def stratified_sample_indices(labels: List[Dict[str, Any]], fraction: float, seed: int) -> List[int]:
     """Create stratified subset indices retaining class balance."""
 
@@ -547,6 +585,18 @@ def main():
         default="default",
         help="torch.compile mode when enabled (default/reduce-overhead/max-autotune)",
     )
+    parser.add_argument(
+        "--class-weights",
+        choices=["none", "balanced", "sqrt"],
+        default="none",
+        help="Class weighting strategy: none (default), balanced (inverse frequency), sqrt (sqrt of inverse)",
+    )
+    parser.add_argument(
+        "--label-smoothing",
+        type=float,
+        default=0.0,
+        help="Label smoothing factor for cross-entropy loss (0.0-0.2 typical)",
+    )
     
     args = parser.parse_args()
 
@@ -768,8 +818,21 @@ def main():
         else:
             print("Warning: torch.compile requested but unsupported in this PyTorch build. Ignoring.")
     
-    # Loss and optimizer
-    criterion = nn.CrossEntropyLoss()
+    # Loss and optimizer with optional class weighting
+    class_weights_tensor: Optional[torch.Tensor] = None
+    if args.class_weights != "none":
+        class_weights_tensor = compute_class_weights(
+            train_dataset_full.labels,
+            num_classes,
+            strategy=args.class_weights,
+        ).to(torch_device)
+        print(f"Class weighting enabled ({args.class_weights}): min={class_weights_tensor.min():.3f}, max={class_weights_tensor.max():.3f}")
+    
+    criterion = nn.CrossEntropyLoss(
+        weight=class_weights_tensor,
+        label_smoothing=args.label_smoothing,
+    )
+    
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     for group in optimizer.param_groups:
         group.setdefault("initial_lr", args.lr)

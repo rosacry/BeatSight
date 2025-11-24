@@ -31,6 +31,19 @@ namespace BeatSight.Game.Beatmaps
                 beatmap = JsonConvert.DeserializeObject<Beatmap>(json) ?? throw new InvalidDataException("Failed to parse beatmap file");
             }
 
+            // Recalculate difficulty using the new sophisticated algorithm
+            try
+            {
+                var calculator = new BeatSight.Game.Beatmaps.Difficulty.DifficultyCalculator(beatmap);
+                var attributes = calculator.Calculate();
+                beatmap.Metadata.Difficulty = attributes.StarRating;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to calculate difficulty: {ex.Message}");
+                // Fallback to existing difficulty or 0
+            }
+
             ValidateBeatmap(beatmap);
             return beatmap;
         }

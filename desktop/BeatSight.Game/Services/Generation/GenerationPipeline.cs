@@ -45,7 +45,8 @@ namespace BeatSight.Game.Services.Generation
         double StageProgress,
         string StageLabel,
         bool IsHeartbeat = false,
-        IReadOnlyDictionary<GenerationStageId, double>? StageDurations = null)
+        IReadOnlyDictionary<GenerationStageId, double>? StageDurations = null,
+        string? LogOutput = null)
     {
         public bool IsTerminal => Phase is PipelinePhase.Completed or PipelinePhase.Cancelled or PipelinePhase.Faulted;
         public string PhaseName => Phase.ToString();
@@ -465,7 +466,7 @@ namespace BeatSight.Game.Services.Generation
 
                 double cancelledDurationMs = stopwatch.Elapsed.TotalMilliseconds;
                 var cancelledStageDurations = finalizeStageDurations(stageDurationsCapture, cancelledDurationMs);
-                finalResult = GenerationPipelineResult.CreateCancelled(usedFallback, playbackAvailable, offlineDecodeUsed, offlineFallbackEncountered, context.Warning, latestAnalysis, waveform, logs, stageDurations: cancelledStageDurations, totalDurationMs: cancelledDurationMs, detectionStats: finalDetectionStats);
+                finalResult = GenerationPipelineResult.CreateCancelled(usedFallback, playbackAvailable, offlineDecodeUsed, offlineFallbackEncountered, context.Warning, latestAnalysis, waveform, logs, laneStats: null, stageDurations: cancelledStageDurations, totalDurationMs: cancelledDurationMs, detectionStats: finalDetectionStats);
                 await context.EmitAsync(PipelinePhase.Cancelled, GenerationStageId.Finalise, 1.0, "Generation cancelled", resultOverride: finalResult).ConfigureAwait(false);
             }
             catch (Exception ex)
@@ -671,9 +672,10 @@ namespace BeatSight.Game.Services.Generation
                 string? warningOverride = null,
                 DrumOnsetAnalysis? analysisOverride = null,
                 WaveformData? waveformOverride = null,
-                GenerationPipelineResult? resultOverride = null)
+                GenerationPipelineResult? resultOverride = null,
+                string? logMessage = null)
             {
-                var progress = createProgress(phase, stageId, stageProgress, status, warningOverride, analysisOverride, waveformOverride, resultOverride, false);
+                var progress = createProgress(phase, stageId, stageProgress, status, warningOverride, analysisOverride, waveformOverride, resultOverride, false, logMessage);
                 return writeAsync(progress);
             }
 
@@ -685,9 +687,10 @@ namespace BeatSight.Game.Services.Generation
                 string? warningOverride = null,
                 DrumOnsetAnalysis? analysisOverride = null,
                 WaveformData? waveformOverride = null,
-                GenerationPipelineResult? resultOverride = null)
+                GenerationPipelineResult? resultOverride = null,
+                string? logMessage = null)
             {
-                var progress = createProgress(phase, stageId, stageProgress, status, warningOverride, analysisOverride, waveformOverride, resultOverride, false);
+                var progress = createProgress(phase, stageId, stageProgress, status, warningOverride, analysisOverride, waveformOverride, resultOverride, false, logMessage);
                 if (writer.TryWrite(progress))
                     heartbeat.Update(progress);
             }
@@ -701,7 +704,8 @@ namespace BeatSight.Game.Services.Generation
                 DrumOnsetAnalysis? analysisOverride,
                 WaveformData? waveformOverride,
                 GenerationPipelineResult? resultOverride,
-                bool isHeartbeat)
+                bool isHeartbeat,
+                string? logMessage)
             {
                 currentStage = stageId;
                 currentStageProgress = stageProgress;
@@ -709,7 +713,7 @@ namespace BeatSight.Game.Services.Generation
 
                 var effectiveWarning = warningOverride ?? Warning;
                 double percent = GenerationStagePlan.ToWeightedProgress(stageId, stageProgress);
-                return new PipelineProgress(phase, percent, status, effectiveWarning, analysisOverride ?? Analysis, waveformOverride ?? Waveform, resultOverride, DateTimeOffset.UtcNow, stageId, stageProgress, currentStageLabel, isHeartbeat);
+                return new PipelineProgress(phase, percent, status, effectiveWarning, analysisOverride ?? Analysis, waveformOverride ?? Waveform, resultOverride, DateTimeOffset.UtcNow, stageId, stageProgress, currentStageLabel, isHeartbeat, null, logMessage);
             }
 
             private async ValueTask writeAsync(PipelineProgress progress)

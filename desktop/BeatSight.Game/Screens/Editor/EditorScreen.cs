@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -8,6 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BeatSight.Game.Audio;
+using BeatSight.Game.AI;
 using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
@@ -90,6 +92,9 @@ namespace BeatSight.Game.Screens.Editor
         private EditorButton redoButton = null!;
         private BackButton backButton = null!;
 
+        private BasicTextBox releaseInput = null!;
+        private BasicTextBox providerInput = null!;
+        private BasicTextBox descriptionInput = null!;
         private BasicTextBox titleInput = null!;
         private BasicTextBox artistInput = null!;
         private BasicTextBox creatorInput = null!;
@@ -97,8 +102,18 @@ namespace BeatSight.Game.Screens.Editor
         private BasicTextBox tagsInput = null!;
         private BasicTextBox bpmInput = null!;
         private BasicTextBox offsetInput = null!;
-        private SpriteText selectionSummaryText = null!;
+
+        private Bindable<string> quantizationGrid = new Bindable<string>("sixteenth");
+        private BindableDouble maxSnapError = new BindableDouble(12.0) { MinValue = 1.0, MaxValue = 50.0 };
+        private BindableDouble confidenceThreshold = new BindableDouble(0.3) { MinValue = 0.1, MaxValue = 0.9 };
+        private BindableDouble detectionSensitivity = new BindableDouble(60.0) { MinValue = 1.0, MaxValue = 100.0 };
+        private BindableBool isolateDrums = new BindableBool(true);
+        private BindableBool forceQuantization = new BindableBool(false);
+        private BindableBool useMlClassifier = new BindableBool(true);
+        private BasicTextBox tempoHintsInput = null!;
+
         private SpriteText noteCountValue = null!;
+        private SpriteText selectionSummaryText = null!;
         private SpriteText mapLengthValue = null!;
         private SpriteText densityValue = null!;
         private SpriteText bpmStatValue = null!;
@@ -107,6 +122,9 @@ namespace BeatSight.Game.Screens.Editor
         private double currentTime;
         private double trackLength;
         private WaveformData? waveformData;
+        private WaveformData? fullTrackWaveform;
+        private WaveformData? drumStemWaveform;
+        private BindableBool showDrumStem = new BindableBool(false);
         private CancellationTokenSource? waveformLoadCts;
         private string statusBaseText = string.Empty;
         private string? statusDetailText;
@@ -168,6 +186,9 @@ namespace BeatSight.Game.Screens.Editor
 
         [Resolved]
         private UIAudioController uiAudio { get; set; } = null!;
+
+        private Container logOverlay = null!;
+        private TextFlowContainer logText = null!;
 
         public EditorScreen(string? beatmapPath = null, ImportedAudioTrack? importedAudio = null, bool playbackAvailable = true)
         {
@@ -412,7 +433,8 @@ namespace BeatSight.Game.Screens.Editor
                     Colour = EditorColours.ScreenBackground.Opacity(0.9f) // High opacity to focus on editing
                 },
                 paddedLayout,
-                backButtonOverlay
+                backButtonOverlay,
+                createLogOverlay()
             };
 
             if (!string.IsNullOrEmpty(beatmapPath))
@@ -437,6 +459,8 @@ namespace BeatSight.Game.Screens.Editor
         protected override void LoadComplete()
         {
             base.LoadComplete();
+
+            showDrumStem.BindValueChanged(_ => updateWaveformSource());
 
             // Ensure preview is synchronized after everything is loaded
             if (beatmap != null && playbackPreview != null)
@@ -984,7 +1008,15 @@ namespace BeatSight.Game.Screens.Editor
             var waveformSection = createTimelineSection("Waveform",
                 waveformSliderContainer,
                 createTimelineMiniButton("Reset", () => setWaveformScale(1.0), 58),
-                waveformScaleValueText);
+                waveformScaleValueText,
+                new BeatSightCheckbox
+                {
+                    LabelText = "Drums",
+                    Current = showDrumStem,
+                    Width = 80,
+                    Height = 20,
+                    Margin = new MarginPadding { Left = 10 }
+                });
 
             var snapSection = createTimelineSection("Snap",
                 createTimelineMiniButton("−", () => adjustSnapDivisor(false)),
@@ -992,6 +1024,10 @@ namespace BeatSight.Game.Screens.Editor
                 createTimelineMiniButton("+", () => adjustSnapDivisor(true)));
 
             var gridSection = createTimelineSection("Overlay", beatGridCheckbox);
+
+            var toolsSection = createTimelineSection("Tools",
+                createTimelineMiniButton("Snap to Transient", () => timeline.SnapSelectedNoteToTransient(), 120),
+                createTimelineMiniButton("Regenerate Selection", regenerateRegion, 140));
 
             var contentFlow = new FillFlowContainer
             {
@@ -1005,7 +1041,8 @@ namespace BeatSight.Game.Screens.Editor
                     zoomSection,
                     waveformSection,
                     snapSection,
-                    gridSection
+                    gridSection,
+                    toolsSection
                 }
             };
 
@@ -1034,6 +1071,15 @@ namespace BeatSight.Game.Screens.Editor
 
         private Drawable createInspectorPanel()
         {
+            releaseInput = createInspectorTextBox("YYYY-MM-DD");
+            releaseInput.Current.ValueChanged += e => applyMetadataChange(meta => meta.ReleaseDate = e.NewValue);
+
+            providerInput = createInspectorTextBox("e.g. My Mapping Group");
+            providerInput.Current.ValueChanged += e => applyMetadataChange(meta => meta.Provider = e.NewValue ?? string.Empty);
+
+            descriptionInput = createInspectorTextBox("Description of the beatmap");
+            descriptionInput.Current.ValueChanged += e => applyMetadataChange(meta => meta.Description = e.NewValue ?? string.Empty);
+
             titleInput = createInspectorTextBox("Song title");
             titleInput.Current.ValueChanged += e => applyMetadataChange(meta => meta.Title = e.NewValue ?? string.Empty, refreshStatus: true);
 
@@ -1067,7 +1113,10 @@ namespace BeatSight.Game.Screens.Editor
                 createInspectorField("Artist", artistInput),
                 createInspectorField("Creator", creatorInput),
                 createInspectorField("Source", sourceInput),
-                createInspectorField("Tags", tagsInput));
+                createInspectorField("Tags", tagsInput),
+                createInspectorField("Release Date", releaseInput),
+                createInspectorField("Provider", providerInput),
+                createInspectorField("Description", descriptionInput));
 
             var timingSection = createInspectorSection("Timing & Selection", 320,
                 createInspectorField("BPM", bpmInput),
@@ -1080,6 +1129,46 @@ namespace BeatSight.Game.Screens.Editor
                 createInspectorStatBadge("Length", out mapLengthValue),
                 createInspectorStatBadge("Density", out densityValue),
                 createInspectorStatBadge("Active BPM", out bpmStatValue));
+
+            var generationSection = createInspectorSection("Generation Settings", 400,
+                createInspectorField("Quantization", new BeatSight.Game.UI.Components.Dropdown<string>
+                {
+                    Width = 150,
+                    Items = new[] { "quarter", "eighth", "sixteenth", "thirty_second" },
+                    Current = quantizationGrid
+                }),
+                createInspectorField("Max Snap (ms)", new BeatSightSliderBar { Current = maxSnapError, Width = 150, Height = 20 }),
+                createInspectorField("Confidence", new BeatSightSliderBar { Current = confidenceThreshold, Width = 150, Height = 20 }),
+                createInspectorField("Sensitivity", new BeatSightSliderBar { Current = detectionSensitivity, Width = 150, Height = 20 }),
+                createInspectorField("Isolate Drums", new BeatSightCheckbox { Current = isolateDrums }),
+                createInspectorField("Force Quant.", new BeatSightCheckbox { Current = forceQuantization }),
+                createInspectorField("ML Classifier", new BeatSightCheckbox { Current = useMlClassifier }),
+                createInspectorField("Tempo Hints", tempoHintsInput = createInspectorTextBox("e.g. 120, 140")),
+                new FillFlowContainer
+                {
+                    AutoSizeAxes = Axes.Both,
+                    Direction = FillDirection.Horizontal,
+                    Spacing = new Vector2(10, 0),
+                    Children = new Drawable[]
+                    {
+                        new BeatSightButton
+                        {
+                            Text = "Run Pipeline",
+                            Width = 150,
+                            Height = 40,
+                            BackgroundColour = UITheme.AccentPrimary,
+                            Action = runPipeline
+                        },
+                        new BeatSightButton
+                        {
+                            Text = "Logs",
+                            Width = 80,
+                            Height = 40,
+                            BackgroundColour = UITheme.SurfaceAlt,
+                            Action = () => logOverlay.FadeIn(200)
+                        }
+                    }
+                });
 
             return new Container
             {
@@ -1110,7 +1199,8 @@ namespace BeatSight.Game.Screens.Editor
                             {
                                 metadataSection,
                                 timingSection,
-                                statsSection
+                                statsSection,
+                                generationSection
                             }
                         }
                     }
@@ -1158,7 +1248,7 @@ namespace BeatSight.Game.Screens.Editor
             };
         }
 
-        private Drawable createInspectorSection(string title, float width, params Drawable[] children)
+        private Drawable createInspectorSection(string title, float width, params Drawable[] content)
         {
             return new Container
             {
@@ -1178,7 +1268,7 @@ namespace BeatSight.Game.Screens.Editor
                             Font = BeatSightFont.Section(18f),
                             Colour = EditorColours.TextPrimary
                         }
-                    }.Concat(children).ToArray()
+                    }.Concat(content).ToArray()
                 }
             };
         }
@@ -2172,6 +2262,8 @@ namespace BeatSight.Game.Screens.Editor
             updateActionButtons();
         }
 
+        private void armEditSnapshot() => prepareUndoSnapshot();
+
         private EditorSnapshot createSnapshot()
         {
             if (beatmap == null)
@@ -2430,6 +2522,7 @@ namespace BeatSight.Game.Screens.Editor
                 refreshUnsavedState();
             }
             finally
+
             {
                 isSaving = false;
                 updateActionButtons();
@@ -2679,39 +2772,71 @@ namespace BeatSight.Game.Screens.Editor
             waveformLoadCts = new CancellationTokenSource();
             var token = waveformLoadCts.Token;
 
+            fullTrackWaveform = null;
+            drumStemWaveform = null;
             waveformData = null;
             timeline?.UpdateWaveform(null);
 
-            Task.Run(async () => await WaveformDataBuilder.BuildAsync(absolutePath, cancellationToken: token).ConfigureAwait(false), token)
-                        .ContinueWith(task =>
+            Task.Run(async () =>
+            {
+                var mainTask = WaveformDataBuilder.BuildAsync(absolutePath, cancellationToken: token);
+                Task<WaveformData?>? drumTask = null;
+
+                if (beatmap?.Audio.DrumStem != null && !string.IsNullOrEmpty(beatmapPath))
+                {
+                    string? beatmapDir = Path.GetDirectoryName(beatmapPath);
+                    if (beatmapDir != null)
+                    {
+                        string drumStemPath = Path.Combine(beatmapDir, beatmap.Audio.DrumStem);
+                        if (File.Exists(drumStemPath))
                         {
-                            if (task.IsCanceled || token.IsCancellationRequested)
-                                return;
+                            drumTask = WaveformDataBuilder.BuildAsync(drumStemPath, cancellationToken: token);
+                        }
+                    }
+                }
 
-                            if (task.IsFaulted)
-                            {
-                                Schedule(() => appendStatusDetail("Waveform generation failed"));
-                                return;
-                            }
+                await mainTask.ConfigureAwait(false);
+                if (drumTask != null) await drumTask.ConfigureAwait(false);
 
-                            var result = task.Result;
-                            if (result == null)
-                            {
-                                Schedule(() => appendStatusDetail("Waveform unavailable"));
-                                return;
-                            }
+                return (Main: mainTask.Result, Drum: drumTask?.Result);
+            }, token)
+            .ContinueWith(task =>
+            {
+                if (task.IsCanceled || token.IsCancellationRequested)
+                    return;
 
-                            waveformData = result;
-                            Schedule(() =>
-                            {
-                                if (!token.IsCancellationRequested)
-                                {
-                                    timeline?.UpdateWaveform(waveformData);
-                                    timeline?.SetWaveformScale(waveformScale);
-                                    timeline?.SetCurrentTime(currentTime);
-                                }
-                            });
-                        }, TaskScheduler.Default);
+                if (task.IsFaulted)
+                {
+                    Schedule(() => appendStatusDetail("Waveform generation failed"));
+                    return;
+                }
+
+                var result = task.Result;
+                if (result.Main == null)
+                {
+                    Schedule(() => appendStatusDetail("Waveform unavailable"));
+                    return;
+                }
+
+                fullTrackWaveform = result.Main;
+                drumStemWaveform = result.Drum;
+
+                Schedule(() =>
+                {
+                    if (!token.IsCancellationRequested)
+                    {
+                        updateWaveformSource();
+                        timeline?.SetWaveformScale(waveformScale);
+                        timeline?.SetCurrentTime(currentTime);
+                    }
+                });
+            }, TaskScheduler.Default);
+        }
+
+        private void updateWaveformSource()
+        {
+            waveformData = showDrumStem.Value && drumStemWaveform != null ? drumStemWaveform : fullTrackWaveform;
+            timeline?.UpdateWaveform(waveformData);
         }
 
         private void onTrackCompleted()
@@ -2772,6 +2897,18 @@ namespace BeatSight.Game.Screens.Editor
                 refreshTimelineToolboxState();
                 lastSavedSnapshot = serializeBeatmap(beatmap);
                 populateInspectorFromBeatmap();
+
+                // Load debug data if available
+                string debugPath = Path.ChangeExtension(path, ".debug.json");
+                if (File.Exists(debugPath))
+                {
+                    try
+                    {
+                        string json = File.ReadAllText(debugPath);
+                        timeline?.LoadDebugData(json);
+                    }
+                    catch (Exception) { }
+                }
 
                 // Load audio track
                 loadAudioTrackFromBeatmap();
@@ -3610,5 +3747,305 @@ namespace BeatSight.Game.Screens.Editor
             }
         }
 
+        private void runPipeline()
+        {
+            if (string.IsNullOrEmpty(beatmapPath))
+            {
+                osu.Framework.Logging.Logger.Log("Cannot run pipeline: Beatmap path is not set. Please save the beatmap first.", LoggingTarget.Runtime, LogLevel.Error);
+                return;
+            }
+
+            if (beatmap == null) return;
+
+            string audioPath = Path.Combine(Path.GetDirectoryName(beatmapPath)!, beatmap.Audio.Filename);
+            if (!File.Exists(audioPath))
+            {
+                osu.Framework.Logging.Logger.Log($"Cannot run pipeline: Audio file not found at {audioPath}", LoggingTarget.Runtime, LogLevel.Error);
+                return;
+            }
+
+            // Prepare options from UI
+            var options = new AiGenerationOptions
+            {
+                ConfidenceThreshold = confidenceThreshold.Value,
+                DetectionSensitivity = (int)detectionSensitivity.Value,
+                EnableDrumSeparation = isolateDrums.Value,
+                ForceQuantization = forceQuantization.Value,
+                MaxSnapErrorMilliseconds = maxSnapError.Value,
+                QuantizationGrid = parseQuantizationGrid(quantizationGrid.Value),
+                PythonExecutablePath = config.Get<string>(BeatSightSetting.PythonPath),
+                ExportDebugAnalysis = true
+            };
+
+            // Parse tempo hints
+            if (!string.IsNullOrWhiteSpace(tempoHintsInput.Text))
+            {
+                var candidates = new List<double>();
+                foreach (var part in tempoHintsInput.Text.Split(','))
+                {
+                    if (double.TryParse(part.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double val))
+                        candidates.Add(val);
+                }
+                options.TempoCandidates = candidates;
+            }
+
+            // Create a dummy track object for the generator
+            var dummyTrack = new ImportedAudioTrack(
+                audioPath,
+                audioPath,
+                Path.GetFileName(audioPath),
+                Path.GetFileName(audioPath),
+                new FileInfo(audioPath).Length,
+                null
+            );
+
+            osu.Framework.Logging.Logger.Log("Starting AI pipeline...", LoggingTarget.Runtime, LogLevel.Important);
+            logText.Clear();
+            logText.AddParagraph("Starting AI pipeline...", t => t.Colour = Color4.Cyan);
+            logOverlay.FadeIn(200);
+
+            // Run in background
+            Task.Run(async () =>
+            {
+                var generator = new AiBeatmapGenerator(host);
+                var progress = new Progress<AiGenerationProgress>(p =>
+                {
+                    Schedule(() =>
+                    {
+                        if (!string.IsNullOrEmpty(p.Message))
+                        {
+                            logText.AddParagraph(p.Message, t => t.Colour = Color4.White);
+                            // Auto-scroll to bottom
+                            if (logOverlay.Child is Container c && c.Child is BeatSightScrollContainer scroll)
+                                scroll.ScrollToEnd();
+                        }
+                    });
+                });
+
+                try
+                {
+                    var result = await generator.GenerateAsync(dummyTrack, options, progress, CancellationToken.None);
+
+                    Schedule(() =>
+                    {
+                        if (result.Success)
+                        {
+                            logText.AddParagraph("Pipeline completed successfully!", t => t.Colour = Color4.Green);
+                            osu.Framework.Logging.Logger.Log("Pipeline completed successfully!", LoggingTarget.Runtime, LogLevel.Important);
+
+                            // Reload beatmap
+                            if (result.Beatmap != null)
+                            {
+                                beatmap = result.Beatmap;
+                                beatmapPath = result.BeatmapPath; // Update path if it changed (e.g. new file)
+                                trackLength = beatmap.Audio.Duration;
+                                reloadTimeline();
+                                populateInspectorFromBeatmap();
+
+                                // Load debug data if available
+                                if (result.DebugAnalysisPath != null && File.Exists(result.DebugAnalysisPath))
+                                {
+                                    try
+                                    {
+                                        string json = File.ReadAllText(result.DebugAnalysisPath);
+                                        timeline?.LoadDebugData(json);
+                                    }
+                                    catch { }
+                                }
+
+                                setStatusDetail("Generated new beatmap");
+                            }
+                        }
+                        else
+                        {
+                            logText.AddParagraph($"Pipeline failed: {result.Error}", t => t.Colour = Color4.Red);
+                            osu.Framework.Logging.Logger.Log($"Pipeline failed: {result.Error}", LoggingTarget.Runtime, LogLevel.Error);
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Schedule(() =>
+                    {
+                        logText.AddParagraph($"Pipeline execution error: {ex.Message}", t => t.Colour = Color4.Red);
+                        osu.Framework.Logging.Logger.Log($"Pipeline execution error: {ex.Message}", LoggingTarget.Runtime, LogLevel.Error);
+                    });
+                }
+            });
+        }
+
+        private QuantizationGrid parseQuantizationGrid(string value)
+        {
+            return value switch
+            {
+                "quarter" => QuantizationGrid.Quarter,
+                "eighth" => QuantizationGrid.Eighth,
+                "sixteenth" => QuantizationGrid.Sixteenth,
+                "thirty_second" => QuantizationGrid.ThirtySecond,
+                _ => QuantizationGrid.Sixteenth
+            };
+        }
+
+        private Drawable createLogOverlay()
+        {
+            logText = new TextFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Padding = new MarginPadding(10)
+            };
+
+            logOverlay = new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                Width = 0.8f,
+                Height = 0.8f,
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                Masking = true,
+                CornerRadius = 10,
+                Alpha = 0, // Hidden by default
+                Depth = -100, // On top
+                Children = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = Color4.Black.Opacity(0.9f)
+                    },
+                    new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Padding = new MarginPadding { Bottom = 50 },
+                        Child = new BeatSightScrollContainer
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Child = logText
+                        }
+                    },
+                    new BeatSightButton
+                    {
+                        Text = "Close",
+                        Width = 100,
+                        Height = 30,
+                        Anchor = Anchor.BottomRight,
+                        Origin = Anchor.BottomRight,
+                        Margin = new MarginPadding(10),
+                        Action = () => logOverlay.FadeOut(200)
+                    }
+                }
+            };
+            return logOverlay;
+        }
+
+        private async void regenerateRegion()
+        {
+            if (timeline.SelectionStart.HasValue && timeline.SelectionEnd.HasValue)
+            {
+                double start = Math.Min(timeline.SelectionStart.Value, timeline.SelectionEnd.Value);
+                double end = Math.Max(timeline.SelectionStart.Value, timeline.SelectionEnd.Value);
+
+                if (end - start < 100)
+                {
+                    setStatusBase("Selection too small");
+                    setStatusDetail("Select at least 100ms of audio to regenerate");
+                    return;
+                }
+
+                setStatusBase("Regenerating region...");
+                setStatusDetail($"Processing {(end - start) / 1000.0:F1}s section from {start / 1000.0:F1}s to {end / 1000.0:F1}s");
+
+                string? audioPath = null;
+                if (importedAudio != null)
+                {
+                    audioPath = importedAudio.StoredPath;
+                }
+                else if (!string.IsNullOrEmpty(beatmapPath))
+                {
+                    string? folder = Path.GetDirectoryName(beatmapPath);
+                    if (folder != null)
+                        audioPath = Path.Combine(folder, beatmap!.Audio.Filename);
+                }
+
+                if (string.IsNullOrEmpty(audioPath) || !File.Exists(audioPath))
+                {
+                    setStatusBase("Could not locate audio file");
+                    setStatusDetail($"Expected at: {audioPath ?? "(unknown)"}");
+                    return;
+                }
+
+                var generator = new AiBeatmapGenerator(host);
+                var options = new AiGenerationOptions
+                {
+                    StartTime = start / 1000.0,
+                    EndTime = end / 1000.0,
+                    QuantizationGrid = parseQuantizationGrid(quantizationGrid.Value),
+                    ConfidenceThreshold = confidenceThreshold.Value,
+                    DetectionSensitivity = (int)detectionSensitivity.Value,
+                    EnableDrumSeparation = isolateDrums.Value,
+                    ForceQuantization = forceQuantization.Value,
+                    MaxSnapErrorMilliseconds = maxSnapError.Value,
+                    PythonExecutablePath = config.Get<string>(BeatSightSetting.PythonPath)
+                };
+
+                var dummyTrack = new ImportedAudioTrack(
+                    audioPath,
+                    audioPath,
+                    Path.GetFileName(audioPath),
+                    Path.GetFileName(audioPath),
+                    new FileInfo(audioPath).Length,
+                    null
+                );
+
+                try
+                {
+                    var result = await generator.GenerateAsync(dummyTrack, options, null, CancellationToken.None);
+
+                    if (result.Success && result.Beatmap?.HitObjects != null)
+                    {
+                        int noteCount = result.Beatmap.HitObjects.Count;
+                        mergeHitObjects(result.Beatmap.HitObjects, start, end);
+                        setStatusBase("Region regenerated");
+                        setStatusDetail($"Added {noteCount} notes from {start / 1000.0:F1}s to {end / 1000.0:F1}s");
+                    }
+                    else
+                    {
+                        setStatusBase("Generation failed");
+                        setStatusDetail(result.Error ?? "Unknown error occurred");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    setStatusBase("Generation error");
+                    setStatusDetail(ex.Message);
+                    osu.Framework.Logging.Logger.Error(ex, "Region regeneration failed");
+                }
+            }
+            else
+            {
+                setStatusBase("No region selected");
+                setStatusDetail("Use Shift+Drag on the timeline to select a region to regenerate");
+            }
+        }
+
+        private void mergeHitObjects(List<HitObject> newHits, double start, double end)
+        {
+            setStatusDetail("Regenerate Region");
+            armEditSnapshot();
+
+            if (beatmap != null)
+            {
+                beatmap.HitObjects.RemoveAll(h => h.Time >= start && h.Time <= end);
+
+                var hitsToAdd = newHits.Where(h => h.Time >= start && h.Time <= end).ToList();
+                beatmap.HitObjects.AddRange(hitsToAdd);
+
+                beatmap.HitObjects.Sort((a, b) => a.Time.CompareTo(b.Time));
+
+                reloadTimeline();
+                hasUnsavedChanges = true;
+                updateActionButtons();
+            }
+        }
     }
 }

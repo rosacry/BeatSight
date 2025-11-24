@@ -28,6 +28,8 @@ namespace BeatSight.Game.Screens.SongSelect
         private List<BeatmapLibrary.BeatmapEntry> allBeatmaps = new();
         private string currentFilter = string.Empty;
         private SortMode currentSortMode = SortMode.Title;
+        private double minConfidence = 0.0;
+        private string genreFilter = string.Empty;
 
         [BackgroundDependencyLoader]
         private void load()
@@ -55,6 +57,18 @@ namespace BeatSight.Game.Screens.SongSelect
             Filter(currentFilter);
         }
 
+        public void SetConfidenceFilter(double min)
+        {
+            minConfidence = min;
+            Filter(currentFilter);
+        }
+
+        public void SetGenreFilter(string genre)
+        {
+            genreFilter = genre;
+            Filter(currentFilter);
+        }
+
         public void Sort(SortMode mode)
         {
             currentSortMode = mode;
@@ -64,9 +78,7 @@ namespace BeatSight.Game.Screens.SongSelect
         public void Filter(string query)
         {
             currentFilter = query;
-            var filtered = string.IsNullOrWhiteSpace(query)
-                ? allBeatmaps
-                : allBeatmaps.Where(b => matchesFilter(b, query)).ToList();
+            var filtered = allBeatmaps.Where(b => matchesFilter(b, query)).ToList();
 
             // Apply sorting
             switch (currentSortMode)
@@ -82,6 +94,9 @@ namespace BeatSight.Game.Screens.SongSelect
                     break;
                 case SortMode.DateAdded:
                     filtered = filtered.OrderByDescending(b => b.Beatmap.Metadata.CreatedAt).ToList();
+                    break;
+                case SortMode.DateGenerated:
+                    filtered = filtered.OrderByDescending(b => b.Beatmap.Editor?.AiGenerationMetadata?.ProcessedAt ?? DateTime.MinValue).ToList();
                     break;
             }
 
@@ -148,9 +163,28 @@ namespace BeatSight.Game.Screens.SongSelect
 
         private bool matchesFilter(BeatmapLibrary.BeatmapEntry entry, string query)
         {
-            return entry.Beatmap.Metadata.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
-                || entry.Beatmap.Metadata.Artist.Contains(query, StringComparison.OrdinalIgnoreCase)
-                || entry.Beatmap.Metadata.Creator.Contains(query, StringComparison.OrdinalIgnoreCase);
+            bool matchesQuery = string.IsNullOrWhiteSpace(query) ||
+                entry.Beatmap.Metadata.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                entry.Beatmap.Metadata.Artist.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                entry.Beatmap.Metadata.Creator.Contains(query, StringComparison.OrdinalIgnoreCase);
+
+            if (!matchesQuery) return false;
+
+            // AI Confidence Filter
+            if (minConfidence > 0)
+            {
+                var confidence = entry.Beatmap.Editor?.AiGenerationMetadata?.Confidence ?? 0;
+                if (confidence < minConfidence) return false;
+            }
+
+            // Genre Filter
+            if (!string.IsNullOrEmpty(genreFilter))
+            {
+                if (!entry.Beatmap.Metadata.Tags.Any(t => t.Equals(genreFilter, StringComparison.OrdinalIgnoreCase)))
+                    return false;
+            }
+
+            return true;
         }
 
         private void select(BeatmapLibrary.BeatmapEntry entry, BeatmapPanel panel)
@@ -262,6 +296,14 @@ namespace BeatSight.Game.Screens.SongSelect
                                         Colour = getDifficultyColour((float)entry.Beatmap.Metadata.Difficulty),
                                         Truncate = true,
                                         RelativeSizeAxes = Axes.X
+                                    },
+                                    new FillFlowContainer
+                                    {
+                                        RelativeSizeAxes = Axes.X,
+                                        AutoSizeAxes = Axes.Y,
+                                        Direction = FillDirection.Horizontal,
+                                        Spacing = new Vector2(10, 0),
+                                        Children = getAiInfo(entry.Beatmap)
                                     }
                                 }
                             }
@@ -309,6 +351,58 @@ namespace BeatSight.Game.Screens.SongSelect
                 return UITheme.AccentSecondary;
             }
 
+            private Drawable[] getAiInfo(Beatmap beatmap)
+            {
+                var list = new List<Drawable>();
+                var aiMeta = beatmap.Editor?.AiGenerationMetadata;
+
+                if (aiMeta != null)
+                {
+                    // AI Badge
+                    list.Add(new Container
+                    {
+                        AutoSizeAxes = Axes.Both,
+                        Masking = true,
+                        CornerRadius = 4,
+                        Children = new Drawable[]
+                        {
+                            new Box { RelativeSizeAxes = Axes.Both, Colour = UITheme.AccentPrimary },
+                            new BeatSight.Game.UI.Components.BeatSightSpriteText
+                            {
+                                Text = "AI Generated",
+                                Font = BeatSightFont.Caption(10f),
+                                Colour = Color4.White,
+                                Padding = new MarginPadding { Horizontal = 5, Vertical = 2 }
+                            }
+                        }
+                    });
+
+                    // Confidence
+                    if (aiMeta.Confidence.HasValue)
+                    {
+                        list.Add(new BeatSight.Game.UI.Components.BeatSightSpriteText
+                        {
+                            Text = $"Confidence: {aiMeta.Confidence.Value:P0}",
+                            Font = BeatSightFont.Caption(12f),
+                            Colour = UITheme.TextSecondary
+                        });
+                    }
+
+                    // Model Version
+                    if (!string.IsNullOrEmpty(aiMeta.ModelVersion))
+                    {
+                        list.Add(new BeatSight.Game.UI.Components.BeatSightSpriteText
+                        {
+                            Text = $"v{aiMeta.ModelVersion}",
+                            Font = BeatSightFont.Caption(12f),
+                            Colour = UITheme.TextSecondary,
+                            Alpha = 0.7f
+                        });
+                    }
+                }
+                return list.ToArray();
+            }
+
             protected override bool OnHover(HoverEvent e)
             {
                 if (State.Value == PanelState.NotSelected)
@@ -335,7 +429,8 @@ namespace BeatSight.Game.Screens.SongSelect
             Title,
             Artist,
             Difficulty,
-            DateAdded
+            DateAdded,
+            DateGenerated
         }
     }
 }

@@ -12,7 +12,11 @@ using osu.Framework.Extensions.Color4Extensions;
 
 namespace BeatSight.Game.Screens.Playback.Playfield
 {
-    internal partial class DrawableNote : CompositeDrawable
+    /// <summary>
+    /// Represents a single drum hit note in the playfield.
+    /// Handles rendering, animations, and state management for individual notes.
+    /// </summary>
+    public partial class DrawableNote : CompositeDrawable
     {
         private static readonly Dictionary<string, Color4> componentColours = new Dictionary<string, Color4>
         {
@@ -35,6 +39,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         public string ComponentName { get; }
         public Color4 AccentColour { get; }
         public bool IsKick => isKickNote;
+        public double Velocity { get; } // New property
 
         public bool IsDisposedPublic => IsDisposed;
 
@@ -42,28 +47,25 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private readonly Box highlightStrip;
         private readonly Box? glowBox;
         private readonly Box stem;
-        private readonly CircularContainer? approachCircle;
-        private readonly Bindable<bool> showApproachCircles;
         private readonly Bindable<bool> showGlowEffects;
         private readonly Bindable<bool> showParticleEffects;
         private LaneViewMode viewMode = LaneViewMode.TwoDimensional;
-        private float approachProgress = 1f;
         private readonly bool isKickNote;
         private readonly int originalLane;
         private bool kickGlobalMode;
         private float lastAppliedDepth = float.NaN;
         private readonly float velocityAlpha;
 
-        public DrawableNote(HitObject hitObject, int lane, Bindable<bool> showApproach, Bindable<bool> showGlow, Bindable<bool> showParticles)
+        public DrawableNote(HitObject hitObject, int lane, Bindable<bool> showGlow, Bindable<bool> showParticles)
         {
             HitTime = hitObject.Time;
             ComponentName = hitObject.Component;
             Lane = lane;
             originalLane = lane;
-            showApproachCircles = showApproach;
             showGlowEffects = showGlow;
             showParticleEffects = showParticles;
             isKickNote = !string.IsNullOrEmpty(hitObject.Component) && hitObject.Component.IndexOf("kick", StringComparison.OrdinalIgnoreCase) >= 0;
+            Velocity = hitObject.Velocity;
 
             // Calculate opacity based on velocity (0.0 - 1.0)
             // Map 0.0 -> 0.4 (ghost note)
@@ -129,28 +131,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             };
             children.Add(highlightStrip);
 
-            // Add approach circle if enabled
-            if (showApproach.Value)
-            {
-                approachCircle = new CircularContainer
-                {
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    Size = new Vector2(80, 80),
-                    Masking = true,
-                    BorderThickness = 3,
-                    BorderColour = AccentColour,
-                    Alpha = 0.7f, // Slightly more transparent to reduce overlap visual issues
-                    Child = new Box
-                    {
-                        RelativeSizeAxes = Axes.Both,
-                        Alpha = 0,
-                        AlwaysPresent = true
-                    }
-                };
-                children.Add(approachCircle);
-            }
-
             InternalChildren = children.ToArray();
 
             SetViewMode(viewMode);
@@ -169,13 +149,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         protected override void Update()
         {
             base.Update();
-
-            // Approach circle scales down as note gets closer
-            if (!IsJudged && showApproachCircles.Value && approachCircle != null && approachCircle.Alpha > 0)
-            {
-                float progress = Math.Clamp(approachProgress, 0f, 1f);
-                approachCircle.Scale = new Vector2(1 + (1 - progress) * 2);
-            }
+            // This is a drum analysis tool - no approach circles to update
         }
 
         public void SetViewMode(LaneViewMode mode)
@@ -274,8 +248,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             SetViewMode(viewMode);
         }
 
-        public void SetApproachProgress(float progress) => approachProgress = Math.Clamp(progress, 0f, 1f);
-
         public void ApplyKickLineDimensions(float width, float height, LaneViewMode mode)
         {
             if (!isKickNote || !kickGlobalMode)
@@ -335,11 +307,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             mainBox?.ClearTransforms();
             highlightStrip?.ClearTransforms();
             glowBox?.ClearTransforms();
-            approachCircle?.ClearTransforms();
-
-            // Hide approach circle
-            if (showApproachCircles.Value && approachCircle != null)
-                approachCircle.FadeOut(100);
 
             switch (result)
             {
@@ -405,13 +372,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             if (highlightStrip != null)
             {
                 highlightStrip.ClearTransforms();
-            }
-
-            if (approachCircle != null)
-            {
-                approachCircle.ClearTransforms();
-                approachCircle.Alpha = 0;
-                approachCircle.Scale = Vector2.One;
             }
 
             SetViewMode(viewMode);

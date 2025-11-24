@@ -65,10 +65,10 @@ namespace BeatSight.Game.Configuration
             setDefault(BeatSightSetting.KickLaneMode, KickLaneMode.GlobalLine);
 
             // Visual Settings
-            setDefault(BeatSightSetting.ShowApproachCircles, true);
             setDefault(BeatSightSetting.ShowParticleEffects, true);
             setDefault(BeatSightSetting.ShowGlowEffects, true);
             setDefault(BeatSightSetting.ShowHitBurstAnimations, true);
+            setDefault(BeatSightSetting.UseEnhancedViews, true);
             setDefault(BeatSightSetting.ShowComboMilestones, true);
             setDefault(BeatSightSetting.ShowFpsCounter, false);
             setDefault(BeatSightSetting.UIScale, 1.0, 0.5, 1.5, 0.01);
@@ -108,6 +108,16 @@ namespace BeatSight.Game.Configuration
             setDefault(BeatSightSetting.FrameLimiterEnabled, false);
             setDefault(BeatSightSetting.FrameLimiterTarget, 144.0);
             setDefault(BeatSightSetting.FrameLimiter, FrameLimiterMode.BasicallyUnlimited);
+
+            // AI / Generation
+            setDefault(BeatSightSetting.PythonPath, "python");
+            setDefault(BeatSightSetting.ModelVersion, "v1.0");
+            setDefault(BeatSightSetting.UseGpu, false);
+            setDefault(BeatSightSetting.AcoustIdApiKey, "");
+            setDefault(BeatSightSetting.AutoGenerateOnImport, false);
+            setDefault(BeatSightSetting.CustomModelPath, "");
+            setDefault(BeatSightSetting.DefaultQuantization, "sixteenth");
+            setDefault(BeatSightSetting.DefaultSensitivity, 60.0);
         }
 
         public void ResetToDefaults()
@@ -199,7 +209,6 @@ namespace BeatSight.Game.Configuration
         KickLaneMode,
 
         // Visual
-        ShowApproachCircles,
         ShowParticleEffects,
         ShowGlowEffects,
         ShowHitBurstAnimations,
@@ -209,6 +218,7 @@ namespace BeatSight.Game.Configuration
         NoteSkin,
         ShowGlobalBackground,
         GlobalBackgroundOpacity,
+        UseEnhancedViews,
 
         // Audio
         MasterVolume,
@@ -239,7 +249,17 @@ namespace BeatSight.Game.Configuration
         // Performance
         FrameLimiter,
         FrameLimiterEnabled,
-        FrameLimiterTarget
+        FrameLimiterTarget,
+
+        // AI / Generation
+        PythonPath,
+        ModelVersion,
+        UseGpu,
+        CustomModelPath,
+        AcoustIdApiKey,
+        DefaultQuantization,
+        DefaultSensitivity,
+        AutoGenerateOnImport
     }
 
     public enum GameplayMode

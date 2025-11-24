@@ -189,7 +189,104 @@ run_precompute_cache() {
       --cache-dtype float16
 }
 
+# Prompt user for resume vs fresh start for training runs
+prompt_training_mode() {
+    local run_name="$1"
+    local checkpoint_dir="$2"
+    local latest_checkpoint="${checkpoint_dir}/checkpoints/latest_checkpoint.pth"
+    
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  Training: ${run_name}"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    
+    # Check if checkpoint exists
+    if [ -f "$latest_checkpoint" ]; then
+        echo "  ✓ Found existing checkpoint: ${latest_checkpoint}"
+        echo ""
+        echo "  Options:"
+        echo "    [R] Resume from checkpoint (continue where you left off)"
+        echo "    [F] Fresh start (delete old checkpoints, use improved settings)"
+        echo "    [C] Cancel (go back to menu)"
+        echo ""
+        read -p "  Choose [R/F/C]: " mode_choice
+        
+        case "${mode_choice,,}" in  # lowercase
+            r|resume)
+                echo "  → Resuming from checkpoint..."
+                TRAINING_MODE="resume"
+                RESUME_FLAG="--resume-from ${latest_checkpoint}"
+                # Don't use new experimental settings when resuming
+                CLASS_WEIGHTS_FLAG=""
+                LABEL_SMOOTHING_FLAG=""
+                ;;
+            f|fresh)
+                echo "  → Starting fresh with improved settings..."
+                echo "  ⚠ Removing old checkpoints in ${checkpoint_dir}..."
+                rm -rf "${checkpoint_dir}/checkpoints" 2>/dev/null || true
+                rm -f "${checkpoint_dir}/best_drum_classifier.pth" 2>/dev/null || true
+                TRAINING_MODE="fresh"
+                RESUME_FLAG=""
+                # Use new improved settings for fresh runs
+                CLASS_WEIGHTS_FLAG="--class-weights balanced"
+                LABEL_SMOOTHING_FLAG="--label-smoothing 0.1"
+                ;;
+            c|cancel)
+                echo "  → Cancelled."
+                return 1
+                ;;
+            *)
+                echo "  → Invalid choice. Cancelled."
+                return 1
+                ;;
+        esac
+    else
+        echo "  ℹ No existing checkpoint found. Starting fresh."
+        echo ""
+        echo "  Options:"
+        echo "    [S] Start training (with improved settings)"
+        echo "    [C] Cancel (go back to menu)"
+        echo ""
+        read -p "  Choose [S/C]: " mode_choice
+        
+        case "${mode_choice,,}" in
+            s|start)
+                TRAINING_MODE="fresh"
+                RESUME_FLAG=""
+                CLASS_WEIGHTS_FLAG="--class-weights balanced"
+                LABEL_SMOOTHING_FLAG="--label-smoothing 0.1"
+                ;;
+            c|cancel)
+                echo "  → Cancelled."
+                return 1
+                ;;
+            *)
+                echo "  → Invalid choice. Cancelled."
+                return 1
+                ;;
+        esac
+    fi
+    
+    echo ""
+    if [ -n "$CLASS_WEIGHTS_FLAG" ]; then
+        echo "  📊 Using improved settings:"
+        echo "     • Class weights: balanced (handles imbalanced drum components)"
+        echo "     • Label smoothing: 0.1 (reduces overfitting)"
+    else
+        echo "  📊 Using original settings (to match existing checkpoint)"
+    fi
+    echo ""
+    
+    return 0
+}
+
 run_train_warmup() {
+    echo ">>> Warmup Training Configuration..."
+    
+    if ! prompt_training_mode "Warmup Probe" "${BEATSIGHT_RUN_WARMUP}"; then
+        return 0
+    fi
+    
     echo ">>> Starting Warmup Training..."
     BS_CACHE_DEBUG=1 \
     PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
@@ -217,10 +314,19 @@ run_train_warmup() {
       --wandb-project beatsight-classifier \
       --wandb-tags prod_combined_24class richer_subset warmup \
       --wandb-run-name prod_combined_warmup_probe_$(date +%Y%m%d) \
-      --grad-accum-steps 4
+      --grad-accum-steps 4 \
+      ${CLASS_WEIGHTS_FLAG:-} \
+      ${LABEL_SMOOTHING_FLAG:-} \
+      ${RESUME_FLAG:-}
 }
 
 run_train_quick() {
+    echo ">>> Quick Refresh Training Configuration..."
+    
+    if ! prompt_training_mode "Quick Refresh" "${BEATSIGHT_RUN_QUICK}"; then
+        return 0
+    fi
+    
     echo ">>> Starting Quick Refresh Training..."
     PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
       --dataset "${BEATSIGHT_DATASET_DIR}" \
@@ -245,10 +351,30 @@ run_train_quick() {
       --metrics-json "${BEATSIGHT_METRICS_DIR}/prod_combined_quick.json" \
       --wandb-project beatsight-classifier \
       --wandb-tags prod_combined_24class quick_refresh cached \
-      --wandb-run-name prod_combined_quick_refresh_$(date +%Y%m%d)
+      --wandb-run-name prod_combined_quick_refresh_$(date +%Y%m%d) \
+      ${CLASS_WEIGHTS_FLAG:-} \
+      ${LABEL_SMOOTHING_FLAG:-} \
+      ${RESUME_FLAG:-}
 }
 
 run_train_long() {
+    echo ">>> Long Run Training Configuration..."
+    
+    if ! prompt_training_mode "Long Run" "${BEATSIGHT_RUN_LONG}"; then
+        return 0
+    fi
+    
+    # For long run, if resuming we use the warmup checkpoint, otherwise fresh start
+    if [ "$TRAINING_MODE" = "resume" ]; then
+        # Check if long run has its own checkpoint first
+        if [ -f "${BEATSIGHT_RUN_LONG}/checkpoints/latest_checkpoint.pth" ]; then
+            RESUME_FLAG="--resume-from ${BEATSIGHT_RUN_LONG}/checkpoints/latest_checkpoint.pth"
+        else
+            # Fall back to warmup checkpoint
+            RESUME_FLAG="--resume-from ${BEATSIGHT_RUN_WARMUP}/checkpoints/latest_checkpoint.pth"
+        fi
+    fi
+    
     echo ">>> Starting Long Run Training..."
     export WANDB_RUN_GROUP=prod_combined_longrun_lr28e5
     PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
@@ -279,7 +405,9 @@ run_train_long() {
       --metrics-json "${BEATSIGHT_METRICS_DIR}/prod_combined_longrun.json" \
       --wandb-tags prod_combined_24class full_corpus longrun lr28e5 richer_split \
       --wandb-run-name prod_combined_longrun_lr28e5_$(date +%Y%m%d) \
-      --resume-from "${BEATSIGHT_RUN_WARMUP}/checkpoints/latest_checkpoint.pth"
+      ${CLASS_WEIGHTS_FLAG:-} \
+      ${LABEL_SMOOTHING_FLAG:-} \
+      ${RESUME_FLAG:-}
 }
 
 run_eval() {

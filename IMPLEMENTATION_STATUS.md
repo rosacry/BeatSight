@@ -10,10 +10,10 @@
 
 | Category | Count | Notes |
 |----------|-------|-------|
-| **Total Items Requiring Attention** | 36 | Across all priority levels (11 resolved this session) |
+| **Total Items Requiring Attention** | 34 | Across all priority levels (13 resolved this session) |
 | **Critical Blockers** | 3 | Hardware migration, web MVP infrastructure |
-| **High Priority** | 5 | Test coverage ↓, remaining integration gaps |
-| **Medium Priority** | 16 | Polish features, integrations, documentation ↓ |
+| **High Priority** | 3 | Test coverage, remaining integration gaps |
+| **Medium Priority** | 16 | Polish features, integrations |
 | **Low Priority / Nice-to-have** | 12 | Future enhancements, optimizations |
 
 ### Session Progress (Nov 24)
@@ -30,6 +30,8 @@
 - ✅ **Added generation logging** to `AiBeatmapGenerator.cs` (`[gen] notes=... bpm=... lanes=...`)
 - ✅ **Fixed cancellation propagation** in `DemucsExternalProcessBackend.probeDemucs`
 - ✅ **Implemented JWT authentication** - `auth.py` service, routes, and dependencies
+- ✅ **Created API Reference** - `docs/API_REFERENCE.md` (comprehensive endpoint docs)
+- ✅ **Created Deployment Guide** - `docs/DEPLOYMENT.md` (Docker, Azure, security)
 
 ### Current State Overview
 - **Desktop Application**: ✅ Shipping-quality. Playback, editor, and song selection are functional.
@@ -128,8 +130,8 @@
 | Integration | Status | Gap Description | Action Required |
 |-------------|--------|-----------------|-----------------|
 | Tempo authority | ✅ **Working** | `TempoAuthority.Evaluate` injects BPM/offset/step into options; `BeatmapTimebaseSynchroniser.Apply` synchronizes post-generation | Complete |
-| Debug metadata binding | 🟡 Partial | Debug overlay exists but binding mid-run incomplete | Complete real-time debug overlay data binding |
-| Cancellation propagation | 🟡 Partial | Not fully propagated through Demucs/Onset/Tempo services | Implement end-to-end cancellation token handling |
+| Debug metadata binding | ✅ **Working** | Real-time binding via `onStatsChanged`/`onAnalysisChanged`; placeholder shown during early stages (expected) | Complete |
+| Cancellation propagation | ✅ **Working** | Propagated through all services; `probeDemucs` fixed to poll with cancellation | Complete |
 
 ### 4.2 Backend ↔ Desktop
 
@@ -270,12 +272,12 @@ Per `MISSING_INTEGRATIONS.md` verification (Nov 24, 2025): **✅ All 39 features
 
 ### 8.1 Missing Documentation
 
-| Document | Purpose | Priority |
-|----------|---------|----------|
-| API reference | Backend endpoint documentation | High (for web launch) |
-| Beatmap creation guide | User-facing tutorial | Medium |
-| Contribution workflow | Developer onboarding | Medium |
-| Deployment guide | Production deployment steps | High |
+| Document | Purpose | Priority | Status |
+|----------|---------|----------|--------|
+| API reference | Backend endpoint documentation | High | ✅ **Created Nov 24** - `docs/API_REFERENCE.md` |
+| Deployment guide | Production deployment steps | High | ✅ **Created Nov 24** - `docs/DEPLOYMENT.md` |
+| Beatmap creation guide | User-facing tutorial | Medium | Not started |
+| Contribution workflow | Developer onboarding | Medium | Partially covered in `CONTRIBUTING.md` |
 
 ### 8.2 Outdated Documentation
 
@@ -293,6 +295,8 @@ Per `MISSING_INTEGRATIONS.md` verification (Nov 24, 2025): **✅ All 39 features
 - `docs/ml_training_runbook.md` - Training SOP
 - `docs/ARCHITECTURE.md` - System design
 - `docs/BS_FILE_FORMAT.md` - Beatmap format spec
+- `docs/API_REFERENCE.md` - Backend API documentation (NEW)
+- `docs/DEPLOYMENT.md` - Production deployment guide (NEW)
 - `ai-pipeline/training/TRAINING_AUDIT_REPORT.md` - Training audit
 
 ---

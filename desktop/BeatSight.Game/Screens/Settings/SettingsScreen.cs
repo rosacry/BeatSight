@@ -240,7 +240,7 @@ namespace BeatSight.Game.Screens.Settings
                 case SettingsCategory.Audio:
                     return new AudioSettingsSection(config, host, dropdownOverlay, tooltipOverlay);
                 case SettingsCategory.Graphics:
-                    return new GraphicsSettingsSection(config, host, dropdownOverlay, tooltipOverlay, uiScaleWizard);
+                    return new GraphicsSettingsSection(config, host, dropdownOverlay, tooltipOverlay, uiScaleWizard, openSkinEditor);
                 case SettingsCategory.Controls:
                     return new ControlsSettingsSection(config, host, dropdownOverlay, tooltipOverlay);
                 case SettingsCategory.AI:
@@ -2208,6 +2208,7 @@ namespace BeatSight.Game.Screens.Settings
         private readonly BeatSightConfigManager config;
         private readonly GameHost host;
         private readonly UIScaleWizard uiScaleWizard;
+        private readonly Action openSkinEditorAction;
         private Bindable<int>? windowWidth;
         private Bindable<int>? windowHeight;
         private Bindable<bool>? windowFullscreen;
@@ -2221,12 +2222,13 @@ namespace BeatSight.Game.Screens.Settings
         private bool monitorRefreshScheduled;
         private bool resolutionRefreshScheduled;
 
-        public GraphicsSettingsSection(BeatSightConfigManager config, GameHost host, Container dropdownOverlay, SettingsTooltipOverlay tooltipOverlay, UIScaleWizard uiScaleWizard)
+        public GraphicsSettingsSection(BeatSightConfigManager config, GameHost host, Container dropdownOverlay, SettingsTooltipOverlay tooltipOverlay, UIScaleWizard uiScaleWizard, Action openSkinEditor)
             : base("Graphics Settings", dropdownOverlay, tooltipOverlay)
         {
             this.config = config;
             this.host = host;
             this.uiScaleWizard = uiScaleWizard;
+            this.openSkinEditorAction = openSkinEditor;
         }
 
         protected override Drawable createContent()
@@ -2323,7 +2325,7 @@ namespace BeatSight.Game.Screens.Settings
                 Text = "Skin Editor",
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft,
-                Action = openSkinEditor
+                Action = openSkinEditorAction
             };
 
             var control = new FillFlowContainer
@@ -2870,13 +2872,13 @@ namespace BeatSight.Game.Screens.Settings
                     new SpriteText
                     {
                         Text = "Lane Key Bindings",
-                        Font = BeatSightFont.BodySmall(16f),
+                        Font = BeatSightFont.Caption(16f),
                         Colour = UITheme.TextSecondary
                     },
                     new SpriteText
                     {
                         Text = "Configure keyboard keys for each lane count. Changes apply immediately.",
-                        Font = BeatSightFont.BodySmall(12f),
+                        Font = BeatSightFont.Caption(12f),
                         Colour = UITheme.TextMuted,
                         Margin = new MarginPadding { Bottom = 10 }
                     },
@@ -2943,7 +2945,7 @@ namespace BeatSight.Game.Screens.Settings
                             new SpriteText
                             {
                                 Text = $"{laneCount} Lanes:",
-                                Font = BeatSightFont.BodySmall(14f),
+                                Font = BeatSightFont.Caption(14f),
                                 Colour = UITheme.TextPrimary,
                                 Width = 70
                             },
@@ -2986,7 +2988,7 @@ namespace BeatSight.Game.Screens.Settings
                     }
                     populateKeyBindings();
                 },
-                BackgroundColour = UITheme.Danger,
+                BackgroundColour = UITheme.AccentError,
                 Margin = new MarginPadding { Top = 20 }
             };
         }
@@ -3032,7 +3034,7 @@ namespace BeatSight.Game.Screens.Settings
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
                     Text = KeyBindingHelper.GetKeyDisplayName(currentKey),
-                    Font = BeatSightFont.BodySmall(12f),
+                    Font = BeatSightFont.Caption(12f),
                     Colour = UITheme.TextPrimary
                 }
             };
@@ -3086,7 +3088,7 @@ namespace BeatSight.Game.Screens.Settings
             isCapturing = true;
             background.Colour = UITheme.AccentPrimary;
             keyText.Text = "...";
-            keyText.Colour = UITheme.TextInverse;
+            keyText.Colour = UITheme.Background;
 
             // Request focus to capture key events
             GetContainingFocusManager()?.ChangeFocus(this);

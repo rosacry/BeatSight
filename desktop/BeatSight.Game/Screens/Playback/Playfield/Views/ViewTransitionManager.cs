@@ -326,7 +326,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             var wipeBox = new Box
             {
                 RelativeSizeAxes = Axes.Both,
-                Colour = BeatSightColors.BackgroundDark,
+                Colour = UITheme.Background,
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft
             };

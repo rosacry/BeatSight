@@ -46,12 +46,12 @@ namespace BeatSight.Game.Services.Generation
         /// </summary>
         public static readonly IReadOnlyDictionary<GenerationStageId, string> StageLabels = new Dictionary<GenerationStageId, string>
         {
-            { GenerationStageId.ModelLoad, "Model Load (Demucs)" },
-            { GenerationStageId.Separation, "Separation" },
+            { GenerationStageId.ModelLoad, "Loading AI Model" },
+            { GenerationStageId.Separation, "Separating Drums" },
             { GenerationStageId.OnsetDetection, "Onset & Peak Detection" },
-            { GenerationStageId.TempoGrid, "Tempo & Grid" },
-            { GenerationStageId.DraftMapping, "Draft Mapping" },
-            { GenerationStageId.Finalise, "Finalising" }
+            { GenerationStageId.TempoGrid, "Tempo & Grid Analysis" },
+            { GenerationStageId.DraftMapping, "Generating Beatmap" },
+            { GenerationStageId.Finalise, "Finalising Output" }
         };
 
         public static string GetLabel(GenerationStageId stage) =>

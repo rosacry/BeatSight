@@ -161,15 +161,17 @@ public class GenerationCoordinatorTests
             durationMilliseconds: 120_000);
 
         using var cts = new CancellationTokenSource();
+        var pipelineStarted = new TaskCompletionSource<bool>();
 
-        var pipeline = new FakePipeline(ct => slowSequence(ct, cts));
+        var pipeline = new FakePipeline(ct => slowSequence(ct, pipelineStarted));
         var coordinator = new GenerationCoordinator(pipeline, action => action());
 
         var parameters = new GenerationParams(track, DetectionSensitivity: 60, Quantization: QuantizationGrid.Sixteenth, DebugOverlayEnabled: false, TempoOverride: null);
 
         var resultTask = coordinator.RunAsync(parameters, cts.Token);
 
-        // Cancel immediately
+        // Wait for pipeline to actually start before cancelling
+        await pipelineStarted.Task;
         cts.Cancel();
 
         var result = await resultTask;
@@ -179,8 +181,11 @@ public class GenerationCoordinatorTests
 
         coordinator.Dispose();
 
-        static async IAsyncEnumerable<PipelineProgress> slowSequence([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct, CancellationTokenSource triggerCts)
+        static async IAsyncEnumerable<PipelineProgress> slowSequence([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct, TaskCompletionSource<bool> started)
         {
+            // Signal that pipeline has started
+            started.TrySetResult(true);
+            
             yield return new PipelineProgress(
                 Phase: PipelinePhase.AudioInit,
                 Percent: 0.1,

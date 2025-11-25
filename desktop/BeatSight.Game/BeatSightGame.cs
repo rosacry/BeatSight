@@ -41,6 +41,7 @@ using osuTK;
 using osuTK.Graphics;
 using osu.Framework.Platform;
 using osu.Framework.IO.Stores;
+using osu.Framework.Input.Events;
 using FrameworkWindowState = osu.Framework.Platform.WindowState;
 
 namespace BeatSight.Game
@@ -133,6 +134,7 @@ namespace BeatSight.Game
             dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
 
         private FpsCounter fpsCounter = null!;
+        private HelpOverlay? helpOverlayInstance;
 
         private const string audioImportsDirectory = "AudioImports";
         private static readonly string[] supportedAudioExtensions = { ".mp3", ".wav", ".ogg", ".flac", ".m4a", ".aac" };
@@ -223,6 +225,10 @@ namespace BeatSight.Game
             var uiScaleWizard = new UIScaleWizard { State = { Value = Visibility.Hidden } };
             dependencies.Cache(uiScaleWizard);
 
+            var helpOverlay = new HelpOverlay();
+            dependencies.Cache(helpOverlay);
+            helpOverlayInstance = helpOverlay;
+
             // Initialize the game
             Children = new Drawable[]
             {
@@ -240,6 +246,7 @@ namespace BeatSight.Game
                     }
                 },
                 uiScaleWizard,
+                helpOverlay,
                 fpsCounter = new FpsCounter()
             };
 
@@ -509,6 +516,21 @@ namespace BeatSight.Game
 
             // Load the intro screen
             screenStack.Push(new Screens.IntroScreen());
+        }
+
+        protected override bool OnKeyDown(KeyDownEvent e)
+        {
+            // F1 or '?' toggles help overlay
+            if (e.Key == osuTK.Input.Key.F1 || (e.Key == osuTK.Input.Key.Slash && e.ShiftPressed))
+            {
+                if (helpOverlayInstance != null)
+                {
+                    helpOverlayInstance.ToggleVisibility();
+                    return true;
+                }
+            }
+
+            return base.OnKeyDown(e);
         }
 
         private void bootstrapDefaultUserAssets()

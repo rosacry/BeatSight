@@ -357,7 +357,7 @@ Per `MISSING_INTEGRATIONS.md` verification (Nov 24, 2025): **✅ All 39 features
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Tutorial/onboarding | ✅ **Complete** | OnboardingScreen with 5-page walkthrough |
-| In-app help | Partial | Tooltips exist; no help system |
+| In-app help | ✅ **Complete** | HelpOverlay with F1 toggle, context-aware shortcuts |
 | Keyboard rebinding UI | ✅ **Complete** | Controls settings section with per-lane-count inputs |
 | Theme customization | Partial | `DesignSystem.cs` exists; no user UI |
 
@@ -445,9 +445,9 @@ No explicit `TODO` or `FIXME` comments found in core source files.
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Settings/preferences | ✅ Complete | Comprehensive `SettingsScreen` |
-| Keyboard customization | 🟡 Partial | Bindings exist; no UI to change |
-| Tutorial/onboarding | 🔴 Not started | No first-run experience |
-| In-app help | 🟡 Partial | Tooltips only |
+| Keyboard customization | ✅ Complete | Controls settings section with per-lane inputs |
+| Tutorial/onboarding | ✅ Complete | OnboardingScreen with 5-page walkthrough |
+| In-app help | ✅ Complete | HelpOverlay with F1 toggle, context-aware |
 
 ---
 

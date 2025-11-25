@@ -23,6 +23,31 @@ BeatSight is an ambitious, potentially **revolutionary** program designed to tra
 
 ---
 
+### ⚠️ ACTIVE OPERATION IN PROGRESS (as of Nov 24, 2025)
+
+**DO NOT INTERFERE WITH THE FOLLOWING:**
+
+Currently migrating training data from SSD (C:) to HDD (E:) due to low disk space:
+
+```bash
+robocopy "C:\github\BeatSight\data\prod_combined_profile_run" "E:\data\prod_combined_profile_run" /E /MOVE /MT:8 /ETA /R:3 /W:5 /LOG:"C:\logs\BeatSight_robocopy.log" /TEE
+```
+
+**What's happening:**
+- Moving `prod_combined_profile_run` dataset from `C:\github\BeatSight\data\` to `E:\data\`
+- Using robocopy with 8 threads (`/MT:8`) and move mode (`/MOVE`)
+- Log file: `C:\logs\BeatSight_robocopy.log`
+
+**Next step after transfer completes:**
+- Run step `5a` from `post_export_commands.sh`
+
+**⚠️ Do not:**
+- Modify, read, or access files in `data/prod_combined_profile_run/` during transfer
+- Run any training commands until migration is complete
+- Delete or move any files in the source or destination directories
+
+---
+
 ## Your Task
 
 Perform an **exhaustive, systematic analysis** of the entire BeatSight codebase. Generate a comprehensive Markdown document (`IMPLEMENTATION_STATUS.md`) that catalogs:

@@ -75,6 +75,26 @@ namespace BeatSight.Game.Screens.SongSelect
             Filter(currentFilter);
         }
 
+        /// <summary>
+        /// Selects a random beatmap from the currently filtered list.
+        /// </summary>
+        /// <returns>True if a random selection was made, false if no beatmaps available.</returns>
+        public bool SelectRandom()
+        {
+            var panels = flow.Children.ToList();
+            if (panels.Count == 0)
+                return false;
+
+            var random = new Random();
+            var randomPanel = panels[random.Next(panels.Count)];
+            select(randomPanel.Entry, randomPanel);
+
+            // Scroll to the selected panel
+            scroll.ScrollTo(randomPanel);
+
+            return true;
+        }
+
         public void Filter(string query)
         {
             currentFilter = query;

@@ -28,6 +28,7 @@ from training.train_classifier import (
     validate,
 )
 from transcription.ml_drum_classifier import DrumClassifierCNN
+from tests.test_utils import create_mock_dataloader
 
 
 class TestDrumClassifierCNN:
@@ -201,17 +202,12 @@ class TestTrainingLoop:
 
     @pytest.fixture
     def mock_dataloader(self):
-        """Create a minimal mock dataloader."""
-        class MockDataset(torch.utils.data.Dataset):
-            def __len__(self):
-                return 32
-            
-            def __getitem__(self, idx):
-                return torch.randn(1, 128, 128), idx % 24
-        
-        return torch.utils.data.DataLoader(
-            MockDataset(),
+        """Create a minimal mock dataloader using shared test utilities."""
+        return create_mock_dataloader(
             batch_size=8,
+            dataset_size=32,
+            input_shape=(1, 128, 128),
+            num_classes=24,
             shuffle=True,
         )
 

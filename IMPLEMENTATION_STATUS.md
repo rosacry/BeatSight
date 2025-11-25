@@ -10,11 +10,11 @@
 
 | Category | Count | Notes |
 |----------|-------|-------|
-| **Total Items Requiring Attention** | 41 | Across all priority levels (6 resolved this session) |
+| **Total Items Requiring Attention** | 36 | Across all priority levels (11 resolved this session) |
 | **Critical Blockers** | 3 | Hardware migration, web MVP infrastructure |
-| **High Priority** | 8 | Test coverage ↓, integration gaps |
-| **Medium Priority** | 17 | Polish features, integrations, documentation ↓ |
-| **Low Priority / Nice-to-have** | 13 | Future enhancements, optimizations |
+| **High Priority** | 5 | Test coverage ↓, remaining integration gaps |
+| **Medium Priority** | 16 | Polish features, integrations, documentation ↓ |
+| **Low Priority / Nice-to-have** | 12 | Future enhancements, optimizations |
 
 ### Session Progress (Nov 24)
 - ✅ Added backend service tests (`test_songs.py`, `test_ai_jobs.py`)
@@ -25,11 +25,16 @@
 - ✅ **Implemented tempo disambiguation algorithm** in `TempoAuthority.cs` with multi-factor scoring
 - ✅ **Added low-confidence banner** to `MappingGenerationScreen.cs`
 - ✅ **Created 56 web MVP tickets** in `docs/product/web_mvp_tickets.md`
+- ✅ **Added comprehensive GenerationCoordinator tests** (cancellation, error handling, state transitions)
+- ✅ **Added comprehensive GenerationStagePlan tests** (edge cases, boundary conditions)
+- ✅ **Added generation logging** to `AiBeatmapGenerator.cs` (`[gen] notes=... bpm=... lanes=...`)
+- ✅ **Fixed cancellation propagation** in `DemucsExternalProcessBackend.probeDemucs`
+- ✅ **Implemented JWT authentication** - `auth.py` service, routes, and dependencies
 
 ### Current State Overview
 - **Desktop Application**: ✅ Shipping-quality. Playback, editor, and song selection are functional.
 - **AI/ML Pipeline**: 🟡 Training infrastructure ready, awaiting data migration completion.
-- **Backend (Web MVP)**: 🟡 Scaffolded, 56 engineering tickets created. Ready for implementation.
+- **Backend (Web MVP)**: 🟡 Scaffolded, 56 tickets created, **auth implemented**. Ready for core feature work.
 - **Mobile**: 🔴 Not started. Queued for Phase 3.
 
 ---
@@ -122,7 +127,7 @@
 
 | Integration | Status | Gap Description | Action Required |
 |-------------|--------|-----------------|-----------------|
-| Tempo authority | 🔴 Gap | Desktop passes raw options to Python without timebase injection | Implement shared timebase in `GenerationPipeline.cs` |
+| Tempo authority | ✅ **Working** | `TempoAuthority.Evaluate` injects BPM/offset/step into options; `BeatmapTimebaseSynchroniser.Apply` synchronizes post-generation | Complete |
 | Debug metadata binding | 🟡 Partial | Debug overlay exists but binding mid-run incomplete | Complete real-time debug overlay data binding |
 | Cancellation propagation | 🟡 Partial | Not fully propagated through Demucs/Onset/Tempo services | Implement end-to-end cancellation token handling |
 
@@ -131,7 +136,7 @@
 | Integration | Status | Gap Description | Action Required |
 |-------------|--------|-----------------|-----------------|
 | Beatmap sync | 🔴 Not started | No mechanism to sync local beatmaps with cloud | Design sync protocol |
-| User authentication | 🔴 Not started | Backend has no auth system | Implement OAuth/email auth |
+| User authentication | ✅ **Implemented Nov 24** | JWT auth with register/login/refresh endpoints | `poetry install` to add `python-jose` |
 | Karma system | 🔴 Planning only | Documented in `web_pivot_notes.md` but not implemented | Build karma service |
 
 ### 4.3 All 39 AI Integration Features

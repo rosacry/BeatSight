@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import uuid
+from typing import Optional
 
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db_session
+from app.api.deps import get_current_user_optional, get_db_session
+from app.models.user import User
 from app.schemas.ai_jobs import AIJobCreate, AIJobRead
 from app.services.ai_jobs import AIJobService
 
@@ -18,15 +20,17 @@ router = APIRouter(prefix="/ai-jobs", tags=["ai-jobs"])
 async def enqueue_job(
     payload: AIJobCreate,
     session: AsyncSession = Depends(get_db_session),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ) -> AIJobRead:
-    """Enqueue an AI mapping job."""
+    """
+    Enqueue an AI mapping job.
 
+    Authentication is optional - anonymous users can enqueue jobs but won't
+    have them associated with their account for tracking.
+    """
     service = AIJobService(session)
-    # TODO: Implement OAuth2/JWT authentication, then:
-    #   1. Add `current_user: User = Depends(get_current_user)` to route params
-    #   2. Pass `requested_by=current_user.id` below
-    #   See: backend/app/services/auth.py (to be created), docs/web_backend_architecture.md
-    job = await service.enqueue(payload, requested_by=None)
+    requested_by = current_user.id if current_user else None
+    job = await service.enqueue(payload, requested_by=requested_by)
     return AIJobRead.model_validate(job)
 
 

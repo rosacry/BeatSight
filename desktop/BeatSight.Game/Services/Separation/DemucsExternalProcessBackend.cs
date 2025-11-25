@@ -103,6 +103,8 @@ namespace BeatSight.Game.Services.Separation
 
         private void probeDemucs(CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var psi = new ProcessStartInfo
             {
                 FileName = pythonExecutable,
@@ -117,18 +119,27 @@ namespace BeatSight.Game.Services.Separation
             if (process == null)
                 throw new InvalidOperationException("Failed to start demucs probe process.");
 
-            if (!process.WaitForExit((int)probeTimeout.TotalMilliseconds))
+            // Poll for either process exit or cancellation
+            var timeout = DateTime.UtcNow.Add(probeTimeout);
+            while (!process.HasExited)
             {
-                try
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (DateTime.UtcNow > timeout)
                 {
-                    process.Kill(true);
-                }
-                catch
-                {
-                    // ignored
+                    try
+                    {
+                        process.Kill(true);
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
+
+                    throw new TimeoutException("Demucs probe timed out.");
                 }
 
-                throw new TimeoutException("Demucs probe timed out.");
+                Thread.Sleep(50);
             }
 
             if (process.ExitCode != 0)

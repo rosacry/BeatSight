@@ -118,6 +118,13 @@ namespace BeatSight.Game.Configuration
             setDefault(BeatSightSetting.CustomModelPath, "");
             setDefault(BeatSightSetting.DefaultQuantization, "sixteenth");
             setDefault(BeatSightSetting.DefaultSensitivity, 60.0);
+
+            // Key Bindings (serialized as comma-separated key names)
+            setDefault(BeatSightSetting.LaneKeys4, "D,F,J,K");
+            setDefault(BeatSightSetting.LaneKeys5, "S,D,Space,J,K");
+            setDefault(BeatSightSetting.LaneKeys6, "S,D,F,J,K,L");
+            setDefault(BeatSightSetting.LaneKeys7, "S,D,F,Space,J,K,L");
+            setDefault(BeatSightSetting.LaneKeys8, "A,S,D,F,J,K,L,Semicolon");
         }
 
         public void ResetToDefaults()
@@ -259,7 +266,14 @@ namespace BeatSight.Game.Configuration
         AcoustIdApiKey,
         DefaultQuantization,
         DefaultSensitivity,
-        AutoGenerateOnImport
+        AutoGenerateOnImport,
+
+        // Key Bindings
+        LaneKeys4,
+        LaneKeys5,
+        LaneKeys6,
+        LaneKeys7,
+        LaneKeys8
     }
 
     public enum GameplayMode

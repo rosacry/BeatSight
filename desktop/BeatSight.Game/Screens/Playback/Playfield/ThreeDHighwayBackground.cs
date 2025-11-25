@@ -20,6 +20,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private readonly bool kickLaneSuppressed;
         private Box? horizonGlow;
         private Box? specularSweep;
+        private Box? beatPulseOverlay;
+        private Container? starfieldContainer;
         private int visibleLaneCount;
         private List<int> laneOrder = new();
         private Color4[] laneAccentPalette = {
@@ -38,6 +40,16 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private Container? kickPulseContainer;
         private Container? kickGuideBand;
 
+        // Beat sync state
+        private double lastBeatTime;
+        private double beatInterval = 500; // Default 120 BPM
+        private float currentBeatIntensity;
+        private bool beatSyncEnabled = true;
+
+        // Starfield particles
+        private readonly List<StarParticle> starParticles = new();
+        private const int star_count = 40;
+
         public ThreeDHighwayBackground(LaneLayout laneLayout, bool kickUsesGlobalLine)
         {
             this.laneLayout = laneLayout;
@@ -50,6 +62,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             InternalChildren = new Drawable[]
             {
+                // Base starfield layer (behind everything)
+                starfieldContainer = createStarfieldLayer(),
+
                 horizonGlow = new Box
                 {
                     RelativeSizeAxes = Axes.X,
@@ -66,7 +81,15 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     Origin = Anchor.Centre,
                     Colour = Color4Extensions.Opacity(Color4.White, 0.2f)
                 },
-                createLaneSurfaceLayer()
+                createLaneSurfaceLayer(),
+                // Beat pulse overlay (on top of lanes)
+                beatPulseOverlay = new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = Color4Extensions.Opacity(Color4.White, 0.0f),
+                    Blending = BlendingParameters.Additive,
+                    Alpha = 0
+                }
             };
 
             if (kickUsesGlobalLine)
@@ -84,6 +107,56 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             // Stub implementation
         }
 
+        /// <summary>
+        /// Sets the BPM for beat-synchronized effects.
+        /// </summary>
+        public void SetBpm(double bpm)
+        {
+            if (bpm > 0)
+                beatInterval = 60000.0 / bpm;
+        }
+
+        /// <summary>
+        /// Enables or disables beat synchronization effects.
+        /// </summary>
+        public void SetBeatSyncEnabled(bool enabled)
+        {
+            beatSyncEnabled = enabled;
+        }
+
+        /// <summary>
+        /// Triggers a beat pulse effect (call on each beat).
+        /// </summary>
+        public void TriggerBeatPulse(double intensity = 1.0)
+        {
+            if (!beatSyncEnabled || beatPulseOverlay == null)
+                return;
+
+            currentBeatIntensity = (float)Math.Clamp(intensity, 0, 1);
+
+            // Flash the overlay
+            beatPulseOverlay.Alpha = 0.15f * currentBeatIntensity;
+            beatPulseOverlay.FadeOut(beatInterval * 0.8, Easing.OutQuad);
+
+            // Pulse the horizon glow
+            horizonGlow?.TransformTo(nameof(horizonGlow.Alpha), 0.5f * currentBeatIntensity, 50)
+                .Then()
+                .TransformTo(nameof(horizonGlow.Alpha), 0.25f, (beatInterval * 0.7), Easing.OutQuad);
+        }
+
+        /// <summary>
+        /// Triggers a lane-specific hit flash effect.
+        /// </summary>
+        public void TriggerLaneHit(int laneIndex, float intensity = 1.0f)
+        {
+            if (laneIndex < 0 || laneIndex >= lanePulseLights.Count)
+                return;
+
+            var glow = lanePulseLights[laneIndex];
+            glow.Alpha = 0.8f * intensity;
+            glow.FadeOut(300, Easing.OutQuad);
+        }
+
         protected override void LoadComplete()
         {
             base.LoadComplete();
@@ -97,6 +170,50 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 .MoveToX(0.45f, 2600, Easing.InOutSine)
                 .Then()
                 .MoveToX(-0.45f, 2600, Easing.InOutSine));
+
+            // Initialize starfield particles
+            initializeStarfield();
+        }
+
+        private Container createStarfieldLayer()
+        {
+            return new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                Masking = true
+            };
+        }
+
+        private void initializeStarfield()
+        {
+            if (starfieldContainer == null)
+                return;
+
+            var random = new Random(42); // Fixed seed for consistent starfield
+
+            for (int i = 0; i < star_count; i++)
+            {
+                var star = new StarParticle
+                {
+                    X = (float)(random.NextDouble() * 2 - 1), // -1 to 1
+                    Y = (float)random.NextDouble(), // 0 to 1 (top to bottom)
+                    Depth = (float)random.NextDouble(),
+                    Size = 1.5f + (float)random.NextDouble() * 2.5f,
+                    TwinkleOffset = (float)(random.NextDouble() * Math.PI * 2)
+                };
+                starParticles.Add(star);
+
+                var starBox = new Box
+                {
+                    Size = new Vector2(star.Size),
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    Colour = Color4.White,
+                    Alpha = 0.3f + star.Depth * 0.4f
+                };
+                star.Visual = starBox;
+                starfieldContainer.Add(starBox);
+            }
         }
 
         private Drawable createLaneSurfaceLayer()
@@ -291,6 +408,20 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             if (DrawHeight <= 0)
                 return;
 
+            // Update starfield
+            updateStarfield(currentTime);
+
+            // Check for beat pulse based on time
+            if (beatSyncEnabled && beatInterval > 0)
+            {
+                double beatProgress = (currentTime - lastBeatTime) / beatInterval;
+                if (beatProgress >= 1.0)
+                {
+                    lastBeatTime = currentTime - (currentTime % beatInterval);
+                    TriggerBeatPulse(0.6);
+                }
+            }
+
             if (timelineStripes.Count > 0)
             {
                 float baseOffset = (float)((currentTime * 0.0006) % 1.0);
@@ -317,10 +448,66 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     float offset = lanePulseOffsets.Count > i ? lanePulseOffsets[i] : 0;
                     float wave = (float)Math.Sin(currentTime * 0.002 + offset * MathF.PI);
                     float intensity = 0.18f + MathF.Max(0, wave) * 0.32f;
-                    glow.Alpha = intensity;
+
+                    // Only apply ambient pulse if not currently flashing from a hit
+                    if (glow.Alpha < intensity)
+                        glow.Alpha = intensity;
+
                     glow.Scale = new Vector2(1f, 1.05f + MathF.Max(0, (float)Math.Sin(currentTime * 0.003 + offset * 2)) * 0.08f);
                 }
             }
         }
+
+        private void updateStarfield(double currentTime)
+        {
+            if (starfieldContainer == null || DrawWidth <= 0 || DrawHeight <= 0)
+                return;
+
+            float scrollSpeed = 0.00015f;
+
+            foreach (var star in starParticles)
+            {
+                if (star.Visual == null)
+                    continue;
+
+                // Move stars down based on depth (parallax effect)
+                float speed = scrollSpeed * (0.3f + star.Depth * 0.7f);
+                star.Y += (float)(speed * 16.67); // Approximate frame time
+
+                // Wrap around when reaching bottom
+                if (star.Y > 1.2f)
+                {
+                    star.Y = -0.2f;
+                    star.X = (float)(new Random().NextDouble() * 2 - 1);
+                }
+
+                // Apply position
+                star.Visual.Position = new Vector2(
+                    star.X * DrawWidth * 0.5f,
+                    (star.Y - 0.5f) * DrawHeight
+                );
+
+                // Twinkle effect
+                float twinkle = 0.5f + 0.5f * MathF.Sin((float)(currentTime * 0.003 + star.TwinkleOffset));
+                star.Visual.Alpha = (0.2f + star.Depth * 0.5f) * twinkle;
+
+                // Size variation with depth
+                float depthScale = 0.5f + star.Depth * 0.5f;
+                star.Visual.Size = new Vector2(star.Size * depthScale);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Represents a star particle in the background starfield.
+    /// </summary>
+    internal class StarParticle
+    {
+        public float X { get; set; }
+        public float Y { get; set; }
+        public float Depth { get; set; }
+        public float Size { get; set; }
+        public float TwinkleOffset { get; set; }
+        public Box? Visual { get; set; }
     }
 }

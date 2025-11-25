@@ -1,0 +1,103 @@
+# BeatSight Backend - Docker Compose
+# Local development and testing environment
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # API Server
+  # ==========================================================================
+  api:
+    build:
+      context: .
+      target: development
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount source code for hot reload
+      - ./app:/app/app:ro
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_DSN=postgresql+asyncpg://beatsight:beatsight@postgres:5432/beatsight
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET_KEY=dev_secret_key_not_for_production
+      - LOG_LEVEL=DEBUG
+      - LOGGING_JSON=false
+      - CORS_ORIGINS=["http://localhost:3000","http://localhost:5173"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - beatsight
+
+  # ==========================================================================
+  # PostgreSQL Database
+  # ==========================================================================
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=beatsight
+      - POSTGRES_PASSWORD=beatsight
+      - POSTGRES_DB=beatsight
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U beatsight"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - beatsight
+
+  # ==========================================================================
+  # Redis Cache
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - beatsight
+
+  # ==========================================================================
+  # Database Migrations (run once)
+  # ==========================================================================
+  migrations:
+    build:
+      context: .
+      target: development
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      - DATABASE_DSN=postgresql+asyncpg://beatsight:beatsight@postgres:5432/beatsight
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - beatsight
+    profiles:
+      - migrate
+
+networks:
+  beatsight:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -185,7 +185,7 @@ public class GenerationCoordinatorTests
         {
             // Signal that pipeline has started
             started.TrySetResult(true);
-            
+
             yield return new PipelineProgress(
                 Phase: PipelinePhase.AudioInit,
                 Percent: 0.1,

@@ -109,8 +109,8 @@
 |---------|----------|--------|----------|
 | Key Bindings customization | `docs/archive/.../FEATURE_LIST.md` L102 | ✅ **Implemented Nov 24** | Complete |
 | Performance Graph | `docs/archive/.../FEATURE_LIST.md` L117 | Not started | Low |
-| Song filtering/search | `docs/archive/.../FEATURE_LIST.md` L144 | Partially implemented | Medium |
-| Random song selection | `docs/archive/.../FEATURE_LIST.md` L145 | Not started | Low |
+| Song filtering/search | `docs/archive/.../FEATURE_LIST.md` L144 | ✅ Complete - text search, sort, genre, confidence | Low |
+| Random song selection | `docs/archive/.../FEATURE_LIST.md` L145 | ✅ Added Nov 24 - Random button + SelectRandom() | Low |
 | Hit Error Meter | `docs/archive/.../FEATURE_LIST.md` L63 | Not started | Low |
 
 ### 3.2 Web/Mobile Platforms
@@ -212,8 +212,8 @@ Per `MISSING_INTEGRATIONS.md` verification (Nov 24, 2025): **✅ All 39 features
 
 | File | Line(s) | Issue | Description | Suggested Action |
 |------|---------|-------|-------------|------------------|
-| `desktop/.../SimpleDrumClassifier` | L65 | Comment: "placeholder for ML model" | Heuristic classifier retained as fallback | Document as intentional fallback |
-| `ai-pipeline/tests/` | Various | Mock/Dummy classes | `_Dummy`, `MockDataset`, etc. proliferate | Consolidate test utilities |
+| `ai-pipeline/transcription/drum_classifier.py` | L66 | SimpleDrumClassifier | Heuristic classifier retained as fallback | ✅ Documented as intentional fallback |
+| `ai-pipeline/tests/` | Various | Mock/Dummy classes | `_Dummy`, `MockDataset`, etc. proliferate | ✅ Consolidated into test_utils.py |
 | `desktop/.../EditorScreen.cs` | 3792-3793 | Dummy track objects | `dummyTrack` variable naming | Rename to more descriptive name |
 | `desktop/.../Program.cs` | 229 | Reflection hack | Uses reflection to access private `is_debug_build` field | Document or find alternative |
 
@@ -228,11 +228,11 @@ Per `MISSING_INTEGRATIONS.md` verification (Nov 24, 2025): **✅ All 39 features
 
 ### 6.3 Magic Numbers / Hardcoded Values
 
-| File | Line(s) | Value | Description | Suggested Action |
-|------|---------|-------|-------------|------------------|
-| `PlaybackPlayfield.cs` | 27 | `5000` | `ApproachDuration` default | Move to config |
-| `PlaybackPlayfield.cs` | 29-33 | `35,80,130,180,220` | Timing windows | Define as constants with names |
-| `PlaybackPlayfield.cs` | 35 | `1f` | `PlayfieldWidthRatio` | Already commented; consider removal |
+| File | Line(s) | Value | Description | Status |
+|------|---------|-------|-------------|--------|
+| `PlaybackPlayfield.cs` | 34 | `5000` | `ApproachDuration` default | ✅ Documented, dynamically adjusted by speed multiplier |
+| `PlaybackPlayfield.cs` | 41-53 | `35,80,130,180,220` | Timing windows | ✅ Named constants with XML documentation in #region |
+| `PlaybackPlayfield.cs` | 59 | `1f` | `PlayfieldWidthRatio` | ✅ Named constant, documented |
 | `BeatmapLoader.cs` | Various | `0`, `1` | Hit object count thresholds | Define meaningful constants |
 
 ---
@@ -337,7 +337,7 @@ Per `MISSING_INTEGRATIONS.md` verification (Nov 24, 2025): **✅ All 39 features
 |----------|---------------|--------|
 | Windows | `README.md` | ✅ Complete |
 | Linux | `SETUP_LINUX.md` | ✅ Complete |
-| macOS | Implicit in Linux docs | 🟡 Partial |
+| macOS | `SETUP_MACOS.md` | ✅ Complete - Added Nov 24 |
 | iOS/Android | Not applicable yet | Phase 3 |
 
 ---
@@ -348,9 +348,9 @@ Per `MISSING_INTEGRATIONS.md` verification (Nov 24, 2025): **✅ All 39 features
 
 | Component | File | Description | Priority |
 |-----------|------|-------------|----------|
-| PlaceholderScreen | `MainMenuScreen.cs` L335 | Generic placeholder class | Low |
+| ~~PlaceholderScreen~~ | ~~`MainMenuScreen.cs` L335~~ | ✅ Removed Nov 24 | ~~Low~~ |
 | Debug overlay placeholder text | `DetectionDebugOverlay.cs` | "Waiting for analysis..." | Complete (intentional UX) |
-| Skin editor toggle | `SettingsScreen.cs` L2325 | Described as placeholder | Medium |
+| ~~Skin editor toggle~~ | ~~`SettingsScreen.cs` L2325~~ | ✅ Full SkinEditorScreen added Nov 24 | ~~Medium~~ |
 
 ### 10.2 UI Features Pending
 

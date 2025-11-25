@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 from pipeline.transcription.onset_detector import detect_onsets, refine_onsets
 from pipeline.beatmap_generator import _select_best_quantization
+from tests.test_utils import make_tempo_dummy_module
 
 SR = 44100
 BPM = 178
@@ -137,17 +138,7 @@ def test_tempo_resolver_prefers_feature_module(monkeypatch):
     monkeypatch.setattr(detector, "librosa", fake_librosa)
 
     captured = {}
-
-    def fake_import(name: str):
-        captured["name"] = name
-
-        class _Dummy:
-            @staticmethod
-            def tempo(*_args, **_kwargs):
-                return "tempo"
-
-        return _Dummy()
-
+    fake_import = make_tempo_dummy_module(tempo_return_value="tempo", captured_dict=captured)
     monkeypatch.setattr(detector, "import_module", fake_import)
 
     tempo_fn = detector._resolve_tempo_fn()
@@ -163,17 +154,7 @@ def test_tempo_resolver_supports_pre_010(monkeypatch):
     monkeypatch.setattr(detector, "librosa", fake_librosa)
 
     captured = {}
-
-    def fake_import(name: str):
-        captured["name"] = name
-
-        class _Dummy:
-            @staticmethod
-            def tempo(*_args, **_kwargs):
-                return "legacy"
-
-        return _Dummy()
-
+    fake_import = make_tempo_dummy_module(tempo_return_value="legacy", captured_dict=captured)
     monkeypatch.setattr(detector, "import_module", fake_import)
 
     tempo_fn = detector._resolve_tempo_fn()

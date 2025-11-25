@@ -778,6 +778,16 @@ namespace BeatSight.Game.Screens.SongSelect
 
             confidenceFilter.Current.BindValueChanged(e => carousel.SetConfidenceFilter(e.NewValue ? 0.8 : 0.0));
 
+            var randomButton = new BeatSightButton
+            {
+                Text = "🎲 Random",
+                Width = 100,
+                Height = 40,
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+                Action = () => carousel.SelectRandom()
+            };
+
             return new Container
             {
                 RelativeSizeAxes = Axes.X,
@@ -816,7 +826,8 @@ namespace BeatSight.Game.Screens.SongSelect
                                     sortDropdown,
                                     searchBox,
                                     genreDropdown,
-                                    confidenceFilter
+                                    confidenceFilter,
+                                    randomButton
                                 }
                             }
                         }

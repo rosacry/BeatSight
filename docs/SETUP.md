@@ -4,10 +4,11 @@ This document captures the common pieces of the BeatSight developer environment 
 
 ## Platform Checklists
 
-- **Windows (Git Bash preferred):** see `SETUP_WINDOWS.md`
+- **Windows (Git Bash preferred):** see `SETUP_WINDOWS.md` *(coming soon)*
 - **Linux (fish/kitty or bash/zsh):** see `SETUP_LINUX.md`
+- **macOS (Intel or Apple Silicon):** see `SETUP_MACOS.md`
 
-Both guides land you in the same project layout with .NET for the desktop client, Python for the AI pipeline, and Poetry for the backend. Use whichever shell is native to your machine; Git Bash on Windows and fish on Linux are both fully supported.
+Both guides land you in the same project layout with .NET for the desktop client, Python for the AI pipeline, and Poetry for the backend. Use whichever shell is native to your machine; Git Bash on Windows, fish on Linux, and zsh on macOS are all fully supported.
 
 ## Core Prerequisites (All Platforms)
 

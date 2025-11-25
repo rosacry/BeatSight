@@ -939,7 +939,7 @@ namespace BeatSight.Game.Screens.Mapping
             lowConfidenceBannerText = new SpriteText
             {
                 Text = "⚠️ Low Detection Confidence",
-                Font = BeatSightFont.Bold(18f),
+                Font = BeatSightFont.Section(18f),
                 Colour = new Color4(255, 220, 150, 255)
             };
 

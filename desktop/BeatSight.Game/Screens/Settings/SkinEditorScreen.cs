@@ -58,7 +58,7 @@ namespace BeatSight.Game.Screens.Settings
                 dimBackground = new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = Color4.Black.Opacity(0.7f)
+                    Colour = UITheme.Opacity(Color4.Black, 0.7f)
                 },
                 new Container
                 {
@@ -67,14 +67,14 @@ namespace BeatSight.Game.Screens.Settings
                     Size = new Vector2(panel_width, panel_height),
                     Masking = true,
                     CornerRadius = 12,
-                    BorderColour = BeatSightColors.AccentPrimary.Opacity(0.5f),
+                    BorderColour = UITheme.Opacity(UITheme.AccentPrimary, 0.5f),
                     BorderThickness = 2,
                     Children = new Drawable[]
                     {
                         new Box
                         {
                             RelativeSizeAxes = Axes.Both,
-                            Colour = BeatSightColors.BackgroundDark
+                            Colour = UITheme.Background
                         },
                         createHeader(),
                         createContent()
@@ -96,7 +96,7 @@ namespace BeatSight.Game.Screens.Settings
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = BeatSightColors.BackgroundDarker
+                        Colour = UITheme.BackgroundLayer
                     },
                     new SpriteText
                     {
@@ -107,14 +107,13 @@ namespace BeatSight.Game.Screens.Settings
                         Padding = new MarginPadding { Left = 20 },
                         Colour = Color4.White
                     },
-                    new IconButton
+                    new BeatSightButton
                     {
                         Anchor = Anchor.CentreRight,
                         Origin = Anchor.CentreRight,
                         Size = new Vector2(40),
                         Margin = new MarginPadding { Right = 10 },
-                        Icon = FontAwesome.Solid.Times,
-                        IconScale = new Vector2(0.5f),
+                        Text = "✕",
                         Action = closeEditor
                     }
                 }
@@ -146,7 +145,7 @@ namespace BeatSight.Game.Screens.Settings
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = BeatSightColors.BackgroundDark.Darken(0.3f)
+                        Colour = UITheme.Surface
                     },
                     new FillFlowContainer
                     {
@@ -160,7 +159,7 @@ namespace BeatSight.Game.Screens.Settings
                             {
                                 Text = "Available Skins",
                                 Font = FrameworkFont.Regular.With(size: 16),
-                                Colour = BeatSightColors.TextSecondary
+                                Colour = UITheme.TextSecondary
                             },
                             skinListContainer = new FillFlowContainer
                             {
@@ -173,8 +172,6 @@ namespace BeatSight.Game.Screens.Settings
                     }
                 }
             };
-
-            populateSkinList();
         }
 
         private void populateSkinList()
@@ -235,7 +232,7 @@ namespace BeatSight.Game.Screens.Settings
                             skinDescriptionText = new SpriteText
                             {
                                 Font = FrameworkFont.Regular.With(size: 14),
-                                Colour = BeatSightColors.TextSecondary
+                                Colour = UITheme.TextSecondary
                             }
                         }
                     }
@@ -256,7 +253,7 @@ namespace BeatSight.Game.Screens.Settings
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = Color4.Black.Opacity(0.4f)
+                        Colour = UITheme.Opacity(Color4.Black, 0.4f)
                     },
                     previewArea = new Container
                     {
@@ -267,7 +264,7 @@ namespace BeatSight.Game.Screens.Settings
                     {
                         Text = "Preview",
                         Font = FrameworkFont.Regular.With(size: 12),
-                        Colour = BeatSightColors.TextSecondary.Opacity(0.5f),
+                        Colour = UITheme.Opacity(UITheme.TextSecondary, 0.5f),
                         Anchor = Anchor.TopLeft,
                         Origin = Anchor.TopLeft,
                         Padding = new MarginPadding(8)
@@ -411,8 +408,8 @@ namespace BeatSight.Game.Screens.Settings
                     {
                         RelativeSizeAxes = Axes.Both,
                         Colour = ColourInfo.GradientVertical(
-                            color.Opacity(0.1f),
-                            color.Opacity(0.3f)
+                            UITheme.Opacity(color, 0.1f),
+                            UITheme.Opacity(color, 0.3f)
                         )
                     },
                     // Sample notes at different heights
@@ -457,7 +454,7 @@ namespace BeatSight.Game.Screens.Settings
                     {
                         RelativeSizeAxes = Axes.Both,
                         Colour = ColourInfo.GradientVertical(
-                            Color4.White.Opacity(0.3f),
+                            UITheme.Opacity(Color4.White, 0.3f),
                             Color4.Transparent
                         ),
                         Height = 0.5f
@@ -539,7 +536,7 @@ namespace BeatSight.Game.Screens.Settings
                     {
                         Width = 3,
                         RelativeSizeAxes = Axes.Y,
-                        Colour = BeatSightColors.AccentPrimary,
+                        Colour = UITheme.AccentPrimary,
                         Alpha = 0
                     },
                     new SpriteText
@@ -561,7 +558,7 @@ namespace BeatSight.Game.Screens.Settings
                 bool isSelected = e.NewValue == skin;
                 selectionIndicator.FadeTo(isSelected ? 1 : 0, 150);
                 background.FadeTo(isSelected ? 0.15f : 0, 150);
-                background.Colour = isSelected ? BeatSightColors.AccentPrimary : Color4.White;
+                background.Colour = isSelected ? UITheme.AccentPrimary : Color4.White;
             }
 
             protected override bool OnHover(HoverEvent e)

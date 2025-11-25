@@ -59,10 +59,10 @@ COMPONENT_LANE_MAP: Dict[str, int] = {
     "ride_bell": 6,
     "ride_edge": 6,
     "crash": 6,
-    "crash1": 6,
-    "crash_1": 6,
-    "crash2": 0,
-    "crash_2": 0,
+    "crash1": 6,    # Legacy alias -> same as crash
+    "crash_1": 6,   # Legacy alias -> same as crash  
+    "crash2": 6,    # Legacy alias -> same as crash
+    "crash_2": 6,   # Legacy alias -> same as crash
     "china": 6,
     "splash": 6,
     "stack": 6,

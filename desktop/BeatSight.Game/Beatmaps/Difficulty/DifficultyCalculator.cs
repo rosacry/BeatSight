@@ -306,6 +306,171 @@ namespace BeatSight.Game.Beatmaps.Difficulty
         }
 
         /// <summary>
+        /// ╔══════════════════════════════════════════════════════════════════════════════╗
+        /// ║               REAL-TIME TIMED DIFFICULTY CALCULATION                         ║
+        /// ╠══════════════════════════════════════════════════════════════════════════════╣
+        /// ║                                                                              ║
+        /// ║  REVOLUTIONARY FEATURE: Calculate progressive difficulty attributes at       ║
+        /// ║  each point in time, enabling real-time star rating display during           ║
+        /// ║  playback. Inspired by osu!'s TimedDifficultyAttributes but enhanced         ║
+        /// ║  for drumming-specific needs.                                                ║
+        /// ║                                                                              ║
+        /// ║  KEY INNOVATIONS:                                                            ║
+        /// ║                                                                              ║
+        /// ║  1. PROGRESSIVE STAR RATING                                                  ║
+        /// ║     The star rating builds up as the song progresses, showing users          ║
+        /// ║     the accumulated difficulty up to each point.                             ║
+        /// ║                                                                              ║
+        /// ║  2. INSTANTANEOUS DIFFICULTY                                                 ║
+        /// ║     Also tracks the current instantaneous difficulty (not accumulated),      ║
+        /// ║     showing real-time "how hard is this exact moment" feedback.              ║
+        /// ║                                                                              ║
+        /// ║  3. PER-SKILL BREAKDOWN                                                      ║
+        /// ║     Each time point includes breakdowns for all 10 skill dimensions,         ║
+        /// ║     allowing visualization of which skills are being challenged.             ║
+        /// ║                                                                              ║
+        /// ║  4. SECTION-BASED SAMPLING                                                   ║
+        /// ║     Uses configurable section lengths (default 500ms) for smooth updates     ║
+        /// ║     without excessive computation or jittery display.                        ║
+        /// ║                                                                              ║
+        /// ╚══════════════════════════════════════════════════════════════════════════════╝
+        /// </summary>
+        /// <returns>List of timed difficulty attributes for real-time display.</returns>
+        public List<TimedDifficultyAttributes> CalculateTimed()
+        {
+            var timedAttributes = new List<TimedDifficultyAttributes>();
+
+            if (beatmap.HitObjects.Count == 0)
+            {
+                return timedAttributes;
+            }
+
+            var allDifficultyObjects = CreateDifficultyHitObjects();
+            if (allDifficultyObjects.Count == 0)
+            {
+                return timedAttributes;
+            }
+
+            // Progressive calculation - process objects incrementally
+            var skills = CreateSkills();
+            var processedObjects = new List<DifficultyHitObject>();
+            int comboCount = 0;
+
+            // Section length for sampling (in milliseconds)
+            // 500ms provides smooth real-time updates without excessive computation
+            const double SECTION_LENGTH = 500;
+            double lastSampleTime = double.MinValue;
+
+            foreach (var hitObject in allDifficultyObjects)
+            {
+                // Process this hit object through all skills
+                foreach (var skill in skills)
+                {
+                    skill.Process(hitObject);
+                }
+                processedObjects.Add(hitObject);
+                comboCount++;
+
+                // Sample at regular intervals
+                if (hitObject.StartTime - lastSampleTime >= SECTION_LENGTH)
+                {
+                    // Extract current difficulty values from skills
+                    var currentDifficultyValues = ExtractDifficultyValues(skills);
+
+                    // Calculate current star rating
+                    double currentStarRating = CalculateStarRating(currentDifficultyValues);
+
+                    // Calculate instantaneous difficulty (strain at this moment)
+                    double instantDifficulty = CalculateInstantaneousDifficulty(skills);
+
+                    // Scale individual skill ratings
+                    var scaledRatings = ScaleToStarRatings(currentDifficultyValues);
+
+                    timedAttributes.Add(new TimedDifficultyAttributes
+                    {
+                        Time = hitObject.StartTime,
+                        StarRating = Math.Round(currentStarRating * 100) / 100,
+                        InstantaneousDifficulty = instantDifficulty,
+                        SpeedRating = scaledRatings.GetValueOrDefault("Speed", 0),
+                        StaminaRating = scaledRatings.GetValueOrDefault("Stamina", 0),
+                        CoordinationRating = scaledRatings.GetValueOrDefault("Coordination", 0),
+                        RhythmicComplexityRating = scaledRatings.GetValueOrDefault("RhythmicComplexity", 0),
+                        PatternRating = scaledRatings.GetValueOrDefault("Pattern", 0),
+                        TechniqueRating = scaledRatings.GetValueOrDefault("Technique", 0),
+                        PrecisionRating = scaledRatings.GetValueOrDefault("Precision", 0),
+                        MovementRating = scaledRatings.GetValueOrDefault("Movement", 0),
+                        MusicalityRating = scaledRatings.GetValueOrDefault("Musicality", 0),
+                        ReadingRating = scaledRatings.GetValueOrDefault("Reading", 0),
+                        ComboAtTime = comboCount
+                    });
+
+                    lastSampleTime = hitObject.StartTime;
+                }
+            }
+
+            // Always include final point with full difficulty
+            if (processedObjects.Count > 0)
+            {
+                var finalObject = processedObjects[^1];
+                var finalDifficultyValues = ExtractDifficultyValues(skills);
+                double finalStarRating = CalculateStarRating(finalDifficultyValues);
+                double finalInstantDifficulty = CalculateInstantaneousDifficulty(skills);
+                var finalScaledRatings = ScaleToStarRatings(finalDifficultyValues);
+
+                // Only add if not already present at this time
+                if (timedAttributes.Count == 0 ||
+                    Math.Abs(timedAttributes[^1].Time - finalObject.StartTime) > 1)
+                {
+                    timedAttributes.Add(new TimedDifficultyAttributes
+                    {
+                        Time = finalObject.StartTime,
+                        StarRating = Math.Round(finalStarRating * 100) / 100,
+                        InstantaneousDifficulty = finalInstantDifficulty,
+                        SpeedRating = finalScaledRatings.GetValueOrDefault("Speed", 0),
+                        StaminaRating = finalScaledRatings.GetValueOrDefault("Stamina", 0),
+                        CoordinationRating = finalScaledRatings.GetValueOrDefault("Coordination", 0),
+                        RhythmicComplexityRating = finalScaledRatings.GetValueOrDefault("RhythmicComplexity", 0),
+                        PatternRating = finalScaledRatings.GetValueOrDefault("Pattern", 0),
+                        TechniqueRating = finalScaledRatings.GetValueOrDefault("Technique", 0),
+                        PrecisionRating = finalScaledRatings.GetValueOrDefault("Precision", 0),
+                        MovementRating = finalScaledRatings.GetValueOrDefault("Movement", 0),
+                        MusicalityRating = finalScaledRatings.GetValueOrDefault("Musicality", 0),
+                        ReadingRating = finalScaledRatings.GetValueOrDefault("Reading", 0),
+                        ComboAtTime = comboCount
+                    });
+                }
+            }
+
+            return timedAttributes;
+        }
+
+        /// <summary>
+        /// Calculate instantaneous difficulty at the current processing point.
+        /// This represents "how hard is this exact moment" rather than cumulative difficulty.
+        /// </summary>
+        private double CalculateInstantaneousDifficulty(Skill[] skills)
+        {
+            // Get peak strains from each skill as instantaneous measure
+            double totalInstant = 0;
+            int count = 0;
+
+            foreach (var skill in skills)
+            {
+                double peak = skill.PeakStrain();
+                if (peak > 0)
+                {
+                    totalInstant += peak;
+                    count++;
+                }
+            }
+
+            if (count == 0) return 0;
+
+            // Scale to reasonable range
+            return totalInstant / count * 0.1;
+        }
+
+        /// <summary>
         /// Run the v3.1 advanced analyzers across all hit objects.
         /// These provide deep mathematical analysis of groove, polyrhythm,
         /// cognitive load, and limb independence.

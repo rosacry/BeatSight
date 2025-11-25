@@ -237,13 +237,19 @@ def compute_class_weights(
     labels: List[Dict[str, Any]],
     num_classes: int,
     strategy: str = "balanced",
+    max_weight: float = 10.0,
 ) -> torch.Tensor:
     """Compute class weights for handling imbalanced datasets.
     
     Args:
         labels: List of label dictionaries with 'component_idx' key
         num_classes: Total number of classes
-        strategy: 'balanced' (inverse frequency) or 'sqrt' (sqrt of inverse)
+        strategy: Weight computation strategy:
+            - 'balanced': Inverse frequency (can be extreme for rare classes)
+            - 'sqrt': Square root of inverse frequency (moderate dampening)
+            - 'log': Log-based dampening (better for extreme imbalance)
+            - 'effective': Effective number of samples (recommended for extreme imbalance)
+        max_weight: Maximum weight cap to prevent instability (default 10.0)
     
     Returns:
         Tensor of shape (num_classes,) with class weights
@@ -264,9 +270,28 @@ def compute_class_weights(
             elif strategy == "sqrt":
                 # Square root dampening for less aggressive weighting
                 weights[class_idx] = np.sqrt(total_samples / (num_classes * count))
+            elif strategy == "log":
+                # Log-based dampening - much gentler on extreme imbalance
+                # w = log(total/count + 1) which caps naturally
+                weights[class_idx] = np.log(total_samples / count + 1)
+            elif strategy == "effective":
+                # Effective number of samples (from "Class-Balanced Loss" paper)
+                # Uses beta = 0.9999 for extreme imbalance scenarios
+                beta = 0.9999
+                effective_num = (1.0 - beta**count) / (1.0 - beta)
+                weights[class_idx] = 1.0 / max(effective_num, 1e-6)
     
     # Normalize so mean weight is 1.0
     weights = weights / weights.mean()
+    
+    # Cap extreme weights to prevent training instability
+    if max_weight > 0:
+        original_max = weights.max().item()
+        weights = weights.clamp(max=max_weight)
+        if original_max > max_weight:
+            # Re-normalize after capping
+            weights = weights / weights.mean()
+            print(f"  Note: Class weights capped from {original_max:.2f} to {max_weight:.2f}")
     
     return weights
 
@@ -587,9 +612,16 @@ def main():
     )
     parser.add_argument(
         "--class-weights",
-        choices=["none", "balanced", "sqrt"],
+        choices=["none", "balanced", "sqrt", "log", "effective"],
         default="none",
-        help="Class weighting strategy: none (default), balanced (inverse frequency), sqrt (sqrt of inverse)",
+        help="Class weighting strategy: none (default), balanced (inverse frequency - can be unstable), "
+             "sqrt (sqrt of inverse), log (log-based dampening), effective (recommended for extreme imbalance)",
+    )
+    parser.add_argument(
+        "--max-class-weight",
+        type=float,
+        default=10.0,
+        help="Maximum class weight cap to prevent training instability (default: 10.0, 0 to disable)",
     )
     parser.add_argument(
         "--label-smoothing",
@@ -825,6 +857,7 @@ def main():
             train_dataset_full.labels,
             num_classes,
             strategy=args.class_weights,
+            max_weight=args.max_class_weight,
         ).to(torch_device)
         print(f"Class weighting enabled ({args.class_weights}): min={class_weights_tensor.min():.3f}, max={class_weights_tensor.max():.3f}")
     

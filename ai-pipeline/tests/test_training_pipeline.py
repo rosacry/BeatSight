@@ -318,6 +318,12 @@ class TestHardwareOptimization:
         if not hasattr(torch, "compile"):
             pytest.skip("torch.compile not available")
         
+        # Check if triton is available (required for inductor backend)
+        try:
+            import triton
+        except ImportError:
+            pytest.skip("triton not installed (required for torch.compile inductor backend)")
+        
         device = torch.device("cuda")
         model = DrumClassifierCNN(num_classes=24).to(device)
         

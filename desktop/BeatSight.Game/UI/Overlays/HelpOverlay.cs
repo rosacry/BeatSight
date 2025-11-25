@@ -45,7 +45,7 @@ namespace BeatSight.Game.UI.Overlays
         private void load()
         {
             RelativeSizeAxes = Axes.Both;
-            
+
             Children = new Drawable[]
             {
                 backgroundDim = new Box

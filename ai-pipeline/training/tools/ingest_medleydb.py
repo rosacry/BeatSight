@@ -49,9 +49,9 @@ INSTRUMENT_MAP = {
     "low tom": "tom_low",
     "floor tom": "tom_low",
     "hi-hat": "hihat_closed", # Generic
-    "cymbal": "crash_1", # Generic
+    "cymbal": "crash", # Generic cymbal -> crash
     "ride cymbal": "ride_bow",
-    "crash cymbal": "crash_1",
+    "crash cymbal": "crash",
     "cowbell": "cowbell",
     "claps": "clap",
     "shaker": "shaker",

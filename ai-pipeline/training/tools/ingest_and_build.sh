@@ -77,7 +77,8 @@ update_paths
 MASTER_MANIFEST="${MANIFEST_DIR}/prod_combined_events.jsonl"
 TARGET_MANIFEST="${MANIFEST_DIR}/prod_combined_events_v2.jsonl"
 
-DATASET_OUTPUT_DIR="${REPO_ROOT}/data/prod_combined_profile_run"
+# Dataset moved to HDD (E:/data) for space savings
+DATASET_OUTPUT_DIR="${BEATSIGHT_DATASET_DIR:-/e/data/prod_combined_profile_run}"
 AUDIO_ROOT_PRIMARY="E:/data/raw"
 
 # --- 3. Functions ---

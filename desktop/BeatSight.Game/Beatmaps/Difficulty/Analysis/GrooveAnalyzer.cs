@@ -68,12 +68,14 @@ namespace BeatSight.Game.Beatmaps.Difficulty.Analysis
 
         /// <summary>
         /// Analyze a hit object for groove characteristics.
-        /// Returns a groove difficulty contribution.
+        /// Returns a GrooveAnalysisResult with difficulty contribution and analysis data.
         /// </summary>
-        public double Analyze(DifficultyHitObject current)
+        public GrooveAnalysisResult Analyze(DifficultyHitObject current)
         {
+            var result = new GrooveAnalysisResult();
+
             if (current.DeltaTime <= 0 || current.Previous == null)
-                return 0;
+                return result;
 
             double grooveDifficulty = 0;
 
@@ -95,7 +97,16 @@ namespace BeatSight.Game.Beatmaps.Difficulty.Analysis
             // Update state
             UpdateHistory(current);
 
-            return grooveDifficulty;
+            // Build result
+            result.DetectedGroove = detectedGroove;
+            result.SwingPercentage = swingPercentage;
+            result.PocketTightness = pocketTightness;
+            result.DynamicRange = dynamicGrooveScore;
+            result.SwingAmount = swingPercentage / 100.0;
+            result.GrooveComplexity = grooveDifficulty;
+            result.DominantFeel = detectedGroove.ToString();
+
+            return result;
         }
 
         /// <summary>
@@ -473,5 +484,20 @@ namespace BeatSight.Game.Beatmaps.Difficulty.Analysis
         public double SwingPercentage { get; set; }
         public double PocketTightness { get; set; }
         public double DynamicRange { get; set; }
+
+        /// <summary>
+        /// Swing amount as a 0-1 fraction (0 = straight, 0.33 = triplet shuffle).
+        /// </summary>
+        public double SwingAmount { get; set; }
+
+        /// <summary>
+        /// Overall groove complexity score.
+        /// </summary>
+        public double GrooveComplexity { get; set; }
+
+        /// <summary>
+        /// String representation of the dominant groove feel.
+        /// </summary>
+        public string DominantFeel { get; set; } = "Straight";
     }
 }

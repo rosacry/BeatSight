@@ -53,13 +53,20 @@
 
 ## 1. Critical/Blocking Issues
 
-### 1.1 Hardware & Data Migration (IN PROGRESS)
+### 1.1 Hardware & Data Migration (✅ COMPLETED)
 
 | File/Location | Issue | Description | Status | Suggested Action |
 |--------------|-------|-------------|--------|------------------|
-| `data/prod_combined_profile_run/` | Data migration in progress | Dataset being moved from C: to E: drive via robocopy | 🔄 Active | Wait for completion, do NOT access during transfer |
-| `CODEBASE_ANALYSIS_PROMPT.md` L24-40 | Storage constraint | SSD (C:) running low on space | 🔴 Blocking | Complete migration, then run step 5a from `post_export_commands.sh` |
-| `ai-pipeline/training/` | Training blocked | Cannot proceed until data migration completes | 🔴 Blocked | Monitor robocopy log at `C:\logs\BeatSight_robocopy.log` |
+| `E:/data/prod_combined_profile_run/` | ✅ Data migration complete | Dataset successfully moved from C: to E: drive (436GB, 16.3M files) | ✅ Done | Proceed with training |
+| `C:/github/BeatSight/data/feature_cache/` | Feature cache on SSD | Keeping on SSD for training performance | ✅ Optimal | No action needed |
+| `ai-pipeline/training/` | Training unblocked | Config files updated to point to new E: drive location | ✅ Ready | Run step 5a from `post_export_commands.sh` |
+
+**Migration Details (completed Nov 25, 2025):**
+- Source: `C:\github\BeatSight\data\prod_combined_profile_run`
+- Destination: `E:\data\prod_combined_profile_run`
+- Total: 435.984 GB across 16,282,317 files in 517 directories
+- Duration: ~9 hours
+- Speed: 14.7 MB/s (~845 MB/min)
 
 ### 1.2 Web MVP Infrastructure
 
@@ -518,19 +525,29 @@ No explicit `TODO` or `FIXME` comments found in core source files.
 
 ---
 
-## Appendix E: Active Operations Warning
+## Appendix E: Data Location Reference
 
-⚠️ **DO NOT INTERFERE** with the following operation in progress:
+✅ **Data Migration Completed** (Nov 25, 2025)
 
+| Data Type | Location | Drive | Notes |
+|-----------|----------|-------|-------|
+| Dataset (`prod_combined_profile_run`) | `E:/data/prod_combined_profile_run` | HDD | 436GB, 16.3M files |
+| Feature Cache | `C:/github/BeatSight/data/feature_cache/` | SSD | Kept on SSD for training performance |
+| Checkpoints/Runs | `C:/github/BeatSight/ai-pipeline/training/runs/` | SSD | Training outputs |
+
+**Configuration files updated:**
+- `ai-pipeline/training/common_paths.py` - Default `dataset_root()` now returns `E:/data/prod_combined_profile_run`
+- `ai-pipeline/training/tools/beatsight_env.sh` - `BEATSIGHT_SECONDARY_ROOT` set to `/e/data`
+- `ai-pipeline/training/tools/post_export_commands.sh` - Dataset path updated
+- `ai-pipeline/training/tools/ingest_and_build.sh` - Output directory updated
+
+**To run training:**
 ```bash
-robocopy "C:\github\BeatSight\data\prod_combined_profile_run" "E:\data\prod_combined_profile_run" /E /MOVE /MT:8 /ETA /R:3 /W:5 /LOG:"C:\logs\BeatSight_robocopy.log" /TEE
+cd /c/github/BeatSight
+source ai-pipeline/training/tools/beatsight_env.sh
+bash ai-pipeline/training/tools/post_export_commands.sh
+# Select option 5a for warmup training
 ```
-
-Monitor progress: `tail -f C:\logs\BeatSight_robocopy.log`
-
-After completion:
-1. Update `BEATSIGHT_DATA_ROOT` to point to `E:\data`
-2. Run `source ai-pipeline/training/tools/beatsight_env.sh`
 3. Execute step 5a from `post_export_commands.sh`
 
 ---

@@ -61,9 +61,17 @@ ai-pipeline/training/boundary_pack/
 ai-pipeline/training/negatives/
 ai-pipeline/training/data/manifests/*.jsonl
 ai-pipeline/training/data/provenance/*.jsonl
+ai-pipeline/training/data/embeddings/*.jsonl
+ai-pipeline/training/data/events_*.jsonl
 ai-pipeline/training/datasets/
 ai-pipeline/training/feature_cache/
 ai-pipeline/training/runs/
+
+# AI Pipeline Reports (generated, can be regenerated)
+ai-pipeline/training/reports/ingest/*.json
+ai-pipeline/training/reports/metrics/*.json
+ai-pipeline/training/reports/provenance/*.json
+ai-pipeline/training/reports/training_smoke/*.json
 
 # Node.js
 node_modules/

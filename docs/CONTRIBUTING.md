@@ -168,8 +168,7 @@ By contributing, you agree that your contributions will be licensed under the MI
 ## Questions?
 
 Feel free to ask in:
-- GitHub Discussions
-- Discord server
-- Email: beatsight@example.com (placeholder)
+- GitHub Issues: Open a discussion or question issue on this repository
+- GitHub Discussions: Use the Discussions tab for open-ended questions
 
 Thank you for contributing to BeatSight! 🥁

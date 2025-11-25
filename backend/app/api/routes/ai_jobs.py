@@ -22,7 +22,11 @@ async def enqueue_job(
     """Enqueue an AI mapping job."""
 
     service = AIJobService(session)
-    job = await service.enqueue(payload, requested_by=None)  # TODO: wire authenticated user id
+    # TODO: Implement OAuth2/JWT authentication, then:
+    #   1. Add `current_user: User = Depends(get_current_user)` to route params
+    #   2. Pass `requested_by=current_user.id` below
+    #   See: backend/app/services/auth.py (to be created), docs/web_backend_architecture.md
+    job = await service.enqueue(payload, requested_by=None)
     return AIJobRead.model_validate(job)
 
 

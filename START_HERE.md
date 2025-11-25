@@ -45,6 +45,7 @@ See `backend/README.md` for routes and health checks if you need the service.
 
 - **Guidebook** → `docs/Guidebook.md` is the master index (orientation, engineering playbooks, archive pointers)
 - **Current status / next steps** → `docs/product/status.md`
+- **Implementation status** → `IMPLEMENTATION_STATUS.md` (comprehensive codebase analysis with all gaps and priorities)
 - **Roadmap** → `docs/product/roadmap.md`
 - **Training SOP** → `docs/ml_training_runbook.md`
 - **Recent archives** → `docs/archive/2025-11-02-phase12/` and `docs/archive/2025-11-orientation/`

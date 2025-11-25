@@ -17,20 +17,45 @@ using osuTK.Graphics;
 
 namespace BeatSight.Game.Screens.Playback.Playfield
 {
+    /// <summary>
+    /// Primary playfield for rendering notes in lane-based views (2D, 3D highway, manuscript).
+    /// Manages note spawning, hit judgment, and visual feedback during playback sessions.
+    /// </summary>
     public partial class PlaybackPlayfield : CompositeDrawable
     {
         private LaneLayout laneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
         private int laneCount => Math.Max(1, laneLayout.LaneCount);
 
-        // Changed from const to property to allow dynamic adjustment
+        /// <summary>
+        /// Time in milliseconds that notes are visible before reaching the hit zone.
+        /// Higher values give more reaction time but reduce note density perception.
+        /// Default: 5000ms (5 seconds). Dynamically adjusted based on speed multiplier.
+        /// </summary>
         public double ApproachDuration { get; private set; } = 5000;
 
+        #region Timing Windows (milliseconds)
+        // These define hit accuracy thresholds. Values tuned for drum game feel.
+        // Compared against |noteTime - hitTime| to determine judgment grade.
+
+        /// <summary>Timing window for "Perfect" judgment (±35ms). Tight but achievable.</summary>
         private const double perfectWindow = 35;
+
+        /// <summary>Timing window for "Great" judgment (±80ms). Standard accuracy.</summary>
         private const double greatWindow = 80;
+
+        /// <summary>Timing window for "Good" judgment (±130ms). Loose but acceptable.</summary>
         private const double goodWindow = 130;
+
+        /// <summary>Timing window for "Meh" judgment (±180ms). Late/early but hit.</summary>
         private const double mehWindow = 180;
+
+        /// <summary>Timing window beyond which a note is considered missed (±220ms).</summary>
         private const double missWindow = 220;
-        private const float PlayfieldWidthRatio = 1f; // Constrain playfield width
+
+        #endregion
+
+        /// <summary>Width ratio of the playfield relative to container. 1.0 = full width.</summary>
+        private const float PlayfieldWidthRatio = 1f;
 
         private readonly Func<double> currentTimeProvider;
         private readonly List<DrawableNote> notes = new();

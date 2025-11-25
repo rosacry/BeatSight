@@ -52,26 +52,35 @@ namespace BeatSight.Game.Services.Generation
             var alias = FindAliasCandidate(primary, candidates);
             bool ambiguous = alias.HasValue;
 
-            bool strongCoverage = coverage >= 0.68;
-            bool preciseMean = primary.MeanErrorMilliseconds <= 10;
-            bool preciseMedian = primary.MedianErrorMilliseconds <= 7;
-            bool steadyStep = primary.StepSeconds > 0 && primary.StepSeconds <= 1.5;
+            // When ambiguous (half/double-time detected), pick the better tempo
+            // based on quantization quality rather than just warning
+            QuantizationCandidate resolvedPrimary = primary;
+            if (ambiguous && alias.HasValue)
+            {
+                resolvedPrimary = ResolveAmbiguousTempo(primary, alias.Value);
+            }
 
+            bool strongCoverage = resolvedPrimary.Coverage >= 0.68;
+            bool preciseMean = resolvedPrimary.MeanErrorMilliseconds <= 10;
+            bool preciseMedian = resolvedPrimary.MedianErrorMilliseconds <= 7;
+            bool steadyStep = resolvedPrimary.StepSeconds > 0 && resolvedPrimary.StepSeconds <= 1.5;
+
+            // Only force quantization if not ambiguous AND all quality checks pass
             bool force = strongCoverage && preciseMean && preciseMedian && steadyStep && !ambiguous;
             options.ForceQuantization = force;
 
-            double authoritativeBpm = bpm;
+            double authoritativeBpm = resolvedPrimary.Bpm;
             if (!double.IsFinite(authoritativeBpm) || authoritativeBpm <= 0)
                 authoritativeBpm = quantization.Bpm;
             if (!double.IsFinite(authoritativeBpm) || authoritativeBpm <= 0)
                 authoritativeBpm = 120.0;
 
-            double authoritativeStep = stepSeconds;
+            double authoritativeStep = resolvedPrimary.StepSeconds;
             if (!double.IsFinite(authoritativeStep) || authoritativeStep <= 0)
                 authoritativeStep = inferStepSeconds(options.QuantizationGrid, authoritativeBpm);
             authoritativeStep = Math.Max(authoritativeStep, 1e-4);
 
-            double authoritativeOffset = offsetSeconds;
+            double authoritativeOffset = resolvedPrimary.OffsetSeconds;
             if (!double.IsFinite(authoritativeOffset))
                 authoritativeOffset = summary.OffsetSeconds;
             if (!double.IsFinite(authoritativeOffset))
@@ -80,13 +89,78 @@ namespace BeatSight.Game.Services.Generation
             options.ForcedBpm = authoritativeBpm;
             options.ForcedStepSeconds = authoritativeStep;
             options.ForcedOffsetSeconds = authoritativeOffset;
-            options.TempoCandidates = buildTempoCandidates(primary, candidates);
+            options.TempoCandidates = buildTempoCandidates(resolvedPrimary, candidates);
 
             string? warning = null;
             if (alias is QuantizationCandidate aliasCandidate)
-                warning = $"Tempo ambiguous (~{primary.Bpm:0.#} vs ~{aliasCandidate.Bpm:0.#} BPM). Try halving/doubling the tempo or switching the quantization grid.";
+            {
+                bool pickedAlias = Math.Abs(resolvedPrimary.Bpm - aliasCandidate.Bpm) < 0.01;
+                warning = pickedAlias
+                    ? $"Tempo ambiguous (~{primary.Bpm:0.#} vs ~{aliasCandidate.Bpm:0.#} BPM). Selected ~{aliasCandidate.Bpm:0.#} BPM based on better quantization fit."
+                    : $"Tempo ambiguous (~{primary.Bpm:0.#} vs ~{aliasCandidate.Bpm:0.#} BPM). Kept ~{primary.Bpm:0.#} BPM. Try switching quantization grid if misaligned.";
+            }
 
-            return new TempoDecision(true, force, ambiguous, primary, alias, candidates, coverage, offsetSeconds, summary.Grid, warning);
+            return new TempoDecision(true, force, ambiguous, resolvedPrimary, alias, candidates, resolvedPrimary.Coverage, authoritativeOffset, summary.Grid, warning);
+        }
+
+        /// <summary>
+        /// Resolves ambiguous tempo by selecting the candidate with better quantization fit.
+        /// Uses a weighted scoring system that considers coverage, accuracy, and tempo preference.
+        /// </summary>
+        /// <remarks>
+        /// Prefers the alias (half/double) over primary when:
+        /// - Coverage is significantly better (>3%)
+        /// - Or coverage is similar but mean error is lower
+        /// - Applies a slight bias toward "musically typical" tempos (80-160 BPM range)
+        /// </remarks>
+        internal static QuantizationCandidate ResolveAmbiguousTempo(QuantizationCandidate primary, QuantizationCandidate alias)
+        {
+            // Score based on quantization quality
+            double primaryScore = ComputeTempoScore(primary);
+            double aliasScore = ComputeTempoScore(alias);
+
+            // If scores are very close, prefer the tempo in a more typical range (80-160 BPM)
+            if (Math.Abs(primaryScore - aliasScore) < 0.02)
+            {
+                bool primaryInRange = primary.Bpm >= 80 && primary.Bpm <= 160;
+                bool aliasInRange = alias.Bpm >= 80 && alias.Bpm <= 160;
+
+                if (aliasInRange && !primaryInRange)
+                    return alias;
+                if (primaryInRange && !aliasInRange)
+                    return primary;
+            }
+
+            return aliasScore > primaryScore ? alias : primary;
+        }
+
+        /// <summary>
+        /// Computes a quality score for a tempo candidate based on coverage and accuracy.
+        /// Higher scores indicate better quantization fit.
+        /// </summary>
+        internal static double ComputeTempoScore(QuantizationCandidate candidate)
+        {
+            // Base score from coverage (0-1)
+            double score = Math.Clamp(candidate.Coverage, 0, 1);
+
+            // Penalty for high mean error (normalize to 0-0.3 range)
+            double meanPenalty = candidate.MeanErrorMilliseconds > 0
+                ? Math.Clamp(candidate.MeanErrorMilliseconds / 20.0, 0, 0.3)
+                : 0;
+
+            // Penalty for high median error (normalize to 0-0.2 range)
+            double medianPenalty = candidate.MedianErrorMilliseconds > 0
+                ? Math.Clamp(candidate.MedianErrorMilliseconds / 18.0, 0, 0.2)
+                : 0;
+
+            // Small bonus for tempos in "typical" drumming range
+            double rangeBonus = 0;
+            if (candidate.Bpm >= 80 && candidate.Bpm <= 160)
+                rangeBonus = 0.02;
+            else if (candidate.Bpm >= 60 && candidate.Bpm <= 180)
+                rangeBonus = 0.01;
+
+            return score - meanPenalty - medianPenalty + rangeBonus;
         }
 
         private static IReadOnlyList<double> buildTempoCandidates(QuantizationCandidate primary, IReadOnlyList<QuantizationCandidate> candidates)

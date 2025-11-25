@@ -64,6 +64,9 @@ namespace BeatSight.Game.Screens.Mapping
         private Container errorNotificationContainer = null!;
         private SpriteText errorNotificationText = null!;
         private BasicButton copyLogsButton = null!;
+        private Container lowConfidenceBanner = null!;
+        private SpriteText lowConfidenceBannerText = null!;
+        private SpriteText lowConfidenceBannerAdvice = null!;
 
         private readonly Bindable<int> detectionSensitivity = new Bindable<int>();
         private readonly Bindable<QuantizationGridSetting> quantizationGrid = new Bindable<QuantizationGridSetting>();
@@ -932,6 +935,54 @@ namespace BeatSight.Game.Screens.Mapping
                 }
             };
 
+            // Low-confidence banner - prominent warning shown after generation when detection quality is poor
+            lowConfidenceBannerText = new SpriteText
+            {
+                Text = "⚠️ Low Detection Confidence",
+                Font = BeatSightFont.Bold(18f),
+                Colour = new Color4(255, 220, 150, 255)
+            };
+
+            lowConfidenceBannerAdvice = new SpriteText
+            {
+                Text = string.Empty,
+                Font = BeatSightFont.Body(14f),
+                Colour = new Color4(255, 245, 220, 255),
+                RelativeSizeAxes = Axes.X
+            };
+
+            lowConfidenceBanner = new Container
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Alpha = 0,
+                Masking = true,
+                CornerRadius = 8,
+                BorderThickness = 2,
+                BorderColour = new Color4(200, 150, 80, 200),
+                Children = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = new Color4(80, 60, 40, 245)
+                    },
+                    new FillFlowContainer
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Vertical,
+                        Spacing = new Vector2(0, 6),
+                        Padding = new MarginPadding(14),
+                        Children = new Drawable[]
+                        {
+                            lowConfidenceBannerText,
+                            lowConfidenceBannerAdvice
+                        }
+                    }
+                }
+            };
+
             return new FillFlowContainer
             {
                 AutoSizeAxes = Axes.Both,
@@ -947,6 +998,7 @@ namespace BeatSight.Game.Screens.Mapping
                     heartbeatStatusText,
                     offlineStatusContainer,
                     infoToastContainer,
+                    lowConfidenceBanner,
                     warningContainer,
                     summaryText,
                     errorNotificationContainer
@@ -991,6 +1043,7 @@ namespace BeatSight.Game.Screens.Mapping
             overlayAvailabilityAnnounced = false;
             updateHeartbeatStatus(true);
             showWarning(string.Empty);
+            updateLowConfidenceBanner(null, forceHide: true);
             errorNotificationContainer.FadeOut(120);
             showOfflineStatus(false);
             clearInfoToast();
@@ -1711,6 +1764,9 @@ namespace BeatSight.Game.Screens.Mapping
                 : string.Empty;
 
             showWarning(message);
+
+            // Show prominent low-confidence banner after generation completes
+            updateLowConfidenceBanner(currentStats);
         }
 
         private static bool isOfflineFallbackMessage(string message)
@@ -1872,6 +1928,53 @@ namespace BeatSight.Game.Screens.Mapping
 
             warningText.Text = message;
             warningContainer.FadeIn(200);
+        }
+
+        /// <summary>
+        /// Shows or hides the prominent low-confidence banner.
+        /// This is shown after generation completes when detection quality is poor,
+        /// giving users clear guidance on how to improve results.
+        /// </summary>
+        private void updateLowConfidenceBanner(DetectionStats? stats, bool forceHide = false)
+        {
+            if (forceHide || stats == null)
+            {
+                lowConfidenceBanner.FadeOut(200);
+                return;
+            }
+
+            // Only show banner if confidence is notably low
+            const double lowConfidenceThreshold = 0.55;
+            if (stats.ConfidenceScore >= lowConfidenceThreshold)
+            {
+                lowConfidenceBanner.FadeOut(200);
+                return;
+            }
+
+            // Build contextual advice based on what's actually wrong
+            var issues = stats.GetConfidenceIssues();
+            string advice;
+
+            if (issues.Count > 0)
+            {
+                advice = $"Tips: {string.Join(" • ", issues.Take(3))}";
+            }
+            else if (stats.PeakCount < 20)
+            {
+                advice = "Very few drum hits detected. Try lowering detection sensitivity or check if the audio contains audible drums.";
+            }
+            else if (stats.QuantizationCoverage < 0.5)
+            {
+                advice = "Onsets don't align well with the detected tempo. Try a different quantization grid or adjust sensitivity.";
+            }
+            else
+            {
+                advice = "The beatmap may have timing or classification errors. Consider editing in the Editor after generation.";
+            }
+
+            lowConfidenceBannerText.Text = $"⚠️ Low Detection Confidence ({stats.ConfidenceScore:P0})";
+            lowConfidenceBannerAdvice.Text = advice;
+            lowConfidenceBanner.FadeIn(300);
         }
 
         private void showConfidenceAdvice(DetectionStats stats)

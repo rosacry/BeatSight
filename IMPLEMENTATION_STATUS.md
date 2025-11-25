@@ -10,10 +10,10 @@
 
 | Category | Count | Notes |
 |----------|-------|-------|
-| **Total Items Requiring Attention** | 28 | Across all priority levels (19 resolved this session) |
+| **Total Items Requiring Attention** | 24 | Across all priority levels (23 resolved this session) |
 | **Critical Blockers** | 2 | Hardware migration, GPU orchestration |
-| **High Priority** | 2 | Test coverage, data migration |
-| **Medium Priority** | 13 | Polish features, remaining integrations |
+| **High Priority** | 1 | Data migration completion |
+| **Medium Priority** | 10 | Remaining polish features |
 | **Low Priority / Nice-to-have** | 11 | Future enhancements, optimizations |
 
 ### Session Progress (Nov 24)
@@ -38,6 +38,10 @@
 - ✅ **Key Bindings UI** - Controls settings section with 4-8 lane configs
 - ✅ **3D Background Effects** - Beat sync, starfield parallax, intensity modes
 - ✅ **Skin Editor Screen** - Preview gallery, lane visualization, skin management
+- ✅ **View Transition Animations** - 2D/3D/Manuscript entry/exit effects in ViewTransitionManager
+- ✅ **Backend Environment Config** - Comprehensive .env.example with 50+ settings
+- ✅ **Beatmap Creation Guide** - User documentation in docs/BEATMAP_CREATION_GUIDE.md
+- ✅ **Onboarding Flow** - First-run tutorial screen with 5-page walkthrough
 
 ### Current State Overview
 - **Desktop Application**: ✅ Shipping-quality. Playback, editor, and song selection are functional.
@@ -83,7 +87,7 @@
 | File | Line(s) | Issue | Description | Suggested Action |
 |------|---------|-------|-------------|------------------|
 | `desktop/.../ThreeDHighwayBackground.cs` | - | ✅ **FIXED Nov 24** | Beat sync, starfield parallax, intensity modes implemented | Complete |
-| `desktop/.../ViewTransitionManager.cs` | 224 | Placeholder animation | "For now, this is a placeholder for view-specific animations" | Implement view transition animations |
+| `desktop/.../ViewTransitionManager.cs` | - | ✅ **FIXED Nov 24** | View-specific entry/exit animations with 2D/3D/Manuscript effects | Complete |
 | `desktop/.../SettingsScreen.cs` | - | ✅ **FIXED Nov 24** | Skin editor screen created with preview gallery | Complete |
 | `desktop/.../MainMenuScreen.cs` | 335 | PlaceholderScreen class | Generic placeholder screen still exists | Remove or repurpose |
 
@@ -282,7 +286,7 @@ Per `MISSING_INTEGRATIONS.md` verification (Nov 24, 2025): **✅ All 39 features
 |----------|---------|----------|--------|
 | API reference | Backend endpoint documentation | High | ✅ **Created Nov 24** - `docs/API_REFERENCE.md` |
 | Deployment guide | Production deployment steps | High | ✅ **Created Nov 24** - `docs/DEPLOYMENT.md` |
-| Beatmap creation guide | User-facing tutorial | Medium | Not started |
+| Beatmap creation guide | User-facing tutorial | Medium | ✅ **Created Nov 24** - docs/BEATMAP_CREATION_GUIDE.md |
 | Contribution workflow | Developer onboarding | Medium | Partially covered in `CONTRIBUTING.md` |
 
 ### 8.2 Outdated Documentation
@@ -324,8 +328,8 @@ Per `MISSING_INTEGRATIONS.md` verification (Nov 24, 2025): **✅ All 39 features
 | Configuration | Purpose | Status |
 |---------------|---------|--------|
 | CUDA/cuDNN versions | Training reproducibility | 🟡 Noted as open item in runbook |
-| Production Python path | Deployment | 🔴 Not documented for deployment |
-| Backend environment | Web deployment | 🔴 Only `.env.example` exists |
+| Production Python path | Deployment | ✅ Documented in .env.example |
+| Backend environment | Web deployment | ✅ **Enhanced Nov 24** - Comprehensive .env.example with 50+ settings |
 
 ### 9.3 Platform-Specific Setup
 
@@ -352,7 +356,7 @@ Per `MISSING_INTEGRATIONS.md` verification (Nov 24, 2025): **✅ All 39 features
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Tutorial/onboarding | Not started | No first-run experience |
+| Tutorial/onboarding | ✅ **Complete** | OnboardingScreen with 5-page walkthrough |
 | In-app help | Partial | Tooltips exist; no help system |
 | Keyboard rebinding UI | ✅ **Complete** | Controls settings section with per-lane-count inputs |
 | Theme customization | Partial | `DesignSystem.cs` exists; no user UI |

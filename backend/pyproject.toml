@@ -22,6 +22,7 @@ passlib = { version = "^1.7.4", extras = ["bcrypt"] }
 argon2-cffi = "^23.1.0"
 cryptography = "^42.0.0"
 structlog = "^24.1.0"
+python-jose = { version = "^3.3.0", extras = ["cryptography"] }
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.1.1"

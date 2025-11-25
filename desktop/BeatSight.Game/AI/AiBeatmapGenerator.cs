@@ -225,6 +225,9 @@ namespace BeatSight.Game.AI
                 return failure($"Failed to parse generated beatmap: {ex.Message}");
             }
 
+            // Log generation summary after successful beatmap load
+            logGenerationSummary(beatmap, options, logs);
+
             try
             {
                 await MetadataEnricher.EnrichAsync(beatmap, track, cancellationToken);
@@ -280,6 +283,45 @@ namespace BeatSight.Game.AI
                     Error = message,
                     Logs = logs.AsReadOnly()
                 };
+            }
+        }
+
+        /// <summary>
+        /// Logs a comprehensive generation summary including note counts, BPM, and grid configuration.
+        /// This provides visibility into what the AI pipeline produced for debugging and validation.
+        /// </summary>
+        private static void logGenerationSummary(Beatmap beatmap, AiGenerationOptions options, List<string> logs)
+        {
+            int noteCount = beatmap.HitObjects?.Count ?? 0;
+            double bpm = beatmap.Timing?.Bpm ?? options.ForcedBpm ?? 0;
+            double offsetMs = beatmap.Timing?.Offset ?? 0;
+            string grid = options.QuantizationGrid.ToString();
+
+            // Count notes by lane for distribution insight
+            var laneCounts = new Dictionary<int, int>();
+            if (beatmap.HitObjects != null)
+            {
+                foreach (var hit in beatmap.HitObjects)
+                {
+                    int lane = hit.Lane ?? 0;
+                    laneCounts[lane] = laneCounts.GetValueOrDefault(lane, 0) + 1;
+                }
+            }
+
+            string laneDistribution = laneCounts.Count > 0
+                ? string.Join(" ", laneCounts.OrderBy(kv => kv.Key).Select(kv => $"L{kv.Key}:{kv.Value}"))
+                : "none";
+
+            logs.Add($"[gen] notes={noteCount} bpm={bpm:0.###} offset={offsetMs:0}ms grid={grid} lanes=[{laneDistribution}]");
+
+            // Log duration coverage if we have timing info
+            if (noteCount > 0 && beatmap.HitObjects != null)
+            {
+                double firstNoteMs = beatmap.HitObjects.Min(h => h.Time);
+                double lastNoteMs = beatmap.HitObjects.Max(h => h.Time);
+                double spanSeconds = (lastNoteMs - firstNoteMs) / 1000.0;
+                double notesPerSecond = spanSeconds > 0 ? noteCount / spanSeconds : 0;
+                logs.Add($"[gen] span={spanSeconds:0.0}s density={notesPerSecond:0.00}nps first={firstNoteMs:0}ms last={lastNoteMs:0}ms");
             }
         }
 

@@ -125,6 +125,10 @@ namespace BeatSight.Game.Configuration
             setDefault(BeatSightSetting.LaneKeys6, "S,D,F,J,K,L");
             setDefault(BeatSightSetting.LaneKeys7, "S,D,F,Space,J,K,L");
             setDefault(BeatSightSetting.LaneKeys8, "A,S,D,F,J,K,L,Semicolon");
+
+            // Onboarding
+            setDefault(BeatSightSetting.HasCompletedOnboarding, false);
+            setDefault(BeatSightSetting.OnboardingVersion, 0); // Increment to re-show onboarding
         }
 
         public void ResetToDefaults()
@@ -273,7 +277,11 @@ namespace BeatSight.Game.Configuration
         LaneKeys5,
         LaneKeys6,
         LaneKeys7,
-        LaneKeys8
+        LaneKeys8,
+
+        // Onboarding
+        HasCompletedOnboarding,
+        OnboardingVersion
     }
 
     public enum GameplayMode

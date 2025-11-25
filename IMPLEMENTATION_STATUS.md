@@ -45,7 +45,7 @@
 
 ### Current State Overview
 - **Desktop Application**: ✅ Shipping-quality. Playback, editor, and song selection are functional.
-- **AI/ML Pipeline**: 🟡 Training infrastructure ready, awaiting data migration completion.
+- **AI/ML Pipeline**: 🟢 **Training actively running** (warm-up probe step 5a). Data migration complete.
 - **Backend (Web MVP)**: 🟡 Scaffolded, 56 tickets created, **auth implemented**. Ready for core feature work.
 - **Mobile**: 🔴 Not started. Queued for Phase 3.
 
@@ -57,9 +57,9 @@
 
 | File/Location | Issue | Description | Status | Suggested Action |
 |--------------|-------|-------------|--------|------------------|
-| `E:/data/prod_combined_profile_run/` | ✅ Data migration complete | Dataset successfully moved from C: to E: drive (436GB, 16.3M files) | ✅ Done | Proceed with training |
+| `E:/data/prod_combined_profile_run/` | ✅ Data migration complete | Dataset successfully moved from C: to E: drive (436GB, 16.3M files) | ✅ Done | No action needed |
 | `C:/github/BeatSight/data/feature_cache/` | Feature cache on SSD | Keeping on SSD for training performance | ✅ Optimal | No action needed |
-| `ai-pipeline/training/` | Training unblocked | Config files updated to point to new E: drive location | ✅ Ready | Run step 5a from `post_export_commands.sh` |
+| `ai-pipeline/training/` | 🟢 Training running | Step 5a warm-up probe actively training | 🟢 In Progress | Monitor training output |
 
 **Migration Details (completed Nov 25, 2025):**
 - Source: `C:\github\BeatSight\data\prod_combined_profile_run`
@@ -67,6 +67,10 @@
 - Total: 435.984 GB across 16,282,317 files in 517 directories
 - Duration: ~9 hours
 - Speed: 14.7 MB/s (~845 MB/min)
+
+**Training Status (started Nov 25, 2025):**
+- Running: Step 5a warm-up training probe
+- Do not interrupt - training in background
 
 ### 1.2 Web MVP Infrastructure
 
@@ -175,9 +179,9 @@ Per `MISSING_INTEGRATIONS.md` verification (Nov 24, 2025): **✅ All 39 features
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| `train_classifier.py` | ✅ Ready | Class weighting, label smoothing added |
+| `train_classifier.py` | 🟢 **Running** | Warm-up probe (step 5a) actively training |
 | `DrumSampleDataset` | ✅ Ready | float16 cache, torchaudio optimization |
-| `DrumClassifierCNN` | ✅ Ready | ~385K params, 24 classes |
+| `DrumClassifierCNN` | ✅ Ready | ~385K params, 21 classes (after crash_1/crash_2 merge) |
 | Hardware configs | ✅ Created | RTX 3080 Ti optimized in `configs/hardware_profiles.json` |
 | Environment hook | ✅ Created | `beatsight_env.sh` centralizes paths |
 | Post-export script | ✅ Improved | Logging, error handling added |
@@ -209,7 +213,7 @@ Per `MISSING_INTEGRATIONS.md` verification (Nov 24, 2025): **✅ All 39 features
 | Audio sources | Slakh2100, Groove MIDI, Cambridge Multitrack, MUSDB18 |
 | Export tool | `build_training_dataset.py` with Rich progress |
 | Validation | `dataset_health.py` generates JSON + HTML reports |
-| **Current blocker** | Data migration from C: to E: in progress |
+| **Current status** | ✅ Data migration complete, 🟢 training running |
 
 ---
 
@@ -500,9 +504,9 @@ No explicit `TODO` or `FIXME` comments found in core source files.
 ## Appendix D: Recommended Priority Order
 
 ### Immediate (This Week)
-1. ⏳ **Wait for data migration** to complete (robocopy C: → E:)
-2. 🔬 **Run warm-up probe** (step 5a) after migration
-3. 📊 **Evaluate probe results** per ML runbook checklist
+1. ✅ ~~Wait for data migration~~ - Complete
+2. 🟢 ~~Run warm-up probe~~ - **Currently running** (step 5a)
+3. 📊 **Evaluate probe results** per ML runbook checklist when training completes
 
 ### Short-Term (Next 2 Weeks)
 4. 🎯 **Complete long training run** if probe passes
@@ -541,14 +545,18 @@ No explicit `TODO` or `FIXME` comments found in core source files.
 - `ai-pipeline/training/tools/post_export_commands.sh` - Dataset path updated
 - `ai-pipeline/training/tools/ingest_and_build.sh` - Output directory updated
 
-**To run training:**
+**Training Status:**
+- 🟢 **Step 5a warm-up training probe is currently running**
+- Do not interrupt the training process
+- Monitor output for completion
+
+**To restart training (if needed):**
 ```bash
 cd /c/github/BeatSight
 source ai-pipeline/training/tools/beatsight_env.sh
 bash ai-pipeline/training/tools/post_export_commands.sh
 # Select option 5a for warmup training
 ```
-3. Execute step 5a from `post_export_commands.sh`
 
 ---
 

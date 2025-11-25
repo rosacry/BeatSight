@@ -11,14 +11,45 @@ FastAPI-based backend services supporting the BeatSight web platform. This modul
 - JWT authentication with access/refresh tokens.
 
 ## Getting Started
+
+### Option 1: Docker (Recommended)
+
+```bash
+cd backend
+
+# Start all services (API, PostgreSQL, Redis)
+docker-compose up -d
+
+# Run migrations
+docker-compose --profile migrate up migrations
+
+# View logs
+docker-compose logs -f api
+```
+
+The API will be available at `http://localhost:8000`.
+
+### Option 2: Local Development
+
 ```bash
 cd backend
 poetry install
 poetry run uvicorn app.main:app --reload
 ```
 
-Configuration is handled through environment variables (see `app/config.py`).
+Requires PostgreSQL and Redis running locally. Configuration is handled through environment variables (see `app/config.py`).
+
+## Testing
+
+```bash
+# Run tests
+poetry run pytest
+
+# With coverage
+poetry run pytest --cov=app --cov-report=html
+```
 
 ## Documentation
 - **API Reference**: See `docs/API_REFERENCE.md` for endpoint documentation.
 - **Deployment**: See `docs/DEPLOYMENT.md` for production deployment guide.
+

@@ -32,10 +32,10 @@ fi
 BEATSIGHT_DATA_ROOT=${BEATSIGHT_DATA_ROOT:-${BEATSIGHT_REPO_ROOT}/data}
 
 # Secondary data root for overflow/alternate mounts (e.g., external drives)
-BEATSIGHT_SECONDARY_ROOT=${BEATSIGHT_SECONDARY_ROOT:-${BEATSIGHT_DATA_ROOT}}
+BEATSIGHT_SECONDARY_ROOT=${BEATSIGHT_SECONDARY_ROOT:-/e/data}
 
-# Dataset directory containing train/val splits
-BEATSIGHT_DATASET_DIR=${BEATSIGHT_DATASET_DIR:-${BEATSIGHT_DATA_ROOT}/prod_combined_profile_run}
+# Dataset directory containing train/val splits (moved to HDD for space)
+BEATSIGHT_DATASET_DIR=${BEATSIGHT_DATASET_DIR:-${BEATSIGHT_SECONDARY_ROOT}/prod_combined_profile_run}
 
 # Feature cache for precomputed mel spectrograms
 BEATSIGHT_CACHE_DIR=${BEATSIGHT_CACHE_DIR:-${BEATSIGHT_DATA_ROOT}/feature_cache/prod_combined_warmup}

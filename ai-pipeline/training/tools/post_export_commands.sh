@@ -71,7 +71,9 @@ fi
 
 DATA_ROOT_DEFAULT=${DATA_ROOT_DEFAULT:-${BEATSIGHT_REPO_ROOT}/data}
 BEATSIGHT_DATA_ROOT=${BEATSIGHT_DATA_ROOT:-$DATA_ROOT_DEFAULT}
-BEATSIGHT_DATASET_DIR=${BEATSIGHT_DATASET_DIR:-${BEATSIGHT_DATA_ROOT}/prod_combined_profile_run}
+# Dataset moved to HDD (E:/data) for space; feature cache stays on SSD for performance
+BEATSIGHT_SECONDARY_ROOT=${BEATSIGHT_SECONDARY_ROOT:-/e/data}
+BEATSIGHT_DATASET_DIR=${BEATSIGHT_DATASET_DIR:-${BEATSIGHT_SECONDARY_ROOT}/prod_combined_profile_run}
 BEATSIGHT_CACHE_DIR=${BEATSIGHT_CACHE_DIR:-${BEATSIGHT_DATA_ROOT}/feature_cache/prod_combined_warmup}
 BEATSIGHT_HEALTH_DIR=${BEATSIGHT_HEALTH_DIR:-${BEATSIGHT_REPO_ROOT}/ai-pipeline/training/reports/health}
 BEATSIGHT_METRICS_DIR=${BEATSIGHT_METRICS_DIR:-${BEATSIGHT_REPO_ROOT}/ai-pipeline/training/reports/metrics}
@@ -227,9 +229,11 @@ prompt_training_mode() {
                 rm -f "${checkpoint_dir}/best_drum_classifier.pth" 2>/dev/null || true
                 TRAINING_MODE="fresh"
                 RESUME_FLAG=""
-                # Use new improved settings for fresh runs
-                CLASS_WEIGHTS_FLAG="--class-weights balanced"
-                LABEL_SMOOTHING_FLAG="--label-smoothing 0.1"
+                # Use improved settings for fresh runs
+                # 'effective' strategy handles extreme class imbalance (2M:1 ratio)
+                # max-class-weight caps extreme weights to prevent instability
+                CLASS_WEIGHTS_FLAG="--class-weights effective --max-class-weight 10.0"
+                LABEL_SMOOTHING_FLAG="--label-smoothing 0.05"
                 ;;
             c|cancel)
                 echo "  → Cancelled."
@@ -253,8 +257,10 @@ prompt_training_mode() {
             s|start)
                 TRAINING_MODE="fresh"
                 RESUME_FLAG=""
-                CLASS_WEIGHTS_FLAG="--class-weights balanced"
-                LABEL_SMOOTHING_FLAG="--label-smoothing 0.1"
+                # Use improved settings for fresh runs
+                # 'effective' strategy handles extreme class imbalance (2M:1 ratio)
+                CLASS_WEIGHTS_FLAG="--class-weights effective --max-class-weight 10.0"
+                LABEL_SMOOTHING_FLAG="--label-smoothing 0.05"
                 ;;
             c|cancel)
                 echo "  → Cancelled."
@@ -270,8 +276,9 @@ prompt_training_mode() {
     echo ""
     if [ -n "$CLASS_WEIGHTS_FLAG" ]; then
         echo "  📊 Using improved settings:"
-        echo "     • Class weights: balanced (handles imbalanced drum components)"
-        echo "     • Label smoothing: 0.1 (reduces overfitting)"
+        echo "     • Class weights: effective (handles extreme class imbalance)"
+        echo "     • Weight cap: 10.0 (prevents training instability)"
+        echo "     • Label smoothing: 0.05 (reduces overfitting)"
     else
         echo "  📊 Using original settings (to match existing checkpoint)"
     fi

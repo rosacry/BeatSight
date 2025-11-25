@@ -20,12 +20,16 @@ def _repo_root() -> Path:
 
 
 def dataset_root() -> Path:
-    """Return the canonical dataset directory used for classifier training."""
+    """Return the canonical dataset directory used for classifier training.
+    
+    Note: Dataset moved to HDD (E:/data) for space. Feature cache remains on SSD.
+    """
 
     env_dataset = os.environ.get("BEATSIGHT_DATASET_DIR")
     if env_dataset:
         return Path(env_dataset)
-    return _repo_root() / "data" / "prod_combined_profile_run"
+    # Default to HDD location (moved from SSD for space savings)
+    return Path("E:/data/prod_combined_profile_run")
 
 
 def feature_cache_root() -> Path:

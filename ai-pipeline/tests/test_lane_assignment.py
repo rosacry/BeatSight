@@ -23,7 +23,7 @@ def test_primary_components_follow_liveinput_layout():
         "tom_mid": 4,
         "tom_low": 4,
         "crash": 6,
-        "crash2": 0,
+        "crash2": 6,   # Legacy alias for crash (pitch ranking handles multi-crash)
         "ride": 6,
     }
 

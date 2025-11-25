@@ -77,6 +77,12 @@ from training.tools.console_utils import (  # type: ignore[import]
     OutputLogger,
     ProgressAdapter,
 )
+from training.excluded_classes import (  # type: ignore[import]
+    EXCLUDED_CLASSES,
+    should_exclude_class,
+    remap_label,
+    process_label,
+)
 
 import librosa  # type: ignore[import]
 import numpy as np
@@ -153,6 +159,7 @@ class ExportStats:
     written_clips: int = 0
     skipped_missing_audio: int = 0
     skipped_no_components: int = 0
+    skipped_excluded_class: int = 0
     train_clips: int = 0
     val_clips: int = 0
     written_seconds: float = 0.0
@@ -163,7 +170,7 @@ class ExportStats:
 
     @property
     def skipped_total(self) -> int:
-        return self.skipped_missing_audio + self.skipped_no_components
+        return self.skipped_missing_audio + self.skipped_no_components + self.skipped_excluded_class
 
     def as_dict(self) -> Dict[str, int]:
         return {
@@ -172,6 +179,7 @@ class ExportStats:
             "written_clips": self.written_clips,
             "skipped_missing_audio": self.skipped_missing_audio,
             "skipped_no_components": self.skipped_no_components,
+            "skipped_excluded_class": self.skipped_excluded_class,
             "skipped_total": self.skipped_total,
             "train_clips": self.train_clips,
             "val_clips": self.val_clips,
@@ -1164,7 +1172,7 @@ def build_dataset(
                 prev_split_counts = loaded_metadata.get("split_counts")
                 if isinstance(prev_split_counts, Mapping):
                     for split in ("train", "val"):
-                        count_val = _coerce_int(prev_splitCounts.get(split))
+                        count_val = _coerce_int(prev_split_counts.get(split))
                         if count_val is not None:
                             split_counts[split] = count_val
                 prev_label_counts = loaded_metadata.get("label_counts")
@@ -1691,6 +1699,12 @@ def build_dataset(
                 if not label:
                     continue
 
+                # Remap and filter labels (e.g., crash_1 → crash, shaker → excluded)
+                label = remap_label(label)
+                if should_exclude_class(label):
+                    stats.skipped_excluded_class += 1
+                    continue
+
                 if label not in component_index:
                     component_index[label] = len(components)
                     components.append(label)
@@ -1877,8 +1891,11 @@ def verify_manifest(
                     if isinstance(component_entry, Mapping):
                         label = component_entry.get("label")
                         if isinstance(label, str) and label:
-                            per_label_counts[label.strip()] += 1
-                            valid_component_count += 1
+                            # Apply remapping for accurate stats (e.g., crash_1 → crash)
+                            label = remap_label(label.strip())
+                            if not should_exclude_class(label):
+                                per_label_counts[label] += 1
+                                valid_component_count += 1
             else:
                 stats["missing_components"] += 1
 

@@ -28,34 +28,35 @@ class DrumClassifierCNN(nn.Module):
     - Fully connected output layer
     """
     
+    # Note: This is a reference list. The actual class list is determined by
+    # components.json in the dataset. Classes like 'shaker', 'tambourine', 
+    # 'drum_mix', 'crash_1', 'crash_2' are excluded (see excluded_classes.py).
+    # Multi-cymbal distinction is handled via pitch-based post-processing.
     DRUM_COMPONENTS = [
-        "kick",
-        "snare_center",
-        "snare_rimshot",
-        "snare_cross_stick",
-        "snare_off",
+        "aux_percussion",
+        "china",
+        "crash",
+        "cross_stick",
         "hihat_closed",
+        "hihat_foot_splash",
         "hihat_open",
-        "hihat_half",
         "hihat_pedal",
         "hihat_splash",
-        "tom_high",
-        "tom_mid",
-        "tom_low",
-        "ride_bow",
+        "kick",
         "ride_bell",
-        "ride_edge",
-        "crash_1",
-        "crash_2",
-        "china",
+        "ride_bow",
+        "rimshot",
+        "snare",
+        "snare_center",
+        "snare_cross_stick",
+        "snare_rimshot",
         "splash",
-        "cowbell",
-        "tambourine",
-        "clap",
-        "shaker"
+        "tom_high",
+        "tom_low",
+        "tom_mid",
     ]
     
-    def __init__(self, num_classes: int = 24, dropout: float = 0.3):
+    def __init__(self, num_classes: int = 21, dropout: float = 0.3):
         super().__init__()
         
         # Convolutional blocks

@@ -50,8 +50,8 @@ NOTE_MAP: Dict[int, Tuple[str, Dict[str, str]]] = {
     51: ("ride_bow", {}),
     53: ("ride_bell", {}),
     59: ("ride_bell", {}),
-    49: ("crash_1", {}),
-    57: ("crash_2", {}),
+    49: ("crash", {}),   # Was crash_1 - now unified
+    57: ("crash", {}),   # Was crash_2 - now unified
     55: ("splash", {}),
     52: ("china", {}),
     54: ("china", {}),
@@ -59,7 +59,7 @@ NOTE_MAP: Dict[int, Tuple[str, Dict[str, str]]] = {
     58: ("aux_percussion", {"instrument_variant": "vibraslap"})
 }
 
-CYMBAL_MULTI_LABELS = {"crash_1", "crash_2", "splash", "china"}
+CYMBAL_MULTI_LABELS = {"crash", "splash", "china"}
 
 
 class EventContext:

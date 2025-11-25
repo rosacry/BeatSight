@@ -243,7 +243,7 @@ def process_audio_file(
         forced_offset=forced_offset,
         forced_step=forced_step,
         force_quantization=force_quantization,
-        start_time=start_time,
+        start_time=start_time or 0.0,
     )
 
     # Save beatmap

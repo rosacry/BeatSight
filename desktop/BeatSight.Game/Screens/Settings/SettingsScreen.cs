@@ -69,6 +69,7 @@ namespace BeatSight.Game.Screens.Settings
             Playback,
             Audio,
             Graphics,
+            Controls,
             AI
         }
 
@@ -194,6 +195,7 @@ namespace BeatSight.Game.Screens.Settings
                                 createSectionButton(SettingsCategory.Playback, "Playback"),
                                 createSectionButton(SettingsCategory.Audio, "Audio"),
                                 createSectionButton(SettingsCategory.Graphics, "Graphics"),
+                                createSectionButton(SettingsCategory.Controls, "Controls"),
                                 createSectionButton(SettingsCategory.AI, "AI / Generation")
                             }
                         }
@@ -239,6 +241,8 @@ namespace BeatSight.Game.Screens.Settings
                     return new AudioSettingsSection(config, host, dropdownOverlay, tooltipOverlay);
                 case SettingsCategory.Graphics:
                     return new GraphicsSettingsSection(config, host, dropdownOverlay, tooltipOverlay, uiScaleWizard);
+                case SettingsCategory.Controls:
+                    return new ControlsSettingsSection(config, host, dropdownOverlay, tooltipOverlay);
                 case SettingsCategory.AI:
                     return new AISettingsSection(config, host, dropdownOverlay, tooltipOverlay);
                 default:
@@ -349,6 +353,18 @@ namespace BeatSight.Game.Screens.Settings
             {
                 Logger.Log($"[Settings] Failed to open directory '{relativePath}': {ex.Message}", LoggingTarget.Runtime, LogLevel.Debug);
             }
+        }
+
+        private void openSkinEditor()
+        {
+            var editor = new SkinEditorScreen
+            {
+                OnClose = () =>
+                {
+                    // Refresh skin settings if needed
+                }
+            };
+            AddInternal(editor);
         }
 
         private static void launchFileBrowser(string path)
@@ -2304,11 +2320,11 @@ namespace BeatSight.Game.Screens.Settings
             {
                 Width = 160,
                 Height = 32,
-                Text = "Skin Editor (Soon)"
+                Text = "Skin Editor",
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                Action = openSkinEditor
             };
-            editorButton.Anchor = Anchor.CentreLeft;
-            editorButton.Origin = Anchor.CentreLeft;
-            editorButton.Enabled.Value = false;
 
             var control = new FillFlowContainer
             {
@@ -2813,5 +2829,277 @@ namespace BeatSight.Game.Screens.Settings
                 BackgroundColour = UITheme.SurfaceAlt
             };
         }
+    }
+
+    /// <summary>
+    /// Settings section for keyboard controls and key bindings.
+    /// </summary>
+    public partial class ControlsSettingsSection : SettingsSection
+    {
+        private readonly BeatSightConfigManager config;
+        private readonly GameHost host;
+        private FillFlowContainer keyBindingsList = null!;
+
+        public ControlsSettingsSection(BeatSightConfigManager config, GameHost host, Container dropdownOverlay, SettingsTooltipOverlay tooltipOverlay)
+            : base("Controls", dropdownOverlay, tooltipOverlay)
+        {
+            this.config = config;
+            this.host = host;
+        }
+
+        protected override Drawable createContent()
+        {
+            keyBindingsList = new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(0, 8)
+            };
+
+            populateKeyBindings();
+
+            return new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(0, 20),
+                Children = new Drawable[]
+                {
+                    new SpriteText
+                    {
+                        Text = "Lane Key Bindings",
+                        Font = BeatSightFont.BodySmall(16f),
+                        Colour = UITheme.TextSecondary
+                    },
+                    new SpriteText
+                    {
+                        Text = "Configure keyboard keys for each lane count. Changes apply immediately.",
+                        Font = BeatSightFont.BodySmall(12f),
+                        Colour = UITheme.TextMuted,
+                        Margin = new MarginPadding { Bottom = 10 }
+                    },
+                    keyBindingsList,
+                    createResetAllButton()
+                }
+            };
+        }
+
+        private void populateKeyBindings()
+        {
+            keyBindingsList.Clear();
+
+            // Create binding rows for each supported lane count
+            foreach (int laneCount in new[] { 4, 5, 6, 7, 8 })
+            {
+                keyBindingsList.Add(createKeyBindingRow(laneCount));
+            }
+        }
+
+        private Drawable createKeyBindingRow(int laneCount)
+        {
+            var currentKeys = KeyBindingHelper.GetLaneKeys(config, laneCount);
+            var keyDisplays = new FillFlowContainer
+            {
+                AutoSizeAxes = Axes.Both,
+                Direction = FillDirection.Horizontal,
+                Spacing = new Vector2(6, 0)
+            };
+
+            for (int i = 0; i < currentKeys.Length; i++)
+            {
+                int laneIndex = i;
+                var key = currentKeys[i];
+
+                var keyBox = new KeyBindingBox(key, newKey =>
+                {
+                    // Update the key binding
+                    var keys = KeyBindingHelper.GetLaneKeys(config, laneCount);
+                    if (laneIndex < keys.Length)
+                    {
+                        keys[laneIndex] = newKey;
+                        KeyBindingHelper.SetLaneKeys(config, laneCount, keys);
+                    }
+                });
+
+                keyDisplays.Add(keyBox);
+            }
+
+            return new Container
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Children = new Drawable[]
+                {
+                    new FillFlowContainer
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Horizontal,
+                        Spacing = new Vector2(15, 0),
+                        Children = new Drawable[]
+                        {
+                            new SpriteText
+                            {
+                                Text = $"{laneCount} Lanes:",
+                                Font = BeatSightFont.BodySmall(14f),
+                                Colour = UITheme.TextPrimary,
+                                Width = 70
+                            },
+                            keyDisplays,
+                            createResetButton(laneCount)
+                        }
+                    }
+                }
+            };
+        }
+
+        private Drawable createResetButton(int laneCount)
+        {
+            return new BeatSightButton
+            {
+                Text = "Reset",
+                Width = 60,
+                Height = 28,
+                Action = () =>
+                {
+                    KeyBindingHelper.ResetToDefaults(config, laneCount);
+                    populateKeyBindings();
+                },
+                BackgroundColour = UITheme.SurfaceAlt
+            };
+        }
+
+        private Drawable createResetAllButton()
+        {
+            return new BeatSightButton
+            {
+                Text = "Reset All Key Bindings to Defaults",
+                RelativeSizeAxes = Axes.X,
+                Height = 40,
+                Action = () =>
+                {
+                    foreach (int laneCount in new[] { 4, 5, 6, 7, 8 })
+                    {
+                        KeyBindingHelper.ResetToDefaults(config, laneCount);
+                    }
+                    populateKeyBindings();
+                },
+                BackgroundColour = UITheme.Danger,
+                Margin = new MarginPadding { Top = 20 }
+            };
+        }
+    }
+
+    /// <summary>
+    /// Interactive key binding box that captures key presses.
+    /// </summary>
+    public partial class KeyBindingBox : CompositeDrawable
+    {
+        private osuTK.Input.Key currentKey;
+        private readonly Action<osuTK.Input.Key> onKeyChanged;
+        private Box background = null!;
+        private SpriteText keyText = null!;
+        private bool isCapturing;
+
+        private const float box_width = 50;
+        private const float box_height = 32;
+
+        public KeyBindingBox(osuTK.Input.Key initialKey, Action<osuTK.Input.Key> onKeyChanged)
+        {
+            currentKey = initialKey;
+            this.onKeyChanged = onKeyChanged;
+
+            Size = new Vector2(box_width, box_height);
+        }
+
+        [BackgroundDependencyLoader]
+        private void load()
+        {
+            Masking = true;
+            CornerRadius = 4;
+
+            InternalChildren = new Drawable[]
+            {
+                background = new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = UITheme.SurfaceAlt
+                },
+                keyText = new SpriteText
+                {
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    Text = KeyBindingHelper.GetKeyDisplayName(currentKey),
+                    Font = BeatSightFont.BodySmall(12f),
+                    Colour = UITheme.TextPrimary
+                }
+            };
+        }
+
+        protected override bool OnClick(ClickEvent e)
+        {
+            startCapture();
+            return true;
+        }
+
+        protected override bool OnKeyDown(KeyDownEvent e)
+        {
+            if (!isCapturing)
+                return base.OnKeyDown(e);
+
+            // Ignore modifier keys alone
+            if (e.Key == osuTK.Input.Key.ShiftLeft || e.Key == osuTK.Input.Key.ShiftRight ||
+                e.Key == osuTK.Input.Key.ControlLeft || e.Key == osuTK.Input.Key.ControlRight ||
+                e.Key == osuTK.Input.Key.AltLeft || e.Key == osuTK.Input.Key.AltRight)
+            {
+                return true;
+            }
+
+            // Escape cancels
+            if (e.Key == osuTK.Input.Key.Escape)
+            {
+                stopCapture();
+                return true;
+            }
+
+            // Assign the new key
+            currentKey = e.Key;
+            keyText.Text = KeyBindingHelper.GetKeyDisplayName(currentKey);
+            onKeyChanged?.Invoke(currentKey);
+            stopCapture();
+
+            return true;
+        }
+
+        protected override void OnFocusLost(FocusLostEvent e)
+        {
+            if (isCapturing)
+                stopCapture();
+
+            base.OnFocusLost(e);
+        }
+
+        private void startCapture()
+        {
+            isCapturing = true;
+            background.Colour = UITheme.AccentPrimary;
+            keyText.Text = "...";
+            keyText.Colour = UITheme.TextInverse;
+
+            // Request focus to capture key events
+            GetContainingFocusManager()?.ChangeFocus(this);
+        }
+
+        private void stopCapture()
+        {
+            isCapturing = false;
+            background.Colour = UITheme.SurfaceAlt;
+            keyText.Text = KeyBindingHelper.GetKeyDisplayName(currentKey);
+            keyText.Colour = UITheme.TextPrimary;
+        }
+
+        public override bool AcceptsFocus => true;
     }
 }

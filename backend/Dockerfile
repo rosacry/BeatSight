@@ -36,8 +36,8 @@ RUN poetry install --no-root --only=main
 FROM python:3.12-slim AS production
 
 LABEL maintainer="BeatSight Team" \
-      version="1.0.0" \
-      description="BeatSight API Backend"
+    version="1.0.0" \
+    description="BeatSight API Backend"
 
 WORKDIR /app
 
@@ -82,11 +82,11 @@ EXPOSE 8000
 # Run with uvicorn (production settings)
 # Workers: 2-4 x CPU cores is recommended; using 4 as default
 CMD ["uvicorn", "app.main:app", \
-     "--host", "0.0.0.0", \
-     "--port", "8000", \
-     "--workers", "4", \
-     "--loop", "uvloop", \
-     "--http", "httptools"]
+    "--host", "0.0.0.0", \
+    "--port", "8000", \
+    "--workers", "4", \
+    "--loop", "uvloop", \
+    "--http", "httptools"]
 
 # =============================================================================
 # Development Stage (optional, for local development)
@@ -106,6 +106,6 @@ USER appuser
 
 # Override CMD for development (single worker, reload enabled)
 CMD ["uvicorn", "app.main:app", \
-     "--host", "0.0.0.0", \
-     "--port", "8000", \
-     "--reload"]
+    "--host", "0.0.0.0", \
+    "--port", "8000", \
+    "--reload"]

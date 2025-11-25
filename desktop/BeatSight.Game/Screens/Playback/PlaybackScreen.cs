@@ -1785,8 +1785,16 @@ namespace BeatSight.Game.Screens.Playback
             if (lanes <= 0)
                 return;
 
-            if (!defaultLaneKeyLayouts.TryGetValue(lanes, out var layoutKeys))
+            // Try to get keys from config, fall back to defaults
+            osuTK.Input.Key[] layoutKeys;
+            if (config != null)
+            {
+                layoutKeys = KeyBindingHelper.GetLaneKeys(config, lanes);
+            }
+            else if (!defaultLaneKeyLayouts.TryGetValue(lanes, out layoutKeys!))
+            {
                 layoutKeys = fallbackLaneKeyOrder;
+            }
 
             int keysToAssign = Math.Min(lanes, layoutKeys.Length);
 
@@ -1799,7 +1807,7 @@ namespace BeatSight.Game.Screens.Playback
             if (keysToAssign < lanes)
             {
                 osu.Framework.Logging.Logger.Log(
-                    $"[PlaybackScreen] Lane preset requires {lanes} lanes but only {keysToAssign} default key bindings are available.",
+                    $"[PlaybackScreen] Lane preset requires {lanes} lanes but only {keysToAssign} key bindings are available.",
                     osu.Framework.Logging.LoggingTarget.Runtime,
                     osu.Framework.Logging.LogLevel.Important);
             }

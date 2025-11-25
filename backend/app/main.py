@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from app.api.routes import ai_jobs, auth, health, songs
+from app.api.routes import ai_jobs, auth, health, karma, songs
 from app.config import get_settings
 from app.logging import configure_logging, get_logger
 
@@ -18,6 +18,7 @@ app.include_router(health.router)
 app.include_router(auth.router, prefix=settings.api_prefix)
 app.include_router(songs.router, prefix=settings.api_prefix)
 app.include_router(ai_jobs.router, prefix=settings.api_prefix)
+app.include_router(karma.router, prefix=settings.api_prefix)
 
 
 @app.on_event("startup")

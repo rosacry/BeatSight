@@ -8,6 +8,7 @@ FastAPI-based backend services supporting the BeatSight web platform. This modul
 - Pydantic v2 schemas for API payloads.
 - Dependency wiring for async database sessions and Redis cache.
 - Structured logging via `structlog`.
+- JWT authentication with access/refresh tokens.
 
 ## Getting Started
 ```bash
@@ -17,3 +18,7 @@ poetry run uvicorn app.main:app --reload
 ```
 
 Configuration is handled through environment variables (see `app/config.py`).
+
+## Documentation
+- **API Reference**: See `docs/API_REFERENCE.md` for endpoint documentation.
+- **Deployment**: See `docs/DEPLOYMENT.md` for production deployment guide.

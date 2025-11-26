@@ -28,7 +28,7 @@ from training.train_classifier import (
     validate,
 )
 from transcription.ml_drum_classifier import DrumClassifierCNN
-from tests.test_utils import create_mock_dataloader
+from test_utils import create_mock_dataloader
 
 
 class TestDrumClassifierCNN:

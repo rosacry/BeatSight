@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 from pipeline.transcription.onset_detector import detect_onsets, refine_onsets
 from pipeline.beatmap_generator import _select_best_quantization
-from tests.test_utils import make_tempo_dummy_module
+from test_utils import make_tempo_dummy_module
 
 SR = 44100
 BPM = 178

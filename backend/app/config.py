@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     # Application
     # -------------------------------------------------------------------------
     app_name: str = "BeatSight Backend"
-    environment: Literal["development", "staging", "production"] = Field(
+    environment: Literal["development", "staging", "production", "testing"] = Field(
         default="development", alias="ENVIRONMENT"
     )
     debug: bool = Field(default=False, alias="DEBUG")

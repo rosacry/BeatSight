@@ -73,7 +73,7 @@ jobs:
       REDIS_URL: redis://localhost:6379
       SECRET_KEY: test-secret-key-for-ci
       TESTING: "true"
-      ENVIRONMENT: test
+      ENVIRONMENT: testing
 
     steps:
       - uses: actions/checkout@v4

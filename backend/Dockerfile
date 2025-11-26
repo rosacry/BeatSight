@@ -18,6 +18,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy dependency files (README.md is required by pyproject.toml)
 COPY pyproject.toml README.md ./
 
+# Copy application source code (required for package building)
+COPY app/ ./app/
+
 # Install dependencies using pip
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir .

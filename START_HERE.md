@@ -90,22 +90,27 @@ cd backend
 poetry run ruff check
 ```
 
-### Local CI Scripts (run before every push!)
+### Local CI with `act` (run before every push!)
+
+We use [`act`](https://github.com/nektos/act) to run the **actual GitHub Actions workflows** locally in Docker containers. This ensures 100% parity with CI.
+
+**Prerequisites:**
+- Docker Desktop running
+- `act` CLI installed: `winget install nektos.act`
 
 ```bash
-# Run ALL CI checks (recommended before every push)
-./scripts/ci-all.sh
+# List all available CI jobs
+./scripts/act-local.sh
 
-# Individual checks:
-./scripts/ci-backend-lint.sh      # Ruff lint + format
-./scripts/ci-backend-docker.sh    # Docker build
-./scripts/ci-backend-test.sh      # pytest (requires Postgres/Redis)
-./scripts/ci-backend-security.sh  # Bandit + Safety
-./scripts/ci-desktop-build.sh     # dotnet build + test
-./scripts/ci-ai-pipeline.sh       # AI pipeline pytest
+# Run specific jobs:
+./scripts/act-local.sh backend-lint       # Ruff lint + format
+./scripts/act-local.sh backend-test       # pytest with Postgres/Redis
+./scripts/act-local.sh desktop-build      # .NET build + test
+./scripts/act-local.sh ai-pipeline-test   # AI pipeline tests
+./scripts/act-local.sh security-scan      # Trivy vulnerability scan
 ```
 
-**⚠️ All checks must pass before pushing.** These scripts mirror the GitHub Actions CI workflows exactly, so catching failures locally avoids broken builds.
+**⚠️ All checks must pass before pushing.** Since `act` runs the real `.github/workflows/*.yml` files, you get exact CI parity—no more "works locally but fails in CI" surprises.
 
 ## 7. Need More Context?
 

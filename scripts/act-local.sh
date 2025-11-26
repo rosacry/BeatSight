@@ -51,8 +51,18 @@ if [[ $# -eq 0 ]]; then
     echo ""
     "$ACT_PATH" -l
     echo ""
-    echo "Usage: ./scripts/act-local.sh <job-name>"
-    echo "Example: ./scripts/act-local.sh backend-test"
+    echo "Usage:"
+    echo "  ./scripts/act-local.sh <job-name>   # Run a specific job"
+    echo "  ./scripts/act-local.sh --all        # Run ALL jobs in ci.yml"
+    echo ""
+    echo "Examples:"
+    echo "  ./scripts/act-local.sh backend-lint"
+    echo "  ./scripts/act-local.sh backend-test"
+    echo "  ./scripts/act-local.sh --all"
+elif [[ "$1" == "--all" || "$1" == "-a" ]]; then
+    echo "=== Running ALL GitHub Actions Jobs (ci.yml) ==="
+    echo ""
+    "$ACT_PATH" -W .github/workflows/ci.yml -P ubuntu-latest=catthehacker/ubuntu:act-latest "${@:2}"
 else
     JOB_NAME="$1"
     shift

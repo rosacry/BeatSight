@@ -16,6 +16,7 @@ if TYPE_CHECKING:  # pragma: no cover - type-checking only
     from .ai_job import AIJob
     from .karma import KarmaLedger
     from .map_edit import MapEditProposal, MapVerificationDecision
+    from .push_subscription import PushSubscription
     from .role import UserRole
     from .song import Song
     from .subscription import Subscription
@@ -51,3 +52,6 @@ class User(Base):
         "MapVerificationDecision", back_populates="verifier"
     )
     songs: Mapped[list["Song"]] = relationship("Song", back_populates="creator")
+    push_subscriptions: Mapped[list["PushSubscription"]] = relationship(
+        "PushSubscription", back_populates="user", cascade="all, delete-orphan"
+    )

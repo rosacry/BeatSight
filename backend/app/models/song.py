@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import enum
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, String, UniqueConstraint, func
+from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Index, Integer, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -18,7 +19,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from .user import User
 
 
-class SongStatus(str, Enum):  # type: ignore[misc]
+class SongStatus(str, enum.Enum):
     """Lifecycle status for a song."""
 
     PENDING = "pending"
@@ -27,7 +28,7 @@ class SongStatus(str, Enum):  # type: ignore[misc]
     ARCHIVED = "archived"
 
 
-class MapState(str, Enum):  # type: ignore[misc]
+class MapState(str, enum.Enum):
     """Lifecycle for a map variant."""
 
     VERIFIED = "verified"
@@ -49,15 +50,15 @@ class Song(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     artist: Mapped[str] = mapped_column(String(255), nullable=False)
     bpm: Mapped[int | None] = mapped_column(Integer)
-    status: Mapped[SongStatus] = mapped_column(Enum(SongStatus), default=SongStatus.PENDING, nullable=False)
+    status: Mapped[SongStatus] = mapped_column(SAEnum(SongStatus), default=SongStatus.PENDING, nullable=False)
     canonical_map_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("maps.id"))
     created_by_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    maps: Mapped[list["Map"]] = relationship("Map", back_populates="song", cascade="all, delete-orphan")
-    canonical_map: Mapped["Map" | None] = relationship("Map", foreign_keys=[canonical_map_id], post_update=True)
-    creator: Mapped["User" | None] = relationship("User", back_populates="songs")
+    maps: Mapped[list["Map"]] = relationship("Map", back_populates="song", cascade="all, delete-orphan", foreign_keys="Map.song_id")
+    canonical_map: Mapped["Map | None"] = relationship("Map", foreign_keys=[canonical_map_id], post_update=True)
+    creator: Mapped["User | None"] = relationship("User", back_populates="songs")
     ai_jobs: Mapped[list["AIJob"]] = relationship("AIJob", back_populates="song")
 
 
@@ -71,15 +72,15 @@ class Map(Base):
     song_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("songs.id", ondelete="CASCADE"))
     difficulty_label: Mapped[str] = mapped_column(String(64), nullable=False)
     is_canonical: Mapped[bool] = mapped_column(default=False)
-    state: Mapped[MapState] = mapped_column(Enum(MapState), default=MapState.UNVERIFIED, nullable=False)
+    state: Mapped[MapState] = mapped_column(SAEnum(MapState), default=MapState.UNVERIFIED, nullable=False)
     current_version_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("map_versions.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    song: Mapped[Song] = relationship("Song", back_populates="maps")
+    song: Mapped[Song] = relationship("Song", back_populates="maps", foreign_keys=[song_id])
     versions: Mapped[list["MapVersion"]] = relationship(
-        "MapVersion", back_populates="map", cascade="all, delete-orphan", order_by="MapVersion.version_number"
+        "MapVersion", back_populates="map", cascade="all, delete-orphan", order_by="MapVersion.version_number", foreign_keys="MapVersion.map_id"
     )
-    current_version: Mapped["MapVersion" | None] = relationship(
+    current_version: Mapped["MapVersion | None"] = relationship(
         "MapVersion", foreign_keys=[current_version_id], post_update=True
     )

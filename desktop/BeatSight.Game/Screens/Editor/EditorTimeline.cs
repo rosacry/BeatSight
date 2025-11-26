@@ -8,6 +8,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Logging;
 using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osu.Framework.Input.Events;
 using osu.Framework.Utils;
@@ -262,9 +263,13 @@ namespace BeatSight.Game.Screens.Editor
                         detectedOnsets.Add(peak.Time * 1000.0);
                     }
                 }
-                catch (Exception)
+                catch (System.IO.IOException ex)
                 {
-                    // Logger.Log($"Failed to load debug data: {ex.Message}");
+                    Logger.Log($"Failed to load debug data file: {ex.Message}", LoggingTarget.Runtime, LogLevel.Debug);
+                }
+                catch (Newtonsoft.Json.JsonException ex)
+                {
+                    Logger.Log($"Failed to parse debug data JSON: {ex.Message}", LoggingTarget.Runtime, LogLevel.Debug);
                 }
             }
 

@@ -1099,12 +1099,38 @@ def main():
                 if wandb_run is not None:
                     wandb_run.summary["best_val_accuracy"] = best_val_acc  # type: ignore[index]
                     wandb_run.summary["best_epoch"] = best_epoch  # type: ignore[index]
-                    wandb_run.save(str(model_path))  # type: ignore[arg-type]
 
             last_completed_epoch = epoch + 1
 
+            # Save checkpoint BEFORE any W&B uploads to ensure training progress is never lost
             if checkpoint_interval and (epoch + 1) % checkpoint_interval == 0:
                 save_checkpoint(epoch + 1, reason="interval")
+
+            # W&B model upload (best-effort, won't crash training if it fails)
+            if val_acc == best_val_acc and wandb_run is not None:
+                # Use policy="now" to copy file immediately instead of symlink
+                # This avoids Windows symlink permission issues (WinError 1314)
+                try:
+                    wandb_run.save(str(model_path), policy="now")  # type: ignore[arg-type]
+                except OSError as e:
+                    # Fallback: log artifact instead if save still fails
+                    if "WinError 1314" in str(e) or "privilege" in str(e).lower():
+                        print(f"⚠ wandb.save() failed (Windows symlink issue), using artifact instead")
+                        try:
+                            artifact = wandb.Artifact(
+                                name=f"best_model_epoch_{best_epoch}",
+                                type="model",
+                                description=f"Best model checkpoint (val_acc={val_acc:.2f}%)"
+                            )
+                            artifact.add_file(str(model_path))
+                            wandb_run.log_artifact(artifact)
+                        except Exception as artifact_err:
+                            print(f"⚠ Artifact upload also failed: {artifact_err} (continuing anyway)")
+                    else:
+                        print(f"⚠ wandb.save() failed: {e} (continuing anyway)")
+                except Exception as e:
+                    print(f"⚠ wandb.save() failed: {e} (continuing anyway)")
+
     except KeyboardInterrupt:
         print("Training interrupted by user. Saving checkpoint before exiting...")
         save_checkpoint(last_completed_epoch, reason="interrupt")
@@ -1129,7 +1155,22 @@ def main():
         wandb_run.summary["final_val_accuracy"] = history[-1]["val_accuracy"] if history else None  # type: ignore[index]
         wandb_run.summary["best_model_path"] = str(best_model_path) if best_model_path else None  # type: ignore[index]
         wandb_run.summary["final_model_path"] = str(final_model_path)  # type: ignore[index]
-        wandb_run.save(str(final_model_path))  # type: ignore[arg-type]
+        # Use policy="now" to copy file immediately instead of symlink
+        # This avoids Windows symlink permission issues (WinError 1314)
+        try:
+            wandb_run.save(str(final_model_path), policy="now")  # type: ignore[arg-type]
+        except OSError as e:
+            if "WinError 1314" in str(e) or "privilege" in str(e).lower():
+                print(f"⚠ wandb.save() failed (Windows symlink issue), using artifact instead")
+                artifact = wandb.Artifact(
+                    name="final_model",
+                    type="model",
+                    description="Final model checkpoint"
+                )
+                artifact.add_file(str(final_model_path))
+                wandb_run.log_artifact(artifact)
+            else:
+                raise
         wandb_run.log({"status": "completed"})  # type: ignore[call-arg]
         wandb_run.finish()  # type: ignore[call-arg]
 

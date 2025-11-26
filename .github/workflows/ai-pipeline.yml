@@ -1,0 +1,75 @@
+name: AI Pipeline CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'ai-pipeline/**'
+      - '.github/workflows/ai-pipeline.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'ai-pipeline/**'
+      - '.github/workflows/ai-pipeline.yml'
+
+defaults:
+  run:
+    working-directory: ai-pipeline
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install ruff
+      
+      - name: Run Ruff linter
+        run: ruff check pipeline/ separation/ transcription/
+      
+      - name: Run Ruff formatter check
+        run: ruff format --check pipeline/ separation/ transcription/
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libsndfile1
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+      
+      - name: Run tests
+        run: pytest tests/ -v --cov=pipeline --cov-report=xml
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          file: ai-pipeline/coverage.xml
+          flags: ai-pipeline
+          fail_ci_if_error: false

@@ -6,6 +6,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Logging;
 using osuTK;
 using osuTK.Graphics;
 using Newtonsoft.Json.Linq;
@@ -99,9 +100,13 @@ namespace BeatSight.Game.Screens.Playback
                     });
                 }
             }
-            catch (Exception)
+            catch (InvalidOperationException ex)
             {
-                // Ignore parsing errors
+                Logger.Log($"Failed to build confidence bars: {ex.Message}", LoggingTarget.Runtime, LogLevel.Debug);
+            }
+            catch (ArgumentException ex)
+            {
+                Logger.Log($"Invalid confidence data: {ex.Message}", LoggingTarget.Runtime, LogLevel.Debug);
             }
         }
 

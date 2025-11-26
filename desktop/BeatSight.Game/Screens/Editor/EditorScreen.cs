@@ -3789,8 +3789,8 @@ namespace BeatSight.Game.Screens.Editor
                 options.TempoCandidates = candidates;
             }
 
-            // Create a dummy track object for the generator
-            var dummyTrack = new ImportedAudioTrack(
+            // Create a track object for the AI generator from the current audio path
+            var audioTrackForGeneration = new ImportedAudioTrack(
                 audioPath,
                 audioPath,
                 Path.GetFileName(audioPath),
@@ -3824,7 +3824,7 @@ namespace BeatSight.Game.Screens.Editor
 
                 try
                 {
-                    var result = await generator.GenerateAsync(dummyTrack, options, progress, CancellationToken.None);
+                    var result = await generator.GenerateAsync(audioTrackForGeneration, options, progress, CancellationToken.None);
 
                     Schedule(() =>
                     {
@@ -3988,7 +3988,7 @@ namespace BeatSight.Game.Screens.Editor
                     PythonExecutablePath = config.Get<string>(BeatSightSetting.PythonPath)
                 };
 
-                var dummyTrack = new ImportedAudioTrack(
+                var audioTrackForGeneration = new ImportedAudioTrack(
                     audioPath,
                     audioPath,
                     Path.GetFileName(audioPath),
@@ -3999,7 +3999,7 @@ namespace BeatSight.Game.Screens.Editor
 
                 try
                 {
-                    var result = await generator.GenerateAsync(dummyTrack, options, null, CancellationToken.None);
+                    var result = await generator.GenerateAsync(audioTrackForGeneration, options, null, CancellationToken.None);
 
                     if (result.Success && result.Beatmap?.HitObjects != null)
                     {

@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db_session
 from app.models.user import User
 from app.services.auth import AuthService
+from app.services.email import get_email_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -58,9 +62,29 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class ForgotPasswordRequest(BaseModel):
+    """Forgot password request."""
+
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    """Reset password request."""
+
+    token: str
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class MessageResponse(BaseModel):
+    """Simple message response."""
+
+    message: str
+
+
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     request: RegisterRequest,
+    background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_db_session),
 ) -> TokenResponse:
     """
@@ -88,6 +112,12 @@ async def register(
     session.add(user)
     await session.commit()
     await session.refresh(user)
+
+    # Send welcome email in background
+    email_service = get_email_service()
+    background_tasks.add_task(
+        email_service.send_welcome, user.email, user.display_name
+    )
 
     # Generate tokens
     access_token = auth_service.create_access_token(user.id)
@@ -180,3 +210,94 @@ async def get_me(
     Requires valid access token.
     """
     return UserResponse.model_validate(current_user)
+
+
+@router.post("/forgot-password", response_model=MessageResponse)
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    session: AsyncSession = Depends(get_db_session),
+) -> MessageResponse:
+    """
+    Request a password reset email.
+    
+    Always returns success to prevent email enumeration attacks.
+    """
+    auth_service = AuthService(session)
+    user = await auth_service.get_user_by_email(request.email)
+
+    if user:
+        # Send reset email in background
+        email_service = get_email_service()
+        background_tasks.add_task(
+            email_service.send_password_reset,
+            user.id,
+            user.email,
+            user.display_name,
+        )
+        logger.info(f"Password reset requested for {request.email}")
+    else:
+        # Don't reveal that email doesn't exist
+        logger.info(f"Password reset requested for non-existent email: {request.email}")
+
+    # Always return success to prevent email enumeration
+    return MessageResponse(
+        message="If an account exists with that email, you will receive a password reset link"
+    )
+
+
+@router.post("/reset-password", response_model=MessageResponse)
+async def reset_password(
+    request: ResetPasswordRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> MessageResponse:
+    """
+    Reset password using a valid reset token.
+    """
+    email_service = get_email_service()
+    payload = email_service.verify_password_reset_token(request.token)
+
+    if payload is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token",
+        )
+
+    user_id_str = payload.get("sub")
+    if not user_id_str:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid token payload",
+        )
+
+    try:
+        user_id = uuid.UUID(user_id_str)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid token payload",
+        )
+
+    auth_service = AuthService(session)
+    user = await auth_service.get_user_by_id(user_id)
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User not found",
+        )
+
+    # Verify email matches token (extra security)
+    if user.email != payload.get("email"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token does not match user",
+        )
+
+    # Update password
+    user.hashed_password = auth_service.hash_password(request.new_password)
+    await session.commit()
+
+    logger.info(f"Password reset completed for user {user_id}")
+
+    return MessageResponse(message="Password has been reset successfully")

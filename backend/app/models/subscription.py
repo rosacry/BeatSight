@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import enum
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, func
+from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -16,7 +17,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from .user import User
 
 
-class SubscriptionPlan(str, Enum):  # type: ignore[misc]
+class SubscriptionPlan(str, enum.Enum):
     """Subscription tiers."""
 
     FREE = "free"
@@ -24,7 +25,7 @@ class SubscriptionPlan(str, Enum):  # type: ignore[misc]
     PRO_YEARLY = "pro_yearly"
 
 
-class SubscriptionStatus(str, Enum):  # type: ignore[misc]
+class SubscriptionStatus(str, enum.Enum):
     """Subscription lifecycle state."""
 
     ACTIVE = "active"
@@ -39,8 +40,8 @@ class Subscription(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
-    plan_code: Mapped[SubscriptionPlan] = mapped_column(Enum(SubscriptionPlan), default=SubscriptionPlan.FREE)
-    status: Mapped[SubscriptionStatus] = mapped_column(Enum(SubscriptionStatus), default=SubscriptionStatus.ACTIVE)
+    plan_code: Mapped[SubscriptionPlan] = mapped_column(SAEnum(SubscriptionPlan), default=SubscriptionPlan.FREE)
+    status: Mapped[SubscriptionStatus] = mapped_column(SAEnum(SubscriptionStatus), default=SubscriptionStatus.ACTIVE)
     current_period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     current_period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     ai_quota_remaining: Mapped[int] = mapped_column(Integer, default=0)
@@ -52,13 +53,13 @@ class Subscription(Base):
     )
 
 
-class BillingProvider(str, Enum):  # type: ignore[misc]
+class BillingProvider(str, enum.Enum):
     """Payment providers supported."""
 
     STRIPE = "stripe"
 
 
-class BillingTransactionType(str, Enum):  # type: ignore[misc]
+class BillingTransactionType(str, enum.Enum):
     """Different transaction categories."""
 
     SUBSCRIPTION = "subscription"
@@ -66,7 +67,7 @@ class BillingTransactionType(str, Enum):  # type: ignore[misc]
     DONATION = "donation"
 
 
-class BillingTransactionStatus(str, Enum):  # type: ignore[misc]
+class BillingTransactionStatus(str, enum.Enum):
     """State of the payment."""
 
     SUCCEEDED = "succeeded"
@@ -85,12 +86,12 @@ class BillingTransaction(Base):
         UUID(as_uuid=True), ForeignKey("subscriptions.id", ondelete="SET NULL")
     )
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
-    provider: Mapped[BillingProvider] = mapped_column(Enum(BillingProvider), nullable=False)
+    provider: Mapped[BillingProvider] = mapped_column(SAEnum(BillingProvider), nullable=False)
     provider_ref: Mapped[str] = mapped_column(String(128), nullable=False)
     amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
     currency: Mapped[str] = mapped_column(String(8), default="USD")
-    tx_type: Mapped[BillingTransactionType] = mapped_column(Enum(BillingTransactionType), nullable=False)
-    status: Mapped[BillingTransactionStatus] = mapped_column(Enum(BillingTransactionStatus), nullable=False)
+    tx_type: Mapped[BillingTransactionType] = mapped_column(SAEnum(BillingTransactionType), nullable=False)
+    status: Mapped[BillingTransactionStatus] = mapped_column(SAEnum(BillingTransactionStatus), nullable=False)
     processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    subscription: Mapped[Subscription | None] = relationship("Subscription", back_populates="transactions")
+    subscription: Mapped["Subscription | None"] = relationship("Subscription", back_populates="transactions")

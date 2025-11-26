@@ -94,6 +94,39 @@ services:
     profiles:
       - migrate
 
+  # ==========================================================================
+  # AI Pipeline Worker (GPU)
+  # ==========================================================================
+  ai-worker:
+    build:
+      context: ../ai-pipeline
+      dockerfile: Dockerfile
+    environment:
+      - BEATSIGHT_API_URL=http://api:8000/api
+      - WORKER_ID=${AI_WORKER_ID:-}
+      - HEARTBEAT_INTERVAL_SECONDS=30
+      - POLL_INTERVAL_SECONDS=5
+      - LOG_LEVEL=INFO
+      - LOG_JSON=true
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      # Mount temp directory for processing
+      - ai_worker_temp:/tmp/beatsight-worker
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - beatsight
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - gpu
+
 networks:
   beatsight:
     driver: bridge
@@ -101,3 +134,4 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+  ai_worker_temp:

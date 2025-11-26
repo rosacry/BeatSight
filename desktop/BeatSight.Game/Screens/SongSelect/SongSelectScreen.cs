@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using BeatSight.Game.Beatmaps;
+using BeatSight.Game.Progress;
 using BeatSight.Game.Screens.Editor;
 using BeatSight.Game.Screens.Playback;
 using BeatSight.Game.UI.Components;
@@ -45,6 +46,9 @@ namespace BeatSight.Game.Screens.SongSelect
         [Resolved]
         private BeatSightGame game { get; set; } = null!;
 
+        [Resolved]
+        private UserProgressManager progressManager { get; set; } = null!;
+
         private readonly bool editorMode;
         private readonly bool previewMode;
         private BeatmapCarousel carousel = null!;
@@ -52,8 +56,9 @@ namespace BeatSight.Game.Screens.SongSelect
         private BeatmapLibrary.BeatmapEntry? selectedBeatmap;
         private SearchTextBox searchBox = null!;
         private BeatSight.Game.UI.Components.Dropdown<BeatmapCarousel.SortMode> sortDropdown = null!;
-        private BeatSight.Game.UI.Components.Dropdown<string> genreDropdown = null!; // New
-        private BeatSightCheckbox confidenceFilter = null!; // New
+        private BeatSight.Game.UI.Components.Dropdown<string> genreDropdown = null!;
+        private BeatSightCheckbox confidenceFilter = null!;
+        private BeatSightCheckbox favoritesFilter = null!;
         private Box backgroundDim = null!;
         private Sprite backgroundSprite = null!;
         private BackButton backButton = null!;
@@ -178,6 +183,21 @@ namespace BeatSight.Game.Screens.SongSelect
             if (leftContent.Child is BeatmapDetailsPanel details)
             {
                 details.UpdateBeatmap(entry.Beatmap);
+
+                // Fetch and display progress data
+                var beatmapId = UserProgressManager.GenerateBeatmapId(
+                    entry.Path,
+                    entry.Beatmap.Metadata.Title,
+                    entry.Beatmap.Metadata.Artist);
+                var progress = progressManager.GetProgress(beatmapId);
+                details.UpdateProgress(progress);
+
+                // Wire up favorite toggle
+                details.ToggleFavoriteAction = () =>
+                {
+                    var newFavorite = progressManager.ToggleFavorite(beatmapId);
+                    details.SetFavoriteStatus(newFavorite);
+                };
             }
 
             // Play preview
@@ -356,7 +376,8 @@ namespace BeatSight.Game.Screens.SongSelect
         private partial class BeatmapDetailsPanel : CompositeDrawable
         {
             public Action? CreateNewAction;
-            public Action? ImportAudioAction; // New
+            public Action? ImportAudioAction;
+            public Action? ToggleFavoriteAction;
 
             private readonly bool editorMode;
             private FillFlowContainer contentFlow = null!;
@@ -377,6 +398,14 @@ namespace BeatSight.Game.Screens.SongSelect
             private SpriteText tags = null!;
             private SpriteText provider = null!;
             private BeatSightButton actionButton = null!;
+
+            // Progress tracking display
+            private Container progressStatsContainer = null!;
+            private SpriteText playCountText = null!;
+            private SpriteText practiceTimeText = null!;
+            private SpriteText lastPlayedText = null!;
+            private BeatSightButton favoriteButton = null!;
+            private bool isFavorite;
 
             // Empty view
             private Container emptyContainer = null!;
@@ -583,7 +612,70 @@ namespace BeatSight.Game.Screens.SongSelect
                                     Origin = Anchor.TopCentre,
                                     Alpha = 0.7f
                                 },
-                                new Container { Height = 40 }, // Spacer
+                                new Container { Height = 20 }, // Spacer
+                                // Progress stats section
+                                progressStatsContainer = new Container
+                                {
+                                    AutoSizeAxes = Axes.Both,
+                                    Anchor = Anchor.TopCentre,
+                                    Origin = Anchor.TopCentre,
+                                    Alpha = 0, // Hidden until we have progress data
+                                    Child = new FillFlowContainer
+                                    {
+                                        AutoSizeAxes = Axes.Both,
+                                        Direction = FillDirection.Vertical,
+                                        Anchor = Anchor.TopCentre,
+                                        Origin = Anchor.TopCentre,
+                                        Spacing = new Vector2(0, 4),
+                                        Children = new Drawable[]
+                                        {
+                                            new Box { RelativeSizeAxes = Axes.X, Width = 0.6f, Height = 1, Colour = UITheme.Divider, Anchor = Anchor.TopCentre, Origin = Anchor.TopCentre },
+                                            new SpriteText
+                                            {
+                                                Text = "Practice History",
+                                                Font = BeatSightFont.Section(14f),
+                                                Colour = UITheme.AccentSecondary,
+                                                Anchor = Anchor.TopCentre,
+                                                Origin = Anchor.TopCentre,
+                                                Margin = new MarginPadding { Top = 8 }
+                                            },
+                                            playCountText = new SpriteText
+                                            {
+                                                Font = BeatSightFont.Body(14f),
+                                                Colour = UITheme.TextSecondary,
+                                                Anchor = Anchor.TopCentre,
+                                                Origin = Anchor.TopCentre,
+                                            },
+                                            practiceTimeText = new SpriteText
+                                            {
+                                                Font = BeatSightFont.Body(14f),
+                                                Colour = UITheme.TextSecondary,
+                                                Anchor = Anchor.TopCentre,
+                                                Origin = Anchor.TopCentre,
+                                            },
+                                            lastPlayedText = new SpriteText
+                                            {
+                                                Font = BeatSightFont.Body(14f),
+                                                Colour = UITheme.TextMuted,
+                                                Anchor = Anchor.TopCentre,
+                                                Origin = Anchor.TopCentre,
+                                            },
+                                        }
+                                    }
+                                },
+                                new Container { Height = 20 }, // Spacer
+                                // Favorite button
+                                favoriteButton = new BeatSightButton
+                                {
+                                    Text = "☆ Add to Favorites",
+                                    Width = 180,
+                                    Height = 36,
+                                    BackgroundColour = UITheme.SurfaceAlt,
+                                    Anchor = Anchor.TopCentre,
+                                    Origin = Anchor.TopCentre,
+                                    Action = () => ToggleFavoriteAction?.Invoke()
+                                },
+                                new Container { Height = 20 }, // Spacer
                                 actionButton = new BeatSightButton
                                 {
                                     Text = editorMode ? "Edit Beatmap" : "Play Beatmap",
@@ -644,6 +736,72 @@ namespace BeatSight.Game.Screens.SongSelect
                             screen.StartPlayback();
                     }
                 };
+            }
+
+            /// <summary>
+            /// Updates the progress statistics display for the selected beatmap.
+            /// </summary>
+            public void UpdateProgress(SongProgress? progress)
+            {
+                if (progress == null || progress.PlayCount == 0)
+                {
+                    progressStatsContainer.Alpha = 0;
+                    isFavorite = false;
+                    updateFavoriteButton();
+                    return;
+                }
+
+                progressStatsContainer.Alpha = 1;
+                isFavorite = progress.IsFavorite;
+                updateFavoriteButton();
+
+                playCountText.Text = $"Sessions: {progress.PlayCount}";
+
+                var totalTime = TimeSpan.FromMilliseconds(progress.TotalPlayTimeMs);
+                if (totalTime.TotalHours >= 1)
+                    practiceTimeText.Text = $"Total Practice: {totalTime.Hours}h {totalTime.Minutes}m";
+                else if (totalTime.TotalMinutes >= 1)
+                    practiceTimeText.Text = $"Total Practice: {totalTime.Minutes}m {totalTime.Seconds}s";
+                else
+                    practiceTimeText.Text = $"Total Practice: {totalTime.Seconds}s";
+
+                if (progress.LastPlayedAt != default)
+                {
+                    var elapsed = DateTimeOffset.UtcNow - progress.LastPlayedAt;
+                    if (elapsed.TotalDays >= 1)
+                        lastPlayedText.Text = $"Last practiced: {(int)elapsed.TotalDays} days ago";
+                    else if (elapsed.TotalHours >= 1)
+                        lastPlayedText.Text = $"Last practiced: {(int)elapsed.TotalHours} hours ago";
+                    else
+                        lastPlayedText.Text = "Last practiced: recently";
+                }
+                else
+                {
+                    lastPlayedText.Text = "";
+                }
+            }
+
+            private void updateFavoriteButton()
+            {
+                if (isFavorite)
+                {
+                    favoriteButton.Text = "★ Favorite";
+                    favoriteButton.BackgroundColour = UITheme.AccentWarning;
+                }
+                else
+                {
+                    favoriteButton.Text = "☆ Add to Favorites";
+                    favoriteButton.BackgroundColour = UITheme.SurfaceAlt;
+                }
+            }
+
+            /// <summary>
+            /// Called when favorite status changes externally.
+            /// </summary>
+            public void SetFavoriteStatus(bool favorite)
+            {
+                isFavorite = favorite;
+                updateFavoriteButton();
             }
         }
 
@@ -778,6 +936,33 @@ namespace BeatSight.Game.Screens.SongSelect
 
             confidenceFilter.Current.BindValueChanged(e => carousel.SetConfidenceFilter(e.NewValue ? 0.8 : 0.0));
 
+            favoritesFilter = new BeatSightCheckbox
+            {
+                LabelText = "★ Favorites",
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+            };
+
+            favoritesFilter.Current.BindValueChanged(e =>
+            {
+                if (e.NewValue)
+                {
+                    carousel.SetCustomFilter(entry =>
+                    {
+                        var beatmapId = UserProgressManager.GenerateBeatmapId(
+                            entry.Path,
+                            entry.Beatmap.Metadata.Title,
+                            entry.Beatmap.Metadata.Artist);
+                        var progress = progressManager.GetProgress(beatmapId);
+                        return progress?.IsFavorite == true;
+                    });
+                }
+                else
+                {
+                    carousel.SetCustomFilter(null);
+                }
+            });
+
             var randomButton = new BeatSightButton
             {
                 Text = "🎲 Random",
@@ -826,6 +1011,7 @@ namespace BeatSight.Game.Screens.SongSelect
                                     sortDropdown,
                                     searchBox,
                                     genreDropdown,
+                                    favoritesFilter,
                                     confidenceFilter,
                                     randomButton
                                 }

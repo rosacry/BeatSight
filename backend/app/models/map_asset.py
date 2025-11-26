@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import enum
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, func
+from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -16,7 +17,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from .map_version import MapVersion
 
 
-class MapAssetType(str, Enum):  # type: ignore[misc]
+class MapAssetType(str, enum.Enum):
     """Different types of supplemental assets."""
 
     WAVEFORM = "waveform"
@@ -33,7 +34,7 @@ class MapAsset(Base):
     map_version_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("map_versions.id", ondelete="CASCADE")
     )
-    asset_type: Mapped[MapAssetType] = mapped_column(Enum(MapAssetType), nullable=False)
+    asset_type: Mapped[MapAssetType] = mapped_column(SAEnum(MapAssetType), nullable=False)
     storage_uri: Mapped[str] = mapped_column(String(512), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

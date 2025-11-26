@@ -1,0 +1,1064 @@
+"""
+Admin API routes for internal tooling and support.
+
+Ticket E2-007: Admin Dashboard for AI Job Inspection
+- Admin route: /admin/ai-jobs
+- List view with filters: status, user, date range
+- Detail view showing job parameters, progress history, error logs
+- Retry button
+- Requires admin role
+- Audit log for admin actions
+
+Updated with E4-001: RBAC System
+- All admin endpoints now require ADMIN_DASHBOARD permission
+- Job management requires JOB_ADMIN permission
+"""
+
+from __future__ import annotations
+
+import uuid
+from datetime import datetime
+from typing import Annotated, Any
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
+from sqlalchemy import select, func, and_, or_
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.session import get_session
+from app.models.ai_job import AIJob, AIJobState, AIJobPriority
+from app.models.user import User
+from app.models.subscription import Subscription, SubscriptionPlan, SubscriptionStatus
+from app.models.role import Role, UserRole
+from app.logging import get_logger
+from app.services.rbac import Permission, require_permission, RequireAdminDashboard
+
+router = APIRouter(prefix="/admin", tags=["admin"])
+logger = get_logger(__name__)
+
+
+# =============================================================================
+# Response Models
+# =============================================================================
+
+
+class AdminJobSummary(BaseModel):
+    """Summary of an AI job for admin list view."""
+
+    id: uuid.UUID
+    song_id: uuid.UUID
+    state: AIJobState
+    priority: AIJobPriority
+    requested_by_id: uuid.UUID | None
+    requested_by_email: str | None = None
+    created_at: datetime
+    started_at: datetime | None
+    finished_at: datetime | None
+    error_message: str | None
+    retry_count: int
+    max_retries: int
+    worker_id: uuid.UUID | None
+
+    model_config = {"from_attributes": True}
+
+
+class AdminJobDetail(AdminJobSummary):
+    """Detailed AI job info for admin view."""
+
+    progress_percent: int | None
+    progress_message: str | None
+    last_heartbeat: datetime | None
+    next_retry_at: datetime | None
+    last_error: str | None
+    duration_seconds: float | None = None
+
+
+class AdminJobListResponse(BaseModel):
+    """Response for admin job list endpoint."""
+
+    jobs: list[AdminJobSummary]
+    total: int
+    page: int
+    page_size: int
+    has_next: bool
+    has_prev: bool
+
+
+class QueueStats(BaseModel):
+    """Statistics about the job queue."""
+
+    total_jobs: int
+    queued: int
+    processing: int
+    complete: int
+    failed: int
+    cancelled: int
+    avg_processing_time_seconds: float | None
+    jobs_today: int
+    jobs_this_hour: int
+
+
+class AdminAction(BaseModel):
+    """Record of an admin action."""
+
+    action: str
+    job_id: uuid.UUID
+    admin_id: uuid.UUID | None
+    timestamp: datetime
+    details: dict[str, Any] | None = None
+
+
+class AdminActionResponse(BaseModel):
+    """Response for admin action."""
+
+    success: bool
+    message: str
+    job: AdminJobSummary | None = None
+
+
+# =============================================================================
+# Helper Functions
+# =============================================================================
+
+
+async def log_admin_action(
+    action: str,
+    job_id: uuid.UUID,
+    admin_id: uuid.UUID | None = None,
+    details: dict[str, Any] | None = None,
+) -> None:
+    """Log an admin action for audit trail."""
+    logger.info(
+        "admin_action",
+        action=action,
+        job_id=str(job_id),
+        admin_id=str(admin_id) if admin_id else None,
+        details=details,
+    )
+
+
+def job_to_summary(job: AIJob, email: str | None = None) -> AdminJobSummary:
+    """Convert AIJob model to AdminJobSummary."""
+    return AdminJobSummary(
+        id=job.id,
+        song_id=job.song_id,
+        state=job.state,
+        priority=job.priority,
+        requested_by_id=job.requested_by_id,
+        requested_by_email=email,
+        created_at=job.created_at,
+        started_at=job.started_at,
+        finished_at=job.finished_at,
+        error_message=job.error_message,
+        retry_count=job.retry_count,
+        max_retries=job.max_retries,
+        worker_id=job.worker_id,
+    )
+
+
+def job_to_detail(job: AIJob, email: str | None = None) -> AdminJobDetail:
+    """Convert AIJob model to AdminJobDetail."""
+    duration = None
+    if job.started_at and job.finished_at:
+        duration = (job.finished_at - job.started_at).total_seconds()
+
+    return AdminJobDetail(
+        id=job.id,
+        song_id=job.song_id,
+        state=job.state,
+        priority=job.priority,
+        requested_by_id=job.requested_by_id,
+        requested_by_email=email,
+        created_at=job.created_at,
+        started_at=job.started_at,
+        finished_at=job.finished_at,
+        error_message=job.error_message,
+        retry_count=job.retry_count,
+        max_retries=job.max_retries,
+        worker_id=job.worker_id,
+        progress_percent=job.progress_percent,
+        progress_message=job.progress_message,
+        last_heartbeat=job.last_heartbeat,
+        next_retry_at=job.next_retry_at,
+        last_error=job.last_error,
+        duration_seconds=duration,
+    )
+
+
+# =============================================================================
+# Admin Endpoints
+# =============================================================================
+
+
+@router.get(
+    "/ai-jobs",
+    response_model=AdminJobListResponse,
+    summary="List AI jobs with filters",
+    description="Admin endpoint to list and filter AI jobs.",
+)
+async def list_ai_jobs(
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(RequireAdminDashboard)],
+    state: Annotated[AIJobState | None, Query(description="Filter by job state")] = None,
+    user_id: Annotated[uuid.UUID | None, Query(description="Filter by requesting user")] = None,
+    priority: Annotated[AIJobPriority | None, Query(description="Filter by priority")] = None,
+    date_from: Annotated[datetime | None, Query(description="Filter jobs created after this date")] = None,
+    date_to: Annotated[datetime | None, Query(description="Filter jobs created before this date")] = None,
+    has_error: Annotated[bool | None, Query(description="Filter jobs with/without errors")] = None,
+    page: Annotated[int, Query(ge=1, description="Page number")] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100, description="Items per page")] = 20,
+) -> AdminJobListResponse:
+    """
+    List AI jobs with optional filters.
+
+    Supports filtering by:
+    - state: queued, processing, complete, failed, cancelled
+    - user_id: UUID of requesting user
+    - priority: standard, priority
+    - date_from/date_to: created_at range
+    - has_error: whether job has an error message
+    """
+    # Build query with filters
+    conditions = []
+
+    if state is not None:
+        conditions.append(AIJob.state == state)
+    if user_id is not None:
+        conditions.append(AIJob.requested_by_id == user_id)
+    if priority is not None:
+        conditions.append(AIJob.priority == priority)
+    if date_from is not None:
+        conditions.append(AIJob.created_at >= date_from)
+    if date_to is not None:
+        conditions.append(AIJob.created_at <= date_to)
+    if has_error is True:
+        conditions.append(AIJob.error_message.isnot(None))
+    elif has_error is False:
+        conditions.append(AIJob.error_message.is_(None))
+
+    # Count total
+    count_query = select(func.count(AIJob.id))
+    if conditions:
+        count_query = count_query.where(and_(*conditions))
+    total = (await db.execute(count_query)).scalar() or 0
+
+    # Fetch jobs with pagination
+    offset = (page - 1) * page_size
+    query = (
+        select(AIJob)
+        .order_by(AIJob.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
+    if conditions:
+        query = query.where(and_(*conditions))
+
+    result = await db.execute(query)
+    jobs = result.scalars().all()
+
+    # Convert to response models
+    job_summaries = [job_to_summary(job) for job in jobs]
+
+    return AdminJobListResponse(
+        jobs=job_summaries,
+        total=total,
+        page=page,
+        page_size=page_size,
+        has_next=offset + len(jobs) < total,
+        has_prev=page > 1,
+    )
+
+
+@router.get(
+    "/ai-jobs/stats",
+    response_model=QueueStats,
+    summary="Get queue statistics",
+    description="Get statistics about the AI job queue.",
+)
+async def get_queue_stats(
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(RequireAdminDashboard)],
+) -> QueueStats:
+    """
+    Get statistics about the AI job queue.
+
+    Returns counts by state, average processing time, and recent activity.
+    """
+    from datetime import timedelta
+
+    now = datetime.utcnow()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    hour_ago = now - timedelta(hours=1)
+
+    # Count by state
+    state_counts = {}
+    for state in AIJobState:
+        count_query = select(func.count(AIJob.id)).where(AIJob.state == state)
+        state_counts[state.value] = (await db.execute(count_query)).scalar() or 0
+
+    total = sum(state_counts.values())
+
+    # Average processing time for completed jobs
+    avg_query = select(
+        func.avg(
+            func.extract("epoch", AIJob.finished_at) - func.extract("epoch", AIJob.started_at)
+        )
+    ).where(
+        and_(
+            AIJob.state == AIJobState.COMPLETE,
+            AIJob.started_at.isnot(None),
+            AIJob.finished_at.isnot(None),
+        )
+    )
+    avg_time = (await db.execute(avg_query)).scalar()
+
+    # Jobs today
+    today_query = select(func.count(AIJob.id)).where(AIJob.created_at >= today_start)
+    jobs_today = (await db.execute(today_query)).scalar() or 0
+
+    # Jobs this hour
+    hour_query = select(func.count(AIJob.id)).where(AIJob.created_at >= hour_ago)
+    jobs_this_hour = (await db.execute(hour_query)).scalar() or 0
+
+    return QueueStats(
+        total_jobs=total,
+        queued=state_counts.get("queued", 0),
+        processing=state_counts.get("processing", 0),
+        complete=state_counts.get("complete", 0),
+        failed=state_counts.get("failed", 0),
+        cancelled=state_counts.get("cancelled", 0),
+        avg_processing_time_seconds=avg_time,
+        jobs_today=jobs_today,
+        jobs_this_hour=jobs_this_hour,
+    )
+
+
+@router.get(
+    "/ai-jobs/{job_id}",
+    response_model=AdminJobDetail,
+    summary="Get AI job details",
+    description="Get detailed information about a specific AI job.",
+)
+async def get_ai_job_detail(
+    job_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(RequireAdminDashboard)],
+) -> AdminJobDetail:
+    """
+    Get detailed information about a specific AI job.
+
+    Includes all job fields, progress information, and calculated duration.
+    """
+    query = select(AIJob).where(AIJob.id == job_id)
+    result = await db.execute(query)
+    job = result.scalar_one_or_none()
+
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job {job_id} not found",
+        )
+
+    # Get requester email if available
+    email = None
+    if job.requested_by_id:
+        user_query = select(User.email).where(User.id == job.requested_by_id)
+        email = (await db.execute(user_query)).scalar()
+
+    return job_to_detail(job, email)
+
+
+@router.post(
+    "/ai-jobs/{job_id}/retry",
+    response_model=AdminActionResponse,
+    summary="Retry a failed job",
+    description="Reset a failed or cancelled job to queued state.",
+)
+async def admin_retry_job(
+    job_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(require_permission(Permission.JOB_ADMIN))],
+) -> AdminActionResponse:
+    """
+    Retry a failed or cancelled job.
+
+    Resets the job to queued state and clears error information.
+    Increments retry count and logs the admin action.
+    """
+    query = select(AIJob).where(AIJob.id == job_id)
+    result = await db.execute(query)
+    job = result.scalar_one_or_none()
+
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job {job_id} not found",
+        )
+
+    if job.state not in (AIJobState.FAILED, AIJobState.CANCELLED):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot retry job in state {job.state}",
+        )
+
+    # Reset job state
+    job.state = AIJobState.QUEUED
+    job.error_message = None
+    job.started_at = None
+    job.finished_at = None
+    job.worker_id = None
+    job.last_heartbeat = None
+    job.progress_percent = None
+    job.progress_message = None
+    job.retry_count += 1
+
+    await db.commit()
+    await db.refresh(job)
+
+    # Log admin action
+    await log_admin_action("retry_job", job_id, admin_id=admin.id, details={"new_state": "queued"})
+
+    return AdminActionResponse(
+        success=True,
+        message=f"Job {job_id} has been requeued (retry #{job.retry_count})",
+        job=job_to_summary(job),
+    )
+
+
+@router.post(
+    "/ai-jobs/{job_id}/cancel",
+    response_model=AdminActionResponse,
+    summary="Cancel a job",
+    description="Cancel a queued or processing job.",
+)
+async def admin_cancel_job(
+    job_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(require_permission(Permission.JOB_ADMIN))],
+) -> AdminActionResponse:
+    """
+    Cancel a queued or processing job.
+
+    Sets the job state to cancelled and logs the admin action.
+    """
+    query = select(AIJob).where(AIJob.id == job_id)
+    result = await db.execute(query)
+    job = result.scalar_one_or_none()
+
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job {job_id} not found",
+        )
+
+    if job.state not in (AIJobState.QUEUED, AIJobState.PROCESSING):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot cancel job in state {job.state}",
+        )
+
+    old_state = job.state
+    job.state = AIJobState.CANCELLED
+    job.finished_at = datetime.utcnow()
+
+    await db.commit()
+    await db.refresh(job)
+
+    # Log admin action
+    await log_admin_action(
+        "cancel_job",
+        job_id,
+        admin_id=admin.id,
+        details={"old_state": old_state.value, "new_state": "cancelled"},
+    )
+
+    return AdminActionResponse(
+        success=True,
+        message=f"Job {job_id} has been cancelled",
+        job=job_to_summary(job),
+    )
+
+
+@router.post(
+    "/ai-jobs/{job_id}/set-priority",
+    response_model=AdminActionResponse,
+    summary="Change job priority",
+    description="Change the priority of a queued job.",
+)
+async def admin_set_priority(
+    job_id: uuid.UUID,
+    priority: AIJobPriority,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(require_permission(Permission.JOB_ADMIN))],
+) -> AdminActionResponse:
+    """
+    Change the priority of a job.
+
+    Can only change priority of queued jobs.
+    """
+    query = select(AIJob).where(AIJob.id == job_id)
+    result = await db.execute(query)
+    job = result.scalar_one_or_none()
+
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job {job_id} not found",
+        )
+
+    if job.state != AIJobState.QUEUED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot change priority of job in state {job.state}",
+        )
+
+    old_priority = job.priority
+    job.priority = priority
+
+    await db.commit()
+    await db.refresh(job)
+
+    # Log admin action
+    await log_admin_action(
+        "set_priority",
+        job_id,
+        admin_id=admin.id,
+        details={"old_priority": old_priority.value, "new_priority": priority.value},
+    )
+
+    return AdminActionResponse(
+        success=True,
+        message=f"Job {job_id} priority changed to {priority.value}",
+        job=job_to_summary(job),
+    )
+
+
+@router.get(
+    "/ai-jobs/{job_id}/logs",
+    summary="Get job logs",
+    description="Get recent log entries for a specific job.",
+)
+async def get_job_logs(
+    job_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(RequireAdminDashboard)],
+) -> dict[str, Any]:
+    """
+    Get log/progress history for a job.
+
+    Returns available log information from the job record.
+    Full log retrieval would require integration with a logging system.
+    """
+    query = select(AIJob).where(AIJob.id == job_id)
+    result = await db.execute(query)
+    job = result.scalar_one_or_none()
+
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job {job_id} not found",
+        )
+
+    # Return available job history from the record
+    # In production, this would query a logging service
+    return {
+        "job_id": str(job.id),
+        "current_state": job.state.value,
+        "error_message": job.error_message,
+        "last_error": job.last_error,
+        "progress_percent": job.progress_percent,
+        "progress_message": job.progress_message,
+        "retry_count": job.retry_count,
+        "timeline": {
+            "created_at": job.created_at.isoformat() if job.created_at else None,
+            "started_at": job.started_at.isoformat() if job.started_at else None,
+            "finished_at": job.finished_at.isoformat() if job.finished_at else None,
+            "last_heartbeat": job.last_heartbeat.isoformat() if job.last_heartbeat else None,
+            "next_retry_at": job.next_retry_at.isoformat() if job.next_retry_at else None,
+        },
+    }
+
+
+# =============================================================================
+# User Management Models
+# =============================================================================
+
+
+class AdminUserSummary(BaseModel):
+    """User summary for admin list view."""
+
+    id: uuid.UUID
+    email: str
+    display_name: str
+    role: str
+    email_verified: bool
+    karma_score: int
+    created_at: datetime
+    subscription_plan: str | None = None
+    subscription_status: str | None = None
+    job_count: int = 0
+    last_active: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class AdminUserListResponse(BaseModel):
+    """Response for admin user list endpoint."""
+
+    users: list[AdminUserSummary]
+    total: int
+    page: int
+    page_size: int
+    has_next: bool
+    has_prev: bool
+
+
+class UserStats(BaseModel):
+    """User statistics."""
+
+    total_users: int
+    verified_users: int
+    pro_users: int
+    users_today: int
+    users_this_week: int
+    users_this_month: int
+
+
+class SystemOverview(BaseModel):
+    """System overview statistics."""
+
+    # Users
+    total_users: int
+    active_users_24h: int
+    pro_subscribers: int
+    
+    # Jobs
+    total_jobs: int
+    jobs_today: int
+    processing_jobs: int
+    failed_jobs_24h: int
+    
+    # Revenue (if applicable)
+    monthly_recurring_revenue: float | None = None
+    
+    # System health
+    api_requests_today: int | None = None
+    avg_response_time_ms: float | None = None
+
+
+class UpdateUserRoleRequest(BaseModel):
+    """Request to update user role."""
+
+    role: str
+
+
+class AdminUserActionResponse(BaseModel):
+    """Response for user management actions."""
+
+    success: bool
+    message: str
+
+
+# =============================================================================
+# User Management Endpoints
+# =============================================================================
+
+
+async def get_user_role_codes(db: AsyncSession, user_id: uuid.UUID) -> list[str]:
+    """Get role codes for a user."""
+    query = (
+        select(Role.code)
+        .join(UserRole, UserRole.role_id == Role.id)
+        .where(UserRole.user_id == user_id)
+    )
+    result = await db.execute(query)
+    return [r for r in result.scalars().all()]
+
+
+@router.get(
+    "/users",
+    response_model=AdminUserListResponse,
+    summary="List users with filters",
+    description="Admin endpoint to list and filter users.",
+)
+async def list_users(
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(RequireAdminDashboard)],
+    search: Annotated[str | None, Query(description="Search by email or display name")] = None,
+    role: Annotated[str | None, Query(description="Filter by role code")] = None,
+    subscription: Annotated[str | None, Query(description="Filter by subscription plan")] = None,
+    verified: Annotated[bool | None, Query(description="Filter by email verification")] = None,
+    page: Annotated[int, Query(ge=1, description="Page number")] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100, description="Items per page")] = 20,
+) -> AdminUserListResponse:
+    """List users with optional filters."""
+    
+    conditions = []
+    
+    if search:
+        search_term = f"%{search}%"
+        conditions.append(
+            or_(
+                User.email.ilike(search_term),
+                User.display_name.ilike(search_term),
+            )
+        )
+    
+    if role:
+        # Filter users by role code
+        role_subquery = (
+            select(UserRole.user_id)
+            .join(Role, Role.id == UserRole.role_id)
+            .where(Role.code == role)
+        )
+        conditions.append(User.id.in_(role_subquery))
+    
+    if verified is not None:
+        conditions.append(User.email_verified == verified)
+    
+    # Base query
+    base_query = select(User)
+    if conditions:
+        base_query = base_query.where(and_(*conditions))
+    
+    # Count total
+    count_query = select(func.count(User.id))
+    if conditions:
+        count_query = count_query.where(and_(*conditions))
+    total = (await db.execute(count_query)).scalar() or 0
+    
+    # Get users with pagination
+    query = (
+        base_query
+        .order_by(User.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    result = await db.execute(query)
+    users = result.scalars().all()
+    
+    # Get subscription info and job counts for users
+    user_summaries = []
+    for user in users:
+        # Get subscription
+        sub_query = (
+            select(Subscription)
+            .where(Subscription.user_id == user.id)
+            .order_by(Subscription.created_at.desc())
+            .limit(1)
+        )
+        sub_result = await db.execute(sub_query)
+        user_subscription = sub_result.scalar_one_or_none()
+        
+        # Skip if subscription filter doesn't match
+        if subscription:
+            plan = user_subscription.plan.value if user_subscription else "free"
+            if subscription == "pro" and plan != "pro":
+                continue
+            if subscription == "free" and plan == "pro":
+                continue
+        
+        # Get job count
+        job_count_query = select(func.count(AIJob.id)).where(AIJob.requested_by_id == user.id)
+        job_count = (await db.execute(job_count_query)).scalar() or 0
+        
+        # Get last job as proxy for activity
+        last_job_query = (
+            select(AIJob.created_at)
+            .where(AIJob.requested_by_id == user.id)
+            .order_by(AIJob.created_at.desc())
+            .limit(1)
+        )
+        last_job = (await db.execute(last_job_query)).scalar()
+        
+        # Get user roles
+        role_codes = await get_user_role_codes(db, user.id)
+        primary_role = role_codes[0] if role_codes else "user"
+        
+        user_summaries.append(
+            AdminUserSummary(
+                id=user.id,
+                email=user.email,
+                display_name=user.display_name,
+                role=primary_role,
+                email_verified=user.email_verified,
+                karma_score=user.karma_score,
+                created_at=user.created_at,
+                subscription_plan=user_subscription.plan.value if user_subscription else "free",
+                subscription_status=user_subscription.status.value if user_subscription else None,
+                job_count=job_count,
+                last_active=last_job,
+            )
+        )
+    
+    return AdminUserListResponse(
+        users=user_summaries,
+        total=total,
+        page=page,
+        page_size=page_size,
+        has_next=page * page_size < total,
+        has_prev=page > 1,
+    )
+
+
+@router.get(
+    "/users/stats",
+    response_model=UserStats,
+    summary="Get user statistics",
+    description="Get aggregate statistics about users.",
+)
+async def get_user_stats(
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(RequireAdminDashboard)],
+) -> UserStats:
+    """Get aggregate user statistics."""
+    from datetime import timedelta
+    
+    now = datetime.utcnow()
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_ago = now - timedelta(days=7)
+    month_ago = now - timedelta(days=30)
+    
+    # Total users
+    total = (await db.execute(select(func.count(User.id)))).scalar() or 0
+    
+    # Verified users
+    verified = (await db.execute(
+        select(func.count(User.id)).where(User.email_verified == True)
+    )).scalar() or 0
+    
+    # Pro users (active subscription)
+    pro_query = (
+        select(func.count(func.distinct(Subscription.user_id)))
+        .where(
+            and_(
+                Subscription.plan == SubscriptionPlan.PRO,
+                Subscription.status == SubscriptionStatus.ACTIVE,
+            )
+        )
+    )
+    pro = (await db.execute(pro_query)).scalar() or 0
+    
+    # Users created today
+    users_today = (await db.execute(
+        select(func.count(User.id)).where(User.created_at >= today)
+    )).scalar() or 0
+    
+    # Users this week
+    users_week = (await db.execute(
+        select(func.count(User.id)).where(User.created_at >= week_ago)
+    )).scalar() or 0
+    
+    # Users this month
+    users_month = (await db.execute(
+        select(func.count(User.id)).where(User.created_at >= month_ago)
+    )).scalar() or 0
+    
+    return UserStats(
+        total_users=total,
+        verified_users=verified,
+        pro_users=pro,
+        users_today=users_today,
+        users_this_week=users_week,
+        users_this_month=users_month,
+    )
+
+
+@router.get(
+    "/users/{user_id}",
+    response_model=AdminUserSummary,
+    summary="Get user details",
+    description="Get detailed information about a specific user.",
+)
+async def get_user_detail(
+    user_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(RequireAdminDashboard)],
+) -> AdminUserSummary:
+    """Get detailed user information."""
+    query = select(User).where(User.id == user_id)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+    
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User {user_id} not found",
+        )
+    
+    # Get subscription
+    sub_query = (
+        select(Subscription)
+        .where(Subscription.user_id == user.id)
+        .order_by(Subscription.created_at.desc())
+        .limit(1)
+    )
+    sub_result = await db.execute(sub_query)
+    subscription = sub_result.scalar_one_or_none()
+    
+    # Get job count
+    job_count = (await db.execute(
+        select(func.count(AIJob.id)).where(AIJob.requested_by_id == user.id)
+    )).scalar() or 0
+    
+    # Get user roles
+    role_codes = await get_user_role_codes(db, user.id)
+    primary_role = role_codes[0] if role_codes else "user"
+    
+    return AdminUserSummary(
+        id=user.id,
+        email=user.email,
+        display_name=user.display_name,
+        role=primary_role,
+        email_verified=user.email_verified,
+        karma_score=user.karma_score,
+        created_at=user.created_at,
+        subscription_plan=subscription.plan.value if subscription else "free",
+        subscription_status=subscription.status.value if subscription else None,
+        job_count=job_count,
+    )
+
+
+@router.post(
+    "/users/{user_id}/role",
+    response_model=AdminUserActionResponse,
+    summary="Update user role",
+    description="Add or remove a role from a user.",
+)
+async def update_user_role(
+    user_id: uuid.UUID,
+    request: UpdateUserRoleRequest,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(require_permission(Permission.ROLE_ASSIGN))],
+) -> AdminUserActionResponse:
+    """Update user role. Requires USER_ADMIN permission."""
+    query = select(User).where(User.id == user_id)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+    
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User {user_id} not found",
+        )
+    
+    # Prevent demoting yourself
+    if user.id == admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot change your own role",
+        )
+    
+    # Find the role by code
+    role_query = select(Role).where(Role.code == request.role)
+    role_result = await db.execute(role_query)
+    role = role_result.scalar_one_or_none()
+    
+    if role is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid role: {request.role}",
+        )
+    
+    # Get current roles
+    old_roles = await get_user_role_codes(db, user.id)
+    
+    # Check if user already has this role
+    existing_query = select(UserRole).where(
+        and_(UserRole.user_id == user.id, UserRole.role_id == role.id)
+    )
+    existing = (await db.execute(existing_query)).scalar_one_or_none()
+    
+    if existing:
+        return AdminUserActionResponse(
+            success=True,
+            message=f"User already has role {request.role}",
+        )
+    
+    # Add the role
+    new_user_role = UserRole(user_id=user.id, role_id=role.id)
+    db.add(new_user_role)
+    await db.commit()
+    
+    logger.info(
+        "admin_action",
+        action="add_role",
+        user_id=str(user_id),
+        admin_id=str(admin.id),
+        details={"old_roles": old_roles, "added_role": request.role},
+    )
+    
+    return AdminUserActionResponse(
+        success=True,
+        message=f"Role {request.role} added to user",
+    )
+
+
+@router.get(
+    "/overview",
+    response_model=SystemOverview,
+    summary="Get system overview",
+    description="Get high-level system statistics and health metrics.",
+)
+async def get_system_overview(
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(RequireAdminDashboard)],
+) -> SystemOverview:
+    """Get system overview with key metrics."""
+    from datetime import timedelta
+    
+    now = datetime.utcnow()
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    day_ago = now - timedelta(hours=24)
+    
+    # User metrics
+    total_users = (await db.execute(select(func.count(User.id)))).scalar() or 0
+    
+    # Active users in last 24h (users who created jobs)
+    active_users_query = (
+        select(func.count(func.distinct(AIJob.requested_by_id)))
+        .where(AIJob.created_at >= day_ago)
+    )
+    active_users = (await db.execute(active_users_query)).scalar() or 0
+    
+    # Pro subscribers
+    pro_query = (
+        select(func.count(func.distinct(Subscription.user_id)))
+        .where(
+            and_(
+                Subscription.plan == SubscriptionPlan.PRO,
+                Subscription.status == SubscriptionStatus.ACTIVE,
+            )
+        )
+    )
+    pro_subs = (await db.execute(pro_query)).scalar() or 0
+    
+    # Job metrics
+    total_jobs = (await db.execute(select(func.count(AIJob.id)))).scalar() or 0
+    
+    jobs_today = (await db.execute(
+        select(func.count(AIJob.id)).where(AIJob.created_at >= today)
+    )).scalar() or 0
+    
+    processing = (await db.execute(
+        select(func.count(AIJob.id)).where(AIJob.state == AIJobState.PROCESSING)
+    )).scalar() or 0
+    
+    failed_24h = (await db.execute(
+        select(func.count(AIJob.id)).where(
+            and_(
+                AIJob.state == AIJobState.FAILED,
+                AIJob.finished_at >= day_ago,
+            )
+        )
+    )).scalar() or 0
+    
+    return SystemOverview(
+        total_users=total_users,
+        active_users_24h=active_users,
+        pro_subscribers=pro_subs,
+        total_jobs=total_jobs,
+        jobs_today=jobs_today,
+        processing_jobs=processing,
+        failed_jobs_24h=failed_24h,
+    )

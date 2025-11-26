@@ -14,9 +14,9 @@ def configure_logging() -> None:
     """Configure structlog and standard logging."""
 
     settings = get_settings()
+    log_level = getattr(logging, settings.log_level.upper(), logging.INFO)
     timestamper = structlog.processors.TimeStamper(fmt="iso", utc=True)
     shared_processors: list[structlog.types.Processor] = [
-        structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
         timestamper,
         structlog.processors.StackInfoRenderer(),
@@ -29,7 +29,7 @@ def configure_logging() -> None:
                 *shared_processors,
                 structlog.processors.JSONRenderer(),
             ],
-            wrapper_class=structlog.make_filtering_bound_logger(settings.log_level.upper()),
+            wrapper_class=structlog.make_filtering_bound_logger(log_level),
             cache_logger_on_first_use=True,
         )
     else:
@@ -38,11 +38,11 @@ def configure_logging() -> None:
                 *shared_processors,
                 structlog.dev.ConsoleRenderer(colors=True),
             ],
-            wrapper_class=structlog.make_filtering_bound_logger(settings.log_level.upper()),
+            wrapper_class=structlog.make_filtering_bound_logger(log_level),
             cache_logger_on_first_use=True,
         )
 
-    logging.basicConfig(level=settings.log_level.upper(), format="%(message)s")
+    logging.basicConfig(level=log_level, format="%(message)s")
 
 
 def get_logger(name: str) -> structlog.stdlib.BoundLogger:

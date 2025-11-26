@@ -139,7 +139,7 @@ class DrumSampleDataset(Dataset):
             cache_path = self._cache_path(audio_path)
             if cache_path.exists():
                 try:
-                    features = torch.load(cache_path, map_location="cpu")
+                    features = torch.load(cache_path, map_location="cpu", weights_only=True)
                     if isinstance(features, torch.Tensor):
                         features = features.to(dtype=torch.float32)
                 except Exception:

@@ -85,7 +85,7 @@ class EmailBackend(NotificationBackend):
             return f'Beatmap generation failed for "{payload.song_title}"'
         elif payload.event == NotificationEvent.JOB_TIMEOUT:
             return f'Beatmap generation timed out for "{payload.song_title}"'
-        return f"BeatSight notification"
+        return "BeatSight notification"
     
     def _render_body_html(self, payload: NotificationPayload) -> str:
         """Render HTML email body."""

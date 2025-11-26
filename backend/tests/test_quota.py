@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.models.subscription import Subscription, SubscriptionPlan, SubscriptionStatus
+from app.models.subscription import Subscription, SubscriptionPlan
 from app.services.quota import (
     JobPriority,
     QuotaExceededError,

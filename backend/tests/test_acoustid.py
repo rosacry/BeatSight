@@ -4,8 +4,7 @@ Tests for the AcoustID audio fingerprinting service.
 Ticket E1-007: AcoustID Integration
 """
 
-import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -15,7 +14,6 @@ from app.services.acoustid import (
     AudioFingerprint,
     AcoustIDResult,
     MetadataResult,
-    AcoustIDError,
     FingerprintError,
     LookupError,
     _RateLimiter,

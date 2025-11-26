@@ -7,7 +7,7 @@ import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -244,7 +244,7 @@ class TestAudioStorage:
         song_id = uuid.uuid4()
         data = b"audio content"
         
-        result = await audio_storage.upload_audio(song_id, data)
+        await audio_storage.upload_audio(song_id, data)
         
         mock_backend.upload.assert_called_once()
         call_args = mock_backend.upload.call_args
@@ -323,7 +323,7 @@ class TestBeatmapStorage:
         map_id = uuid.uuid4()
         data = b'{"notes": []}'
         
-        result = await beatmap_storage.upload_beatmap(map_id, 1, data)
+        await beatmap_storage.upload_beatmap(map_id, 1, data)
         
         mock_backend.upload.assert_called_once()
         call_args = mock_backend.upload.call_args

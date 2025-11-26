@@ -15,12 +15,10 @@ from fastapi import APIRouter, Depends, File, HTTPException, Path, Query, Upload
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 
-from app.api.deps import get_current_user_optional, get_db_session
+from app.api.deps import get_current_user_optional
 from app.services.storage import (
     AudioStorage,
     BeatmapStorage,
-    PresignedUrl,
-    StorageObject,
     get_storage,
 )
 

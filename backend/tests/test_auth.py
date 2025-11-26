@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import warnings
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -336,7 +335,6 @@ class TestRegisterWithWelcomeEmail:
         # Track background tasks
         background_tasks = BackgroundTasks()
         tasks_added = []
-        original_add_task = background_tasks.add_task
         def track_add_task(func, *args, **kwargs):
             tasks_added.append((func, args, kwargs))
         background_tasks.add_task = track_add_task

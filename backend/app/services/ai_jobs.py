@@ -9,8 +9,8 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.redis import ProgressUpdate, get_redis, publish_progress
-from app.models.ai_job import AIJob, AIJobPriority, AIJobState
-from app.schemas.ai_jobs import AIJobCreate, AIJobProgressUpdate
+from app.models.ai_job import AIJob, AIJobState
+from app.schemas.ai_jobs import AIJobCreate
 
 
 class AIJobService:

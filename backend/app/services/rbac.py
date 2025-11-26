@@ -17,13 +17,11 @@ from __future__ import annotations
 
 import uuid
 from enum import Enum
-from functools import wraps
-from typing import TYPE_CHECKING, Callable, Optional, Sequence
+from typing import TYPE_CHECKING, Sequence
 
 from fastapi import Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user, get_db_session
 from app.logging import get_logger

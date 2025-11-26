@@ -238,7 +238,7 @@ run_training() {
               --wandb-run-name prod_combined_warmup_auto_$(date +%Y%m%d) \
               --grad-accum-steps 1 \
               --class-weights effective \
-              --class-weight-cap 10.0 \
+              --max-class-weight 10.0 \
               --label-smoothing 0.05 \
               $resume_flag
             ;;
@@ -273,7 +273,7 @@ run_training() {
               --wandb-tags prod_combined_24class quick_refresh auto_train \
               --wandb-run-name prod_combined_quick_auto_$(date +%Y%m%d) \
               --class-weights effective \
-              --class-weight-cap 10.0 \
+              --max-class-weight 10.0 \
               --label-smoothing 0.05 \
               $resume_flag
             ;;
@@ -312,7 +312,7 @@ run_training() {
               --wandb-tags prod_combined_24class full_corpus longrun auto_train \
               --wandb-run-name prod_combined_longrun_auto_$(date +%Y%m%d) \
               --class-weights effective \
-              --class-weight-cap 10.0 \
+              --max-class-weight 10.0 \
               --label-smoothing 0.05 \
               $resume_flag
             ;;

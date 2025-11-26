@@ -30,6 +30,12 @@ interface TimelineCanvasProps {
     snap: SnapSettings
     /** Whether diff mode is enabled */
     showDiff?: boolean
+    /** Whether beat grid is visible - matches desktop EditorTimeline */
+    beatGridVisible?: boolean
+    /** Whether onset detection layer is visible - matches desktop EditorTimeline */
+    onsetLayerVisible?: boolean
+    /** Waveform scale (0.5-2.5) - matches desktop EditorTimeline */
+    waveformScale?: number
     /** Callback when viewport changes */
     onViewportChange: (viewport: TimelineViewport) => void
     /** Callback when selection changes */
@@ -50,6 +56,13 @@ const HEADER_HEIGHT = 24
 const RULER_HEIGHT = 28
 const PLAYHEAD_COLOR = '#f97316' // orange-500
 
+/**
+ * Zoom limits matching desktop EditorTimeline.cs
+ * Desktop: MinZoom = 0.2, MaxZoom = 5.0 (in their coordinate system)
+ */
+const MIN_ZOOM = 0.02  // pixels per ms
+const MAX_ZOOM = 0.5   // pixels per ms
+
 export function TimelineCanvas({
     hitObjects,
     comparisonObjects,
@@ -61,6 +74,9 @@ export function TimelineCanvas({
     selection,
     snap,
     showDiff = false,
+    beatGridVisible = true,
+    onsetLayerVisible = false,
+    waveformScale = 1.0,
     onViewportChange,
     onSelectionChange,
     onNoteClick,
@@ -197,7 +213,7 @@ export function TimelineCanvas({
         ctx.fillStyle = '#374151' // gray-700
         ctx.fillRect(60, HEADER_HEIGHT, width - 60, RULER_HEIGHT)
 
-        // Draw beat grid lines
+        // Draw beat grid lines (conditional on beatGridVisible - matches desktop EditorTimeline)
         const beatDuration = 60000 / bpm
         const startBeat = Math.floor(viewport.startTime / beatDuration)
         const endBeat = Math.ceil(viewport.endTime / beatDuration)
@@ -211,20 +227,31 @@ export function TimelineCanvas({
 
             if (x < 60 || x > width) continue
 
-            // Draw grid line
-            ctx.strokeStyle = beat % 4 === 0 ? '#6b7280' : '#4b5563'
-            ctx.lineWidth = beat % 4 === 0 ? 1 : 0.5
-            ctx.beginPath()
-            ctx.moveTo(x, HEADER_HEIGHT + RULER_HEIGHT)
-            ctx.lineTo(x, canvas.height)
-            ctx.stroke()
+            // Draw grid line (only if beatGridVisible)
+            if (beatGridVisible) {
+                ctx.strokeStyle = beat % 4 === 0 ? '#6b7280' : '#4b5563'
+                ctx.lineWidth = beat % 4 === 0 ? 1 : 0.5
+                ctx.beginPath()
+                ctx.moveTo(x, HEADER_HEIGHT + RULER_HEIGHT)
+                ctx.lineTo(x, canvas.height)
+                ctx.stroke()
+            }
 
-            // Draw beat number on ruler (every 4 beats)
+            // Draw beat number on ruler (every 4 beats) - always shown
             if (beat % 4 === 0) {
                 ctx.fillStyle = '#d1d5db' // gray-300
                 ctx.fillText(`${beat / 4 + 1}`, x, HEADER_HEIGHT + RULER_HEIGHT - 8)
             }
         }
+
+        // TODO: Draw waveform layer (scaled by waveformScale)
+        // This will require fetching/computing waveform data from the audio
+        // Desktop uses WaveformGraph with configurable WaveformScale (0.5 to 2.5)
+        void waveformScale // Reserved for future waveform rendering
+
+        // TODO: Draw onset detection layer (when onsetLayerVisible)
+        // Desktop has OnsetDetectionLayer that shows detected transients
+        void onsetLayerVisible // Reserved for future onset detection visualization
 
         // Draw lane backgrounds
         lanes.forEach((_, i) => {
@@ -369,6 +396,9 @@ export function TimelineCanvas({
         viewport,
         selection,
         showDiff,
+        beatGridVisible,
+        waveformScale,
+        onsetLayerVisible,
         noteDiffs,
         timeToX,
         laneToY,
@@ -530,9 +560,9 @@ export function TimelineCanvas({
             e.preventDefault()
 
             if (e.ctrlKey || e.metaKey) {
-                // Zoom
+                // Zoom - clamp to MIN_ZOOM/MAX_ZOOM (matches desktop EditorTimeline limits)
                 const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1
-                const newZoom = Math.max(0.01, Math.min(1, viewport.zoom * zoomFactor))
+                const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, viewport.zoom * zoomFactor))
 
                 // Zoom towards mouse position
                 const canvas = canvasRef.current

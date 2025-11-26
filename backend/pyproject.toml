@@ -10,7 +10,7 @@ packages = [{ include = "app" }]
 python = "^3.10"
 fastapi = "^0.115.0"
 uvicorn = { version = "^0.30.0", extras = ["standard"] }
-pydantic = "^2.7.0"
+pydantic = {version = "^2.7.0", extras = ["email"]}
 pydantic-settings = "^2.5.2"
 sqlalchemy = { version = "^2.0.25", extras = ["asyncio"] }
 asyncpg = "^0.29.0"
@@ -50,7 +50,7 @@ readme = "README.md"
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",
-    "pydantic>=2.7.0",
+    "pydantic[email]>=2.7.0",
     "pydantic-settings>=2.5.2",
     "sqlalchemy[asyncio]>=2.0.25",
     "asyncpg>=0.29.0",

@@ -1,21 +1,24 @@
 #!/bin/bash
-# Backend Tests - mirrors GitHub Actions backend-test job
-# Note: Requires PostgreSQL and Redis running locally or skips DB tests
+# Backend Tests - mirrors GitHub Actions ci.yml backend-test job EXACTLY
+# Note: Requires PostgreSQL and Redis running locally
+#   PostgreSQL: postgresql+asyncpg://beatsight:beatsight@localhost:5432/beatsight_test
+#   Redis: redis://localhost:6379/0
 set -e
 
 echo "=== Backend Tests ==="
 cd "$(dirname "$0")/../backend"
 
 echo "Installing dependencies..."
-pip install --quiet -e ".[dev,test]" 2>/dev/null || pip install --quiet -e ".[dev]"
+pip install -e ".[dev]" --quiet
 
 echo ""
-echo "--- Running pytest ---"
-# Set test environment variables
+echo "--- Running pytest with coverage ---"
+# Set test environment variables (same as GitHub Actions)
+export DATABASE_DSN="postgresql+asyncpg://beatsight:beatsight@localhost:5432/beatsight_test"
+export REDIS_URL="redis://localhost:6379/0"
 export ENVIRONMENT=testing
-export TESTING=true
 
-pytest tests/ -v --tb=short
+pytest tests/ -v --cov=app --cov-report=xml --cov-report=term-missing
 
 echo ""
 echo "✅ Backend tests passed!"

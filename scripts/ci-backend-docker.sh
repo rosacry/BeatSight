@@ -1,11 +1,11 @@
 #!/bin/bash
-# Backend Docker Build - mirrors GitHub Actions docker job
+# Backend Docker Build - mirrors GitHub Actions backend.yml docker job EXACTLY
 set -e
 
 echo "=== Backend Docker Build ==="
 cd "$(dirname "$0")/../backend"
 
-echo "Building Docker image..."
+echo "Building Docker image (docker build -t beatsight-backend:test .)..."
 docker build -t beatsight-backend:test .
 
 echo ""

@@ -121,19 +121,73 @@ get_checkpoint_path() {
 }
 
 check_training_complete() {
-    # Training is complete if final model exists and is newer than any checkpoint
+    # Training is ONLY complete if our completion marker exists
+    # This marker is created by auto_train.sh when training exits cleanly with code 0
+    # AND the final model exists
+    local completion_marker="${RUN_DIR}/.auto_train_complete"
     local final_model="${RUN_DIR}/final_drum_classifier.pth"
-    local best_model="${RUN_DIR}/best_drum_classifier.pth"
     
-    if [ -f "$final_model" ]; then
-        # Check if there's a checkpoint that's newer (meaning training resumed after "completion")
-        local checkpoint=$(get_checkpoint_path)
-        if [ -n "$checkpoint" ] && [ "$checkpoint" -nt "$final_model" ]; then
-            return 1  # Checkpoint is newer, training not complete
+    if [ -f "$completion_marker" ] && [ -f "$final_model" ]; then
+        # Verify the marker is newer than the final model (created after training finished)
+        if [ "$completion_marker" -nt "$final_model" ] || [ "$completion_marker" -ot "$final_model" ]; then
+            # Close enough in time, consider complete
+            return 0
         fi
         return 0  # Training complete
     fi
     return 1  # Not complete
+}
+
+clear_old_run() {
+    log "🗑️  Clearing old/incomplete run data..."
+    rm -f "${RUN_DIR}/final_drum_classifier.pth"
+    rm -f "${RUN_DIR}/best_drum_classifier.pth"
+    rm -f "${RUN_DIR}/.auto_train_complete"
+    rm -rf "${RUN_DIR}/checkpoints"
+    log "   Old run data cleared. Starting fresh."
+}
+
+prompt_clear_old_run() {
+    local final_model="${RUN_DIR}/final_drum_classifier.pth"
+    local completion_marker="${RUN_DIR}/.auto_train_complete"
+    
+    if [ -f "$final_model" ] && [ ! -f "$completion_marker" ]; then
+        echo ""
+        echo "⚠️  Found old/incomplete run data:"
+        echo "    ${final_model}"
+        echo "    (No completion marker - likely from a crashed or interrupted run)"
+        echo ""
+        echo "  Options:"
+        echo "    [C] Clear old data and start fresh (recommended)"
+        echo "    [R] Resume/continue from existing state"
+        echo "    [Q] Quit"
+        echo ""
+        read -p "  Choose [C/R/Q]: " choice
+        
+        case "${choice,,}" in
+            c|clear)
+                clear_old_run
+                ;;
+            r|resume)
+                log "Attempting to resume from existing state..."
+                ;;
+            q|quit)
+                log "Cancelled by user."
+                exit 0
+                ;;
+            *)
+                log "Invalid choice. Exiting."
+                exit 1
+                ;;
+        esac
+    fi
+}
+
+mark_complete() {
+    # Create completion marker
+    local completion_marker="${RUN_DIR}/.auto_train_complete"
+    date > "$completion_marker"
+    log "✅ Created completion marker: $completion_marker"
 }
 
 run_training() {
@@ -282,12 +336,15 @@ echo ""
 
 log_summary "=== Auto-training started: $TRAIN_MODE ==="
 
-# Check if already complete
+# Check if already complete (has completion marker)
 if check_training_complete; then
     log "✅ Training already complete! Final model exists at: ${RUN_DIR}/final_drum_classifier.pth"
     log_summary "Training already complete (no action needed)"
     exit 0
 fi
+
+# Check for old/incomplete run data and prompt user
+prompt_clear_old_run
 
 attempt=0
 start_time=$(date +%s)
@@ -303,31 +360,31 @@ while [ $attempt -lt $MAX_RETRIES ]; do
     
     # Run training
     if run_training 2>&1 | tee -a "$LOG_FILE"; then
-        # Training exited with code 0
-        if check_training_complete; then
-            end_time=$(date +%s)
-            duration=$((end_time - start_time))
-            hours=$((duration / 3600))
-            minutes=$(((duration % 3600) / 60))
-            
-            log ""
-            log "🎉🎉🎉 TRAINING COMPLETE! 🎉🎉🎉"
-            log "  Total attempts: $attempt"
-            log "  Total time: ${hours}h ${minutes}m"
-            log "  Best model: ${RUN_DIR}/best_drum_classifier.pth"
-            log "  Final model: ${RUN_DIR}/final_drum_classifier.pth"
-            log ""
-            
-            log_summary "SUCCESS after $attempt attempts (${hours}h ${minutes}m)"
-            
-            notify "BeatSight Training Complete!" "Mode: $TRAIN_MODE | Attempts: $attempt | Time: ${hours}h ${minutes}m"
-            
-            # Sync wandb runs
-            log "📤 Syncing offline wandb runs..."
-            wandb sync "${BEATSIGHT_REPO_ROOT}/wandb"/offline-run-*/ 2>&1 | tee -a "$LOG_FILE" || true
-            
-            exit 0
-        fi
+        # Training exited with code 0 - mark as complete
+        mark_complete
+        
+        end_time=$(date +%s)
+        duration=$((end_time - start_time))
+        hours=$((duration / 3600))
+        minutes=$(((duration % 3600) / 60))
+        
+        log ""
+        log "🎉🎉🎉 TRAINING COMPLETE! 🎉🎉🎉"
+        log "  Total attempts: $attempt"
+        log "  Total time: ${hours}h ${minutes}m"
+        log "  Best model: ${RUN_DIR}/best_drum_classifier.pth"
+        log "  Final model: ${RUN_DIR}/final_drum_classifier.pth"
+        log ""
+        
+        log_summary "SUCCESS after $attempt attempts (${hours}h ${minutes}m)"
+        
+        notify "BeatSight Training Complete!" "Mode: $TRAIN_MODE | Attempts: $attempt | Time: ${hours}h ${minutes}m"
+        
+        # Sync wandb runs
+        log "📤 Syncing offline wandb runs..."
+        wandb sync "${BEATSIGHT_REPO_ROOT}/wandb"/offline-run-*/ 2>&1 | tee -a "$LOG_FILE" || true
+        
+        exit 0
     fi
     
     # Training crashed or didn't complete

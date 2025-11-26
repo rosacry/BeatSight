@@ -456,6 +456,47 @@ run_analysis() {
       --topk-misclassified 100
 }
 
+# --- Auto-Training Functions (run until complete, auto-resume on crash) ---
+
+run_auto_train() {
+    local mode="$1"
+    local script="${BEATSIGHT_REPO_ROOT}/ai-pipeline/training/tools/auto_train.sh"
+    
+    if [ ! -f "$script" ]; then
+        echo "ERROR: auto_train.sh not found at ${script}"
+        return 1
+    fi
+    
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  🤖 AUTO-TRAINING MODE: ${mode}"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "  This will run training until COMPLETE, automatically restarting on ANY crash."
+    echo "  Perfect for overnight runs or while you're away."
+    echo ""
+    echo "  Features:"
+    echo "    ✓ Automatic resume from latest checkpoint on crash"
+    echo "    ✓ Checkpoints saved every 25,000 batches (mid-epoch protection)"
+    echo "    ✓ Wandb runs offline (no network-related crashes)"
+    echo "    ✓ 30-second delay between retries (handles temp issues)"
+    echo "    ✓ Desktop notification when complete (Windows toast)"
+    echo "    ✓ Detailed logs in logs/auto_train/"
+    echo ""
+    echo "  Press Ctrl+C to stop (training can be resumed later)"
+    echo ""
+    read -p "  Start auto-training? [Y/n]: " confirm
+    
+    case "${confirm,,}" in
+        n|no)
+            echo "  → Cancelled."
+            return 0
+            ;;
+    esac
+    
+    bash "$script" "$mode"
+}
+
 # --- Interactive Menu ---
 
 while true; do
@@ -468,11 +509,19 @@ while true; do
     echo " 2) Sanity Snapshot (Metadata)"
     echo " 3) Smoke Tests (pytest)"
     echo " 4) Precompute Feature Cache"
+    echo "-----------------------------------------"
+    echo " MANUAL TRAINING (interactive):"
     echo " 5a) Train: Warmup Probe (Recommended First)"
     echo " 5b) Train: Quick Refresh"
     echo " 5c) Train: Long Run"
-    echo " 6) Evaluation (Validation Snapshot)"
-    echo " 7) Analysis (Post-Run)"
+    echo "-----------------------------------------"
+    echo " 🤖 AUTO-TRAINING (unattended, crash-proof):"
+    echo " 6a) Auto-Train: Warmup (runs until complete)"
+    echo " 6b) Auto-Train: Quick  (runs until complete)"
+    echo " 6c) Auto-Train: Long   (runs until complete)"
+    echo "-----------------------------------------"
+    echo " 7) Evaluation (Validation Snapshot)"
+    echo " 8) Analysis (Post-Run)"
     echo " q) Quit"
     echo "========================================="
     read -p "Select a step to run: " choice
@@ -486,8 +535,11 @@ while true; do
         5a) run_train_warmup ;;
         5b) run_train_quick ;;
         5c) run_train_long ;;
-        6) run_eval ;;
-        7) run_analysis ;;
+        6a) run_auto_train warmup ;;
+        6b) run_auto_train quick ;;
+        6c) run_auto_train long ;;
+        7) run_eval ;;
+        8) run_analysis ;;
         q|Q) echo "Exiting."; exit 0 ;;
         *) echo "Invalid option." ;;
     esac

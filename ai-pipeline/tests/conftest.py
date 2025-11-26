@@ -8,13 +8,16 @@ from pathlib import Path
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+TESTS_DIR = Path(__file__).resolve().parent
 
 # Ensure the ai-pipeline package is available without relying on PYTHONPATH tweaks.
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+if str(TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(TESTS_DIR))
 
 # Import shared test utilities for use as fixtures
-from tests.test_utils import (
+from test_utils import (
     MockAudioData,
     MockDataset,
     MockProgressCallback,

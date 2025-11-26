@@ -12,6 +12,7 @@ using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Logging;
 using osuTK;
 using osuTK.Graphics;
 
@@ -33,36 +34,49 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         /// </summary>
         public double ApproachDuration { get; private set; } = 5000;
 
-        #region Timing Windows (milliseconds)
-        // These define hit accuracy thresholds. Values tuned for drum game feel.
-        // Compared against |noteTime - hitTime| to determine judgment grade.
+        #region Timing Windows (from DesignSystem)
+        // Use centralized timing windows from DesignSystem for consistency across the application.
+        // These are exposed here for local readability while referencing the single source of truth.
 
-        /// <summary>Timing window for "Perfect" judgment (±35ms). Tight but achievable.</summary>
-        private const double perfectWindow = 35;
+        /// <summary>Timing window for "Perfect" judgment (±35ms).</summary>
+        private static double perfectWindow => DesignSystem.HitWindowPerfect;
 
-        /// <summary>Timing window for "Great" judgment (±80ms). Standard accuracy.</summary>
-        private const double greatWindow = 80;
+        /// <summary>Timing window for "Great" judgment (±80ms).</summary>
+        private static double greatWindow => DesignSystem.HitWindowGreat;
 
-        /// <summary>Timing window for "Good" judgment (±130ms). Loose but acceptable.</summary>
-        private const double goodWindow = 130;
+        /// <summary>Timing window for "Good" judgment (±130ms).</summary>
+        private static double goodWindow => DesignSystem.HitWindowGood;
 
-        /// <summary>Timing window for "Meh" judgment (±180ms). Late/early but hit.</summary>
-        private const double mehWindow = 180;
+        /// <summary>Timing window for "Meh" judgment (±180ms).</summary>
+        private static double mehWindow => DesignSystem.HitWindowMeh;
 
         /// <summary>Timing window beyond which a note is considered missed (±220ms).</summary>
-        private const double missWindow = 220;
+        private static double missWindow => DesignSystem.HitWindowMiss;
 
         #endregion
 
+        /// <summary>Depth tolerance constants for note layer management.</summary>
+        private static class DepthTolerance
+        {
+            /// <summary>Tolerance for depth updates in 3D view (allows larger changes).</summary>
+            public const float ThreeDimensional = 12f;
+
+            /// <summary>Tolerance for depth updates in 2D view (more precise).</summary>
+            public const float TwoDimensional = 5f;
+        }
+
         /// <summary>Width ratio of the playfield relative to container. 1.0 = full width.</summary>
         private const float PlayfieldWidthRatio = 1f;
+
+        /// <summary>Additional visibility buffer after miss window (ms).</summary>
+        private const double PastVisibilityBuffer = 600;
 
         private readonly Func<double> currentTimeProvider;
         private readonly List<DrawableNote> notes = new();
         private readonly List<DrawableNote> kickNoteBuffer = new();
         private int firstActiveNoteIndex;
         private double futureVisibilityWindow => ApproachDuration + 900;
-        private const double pastVisibilityWindow = missWindow + 600;
+        private double pastVisibilityWindow => missWindow + PastVisibilityBuffer;
         private bool isPreviewMode; // If true, notes won't be auto-judged
 
         [Resolved]
@@ -579,7 +593,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 return;
             }
 
-            float tolerance = currentLaneViewMode == LaneViewMode.ThreeDimensional ? 12f : 5f;
+            float tolerance = currentLaneViewMode == LaneViewMode.ThreeDimensional
+                ? DepthTolerance.ThreeDimensional
+                : DepthTolerance.TwoDimensional;
 
             if (note.ShouldUpdateDepth(depth, tolerance))
             {
@@ -587,9 +603,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 {
                     noteLayer.ChangeChildDepth(note, depth);
                 }
-                catch (Exception)
+                catch (InvalidOperationException ex)
                 {
-                    // Ignore depth change errors
+                    // Depth changes can fail during scene graph updates - this is non-critical
+                    Logger.Log($"Note depth change failed: {ex.Message}", LoggingTarget.Runtime, LogLevel.Debug);
                 }
             }
         }

@@ -133,6 +133,15 @@ class Settings(BaseSettings):
     ai_max_concurrent_jobs: int = Field(default=2, alias="AI_MAX_CONCURRENT_JOBS")
 
     # -------------------------------------------------------------------------
+    # Modal.com GPU Orchestration
+    # -------------------------------------------------------------------------
+    modal_enabled: bool = Field(default=False, alias="MODAL_ENABLED")
+    modal_token_id: Optional[str] = Field(default=None, alias="MODAL_TOKEN_ID")
+    modal_token_secret: Optional[str] = Field(default=None, alias="MODAL_TOKEN_SECRET")
+    modal_app_name: str = Field(default="beatsight-ai", alias="MODAL_APP_NAME")
+    modal_environment: str = Field(default="main", alias="MODAL_ENVIRONMENT")
+
+    # -------------------------------------------------------------------------
     # Rate Limiting
     # -------------------------------------------------------------------------
     rate_limit_enabled: bool = Field(default=True, alias="RATE_LIMIT_ENABLED")
@@ -158,6 +167,32 @@ class Settings(BaseSettings):
         alias="TRUSTED_PROXY_HEADERS"
     )
     csp_report_uri: Optional[str] = Field(default=None, alias="CSP_REPORT_URI")
+
+    # -------------------------------------------------------------------------
+    # Stripe (Payments)
+    # -------------------------------------------------------------------------
+    stripe_secret_key: Optional[str] = Field(default=None, alias="STRIPE_SECRET_KEY")
+    stripe_publishable_key: Optional[str] = Field(default=None, alias="STRIPE_PUBLISHABLE_KEY")
+    stripe_webhook_secret: Optional[str] = Field(default=None, alias="STRIPE_WEBHOOK_SECRET")
+    stripe_pro_monthly_price_id: Optional[str] = Field(default=None, alias="STRIPE_PRO_MONTHLY_PRICE_ID")
+    stripe_pro_yearly_price_id: Optional[str] = Field(default=None, alias="STRIPE_PRO_YEARLY_PRICE_ID")
+
+    # -------------------------------------------------------------------------
+    # Notifications (E2-006)
+    # -------------------------------------------------------------------------
+    sendgrid_api_key: Optional[str] = Field(default=None, alias="SENDGRID_API_KEY")
+    email_from: Optional[str] = Field(default=None, alias="EMAIL_FROM")
+    vapid_private_key: Optional[str] = Field(default=None, alias="VAPID_PRIVATE_KEY")
+    vapid_public_key: Optional[str] = Field(default=None, alias="VAPID_PUBLIC_KEY")
+    frontend_url: Optional[str] = Field(default=None, alias="FRONTEND_URL")
+    notification_rate_limit_per_hour: int = Field(default=10, alias="NOTIFICATION_RATE_LIMIT")
+
+    # -------------------------------------------------------------------------
+    # Alerting (E6-003)
+    # -------------------------------------------------------------------------
+    slack_webhook_url: Optional[str] = Field(default=None, alias="SLACK_WEBHOOK_URL")
+    discord_webhook_url: Optional[str] = Field(default=None, alias="DISCORD_WEBHOOK_URL")
+    pagerduty_routing_key: Optional[str] = Field(default=None, alias="PAGERDUTY_ROUTING_KEY")
 
     # -------------------------------------------------------------------------
     # Feature Flags

@@ -2,6 +2,6 @@
 Route package exports.
 """
 
-from . import ai_jobs, auth, health, karma, songs
+from . import admin, ai_jobs, auth, billing, health, karma, map_edits, metadata, roles, songs, storage, sync, verifier, websocket
 
-__all__ = ["ai_jobs", "auth", "health", "karma", "songs"]
+__all__ = ["admin", "ai_jobs", "auth", "billing", "health", "karma", "map_edits", "metadata", "roles", "songs", "storage", "sync", "verifier", "websocket"]

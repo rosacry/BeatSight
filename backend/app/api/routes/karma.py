@@ -177,6 +177,7 @@ async def get_my_karma_history(
     """Get the current user's karma history."""
     service = KarmaService(session)
     entries = await service.get_karma_history(current_user.id, limit=limit, offset=offset)
+    total_count = await service.get_karma_history_count(current_user.id)
 
     items = [
         KarmaHistoryItem(
@@ -192,7 +193,7 @@ async def get_my_karma_history(
 
     return KarmaHistoryResponse(
         items=items,
-        total_count=len(items),  # TODO: Add proper count query
+        total_count=total_count,
         limit=limit,
         offset=offset,
     )

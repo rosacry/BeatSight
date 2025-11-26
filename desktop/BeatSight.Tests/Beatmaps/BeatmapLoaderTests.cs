@@ -22,6 +22,8 @@ public class BeatmapLoaderTests
         return path;
     }
 
+    #region LoadFromFile Tests
+
     [Fact]
     public void LoadFromFile_ParsesExpectedMetadata()
     {
@@ -61,6 +63,137 @@ public class BeatmapLoaderTests
     }
 
     [Fact]
+    public void LoadFromFile_ThrowsFileNotFoundForMissingFile()
+    {
+        string nonexistentPath = Path.Combine(Path.GetTempPath(), $"beatsight-test-{Guid.NewGuid()}.bsm");
+
+        var ex = Assert.Throws<FileNotFoundException>(() => BeatmapLoader.LoadFromFile(nonexistentPath));
+        Assert.Contains("not found", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void LoadFromFile_ThrowsForMalformedJson()
+    {
+        string tempPath = Path.Combine(Path.GetTempPath(), $"beatsight-test-{Guid.NewGuid()}.bsm");
+
+        try
+        {
+            File.WriteAllText(tempPath, "{ this is not valid json }");
+
+            Assert.ThrowsAny<Exception>(() => BeatmapLoader.LoadFromFile(tempPath));
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
+    }
+
+    [Fact]
+    public void LoadFromFile_ThrowsForMissingTitle()
+    {
+        string tempPath = Path.Combine(Path.GetTempPath(), $"beatsight-test-{Guid.NewGuid()}.bsm");
+
+        try
+        {
+            // Create a beatmap JSON missing the title
+            string json = @"{
+                ""metadata"": { ""artist"": ""Test Artist"" },
+                ""audio"": { ""filename"": ""test.mp3"" },
+                ""hitObjects"": [{ ""time"": 100, ""lane"": 0, ""component"": ""kick"" }]
+            }";
+            File.WriteAllText(tempPath, json);
+
+            var ex = Assert.Throws<InvalidDataException>(() => BeatmapLoader.LoadFromFile(tempPath));
+            Assert.Contains("title", ex.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
+    }
+
+    [Fact]
+    public void LoadFromFile_ThrowsForMissingArtist()
+    {
+        string tempPath = Path.Combine(Path.GetTempPath(), $"beatsight-test-{Guid.NewGuid()}.bsm");
+
+        try
+        {
+            // Create a beatmap JSON missing the artist
+            string json = @"{
+                ""metadata"": { ""title"": ""Test Title"" },
+                ""audio"": { ""filename"": ""test.mp3"" },
+                ""hitObjects"": [{ ""time"": 100, ""lane"": 0, ""component"": ""kick"" }]
+            }";
+            File.WriteAllText(tempPath, json);
+
+            var ex = Assert.Throws<InvalidDataException>(() => BeatmapLoader.LoadFromFile(tempPath));
+            Assert.Contains("artist", ex.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
+    }
+
+    [Fact]
+    public void LoadFromFile_ThrowsForMissingAudioFilename()
+    {
+        string tempPath = Path.Combine(Path.GetTempPath(), $"beatsight-test-{Guid.NewGuid()}.bsm");
+
+        try
+        {
+            // Create a beatmap JSON missing the audio filename
+            string json = @"{
+                ""metadata"": { ""title"": ""Test Title"", ""artist"": ""Test Artist"" },
+                ""audio"": { },
+                ""hitObjects"": [{ ""time"": 100, ""lane"": 0, ""component"": ""kick"" }]
+            }";
+            File.WriteAllText(tempPath, json);
+
+            var ex = Assert.Throws<InvalidDataException>(() => BeatmapLoader.LoadFromFile(tempPath));
+            Assert.Contains("audio file", ex.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
+    }
+
+    [Fact]
+    public void LoadFromFile_ThrowsForEmptyHitObjects()
+    {
+        string tempPath = Path.Combine(Path.GetTempPath(), $"beatsight-test-{Guid.NewGuid()}.bsm");
+
+        try
+        {
+            // Create a beatmap JSON with empty hit objects
+            string json = @"{
+                ""metadata"": { ""title"": ""Test Title"", ""artist"": ""Test Artist"" },
+                ""audio"": { ""filename"": ""test.mp3"" },
+                ""hitObjects"": []
+            }";
+            File.WriteAllText(tempPath, json);
+
+            var ex = Assert.Throws<InvalidDataException>(() => BeatmapLoader.LoadFromFile(tempPath));
+            Assert.Contains("hit object", ex.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
+    }
+
+    #endregion
+
+    #region SaveToFile Tests
+
+    [Fact]
     public void SaveToFile_ThrowsWhenNoHitObjects()
     {
         var beatmap = new Beatmap
@@ -93,6 +226,10 @@ public class BeatmapLoaderTests
         }
     }
 
+    #endregion
+
+    #region Lane Heuristics Tests
+
     [Fact]
     public void SampleBeatmap_AlignsWithLaneHeuristics()
     {
@@ -109,10 +246,16 @@ public class BeatmapLoaderTests
         AssertComponentLane(beatmap, "tom_low", expectedLane: 4);
     }
 
+    #endregion
+
+    #region Helper Methods
+
     private static void AssertComponentLane(Beatmap beatmap, string component, int expectedLane)
     {
         var hits = beatmap.HitObjects.Where(h => string.Equals(h.Component, component, StringComparison.OrdinalIgnoreCase)).ToList();
         Assert.NotEmpty(hits);
         Assert.All(hits, h => Assert.Equal(expectedLane, h.Lane));
     }
+
+    #endregion
 }

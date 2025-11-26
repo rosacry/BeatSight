@@ -1,0 +1,75 @@
+name: Desktop CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/desktop.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/desktop.yml'
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      
+      - name: Restore dependencies
+        run: dotnet restore BeatSight.sln
+      
+      - name: Build
+        run: dotnet build BeatSight.sln --no-restore --configuration Release
+      
+      - name: Run tests
+        run: dotnet test desktop/BeatSight.Tests/BeatSight.Tests.csproj --no-build --configuration Release --verbosity normal
+
+  publish:
+    name: Publish ${{ matrix.rid }}
+    runs-on: ${{ matrix.os }}
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: windows-latest
+            rid: win-x64
+          - os: macos-latest
+            rid: osx-x64
+          - os: macos-latest
+            rid: osx-arm64
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      
+      - name: Publish
+        run: dotnet publish desktop/BeatSight.Desktop/BeatSight.Desktop.csproj -c Release -r ${{ matrix.rid }} --self-contained true -o publish/${{ matrix.rid }}
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: beatsight-${{ matrix.rid }}
+          path: publish/${{ matrix.rid }}
+          retention-days: 30

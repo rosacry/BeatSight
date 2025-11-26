@@ -1,13 +1,13 @@
 """Tests for AI job service operations.
 
 These tests validate job lifecycle management including enqueueing,
-state transitions, and filtering operations.
+state transitions, filtering operations, and worker coordination.
 """
 
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -42,14 +42,14 @@ class TestAIJobService:
         """Test successfully enqueueing a new AI job."""
         song_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        payload = AIJobCreate(song_id=song_id, priority=AIJobPriority.HIGH)
+        payload = AIJobCreate(song_id=song_id, priority=AIJobPriority.PRIORITY)
 
         result = await service.enqueue(payload, requested_by=user_id)
 
         mock_session.add.assert_called_once()
         added_job = mock_session.add.call_args[0][0]
         assert added_job.song_id == song_id
-        assert added_job.priority == AIJobPriority.HIGH
+        assert added_job.priority == AIJobPriority.PRIORITY
         assert added_job.requested_by_id == user_id
         assert added_job.state == AIJobState.QUEUED
         mock_session.commit.assert_called_once()
@@ -127,6 +127,7 @@ class TestAIJobService:
     ) -> None:
         """Test marking a job as started."""
         job_id = uuid.uuid4()
+        worker_id = uuid.uuid4()
         job = AIJob(
             id=job_id,
             song_id=uuid.uuid4(),
@@ -134,7 +135,7 @@ class TestAIJobService:
         )
         mock_session.get.return_value = job
 
-        await service.mark_started(job_id)
+        await service.mark_started(job_id, worker_id)
 
         assert job.state == AIJobState.PROCESSING
         assert job.started_at is not None
@@ -146,9 +147,10 @@ class TestAIJobService:
     ) -> None:
         """Test that marking non-existent job raises ValueError."""
         mock_session.get.return_value = None
+        worker_id = uuid.uuid4()
 
         with pytest.raises(ValueError, match="Job not found"):
-            await service.mark_started(uuid.uuid4())
+            await service.mark_started(uuid.uuid4(), worker_id)
 
     @pytest.mark.asyncio
     async def test_mark_finished_success(
@@ -226,9 +228,10 @@ class TestAIJobLifecycle:
         """Test complete lifecycle: enqueue → start → finish."""
         song_id = uuid.uuid4()
         job_id = uuid.uuid4()
+        worker_id = uuid.uuid4()
 
         # Simulate enqueue
-        payload = AIJobCreate(song_id=song_id, priority=AIJobPriority.HIGH)
+        payload = AIJobCreate(song_id=song_id, priority=AIJobPriority.PRIORITY)
         await service.enqueue(payload, requested_by=None)
 
         # Create a job object to simulate database state
@@ -236,12 +239,12 @@ class TestAIJobLifecycle:
             id=job_id,
             song_id=song_id,
             state=AIJobState.QUEUED,
-            priority=AIJobPriority.HIGH,
+            priority=AIJobPriority.PRIORITY,
         )
         mock_session.get.return_value = job
 
         # Start processing
-        await service.mark_started(job_id)
+        await service.mark_started(job_id, worker_id)
         assert job.state == AIJobState.PROCESSING
 
         # Complete successfully
@@ -255,6 +258,7 @@ class TestAIJobLifecycle:
         """Test lifecycle with failure: enqueue → start → fail."""
         song_id = uuid.uuid4()
         job_id = uuid.uuid4()
+        worker_id = uuid.uuid4()
 
         # Simulate enqueue
         payload = AIJobCreate(song_id=song_id)
@@ -269,10 +273,204 @@ class TestAIJobLifecycle:
         mock_session.get.return_value = job
 
         # Start processing
-        await service.mark_started(job_id)
+        await service.mark_started(job_id, worker_id)
         assert job.state == AIJobState.PROCESSING
 
         # Fail with error
         await service.mark_finished(job_id, error="Model inference timeout")
         assert job.state == AIJobState.FAILED
         assert "timeout" in job.error_message.lower()
+
+
+class TestWorkerCoordination:
+    """Tests for worker heartbeat and coordination functionality."""
+
+    @pytest.fixture
+    def mock_session(self) -> AsyncMock:
+        """Create a mock async session."""
+        session = AsyncMock()
+        session.commit = AsyncMock()
+        session.refresh = AsyncMock()
+        session.add = MagicMock()
+        session.get = AsyncMock()
+        session.execute = AsyncMock()
+        return session
+
+    @pytest.fixture
+    def service(self, mock_session: AsyncMock) -> AIJobService:
+        """Create an AIJobService with mocked session."""
+        return AIJobService(mock_session)
+
+    @pytest.mark.asyncio
+    async def test_heartbeat_updates_timestamp(
+        self, service: AIJobService, mock_session: AsyncMock
+    ) -> None:
+        """Test that heartbeat updates worker_id and last_heartbeat."""
+        job_id = uuid.uuid4()
+        worker_id = uuid.uuid4()
+        job = AIJob(
+            id=job_id,
+            song_id=uuid.uuid4(),
+            state=AIJobState.PROCESSING,
+        )
+        mock_session.get.return_value = job
+
+        await service.heartbeat(job_id, worker_id)
+
+        assert job.worker_id == worker_id
+        assert job.last_heartbeat is not None
+        mock_session.commit.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_heartbeat_job_not_found(
+        self, service: AIJobService, mock_session: AsyncMock
+    ) -> None:
+        """Test that heartbeat for non-existent job raises ValueError."""
+        mock_session.get.return_value = None
+
+        with pytest.raises(ValueError, match="Job not found"):
+            await service.heartbeat(uuid.uuid4(), uuid.uuid4())
+
+    @pytest.mark.asyncio
+    async def test_update_progress_sets_values(
+        self, service: AIJobService, mock_session: AsyncMock
+    ) -> None:
+        """Test that update_progress sets percent and message."""
+        job_id = uuid.uuid4()
+        job = AIJob(
+            id=job_id,
+            song_id=uuid.uuid4(),
+            state=AIJobState.PROCESSING,
+        )
+        mock_session.get.return_value = job
+
+        await service.update_progress(job_id, 75, "Separating drums...")
+
+        assert job.progress_percent == 75
+        assert job.progress_message == "Separating drums..."
+        mock_session.commit.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_update_progress_message_only(
+        self, service: AIJobService, mock_session: AsyncMock
+    ) -> None:
+        """Test that update_progress works with message only."""
+        job_id = uuid.uuid4()
+        job = AIJob(
+            id=job_id,
+            song_id=uuid.uuid4(),
+            state=AIJobState.PROCESSING,
+            progress_percent=50,
+        )
+        mock_session.get.return_value = job
+
+        await service.update_progress(job_id, 50, "Still processing...")
+
+        assert job.progress_percent == 50
+        assert job.progress_message == "Still processing..."
+
+    @pytest.mark.asyncio
+    async def test_claim_job_returns_oldest_queued(
+        self, service: AIJobService, mock_session: AsyncMock
+    ) -> None:
+        """Test that claim_job returns oldest queued job."""
+        worker_id = uuid.uuid4()
+        oldest_job = AIJob(
+            id=uuid.uuid4(),
+            song_id=uuid.uuid4(),
+            state=AIJobState.QUEUED,
+            created_at=datetime.now(timezone.utc) - timedelta(hours=1),
+        )
+
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = oldest_job
+        mock_session.execute.return_value = mock_result
+
+        result = await service.claim_job(worker_id)
+
+        assert result == oldest_job
+        assert oldest_job.state == AIJobState.PROCESSING
+        assert oldest_job.worker_id == worker_id
+        assert oldest_job.started_at is not None
+        assert oldest_job.last_heartbeat is not None
+
+    @pytest.mark.asyncio
+    async def test_claim_job_returns_none_when_empty(
+        self, service: AIJobService, mock_session: AsyncMock
+    ) -> None:
+        """Test that claim_job returns None when no jobs available."""
+        worker_id = uuid.uuid4()
+
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_session.execute.return_value = mock_result
+
+        result = await service.claim_job(worker_id)
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_release_job_resets_state(
+        self, service: AIJobService, mock_session: AsyncMock
+    ) -> None:
+        """Test that release_job resets job to queued state."""
+        job_id = uuid.uuid4()
+        worker_id = uuid.uuid4()
+        job = AIJob(
+            id=job_id,
+            song_id=uuid.uuid4(),
+            state=AIJobState.PROCESSING,
+            worker_id=worker_id,
+            last_heartbeat=datetime.now(timezone.utc),
+            progress_percent=50,
+            progress_message="Halfway done",
+        )
+        mock_session.get.return_value = job
+
+        await service.release_job(job_id)
+
+        assert job.state == AIJobState.QUEUED
+        assert job.worker_id is None
+        assert job.started_at is None
+        assert job.last_heartbeat is None
+        assert job.progress_percent is None
+        assert job.progress_message is None
+        mock_session.commit.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_release_job_not_found(
+        self, service: AIJobService, mock_session: AsyncMock
+    ) -> None:
+        """Test that release_job for non-existent job raises ValueError."""
+        mock_session.get.return_value = None
+
+        with pytest.raises(ValueError, match="Job not found"):
+            await service.release_job(uuid.uuid4())
+
+    @pytest.mark.asyncio
+    async def test_find_stale_jobs_filters_by_threshold(
+        self, service: AIJobService, mock_session: AsyncMock
+    ) -> None:
+        """Test that find_stale_jobs returns jobs with old heartbeats."""
+        now = datetime.now(timezone.utc)
+        stale_job = AIJob(
+            id=uuid.uuid4(),
+            song_id=uuid.uuid4(),
+            state=AIJobState.PROCESSING,
+            last_heartbeat=now - timedelta(minutes=10),
+        )
+        fresh_job = AIJob(
+            id=uuid.uuid4(),
+            song_id=uuid.uuid4(),
+            state=AIJobState.PROCESSING,
+            last_heartbeat=now - timedelta(minutes=2),
+        )
+
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [stale_job]
+        mock_session.execute.return_value = mock_result
+
+        result = await service.find_stale_jobs(stale_threshold_seconds=300)  # 5 minutes
+
+        assert len(result) == 1
+        assert result[0] == stale_job

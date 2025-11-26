@@ -372,17 +372,93 @@ POST /ai-jobs
 
 ```json
 {
-  "id": "880e8400-e29b-41d4-a716-446655440000",
-  "song_id": "550e8400-e29b-41d4-a716-446655440000",
-  "priority": "standard",
-  "state": "queued",
-  "error_message": null,
-  "requested_by_id": "550e8400-e29b-41d4-a716-446655440000",
-  "started_at": null,
-  "finished_at": null,
-  "created_at": "2025-11-24T12:00:00Z"
+  "job": {
+    "id": "880e8400-e29b-41d4-a716-446655440000",
+    "song_id": "550e8400-e29b-41d4-a716-446655440000",
+    "priority": "standard",
+    "state": "queued",
+    "error_message": null,
+    "requested_by_id": "550e8400-e29b-41d4-a716-446655440000",
+    "worker_id": null,
+    "last_heartbeat": null,
+    "progress_percent": null,
+    "progress_message": null,
+    "started_at": null,
+    "finished_at": null,
+    "created_at": "2025-11-24T12:00:00Z"
+  },
+  "queue_position": 3,
+  "estimated_wait_minutes": 9,
+  "quota": {
+    "plan": "free",
+    "used_this_month": 5,
+    "used_today": 1,
+    "remaining_month": 5,
+    "remaining_today": 2,
+    "limit_month": 10,
+    "limit_day": 3,
+    "resets_at": "2025-12-01T00:00:00Z",
+    "priority": 50
+  }
 }
 ```
+
+**Error Responses:**
+
+| Code | Detail |
+|------|--------|
+| 404 | Song not found |
+| 429 | Quota exceeded (see response body for details) |
+
+**429 Response:**
+
+```json
+{
+  "detail": {
+    "message": "AI generation quota exceeded",
+    "limit": 10,
+    "used": 10,
+    "resets_at": "2025-12-01T00:00:00Z"
+  }
+}
+```
+
+---
+
+### Get Quota Status
+
+Get current AI generation quota for the authenticated user.
+
+```http
+GET /ai-jobs/quota
+```
+
+**Headers:**
+- `Authorization: Bearer <access_token>` (optional - returns anonymous limits if not provided)
+
+**Response (200 OK):**
+
+```json
+{
+  "plan": "free",
+  "used_this_month": 5,
+  "used_today": 1,
+  "remaining_month": 5,
+  "remaining_today": 2,
+  "limit_month": 10,
+  "limit_day": 3,
+  "resets_at": "2025-12-01T00:00:00Z",
+  "priority": 50
+}
+```
+
+**Quota Limits by Plan:**
+
+| Plan | Monthly Limit | Daily Limit | Priority |
+|------|---------------|-------------|----------|
+| Anonymous | 3 | 1 | 25 (low) |
+| Free | 10 | 3 | 50 (standard) |
+| Pro | 100 | 20 | 100 (high) |
 
 ---
 
@@ -411,12 +487,227 @@ GET /ai-jobs?song_id={song_id}
     "state": "complete",
     "error_message": null,
     "requested_by_id": "550e8400-e29b-41d4-a716-446655440000",
+    "worker_id": "990e8400-e29b-41d4-a716-446655440000",
+    "last_heartbeat": "2025-11-24T12:02:55Z",
+    "progress_percent": 100,
+    "progress_message": "Complete",
     "started_at": "2025-11-24T12:01:00Z",
     "finished_at": "2025-11-24T12:03:00Z",
     "created_at": "2025-11-24T12:00:00Z"
   }
 ]
 ```
+
+---
+
+### Get Job
+
+Retrieve a specific AI job by ID.
+
+```http
+GET /ai-jobs/{job_id}
+```
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `job_id` | UUID | The job's unique identifier |
+
+**Response (200 OK):** Same as single item in list response.
+
+**Error Responses:**
+
+| Code | Detail |
+|------|--------|
+| 404 | "Job {job_id} not found" |
+
+---
+
+### Stream Job Progress (SSE)
+
+Stream real-time progress updates for a job via Server-Sent Events.
+
+```http
+GET /ai-jobs/{job_id}/progress/stream
+```
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `job_id` | UUID | The job's unique identifier |
+
+**Response:** `text/event-stream`
+
+The stream sends the following event types:
+
+| Event | Description |
+|-------|-------------|
+| `status` | Initial job status when connecting |
+| `progress` | Progress updates (percent, message, stage) |
+| `complete` | Job completed successfully |
+| `error` | Job failed or was cancelled |
+| `timeout` | Connection closed due to inactivity |
+
+**Event Examples:**
+
+```
+event: status
+data: {"job_id": "880e8400-...", "status": "processing", "percent": 45, "message": "Separating drums..."}
+
+event: progress
+data: {"percent": 60, "message": "Transcribing notes...", "stage": "transcription", "timestamp": "2025-11-24T12:02:00Z"}
+
+event: complete
+data: {"job_id": "880e8400-...", "status": "completed", "beatmap_id": "aa0e8400-..."}
+
+event: error
+data: {"job_id": "880e8400-...", "status": "failed", "error": "Processing failed: out of memory"}
+```
+
+**Client Usage Example (JavaScript):**
+
+```javascript
+const eventSource = new EventSource('/api/v1/ai-jobs/{job_id}/progress/stream');
+
+eventSource.addEventListener('progress', (e) => {
+  const data = JSON.parse(e.data);
+  console.log(`Progress: ${data.percent}% - ${data.message}`);
+  updateProgressBar(data.percent);
+});
+
+eventSource.addEventListener('complete', (e) => {
+  const data = JSON.parse(e.data);
+  console.log('Job completed! Beatmap:', data.beatmap_id);
+  eventSource.close();
+});
+
+eventSource.addEventListener('error', (e) => {
+  if (e.data) {
+    const data = JSON.parse(e.data);
+    console.error('Job failed:', data.error);
+  }
+  eventSource.close();
+});
+```
+
+**Error Responses:**
+
+| Code | Detail |
+|------|--------|
+| 404 | "Job {job_id} not found" |
+
+---
+
+## Worker Endpoints (`/ai-jobs` - Internal)
+
+These endpoints are used by AI worker processes and should not be called by clients.
+
+### Claim Job
+
+Claim the next available job for processing.
+
+```http
+POST /ai-jobs/claim?worker_id={worker_id}
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `worker_id` | UUID | Yes | Worker's unique identifier |
+
+**Response (200 OK):** Job object or `null` if no jobs available.
+
+---
+
+### Worker Heartbeat
+
+Signal that a worker is still processing a job.
+
+```http
+POST /ai-jobs/{job_id}/heartbeat?worker_id={worker_id}
+```
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `job_id` | UUID | The job being processed |
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `worker_id` | UUID | Yes | Worker's unique identifier |
+
+**Response (204 No Content)**
+
+**Error Responses:**
+
+| Code | Detail |
+|------|--------|
+| 404 | "Job {job_id} not found" |
+| 409 | "Job is being processed by another worker" |
+
+---
+
+### Update Progress
+
+Update job progress during processing.
+
+```http
+PATCH /ai-jobs/{job_id}/progress
+```
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `progress_percent` | integer | Yes | 0-100 |
+| `progress_message` | string | No | Status message |
+
+**Example Request:**
+
+```json
+{
+  "progress_percent": 65,
+  "progress_message": "Transcribing drum notes..."
+}
+```
+
+**Response (204 No Content)**
+
+---
+
+### Release Job
+
+Release a job back to the queue for retry.
+
+```http
+POST /ai-jobs/{job_id}/release
+```
+
+**Response (204 No Content)**
+
+---
+
+### List Stale Jobs
+
+List jobs with stale heartbeats (for orchestration).
+
+```http
+GET /ai-jobs/stale/list?threshold_seconds={seconds}
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `threshold_seconds` | integer | 300 | Heartbeat staleness threshold |
+
+**Response (200 OK):** Array of stale job objects.
 
 ---
 
@@ -482,6 +773,24 @@ GET /health
 
 ---
 
+## Common Response Codes (Extended)
+
+| Code | Description |
+|------|-------------|
+| 200 | Success |
+| 201 | Created |
+| 202 | Accepted (async job queued) |
+| 204 | No Content (success with no body) |
+| 400 | Bad Request - Invalid input |
+| 401 | Unauthorized - Invalid or missing token |
+| 404 | Not Found |
+| 409 | Conflict - Resource already exists or state conflict |
+| 422 | Validation Error |
+| 429 | Too Many Requests - Rate limit or quota exceeded |
+| 500 | Internal Server Error |
+
+---
+
 ## Rate Limits
 
 | Endpoint Group | Limit | Window |
@@ -526,6 +835,14 @@ Official SDKs will be available for:
 ---
 
 ## Changelog
+
+### v1.1.0 (November 2025)
+- Added quota management endpoints (`GET /ai-jobs/quota`)
+- Added SSE progress streaming (`GET /ai-jobs/{id}/progress/stream`)
+- Added worker coordination endpoints (claim, heartbeat, release, stale)
+- Enhanced job response with queue position and estimated wait time
+- Added 429 response for quota exceeded scenarios
+- Job objects now include `worker_id`, `last_heartbeat`, `progress_percent`, `progress_message`
 
 ### v1.0.0 (November 2025)
 - Initial API release

@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import enum
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, JSON, func
+from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, String, JSON, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,7 +18,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from .user import User
 
 
-class EditStatus(str, Enum):  # type: ignore[misc]
+class EditStatus(str, enum.Enum):
     """State of a map edit proposal."""
 
     PENDING = "pending"
@@ -26,7 +27,7 @@ class EditStatus(str, Enum):  # type: ignore[misc]
     WITHDRAWN = "withdrawn"
 
 
-class VerificationDecision(str, Enum):  # type: ignore[misc]
+class VerificationDecision(str, enum.Enum):
     """Possible decision outcomes for a verification."""
 
     APPROVE = "approve"
@@ -46,13 +47,13 @@ class MapEditProposal(Base):
     proposer_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
     summary: Mapped[str] = mapped_column(String(255))
     diff_payload: Mapped[dict] = mapped_column(JSON)
-    status: Mapped[EditStatus] = mapped_column(Enum(EditStatus), default=EditStatus.PENDING, nullable=False)
+    status: Mapped[EditStatus] = mapped_column(SAEnum(EditStatus), default=EditStatus.PENDING, nullable=False)
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     map_version: Mapped["MapVersion"] = relationship("MapVersion", back_populates="edit_proposals")
     proposer: Mapped["User"] = relationship("User", back_populates="map_edits")
-    decision: Mapped["MapVerificationDecision" | None] = relationship(
+    decision: Mapped["MapVerificationDecision | None"] = relationship(
         "MapVerificationDecision", back_populates="proposal", uselist=False, cascade="all, delete-orphan"
     )
 
@@ -67,7 +68,7 @@ class MapVerificationDecision(Base):
         UUID(as_uuid=True), ForeignKey("map_edit_proposals.id", ondelete="CASCADE"), unique=True
     )
     verifier_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
-    decision: Mapped[VerificationDecision] = mapped_column(Enum(VerificationDecision), nullable=False)
+    decision: Mapped[VerificationDecision] = mapped_column(SAEnum(VerificationDecision), nullable=False)
     notes: Mapped[str | None] = mapped_column(String(512))
     decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

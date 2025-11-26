@@ -154,6 +154,15 @@ class KarmaService:
         )
         return list(result.scalars().all())
 
+    async def get_karma_history_count(self, user_id: uuid.UUID) -> int:
+        """Get total count of karma history entries for a user."""
+        from sqlalchemy import func
+        result = await self.session.execute(
+            select(func.count(KarmaLedger.id))
+            .where(KarmaLedger.user_id == user_id)
+        )
+        return result.scalar_one()
+
     async def get_daily_ai_quota(self, user_id: uuid.UUID) -> int:
         """
         Get the user's daily AI generation quota based on karma.

@@ -13,7 +13,9 @@
 #   - CUDA available for GPU training
 #   - Optional: source beatsight_env.sh first to configure paths
 #
-# Hardware Profile: RTX 3080 Ti (12GB), Ryzen 9800X3D, 32GB DDR5, NVMe
+# Hardware Profile: RTX 3080 Ti FE (12GB), Ryzen 9800X3D (8c/16t), 32GB DDR5-6000
+#                   C: Samsung 990 Pro 2TB NVMe (7000/5100 MB/s) - feature_cache
+#                   E: Seagate 2TB HDD (120 MB/s) - dataset
 # ============================================================================
 
 set -euo pipefail
@@ -302,18 +304,20 @@ run_train_warmup() {
       --warmup-epochs 4 \
       --scheduler cosine \
       --min-lr 0.00002 \
-      --batch-size 32 \
-      --lr 0.00045 \
+      --batch-size 128 \
+      --lr 0.0006 \
       --device cuda \
       --val-fraction 0.12 \
       --cache-dtype float16 \
-      --num-workers 2 \
-      --val-num-workers 2 \
-      --prefetch-factor 1 \
-      --val-prefetch-factor 1 \
+      --num-workers 6 \
+      --val-num-workers 4 \
+      --prefetch-factor 4 \
+      --val-prefetch-factor 2 \
+      --persistent-workers \
+      --pin-memory \
       --grad-clip-norm 1.0 \
       --weight-decay 0.0001 \
-      --torch-compile-mode reduce-overhead \
+      --channels-last \
       --seed 1337 \
       --checkpoint-every 1 \
       --output "${BEATSIGHT_RUN_WARMUP}" \
@@ -321,7 +325,7 @@ run_train_warmup() {
       --wandb-project beatsight-classifier \
       --wandb-tags prod_combined_24class richer_subset warmup \
       --wandb-run-name prod_combined_warmup_probe_$(date +%Y%m%d) \
-      --grad-accum-steps 4 \
+      --grad-accum-steps 1 \
       ${CLASS_WEIGHTS_FLAG:-} \
       ${LABEL_SMOOTHING_FLAG:-} \
       ${RESUME_FLAG:-}
@@ -340,18 +344,19 @@ run_train_quick() {
       --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
       --epochs 60 \
       --scheduler plateau \
-      --batch-size 48 \
-      --lr 0.0005 \
+      --batch-size 128 \
+      --lr 0.0006 \
       --device cuda \
       --cache-dtype float16 \
-      --num-workers 8 \
-      --val-num-workers 8 \
+      --num-workers 6 \
+      --val-num-workers 4 \
+      --prefetch-factor 4 \
+      --val-prefetch-factor 2 \
       --persistent-workers \
+      --pin-memory \
       --grad-clip-norm 1.0 \
       --weight-decay 0.0001 \
       --channels-last \
-      --torch-compile \
-      --torch-compile-mode reduce-overhead \
       --seed 1337 \
       --checkpoint-every 10 \
       --output "${BEATSIGHT_RUN_QUICK}" \
@@ -390,22 +395,21 @@ run_train_long() {
       --warmup-epochs 16 \
       --scheduler cosine \
       --min-lr 0.00002 \
-      --batch-size 32 \
-      --lr 0.00028 \
+      --batch-size 128 \
+      --lr 0.0005 \
       --device cuda \
       --train-fraction 1.0 \
       --val-fraction 0.3 \
       --subset-seed 20251112 \
-      --num-workers 4 \
+      --num-workers 6 \
       --val-num-workers 4 \
-      --prefetch-factor 2 \
+      --prefetch-factor 4 \
       --val-prefetch-factor 2 \
       --persistent-workers \
+      --pin-memory \
       --grad-clip-norm 1.0 \
       --weight-decay 0.0001 \
       --channels-last \
-      --torch-compile \
-      --torch-compile-mode reduce-overhead \
       --seed 1337 \
       --checkpoint-every 20 \
       --output "${BEATSIGHT_RUN_LONG}" \

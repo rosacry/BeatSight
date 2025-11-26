@@ -15,6 +15,7 @@ using BeatSight.Game.Audio;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Customization;
 using BeatSight.Game.Mapping;
+using BeatSight.Game.Progress;
 using BeatSight.Game.Screens.Mapping;
 using BeatSight.Game.Services.Analysis;
 using BeatSight.Game.Services.Decode;
@@ -214,6 +215,9 @@ namespace BeatSight.Game
 
             var onsetDetectionService = new OnsetDetectionService();
             dependencies.Cache(onsetDetectionService);
+
+            var progressManager = new UserProgressManager(Host.Storage);
+            dependencies.Cache(progressManager);
 
             generationPipeline = new GenerationPipeline(audioEngine, decodeService, onsetDetectionService, aiGenerator, new DemucsExternalProcessBackend(), new PassthroughBackend());
             dependencies.Cache(generationPipeline);
@@ -1127,6 +1131,7 @@ namespace BeatSight.Game
             boundWindow = null;
 
             dependencies?.Get<BeatSightConfigManager>()?.Dispose();
+            dependencies?.Get<UserProgressManager>()?.Dispose();
             generationCoordinator?.Dispose();
             generationPipeline?.Dispose();
             audioEngine?.Dispose();

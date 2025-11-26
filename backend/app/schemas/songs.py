@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.song import MapState, SongStatus
 
@@ -35,8 +35,7 @@ class MapSummary(BaseModel):
     state: MapState
     current_version_id: uuid.UUID | None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SongRead(SongBase):
@@ -47,5 +46,4 @@ class SongRead(SongBase):
     updated_at: datetime
     maps: list[MapSummary] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

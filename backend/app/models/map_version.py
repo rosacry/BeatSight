@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import enum
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, JSON, String, UniqueConstraint, func
+from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Integer, JSON, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,7 +20,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from .song import Map
 
 
-class MapSource(str, Enum):  # type: ignore[misc]
+class MapSource(str, enum.Enum):
     """Enumerates how a map version was generated."""
 
     AI = "ai"
@@ -36,7 +37,7 @@ class MapVersion(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     map_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("maps.id", ondelete="CASCADE"))
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
-    source_type: Mapped[MapSource] = mapped_column(Enum(MapSource), default=MapSource.AI, nullable=False)
+    source_type: Mapped[MapSource] = mapped_column(SAEnum(MapSource), default=MapSource.AI, nullable=False)
     generation_job_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("ai_jobs.id", ondelete="SET NULL")
     )
@@ -46,8 +47,8 @@ class MapVersion(Base):
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    map: Mapped["Map"] = relationship("Map", back_populates="versions")
-    generation_job: Mapped["AIJob" | None] = relationship("AIJob", back_populates="output_versions")
+    map: Mapped["Map"] = relationship("Map", back_populates="versions", foreign_keys=[map_id])
+    generation_job: Mapped["AIJob | None"] = relationship("AIJob", back_populates="output_versions")
     assets: Mapped[list["MapAsset"]] = relationship("MapAsset", back_populates="map_version", cascade="all, delete-orphan")
     edit_proposals: Mapped[list["MapEditProposal"]] = relationship(
         "MapEditProposal", back_populates="map_version", cascade="all, delete-orphan"

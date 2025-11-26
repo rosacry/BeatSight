@@ -29,6 +29,7 @@ The project fuses an osu!-framework desktop client, a Python-based processing pi
 - Generation UI with weighted progress, debug overlay hooks, detection confidence banners, and lane statistics.
 - PlaybackScreen for practice sessions: metadata review, drum/full-mix stem toggles, timeline scrubbing, configurable lane presets, offset + speed controls, and the BackButton-driven navigation shell.
 - Practice overlays (looping, metronome, playback speed) and `BeatSightConfigManager` settings surfaces that persist per-user preferences.
+- Progress tracking with persistent practice history: favorites, tags, notes, and difficult section marking for focused rehearsal.
 - Editor entry point scaffolding that opens generated drafts, embeds PlaybackPreview, and will host deeper authoring workflows.
 
 ### AI processing & tooling
@@ -68,6 +69,8 @@ BeatSight/
 │   └── models/                   # drop-in classifier weights
 ├── backend/
 │   └── app/                      # FastAPI app, routers, services, models
+├── frontend/
+│   └── src/                      # React + TypeScript web application
 ├── data/                         # local dataset mirrors (ignored in git)
 ├── docs/                         # architecture, roadmap, archives
 ├── shared/                       # format specs, shared assets
@@ -81,6 +84,7 @@ BeatSight/
 - **.NET 8 SDK** for the desktop solution (`BeatSight.sln`).
 - **Python 3.10+** with virtualenv support for the AI pipeline and training tools.
 - **Poetry 1.7+** (or `pipx install poetry`) for the backend service.
+- **Node.js 18+** and npm for the web frontend.
 - **FFmpeg + Demucs model cache** for source separation (see the platform guides referenced by `docs/SETUP.md`).
 - Optional: CUDA-enabled GPU for accelerated separation and training.
 - Detailed platform setup: start with `docs/SETUP.md` and follow `SETUP_WINDOWS.md` or `SETUP_LINUX.md` as appropriate.
@@ -121,7 +125,22 @@ cd backend
 poetry install
 poetry run uvicorn app.main:app --reload
 ```
-Environment variables live in `backend/.env.example`. The service exposes health checks at `/health/live` and API routes under `/api/v1`.
+Environment variables live in `backend/.env.example`. The service exposes health checks at `/health/live` and API routes under `/api`.
+
+### Web frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+The web frontend is a React + TypeScript SPA built with Vite. It provides:
+- **User authentication** with JWT tokens and persistent sessions
+- **Song library management** with upload, search, and filtering
+- **AI beatmap generation** with real-time progress tracking via SSE
+- **PWA support** for offline access and mobile installation
+- **Responsive design** with TailwindCSS
+
+For production builds: `npm run build` outputs to `frontend/dist/`. See `docs/WEB_API_REFERENCE.md` for API documentation.
 
 ## Workflow & Documentation
 - Start with `START_HERE.md` for active tasks and launch commands.

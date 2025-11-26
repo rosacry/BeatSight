@@ -30,6 +30,7 @@ namespace BeatSight.Game.Screens.SongSelect
         private SortMode currentSortMode = SortMode.Title;
         private double minConfidence = 0.0;
         private string genreFilter = string.Empty;
+        private Func<BeatmapLibrary.BeatmapEntry, bool>? customFilter;
 
         [BackgroundDependencyLoader]
         private void load()
@@ -66,6 +67,15 @@ namespace BeatSight.Game.Screens.SongSelect
         public void SetGenreFilter(string genre)
         {
             genreFilter = genre;
+            Filter(currentFilter);
+        }
+
+        /// <summary>
+        /// Sets a custom filter predicate. Used for favorites filtering.
+        /// </summary>
+        public void SetCustomFilter(Func<BeatmapLibrary.BeatmapEntry, bool>? filter)
+        {
+            customFilter = filter;
             Filter(currentFilter);
         }
 
@@ -203,6 +213,10 @@ namespace BeatSight.Game.Screens.SongSelect
                 if (!entry.Beatmap.Metadata.Tags.Any(t => t.Equals(genreFilter, StringComparison.OrdinalIgnoreCase)))
                     return false;
             }
+
+            // Custom filter (e.g., favorites)
+            if (customFilter != null && !customFilter(entry))
+                return false;
 
             return true;
         }

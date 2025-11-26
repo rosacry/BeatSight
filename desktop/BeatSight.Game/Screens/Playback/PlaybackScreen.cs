@@ -7,6 +7,7 @@ using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Customization;
 using BeatSight.Game.Mapping;
+using BeatSight.Game.Progress;
 using BeatSight.Game.UI.Components;
 using BeatSight.Game.UI.Theming;
 using BeatSight.Game.Screens.Playback.Playfield;
@@ -225,6 +226,15 @@ namespace BeatSight.Game.Screens.Playback
 
         [Resolved]
         private MapPlaybackSettingsManager mapSettings { get; set; } = null!;
+
+        [Resolved]
+        private UserProgressManager progressManager { get; set; } = null!;
+
+        // Progress tracking state
+        private string? currentBeatmapId;
+        private double sessionStartTime;
+        private double lastProgressUpdateTime;
+        private bool sessionRecorded;
 
         public PlaybackScreen(string? beatmapPath = null)
         {
@@ -1659,23 +1669,79 @@ namespace BeatSight.Game.Screens.Playback
         {
             base.OnEntering(e);
             startPlayback(restart: true);
+            startProgressTracking();
         }
         public override void OnResuming(ScreenTransitionEvent e)
         {
             base.OnResuming(e);
             startPlayback(restart: false);
+            startProgressTracking();
         }
 
         public override void OnSuspending(ScreenTransitionEvent e)
         {
             base.OnSuspending(e);
             stopPlayback();
+            saveProgressOnExit();
         }
 
         public override bool OnExiting(ScreenExitEvent e)
         {
             stopPlayback();
+            saveProgressOnExit();
             return base.OnExiting(e);
+        }
+
+        private void startProgressTracking()
+        {
+            if (beatmap == null || string.IsNullOrEmpty(beatmapPath)) return;
+
+            currentBeatmapId = UserProgressManager.GenerateBeatmapId(
+                beatmapPath,
+                beatmap.Metadata?.Title,
+                beatmap.Metadata?.Artist);
+
+            sessionStartTime = Time.Current;
+            lastProgressUpdateTime = Time.Current;
+            sessionRecorded = false;
+
+            // Record play start on first entry
+            progressManager.RecordPlayStart(currentBeatmapId);
+        }
+
+        private void saveProgressOnExit()
+        {
+            if (string.IsNullOrEmpty(currentBeatmapId) || sessionRecorded) return;
+
+            double duration = getPlaybackDuration();
+            if (duration <= 0) return;
+
+            double currentTime = track?.CurrentTime ?? fallbackElapsed;
+            double progressFraction = Math.Clamp(currentTime / duration, 0, 1);
+            long elapsedMs = (long)(Time.Current - sessionStartTime);
+
+            // Record progress
+            progressManager.RecordPlayProgress(currentBeatmapId, progressFraction, elapsedMs);
+
+            // Check for completion (>95% of song played)
+            if (progressFraction >= 0.95)
+            {
+                progressManager.RecordCompletion(currentBeatmapId, playbackSpeed);
+            }
+
+            // If looping was used, record practice session
+            if (loopStart.HasValue && loopEnd.HasValue)
+            {
+                progressManager.RecordPracticeSession(
+                    currentBeatmapId,
+                    elapsedMs,
+                    loopStart.Value,
+                    loopEnd.Value,
+                    playbackSpeed);
+            }
+
+            sessionRecorded = true;
+            progressManager.Save();
         }
 
         protected override void Update()

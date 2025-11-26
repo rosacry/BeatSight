@@ -128,7 +128,16 @@ export interface TimelineViewport {
 
 export interface SnapSettings {
     enabled: boolean
-    divisor: 1 | 2 | 3 | 4 | 6 | 8 | 12 | 16
+    divisor: 1 | 2 | 3 | 4 | 6 | 8 | 12 | 16 | 24 | 32
+}
+
+/**
+ * Timeline display settings - matches desktop EditorInfo
+ */
+export interface TimelineDisplaySettings {
+    waveformScale: number  // 0.5 to 2.5, default 1.0
+    beatGridVisible: boolean
+    onsetLayerVisible: boolean
 }
 
 export interface NoteEdit {

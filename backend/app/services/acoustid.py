@@ -22,7 +22,6 @@ from pathlib import Path
 
 import httpx
 
-from app.config import get_settings
 from app.logging import get_logger
 
 logger = get_logger(__name__)

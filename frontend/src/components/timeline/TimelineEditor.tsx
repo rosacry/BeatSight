@@ -28,17 +28,45 @@ interface TimelineEditorProps {
     showDiff?: boolean
 }
 
-const DEFAULT_LANES: DrumComponent[] = [
-    'crash',
-    'hihat_closed',
-    'snare',
-    'kick',
-    'tom_high',
-    'tom_mid',
-    'tom_low',
-    'ride',
-]
+/**
+ * Lane sort priority matching desktop DynamicLaneLayoutBuilder.computeSortKey()
+ * Lower values appear higher in the timeline (hi-hats at top, kicks in middle, crashes at bottom)
+ */
+const LANE_SORT_PRIORITY: Record<DrumComponent, number> = {
+    // Hi-hats (top of timeline, left side of kit)
+    hihat_closed: -40,
+    hihat_open: -39,
+    hihat_pedal: -38,
+    hihat_foot_splash: -37,
+    // Snare variations (center-ish)
+    snare: -5,
+    rimshot: -4,
+    cross_stick: -3,
+    // Kick (center)
+    kick: 0,
+    // Toms (descending pitch order)
+    tom_high: 10,
+    tom_mid: 12,
+    tom_low: 15,
+    // Ride (right side)
+    ride: 25,
+    ride_bow: 25,
+    ride_bell: 26,
+    // Crashes/effects (bottom, around kit)
+    crash: 30,
+    crash2: 31,
+    splash: 32,
+    china: 33,
+    // Auxiliary percussion (very bottom)
+    cowbell: 40,
+    aux_percussion: 41,
+    unknown: 50,
+}
 
+/**
+ * Snap divisor options - matches desktop EditorTimeline.SupportedSnapDivisors
+ * [1, 2, 3, 4, 6, 8, 12, 16, 24, 32]
+ */
 const SNAP_OPTIONS: { value: SnapSettings['divisor']; label: string }[] = [
     { value: 1, label: '1/1' },
     { value: 2, label: '1/2' },
@@ -48,7 +76,16 @@ const SNAP_OPTIONS: { value: SnapSettings['divisor']; label: string }[] = [
     { value: 8, label: '1/8' },
     { value: 12, label: '1/12' },
     { value: 16, label: '1/16' },
+    { value: 24, label: '1/24' },
+    { value: 32, label: '1/32' },
 ]
+
+/**
+ * Waveform scale constants matching desktop EditorTimeline.cs
+ */
+const DEFAULT_WAVEFORM_SCALE = 1.0
+const MIN_WAVEFORM_SCALE = 0.5
+const MAX_WAVEFORM_SCALE = 2.5
 
 const PLAYBACK_RATES = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
 
@@ -80,6 +117,11 @@ export function TimelineEditor({
     const [snap, setSnap] = useState<SnapSettings>({ enabled: true, divisor: 4 })
     const [showDiff, setShowDiff] = useState(initialShowDiff)
 
+    // Display settings matching desktop EditorTimeline
+    const [waveformScale, setWaveformScale] = useState(DEFAULT_WAVEFORM_SCALE)
+    const [beatGridVisible, setBeatGridVisible] = useState(true)
+    const [onsetLayerVisible, setOnsetLayerVisible] = useState(false)
+
     // Edit history for undo/redo
     const [undoStack, setUndoStack] = useState<NoteEdit[][]>([])
     const [redoStack, setRedoStack] = useState<NoteEdit[][]>([])
@@ -87,15 +129,45 @@ export function TimelineEditor({
     // Local editable copy of hit objects
     const [hitObjects, setHitObjects] = useState<HitObject[]>(beatmap.hitObjects)
 
-    // Which lanes to display
+    /**
+     * Dynamically build lanes from the beatmap content.
+     * Matches desktop DynamicLaneLayoutBuilder.CreateForBeatmap():
+     * 1. Collect all unique components from drumKit.components or hitObjects
+     * 2. Sort by priority (hi-hats at top, kicks in middle, crashes at bottom)
+     */
     const lanes = useMemo(() => {
-        // Use all components present in the beatmap, or defaults
-        const components = new Set(hitObjects.map((n) => n.component))
+        const components = new Set<DrumComponent>()
+
+        // First: use drumKit.components if available (preferred source)
+        if (beatmap.drumKit?.components) {
+            beatmap.drumKit.components.forEach((c) => components.add(c))
+        }
+
+        // Second: collect from hitObjects if drumKit is empty
+        if (components.size === 0) {
+            hitObjects.forEach((n) => components.add(n.component))
+        }
+
+        // Also include comparison beatmap components for diff view
         if (comparisonBeatmap) {
+            if (comparisonBeatmap.drumKit?.components) {
+                comparisonBeatmap.drumKit.components.forEach((c) => components.add(c))
+            }
             comparisonBeatmap.hitObjects.forEach((n) => components.add(n.component))
         }
-        return DEFAULT_LANES.filter((l) => components.has(l) || DEFAULT_LANES.includes(l))
-    }, [hitObjects, comparisonBeatmap])
+
+        // Fallback: at minimum show kick if nothing detected
+        if (components.size === 0) {
+            components.add('kick')
+        }
+
+        // Sort by priority (matching desktop DynamicLaneLayoutBuilder.computeSortKey)
+        return Array.from(components).sort((a, b) => {
+            const priorityA = LANE_SORT_PRIORITY[a] ?? 50
+            const priorityB = LANE_SORT_PRIORITY[b] ?? 50
+            return priorityA - priorityB
+        })
+    }, [beatmap.drumKit?.components, hitObjects, comparisonBeatmap])
 
     // Initialize audio player
     useEffect(() => {
@@ -480,6 +552,43 @@ export function TimelineEditor({
                     </label>
                 )}
 
+                <div className="h-6 w-px bg-gray-700" />
+
+                {/* Display controls - matches desktop EditorTimeline */}
+                <label className="flex items-center gap-1.5 text-sm">
+                    <input
+                        type="checkbox"
+                        checked={beatGridVisible}
+                        onChange={(e) => setBeatGridVisible(e.target.checked)}
+                        className="rounded"
+                    />
+                    <span className="text-gray-400">Grid</span>
+                </label>
+
+                <label className="flex items-center gap-1.5 text-sm">
+                    <input
+                        type="checkbox"
+                        checked={onsetLayerVisible}
+                        onChange={(e) => setOnsetLayerVisible(e.target.checked)}
+                        className="rounded"
+                    />
+                    <span className="text-gray-400">Onsets</span>
+                </label>
+
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">Wave:</span>
+                    <input
+                        type="range"
+                        min={MIN_WAVEFORM_SCALE}
+                        max={MAX_WAVEFORM_SCALE}
+                        step="0.1"
+                        value={waveformScale}
+                        onChange={(e) => setWaveformScale(parseFloat(e.target.value))}
+                        className="h-1 w-16 cursor-pointer"
+                        title={`Waveform scale: ${waveformScale.toFixed(1)}`}
+                    />
+                </div>
+
                 {/* Edit stats */}
                 {showDiff && editStats && (
                     <div className="flex items-center gap-3 text-xs">
@@ -559,6 +668,9 @@ export function TimelineEditor({
                 selection={selection}
                 snap={snap}
                 showDiff={showDiff}
+                beatGridVisible={beatGridVisible}
+                onsetLayerVisible={onsetLayerVisible}
+                waveformScale={waveformScale}
                 onViewportChange={setViewport}
                 onSelectionChange={setSelection}
                 onNoteDrag={handleNoteDrag}

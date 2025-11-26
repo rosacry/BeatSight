@@ -3,10 +3,13 @@
 set -e
 
 echo "=== Backend Security Scan ==="
+echo "Mirrors: backend.yml -> security job"
+echo ""
 cd "$(dirname "$0")/../backend"
 
 echo "Installing security tools..."
-pip install bandit safety --quiet
+python -m pip install --upgrade pip --quiet 2>/dev/null || true
+python -m pip install bandit safety --quiet
 
 echo ""
 echo "--- Bandit Security Linter (bandit -r app/ -ll) ---"

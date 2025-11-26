@@ -4,12 +4,15 @@
 set -e
 
 echo "=== AI Pipeline Tests ==="
+echo "Mirrors: ci.yml -> ai-pipeline-test job"
+echo ""
 cd "$(dirname "$0")/../ai-pipeline"
 
 echo "Installing dependencies..."
+python -m pip install --upgrade pip --quiet 2>/dev/null || true
 # Note: Some CUDA packages (nvidia-nccl-cu12) may fail on Windows - ignore these errors
-pip install -r requirements.txt --quiet 2>/dev/null || echo "⚠️ Some GPU dependencies failed to install (expected on Windows)"
-pip install pytest pytest-asyncio --quiet
+python -m pip install -r requirements.txt --quiet 2>/dev/null || echo "⚠️ Some GPU dependencies failed to install (expected on Windows)"
+python -m pip install pytest pytest-asyncio --quiet
 
 echo ""
 echo "--- Running tests (pytest tests/ -v --ignore=tests/test_pipeline_integration.py) ---"

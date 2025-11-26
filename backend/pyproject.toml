@@ -34,7 +34,32 @@ pytest-asyncio = "^0.23.3"
 httpx = "^0.27.0"
 pre-commit = "^3.6.0"
 ruff = "^0.1.11"
+pytest-cov = "^4.1.0"
 
 [build-system]
 requires = ["poetry-core>=1.7.0"]
 build-backend = "poetry.core.masonry.api"
+
+# PEP 621 compatibility for pip install -e ".[dev]"
+[project]
+name = "beatsight-backend"
+version = "0.1.0"
+description = "BeatSight web backend services"
+requires-python = ">=3.10"
+readme = "README.md"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.1.1",
+    "pytest-asyncio>=0.23.3",
+    "pytest-cov>=4.1.0",
+    "httpx>=0.27.0",
+    "pre-commit>=3.6.0",
+    "ruff>=0.1.11",
+]
+test = [
+    "pytest>=8.1.1",
+    "pytest-asyncio>=0.23.3",
+    "pytest-cov>=4.1.0",
+    "httpx>=0.27.0",
+]

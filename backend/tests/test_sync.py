@@ -22,7 +22,7 @@ from app.services.sync import SyncService
 def create_mock_db() -> MagicMock:
     """
     Create a properly configured mock for AsyncSession.
-    
+
     SQLAlchemy AsyncSession has:
     - Async methods: execute(), commit(), flush(), refresh(), close(), delete()
     - Sync methods: add(), expire(), expunge()
@@ -210,13 +210,13 @@ class TestSyncServiceManifest:
         """Test that matching checksums result in no action."""
         mock_db = create_mock_db()
         map_id = uuid.uuid4()
-        
+
         mock_entry = MagicMock(spec=SyncManifestEntry)
         mock_entry.map_id = map_id
         mock_entry.checksum = "sha256:abc123"
         mock_entry.cloud_version = 5
         mock_entry.sync_state = SyncState.SYNCED
-        
+
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [mock_entry]
         mock_db.execute.return_value = mock_result
@@ -236,13 +236,13 @@ class TestSyncServiceManifest:
         """Test that local newer version results in upload action."""
         mock_db = create_mock_db()
         map_id = uuid.uuid4()
-        
+
         mock_entry = MagicMock(spec=SyncManifestEntry)
         mock_entry.map_id = map_id
         mock_entry.checksum = "sha256:old"
         mock_entry.cloud_version = 3
         mock_entry.sync_state = SyncState.SYNCED
-        
+
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [mock_entry]
         mock_db.execute.return_value = mock_result
@@ -262,13 +262,13 @@ class TestSyncServiceManifest:
         """Test that cloud newer version results in download action."""
         mock_db = create_mock_db()
         map_id = uuid.uuid4()
-        
+
         mock_entry = MagicMock(spec=SyncManifestEntry)
         mock_entry.map_id = map_id
         mock_entry.checksum = "sha256:cloud"
         mock_entry.cloud_version = 10
         mock_entry.sync_state = SyncState.SYNCED
-        
+
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [mock_entry]
         mock_db.execute.return_value = mock_result
@@ -289,13 +289,13 @@ class TestSyncServiceManifest:
         """Test that same version with different checksums results in conflict."""
         mock_db = create_mock_db()
         map_id = uuid.uuid4()
-        
+
         mock_entry = MagicMock(spec=SyncManifestEntry)
         mock_entry.map_id = map_id
         mock_entry.checksum = "sha256:cloud"
         mock_entry.cloud_version = 5
         mock_entry.sync_state = SyncState.SYNCED
-        
+
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [mock_entry]
         mock_db.execute.return_value = mock_result
@@ -314,7 +314,7 @@ class TestSyncServiceManifest:
     async def test_compare_manifest_local_only(self) -> None:
         """Test that local-only maps result in upload action."""
         mock_db = create_mock_db()
-        
+
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = []  # No cloud entries
         mock_db.execute.return_value = mock_result
@@ -335,13 +335,13 @@ class TestSyncServiceManifest:
         """Test that cloud-only maps result in download action."""
         mock_db = create_mock_db()
         cloud_map_id = uuid.uuid4()
-        
+
         mock_entry = MagicMock(spec=SyncManifestEntry)
         mock_entry.map_id = cloud_map_id
         mock_entry.checksum = "sha256:cloud"
         mock_entry.cloud_version = 3
         mock_entry.sync_state = SyncState.SYNCED
-        
+
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [mock_entry]
         mock_db.execute.return_value = mock_result
@@ -428,10 +428,10 @@ class TestSyncServiceUtilities:
     def test_compute_checksum(self) -> None:
         """Test checksum computation is deterministic."""
         data = {"key": "value", "number": 42}
-        
+
         checksum1 = SyncService._compute_checksum(data)
         checksum2 = SyncService._compute_checksum(data)
-        
+
         assert checksum1 == checksum2
         assert checksum1.startswith("sha256:")
 
@@ -439,8 +439,10 @@ class TestSyncServiceUtilities:
         """Test that key order doesn't affect checksum."""
         data1 = {"a": 1, "b": 2, "c": 3}
         data2 = {"c": 3, "a": 1, "b": 2}
-        
-        assert SyncService._compute_checksum(data1) == SyncService._compute_checksum(data2)
+
+        assert SyncService._compute_checksum(data1) == SyncService._compute_checksum(
+            data2
+        )
 
     def test_compute_beatmap_checksum(self) -> None:
         """Test beatmap checksum uses relevant fields only."""
@@ -450,11 +452,11 @@ class TestSyncServiceUtilities:
             "hitObjects": [{"time": 0}],
             "irrelevant": "ignored",
         }
-        
+
         checksum = SyncService.compute_beatmap_checksum(beatmap)
-        
+
         assert checksum.startswith("sha256:")
-        
+
         # Verify irrelevant fields don't affect checksum
         beatmap2 = {
             "metadata": {"title": "Test"},
@@ -462,6 +464,5 @@ class TestSyncServiceUtilities:
             "hitObjects": [{"time": 0}],
             "other": "also ignored",
         }
-        
-        assert SyncService.compute_beatmap_checksum(beatmap2) == checksum
 
+        assert SyncService.compute_beatmap_checksum(beatmap2) == checksum

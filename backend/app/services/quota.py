@@ -22,7 +22,7 @@ from app.models.subscription import Subscription, SubscriptionPlan, Subscription
 
 class QuotaExceededError(Exception):
     """Raised when user has exceeded their AI generation quota."""
-    
+
     def __init__(self, limit: int, used: int, resets_at: datetime | None = None):
         self.limit = limit
         self.used = used
@@ -32,19 +32,21 @@ class QuotaExceededError(Exception):
 
 class JobPriority(IntEnum):
     """Job priority levels based on subscription tier."""
-    LOW = 1       # Anonymous users
+
+    LOW = 1  # Anonymous users
     STANDARD = 5  # Free tier
-    HIGH = 10     # Pro tier
+    HIGH = 10  # Pro tier
 
 
 @dataclass
 class QuotaLimits:
     """Quota limits for a subscription plan."""
+
     jobs_per_month: int
     jobs_per_day: int
     max_concurrent: int
     priority: JobPriority
-    
+
     @classmethod
     def for_plan(cls, plan: SubscriptionPlan) -> "QuotaLimits":
         """Get quota limits for a subscription plan."""
@@ -71,7 +73,7 @@ class QuotaLimits:
                     max_concurrent=1,
                     priority=JobPriority.STANDARD,
                 )
-    
+
     @classmethod
     def anonymous(cls) -> "QuotaLimits":
         """Get quota limits for anonymous (unauthenticated) users."""
@@ -86,6 +88,7 @@ class QuotaLimits:
 @dataclass
 class QuotaStatus:
     """Current quota status for a user."""
+
     plan: SubscriptionPlan | None
     limits: QuotaLimits
     used_this_month: int
@@ -93,7 +96,7 @@ class QuotaStatus:
     remaining_month: int
     remaining_today: int
     resets_at: datetime | None
-    
+
     @property
     def can_enqueue(self) -> bool:
         """Check if user can enqueue a new job."""
@@ -102,10 +105,10 @@ class QuotaStatus:
 
 class QuotaService:
     """Service for checking and managing AI generation quotas."""
-    
+
     def __init__(self, session: AsyncSession):
         self._session = session
-    
+
     async def get_user_subscription(self, user_id: uuid.UUID) -> Subscription | None:
         """Get active subscription for a user."""
         result = await self._session.execute(
@@ -115,13 +118,13 @@ class QuotaService:
             .order_by(Subscription.current_period_end.desc())
         )
         return result.scalar_one_or_none()
-    
+
     async def get_quota_status(self, user_id: uuid.UUID | None) -> QuotaStatus:
         """Get current quota status for a user."""
         now = datetime.now(timezone.utc)
         month_key = now.strftime("%Y-%m")
         day_key = now.strftime("%Y-%m-%d")
-        
+
         # Anonymous users
         if user_id is None:
             limits = QuotaLimits.anonymous()
@@ -134,17 +137,17 @@ class QuotaService:
                 remaining_today=limits.jobs_per_day,
                 resets_at=None,
             )
-        
+
         # Get subscription
         subscription = await self.get_user_subscription(user_id)
         plan = subscription.plan_code if subscription else SubscriptionPlan.FREE
         limits = QuotaLimits.for_plan(plan)
-        
+
         # Get usage from Redis
         redis = await get_redis()
         used_month = await get_quota_usage(redis, user_id, month_key)
         used_day = await get_quota_usage(redis, user_id, day_key)
-        
+
         # Calculate resets_at (end of current billing period or end of month for free)
         if subscription:
             resets_at = subscription.current_period_end
@@ -154,7 +157,7 @@ class QuotaService:
                 resets_at = datetime(now.year + 1, 1, 1, tzinfo=timezone.utc)
             else:
                 resets_at = datetime(now.year, now.month + 1, 1, tzinfo=timezone.utc)
-        
+
         return QuotaStatus(
             plan=plan,
             limits=limits,
@@ -164,39 +167,43 @@ class QuotaService:
             remaining_today=max(0, limits.jobs_per_day - used_day),
             resets_at=resets_at,
         )
-    
+
     async def check_quota(self, user_id: uuid.UUID | None) -> QuotaStatus:
         """Check if user can enqueue a job. Raises QuotaExceededError if not."""
         status = await self.get_quota_status(user_id)
-        
+
         if not status.can_enqueue:
             raise QuotaExceededError(
                 limit=status.limits.jobs_per_month,
                 used=status.used_this_month,
                 resets_at=status.resets_at,
             )
-        
+
         return status
-    
+
     async def consume_quota(self, user_id: uuid.UUID) -> QuotaStatus:
         """Consume one quota unit for a user. Call after successfully enqueuing a job."""
         now = datetime.now(timezone.utc)
         month_key = now.strftime("%Y-%m")
         day_key = now.strftime("%Y-%m-%d")
-        
+
         redis = await get_redis()
-        
+
         # Increment both monthly and daily counters
-        await increment_quota_usage(redis, user_id, month_key, ttl_seconds=2678400)  # ~31 days
-        await increment_quota_usage(redis, user_id, day_key, ttl_seconds=86400)  # 24 hours
-        
+        await increment_quota_usage(
+            redis, user_id, month_key, ttl_seconds=2678400
+        )  # ~31 days
+        await increment_quota_usage(
+            redis, user_id, day_key, ttl_seconds=86400
+        )  # 24 hours
+
         return await self.get_quota_status(user_id)
-    
+
     async def get_priority(self, user_id: uuid.UUID | None) -> JobPriority:
         """Get job priority based on user's subscription."""
         if user_id is None:
             return JobPriority.LOW
-        
+
         subscription = await self.get_user_subscription(user_id)
         plan = subscription.plan_code if subscription else SubscriptionPlan.FREE
         limits = QuotaLimits.for_plan(plan)

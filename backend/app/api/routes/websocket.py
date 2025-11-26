@@ -203,19 +203,23 @@ async def websocket_jobs(
                 job_id = data.get("job_id")
                 if job_id:
                     manager.subscribe_to_job(websocket, job_id)
-                    await websocket.send_json({
-                        "type": "subscribed",
-                        "job_id": job_id,
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "subscribed",
+                            "job_id": job_id,
+                        }
+                    )
 
             elif msg_type == "unsubscribe":
                 job_id = data.get("job_id")
                 if job_id:
                     manager.unsubscribe_from_job(websocket, job_id)
-                    await websocket.send_json({
-                        "type": "unsubscribed",
-                        "job_id": job_id,
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "unsubscribed",
+                            "job_id": job_id,
+                        }
+                    )
 
             elif msg_type == "ping":
                 await websocket.send_json({"type": "pong"})

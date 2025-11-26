@@ -290,15 +290,17 @@ async def metrics_endpoint() -> Response:
 def setup_metrics(app: FastAPI) -> None:
     """
     Set up Prometheus metrics for a FastAPI application.
-    
+
     Args:
         app: FastAPI application instance
     """
     # Set app info
-    APP_INFO.info({
-        "version": "0.1.0",
-        "service": "beatsight-api",
-    })
+    APP_INFO.info(
+        {
+            "version": "0.1.0",
+            "service": "beatsight-api",
+        }
+    )
 
     # Add middleware
     app.add_middleware(PrometheusMiddleware)
@@ -322,10 +324,10 @@ def setup_metrics(app: FastAPI) -> None:
 def track_ai_job_stage(stage: str) -> Generator[None, None, None]:
     """
     Context manager to track AI job stage duration.
-    
+
     Args:
         stage: Name of the processing stage
-        
+
     Example:
         with track_ai_job_stage("separation"):
             await run_separation()
@@ -344,7 +346,7 @@ def track_storage_operation(
 ) -> Generator[None, None, None]:
     """
     Context manager to track storage operation duration.
-    
+
     Args:
         operation: Type of operation (upload, download, delete)
         backend: Storage backend (local, s3, azure)
@@ -364,7 +366,7 @@ def track_storage_operation(
 def track_db_query(operation: str) -> Generator[None, None, None]:
     """
     Context manager to track database query duration.
-    
+
     Args:
         operation: Type of operation (select, insert, update, delete)
     """

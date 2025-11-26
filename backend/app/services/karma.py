@@ -57,9 +57,9 @@ KARMA_REWARDS = {
 
 # Daily AI generation quotas by karma tier
 AI_GENERATION_QUOTAS = {
-    0: 3,      # New users: 3 per day
-    100: 5,    # Fixer: 5 per day
-    500: 10,   # Verifier: 10 per day
+    0: 3,  # New users: 3 per day
+    100: 5,  # Fixer: 5 per day
+    500: 10,  # Verifier: 10 per day
     2000: 25,  # Curator: 25 per day
     10000: -1,  # Admin: unlimited (-1)
 }
@@ -119,9 +119,7 @@ class KarmaService:
         self.session.add(ledger_entry)
 
         # Update user's aggregate karma score
-        result = await self.session.execute(
-            select(User).where(User.id == user_id)
-        )
+        result = await self.session.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
 
         if user is None:
@@ -156,9 +154,9 @@ class KarmaService:
     async def get_karma_history_count(self, user_id: uuid.UUID) -> int:
         """Get total count of karma history entries for a user."""
         from sqlalchemy import func
+
         result = await self.session.execute(
-            select(func.count(KarmaLedger.id))
-            .where(KarmaLedger.user_id == user_id)
+            select(func.count(KarmaLedger.id)).where(KarmaLedger.user_id == user_id)
         )
         return result.scalar_one()
 
@@ -351,15 +349,16 @@ class KarmaService:
             .where(KarmaLedger.user_id == user_id)
             .group_by(KarmaLedger.reason_code)
         )
-        breakdown = {row.reason_code.value: {"total": row.total, "count": row.count} for row in result.all()}
+        breakdown = {
+            row.reason_code.value: {"total": row.total, "count": row.count}
+            for row in result.all()
+        }
 
         # Get current score and rank
         karma = await self.get_user_karma(user_id)
 
         result = await self.session.execute(
-            select(func.count())
-            .select_from(User)
-            .where(User.karma_score > karma)
+            select(func.count()).select_from(User).where(User.karma_score > karma)
         )
         rank = (result.scalar() or 0) + 1
 

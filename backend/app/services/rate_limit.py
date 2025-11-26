@@ -24,10 +24,10 @@ logger = get_logger(__name__)
 
 # Rate limit configurations (requests per minute)
 RATE_LIMITS = {
-    "anonymous": 30,      # Unauthenticated users
+    "anonymous": 30,  # Unauthenticated users
     "authenticated": 100,  # Regular authenticated users
-    "premium": 500,        # Premium/Pro users
-    "admin": 1000,         # Admins (essentially unlimited)
+    "premium": 500,  # Premium/Pro users
+    "admin": 1000,  # Admins (essentially unlimited)
 }
 
 # Endpoints with custom limits (more restrictive)
@@ -53,7 +53,7 @@ EXEMPT_ENDPOINTS = {
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     Sliding window rate limiting middleware using Redis.
-    
+
     Features:
     - Per-user and per-IP rate limiting
     - Different limits for authenticated vs anonymous users
@@ -65,7 +65,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, redis_getter):
         """
         Initialize rate limiter.
-        
+
         Args:
             app: FastAPI application
             redis_getter: Async function that returns Redis client
@@ -145,7 +145,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     ) -> tuple[bool, int, float]:
         """
         Check rate limit using sliding window counter.
-        
+
         Returns:
             Tuple of (allowed, remaining, reset_timestamp)
         """
@@ -155,13 +155,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Simple implementation using individual commands
         # Remove old entries
         await redis.zremrangebyscore(key, 0, window_start)
-        
+
         # Count current requests
         current_count = await redis.zcard(key)
-        
+
         # Check if allowed before adding
         allowed = current_count < limit
-        
+
         if allowed:
             # Add current request
             await redis.zadd(key, {str(now): now})
@@ -188,6 +188,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             # Full validation happens in the endpoint
             try:
                 import jwt
+
                 token = auth_header[7:]
                 # Decode without verification just to get user ID
                 payload = jwt.decode(token, options={"verify_signature": False})
@@ -246,7 +247,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 def setup_rate_limiting(app, redis_getter) -> None:
     """
     Set up rate limiting middleware on the FastAPI app.
-    
+
     Args:
         app: FastAPI application instance
         redis_getter: Async function that returns Redis client

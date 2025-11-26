@@ -80,11 +80,11 @@ class ServiceStatusResponse(BaseModel):
 async def get_metadata_status() -> ServiceStatusResponse:
     """
     Get the status of the metadata identification service.
-    
+
     Returns information about whether AcoustID is properly configured.
     """
     service = get_acoustid_service()
-    
+
     return ServiceStatusResponse(
         available=service.is_available,
         has_api_key=bool(service.api_key),
@@ -103,23 +103,23 @@ async def identify_audio(
 ) -> IdentifyResponse:
     """
     Identify an uploaded audio file.
-    
+
     Uses AcoustID to fingerprint the audio and look up metadata
     in the MusicBrainz database.
-    
+
     The confidence score (0-1) indicates how well the audio matches
     the identified recording. Scores above 0.8 are typically very accurate.
-    
+
     **Rate limits:** 10 requests per minute per user.
     """
     service = get_acoustid_service()
-    
+
     if not service.is_available:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Audio identification service is not available. Check configuration.",
         )
-    
+
     # Validate file type
     content_type = file.content_type or ""
     if not content_type.startswith("audio/") and not file.filename.lower().endswith(
@@ -129,7 +129,7 @@ async def identify_audio(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File must be an audio file",
         )
-    
+
     # Read file content
     try:
         content = await file.read()
@@ -138,28 +138,28 @@ async def identify_audio(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to read file: {e}",
         )
-    
+
     # Size limit: 100MB
     if len(content) > 100 * 1024 * 1024:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail="File size exceeds 100MB limit",
         )
-    
+
     logger.info(
         "Identifying audio file",
         filename=file.filename,
         size=len(content),
         user_id=str(current_user.id) if current_user else None,
     )
-    
+
     try:
         result = await service.identify_audio_bytes(
             content,
             filename=file.filename or "audio.mp3",
             min_score=min_score,
         )
-        
+
         if result:
             return IdentifyResponse(
                 success=True,
@@ -171,7 +171,7 @@ async def identify_audio(
                 metadata=None,
                 message="No matching recordings found above the confidence threshold",
             )
-            
+
     except AcoustIDError as e:
         logger.error("Audio identification failed", error=str(e))
         raise HTTPException(
@@ -191,29 +191,29 @@ async def identify_fingerprint(
 ) -> IdentifyResponse:
     """
     Identify audio from a pre-computed fingerprint.
-    
+
     If you've already generated a Chromaprint fingerprint client-side,
     you can submit it directly without uploading the audio file.
-    
+
     This is useful for:
     - Mobile apps that generate fingerprints locally
     - Batch processing where fingerprints are cached
     - Reducing bandwidth by not uploading full audio
     """
     from app.services.acoustid import AudioFingerprint, LookupError
-    
+
     service = get_acoustid_service()
-    
+
     if not service.api_key:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AcoustID API key not configured",
         )
-    
+
     try:
         fp = AudioFingerprint(duration=duration, fingerprint=fingerprint)
         results = await service.lookup_fingerprint(fp)
-        
+
         # Find best result above threshold
         for result in results:
             if result.score >= min_score and (result.title or result.artist):
@@ -230,13 +230,13 @@ async def identify_fingerprint(
                         musicbrainz_id=result.musicbrainz_id,
                     ),
                 )
-        
+
         return IdentifyResponse(
             success=False,
             metadata=None,
             message="No matching recordings found above the confidence threshold",
         )
-        
+
     except LookupError as e:
         logger.error("Fingerprint lookup failed", error=str(e))
         raise HTTPException(
@@ -254,19 +254,19 @@ async def clear_metadata_cache(
 ) -> dict:
     """
     Clear the metadata lookup cache.
-    
+
     Requires admin:system permission. Admin users can clear the cache
     to force fresh lookups.
     """
     service = get_acoustid_service()
     cleared = service.clear_cache()
-    
+
     logger.info(
         "Metadata cache cleared",
         entries=cleared,
         user_id=str(current_user.id),
     )
-    
+
     return {
         "success": True,
         "cleared_entries": cleared,
@@ -275,7 +275,7 @@ async def clear_metadata_cache(
 
 class IdentifyWithRetryResponse(BaseModel):
     """Response for identify with retry endpoint."""
-    
+
     success: bool
     metadata: MetadataResponse | None
     message: str | None = None
@@ -299,24 +299,24 @@ async def identify_audio_with_retry(
 ) -> IdentifyWithRetryResponse:
     """
     Identify an uploaded audio file with automatic retry on transient failures.
-    
+
     This endpoint will retry fingerprinting and lookup up to `max_retries` times
     if transient errors occur (network issues, rate limits, etc.).
-    
+
     Use this for more reliable identification when immediate response isn't critical.
-    
+
     **Analytics:** Provides session_id to track intake funnel events.
     """
     service = get_acoustid_service()
     analytics = get_intake_analytics()
     user_id = current_user.id if current_user else None
-    
+
     if not service.is_available:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Audio identification service is not available. Check configuration.",
         )
-    
+
     # Validate file type
     content_type = file.content_type or ""
     if not content_type.startswith("audio/") and not file.filename.lower().endswith(
@@ -326,7 +326,7 @@ async def identify_audio_with_retry(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File must be an audio file",
         )
-    
+
     # Read file content
     try:
         content = await file.read()
@@ -337,21 +337,21 @@ async def identify_audio_with_retry(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to read file: {e}",
         )
-    
+
     # Size limit: 100MB
     if len(content) > 100 * 1024 * 1024:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail="File size exceeds 100MB limit",
         )
-    
+
     if session_id:
         analytics.track(
             IntakeEvent.FINGERPRINT_STARTED,
             session_id=session_id,
             user_id=user_id,
         )
-    
+
     # Retry loop with exponential backoff
     last_error: str | None = None
     for attempt in range(1, max_retries + 1):
@@ -361,7 +361,7 @@ async def identify_audio_with_retry(
                 filename=file.filename or "audio.mp3",
                 min_score=min_score,
             )
-            
+
             if result:
                 if session_id:
                     analytics.track_metadata_found(
@@ -371,7 +371,7 @@ async def identify_audio_with_retry(
                         confidence=result.confidence,
                         user_id=user_id,
                     )
-                
+
                 return IdentifyWithRetryResponse(
                     success=True,
                     metadata=MetadataResponse(**result.to_dict()),
@@ -381,17 +381,17 @@ async def identify_audio_with_retry(
                 # No match found - not a retriable error
                 if session_id:
                     analytics.track_metadata_not_found(session_id, user_id=user_id)
-                
+
                 return IdentifyWithRetryResponse(
                     success=False,
                     metadata=None,
                     message="No matching recordings found above the confidence threshold",
                     attempts=attempt,
                 )
-                
+
         except (FingerprintError, LookupError) as e:
             last_error = str(e)
-            
+
             if session_id and attempt < max_retries:
                 analytics.track_fingerprint_retried(
                     session_id=session_id,
@@ -399,7 +399,7 @@ async def identify_audio_with_retry(
                     retry_count=attempt,
                     user_id=user_id,
                 )
-            
+
             if attempt < max_retries:
                 # Exponential backoff: 1s, 2s, 4s...
                 backoff = 2 ** (attempt - 1)
@@ -417,13 +417,13 @@ async def identify_audio_with_retry(
                     attempts=attempt,
                     error=str(e),
                 )
-        
+
         except Exception as e:
             # Unexpected error - don't retry
             last_error = str(e)
             logger.error("Unexpected identification error", error=str(e))
             break
-    
+
     # All retries exhausted
     if session_id:
         analytics.track_fingerprint_failed(
@@ -432,7 +432,7 @@ async def identify_audio_with_retry(
             retry_count=max_retries,
             user_id=user_id,
         )
-    
+
     return IdentifyWithRetryResponse(
         success=False,
         metadata=None,
@@ -444,7 +444,7 @@ async def identify_audio_with_retry(
 
 class ManualMetadataInput(BaseModel):
     """Manual metadata entry for songs that couldn't be identified."""
-    
+
     title: str
     artist: str
     album: str | None = None
@@ -453,7 +453,7 @@ class ManualMetadataInput(BaseModel):
 
 class ManualMetadataResponse(BaseModel):
     """Response for manual metadata entry."""
-    
+
     success: bool
     metadata: MetadataResponse
 
@@ -468,29 +468,29 @@ async def submit_manual_metadata(
 ) -> ManualMetadataResponse:
     """
     Submit manual metadata when automatic identification fails.
-    
+
     This is the fallback path when AcoustID/MusicBrainz cannot identify
     the audio. The user provides the song information directly.
-    
+
     **Analytics:** Tracks manual entry in the intake funnel.
     """
     analytics = get_intake_analytics()
     user_id = current_user.id if current_user else None
-    
+
     if session_id:
         analytics.track_metadata_manual(
             session_id=session_id,
             song_id=uuid.uuid4(),  # Placeholder - would be actual song ID
             user_id=user_id,
         )
-    
+
     logger.info(
         "Manual metadata submitted",
         title=input_data.title,
         artist=input_data.artist,
         user_id=str(user_id) if user_id else None,
     )
-    
+
     return ManualMetadataResponse(
         success=True,
         metadata=MetadataResponse(

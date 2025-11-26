@@ -33,12 +33,20 @@ class KarmaLedger(Base):
 
     __tablename__ = "karma_ledger"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
+    )
     delta: Mapped[int] = mapped_column(Integer, nullable=False)
-    reason_code: Mapped[KarmaReason] = mapped_column(SAEnum(KarmaReason), nullable=False)
+    reason_code: Mapped[KarmaReason] = mapped_column(
+        SAEnum(KarmaReason), nullable=False
+    )
     related_entity_type: Mapped[str | None] = mapped_column(String(64))
     related_entity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
-    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="karma_events")

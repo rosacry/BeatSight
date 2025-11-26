@@ -199,12 +199,24 @@ def job_to_detail(job: AIJob, email: str | None = None) -> AdminJobDetail:
 async def list_ai_jobs(
     db: Annotated[AsyncSession, Depends(get_session)],
     admin: Annotated[User, Depends(RequireAdminDashboard)],
-    state: Annotated[AIJobState | None, Query(description="Filter by job state")] = None,
-    user_id: Annotated[uuid.UUID | None, Query(description="Filter by requesting user")] = None,
-    priority: Annotated[AIJobPriority | None, Query(description="Filter by priority")] = None,
-    date_from: Annotated[datetime | None, Query(description="Filter jobs created after this date")] = None,
-    date_to: Annotated[datetime | None, Query(description="Filter jobs created before this date")] = None,
-    has_error: Annotated[bool | None, Query(description="Filter jobs with/without errors")] = None,
+    state: Annotated[
+        AIJobState | None, Query(description="Filter by job state")
+    ] = None,
+    user_id: Annotated[
+        uuid.UUID | None, Query(description="Filter by requesting user")
+    ] = None,
+    priority: Annotated[
+        AIJobPriority | None, Query(description="Filter by priority")
+    ] = None,
+    date_from: Annotated[
+        datetime | None, Query(description="Filter jobs created after this date")
+    ] = None,
+    date_to: Annotated[
+        datetime | None, Query(description="Filter jobs created before this date")
+    ] = None,
+    has_error: Annotated[
+        bool | None, Query(description="Filter jobs with/without errors")
+    ] = None,
     page: Annotated[int, Query(ge=1, description="Page number")] = 1,
     page_size: Annotated[int, Query(ge=1, le=100, description="Items per page")] = 20,
 ) -> AdminJobListResponse:
@@ -245,10 +257,7 @@ async def list_ai_jobs(
     # Fetch jobs with pagination
     offset = (page - 1) * page_size
     query = (
-        select(AIJob)
-        .order_by(AIJob.created_at.desc())
-        .offset(offset)
-        .limit(page_size)
+        select(AIJob).order_by(AIJob.created_at.desc()).offset(offset).limit(page_size)
     )
     if conditions:
         query = query.where(and_(*conditions))
@@ -301,7 +310,8 @@ async def get_queue_stats(
     # Average processing time for completed jobs
     avg_query = select(
         func.avg(
-            func.extract("epoch", AIJob.finished_at) - func.extract("epoch", AIJob.started_at)
+            func.extract("epoch", AIJob.finished_at)
+            - func.extract("epoch", AIJob.started_at)
         )
     ).where(
         and_(
@@ -416,7 +426,9 @@ async def admin_retry_job(
     await db.refresh(job)
 
     # Log admin action
-    await log_admin_action("retry_job", job_id, admin_id=admin.id, details={"new_state": "queued"})
+    await log_admin_action(
+        "retry_job", job_id, admin_id=admin.id, details={"new_state": "queued"}
+    )
 
     return AdminActionResponse(
         success=True,
@@ -573,8 +585,12 @@ async def get_job_logs(
             "created_at": job.created_at.isoformat() if job.created_at else None,
             "started_at": job.started_at.isoformat() if job.started_at else None,
             "finished_at": job.finished_at.isoformat() if job.finished_at else None,
-            "last_heartbeat": job.last_heartbeat.isoformat() if job.last_heartbeat else None,
-            "next_retry_at": job.next_retry_at.isoformat() if job.next_retry_at else None,
+            "last_heartbeat": job.last_heartbeat.isoformat()
+            if job.last_heartbeat
+            else None,
+            "next_retry_at": job.next_retry_at.isoformat()
+            if job.next_retry_at
+            else None,
         },
     }
 
@@ -631,16 +647,16 @@ class SystemOverview(BaseModel):
     total_users: int
     active_users_24h: int
     pro_subscribers: int
-    
+
     # Jobs
     total_jobs: int
     jobs_today: int
     processing_jobs: int
     failed_jobs_24h: int
-    
+
     # Revenue (if applicable)
     monthly_recurring_revenue: float | None = None
-    
+
     # System health
     api_requests_today: int | None = None
     avg_response_time_ms: float | None = None
@@ -684,17 +700,23 @@ async def get_user_role_codes(db: AsyncSession, user_id: uuid.UUID) -> list[str]
 async def list_users(
     db: Annotated[AsyncSession, Depends(get_session)],
     admin: Annotated[User, Depends(RequireAdminDashboard)],
-    search: Annotated[str | None, Query(description="Search by email or display name")] = None,
+    search: Annotated[
+        str | None, Query(description="Search by email or display name")
+    ] = None,
     role: Annotated[str | None, Query(description="Filter by role code")] = None,
-    subscription: Annotated[str | None, Query(description="Filter by subscription plan")] = None,
-    verified: Annotated[bool | None, Query(description="Filter by email verification")] = None,
+    subscription: Annotated[
+        str | None, Query(description="Filter by subscription plan")
+    ] = None,
+    verified: Annotated[
+        bool | None, Query(description="Filter by email verification")
+    ] = None,
     page: Annotated[int, Query(ge=1, description="Page number")] = 1,
     page_size: Annotated[int, Query(ge=1, le=100, description="Items per page")] = 20,
 ) -> AdminUserListResponse:
     """List users with optional filters."""
-    
+
     conditions = []
-    
+
     if search:
         search_term = f"%{search}%"
         conditions.append(
@@ -703,7 +725,7 @@ async def list_users(
                 User.display_name.ilike(search_term),
             )
         )
-    
+
     if role:
         # Filter users by role code
         role_subquery = (
@@ -712,31 +734,30 @@ async def list_users(
             .where(Role.code == role)
         )
         conditions.append(User.id.in_(role_subquery))
-    
+
     if verified is not None:
         conditions.append(User.email_verified == verified)
-    
+
     # Base query
     base_query = select(User)
     if conditions:
         base_query = base_query.where(and_(*conditions))
-    
+
     # Count total
     count_query = select(func.count(User.id))
     if conditions:
         count_query = count_query.where(and_(*conditions))
     total = (await db.execute(count_query)).scalar() or 0
-    
+
     # Get users with pagination
     query = (
-        base_query
-        .order_by(User.created_at.desc())
+        base_query.order_by(User.created_at.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
     result = await db.execute(query)
     users = result.scalars().all()
-    
+
     # Get subscription info and job counts for users
     user_summaries = []
     for user in users:
@@ -749,7 +770,7 @@ async def list_users(
         )
         sub_result = await db.execute(sub_query)
         user_subscription = sub_result.scalar_one_or_none()
-        
+
         # Skip if subscription filter doesn't match
         if subscription:
             plan = user_subscription.plan.value if user_subscription else "free"
@@ -757,11 +778,13 @@ async def list_users(
                 continue
             if subscription == "free" and plan == "pro":
                 continue
-        
+
         # Get job count
-        job_count_query = select(func.count(AIJob.id)).where(AIJob.requested_by_id == user.id)
+        job_count_query = select(func.count(AIJob.id)).where(
+            AIJob.requested_by_id == user.id
+        )
         job_count = (await db.execute(job_count_query)).scalar() or 0
-        
+
         # Get last job as proxy for activity
         last_job_query = (
             select(AIJob.created_at)
@@ -770,11 +793,11 @@ async def list_users(
             .limit(1)
         )
         last_job = (await db.execute(last_job_query)).scalar()
-        
+
         # Get user roles
         role_codes = await get_user_role_codes(db, user.id)
         primary_role = role_codes[0] if role_codes else "user"
-        
+
         user_summaries.append(
             AdminUserSummary(
                 id=user.id,
@@ -784,13 +807,17 @@ async def list_users(
                 email_verified=user.email_verified,
                 karma_score=user.karma_score,
                 created_at=user.created_at,
-                subscription_plan=user_subscription.plan.value if user_subscription else "free",
-                subscription_status=user_subscription.status.value if user_subscription else None,
+                subscription_plan=user_subscription.plan.value
+                if user_subscription
+                else "free",
+                subscription_status=user_subscription.status.value
+                if user_subscription
+                else None,
                 job_count=job_count,
                 last_active=last_job,
             )
         )
-    
+
     return AdminUserListResponse(
         users=user_summaries,
         total=total,
@@ -813,47 +840,48 @@ async def get_user_stats(
 ) -> UserStats:
     """Get aggregate user statistics."""
     from datetime import timedelta
-    
+
     now = datetime.utcnow()
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     week_ago = now - timedelta(days=7)
     month_ago = now - timedelta(days=30)
-    
+
     # Total users
     total = (await db.execute(select(func.count(User.id)))).scalar() or 0
-    
+
     # Verified users
-    verified = (await db.execute(
-        select(func.count(User.id)).where(User.email_verified.is_(True))
-    )).scalar() or 0
-    
+    verified = (
+        await db.execute(
+            select(func.count(User.id)).where(User.email_verified.is_(True))
+        )
+    ).scalar() or 0
+
     # Pro users (active subscription)
-    pro_query = (
-        select(func.count(func.distinct(Subscription.user_id)))
-        .where(
-            and_(
-                Subscription.plan == SubscriptionPlan.PRO,
-                Subscription.status == SubscriptionStatus.ACTIVE,
-            )
+    pro_query = select(func.count(func.distinct(Subscription.user_id))).where(
+        and_(
+            Subscription.plan == SubscriptionPlan.PRO,
+            Subscription.status == SubscriptionStatus.ACTIVE,
         )
     )
     pro = (await db.execute(pro_query)).scalar() or 0
-    
+
     # Users created today
-    users_today = (await db.execute(
-        select(func.count(User.id)).where(User.created_at >= today)
-    )).scalar() or 0
-    
+    users_today = (
+        await db.execute(select(func.count(User.id)).where(User.created_at >= today))
+    ).scalar() or 0
+
     # Users this week
-    users_week = (await db.execute(
-        select(func.count(User.id)).where(User.created_at >= week_ago)
-    )).scalar() or 0
-    
+    users_week = (
+        await db.execute(select(func.count(User.id)).where(User.created_at >= week_ago))
+    ).scalar() or 0
+
     # Users this month
-    users_month = (await db.execute(
-        select(func.count(User.id)).where(User.created_at >= month_ago)
-    )).scalar() or 0
-    
+    users_month = (
+        await db.execute(
+            select(func.count(User.id)).where(User.created_at >= month_ago)
+        )
+    ).scalar() or 0
+
     return UserStats(
         total_users=total,
         verified_users=verified,
@@ -879,13 +907,13 @@ async def get_user_detail(
     query = select(User).where(User.id == user_id)
     result = await db.execute(query)
     user = result.scalar_one_or_none()
-    
+
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User {user_id} not found",
         )
-    
+
     # Get subscription
     sub_query = (
         select(Subscription)
@@ -895,16 +923,18 @@ async def get_user_detail(
     )
     sub_result = await db.execute(sub_query)
     subscription = sub_result.scalar_one_or_none()
-    
+
     # Get job count
-    job_count = (await db.execute(
-        select(func.count(AIJob.id)).where(AIJob.requested_by_id == user.id)
-    )).scalar() or 0
-    
+    job_count = (
+        await db.execute(
+            select(func.count(AIJob.id)).where(AIJob.requested_by_id == user.id)
+        )
+    ).scalar() or 0
+
     # Get user roles
     role_codes = await get_user_role_codes(db, user.id)
     primary_role = role_codes[0] if role_codes else "user"
-    
+
     return AdminUserSummary(
         id=user.id,
         email=user.email,
@@ -935,51 +965,51 @@ async def update_user_role(
     query = select(User).where(User.id == user_id)
     result = await db.execute(query)
     user = result.scalar_one_or_none()
-    
+
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User {user_id} not found",
         )
-    
+
     # Prevent demoting yourself
     if user.id == admin.id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot change your own role",
         )
-    
+
     # Find the role by code
     role_query = select(Role).where(Role.code == request.role)
     role_result = await db.execute(role_query)
     role = role_result.scalar_one_or_none()
-    
+
     if role is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid role: {request.role}",
         )
-    
+
     # Get current roles
     old_roles = await get_user_role_codes(db, user.id)
-    
+
     # Check if user already has this role
     existing_query = select(UserRole).where(
         and_(UserRole.user_id == user.id, UserRole.role_id == role.id)
     )
     existing = (await db.execute(existing_query)).scalar_one_or_none()
-    
+
     if existing:
         return AdminUserActionResponse(
             success=True,
             message=f"User already has role {request.role}",
         )
-    
+
     # Add the role
     new_user_role = UserRole(user_id=user.id, role_id=role.id)
     db.add(new_user_role)
     await db.commit()
-    
+
     logger.info(
         "admin_action",
         action="add_role",
@@ -987,7 +1017,7 @@ async def update_user_role(
         admin_id=str(admin.id),
         details={"old_roles": old_roles, "added_role": request.role},
     )
-    
+
     return AdminUserActionResponse(
         success=True,
         message=f"Role {request.role} added to user",
@@ -1006,53 +1036,53 @@ async def get_system_overview(
 ) -> SystemOverview:
     """Get system overview with key metrics."""
     from datetime import timedelta
-    
+
     now = datetime.utcnow()
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     day_ago = now - timedelta(hours=24)
-    
+
     # User metrics
     total_users = (await db.execute(select(func.count(User.id)))).scalar() or 0
-    
+
     # Active users in last 24h (users who created jobs)
-    active_users_query = (
-        select(func.count(func.distinct(AIJob.requested_by_id)))
-        .where(AIJob.created_at >= day_ago)
+    active_users_query = select(func.count(func.distinct(AIJob.requested_by_id))).where(
+        AIJob.created_at >= day_ago
     )
     active_users = (await db.execute(active_users_query)).scalar() or 0
-    
+
     # Pro subscribers
-    pro_query = (
-        select(func.count(func.distinct(Subscription.user_id)))
-        .where(
-            and_(
-                Subscription.plan == SubscriptionPlan.PRO,
-                Subscription.status == SubscriptionStatus.ACTIVE,
-            )
+    pro_query = select(func.count(func.distinct(Subscription.user_id))).where(
+        and_(
+            Subscription.plan == SubscriptionPlan.PRO,
+            Subscription.status == SubscriptionStatus.ACTIVE,
         )
     )
     pro_subs = (await db.execute(pro_query)).scalar() or 0
-    
+
     # Job metrics
     total_jobs = (await db.execute(select(func.count(AIJob.id)))).scalar() or 0
-    
-    jobs_today = (await db.execute(
-        select(func.count(AIJob.id)).where(AIJob.created_at >= today)
-    )).scalar() or 0
-    
-    processing = (await db.execute(
-        select(func.count(AIJob.id)).where(AIJob.state == AIJobState.PROCESSING)
-    )).scalar() or 0
-    
-    failed_24h = (await db.execute(
-        select(func.count(AIJob.id)).where(
-            and_(
-                AIJob.state == AIJobState.FAILED,
-                AIJob.finished_at >= day_ago,
+
+    jobs_today = (
+        await db.execute(select(func.count(AIJob.id)).where(AIJob.created_at >= today))
+    ).scalar() or 0
+
+    processing = (
+        await db.execute(
+            select(func.count(AIJob.id)).where(AIJob.state == AIJobState.PROCESSING)
+        )
+    ).scalar() or 0
+
+    failed_24h = (
+        await db.execute(
+            select(func.count(AIJob.id)).where(
+                and_(
+                    AIJob.state == AIJobState.FAILED,
+                    AIJob.finished_at >= day_ago,
+                )
             )
         )
-    )).scalar() or 0
-    
+    ).scalar() or 0
+
     return SystemOverview(
         total_users=total_users,
         active_users_24h=active_users,

@@ -50,7 +50,9 @@ class AuthService:
             "exp": expire,
             "type": "access",
         }
-        return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+        return jwt.encode(
+            payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
+        )
 
     @staticmethod
     def create_refresh_token(
@@ -66,7 +68,9 @@ class AuthService:
             "exp": expire,
             "type": "refresh",
         }
-        return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+        return jwt.encode(
+            payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
+        )
 
     @staticmethod
     def decode_token(token: str) -> dict | None:

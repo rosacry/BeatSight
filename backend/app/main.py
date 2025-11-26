@@ -7,7 +7,22 @@ from typing import AsyncIterator
 
 from fastapi import FastAPI
 
-from app.api.routes import admin, ai_jobs, auth, billing, health, karma, map_edits, metadata, roles, songs, storage, sync, verifier, websocket
+from app.api.routes import (
+    admin,
+    ai_jobs,
+    auth,
+    billing,
+    health,
+    karma,
+    map_edits,
+    metadata,
+    roles,
+    songs,
+    storage,
+    sync,
+    verifier,
+    websocket,
+)
 from app.config import get_settings
 from app.logging import configure_logging, get_logger
 
@@ -116,6 +131,7 @@ Authorization: Bearer <access_token>
 # Set up Prometheus metrics (conditionally to avoid import errors in tests)
 try:
     from app.services.metrics import setup_metrics
+
     setup_metrics(app)
     logger.info("metrics_enabled", endpoint="/metrics")
 except ImportError:
@@ -126,6 +142,7 @@ if settings.environment != "test":
     try:
         from app.services.rate_limit import setup_rate_limiting
         from app.api.deps import get_redis
+
         setup_rate_limiting(app, get_redis)
     except ImportError:
         logger.warning("rate_limiting_disabled", reason="dependencies not installed")

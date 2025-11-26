@@ -25,7 +25,9 @@ async def create_song(
     try:
         song = await service.create_song(payload)
     except SongAlreadyExistsError:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Song already exists")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Song already exists"
+        )
     return SongRead.model_validate(song)
 
 
@@ -39,14 +41,18 @@ async def list_songs(session: AsyncSession = Depends(get_db_session)) -> list[So
 
 
 @router.get("/{song_id}", response_model=SongRead)
-async def get_song(song_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)) -> SongRead:
+async def get_song(
+    song_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)
+) -> SongRead:
     """Retrieve a song by ID."""
 
     service = SongService(session)
     try:
         song = await service.get_song(song_id)
     except SongNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Song not found"
+        )
     return SongRead.model_validate(song)
 
 
@@ -62,5 +68,7 @@ async def update_song(
     try:
         song = await service.update_song(song_id, payload)
     except SongNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Song not found"
+        )
     return SongRead.model_validate(song)

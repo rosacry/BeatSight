@@ -61,7 +61,9 @@ class EmailService:
     def verify_password_reset_token(self, token: str) -> dict[str, Any] | None:
         """Verify a password reset token and return payload."""
         try:
-            payload = jwt.decode(token, self.jwt_secret, algorithms=[self.jwt_algorithm])
+            payload = jwt.decode(
+                token, self.jwt_secret, algorithms=[self.jwt_algorithm]
+            )
             if payload.get("type") != "password_reset":
                 return None
             return payload
@@ -71,7 +73,9 @@ class EmailService:
     def verify_email_verification_token(self, token: str) -> dict[str, Any] | None:
         """Verify an email verification token and return payload."""
         try:
-            payload = jwt.decode(token, self.jwt_secret, algorithms=[self.jwt_algorithm])
+            payload = jwt.decode(
+                token, self.jwt_secret, algorithms=[self.jwt_algorithm]
+            )
             if payload.get("type") != "email_verification":
                 return None
             return payload
@@ -97,26 +101,26 @@ class EmailService:
             from sendgrid.helpers.mail import Mail, Email, To, Content
 
             sg = sendgrid.SendGridAPIClient(api_key=self.api_key)
-            
+
             message = Mail(
                 from_email=Email(self.from_email, self.from_name),
                 to_emails=To(to_email),
                 subject=subject,
                 html_content=Content("text/html", html_content),
             )
-            
+
             if text_content:
                 message.add_content(Content("text/plain", text_content))
 
             response = sg.send(message)
-            
+
             if response.status_code >= 400:
                 logger.error(f"SendGrid error: {response.status_code}")
                 return False
-                
+
             logger.info(f"Email sent to {to_email}: {subject}")
             return True
-            
+
         except ImportError:
             logger.warning("sendgrid package not installed, email not sent")
             return False
@@ -124,7 +128,9 @@ class EmailService:
             logger.error(f"Failed to send email: {e}")
             return False
 
-    async def send_password_reset(self, user_id: UUID, email: str, display_name: str) -> bool:
+    async def send_password_reset(
+        self, user_id: UUID, email: str, display_name: str
+    ) -> bool:
         """Send password reset email."""
         token = self._create_password_reset_token(user_id, email)
         reset_url = f"{self.frontend_url}/reset-password?token={token}"
@@ -277,7 +283,9 @@ The BeatSight Team
 """
         return await self._send_email(email, subject, html_content, text_content)
 
-    async def send_email_verification(self, user_id: UUID, email: str, display_name: str) -> bool:
+    async def send_email_verification(
+        self, user_id: UUID, email: str, display_name: str
+    ) -> bool:
         """Send email verification link."""
         token = self._create_email_verification_token(user_id, email)
         verify_url = f"{self.frontend_url}/verify-email?token={token}"

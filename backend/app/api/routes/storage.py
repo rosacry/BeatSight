@@ -11,7 +11,16 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, Path, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Path,
+    Query,
+    UploadFile,
+    status,
+)
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -74,31 +83,37 @@ async def upload_audio(
     _user: Annotated[dict | None, Depends(get_current_user_optional)] = None,
 ) -> UploadResponse:
     """Upload an audio file for a song.
-    
+
     Accepts MP3, WAV, or FLAC audio files up to 100MB.
     """
     # Validate content type
-    allowed_types = {"audio/mpeg", "audio/wav", "audio/x-wav", "audio/flac", "audio/ogg"}
+    allowed_types = {
+        "audio/mpeg",
+        "audio/wav",
+        "audio/x-wav",
+        "audio/flac",
+        "audio/ogg",
+    }
     content_type = file.content_type or "audio/mpeg"
     if content_type not in allowed_types:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail=f"Unsupported audio format. Allowed: {', '.join(allowed_types)}",
         )
-    
+
     # Read file content (with size limit)
     max_size = 100 * 1024 * 1024  # 100MB
     content = await file.read()
     if len(content) > max_size:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File too large. Maximum size is {max_size // (1024*1024)}MB",
+            detail=f"File too large. Maximum size is {max_size // (1024 * 1024)}MB",
         )
-    
+
     storage = await get_storage()
     audio_storage = AudioStorage(storage)
     result = await audio_storage.upload_audio(song_id, content, content_type)
-    
+
     return UploadResponse(
         key=result.key,
         size=result.size,
@@ -115,12 +130,12 @@ async def download_audio(
     extension: Annotated[str, Query(description="Audio format")] = "mp3",
 ) -> StreamingResponse:
     """Download the original audio file for a song.
-    
+
     Returns the audio as a streaming response.
     """
     storage = await get_storage()
     audio_storage = AudioStorage(storage)
-    
+
     try:
         # Stream the file
         async def generate():
@@ -128,14 +143,14 @@ async def download_audio(
                 audio_storage._audio_key(song_id, extension)
             ):
                 yield chunk
-        
+
         content_type = {
             "mp3": "audio/mpeg",
             "wav": "audio/wav",
             "flac": "audio/flac",
             "ogg": "audio/ogg",
         }.get(extension, "application/octet-stream")
-        
+
         return StreamingResponse(
             generate(),
             media_type=content_type,
@@ -161,14 +176,14 @@ async def get_audio_download_url(
     expires_in: Annotated[int, Query(ge=60, le=86400)] = 3600,
 ) -> PresignedUrlResponse:
     """Get a presigned URL for direct audio download.
-    
+
     The URL can be used for client-side playback without authentication.
     """
     storage = await get_storage()
     audio_storage = AudioStorage(storage)
-    
+
     result = await audio_storage.get_audio_url(song_id, extension, expires_in)
-    
+
     return PresignedUrlResponse(
         url=result.url,
         expires_at=result.expires_at.isoformat(),
@@ -187,23 +202,25 @@ async def get_audio_upload_url(
     _user: Annotated[dict | None, Depends(get_current_user_optional)] = None,
 ) -> PresignedUrlResponse:
     """Get a presigned URL for direct audio upload.
-    
+
     Use this for large files to upload directly to storage without
     proxying through the API server.
     """
     storage = await get_storage()
     audio_storage = AudioStorage(storage)
-    
-    ext = "mp3" if "mpeg" in request.content_type else request.content_type.split("/")[-1]
+
+    ext = (
+        "mp3" if "mpeg" in request.content_type else request.content_type.split("/")[-1]
+    )
     key = audio_storage._audio_key(song_id, ext)
-    
+
     result = await storage.get_presigned_url(
         key,
         method="PUT",
         expires_in=request.expires_in,
         content_type=request.content_type,
     )
-    
+
     return PresignedUrlResponse(
         url=result.url,
         expires_at=result.expires_at.isoformat(),
@@ -223,7 +240,7 @@ async def download_stem(
     stem: Annotated[str, Path(description="Stem name (drums, bass, vocals, other)")],
 ) -> StreamingResponse:
     """Download a separated stem file.
-    
+
     Available stems: drums, bass, vocals, other
     """
     valid_stems = {"drums", "bass", "vocals", "other", "piano", "guitar"}
@@ -232,17 +249,18 @@ async def download_stem(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid stem. Available: {', '.join(valid_stems)}",
         )
-    
+
     storage = await get_storage()
     audio_storage = AudioStorage(storage)
-    
+
     try:
+
         async def generate():
             async for chunk in storage.stream_download(
                 audio_storage._stem_key(song_id, stem)
             ):
                 yield chunk
-        
+
         return StreamingResponse(
             generate(),
             media_type="audio/wav",
@@ -270,9 +288,9 @@ async def get_stem_download_url(
     """Get a presigned URL for direct stem download."""
     storage = await get_storage()
     audio_storage = AudioStorage(storage)
-    
+
     result = await audio_storage.get_stem_url(song_id, stem, expires_in)
-    
+
     return PresignedUrlResponse(
         url=result.url,
         expires_at=result.expires_at.isoformat(),
@@ -296,7 +314,7 @@ async def upload_beatmap(
     _user: Annotated[dict | None, Depends(get_current_user_optional)] = None,
 ) -> UploadResponse:
     """Upload a beatmap file for a specific version.
-    
+
     The beatmap should be in BeatSight JSON format (.bs).
     """
     # Read content
@@ -305,13 +323,13 @@ async def upload_beatmap(
     if len(content) > max_size:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File too large. Maximum size is {max_size // (1024*1024)}MB",
+            detail=f"File too large. Maximum size is {max_size // (1024 * 1024)}MB",
         )
-    
+
     storage = await get_storage()
     beatmap_storage = BeatmapStorage(storage)
     result = await beatmap_storage.upload_beatmap(map_id, version, content)
-    
+
     return UploadResponse(
         key=result.key,
         size=result.size,
@@ -328,12 +346,12 @@ async def download_beatmap(
     version: int,
 ) -> Response:
     """Download a beatmap file.
-    
+
     Returns the beatmap JSON content.
     """
     storage = await get_storage()
     beatmap_storage = BeatmapStorage(storage)
-    
+
     try:
         content = await beatmap_storage.download_beatmap(map_id, version)
         return Response(
@@ -363,9 +381,9 @@ async def get_beatmap_download_url(
     """Get a presigned URL for direct beatmap download."""
     storage = await get_storage()
     beatmap_storage = BeatmapStorage(storage)
-    
+
     result = await beatmap_storage.get_beatmap_url(map_id, version, expires_in)
-    
+
     return PresignedUrlResponse(
         url=result.url,
         expires_at=result.expires_at.isoformat(),

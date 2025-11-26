@@ -1,10 +1,11 @@
 """add ai job worker heartbeat fields
 
 Revision ID: 001_worker_heartbeat
-Revises: 
+Revises:
 Create Date: 2024-11-25 13:00:00.000000
 
 """
+
 from __future__ import annotations
 
 from typing import Sequence, Union

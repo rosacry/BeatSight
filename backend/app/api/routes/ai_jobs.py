@@ -26,7 +26,11 @@ from app.schemas.ai_jobs import (
     QuotaStatusRead,
 )
 from app.services.ai_jobs import AIJobService
-from app.services.modal_gpu import ModalConnectionError, ModalJobError, get_modal_service
+from app.services.modal_gpu import (
+    ModalConnectionError,
+    ModalJobError,
+    get_modal_service,
+)
 from app.services.quota import QuotaExceededError, QuotaService, QuotaStatus
 
 router = APIRouter(prefix="/ai-jobs", tags=["ai-jobs"])
@@ -47,7 +51,9 @@ def _quota_to_read(status: QuotaStatus) -> QuotaStatusRead:
     )
 
 
-@router.post("", response_model=AIJobEnqueueResponse, status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "", response_model=AIJobEnqueueResponse, status_code=status.HTTP_202_ACCEPTED
+)
 async def enqueue_job(
     payload: AIJobCreate,
     session: AsyncSession = Depends(get_db_session),
@@ -58,15 +64,15 @@ async def enqueue_job(
 
     Authentication is optional - anonymous users can enqueue jobs but have
     stricter rate limits and lower priority.
-    
+
     When Modal GPU orchestration is enabled, the job is immediately dispatched
     to Modal's serverless GPU infrastructure. Otherwise, the job is queued
     for processing by local workers.
-    
+
     Returns 429 Too Many Requests if the user has exceeded their quota.
     """
     user_id = current_user.id if current_user else None
-    
+
     # Check quota
     quota_service = QuotaService(session)
     try:
@@ -81,30 +87,31 @@ async def enqueue_job(
                 "resets_at": e.resets_at.isoformat() if e.resets_at else None,
             },
         )
-    
+
     # Get priority based on subscription
     priority = await quota_service.get_priority(user_id)
-    
+
     # Override payload priority with subscription-based priority
     payload.priority = priority
-    
+
     # Enqueue the job
     ai_service = AIJobService(session)
     job = await ai_service.enqueue(payload, requested_by=user_id)
-    
+
     # Consume quota (only for authenticated users)
     if user_id:
         quota_status = await quota_service.consume_quota(user_id)
-    
+
     # Try to dispatch to Modal if enabled
     modal_service = get_modal_service()
     if modal_service.is_enabled():
         try:
             # Get presigned audio URL for Modal to download
             from app.services.storage import get_storage, AudioStorage
+
             storage = await get_storage()
             audio_storage = AudioStorage(storage)
-            
+
             # Try common audio formats
             audio_url = None
             for ext in ["mp3", "wav", "flac"]:
@@ -116,38 +123,39 @@ async def enqueue_job(
                     break
                 except FileNotFoundError:
                     continue
-            
+
             if audio_url:
                 result = await modal_service.trigger_job(
                     job_id=str(job.id),
                     audio_url=audio_url,
                     song_id=str(payload.song_id),
                 )
-                
+
                 if result.accepted:
                     # Update job state to processing since Modal will handle it
                     await ai_service.claim_job_directly(
-                        job.id, 
+                        job.id,
                         worker_id=uuid.UUID(int=0),  # Special ID for Modal
                     )
             else:
                 # No audio file found - job will wait for manual trigger or local worker
                 pass
-                
+
         except (ModalConnectionError, ModalJobError) as e:
             # Modal dispatch failed - job stays queued for local workers
             # This is a graceful degradation, not a failure
             import logging
+
             logging.getLogger(__name__).warning(
                 f"Modal dispatch failed for job {job.id}, falling back to queue: {e}"
             )
-    
+
     # Get queue position
     position = await ai_service.get_queue_position(job.id)
-    
+
     # Estimate wait time (rough: ~3 min per job)
     estimated_wait = position * 3 if position is not None else None
-    
+
     return AIJobEnqueueResponse(
         job=AIJobRead.model_validate(job),
         queue_position=position,
@@ -163,7 +171,7 @@ async def get_quota_status(
 ) -> QuotaStatusRead:
     """
     Get current AI generation quota status.
-    
+
     Returns quota limits and usage for the current user or anonymous limits.
     """
     user_id = current_user.id if current_user else None
@@ -200,7 +208,9 @@ async def get_job(
     return AIJobRead.model_validate(job)
 
 
-@router.post("/{job_id}/heartbeat", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
+@router.post(
+    "/{job_id}/heartbeat", status_code=status.HTTP_204_NO_CONTENT, response_model=None
+)
 async def worker_heartbeat(
     job_id: uuid.UUID,
     worker_id: uuid.UUID,
@@ -228,7 +238,9 @@ async def worker_heartbeat(
     await service.heartbeat(job_id, worker_id)
 
 
-@router.patch("/{job_id}/progress", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
+@router.patch(
+    "/{job_id}/progress", status_code=status.HTTP_204_NO_CONTENT, response_model=None
+)
 async def update_progress(
     job_id: uuid.UUID,
     payload: AIJobProgressUpdate,
@@ -247,7 +259,9 @@ async def update_progress(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Job {job_id} not found",
         )
-    await service.update_progress(job_id, payload.progress_percent, payload.progress_message)
+    await service.update_progress(
+        job_id, payload.progress_percent, payload.progress_message
+    )
 
 
 @router.post("/claim", response_model=AIJobRead | None)
@@ -268,7 +282,9 @@ async def claim_job(
     return AIJobRead.model_validate(job)
 
 
-@router.post("/{job_id}/release", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
+@router.post(
+    "/{job_id}/release", status_code=status.HTTP_204_NO_CONTENT, response_model=None
+)
 async def release_job(
     job_id: uuid.UUID,
     session: AsyncSession = Depends(get_db_session),
@@ -309,30 +325,31 @@ async def list_stale_jobs(
 # SSE Streaming Endpoints (E2-004)
 # =============================================================================
 
+
 async def _progress_event_generator(
     job_id: uuid.UUID,
     session: AsyncSession,
 ) -> AsyncGenerator[str, None]:
     """Generate SSE events for job progress updates.
-    
+
     Yields events in the format:
         event: progress
         data: {"percent": 50, "message": "Processing...", "stage": "separation"}
-        
+
         event: complete
         data: {"job_id": "...", "status": "completed"}
-        
+
         event: error
         data: {"message": "Job failed", "error": "..."}
     """
     service = AIJobService(session)
-    
+
     # First, send current job status
     job = await service.get_by_id(job_id)
     if not job:
-        yield "event: error\ndata: {\"message\": \"Job not found\"}\n\n"
+        yield 'event: error\ndata: {"message": "Job not found"}\n\n'
         return
-    
+
     # Send initial state
     initial_data = {
         "job_id": str(job.id),
@@ -341,19 +358,19 @@ async def _progress_event_generator(
         "message": job.progress_message,
     }
     yield f"event: status\ndata: {_json_dumps(initial_data)}\n\n"
-    
+
     # If job is already complete or failed, just return
     if job.state in (AIJobState.COMPLETE, AIJobState.FAILED, AIJobState.CANCELLED):
         final_data = {"job_id": str(job.id), "status": job.state.value}
         yield f"event: complete\ndata: {_json_dumps(final_data)}\n\n"
         return
-    
+
     # Subscribe to progress updates via Redis pub/sub
     redis = await get_redis()
     channel = RedisKeys.job_progress_channel(job_id)
     pubsub = redis.pubsub()
     await pubsub.subscribe(channel)
-    
+
     try:
         # Also check periodically in case messages are missed
         last_check = datetime.now(timezone.utc)
@@ -361,17 +378,16 @@ async def _progress_event_generator(
         timeout = 0.5  # seconds for message wait
         max_idle = 300  # 5 minutes max idle time
         idle_since = datetime.now(timezone.utc)
-        
+
         while True:
             # Check for messages with timeout
             try:
                 message = await asyncio.wait_for(
-                    pubsub.get_message(ignore_subscribe_messages=True),
-                    timeout=timeout
+                    pubsub.get_message(ignore_subscribe_messages=True), timeout=timeout
                 )
             except asyncio.TimeoutError:
                 message = None
-            
+
             if message and message["type"] == "message":
                 # Got a progress update
                 idle_since = datetime.now(timezone.utc)
@@ -383,17 +399,17 @@ async def _progress_event_generator(
                     "timestamp": update.timestamp.isoformat(),
                 }
                 yield f"event: progress\ndata: {_json_dumps(progress_data)}\n\n"
-            
+
             # Periodically check job status directly
             now = datetime.now(timezone.utc)
             if (now - last_check).total_seconds() >= check_interval:
                 last_check = now
                 job = await service.get_by_id(job_id)
-                
+
                 if not job:
-                    yield "event: error\ndata: {\"message\": \"Job deleted\"}\n\n"
+                    yield 'event: error\ndata: {"message": "Job deleted"}\n\n'
                     break
-                
+
                 if job.state == AIJobState.COMPLETE:
                     final_data = {
                         "job_id": str(job.id),
@@ -402,7 +418,7 @@ async def _progress_event_generator(
                     }
                     yield f"event: complete\ndata: {_json_dumps(final_data)}\n\n"
                     break
-                
+
                 if job.state == AIJobState.FAILED:
                     error_data = {
                         "job_id": str(job.id),
@@ -411,19 +427,19 @@ async def _progress_event_generator(
                     }
                     yield f"event: error\ndata: {_json_dumps(error_data)}\n\n"
                     break
-                
+
                 if job.state == AIJobState.CANCELLED:
-                    yield f"event: complete\ndata: {{\"job_id\": \"{job.id}\", \"status\": \"cancelled\"}}\n\n"
+                    yield f'event: complete\ndata: {{"job_id": "{job.id}", "status": "cancelled"}}\n\n'
                     break
-                
+
                 # Send keepalive/heartbeat
                 yield f": keepalive {now.isoformat()}\n\n"
-            
+
             # Check idle timeout
             if (now - idle_since).total_seconds() >= max_idle:
-                yield "event: timeout\ndata: {\"message\": \"Connection timed out due to inactivity\"}\n\n"
+                yield 'event: timeout\ndata: {"message": "Connection timed out due to inactivity"}\n\n'
                 break
-    
+
     finally:
         await pubsub.unsubscribe(channel)
         await pubsub.close()
@@ -441,26 +457,26 @@ async def stream_job_progress(
 ) -> StreamingResponse:
     """
     Stream real-time progress updates for a job via Server-Sent Events (SSE).
-    
+
     The stream sends the following event types:
-    
+
     - `status`: Initial job status when connecting
     - `progress`: Progress updates (percent, message, stage)
     - `complete`: Job completed successfully (includes beatmap_id)
     - `error`: Job failed or was cancelled
     - `timeout`: Connection closed due to inactivity
-    
+
     The stream automatically closes when the job completes, fails, or times out.
-    
+
     Example client usage:
     ```javascript
     const eventSource = new EventSource('/api/v1/ai-jobs/{job_id}/progress/stream');
-    
+
     eventSource.addEventListener('progress', (e) => {
         const data = JSON.parse(e.data);
         console.log(`Progress: ${data.percent}% - ${data.message}`);
     });
-    
+
     eventSource.addEventListener('complete', (e) => {
         console.log('Job completed!');
         eventSource.close();
@@ -475,7 +491,7 @@ async def stream_job_progress(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Job {job_id} not found",
         )
-    
+
     return StreamingResponse(
         _progress_event_generator(job_id, session),
         media_type="text/event-stream",
@@ -494,11 +510,15 @@ async def stream_job_progress(
 
 class ModalJobResult(BaseModel):
     """Result payload from Modal GPU processing."""
-    
+
     job_id: str = Field(description="The job UUID")
     success: bool = Field(description="Whether processing succeeded")
-    beatmap: str | None = Field(default=None, description="Base64-encoded .bsm file content")
-    beatmap_size: int | None = Field(default=None, description="Size of beatmap in bytes")
+    beatmap: str | None = Field(
+        default=None, description="Base64-encoded .bsm file content"
+    )
+    beatmap_size: int | None = Field(
+        default=None, description="Size of beatmap in bytes"
+    )
     debug: str | None = Field(default=None, description="Base64-encoded debug payload")
     processing_time_seconds: float | None = Field(default=None)
     error: str | None = Field(default=None, description="Error message if failed")
@@ -516,7 +536,7 @@ async def modal_webhook(
 ) -> dict:
     """
     Webhook endpoint for Modal to report job completion.
-    
+
     This is called by the Modal function when processing completes.
     It handles:
     1. Decoding the beatmap content
@@ -524,12 +544,13 @@ async def modal_webhook(
     3. Creating a map_version record
     4. Marking the job as complete
     5. Triggering notifications
-    
+
     Security: In production, this should verify a shared secret.
     """
     import logging
+
     logger = logging.getLogger(__name__)
-    
+
     # Parse job ID
     try:
         job_id = uuid.UUID(result.job_id)
@@ -538,7 +559,7 @@ async def modal_webhook(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid job_id format",
         )
-    
+
     # Get the job
     ai_service = AIJobService(session)
     job = await ai_service.get_by_id(job_id)
@@ -548,29 +569,31 @@ async def modal_webhook(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Job not found",
         )
-    
+
     if result.success and result.beatmap:
         try:
             # Decode beatmap content
             beatmap_content = base64.b64decode(result.beatmap)
-            
+
             # Upload to storage
             from app.services.storage import get_storage
+
             storage = await get_storage()
-            
+
             # Create a map and version for this beatmap
             from app.models.song import Map, MapState
             from app.models.map_version import MapVersion
-            
+
             # Find or create a map for this song
             from sqlalchemy import select
+
             stmt = select(Map).where(
                 Map.song_id == job.song_id,
                 Map.difficulty_label == "AI Generated",
             )
             result_map = await session.execute(stmt)
             ai_map = result_map.scalar_one_or_none()
-            
+
             if not ai_map:
                 # Create new map
                 ai_map = Map(
@@ -581,11 +604,13 @@ async def modal_webhook(
                 )
                 session.add(ai_map)
                 await session.flush()  # Get the map ID
-            
+
             # Upload beatmap to storage
             storage_key = f"beatmaps/{job.song_id}/{ai_map.id}/v1.bsm"
-            await storage.upload(storage_key, beatmap_content, "application/octet-stream")
-            
+            await storage.upload(
+                storage_key, beatmap_content, "application/octet-stream"
+            )
+
             # Create new version
             new_version = MapVersion(
                 map_id=ai_map.id,
@@ -596,33 +621,36 @@ async def modal_webhook(
             )
             session.add(new_version)
             await session.flush()
-            
+
             # Update map to point to this version
             ai_map.current_version_id = new_version.id
-            
+
             # Mark job complete with beatmap reference
             job.state = AIJobState.COMPLETE
             job.finished_at = datetime.now(timezone.utc)
             job.progress_percent = 100
             job.progress_message = "Complete"
-            
+
             # Associate beatmap with job (if we have a beatmap_id field)
             # For now, the relationship is through map_version.generation_job_id
-            
+
             await session.commit()
-            
-            logger.info(f"Job {job_id} completed successfully, beatmap stored at {storage_key}")
-            
+
+            logger.info(
+                f"Job {job_id} completed successfully, beatmap stored at {storage_key}"
+            )
+
             # Trigger notification (best effort)
             try:
                 from app.services.notifications import get_notification_service
+
                 notification_service = get_notification_service()
                 await notification_service.notify_job_complete(job)
             except Exception as e:
                 logger.warning(f"Failed to send notification for job {job_id}: {e}")
-            
+
             return {"status": "success", "map_version_id": str(new_version.id)}
-            
+
         except Exception as e:
             logger.exception(f"Failed to process Modal result for job {job_id}")
             await ai_service.mark_finished(job_id, error=f"Failed to save results: {e}")
@@ -635,5 +663,5 @@ async def modal_webhook(
         error_msg = result.error or "Unknown error from Modal"
         await ai_service.mark_finished(job_id, error=error_msg)
         logger.warning(f"Job {job_id} failed in Modal: {error_msg}")
-        
+
         return {"status": "failed", "error": error_msg}

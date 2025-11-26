@@ -101,12 +101,12 @@ async def list_roles(
 ) -> list[RoleInfo]:
     """
     List all available roles.
-    
+
     Any authenticated user can see the list of roles.
     """
     rbac = RBACService(session)
     roles = await rbac.get_all_roles()
-    
+
     result = []
     for role in roles:
         permissions = EFFECTIVE_PERMISSIONS.get(role.code, set())
@@ -121,7 +121,7 @@ async def list_roles(
                 permissions=[p.value for p in permissions],
             )
         )
-    
+
     return result
 
 
@@ -134,24 +134,23 @@ async def get_my_roles(
     Get the current user's roles and permissions.
     """
     rbac = RBACService(session)
-    
+
     # Get roles with assignment times
     from sqlalchemy import select
     from app.models.role import Role, UserRole
-    
+
     result = await session.execute(
         select(Role.code, UserRole.assigned_at)
         .join(UserRole, UserRole.role_id == Role.id)
         .where(UserRole.user_id == current_user.id)
     )
-    
+
     roles = [
-        UserRoleInfo(role_code=row[0], assigned_at=row[1])
-        for row in result.fetchall()
+        UserRoleInfo(role_code=row[0], assigned_at=row[1]) for row in result.fetchall()
     ]
-    
+
     permissions = await rbac.get_user_permissions(current_user.id)
-    
+
     return UserRolesResponse(
         user_id=current_user.id,
         roles=roles,
@@ -167,37 +166,34 @@ async def get_user_roles(
 ) -> UserRolesResponse:
     """
     Get a specific user's roles and permissions.
-    
+
     Requires ROLE_LIST permission (admin only).
     """
     rbac = RBACService(session)
-    
+
     # Verify user exists
     from sqlalchemy import select
     from app.models.role import Role, UserRole
-    
-    user_check = await session.execute(
-        select(User).where(User.id == user_id)
-    )
+
+    user_check = await session.execute(select(User).where(User.id == user_id))
     if user_check.scalar_one_or_none() is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    
+
     result = await session.execute(
         select(Role.code, UserRole.assigned_at)
         .join(UserRole, UserRole.role_id == Role.id)
         .where(UserRole.user_id == user_id)
     )
-    
+
     roles = [
-        UserRoleInfo(role_code=row[0], assigned_at=row[1])
-        for row in result.fetchall()
+        UserRoleInfo(role_code=row[0], assigned_at=row[1]) for row in result.fetchall()
     ]
-    
+
     permissions = await rbac.get_user_permissions(user_id)
-    
+
     return UserRolesResponse(
         user_id=user_id,
         roles=roles,
@@ -213,9 +209,9 @@ async def assign_role(
 ) -> RoleActionResponse:
     """
     Assign a role to a user.
-    
+
     Requires ROLE_ASSIGN permission (admin only).
-    
+
     Admins cannot assign the admin role to themselves for safety.
     """
     # Safety check: can't self-assign admin
@@ -224,21 +220,19 @@ async def assign_role(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot assign admin role to yourself",
         )
-    
+
     # Verify target user exists
     from sqlalchemy import select
-    
-    user_check = await session.execute(
-        select(User).where(User.id == request.user_id)
-    )
+
+    user_check = await session.execute(select(User).where(User.id == request.user_id))
     if user_check.scalar_one_or_none() is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    
+
     rbac = RBACService(session)
-    
+
     try:
         await rbac.assign_role(
             user_id=request.user_id,
@@ -246,21 +240,21 @@ async def assign_role(
             assigned_by=current_user.id,
         )
         await session.commit()
-        
+
         logger.info(
             "Role assigned via API",
             target_user_id=str(request.user_id),
             role=request.role_code,
             assigned_by=str(current_user.id),
         )
-        
+
         return RoleActionResponse(
             success=True,
             message=f"Role '{request.role_code}' assigned successfully",
             user_id=request.user_id,
             role_code=request.role_code,
         )
-    
+
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -276,9 +270,9 @@ async def revoke_role(
 ) -> RoleActionResponse:
     """
     Revoke a role from a user.
-    
+
     Requires ROLE_REVOKE permission (admin only).
-    
+
     Admins cannot revoke their own admin role for safety.
     Cannot revoke the 'user' role as it's the default.
     """
@@ -288,57 +282,55 @@ async def revoke_role(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot revoke your own admin role",
         )
-    
+
     # Safety check: can't revoke the base 'user' role
     if request.role_code == RoleCode.USER:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot revoke the base 'user' role",
         )
-    
+
     # Verify target user exists
     from sqlalchemy import select
-    
-    user_check = await session.execute(
-        select(User).where(User.id == request.user_id)
-    )
+
+    user_check = await session.execute(select(User).where(User.id == request.user_id))
     if user_check.scalar_one_or_none() is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    
+
     rbac = RBACService(session)
-    
+
     try:
         revoked = await rbac.revoke_role(
             user_id=request.user_id,
             role_code=request.role_code,
             revoked_by=current_user.id,
         )
-        
+
         if not revoked:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"User does not have role '{request.role_code}'",
             )
-        
+
         await session.commit()
-        
+
         logger.info(
             "Role revoked via API",
             target_user_id=str(request.user_id),
             role=request.role_code,
             revoked_by=str(current_user.id),
         )
-        
+
         return RoleActionResponse(
             success=True,
             message=f"Role '{request.role_code}' revoked successfully",
             user_id=request.user_id,
             role_code=request.role_code,
         )
-    
+
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -352,7 +344,7 @@ async def list_permissions(
 ) -> list[str]:
     """
     List all available permissions in the system.
-    
+
     Any authenticated user can see the list of permissions.
     """
     return [p.value for p in Permission]
@@ -366,7 +358,7 @@ async def check_permission(
 ) -> dict:
     """
     Check if the current user has a specific permission.
-    
+
     Useful for frontend to determine UI state.
     """
     try:
@@ -376,10 +368,10 @@ async def check_permission(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unknown permission: {permission}",
         )
-    
+
     rbac = RBACService(session)
     has_permission = await rbac.user_has_permission(current_user.id, perm)
-    
+
     return {
         "permission": permission,
         "granted": has_permission,

@@ -101,7 +101,9 @@ class TestEmailBackend:
         assert "Test Artist" in html
 
     @pytest.mark.asyncio
-    async def test_send_without_email_returns_failure(self, backend: EmailBackend) -> None:
+    async def test_send_without_email_returns_failure(
+        self, backend: EmailBackend
+    ) -> None:
         """Test sending without email address returns failure."""
         payload = NotificationPayload(
             event=NotificationEvent.JOB_COMPLETE,
@@ -135,12 +137,12 @@ class TestEmailBackend:
         assert result.success is True
         assert result.notification_type == NotificationType.EMAIL
         assert "logged" in result.message.lower()
-    
+
     @pytest.mark.asyncio
     async def test_send_with_mocked_sendgrid(self, backend: EmailBackend) -> None:
         """Test successful email send via SendGrid (mocked)."""
         from unittest.mock import MagicMock, patch
-        
+
         payload = NotificationPayload(
             event=NotificationEvent.JOB_COMPLETE,
             user_id=uuid.uuid4(),
@@ -149,16 +151,16 @@ class TestEmailBackend:
             song_artist="Artist",
             job_id=uuid.uuid4(),
         )
-        
+
         # Mock the sendgrid module
         mock_response = MagicMock()
         mock_response.status_code = 202
         mock_response.headers = {"X-Message-Id": "test-message-id"}
-        
+
         with patch("sendgrid.SendGridAPIClient") as mock_client:
             mock_client.return_value.send.return_value = mock_response
             result = await backend.send(payload)
-        
+
         assert result.success is True
         assert result.notification_type == NotificationType.EMAIL
 

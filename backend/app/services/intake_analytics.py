@@ -27,31 +27,31 @@ logger = get_logger(__name__)
 
 class IntakeEvent(str, Enum):
     """Events in the intake funnel."""
-    
+
     # Upload phase
     UPLOAD_STARTED = "upload_started"
     UPLOAD_COMPLETED = "upload_completed"
     UPLOAD_FAILED = "upload_failed"
-    
+
     # Fingerprint phase
     FINGERPRINT_STARTED = "fingerprint_started"
     FINGERPRINT_COMPLETED = "fingerprint_completed"
     FINGERPRINT_FAILED = "fingerprint_failed"
     FINGERPRINT_RETRIED = "fingerprint_retried"
-    
+
     # Metadata phase
     METADATA_LOOKUP_STARTED = "metadata_lookup_started"
     METADATA_FOUND = "metadata_found"
     METADATA_NOT_FOUND = "metadata_not_found"
     METADATA_MANUAL_ENTRY = "metadata_manual_entry"
     METADATA_SKIPPED = "metadata_skipped"
-    
+
     # Job phase
     JOB_QUEUED = "job_queued"
     JOB_STARTED = "job_started"
     JOB_COMPLETED = "job_completed"
     JOB_FAILED = "job_failed"
-    
+
     # Abort/dropout
     USER_ABANDONED = "user_abandoned"
     SESSION_EXPIRED = "session_expired"
@@ -60,18 +60,18 @@ class IntakeEvent(str, Enum):
 class IntakeAnalytics:
     """
     Analytics service for tracking intake funnel events.
-    
+
     In production, this would write to:
     - A time-series database (InfluxDB, TimescaleDB)
     - An analytics service (Mixpanel, Amplitude, PostHog)
     - Or a simple log aggregator (CloudWatch, Datadog)
-    
+
     For MVP, we use structured logging that can be parsed later.
     """
-    
+
     def __init__(self):
         self._session_data: dict[str, dict[str, Any]] = {}
-    
+
     def track(
         self,
         event: IntakeEvent,
@@ -83,7 +83,7 @@ class IntakeAnalytics:
     ) -> None:
         """
         Track an intake funnel event.
-        
+
         Args:
             event: The event type.
             session_id: Browser session ID for anonymous tracking.
@@ -101,13 +101,13 @@ class IntakeAnalytics:
             "job_id": str(job_id) if job_id else None,
             **(metadata or {}),
         }
-        
+
         # Log for aggregation
         logger.info(
             "intake_funnel_event",
             **event_data,
         )
-        
+
         # Update session data for funnel analysis
         if session_id:
             if session_id not in self._session_data:
@@ -116,7 +116,7 @@ class IntakeAnalytics:
                     "started_at": datetime.now(timezone.utc),
                 }
             self._session_data[session_id]["events"].append(event.value)
-    
+
     def track_upload_started(
         self,
         session_id: str,
@@ -136,7 +136,7 @@ class IntakeAnalytics:
                 "content_type": content_type,
             },
         )
-    
+
     def track_upload_completed(
         self,
         session_id: str,
@@ -154,7 +154,7 @@ class IntakeAnalytics:
                 "upload_duration_seconds": duration_seconds,
             },
         )
-    
+
     def track_upload_failed(
         self,
         session_id: str,
@@ -168,7 +168,7 @@ class IntakeAnalytics:
             user_id=user_id,
             metadata={"error": error},
         )
-    
+
     def track_fingerprint_started(
         self,
         session_id: str,
@@ -182,7 +182,7 @@ class IntakeAnalytics:
             user_id=user_id,
             song_id=song_id,
         )
-    
+
     def track_fingerprint_completed(
         self,
         session_id: str,
@@ -198,7 +198,7 @@ class IntakeAnalytics:
             song_id=song_id,
             metadata={"fingerprint_duration_seconds": duration_seconds},
         )
-    
+
     def track_fingerprint_failed(
         self,
         session_id: str,
@@ -218,7 +218,7 @@ class IntakeAnalytics:
                 "retry_count": retry_count,
             },
         )
-    
+
     def track_fingerprint_retried(
         self,
         session_id: str,
@@ -234,7 +234,7 @@ class IntakeAnalytics:
             song_id=song_id,
             metadata={"retry_count": retry_count},
         )
-    
+
     def track_metadata_found(
         self,
         session_id: str,
@@ -254,7 +254,7 @@ class IntakeAnalytics:
                 "confidence": confidence,
             },
         )
-    
+
     def track_metadata_not_found(
         self,
         session_id: str,
@@ -268,7 +268,7 @@ class IntakeAnalytics:
             user_id=user_id,
             song_id=song_id,
         )
-    
+
     def track_metadata_manual(
         self,
         session_id: str,
@@ -282,7 +282,7 @@ class IntakeAnalytics:
             user_id=user_id,
             song_id=song_id,
         )
-    
+
     def track_job_queued(
         self,
         session_id: str,
@@ -300,7 +300,7 @@ class IntakeAnalytics:
             job_id=job_id,
             metadata={"priority": priority},
         )
-    
+
     def track_job_completed(
         self,
         job_id: uuid.UUID,
@@ -316,7 +316,7 @@ class IntakeAnalytics:
             job_id=job_id,
             metadata={"processing_duration_seconds": duration_seconds},
         )
-    
+
     def track_job_failed(
         self,
         job_id: uuid.UUID,
@@ -332,13 +332,13 @@ class IntakeAnalytics:
             job_id=job_id,
             metadata={"error": error},
         )
-    
+
     def get_session_funnel(self, session_id: str) -> list[str]:
         """Get the event sequence for a session."""
         if session_id in self._session_data:
             return self._session_data[session_id]["events"]
         return []
-    
+
     def calculate_conversion_rate(
         self,
         from_event: IntakeEvent,
@@ -346,20 +346,20 @@ class IntakeAnalytics:
     ) -> float:
         """
         Calculate conversion rate between two funnel steps.
-        
+
         Note: This is a simplified in-memory calculation.
         In production, use a proper analytics database query.
         """
         from_count = 0
         to_count = 0
-        
+
         for session_data in self._session_data.values():
             events = session_data["events"]
             if from_event.value in events:
                 from_count += 1
                 if to_event.value in events:
                     to_count += 1
-        
+
         if from_count == 0:
             return 0.0
         return to_count / from_count

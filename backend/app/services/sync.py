@@ -61,7 +61,7 @@ class SyncService:
             "custom_settings": {},
         }
         checksum = self._compute_checksum(defaults)
-        
+
         prefs = UserPreferences(
             user_id=user_id,
             version=1,  # Explicitly set initial version
@@ -80,7 +80,7 @@ class SyncService:
     ) -> tuple[UserPreferences, bool]:
         """
         Update user preferences with optional optimistic locking.
-        
+
         Returns (preferences, conflict_occurred).
         """
         prefs = await self.get_user_preferences(user_id)
@@ -93,11 +93,20 @@ class SyncService:
 
         # Apply updates
         allowed_fields = {
-            "scroll_speed", "note_skin", "audio_offset_ms", "visual_offset_ms",
-            "background_dim", "master_volume", "music_volume", "effects_volume",
-            "hitsound_volume", "theme", "language", "custom_settings",
+            "scroll_speed",
+            "note_skin",
+            "audio_offset_ms",
+            "visual_offset_ms",
+            "background_dim",
+            "master_volume",
+            "music_volume",
+            "effects_volume",
+            "hitsound_volume",
+            "theme",
+            "language",
+            "custom_settings",
         }
-        
+
         for key, value in updates.items():
             if key in allowed_fields:
                 setattr(prefs, key, value)
@@ -148,7 +157,7 @@ class SyncService:
         )
         self.db.add(client)
         await self.db.flush()
-        
+
         logger.info(f"Registered sync client {client.id} for user {user_id}")
         return client
 
@@ -202,11 +211,13 @@ class SyncService:
     ) -> Sequence[SyncManifestEntry]:
         """Get sync manifest entries for a user, optionally filtered by time."""
         query = select(SyncManifestEntry).where(SyncManifestEntry.user_id == user_id)
-        
+
         if since:
             query = query.where(SyncManifestEntry.last_modified > since)
-        
-        result = await self.db.execute(query.order_by(SyncManifestEntry.last_modified.desc()))
+
+        result = await self.db.execute(
+            query.order_by(SyncManifestEntry.last_modified.desc())
+        )
         return result.scalars().all()
 
     async def get_manifest_entry(
@@ -232,81 +243,95 @@ class SyncService:
     ) -> list[dict[str, Any]]:
         """
         Compare client manifest with cloud and determine sync actions.
-        
+
         Returns list of actions: {map_id, action, reason, ...}
         """
         actions = []
-        
+
         # Get cloud manifest
         cloud_entries = await self.get_user_manifest(user_id)
         cloud_by_map = {entry.map_id: entry for entry in cloud_entries}
-        
+
         # Check each client entry
         client_map_ids = set()
         for client_entry in client_entries:
             map_id = uuid.UUID(client_entry["map_id"])
             client_map_ids.add(map_id)
-            
+
             cloud_entry = cloud_by_map.get(map_id)
-            
+
             if cloud_entry is None:
                 # New map from client
-                actions.append({
-                    "map_id": str(map_id),
-                    "action": SyncAction.UPLOAD.value,
-                    "reason": "local_only",
-                })
+                actions.append(
+                    {
+                        "map_id": str(map_id),
+                        "action": SyncAction.UPLOAD.value,
+                        "reason": "local_only",
+                    }
+                )
             elif client_entry.get("checksum") == cloud_entry.checksum:
                 # Already in sync
-                actions.append({
-                    "map_id": str(map_id),
-                    "action": SyncAction.NONE.value,
-                    "reason": "checksums_match",
-                })
+                actions.append(
+                    {
+                        "map_id": str(map_id),
+                        "action": SyncAction.NONE.value,
+                        "reason": "checksums_match",
+                    }
+                )
             elif client_entry.get("version", 0) > cloud_entry.cloud_version:
                 # Client has newer version
-                actions.append({
-                    "map_id": str(map_id),
-                    "action": SyncAction.UPLOAD.value,
-                    "reason": "local_newer",
-                })
+                actions.append(
+                    {
+                        "map_id": str(map_id),
+                        "action": SyncAction.UPLOAD.value,
+                        "reason": "local_newer",
+                    }
+                )
             elif client_entry.get("version", 0) < cloud_entry.cloud_version:
                 # Cloud has newer version
-                actions.append({
-                    "map_id": str(map_id),
-                    "action": SyncAction.DOWNLOAD.value,
-                    "reason": "cloud_newer",
-                    "cloud_version": cloud_entry.cloud_version,
-                    "cloud_checksum": cloud_entry.checksum,
-                })
+                actions.append(
+                    {
+                        "map_id": str(map_id),
+                        "action": SyncAction.DOWNLOAD.value,
+                        "reason": "cloud_newer",
+                        "cloud_version": cloud_entry.cloud_version,
+                        "cloud_checksum": cloud_entry.checksum,
+                    }
+                )
             else:
                 # Same version but different checksums = conflict
-                actions.append({
-                    "map_id": str(map_id),
-                    "action": SyncAction.CONFLICT.value,
-                    "reason": "both_modified",
-                    "local_version": client_entry.get("version"),
-                    "cloud_version": cloud_entry.cloud_version,
-                })
-        
+                actions.append(
+                    {
+                        "map_id": str(map_id),
+                        "action": SyncAction.CONFLICT.value,
+                        "reason": "both_modified",
+                        "local_version": client_entry.get("version"),
+                        "cloud_version": cloud_entry.cloud_version,
+                    }
+                )
+
         # Check for cloud-only maps
         for map_id, cloud_entry in cloud_by_map.items():
             if map_id not in client_map_ids:
                 if cloud_entry.sync_state == SyncState.DELETED:
-                    actions.append({
-                        "map_id": str(map_id),
-                        "action": SyncAction.DELETE.value,
-                        "reason": "deleted_in_cloud",
-                    })
+                    actions.append(
+                        {
+                            "map_id": str(map_id),
+                            "action": SyncAction.DELETE.value,
+                            "reason": "deleted_in_cloud",
+                        }
+                    )
                 else:
-                    actions.append({
-                        "map_id": str(map_id),
-                        "action": SyncAction.DOWNLOAD.value,
-                        "reason": "cloud_only",
-                        "cloud_version": cloud_entry.cloud_version,
-                        "cloud_checksum": cloud_entry.checksum,
-                    })
-        
+                    actions.append(
+                        {
+                            "map_id": str(map_id),
+                            "action": SyncAction.DOWNLOAD.value,
+                            "reason": "cloud_only",
+                            "cloud_version": cloud_entry.cloud_version,
+                            "cloud_checksum": cloud_entry.checksum,
+                        }
+                    )
+
         return actions
 
     async def update_manifest_entry(
@@ -319,7 +344,7 @@ class SyncService:
     ) -> SyncManifestEntry:
         """Create or update a manifest entry after successful sync."""
         entry = await self.get_manifest_entry(user_id, map_id)
-        
+
         if entry is None:
             entry = SyncManifestEntry(
                 user_id=user_id,
@@ -335,10 +360,10 @@ class SyncService:
             entry.local_version = version
             entry.checksum = checksum
             entry.sync_state = sync_state
-        
+
         entry.last_synced_at = datetime.now(timezone.utc)
         entry.last_modified = datetime.now(timezone.utc)
-        
+
         await self.db.flush()
         return entry
 
@@ -368,7 +393,7 @@ class SyncService:
         )
         self.db.add(conflict)
         await self.db.flush()
-        
+
         logger.warning(f"Created sync conflict for map {map_id}, user {user_id}")
         return conflict
 
@@ -379,10 +404,10 @@ class SyncService:
     ) -> Sequence[SyncConflict]:
         """Get sync conflicts for a user."""
         query = select(SyncConflict).where(SyncConflict.user_id == user_id)
-        
+
         if unresolved_only:
             query = query.where(SyncConflict.resolved_at.is_(None))
-        
+
         result = await self.db.execute(query.order_by(SyncConflict.created_at.desc()))
         return result.scalars().all()
 
@@ -399,14 +424,14 @@ class SyncService:
             )
         )
         conflict = result.scalar_one_or_none()
-        
+
         if conflict:
             conflict.resolution = resolution
             conflict.resolved_at = datetime.now(timezone.utc)
             await self.db.flush()
-            
+
             logger.info(f"Resolved conflict {conflict_id} with {resolution.value}")
-        
+
         return conflict
 
     # -------------------------------------------------------------------------

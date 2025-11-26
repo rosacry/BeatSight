@@ -41,18 +41,18 @@ DEFAULT_ROLES = [
 async def seed_roles(session: AsyncSession) -> list[str]:
     """
     Seed default roles into the database.
-    
+
     Returns list of created role codes.
     """
     created = []
-    
+
     for role_data in DEFAULT_ROLES:
         # Check if role already exists
         result = await session.execute(
             select(Role).where(Role.code == role_data["code"])
         )
         existing = result.scalar_one_or_none()
-        
+
         if existing is None:
             role = Role(**role_data)
             session.add(role)
@@ -60,7 +60,7 @@ async def seed_roles(session: AsyncSession) -> list[str]:
             print(f"Created role: {role_data['code']}")
         else:
             print(f"Role already exists: {role_data['code']}")
-    
+
     await session.commit()
     return created
 
@@ -68,10 +68,10 @@ async def seed_roles(session: AsyncSession) -> list[str]:
 async def main() -> None:
     """Run the role seeding script."""
     print("Seeding default roles...")
-    
+
     async with async_session_factory() as session:
         created = await seed_roles(session)
-    
+
     if created:
         print(f"\nCreated {len(created)} role(s): {', '.join(created)}")
     else:

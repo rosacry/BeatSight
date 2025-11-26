@@ -61,34 +61,34 @@ async def redis_connection() -> AsyncIterator[Redis]:
 # =============================================================================
 class RedisKeys:
     """Centralized Redis key management."""
-    
+
     # Job queues (sorted sets by priority/timestamp)
     JOB_QUEUE = "beatsight:jobs:queue"
     JOB_PROCESSING = "beatsight:jobs:processing"
     JOB_COMPLETED = "beatsight:jobs:completed"
     JOB_FAILED = "beatsight:jobs:failed"
-    
+
     # Job data (hash per job)
     @staticmethod
     def job_data(job_id: uuid.UUID) -> str:
         return f"beatsight:jobs:data:{job_id}"
-    
+
     # Progress channels (pub/sub)
     @staticmethod
     def job_progress_channel(job_id: uuid.UUID) -> str:
         return f"beatsight:jobs:progress:{job_id}"
-    
+
     # User quota tracking
     @staticmethod
     def user_quota(user_id: uuid.UUID, period: str) -> str:
         return f"beatsight:quota:{user_id}:{period}"
-    
+
     # Rate limiting
     @staticmethod
     def rate_limit(user_id: uuid.UUID | None, endpoint: str) -> str:
         user_part = str(user_id) if user_id else "anon"
         return f"beatsight:ratelimit:{user_part}:{endpoint}"
-    
+
     # Caching
     @staticmethod
     def cache(namespace: str, key: str) -> str:
@@ -101,12 +101,13 @@ class RedisKeys:
 @dataclass
 class QueuedJob:
     """Represents a job in the Redis queue."""
+
     job_id: uuid.UUID
     song_id: uuid.UUID
     user_id: uuid.UUID | None
     priority: int  # Higher = more urgent
     enqueued_at: datetime
-    
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "job_id": str(self.job_id),
@@ -115,7 +116,7 @@ class QueuedJob:
             "priority": self.priority,
             "enqueued_at": self.enqueued_at.isoformat(),
         }
-    
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "QueuedJob":
         return cls(
@@ -129,47 +130,49 @@ class QueuedJob:
 
 class JobQueue:
     """Redis-backed job queue with priority support."""
-    
+
     def __init__(self, client: Redis):
         self._client = client
-    
+
     async def enqueue(self, job: QueuedJob) -> None:
         """Add a job to the queue with priority scoring.
-        
+
         Score formula: -priority * 1e12 + timestamp
         This ensures higher priority jobs come first, with FIFO within same priority.
         """
         score = -job.priority * 1_000_000_000_000 + job.enqueued_at.timestamp()
-        
+
         async with self._client.pipeline() as pipe:
             # Store job data
             await pipe.hset(
                 RedisKeys.job_data(job.job_id),
-                mapping={k: json.dumps(v) if not isinstance(v, str) else v 
-                        for k, v in job.to_dict().items()}
+                mapping={
+                    k: json.dumps(v) if not isinstance(v, str) else v
+                    for k, v in job.to_dict().items()
+                },
             )
             # Add to sorted set queue
             await pipe.zadd(RedisKeys.JOB_QUEUE, {str(job.job_id): score})
             await pipe.execute()
-    
+
     async def dequeue(self) -> QueuedJob | None:
         """Pop the highest priority job from the queue.
-        
+
         Uses ZPOPMIN for atomic dequeue. Moves job to processing set.
         """
         # Atomically pop from queue
         result = await self._client.zpopmin(RedisKeys.JOB_QUEUE, count=1)
         if not result:
             return None
-        
+
         job_id_str, _score = result[0]
         job_id = uuid.UUID(job_id_str)
-        
+
         # Get job data
         data = await self._client.hgetall(RedisKeys.job_data(job_id))
         if not data:
             return None
-        
+
         # Parse stored JSON values
         parsed = {}
         for k, v in data.items():
@@ -177,12 +180,12 @@ class JobQueue:
                 parsed[k] = json.loads(v)
             except json.JSONDecodeError:
                 parsed[k] = v
-        
+
         # Move to processing set
         await self._client.sadd(RedisKeys.JOB_PROCESSING, job_id_str)
-        
+
         return QueuedJob.from_dict(parsed)
-    
+
     async def mark_complete(self, job_id: uuid.UUID) -> None:
         """Move job from processing to completed."""
         job_id_str = str(job_id)
@@ -192,7 +195,7 @@ class JobQueue:
             # Keep completed jobs for 24 hours
             await pipe.expire(RedisKeys.job_data(job_id), 86400)
             await pipe.execute()
-    
+
     async def mark_failed(self, job_id: uuid.UUID, error: str | None = None) -> None:
         """Move job from processing to failed."""
         job_id_str = str(job_id)
@@ -204,37 +207,37 @@ class JobQueue:
             # Keep failed jobs for 7 days for debugging
             await pipe.expire(RedisKeys.job_data(job_id), 604800)
             await pipe.execute()
-    
+
     async def requeue(self, job_id: uuid.UUID) -> bool:
         """Move a failed/processing job back to the queue for retry."""
         job_id_str = str(job_id)
-        
+
         # Get job data
         data = await self._client.hgetall(RedisKeys.job_data(job_id))
         if not data:
             return False
-        
+
         # Remove from processing/failed
         await self._client.srem(RedisKeys.JOB_PROCESSING, job_id_str)
         await self._client.srem(RedisKeys.JOB_FAILED, job_id_str)
-        
+
         # Re-add to queue with current timestamp
         now = datetime.now(timezone.utc)
         priority = int(data.get("priority", 0))
         score = -priority * 1_000_000_000_000 + now.timestamp()
         await self._client.zadd(RedisKeys.JOB_QUEUE, {job_id_str: score})
-        
+
         return True
-    
+
     async def get_queue_position(self, job_id: uuid.UUID) -> int | None:
         """Get 0-based position of a job in the queue (None if not queued)."""
         rank = await self._client.zrank(RedisKeys.JOB_QUEUE, str(job_id))
         return rank
-    
+
     async def get_queue_length(self) -> int:
         """Get total number of jobs in queue."""
         return await self._client.zcard(RedisKeys.JOB_QUEUE)
-    
+
     async def get_processing_count(self) -> int:
         """Get number of jobs currently being processed."""
         return await self._client.scard(RedisKeys.JOB_PROCESSING)
@@ -246,21 +249,24 @@ class JobQueue:
 @dataclass
 class ProgressUpdate:
     """Progress update message for pub/sub."""
+
     job_id: uuid.UUID
     percent: int
     message: str | None
     stage: str | None
     timestamp: datetime
-    
+
     def to_json(self) -> str:
-        return json.dumps({
-            "job_id": str(self.job_id),
-            "percent": self.percent,
-            "message": self.message,
-            "stage": self.stage,
-            "timestamp": self.timestamp.isoformat(),
-        })
-    
+        return json.dumps(
+            {
+                "job_id": str(self.job_id),
+                "percent": self.percent,
+                "message": self.message,
+                "stage": self.stage,
+                "timestamp": self.timestamp.isoformat(),
+            }
+        )
+
     @classmethod
     def from_json(cls, data: str) -> "ProgressUpdate":
         parsed = json.loads(data)
@@ -284,7 +290,7 @@ async def subscribe_progress(client: Redis, job_id: uuid.UUID):
     pubsub = client.pubsub()
     channel = RedisKeys.job_progress_channel(job_id)
     await pubsub.subscribe(channel)
-    
+
     try:
         async for message in pubsub.listen():
             if message["type"] == "message":
@@ -305,11 +311,11 @@ async def get_quota_usage(client: Redis, user_id: uuid.UUID, period: str) -> int
 
 
 async def increment_quota_usage(
-    client: Redis, 
-    user_id: uuid.UUID, 
-    period: str, 
+    client: Redis,
+    user_id: uuid.UUID,
+    period: str,
     amount: int = 1,
-    ttl_seconds: int = 2678400  # ~31 days
+    ttl_seconds: int = 2678400,  # ~31 days
 ) -> int:
     """Increment quota usage and return new total."""
     key = RedisKeys.user_quota(user_id, period)
@@ -331,11 +337,7 @@ async def cache_get(client: Redis, namespace: str, key: str) -> Any | None:
 
 
 async def cache_set(
-    client: Redis, 
-    namespace: str, 
-    key: str, 
-    value: Any, 
-    ttl: int | None = None
+    client: Redis, namespace: str, key: str, value: Any, ttl: int | None = None
 ) -> None:
     """Set a cached value with optional TTL."""
     redis_key = RedisKeys.cache(namespace, key)

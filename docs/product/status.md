@@ -62,6 +62,34 @@
   - `backend/tests/test_modal_gpu.py` - Comprehensive tests
   - GPU pricing estimation, callback verification, error handling
 
+### CI Infrastructure & Docker Fixes (COMPLETE)
+- ✅ **Docker Build Fixes**:
+  - Fixed missing `README.md` copy for pyproject.toml metadata (commit fce3e4d)
+  - Fixed missing `app/` source copy before pip install (commit b09tbcd)
+  - Docker build now passes: `./scripts/ci-backend-docker.sh`
+
+- ✅ **Local CI Scripts Created** (`scripts/` directory):
+  - `ci-backend-lint.sh` - Ruff lint + format check
+  - `ci-backend-docker.sh` - Docker image build
+  - `ci-backend-test.sh` - pytest (requires Postgres/Redis)
+  - `ci-backend-security.sh` - Bandit + Safety scans
+  - `ci-desktop-build.sh` - dotnet restore + build + test
+  - `ci-ai-pipeline.sh` - AI pipeline pytest
+  - `ci-all.sh` - Runs all checks sequentially
+  - **All scripts match GitHub Actions workflow jobs 1:1**
+
+- ✅ **AI Pipeline Test Import Fixes**:
+  - Fixed `ModuleNotFoundError` for `tests.test_utils` 
+  - Changed imports to use `from test_utils import ...` directly
+  - Updated: `conftest.py`, `test_onset_detection.py`, `test_training_pipeline.py`
+  - 99 tests passing, 2 skipped
+
+- ✅ **Validated All Checks**:
+  - Backend lint: 0 errors
+  - .NET: 90 tests passing
+  - AI pipeline: 99 tests passing (2 skipped)
+  - Updated `docs/CONTRIBUTING.md` with requirement to run `./scripts/ci-all.sh` before pushing
+
 ### Desktop/Web Alignment Audit (Deep Dive)
 
 **Verified against desktop source code:**

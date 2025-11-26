@@ -90,6 +90,23 @@ cd backend
 poetry run ruff check
 ```
 
+### Local CI Scripts (run before every push!)
+
+```bash
+# Run ALL CI checks (recommended before every push)
+./scripts/ci-all.sh
+
+# Individual checks:
+./scripts/ci-backend-lint.sh      # Ruff lint + format
+./scripts/ci-backend-docker.sh    # Docker build
+./scripts/ci-backend-test.sh      # pytest (requires Postgres/Redis)
+./scripts/ci-backend-security.sh  # Bandit + Safety
+./scripts/ci-desktop-build.sh     # dotnet build + test
+./scripts/ci-ai-pipeline.sh       # AI pipeline pytest
+```
+
+**⚠️ All checks must pass before pushing.** These scripts mirror the GitHub Actions CI workflows exactly, so catching failures locally avoids broken builds.
+
 ## 7. Need More Context?
 
 - Check `docs/Guidebook.md#orientation` for the narrative walkthrough of the project

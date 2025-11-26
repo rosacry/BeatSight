@@ -69,9 +69,23 @@ Example: `feat(editor): add waveform zoom controls`
 
 1. Update documentation if needed
 2. Add tests for new functionality
-3. Ensure all tests pass: `dotnet test` / `pytest`
-4. Update CHANGELOG.md (if applicable)
-5. Create pull request with:
+3. **Run local CI checks before pushing:**
+   ```bash
+   # Run all CI checks (recommended before every push)
+   ./scripts/ci-all.sh
+   
+   # Or run individual checks:
+   ./scripts/ci-backend-lint.sh      # Ruff lint + format
+   ./scripts/ci-backend-docker.sh    # Docker build
+   ./scripts/ci-backend-test.sh      # pytest (requires Postgres/Redis)
+   ./scripts/ci-backend-security.sh  # Bandit + Safety
+   ./scripts/ci-desktop-build.sh     # dotnet build + test
+   ./scripts/ci-ai-pipeline.sh       # AI pipeline pytest
+   ```
+   **All checks must pass with no warnings, skips, or errors before pushing.**
+4. Ensure all tests pass: `dotnet test` / `pytest`
+5. Update CHANGELOG.md (if applicable)
+6. Create pull request with:
    - Clear description of changes
    - Link to related issue(s)
    - Screenshots/videos for UI changes

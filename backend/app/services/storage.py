@@ -28,17 +28,17 @@ class StorageConfig:
 
     # Backend selection: "local", "s3", "azure"
     backend: str = "local"
-    
+
     # Local storage
     local_base_path: str = "./storage"
-    
+
     # AWS S3
     s3_bucket: str = ""
     s3_region: str = "us-east-1"
     s3_access_key: str = ""
     s3_secret_key: str = ""
     s3_endpoint_url: str | None = None  # For MinIO/LocalStack
-    
+
     # Azure Blob Storage
     azure_connection_string: str = ""
     azure_container: str = ""
@@ -96,13 +96,13 @@ class StorageBackend(ABC):
         metadata: dict[str, str] | None = None,
     ) -> StorageObject:
         """Upload data to storage.
-        
+
         Args:
             key: Storage path/key for the object.
             data: Bytes or file-like object to upload.
             content_type: MIME type of the content.
             metadata: Optional key-value metadata.
-            
+
         Returns:
             StorageObject with metadata about the upload.
         """
@@ -111,26 +111,28 @@ class StorageBackend(ABC):
     @abstractmethod
     async def download(self, key: str) -> bytes:
         """Download an object from storage.
-        
+
         Args:
             key: Storage path/key for the object.
-            
+
         Returns:
             Object contents as bytes.
-            
+
         Raises:
             FileNotFoundError: If the object does not exist.
         """
         ...
 
     @abstractmethod
-    async def stream_download(self, key: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
+    async def stream_download(
+        self, key: str, chunk_size: int = 8192
+    ) -> AsyncIterator[bytes]:
         """Stream download an object in chunks.
-        
+
         Args:
             key: Storage path/key for the object.
             chunk_size: Size of chunks to yield.
-            
+
         Yields:
             Chunks of object data.
         """
@@ -139,7 +141,7 @@ class StorageBackend(ABC):
     @abstractmethod
     async def delete(self, key: str) -> None:
         """Delete an object from storage.
-        
+
         Args:
             key: Storage path/key for the object.
         """
@@ -148,10 +150,10 @@ class StorageBackend(ABC):
     @abstractmethod
     async def exists(self, key: str) -> bool:
         """Check if an object exists.
-        
+
         Args:
             key: Storage path/key for the object.
-            
+
         Returns:
             True if object exists, False otherwise.
         """
@@ -160,26 +162,28 @@ class StorageBackend(ABC):
     @abstractmethod
     async def get_metadata(self, key: str) -> StorageObject:
         """Get metadata for an object without downloading.
-        
+
         Args:
             key: Storage path/key for the object.
-            
+
         Returns:
             StorageObject with metadata.
-            
+
         Raises:
             FileNotFoundError: If the object does not exist.
         """
         ...
 
     @abstractmethod
-    async def list_objects(self, prefix: str = "", limit: int = 1000) -> list[StorageObject]:
+    async def list_objects(
+        self, prefix: str = "", limit: int = 1000
+    ) -> list[StorageObject]:
         """List objects with a given prefix.
-        
+
         Args:
             prefix: Key prefix to filter by.
             limit: Maximum number of objects to return.
-            
+
         Returns:
             List of StorageObject metadata.
         """
@@ -194,13 +198,13 @@ class StorageBackend(ABC):
         content_type: str | None = None,
     ) -> PresignedUrl:
         """Generate a presigned URL for direct access.
-        
+
         Args:
             key: Storage path/key for the object.
             method: HTTP method ("GET" for download, "PUT" for upload).
             expires_in: URL validity in seconds.
             content_type: Required content type for PUT operations.
-            
+
         Returns:
             PresignedUrl with the URL and expiration.
         """
@@ -236,7 +240,7 @@ class LocalStorageBackend(StorageBackend):
     ) -> StorageObject:
         path = self._resolve_path(key)
         path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         if isinstance(data, bytes):
             path.write_bytes(data)
             size = len(data)
@@ -244,16 +248,21 @@ class LocalStorageBackend(StorageBackend):
             content = data.read()
             path.write_bytes(content)
             size = len(content)
-        
+
         # Store metadata in a sidecar file
         if metadata:
             import json
+
             meta_path = path.with_suffix(path.suffix + ".meta")
-            meta_path.write_text(json.dumps({
-                "content_type": content_type,
-                "metadata": metadata,
-            }))
-        
+            meta_path.write_text(
+                json.dumps(
+                    {
+                        "content_type": content_type,
+                        "metadata": metadata,
+                    }
+                )
+            )
+
         return StorageObject(
             key=key,
             size=size,
@@ -269,11 +278,13 @@ class LocalStorageBackend(StorageBackend):
             raise FileNotFoundError(f"Object not found: {key}")
         return path.read_bytes()
 
-    async def stream_download(self, key: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
+    async def stream_download(
+        self, key: str, chunk_size: int = 8192
+    ) -> AsyncIterator[bytes]:
         path = self._resolve_path(key)
         if not path.exists():
             raise FileNotFoundError(f"Object not found: {key}")
-        
+
         with open(path, "rb") as f:
             while chunk := f.read(chunk_size):
                 yield chunk
@@ -294,19 +305,20 @@ class LocalStorageBackend(StorageBackend):
         path = self._resolve_path(key)
         if not path.exists():
             raise FileNotFoundError(f"Object not found: {key}")
-        
+
         stat = path.stat()
         content_type = "application/octet-stream"
         metadata = None
-        
+
         # Check for metadata sidecar
         meta_path = path.with_suffix(path.suffix + ".meta")
         if meta_path.exists():
             import json
+
             meta = json.loads(meta_path.read_text())
             content_type = meta.get("content_type", content_type)
             metadata = meta.get("metadata")
-        
+
         return StorageObject(
             key=key,
             size=stat.st_size,
@@ -315,30 +327,36 @@ class LocalStorageBackend(StorageBackend):
             metadata=metadata,
         )
 
-    async def list_objects(self, prefix: str = "", limit: int = 1000) -> list[StorageObject]:
+    async def list_objects(
+        self, prefix: str = "", limit: int = 1000
+    ) -> list[StorageObject]:
         results = []
         prefix_path = self._resolve_path(prefix) if prefix else self._base_path
-        
+
         # Handle both file and directory prefixes
         search_dir = prefix_path.parent if prefix_path.is_file() else prefix_path
         if not search_dir.exists():
             search_dir = self._base_path
-        
+
         for path in search_dir.rglob("*"):
             if path.is_file() and not path.suffix == ".meta":
                 relative = path.relative_to(self._base_path)
                 key = str(relative).replace("\\", "/")
                 if key.startswith(prefix):
                     stat = path.stat()
-                    results.append(StorageObject(
-                        key=key,
-                        size=stat.st_size,
-                        content_type="application/octet-stream",
-                        last_modified=datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc),
-                    ))
+                    results.append(
+                        StorageObject(
+                            key=key,
+                            size=stat.st_size,
+                            content_type="application/octet-stream",
+                            last_modified=datetime.fromtimestamp(
+                                stat.st_mtime, tz=timezone.utc
+                            ),
+                        )
+                    )
                     if len(results) >= limit:
                         break
-        
+
         return results
 
     async def get_presigned_url(
@@ -373,18 +391,20 @@ class S3StorageBackend(StorageBackend):
             try:
                 import aioboto3
             except ImportError:
-                raise ImportError("aioboto3 is required for S3 storage. Install with: pip install aioboto3")
-            
+                raise ImportError(
+                    "aioboto3 is required for S3 storage. Install with: pip install aioboto3"
+                )
+
             session = aioboto3.Session(
                 aws_access_key_id=self._config.s3_access_key or None,
                 aws_secret_access_key=self._config.s3_secret_key or None,
                 region_name=self._region,
             )
-            
+
             kwargs = {}
             if self._config.s3_endpoint_url:
                 kwargs["endpoint_url"] = self._config.s3_endpoint_url
-            
+
             self._client = await session.client("s3", **kwargs).__aenter__()
         return self._client
 
@@ -396,7 +416,7 @@ class S3StorageBackend(StorageBackend):
         metadata: dict[str, str] | None = None,
     ) -> StorageObject:
         client = await self._get_client()
-        
+
         kwargs = {
             "Bucket": self._bucket,
             "Key": key,
@@ -405,11 +425,11 @@ class S3StorageBackend(StorageBackend):
         }
         if metadata:
             kwargs["Metadata"] = metadata
-        
+
         response = await client.put_object(**kwargs)
-        
+
         size = len(data) if isinstance(data, bytes) else data.seek(0, 2)
-        
+
         return StorageObject(
             key=key,
             size=size,
@@ -421,16 +441,18 @@ class S3StorageBackend(StorageBackend):
 
     async def download(self, key: str) -> bytes:
         client = await self._get_client()
-        
+
         try:
             response = await client.get_object(Bucket=self._bucket, Key=key)
             return await response["Body"].read()
         except client.exceptions.NoSuchKey:
             raise FileNotFoundError(f"Object not found: {key}")
 
-    async def stream_download(self, key: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
+    async def stream_download(
+        self, key: str, chunk_size: int = 8192
+    ) -> AsyncIterator[bytes]:
         client = await self._get_client()
-        
+
         try:
             response = await client.get_object(Bucket=self._bucket, Key=key)
             async for chunk in response["Body"].iter_chunks(chunk_size):
@@ -452,7 +474,7 @@ class S3StorageBackend(StorageBackend):
 
     async def get_metadata(self, key: str) -> StorageObject:
         client = await self._get_client()
-        
+
         try:
             response = await client.head_object(Bucket=self._bucket, Key=key)
             return StorageObject(
@@ -466,24 +488,30 @@ class S3StorageBackend(StorageBackend):
         except client.exceptions.NoSuchKey:
             raise FileNotFoundError(f"Object not found: {key}")
 
-    async def list_objects(self, prefix: str = "", limit: int = 1000) -> list[StorageObject]:
+    async def list_objects(
+        self, prefix: str = "", limit: int = 1000
+    ) -> list[StorageObject]:
         client = await self._get_client()
-        
+
         results = []
         paginator = client.get_paginator("list_objects_v2")
-        
-        async for page in paginator.paginate(Bucket=self._bucket, Prefix=prefix, MaxKeys=limit):
+
+        async for page in paginator.paginate(
+            Bucket=self._bucket, Prefix=prefix, MaxKeys=limit
+        ):
             for obj in page.get("Contents", []):
-                results.append(StorageObject(
-                    key=obj["Key"],
-                    size=obj["Size"],
-                    content_type="application/octet-stream",  # HEAD required for type
-                    last_modified=obj["LastModified"],
-                    etag=obj.get("ETag", "").strip('"'),
-                ))
+                results.append(
+                    StorageObject(
+                        key=obj["Key"],
+                        size=obj["Size"],
+                        content_type="application/octet-stream",  # HEAD required for type
+                        last_modified=obj["LastModified"],
+                        etag=obj.get("ETag", "").strip('"'),
+                    )
+                )
                 if len(results) >= limit:
                     return results
-        
+
         return results
 
     async def get_presigned_url(
@@ -494,18 +522,18 @@ class S3StorageBackend(StorageBackend):
         content_type: str | None = None,
     ) -> PresignedUrl:
         client = await self._get_client()
-        
+
         params = {"Bucket": self._bucket, "Key": key}
         if method == "PUT" and content_type:
             params["ContentType"] = content_type
-        
+
         client_method = "get_object" if method == "GET" else "put_object"
         url = await client.generate_presigned_url(
             client_method,
             Params=params,
             ExpiresIn=expires_in,
         )
-        
+
         return PresignedUrl(
             url=url,
             expires_at=datetime.now(timezone.utc) + timedelta(seconds=expires_in),
@@ -531,16 +559,21 @@ class AzureBlobStorageBackend(StorageBackend):
                     "azure-storage-blob is required for Azure storage. "
                     "Install with: pip install azure-storage-blob aiohttp"
                 )
-            
+
             if self._config.azure_connection_string:
                 self._client = BlobServiceClient.from_connection_string(
                     self._config.azure_connection_string
                 )
             else:
-                account_url = f"https://{self._config.azure_account_name}.blob.core.windows.net"
+                account_url = (
+                    f"https://{self._config.azure_account_name}.blob.core.windows.net"
+                )
                 from azure.identity.aio import DefaultAzureCredential
-                self._client = BlobServiceClient(account_url, credential=DefaultAzureCredential())
-        
+
+                self._client = BlobServiceClient(
+                    account_url, credential=DefaultAzureCredential()
+                )
+
         return self._client
 
     async def _get_blob_client(self, key: str):
@@ -556,9 +589,9 @@ class AzureBlobStorageBackend(StorageBackend):
         metadata: dict[str, str] | None = None,
     ) -> StorageObject:
         from azure.storage.blob import ContentSettings
-        
+
         blob = await self._get_blob_client(key)
-        
+
         content_settings = ContentSettings(content_type=content_type)
         await blob.upload_blob(
             data,
@@ -566,9 +599,9 @@ class AzureBlobStorageBackend(StorageBackend):
             content_settings=content_settings,
             metadata=metadata,
         )
-        
+
         size = len(data) if isinstance(data, bytes) else data.seek(0, 2)
-        
+
         return StorageObject(
             key=key,
             size=size,
@@ -579,20 +612,22 @@ class AzureBlobStorageBackend(StorageBackend):
 
     async def download(self, key: str) -> bytes:
         from azure.core.exceptions import ResourceNotFoundError
-        
+
         blob = await self._get_blob_client(key)
-        
+
         try:
             download = await blob.download_blob()
             return await download.readall()
         except ResourceNotFoundError:
             raise FileNotFoundError(f"Object not found: {key}")
 
-    async def stream_download(self, key: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
+    async def stream_download(
+        self, key: str, chunk_size: int = 8192
+    ) -> AsyncIterator[bytes]:
         from azure.core.exceptions import ResourceNotFoundError
-        
+
         blob = await self._get_blob_client(key)
-        
+
         try:
             download = await blob.download_blob()
             async for chunk in download.chunks():
@@ -610,15 +645,16 @@ class AzureBlobStorageBackend(StorageBackend):
 
     async def get_metadata(self, key: str) -> StorageObject:
         from azure.core.exceptions import ResourceNotFoundError
-        
+
         blob = await self._get_blob_client(key)
-        
+
         try:
             props = await blob.get_blob_properties()
             return StorageObject(
                 key=key,
                 size=props.size,
-                content_type=props.content_settings.content_type or "application/octet-stream",
+                content_type=props.content_settings.content_type
+                or "application/octet-stream",
                 last_modified=props.last_modified,
                 etag=props.etag,
                 metadata=props.metadata,
@@ -626,22 +662,28 @@ class AzureBlobStorageBackend(StorageBackend):
         except ResourceNotFoundError:
             raise FileNotFoundError(f"Object not found: {key}")
 
-    async def list_objects(self, prefix: str = "", limit: int = 1000) -> list[StorageObject]:
+    async def list_objects(
+        self, prefix: str = "", limit: int = 1000
+    ) -> list[StorageObject]:
         service = await self._get_client()
         container = service.get_container_client(self._container)
-        
+
         results = []
         async for blob in container.list_blobs(name_starts_with=prefix):
-            results.append(StorageObject(
-                key=blob.name,
-                size=blob.size,
-                content_type=blob.content_settings.content_type if blob.content_settings else "application/octet-stream",
-                last_modified=blob.last_modified,
-                etag=blob.etag,
-            ))
+            results.append(
+                StorageObject(
+                    key=blob.name,
+                    size=blob.size,
+                    content_type=blob.content_settings.content_type
+                    if blob.content_settings
+                    else "application/octet-stream",
+                    last_modified=blob.last_modified,
+                    etag=blob.etag,
+                )
+            )
             if len(results) >= limit:
                 break
-        
+
         return results
 
     async def get_presigned_url(
@@ -652,10 +694,14 @@ class AzureBlobStorageBackend(StorageBackend):
         content_type: str | None = None,
     ) -> PresignedUrl:
         from azure.storage.blob import BlobSasPermissions, generate_blob_sas
-        
-        permissions = BlobSasPermissions(read=True) if method == "GET" else BlobSasPermissions(write=True)
+
+        permissions = (
+            BlobSasPermissions(read=True)
+            if method == "GET"
+            else BlobSasPermissions(write=True)
+        )
         expiry = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
-        
+
         sas_token = generate_blob_sas(
             account_name=self._config.azure_account_name,
             container_name=self._container,
@@ -664,9 +710,9 @@ class AzureBlobStorageBackend(StorageBackend):
             permission=permissions,
             expiry=expiry,
         )
-        
+
         url = f"https://{self._config.azure_account_name}.blob.core.windows.net/{self._container}/{key}?{sas_token}"
-        
+
         return PresignedUrl(
             url=url,
             expires_at=expiry,
@@ -676,16 +722,16 @@ class AzureBlobStorageBackend(StorageBackend):
 
 def create_storage_backend(config: StorageConfig | None = None) -> StorageBackend:
     """Factory function to create the appropriate storage backend.
-    
+
     Args:
         config: Optional configuration. If not provided, loads from environment.
-        
+
     Returns:
         Configured StorageBackend instance.
     """
     if config is None:
         config = StorageConfig.from_env()
-    
+
     if config.backend == "local":
         logger.info("Using local filesystem storage at %s", config.local_base_path)
         return LocalStorageBackend(config.local_base_path)

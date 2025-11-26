@@ -7,7 +7,16 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Index, Integer, JSON, String, func
+from sqlalchemy import (
+    DateTime,
+    Enum as SAEnum,
+    ForeignKey,
+    Index,
+    Integer,
+    JSON,
+    String,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -53,7 +62,9 @@ class UserPreferences(Base):
     __tablename__ = "user_preferences"
     __table_args__ = (Index("ix_user_preferences_user_id", "user_id"),)
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True
     )
@@ -83,7 +94,9 @@ class UserPreferences(Base):
     last_modified: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     user: Mapped["User"] = relationship("User", backref="preferences")
 
@@ -94,15 +107,21 @@ class SyncClient(Base):
     __tablename__ = "sync_clients"
     __table_args__ = (Index("ix_sync_clients_user_id", "user_id"),)
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
     )
     client_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    client_type: Mapped[str] = mapped_column(String(64), nullable=False)  # desktop, web, mobile
+    client_type: Mapped[str] = mapped_column(
+        String(64), nullable=False
+    )  # desktop, web, mobile
     last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_ip: Mapped[str | None] = mapped_column(String(45))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     user: Mapped["User"] = relationship("User", backref="sync_clients")
 
@@ -116,7 +135,9 @@ class SyncManifestEntry(Base):
         Index("ix_sync_manifest_user_state", "user_id", "sync_state"),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
     )
@@ -129,7 +150,9 @@ class SyncManifestEntry(Base):
     sync_state: Mapped[SyncState] = mapped_column(
         SAEnum(SyncState), default=SyncState.SYNCED, nullable=False
     )
-    last_modified: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_modified: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     user: Mapped["User"] = relationship("User", backref="sync_manifest")
@@ -140,7 +163,9 @@ class SyncConflict(Base):
 
     __tablename__ = "sync_conflicts"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
     )
@@ -152,9 +177,13 @@ class SyncConflict(Base):
     local_checksum: Mapped[str] = mapped_column(String(128), nullable=False)
     cloud_checksum: Mapped[str] = mapped_column(String(128), nullable=False)
     differences: Mapped[dict | None] = mapped_column(JSON)  # Detailed diff info
-    resolution: Mapped[ConflictResolution | None] = mapped_column(SAEnum(ConflictResolution))
+    resolution: Mapped[ConflictResolution | None] = mapped_column(
+        SAEnum(ConflictResolution)
+    )
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     user: Mapped["User"] = relationship("User", backref="sync_conflicts")
 
@@ -165,17 +194,23 @@ class SyncLog(Base):
     __tablename__ = "sync_logs"
     __table_args__ = (Index("ix_sync_logs_user_id_timestamp", "user_id", "timestamp"),)
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
     )
     client_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("sync_clients.id", ondelete="SET NULL")
     )
-    action: Mapped[str] = mapped_column(String(64), nullable=False)  # manifest, upload, download, conflict_resolved
+    action: Mapped[str] = mapped_column(
+        String(64), nullable=False
+    )  # manifest, upload, download, conflict_resolved
     details: Mapped[dict | None] = mapped_column(JSON)
     maps_synced: Mapped[int] = mapped_column(Integer, default=0)
     bytes_transferred: Mapped[int] = mapped_column(Integer, default=0)
-    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     user: Mapped["User"] = relationship("User", backref="sync_logs")

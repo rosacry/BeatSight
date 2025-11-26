@@ -181,11 +181,11 @@ async def get_preferences(
     """Get current user preferences."""
     service = SyncService(db)
     prefs = await service.get_user_preferences(current_user.id)
-    
+
     if prefs is None:
         prefs = await service.create_default_preferences(current_user.id)
         await db.commit()
-    
+
     return PreferencesResponse.model_validate(prefs)
 
 
@@ -197,14 +197,14 @@ async def update_preferences(
 ) -> PreferencesResponse:
     """Update user preferences with optional optimistic locking."""
     service = SyncService(db)
-    
+
     updates = request.model_dump(exclude={"expected_version"}, exclude_none=True)
     prefs, conflict = await service.update_preferences(
         current_user.id,
         updates,
         expected_version=request.expected_version,
     )
-    
+
     if conflict:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -214,7 +214,7 @@ async def update_preferences(
                 "current_version": prefs.version,
             },
         )
-    
+
     await db.commit()
     return PreferencesResponse.model_validate(prefs)
 
@@ -235,7 +235,9 @@ async def list_clients(
     return [SyncClientResponse.model_validate(c) for c in clients]
 
 
-@router.post("/clients", response_model=SyncClientResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/clients", response_model=SyncClientResponse, status_code=status.HTTP_201_CREATED
+)
 async def register_client(
     request: RegisterClientRequest,
     http_request: Request,
@@ -244,21 +246,25 @@ async def register_client(
 ) -> SyncClientResponse:
     """Register a new sync client (device)."""
     service = SyncService(db)
-    
+
     ip_address = http_request.client.host if http_request.client else None
-    
+
     client = await service.register_client(
         user_id=current_user.id,
         client_name=request.client_name,
         client_type=request.client_type,
         ip_address=ip_address,
     )
-    
+
     await db.commit()
     return SyncClientResponse.model_validate(client)
 
 
-@router.delete("/clients/{client_id}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
+@router.delete(
+    "/clients/{client_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
 async def remove_client(
     client_id: uuid.UUID,
     db: Annotated[AsyncSession, Depends(get_db_session)],
@@ -266,14 +272,14 @@ async def remove_client(
 ) -> Response:
     """Remove a sync client."""
     service = SyncService(db)
-    
+
     deleted = await service.remove_client(client_id, current_user.id)
     if not deleted:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Client not found",
         )
-    
+
     await db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -292,16 +298,16 @@ async def compare_manifest(
 ) -> ManifestCompareResponse:
     """
     Compare client manifest with cloud to determine sync actions.
-    
+
     This is Phase 1 of the sync protocol - discovery phase.
     """
     service = SyncService(db)
-    
+
     # Convert entries to dicts for comparison
     client_entries = [entry.model_dump() for entry in request.beatmaps]
-    
+
     actions = await service.compare_manifest(current_user.id, client_entries)
-    
+
     # Update client sync time if client_id provided
     if request.client_id:
         try:
@@ -310,7 +316,7 @@ async def compare_manifest(
             await service.update_client_sync_time(client_uuid, ip_address)
         except (ValueError, TypeError):
             pass  # Invalid client ID, ignore
-    
+
     # Log the manifest comparison
     await service.log_sync_operation(
         user_id=current_user.id,
@@ -319,9 +325,9 @@ async def compare_manifest(
         details={"entries_compared": len(client_entries)},
         maps_synced=len([a for a in actions if a["action"] == SyncAction.NONE.value]),
     )
-    
+
     await db.commit()
-    
+
     return ManifestCompareResponse(
         server_timestamp=datetime.utcnow(),
         actions=[SyncActionResponse(**a) for a in actions],
@@ -338,16 +344,16 @@ async def update_manifest_entry(
 ) -> dict[str, Any]:
     """Update manifest entry after successful upload/download."""
     service = SyncService(db)
-    
+
     entry = await service.update_manifest_entry(
         user_id=current_user.id,
         map_id=map_id,
         version=version,
         checksum=checksum,
     )
-    
+
     await db.commit()
-    
+
     return {
         "map_id": str(map_id),
         "version": entry.cloud_version,
@@ -385,19 +391,19 @@ async def resolve_conflict(
 ) -> ConflictResponse:
     """Resolve a sync conflict."""
     service = SyncService(db)
-    
+
     conflict = await service.resolve_conflict(
         conflict_id=conflict_id,
         user_id=current_user.id,
         resolution=request.resolution,
     )
-    
+
     if conflict is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Conflict not found",
         )
-    
+
     # Log conflict resolution
     await service.log_sync_operation(
         user_id=current_user.id,
@@ -407,7 +413,7 @@ async def resolve_conflict(
             "resolution": request.resolution.value,
         },
     )
-    
+
     await db.commit()
     return ConflictResponse.model_validate(conflict)
 
@@ -436,30 +442,30 @@ async def get_sync_status(
 ) -> SyncStatusResponse:
     """Get overall sync status for the current user."""
     service = SyncService(db)
-    
+
     # Get preferences
     prefs = await service.get_user_preferences(current_user.id)
     if prefs is None:
         prefs = await service.create_default_preferences(current_user.id)
         await db.commit()
-    
+
     # Get manifest stats
     manifest = await service.get_user_manifest(current_user.id)
     total_maps = len(manifest)
     synced_maps = sum(1 for e in manifest if e.sync_state == SyncState.SYNCED)
     pending_uploads = sum(1 for e in manifest if e.sync_state == SyncState.MODIFIED)
     pending_downloads = sum(1 for e in manifest if e.sync_state == SyncState.CLOUD_ONLY)
-    
+
     # Get conflicts
     conflicts = await service.get_user_conflicts(current_user.id, unresolved_only=True)
-    
+
     # Get clients
     clients = await service.get_user_clients(current_user.id)
-    
+
     # Get last sync time
     history = await service.get_sync_history(current_user.id, limit=1)
     last_sync = history[0].timestamp if history else None
-    
+
     return SyncStatusResponse(
         preferences_version=prefs.version,
         preferences_checksum=prefs.checksum,

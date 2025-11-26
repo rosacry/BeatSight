@@ -3,7 +3,7 @@ Health check endpoints for Kubernetes probes and service monitoring.
 
 Provides:
 - /health/live: Kubernetes liveness probe
-- /health/ready: Kubernetes readiness probe  
+- /health/ready: Kubernetes readiness probe
 - /health/detailed: Detailed component health check
 """
 
@@ -27,6 +27,7 @@ router = APIRouter(prefix="/health", tags=["health"])
 
 class HealthStatus(str, Enum):
     """Health status values."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
@@ -34,6 +35,7 @@ class HealthStatus(str, Enum):
 
 class ComponentHealth(BaseModel):
     """Health status of a single component."""
+
     status: HealthStatus
     message: str | None = None
     latency_ms: float | None = None
@@ -41,6 +43,7 @@ class ComponentHealth(BaseModel):
 
 class HealthResponse(BaseModel):
     """Health check response."""
+
     status: HealthStatus
     service: str = "beatsight-api"
     version: str = "0.1.0"
@@ -50,6 +53,7 @@ class HealthResponse(BaseModel):
 
 class ReadinessResponse(BaseModel):
     """Readiness check response."""
+
     ready: bool
     service: str = "beatsight-api"
     timestamp: datetime
@@ -114,7 +118,7 @@ def aggregate_status(components: dict[str, ComponentHealth]) -> HealthStatus:
 async def live() -> dict[str, str]:
     """
     Kubernetes liveness probe.
-    
+
     Returns 200 OK if the service is running.
     This is a fast check that doesn't verify dependencies.
     """
@@ -134,7 +138,7 @@ async def ready(
 ) -> dict[str, Any]:
     """
     Kubernetes readiness probe.
-    
+
     Returns 200 OK if the service is ready to handle requests.
     Checks database connectivity as the minimum requirement.
     """
@@ -160,7 +164,7 @@ async def detailed_health_check(
 ) -> HealthResponse:
     """
     Detailed health check.
-    
+
     Returns health status of all components including latency information.
     Useful for debugging and monitoring dashboards.
     """
@@ -187,7 +191,7 @@ async def detailed_health_check(
 async def health_check() -> HealthResponse:
     """
     Basic health check without dependency verification.
-    
+
     Returns service health status quickly.
     Use /health/detailed for full component checks.
     """

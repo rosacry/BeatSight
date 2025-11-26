@@ -74,7 +74,9 @@ class TestAIJobMetrics:
         """AI job errors counter increments."""
         initial = AI_JOB_ERRORS_TOTAL.labels(error_type="timeout")._value.get()
         record_ai_job_error("timeout")
-        assert AI_JOB_ERRORS_TOTAL.labels(error_type="timeout")._value.get() == initial + 1
+        assert (
+            AI_JOB_ERRORS_TOTAL.labels(error_type="timeout")._value.get() == initial + 1
+        )
 
     def test_ai_job_retries_counter(self) -> None:
         """AI job retries counter increments."""
@@ -103,13 +105,23 @@ class TestStorageMetrics:
             pass
 
         # Counter should have been incremented
-        assert STORAGE_OPERATIONS_TOTAL.labels(operation="upload", backend="s3")._value.get() > 0
+        assert (
+            STORAGE_OPERATIONS_TOTAL.labels(
+                operation="upload", backend="s3"
+            )._value.get()
+            > 0
+        )
 
     def test_storage_bytes_counter(self) -> None:
         """Storage bytes counter increments."""
-        initial = STORAGE_BYTES_TOTAL.labels(direction="upload", backend="s3")._value.get()
+        initial = STORAGE_BYTES_TOTAL.labels(
+            direction="upload", backend="s3"
+        )._value.get()
         record_storage_bytes("upload", "s3", 1024)
-        assert STORAGE_BYTES_TOTAL.labels(direction="upload", backend="s3")._value.get() == initial + 1024
+        assert (
+            STORAGE_BYTES_TOTAL.labels(direction="upload", backend="s3")._value.get()
+            == initial + 1024
+        )
 
 
 class TestNotificationMetrics:
@@ -117,14 +129,24 @@ class TestNotificationMetrics:
 
     def test_notifications_sent_counter(self) -> None:
         """Notifications sent counter increments."""
-        initial_success = NOTIFICATIONS_SENT_TOTAL.labels(type="email", status="success")._value.get()
-        initial_failed = NOTIFICATIONS_SENT_TOTAL.labels(type="email", status="failed")._value.get()
+        initial_success = NOTIFICATIONS_SENT_TOTAL.labels(
+            type="email", status="success"
+        )._value.get()
+        initial_failed = NOTIFICATIONS_SENT_TOTAL.labels(
+            type="email", status="failed"
+        )._value.get()
 
         record_notification_sent("email", success=True)
         record_notification_sent("email", success=False)
 
-        assert NOTIFICATIONS_SENT_TOTAL.labels(type="email", status="success")._value.get() == initial_success + 1
-        assert NOTIFICATIONS_SENT_TOTAL.labels(type="email", status="failed")._value.get() == initial_failed + 1
+        assert (
+            NOTIFICATIONS_SENT_TOTAL.labels(type="email", status="success")._value.get()
+            == initial_success + 1
+        )
+        assert (
+            NOTIFICATIONS_SENT_TOTAL.labels(type="email", status="failed")._value.get()
+            == initial_failed + 1
+        )
 
 
 class TestQuotaMetrics:
@@ -152,12 +174,19 @@ class TestContextManagers:
 
     def test_track_storage_operation_increments_counter(self) -> None:
         """track_storage_operation increments counter on success."""
-        initial = STORAGE_OPERATIONS_TOTAL.labels(operation="download", backend="local")._value.get()
+        initial = STORAGE_OPERATIONS_TOTAL.labels(
+            operation="download", backend="local"
+        )._value.get()
 
         with track_storage_operation("download", "local"):
             pass
 
-        assert STORAGE_OPERATIONS_TOTAL.labels(operation="download", backend="local")._value.get() == initial + 1
+        assert (
+            STORAGE_OPERATIONS_TOTAL.labels(
+                operation="download", backend="local"
+            )._value.get()
+            == initial + 1
+        )
 
     def test_track_db_query_records_duration(self) -> None:
         """track_db_query records query duration."""

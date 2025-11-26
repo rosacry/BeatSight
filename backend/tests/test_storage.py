@@ -34,11 +34,14 @@ class TestStorageConfig:
 
     def test_from_env(self) -> None:
         """Test loading from environment variables."""
-        with patch.dict(os.environ, {
-            "STORAGE_BACKEND": "s3",
-            "AWS_S3_BUCKET": "test-bucket",
-            "AWS_REGION": "eu-west-1",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "STORAGE_BACKEND": "s3",
+                "AWS_S3_BUCKET": "test-bucket",
+                "AWS_REGION": "eu-west-1",
+            },
+        ):
             config = StorageConfig.from_env()
             assert config.backend == "s3"
             assert config.s3_bucket == "test-bucket"
@@ -64,7 +67,7 @@ class TestLocalStorageBackend:
         """Test uploading bytes."""
         data = b"Hello, World!"
         result = await backend.upload("test/hello.txt", data, "text/plain")
-        
+
         assert result.key == "test/hello.txt"
         assert result.size == len(data)
         assert result.content_type == "text/plain"
@@ -74,8 +77,10 @@ class TestLocalStorageBackend:
         """Test uploading with metadata."""
         data = b"test data"
         metadata = {"song_id": "123", "version": "1"}
-        result = await backend.upload("test.bin", data, "application/octet-stream", metadata)
-        
+        result = await backend.upload(
+            "test.bin", data, "application/octet-stream", metadata
+        )
+
         assert result.metadata == metadata
 
     @pytest.mark.asyncio
@@ -83,7 +88,7 @@ class TestLocalStorageBackend:
         """Test downloading files."""
         data = b"Download test"
         await backend.upload("download/test.txt", data)
-        
+
         result = await backend.download("download/test.txt")
         assert result == data
 
@@ -98,11 +103,11 @@ class TestLocalStorageBackend:
         """Test streaming download."""
         data = b"A" * 10000
         await backend.upload("stream.bin", data)
-        
+
         chunks = []
         async for chunk in backend.stream_download("stream.bin", chunk_size=1000):
             chunks.append(chunk)
-        
+
         assert b"".join(chunks) == data
         assert len(chunks) == 10
 
@@ -110,7 +115,7 @@ class TestLocalStorageBackend:
     async def test_delete(self, backend: LocalStorageBackend) -> None:
         """Test deleting files."""
         await backend.upload("delete_me.txt", b"delete")
-        
+
         assert await backend.exists("delete_me.txt")
         await backend.delete("delete_me.txt")
         assert not await backend.exists("delete_me.txt")
@@ -128,9 +133,9 @@ class TestLocalStorageBackend:
         data = b"metadata test"
         metadata = {"key": "value"}
         await backend.upload("meta.txt", data, "text/plain", metadata)
-        
+
         result = await backend.get_metadata("meta.txt")
-        
+
         assert result.key == "meta.txt"
         assert result.size == len(data)
         assert result.content_type == "text/plain"
@@ -142,10 +147,10 @@ class TestLocalStorageBackend:
         await backend.upload("list/a.txt", b"a")
         await backend.upload("list/b.txt", b"b")
         await backend.upload("other/c.txt", b"c")
-        
+
         results = await backend.list_objects("list/")
         keys = [r.key for r in results]
-        
+
         assert "list/a.txt" in keys
         assert "list/b.txt" in keys
         assert "other/c.txt" not in keys
@@ -155,7 +160,7 @@ class TestLocalStorageBackend:
         """Test listing objects with limit."""
         for i in range(10):
             await backend.upload(f"many/{i}.txt", b"x")
-        
+
         results = await backend.list_objects("many/", limit=3)
         assert len(results) == 3
 
@@ -163,22 +168,24 @@ class TestLocalStorageBackend:
     async def test_get_presigned_url(self, backend: LocalStorageBackend) -> None:
         """Test presigned URL generation (local returns file:// URL)."""
         await backend.upload("presign.txt", b"content")
-        
+
         result = await backend.get_presigned_url("presign.txt", "GET", 3600)
-        
+
         assert result.url.startswith("file://")
         assert result.method == "GET"
         assert result.expires_at > datetime.now(timezone.utc)
 
     @pytest.mark.asyncio
-    async def test_path_traversal_prevention(self, backend: LocalStorageBackend) -> None:
+    async def test_path_traversal_prevention(
+        self, backend: LocalStorageBackend
+    ) -> None:
         """Test that path traversal is prevented."""
         # Attempt to escape the base directory
         await backend.upload("../escape.txt", b"escaped")
-        
+
         # Should be stored safely within base path
         assert await backend.exists("escape.txt")
-        
+
         # Verify it didn't escape
         base = Path(backend._base_path)
         assert not (base.parent / "escape.txt").exists()
@@ -187,7 +194,7 @@ class TestLocalStorageBackend:
     async def test_nested_directories(self, backend: LocalStorageBackend) -> None:
         """Test creating nested directories."""
         await backend.upload("a/b/c/d/deep.txt", b"deep")
-        
+
         assert await backend.exists("a/b/c/d/deep.txt")
         result = await backend.download("a/b/c/d/deep.txt")
         assert result == b"deep"
@@ -243,9 +250,9 @@ class TestAudioStorage:
         """Test uploading audio file."""
         song_id = uuid.uuid4()
         data = b"audio content"
-        
+
         await audio_storage.upload_audio(song_id, data)
-        
+
         mock_backend.upload.assert_called_once()
         call_args = mock_backend.upload.call_args
         assert f"audio/{song_id}.mp3" == call_args[0][0]
@@ -256,9 +263,9 @@ class TestAudioStorage:
     ) -> None:
         """Test downloading audio file."""
         song_id = uuid.uuid4()
-        
+
         result = await audio_storage.download_audio(song_id)
-        
+
         mock_backend.download.assert_called_once()
         assert result == b"audio data"
 
@@ -268,9 +275,9 @@ class TestAudioStorage:
     ) -> None:
         """Test getting presigned URL for audio."""
         song_id = uuid.uuid4()
-        
+
         result = await audio_storage.get_audio_url(song_id)
-        
+
         mock_backend.get_presigned_url.assert_called_once()
         assert result.url == "https://example.com/audio"
 
@@ -281,9 +288,9 @@ class TestAudioStorage:
         """Test uploading stem file."""
         song_id = uuid.uuid4()
         data = b"drum stem"
-        
+
         await audio_storage.upload_stem(song_id, "drums", data)
-        
+
         mock_backend.upload.assert_called_once()
         call_args = mock_backend.upload.call_args
         assert "drums.wav" in call_args[0][0]
@@ -322,9 +329,9 @@ class TestBeatmapStorage:
         """Test uploading beatmap file."""
         map_id = uuid.uuid4()
         data = b'{"notes": []}'
-        
+
         await beatmap_storage.upload_beatmap(map_id, 1, data)
-        
+
         mock_backend.upload.assert_called_once()
         call_args = mock_backend.upload.call_args
         assert f"beatmaps/{map_id}/v1.bs" == call_args[0][0]
@@ -335,9 +342,9 @@ class TestBeatmapStorage:
     ) -> None:
         """Test downloading beatmap file."""
         map_id = uuid.uuid4()
-        
+
         result = await beatmap_storage.download_beatmap(map_id, 1)
-        
+
         mock_backend.download.assert_called_once()
         assert result == b'{"notes": []}'
 
@@ -347,8 +354,8 @@ class TestBeatmapStorage:
     ) -> None:
         """Test getting presigned URL for beatmap."""
         map_id = uuid.uuid4()
-        
+
         result = await beatmap_storage.get_beatmap_url(map_id, 1)
-        
+
         mock_backend.get_presigned_url.assert_called_once()
         assert result.url == "https://example.com/beatmap"

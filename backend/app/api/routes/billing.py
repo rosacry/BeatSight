@@ -37,15 +37,9 @@ router = APIRouter(prefix="/billing", tags=["Billing"])
 class CheckoutRequest(BaseModel):
     """Request to create a checkout session."""
 
-    plan: SubscriptionPlan = Field(
-        ..., description="Subscription plan to purchase"
-    )
-    success_url: str | None = Field(
-        None, description="Custom success redirect URL"
-    )
-    cancel_url: str | None = Field(
-        None, description="Custom cancel redirect URL"
-    )
+    plan: SubscriptionPlan = Field(..., description="Subscription plan to purchase")
+    success_url: str | None = Field(None, description="Custom success redirect URL")
+    cancel_url: str | None = Field(None, description="Custom cancel redirect URL")
 
 
 class CheckoutResponse(BaseModel):
@@ -86,13 +80,13 @@ class StripeConfigResponse(BaseModel):
 @router.get("/config", response_model=StripeConfigResponse)
 async def get_stripe_config():
     """Get public Stripe configuration.
-    
+
     Returns the publishable key for client-side Stripe initialization.
     No authentication required.
     """
     settings = get_settings()
     stripe_service = get_stripe_service()
-    
+
     return StripeConfigResponse(
         publishable_key=settings.stripe_publishable_key,
         is_configured=stripe_service.is_configured(),
@@ -105,7 +99,7 @@ async def get_subscription(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """Get current user's subscription status.
-    
+
     Returns the active subscription or defaults for free tier.
     """
     result = await db.execute(
@@ -143,12 +137,12 @@ async def create_checkout_session(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """Create a Stripe checkout session for subscription upgrade.
-    
+
     Redirects the user to Stripe's hosted checkout page.
     Only pro plans can be purchased (free is default).
     """
     stripe_service = get_stripe_service()
-    
+
     if not stripe_service.is_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -189,12 +183,12 @@ async def create_portal_session(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """Create a Stripe customer portal session.
-    
+
     Allows users to manage their subscription, update payment method,
     view invoices, and cancel subscription.
     """
     stripe_service = get_stripe_service()
-    
+
     if not stripe_service.is_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -222,10 +216,10 @@ async def stripe_webhook(
     stripe_signature: Annotated[str | None, Header(alias="stripe-signature")] = None,
 ):
     """Handle incoming Stripe webhooks.
-    
+
     Processes events like subscription creation, updates, cancellation,
     and payment success/failure.
-    
+
     This endpoint should be configured in the Stripe dashboard to receive
     the following events:
     - checkout.session.completed
@@ -242,7 +236,7 @@ async def stripe_webhook(
         )
 
     stripe_service = get_stripe_service()
-    
+
     if not stripe_service.is_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

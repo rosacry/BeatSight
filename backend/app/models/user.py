@@ -27,27 +27,41 @@ class User(Base):
 
     __tablename__ = "users"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     display_name: Mapped[str] = mapped_column(String(120), nullable=False)
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    email: Mapped[str] = mapped_column(
+        String(255), unique=True, index=True, nullable=False
+    )
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     phone_number: Mapped[str | None] = mapped_column(String(32))
     phone_verified: Mapped[bool] = mapped_column(Boolean, default=False)
-    auth_provider_id: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    auth_provider_id: Mapped[str] = mapped_column(
+        String(128), unique=True, nullable=False
+    )
     hashed_password: Mapped[str | None] = mapped_column(String(255))
     karma_score: Mapped[int] = mapped_column(default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    roles: Mapped[list["UserRole"]] = relationship("UserRole", back_populates="user", cascade="all, delete-orphan")
+    roles: Mapped[list["UserRole"]] = relationship(
+        "UserRole", back_populates="user", cascade="all, delete-orphan"
+    )
     karma_events: Mapped[list["KarmaLedger"]] = relationship(
         "KarmaLedger", back_populates="user", cascade="all, delete-orphan"
     )
-    subscriptions: Mapped[list["Subscription"]] = relationship("Subscription", back_populates="user")
+    subscriptions: Mapped[list["Subscription"]] = relationship(
+        "Subscription", back_populates="user"
+    )
     ai_jobs: Mapped[list["AIJob"]] = relationship("AIJob", back_populates="requester")
-    map_edits: Mapped[list["MapEditProposal"]] = relationship("MapEditProposal", back_populates="proposer")
+    map_edits: Mapped[list["MapEditProposal"]] = relationship(
+        "MapEditProposal", back_populates="proposer"
+    )
     verification_decisions: Mapped[list["MapVerificationDecision"]] = relationship(
         "MapVerificationDecision", back_populates="verifier"
     )

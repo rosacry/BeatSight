@@ -42,28 +42,28 @@ logger = get_logger(__name__)
 class Permission(str, Enum):
     """
     System permissions that can be granted through roles.
-    
+
     Naming convention: <resource>:<action>
     """
-    
+
     # User management
     USER_READ = "user:read"
     USER_UPDATE = "user:update"
     USER_DELETE = "user:delete"
     USER_LIST = "user:list"
-    
+
     # Role management (admin only)
     ROLE_ASSIGN = "role:assign"
     ROLE_REVOKE = "role:revoke"
     ROLE_LIST = "role:list"
-    
+
     # Song management
     SONG_CREATE = "song:create"
     SONG_READ = "song:read"
     SONG_UPDATE = "song:update"
     SONG_DELETE = "song:delete"
     SONG_LIST = "song:list"
-    
+
     # AI job management
     JOB_CREATE = "job:create"
     JOB_READ = "job:read"
@@ -71,22 +71,22 @@ class Permission(str, Enum):
     JOB_RETRY = "job:retry"
     JOB_LIST = "job:list"
     JOB_ADMIN = "job:admin"  # Admin-level job operations
-    
+
     # Map verification (verifier role)
     MAP_VERIFY = "map:verify"
     MAP_REJECT = "map:reject"
     MAP_APPROVE = "map:approve"
-    
+
     # Map editing
     MAP_EDIT_PROPOSE = "map:edit:propose"
     MAP_EDIT_REVIEW = "map:edit:review"
-    
+
     # Admin operations
     ADMIN_DASHBOARD = "admin:dashboard"
     ADMIN_METRICS = "admin:metrics"
     ADMIN_AUDIT = "admin:audit"
     ADMIN_SYSTEM = "admin:system"
-    
+
     # Subscription management
     SUBSCRIPTION_READ = "subscription:read"
     SUBSCRIPTION_MANAGE = "subscription:manage"
@@ -99,7 +99,7 @@ class Permission(str, Enum):
 
 class RoleCode(str, Enum):
     """Standard role codes in the system."""
-    
+
     USER = "user"
     VERIFIER = "verifier"
     ADMIN = "admin"
@@ -156,11 +156,11 @@ def _build_inherited_permissions() -> dict[str, set[Permission]]:
     """Build permission sets with role inheritance."""
     result: dict[str, set[Permission]] = {}
     accumulated: set[Permission] = set()
-    
+
     for role in ROLE_HIERARCHY:
         accumulated = accumulated | ROLE_PERMISSIONS.get(role, set())
         result[role] = accumulated.copy()
-    
+
     return result
 
 
@@ -174,10 +174,10 @@ EFFECTIVE_PERMISSIONS = _build_inherited_permissions()
 
 class RBACService:
     """Service for role-based access control operations."""
-    
+
     def __init__(self, session: AsyncSession):
         self.session = session
-    
+
     async def get_user_roles(self, user_id: uuid.UUID) -> list[str]:
         """Get all role codes for a user."""
         result = await self.session.execute(
@@ -186,18 +186,18 @@ class RBACService:
             .where(UserRole.user_id == user_id)
         )
         return [row[0] for row in result.fetchall()]
-    
+
     async def get_user_permissions(self, user_id: uuid.UUID) -> set[Permission]:
         """Get all effective permissions for a user."""
         roles = await self.get_user_roles(user_id)
-        
+
         permissions: set[Permission] = set()
         for role in roles:
             role_perms = EFFECTIVE_PERMISSIONS.get(role, set())
             permissions |= role_perms
-        
+
         return permissions
-    
+
     async def user_has_permission(
         self,
         user_id: uuid.UUID,
@@ -206,7 +206,7 @@ class RBACService:
         """Check if a user has a specific permission."""
         permissions = await self.get_user_permissions(user_id)
         return permission in permissions
-    
+
     async def user_has_any_permission(
         self,
         user_id: uuid.UUID,
@@ -215,7 +215,7 @@ class RBACService:
         """Check if a user has any of the specified permissions."""
         user_perms = await self.get_user_permissions(user_id)
         return bool(user_perms & set(permissions))
-    
+
     async def user_has_all_permissions(
         self,
         user_id: uuid.UUID,
@@ -224,37 +224,35 @@ class RBACService:
         """Check if a user has all of the specified permissions."""
         user_perms = await self.get_user_permissions(user_id)
         return set(permissions).issubset(user_perms)
-    
+
     async def user_has_role(self, user_id: uuid.UUID, role_code: str) -> bool:
         """Check if a user has a specific role."""
         roles = await self.get_user_roles(user_id)
         return role_code in roles
-    
+
     async def user_is_admin(self, user_id: uuid.UUID) -> bool:
         """Check if a user has admin role."""
         return await self.user_has_role(user_id, RoleCode.ADMIN)
-    
+
     async def user_is_verifier(self, user_id: uuid.UUID) -> bool:
         """Check if a user has verifier role (or admin, which inherits it)."""
         roles = await self.get_user_roles(user_id)
         return RoleCode.VERIFIER in roles or RoleCode.ADMIN in roles
-    
+
     # -------------------------------------------------------------------------
     # Role Management
     # -------------------------------------------------------------------------
-    
+
     async def get_role_by_code(self, code: str) -> Role | None:
         """Get a role by its code."""
-        result = await self.session.execute(
-            select(Role).where(Role.code == code)
-        )
+        result = await self.session.execute(select(Role).where(Role.code == code))
         return result.scalar_one_or_none()
-    
+
     async def get_all_roles(self) -> list[Role]:
         """Get all roles in the system."""
         result = await self.session.execute(select(Role).order_by(Role.id))
         return list(result.scalars().all())
-    
+
     async def assign_role(
         self,
         user_id: uuid.UUID,
@@ -263,14 +261,14 @@ class RBACService:
     ) -> UserRole:
         """
         Assign a role to a user.
-        
+
         Raises:
             ValueError: If role doesn't exist or user already has it
         """
         role = await self.get_role_by_code(role_code)
         if role is None:
             raise ValueError(f"Role '{role_code}' does not exist")
-        
+
         # Check if user already has this role
         existing = await self.session.execute(
             select(UserRole).where(
@@ -280,20 +278,20 @@ class RBACService:
         )
         if existing.scalar_one_or_none() is not None:
             raise ValueError(f"User already has role '{role_code}'")
-        
+
         user_role = UserRole(user_id=user_id, role_id=role.id)
         self.session.add(user_role)
         await self.session.flush()
-        
+
         logger.info(
             "Role assigned",
             user_id=str(user_id),
             role=role_code,
             assigned_by=str(assigned_by) if assigned_by else None,
         )
-        
+
         return user_role
-    
+
     async def revoke_role(
         self,
         user_id: uuid.UUID,
@@ -302,13 +300,13 @@ class RBACService:
     ) -> bool:
         """
         Revoke a role from a user.
-        
+
         Returns True if role was revoked, False if user didn't have it.
         """
         role = await self.get_role_by_code(role_code)
         if role is None:
             raise ValueError(f"Role '{role_code}' does not exist")
-        
+
         result = await self.session.execute(
             select(UserRole).where(
                 UserRole.user_id == user_id,
@@ -316,22 +314,22 @@ class RBACService:
             )
         )
         user_role = result.scalar_one_or_none()
-        
+
         if user_role is None:
             return False
-        
+
         await self.session.delete(user_role)
         await self.session.flush()
-        
+
         logger.info(
             "Role revoked",
             user_id=str(user_id),
             role=role_code,
             revoked_by=str(revoked_by) if revoked_by else None,
         )
-        
+
         return True
-    
+
     async def ensure_default_role(self, user_id: uuid.UUID) -> None:
         """Ensure user has at least the default 'user' role."""
         roles = await self.get_user_roles(user_id)
@@ -350,7 +348,7 @@ class RBACService:
 def require_permission(permission: Permission):
     """
     Dependency factory that requires a specific permission.
-    
+
     Usage:
         @router.get("/admin/users")
         async def list_users(
@@ -358,13 +356,14 @@ def require_permission(permission: Permission):
         ):
             ...
     """
+
     async def dependency(
         user: User = Depends(get_current_user),
         session: AsyncSession = Depends(get_db_session),
     ) -> User:
         rbac = RBACService(session)
         has_permission = await rbac.user_has_permission(user.id, permission)
-        
+
         if not has_permission:
             logger.warning(
                 "Permission denied",
@@ -375,16 +374,16 @@ def require_permission(permission: Permission):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Permission denied: {permission.value}",
             )
-        
+
         return user
-    
+
     return dependency
 
 
 def require_any_permission(*permissions: Permission):
     """
     Dependency factory that requires any of the specified permissions.
-    
+
     Usage:
         @router.get("/maps/{id}/review")
         async def review_map(
@@ -395,13 +394,14 @@ def require_any_permission(*permissions: Permission):
         ):
             ...
     """
+
     async def dependency(
         user: User = Depends(get_current_user),
         session: AsyncSession = Depends(get_db_session),
     ) -> User:
         rbac = RBACService(session)
         has_any = await rbac.user_has_any_permission(user.id, permissions)
-        
+
         if not has_any:
             logger.warning(
                 "Permission denied (any)",
@@ -412,9 +412,9 @@ def require_any_permission(*permissions: Permission):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Permission denied",
             )
-        
+
         return user
-    
+
     return dependency
 
 
@@ -422,13 +422,14 @@ def require_all_permissions(*permissions: Permission):
     """
     Dependency factory that requires all of the specified permissions.
     """
+
     async def dependency(
         user: User = Depends(get_current_user),
         session: AsyncSession = Depends(get_db_session),
     ) -> User:
         rbac = RBACService(session)
         has_all = await rbac.user_has_all_permissions(user.id, permissions)
-        
+
         if not has_all:
             logger.warning(
                 "Permission denied (all)",
@@ -439,16 +440,16 @@ def require_all_permissions(*permissions: Permission):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Permission denied",
             )
-        
+
         return user
-    
+
     return dependency
 
 
 def require_role(role_code: str):
     """
     Dependency factory that requires a specific role.
-    
+
     Usage:
         @router.post("/admin/action")
         async def admin_action(
@@ -456,13 +457,14 @@ def require_role(role_code: str):
         ):
             ...
     """
+
     async def dependency(
         user: User = Depends(get_current_user),
         session: AsyncSession = Depends(get_db_session),
     ) -> User:
         rbac = RBACService(session)
         has_role = await rbac.user_has_role(user.id, role_code)
-        
+
         if not has_role:
             logger.warning(
                 "Role required",
@@ -473,14 +475,16 @@ def require_role(role_code: str):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Role required: {role_code}",
             )
-        
+
         return user
-    
+
     return dependency
 
 
 # Convenience dependencies for common cases
 RequireAdmin = require_role(RoleCode.ADMIN)
-RequireVerifier = require_any_permission(Permission.MAP_VERIFY, Permission.ADMIN_DASHBOARD)
+RequireVerifier = require_any_permission(
+    Permission.MAP_VERIFY, Permission.ADMIN_DASHBOARD
+)
 RequireAdminDashboard = require_permission(Permission.ADMIN_DASHBOARD)
 RequireJobAdmin = require_permission(Permission.JOB_ADMIN)

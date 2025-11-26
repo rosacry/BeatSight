@@ -38,12 +38,24 @@ class Subscription(Base):
 
     __tablename__ = "subscriptions"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
-    plan_code: Mapped[SubscriptionPlan] = mapped_column(SAEnum(SubscriptionPlan), default=SubscriptionPlan.FREE)
-    status: Mapped[SubscriptionStatus] = mapped_column(SAEnum(SubscriptionStatus), default=SubscriptionStatus.ACTIVE)
-    current_period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    current_period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
+    )
+    plan_code: Mapped[SubscriptionPlan] = mapped_column(
+        SAEnum(SubscriptionPlan), default=SubscriptionPlan.FREE
+    )
+    status: Mapped[SubscriptionStatus] = mapped_column(
+        SAEnum(SubscriptionStatus), default=SubscriptionStatus.ACTIVE
+    )
+    current_period_start: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    current_period_end: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
     ai_quota_remaining: Mapped[int] = mapped_column(Integer, default=0)
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -81,17 +93,31 @@ class BillingTransaction(Base):
 
     __tablename__ = "billing_transactions"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     subscription_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("subscriptions.id", ondelete="SET NULL")
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
-    provider: Mapped[BillingProvider] = mapped_column(SAEnum(BillingProvider), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
+    )
+    provider: Mapped[BillingProvider] = mapped_column(
+        SAEnum(BillingProvider), nullable=False
+    )
     provider_ref: Mapped[str] = mapped_column(String(128), nullable=False)
     amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
     currency: Mapped[str] = mapped_column(String(8), default="USD")
-    tx_type: Mapped[BillingTransactionType] = mapped_column(SAEnum(BillingTransactionType), nullable=False)
-    status: Mapped[BillingTransactionStatus] = mapped_column(SAEnum(BillingTransactionStatus), nullable=False)
-    processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    tx_type: Mapped[BillingTransactionType] = mapped_column(
+        SAEnum(BillingTransactionType), nullable=False
+    )
+    status: Mapped[BillingTransactionStatus] = mapped_column(
+        SAEnum(BillingTransactionStatus), nullable=False
+    )
+    processed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
-    subscription: Mapped["Subscription | None"] = relationship("Subscription", back_populates="transactions")
+    subscription: Mapped["Subscription | None"] = relationship(
+        "Subscription", back_populates="transactions"
+    )

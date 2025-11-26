@@ -77,10 +77,10 @@ class TestRetryServiceBackoff:
             jitter_factor=0.2,  # ±20%
         )
         service = RetryService(AsyncMock(), config)
-        
+
         # Calculate multiple times and check variance
         delays = [service.calculate_backoff(0).total_seconds() for _ in range(100)]
-        
+
         # With 20% jitter, delays should be between 80-120 seconds
         assert min(delays) >= 80
         assert max(delays) <= 120
@@ -116,10 +116,10 @@ class TestScheduleRetry:
         job.retry_count = 0
         job.max_retries = 3
         mock_session.get.return_value = job
-        
+
         service = RetryService(mock_session, config)
         result = await service.schedule_retry(job.id, "Connection timeout")
-        
+
         assert result.action == "scheduled"
         assert result.retry_count == 1
         assert result.next_retry_at is not None
@@ -139,10 +139,10 @@ class TestScheduleRetry:
         job.retry_count = 3  # Already at max
         job.max_retries = 3
         mock_session.get.return_value = job
-        
+
         service = RetryService(mock_session, config)
         result = await service.schedule_retry(job.id, "Final error")
-        
+
         assert result.action == "exhausted"
         assert job.state == AIJobState.FAILED
         assert "Max retries" in job.error_message
@@ -153,10 +153,10 @@ class TestScheduleRetry:
     ) -> None:
         """Test retry when job not found."""
         mock_session.get.return_value = None
-        
+
         service = RetryService(mock_session, config)
         result = await service.schedule_retry(uuid.uuid4(), "Error")
-        
+
         assert result.action == "not_retriable"
         assert "not found" in result.message
 
@@ -170,10 +170,10 @@ class TestScheduleRetry:
         job.state = AIJobState.COMPLETE  # Can't retry completed jobs
         job.retry_count = 0
         mock_session.get.return_value = job
-        
+
         service = RetryService(mock_session, config)
         result = await service.schedule_retry(job.id, "Error")
-        
+
         assert result.action == "not_retriable"
         assert "complete" in result.message.lower()
 
@@ -187,17 +187,17 @@ class TestScheduleRetry:
         job.state = AIJobState.PROCESSING
         job.max_retries = 5
         mock_session.get.return_value = job
-        
+
         service = RetryService(mock_session, config)
         delays = []
-        
+
         for i in range(3):
             job.retry_count = i
             job.state = AIJobState.PROCESSING  # Reset for each retry
             result = await service.schedule_retry(job.id, f"Error {i}")
             if result.next_retry_at:
                 delays.append(result.next_retry_at)
-        
+
         # Each delay should be later than the previous
         # (but we can't easily compare due to datetime.now() calls)
         assert len(delays) == 3
@@ -221,33 +221,31 @@ class TestGetJobsReadyForRetry:
         job = MagicMock(spec=AIJob)
         job.id = uuid.uuid4()
         job.next_retry_at = None
-        
+
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [job]
         mock_session.execute.return_value = mock_result
-        
+
         service = RetryService(mock_session)
         jobs = await service.get_jobs_ready_for_retry()
-        
+
         assert len(jobs) == 1
         assert jobs[0].id == job.id
 
     @pytest.mark.asyncio
-    async def test_returns_jobs_past_retry_time(
-        self, mock_session: AsyncMock
-    ) -> None:
+    async def test_returns_jobs_past_retry_time(self, mock_session: AsyncMock) -> None:
         """Jobs with past next_retry_at are ready."""
         job = MagicMock(spec=AIJob)
         job.id = uuid.uuid4()
         job.next_retry_at = datetime.now(timezone.utc) - timedelta(minutes=5)
-        
+
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [job]
         mock_session.execute.return_value = mock_result
-        
+
         service = RetryService(mock_session)
         jobs = await service.get_jobs_ready_for_retry()
-        
+
         assert len(jobs) == 1
 
 
@@ -271,16 +269,16 @@ class TestResetStaleJobs:
         stale_job.retry_count = 0
         stale_job.max_retries = 3
         stale_job.last_heartbeat = datetime.now(timezone.utc) - timedelta(minutes=10)
-        
+
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [stale_job]
         mock_session.execute.return_value = mock_result
         mock_session.get.return_value = stale_job
-        
+
         config = RetryConfig(jitter_factor=0.0)
         service = RetryService(mock_session, config)
         results = await service.reset_stale_jobs(stale_threshold_seconds=300)
-        
+
         assert len(results) == 1
         assert results[0].action == "scheduled"
 
@@ -290,10 +288,10 @@ class TestResetStaleJobs:
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = []
         mock_session.execute.return_value = mock_result
-        
+
         service = RetryService(mock_session)
         results = await service.reset_stale_jobs()
-        
+
         assert len(results) == 0
 
 
@@ -312,16 +310,16 @@ class TestRetryStats:
         """Test that stats are returned correctly."""
         # Mock the four queries
         mock_results = [
-            MagicMock(scalar_one=lambda: 5),   # jobs_with_retries
+            MagicMock(scalar_one=lambda: 5),  # jobs_with_retries
             MagicMock(scalar_one=lambda: 12),  # total_retries
-            MagicMock(scalar_one=lambda: 2),   # exhausted_count
-            MagicMock(scalar_one=lambda: 3),   # pending_retries
+            MagicMock(scalar_one=lambda: 2),  # exhausted_count
+            MagicMock(scalar_one=lambda: 3),  # pending_retries
         ]
         mock_session.execute.side_effect = mock_results
-        
+
         service = RetryService(mock_session)
         stats = await service.get_retry_stats()
-        
+
         assert stats["jobs_with_retries"] == 5
         assert stats["total_retry_attempts"] == 12
         assert stats["exhausted_jobs"] == 2

@@ -147,27 +147,35 @@ class WebhookChannel(AlertChannel):
 
         fields = []
         if alert.metric_value is not None:
-            fields.append({
-                "title": "Current Value",
-                "value": f"{alert.metric_value:.2f}",
-                "short": True,
-            })
+            fields.append(
+                {
+                    "title": "Current Value",
+                    "value": f"{alert.metric_value:.2f}",
+                    "short": True,
+                }
+            )
         if alert.threshold_value is not None:
-            fields.append({
-                "title": "Threshold",
-                "value": f"{alert.threshold_value:.2f}",
+            fields.append(
+                {
+                    "title": "Threshold",
+                    "value": f"{alert.threshold_value:.2f}",
+                    "short": True,
+                }
+            )
+        fields.append(
+            {
+                "title": "Source",
+                "value": alert.source,
                 "short": True,
-            })
-        fields.append({
-            "title": "Source",
-            "value": alert.source,
-            "short": True,
-        })
-        fields.append({
-            "title": "Alert Type",
-            "value": alert.alert_type.value,
-            "short": True,
-        })
+            }
+        )
+        fields.append(
+            {
+                "title": "Alert Type",
+                "value": alert.alert_type.value,
+                "short": True,
+            }
+        )
 
         return {
             "attachments": [
@@ -198,17 +206,21 @@ class WebhookChannel(AlertChannel):
 
         fields = []
         if alert.metric_value is not None:
-            fields.append({
-                "name": "Current Value",
-                "value": f"{alert.metric_value:.2f}",
-                "inline": True,
-            })
+            fields.append(
+                {
+                    "name": "Current Value",
+                    "value": f"{alert.metric_value:.2f}",
+                    "inline": True,
+                }
+            )
         if alert.threshold_value is not None:
-            fields.append({
-                "name": "Threshold",
-                "value": f"{alert.threshold_value:.2f}",
-                "inline": True,
-            })
+            fields.append(
+                {
+                    "name": "Threshold",
+                    "value": f"{alert.threshold_value:.2f}",
+                    "inline": True,
+                }
+            )
         fields.append({"name": "Source", "value": alert.source, "inline": True})
 
         return {
@@ -340,14 +352,16 @@ class InMemoryChannel(AlertChannel):
     async def send(self, alert: Alert) -> AlertResult:
         """Store alert in memory."""
         self.alerts.append(alert)
-        
+
         # Trim if over limit
         if len(self.alerts) > self.max_alerts:
             self.alerts = self.alerts[-self.max_alerts :]
-        
+
         return AlertResult(channel=self.name, success=True)
 
-    def get_recent(self, limit: int = 50, severity: AlertSeverity | None = None) -> list[Alert]:
+    def get_recent(
+        self, limit: int = 50, severity: AlertSeverity | None = None
+    ) -> list[Alert]:
         """Get recent alerts, optionally filtered by severity."""
         alerts = self.alerts
         if severity:
@@ -367,7 +381,7 @@ class AlertService:
         self.thresholds: dict[AlertType, AlertThreshold] = {}
         self._cooldowns: dict[str, datetime] = {}  # fingerprint -> last alert time
         self._metrics_cache: dict[str, list[tuple[datetime, float]]] = {}
-        
+
         # Default thresholds
         self._set_default_thresholds()
 
@@ -434,8 +448,10 @@ class AlertService:
         """Check if alert is in cooldown period."""
         if fingerprint not in self._cooldowns:
             return False
-        
-        cooldown_end = self._cooldowns[fingerprint] + timedelta(minutes=cooldown_minutes)
+
+        cooldown_end = self._cooldowns[fingerprint] + timedelta(
+            minutes=cooldown_minutes
+        )
         return datetime.now(timezone.utc) < cooldown_end
 
     def _set_cooldown(self, fingerprint: str) -> None:
@@ -468,7 +484,8 @@ class AlertService:
         self._set_cooldown(alert.fingerprint)
 
         return [
-            r if isinstance(r, AlertResult)
+            r
+            if isinstance(r, AlertResult)
             else AlertResult(channel="unknown", success=False, message=str(r))
             for r in results
         ]
@@ -484,7 +501,7 @@ class AlertService:
     ) -> Alert | None:
         """
         Check if a metric exceeds its threshold and send alert if needed.
-        
+
         Returns the Alert if one was triggered, None otherwise.
         """
         threshold = self.thresholds.get(alert_type)
@@ -506,7 +523,8 @@ class AlertService:
             alert_type=alert_type,
             severity=severity,
             title=title or f"{alert_type.value.replace('_', ' ').title()} Alert",
-            message=message or f"Metric {current_value:.2f} exceeds threshold {threshold_value:.2f}",
+            message=message
+            or f"Metric {current_value:.2f} exceeds threshold {threshold_value:.2f}",
             metric_value=current_value,
             threshold_value=threshold_value,
             source=source,
@@ -618,13 +636,13 @@ _alert_service: AlertService | None = None
 def get_alert_service() -> AlertService:
     """Get or create the global alert service instance."""
     global _alert_service
-    
+
     if _alert_service is None:
         _alert_service = AlertService()
-        
+
         # Configure channels from settings
         settings = get_settings()
-        
+
         if settings.slack_webhook_url:
             _alert_service.add_channel(
                 WebhookChannel(
@@ -633,7 +651,7 @@ def get_alert_service() -> AlertService:
                     format_type="slack",
                 )
             )
-        
+
         if settings.discord_webhook_url:
             _alert_service.add_channel(
                 WebhookChannel(
@@ -642,7 +660,7 @@ def get_alert_service() -> AlertService:
                     format_type="discord",
                 )
             )
-        
+
         if settings.pagerduty_routing_key:
             _alert_service.add_channel(
                 WebhookChannel(
@@ -651,12 +669,12 @@ def get_alert_service() -> AlertService:
                     format_type="pagerduty",
                 )
             )
-        
+
         # Always add in-memory channel for admin dashboard
         _alert_service.add_channel(InMemoryChannel())
-        
+
         log.info("alert_service_initialized", channels=len(_alert_service.channels))
-    
+
     return _alert_service
 
 

@@ -22,14 +22,14 @@ log = structlog.get_logger(__name__)
 
 class NotificationType(str, Enum):
     """Types of notifications."""
-    
+
     EMAIL = "email"
     WEBPUSH = "webpush"
 
 
 class NotificationEvent(str, Enum):
     """Notification event triggers."""
-    
+
     JOB_COMPLETE = "job_complete"
     JOB_FAILED = "job_failed"
     JOB_TIMEOUT = "job_timeout"
@@ -38,7 +38,7 @@ class NotificationEvent(str, Enum):
 @dataclass
 class NotificationPayload:
     """Payload for a notification."""
-    
+
     event: NotificationEvent
     user_id: UUID
     user_email: str | None
@@ -50,10 +50,10 @@ class NotificationPayload:
     metadata: dict[str, Any] | None = None
 
 
-@dataclass  
+@dataclass
 class NotificationResult:
     """Result of sending a notification."""
-    
+
     notification_type: NotificationType
     success: bool
     message: str | None = None
@@ -62,7 +62,7 @@ class NotificationResult:
 
 class NotificationBackend(ABC):
     """Abstract base class for notification backends."""
-    
+
     @abstractmethod
     async def send(self, payload: NotificationPayload) -> NotificationResult:
         """Send a notification."""
@@ -71,12 +71,12 @@ class NotificationBackend(ABC):
 
 class EmailBackend(NotificationBackend):
     """Email notification backend using SendGrid or SES."""
-    
+
     def __init__(self, api_key: str, from_email: str, from_name: str = "BeatSight"):
         self.api_key = api_key
         self.from_email = from_email
         self.from_name = from_name
-    
+
     def _render_subject(self, payload: NotificationPayload) -> str:
         """Generate email subject line."""
         if payload.event == NotificationEvent.JOB_COMPLETE:
@@ -86,12 +86,12 @@ class EmailBackend(NotificationBackend):
         elif payload.event == NotificationEvent.JOB_TIMEOUT:
             return f'Beatmap generation timed out for "{payload.song_title}"'
         return "BeatSight notification"
-    
+
     def _render_body_html(self, payload: NotificationPayload) -> str:
         """Render HTML email body."""
         settings = get_settings()
         base_url = settings.frontend_url or "https://beatsight.io"
-        
+
         if payload.event == NotificationEvent.JOB_COMPLETE:
             return f"""
 <!DOCTYPE html>
@@ -116,7 +116,7 @@ class EmailBackend(NotificationBackend):
             <p>Great news! Your AI-generated beatmap is complete.</p>
             <p><strong>Song:</strong> {payload.song_title}<br>
                <strong>Artist:</strong> {payload.song_artist}</p>
-            <a href="{payload.result_url or f'{base_url}/jobs/{payload.job_id}'}" class="button">
+            <a href="{payload.result_url or f"{base_url}/jobs/{payload.job_id}"}" class="button">
                 View Your Beatmap
             </a>
             <p style="margin-top: 20px; color: #6b7280; font-size: 14px;">
@@ -157,7 +157,7 @@ class EmailBackend(NotificationBackend):
             <p>Unfortunately, we couldn't generate a beatmap for your song.</p>
             <p><strong>Song:</strong> {payload.song_title}<br>
                <strong>Artist:</strong> {payload.song_artist}</p>
-            {f'<div class="error">{payload.error_message}</div>' if payload.error_message else ''}
+            {f'<div class="error">{payload.error_message}</div>' if payload.error_message else ""}
             <a href="{base_url}/jobs/{payload.job_id}" class="button">
                 View Details & Retry
             </a>
@@ -212,7 +212,7 @@ class EmailBackend(NotificationBackend):
 </body>
 </html>
 """
-    
+
     async def send(self, payload: NotificationPayload) -> NotificationResult:
         """Send email notification."""
         if not payload.user_email:
@@ -221,11 +221,11 @@ class EmailBackend(NotificationBackend):
                 success=False,
                 message="No email address available",
             )
-        
+
         try:
             subject = self._render_subject(payload)
             html_content = self._render_body_html(payload)
-            
+
             # Check if SendGrid is configured
             if not self.api_key:
                 log.warning(
@@ -239,34 +239,36 @@ class EmailBackend(NotificationBackend):
                     success=True,
                     message="Email logged (SendGrid not configured)",
                 )
-            
+
             # Send via SendGrid
             try:
                 import sendgrid
                 from sendgrid.helpers.mail import Mail, Email, To, Content
             except ImportError:
-                log.warning("sendgrid_not_installed", message="sendgrid package not installed")
+                log.warning(
+                    "sendgrid_not_installed", message="sendgrid package not installed"
+                )
                 return NotificationResult(
                     notification_type=NotificationType.EMAIL,
                     success=False,
                     message="sendgrid package not installed",
                 )
-            
+
             sg = sendgrid.SendGridAPIClient(api_key=self.api_key)
-            
+
             message = Mail(
                 from_email=Email(self.from_email, self.from_name),
                 to_emails=To(payload.user_email),
                 subject=subject,
                 html_content=Content("text/html", html_content),
             )
-            
+
             # Run sync SendGrid call in thread pool
             response = await asyncio.to_thread(sg.send, message)
-            
+
             success = response.status_code < 400
             message_id = response.headers.get("X-Message-Id")
-            
+
             if success:
                 log.info(
                     "email_notification_sent",
@@ -283,16 +285,18 @@ class EmailBackend(NotificationBackend):
                     status_code=response.status_code,
                     job_id=str(payload.job_id),
                 )
-            
+
             return NotificationResult(
                 notification_type=NotificationType.EMAIL,
                 success=success,
                 message_id=message_id,
                 message=None if success else f"SendGrid error: {response.status_code}",
             )
-            
+
         except Exception as e:
-            log.error("email_notification_failed", error=str(e), job_id=str(payload.job_id))
+            log.error(
+                "email_notification_failed", error=str(e), job_id=str(payload.job_id)
+            )
             return NotificationResult(
                 notification_type=NotificationType.EMAIL,
                 success=False,
@@ -302,11 +306,11 @@ class EmailBackend(NotificationBackend):
 
 class WebPushBackend(NotificationBackend):
     """WebPush notification backend."""
-    
+
     def __init__(self, vapid_private_key: str, vapid_claims: dict[str, str]):
         self.vapid_private_key = vapid_private_key
         self.vapid_claims = vapid_claims
-    
+
     def _build_payload(self, payload: NotificationPayload) -> dict[str, Any]:
         """Build WebPush notification payload."""
         if payload.event == NotificationEvent.JOB_COMPLETE:
@@ -348,21 +352,21 @@ class WebPushBackend(NotificationBackend):
                     "job_id": str(payload.job_id),
                 },
             }
-    
+
     async def send(
-        self, 
+        self,
         payload: NotificationPayload,
         subscriptions: list[dict] | None = None,
     ) -> NotificationResult:
         """Send WebPush notification.
-        
+
         Args:
             payload: Notification payload with event and user info
             subscriptions: List of subscription dicts from PushSubscription.to_subscription_info()
                           If not provided, notification will be skipped.
         """
         import json
-        
+
         if not subscriptions:
             log.info(
                 "webpush_no_subscriptions",
@@ -374,22 +378,24 @@ class WebPushBackend(NotificationBackend):
                 success=True,
                 message="No push subscriptions registered for user",
             )
-        
+
         try:
             try:
                 from pywebpush import webpush, WebPushException
             except ImportError:
-                log.warning("pywebpush_not_installed", message="pywebpush package not installed")
+                log.warning(
+                    "pywebpush_not_installed", message="pywebpush package not installed"
+                )
                 return NotificationResult(
                     notification_type=NotificationType.WEBPUSH,
                     success=False,
                     message="pywebpush package not installed",
                 )
-            
+
             notification_data = json.dumps(self._build_payload(payload))
             sent_count = 0
             failed_count = 0
-            
+
             for subscription_info in subscriptions:
                 try:
                     await asyncio.to_thread(
@@ -408,7 +414,7 @@ class WebPushBackend(NotificationBackend):
                         error=str(e),
                     )
                     failed_count += 1
-            
+
             log.info(
                 "webpush_notification_sent",
                 user_id=str(payload.user_id),
@@ -417,15 +423,17 @@ class WebPushBackend(NotificationBackend):
                 sent_count=sent_count,
                 failed_count=failed_count,
             )
-            
+
             return NotificationResult(
                 notification_type=NotificationType.WEBPUSH,
                 success=sent_count > 0,
                 message=f"Sent to {sent_count}/{sent_count + failed_count} subscriptions",
             )
-            
+
         except Exception as e:
-            log.error("webpush_notification_failed", error=str(e), job_id=str(payload.job_id))
+            log.error(
+                "webpush_notification_failed", error=str(e), job_id=str(payload.job_id)
+            )
             return NotificationResult(
                 notification_type=NotificationType.WEBPUSH,
                 success=False,
@@ -435,7 +443,7 @@ class WebPushBackend(NotificationBackend):
 
 class NotificationService:
     """Service for sending notifications to users."""
-    
+
     def __init__(
         self,
         email_backend: EmailBackend | None = None,
@@ -444,29 +452,29 @@ class NotificationService:
         self.email_backend = email_backend
         self.webpush_backend = webpush_backend
         self._rate_limit_cache: dict[str, list[datetime]] = {}
-    
+
     def _check_rate_limit(self, user_id: UUID, max_per_hour: int = 10) -> bool:
         """Check if user has exceeded notification rate limit."""
         from datetime import timedelta
+
         key = str(user_id)
         now = datetime.now(timezone.utc)
         hour_ago = now - timedelta(hours=1)
-        
+
         if key not in self._rate_limit_cache:
             self._rate_limit_cache[key] = []
-        
+
         # Clean old entries
         self._rate_limit_cache[key] = [
-            ts for ts in self._rate_limit_cache[key]
-            if ts > hour_ago
+            ts for ts in self._rate_limit_cache[key] if ts > hour_ago
         ]
-        
+
         if len(self._rate_limit_cache[key]) >= max_per_hour:
             return False
-        
+
         self._rate_limit_cache[key].append(now)
         return True
-    
+
     async def notify_job_complete(
         self,
         user_id: UUID,
@@ -489,7 +497,7 @@ class NotificationService:
             result_url=result_url,
         )
         return await self._send_all(payload, send_email, send_push)
-    
+
     async def notify_job_failed(
         self,
         user_id: UUID,
@@ -512,7 +520,7 @@ class NotificationService:
             error_message=error_message,
         )
         return await self._send_all(payload, send_email, send_push)
-    
+
     async def notify_job_timeout(
         self,
         user_id: UUID,
@@ -533,7 +541,7 @@ class NotificationService:
             job_id=job_id,
         )
         return await self._send_all(payload, send_email, send_push)
-    
+
     async def _send_all(
         self,
         payload: NotificationPayload,
@@ -554,22 +562,23 @@ class NotificationService:
                     message="Rate limit exceeded",
                 )
             ]
-        
+
         tasks = []
-        
+
         if send_email and self.email_backend:
             tasks.append(self.email_backend.send(payload))
-        
+
         if send_push and self.webpush_backend:
             tasks.append(self.webpush_backend.send(payload))
-        
+
         if not tasks:
             return []
-        
+
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         return [
-            r if isinstance(r, NotificationResult)
+            r
+            if isinstance(r, NotificationResult)
             else NotificationResult(
                 notification_type=NotificationType.EMAIL,
                 success=False,
@@ -582,7 +591,7 @@ class NotificationService:
 def get_notification_service() -> NotificationService:
     """Factory function to create notification service."""
     settings = get_settings()
-    
+
     email_backend = None
     if settings.sendgrid_api_key:
         email_backend = EmailBackend(
@@ -590,7 +599,7 @@ def get_notification_service() -> NotificationService:
             from_email=settings.email_from or "noreply@beatsight.io",
             from_name="BeatSight",
         )
-    
+
     webpush_backend = None
     if settings.vapid_private_key:
         webpush_backend = WebPushBackend(
@@ -599,7 +608,7 @@ def get_notification_service() -> NotificationService:
                 "sub": f"mailto:{settings.email_from or 'admin@beatsight.io'}",
             },
         )
-    
+
     return NotificationService(
         email_backend=email_backend,
         webpush_backend=webpush_backend,

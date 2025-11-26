@@ -63,7 +63,9 @@ class TestAlert:
 
     def test_alert_fingerprint_different(self) -> None:
         """Different alerts should have different fingerprints."""
-        alert1 = Alert(alert_type=AlertType.JOB_FAILURE_RATE, title="Title 1", source="test")
+        alert1 = Alert(
+            alert_type=AlertType.JOB_FAILURE_RATE, title="Title 1", source="test"
+        )
         alert2 = Alert(alert_type=AlertType.QUEUE_DEPTH, title="Title 2", source="test")
 
         assert alert1.fingerprint != alert2.fingerprint
@@ -135,12 +137,22 @@ class TestInMemoryChannel:
     def test_get_recent(self) -> None:
         """Get recent alerts with optional filtering."""
         channel = InMemoryChannel()
-        
+
         # Add alerts synchronously for testing
         channel.alerts = [
-            Alert(alert_type=AlertType.CUSTOM, severity=AlertSeverity.INFO, title="Info 1"),
-            Alert(alert_type=AlertType.CUSTOM, severity=AlertSeverity.WARNING, title="Warning 1"),
-            Alert(alert_type=AlertType.CUSTOM, severity=AlertSeverity.CRITICAL, title="Critical 1"),
+            Alert(
+                alert_type=AlertType.CUSTOM, severity=AlertSeverity.INFO, title="Info 1"
+            ),
+            Alert(
+                alert_type=AlertType.CUSTOM,
+                severity=AlertSeverity.WARNING,
+                title="Warning 1",
+            ),
+            Alert(
+                alert_type=AlertType.CUSTOM,
+                severity=AlertSeverity.CRITICAL,
+                title="Critical 1",
+            ),
         ]
 
         all_alerts = channel.get_recent(limit=10)
@@ -154,9 +166,9 @@ class TestInMemoryChannel:
         """Clear all stored alerts."""
         channel = InMemoryChannel()
         channel.alerts = [Alert(alert_type=AlertType.CUSTOM, title="Test")]
-        
+
         channel.clear()
-        
+
         assert len(channel.alerts) == 0
 
 
@@ -316,13 +328,13 @@ class TestAlertService:
     def test_set_threshold(self) -> None:
         """Set custom threshold."""
         service = AlertService()
-        
+
         custom_threshold = AlertThreshold(
             alert_type=AlertType.JOB_FAILURE_RATE,
             warning_threshold=5.0,  # More sensitive
             critical_threshold=15.0,
         )
-        
+
         service.set_threshold(custom_threshold)
 
         assert service.thresholds[AlertType.JOB_FAILURE_RATE].warning_threshold == 5.0
@@ -331,7 +343,7 @@ class TestAlertService:
         """Add alert channel."""
         service = AlertService()
         channel = InMemoryChannel()
-        
+
         service.add_channel(channel)
 
         assert len(service.channels) == 1
@@ -524,31 +536,31 @@ class TestGetAlertService:
     def test_get_alert_service_singleton(self) -> None:
         """Factory should return singleton instance."""
         reset_alert_service()  # Ensure clean state
-        
+
         service1 = get_alert_service()
         service2 = get_alert_service()
 
         assert service1 is service2
-        
+
         reset_alert_service()  # Clean up
 
     def test_get_alert_service_with_in_memory_channel(self) -> None:
         """Service should always have in-memory channel."""
         reset_alert_service()
-        
+
         with patch("app.services.alerts.get_settings") as mock_settings:
             mock_settings.return_value = MagicMock(
                 slack_webhook_url=None,
                 discord_webhook_url=None,
                 pagerduty_routing_key=None,
             )
-            
+
             service = get_alert_service()
 
         # Should have at least the in-memory channel
         assert len(service.channels) >= 1
         assert any(isinstance(c, InMemoryChannel) for c in service.channels)
-        
+
         reset_alert_service()
 
     def test_reset_alert_service(self) -> None:
@@ -558,5 +570,5 @@ class TestGetAlertService:
         service2 = get_alert_service()
 
         assert service1 is not service2
-        
+
         reset_alert_service()

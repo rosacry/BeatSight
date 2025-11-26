@@ -54,7 +54,10 @@ class TestRateLimitMiddleware:
         self.middleware = RateLimitMiddleware(self.app, self.redis_getter)
 
     def _create_request(
-        self, path: str = "/api/test", auth_header: str = None, client_ip: str = "1.2.3.4"
+        self,
+        path: str = "/api/test",
+        auth_header: str = None,
+        client_ip: str = "1.2.3.4",
     ) -> Request:
         """Create a mock request."""
         request = MagicMock(spec=Request)
@@ -158,13 +161,13 @@ class TestRateLimitMiddleware:
     def test_get_limit_uses_endpoint_specific(self):
         """Test that endpoint-specific limits are used."""
         limit = self.middleware._get_limit("/api/ai-jobs", "authenticated")
-        
+
         assert limit == ENDPOINT_LIMITS["/api/ai-jobs"]["authenticated"]
 
     def test_get_limit_falls_back_to_default(self):
         """Test that default limits are used for unlisted endpoints."""
         limit = self.middleware._get_limit("/api/unknown", "authenticated")
-        
+
         assert limit == RATE_LIMITS["authenticated"]
 
 

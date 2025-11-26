@@ -21,9 +21,17 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Add retry tracking columns to ai_jobs table."""
-    op.add_column("ai_jobs", sa.Column("retry_count", sa.Integer(), nullable=False, server_default="0"))
-    op.add_column("ai_jobs", sa.Column("max_retries", sa.Integer(), nullable=False, server_default="3"))
-    op.add_column("ai_jobs", sa.Column("next_retry_at", sa.DateTime(timezone=True), nullable=True))
+    op.add_column(
+        "ai_jobs",
+        sa.Column("retry_count", sa.Integer(), nullable=False, server_default="0"),
+    )
+    op.add_column(
+        "ai_jobs",
+        sa.Column("max_retries", sa.Integer(), nullable=False, server_default="3"),
+    )
+    op.add_column(
+        "ai_jobs", sa.Column("next_retry_at", sa.DateTime(timezone=True), nullable=True)
+    )
     op.add_column("ai_jobs", sa.Column("last_error", sa.String(1024), nullable=True))
 
 

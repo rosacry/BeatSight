@@ -26,7 +26,7 @@ class TestForgotPassword:
     def test_forgot_password_success(self):
         """Test forgot password returns success message."""
         client = TestClient(app)
-        
+
         with patch("app.api.routes.auth.AuthService") as MockAuthService:
             # Mock getting user by email
             mock_service = AsyncMock()
@@ -36,12 +36,12 @@ class TestForgotPassword:
             mock_user.display_name = "Test User"
             mock_service.get_user_by_email.return_value = mock_user
             MockAuthService.return_value = mock_service
-            
+
             response = client.post(
                 "/api/auth/forgot-password",
                 json={"email": "test@example.com"},
             )
-            
+
         assert response.status_code == 200
         data = response.json()
         assert "password reset link" in data["message"].lower()
@@ -49,17 +49,17 @@ class TestForgotPassword:
     def test_forgot_password_nonexistent_email(self):
         """Test forgot password for non-existent email (should still succeed)."""
         client = TestClient(app)
-        
+
         with patch("app.api.routes.auth.AuthService") as MockAuthService:
             mock_service = AsyncMock()
             mock_service.get_user_by_email.return_value = None
             MockAuthService.return_value = mock_service
-            
+
             response = client.post(
                 "/api/auth/forgot-password",
                 json={"email": "nobody@example.com"},
             )
-            
+
         # Should return success to prevent email enumeration
         assert response.status_code == 200
         data = response.json()
@@ -68,12 +68,12 @@ class TestForgotPassword:
     def test_forgot_password_invalid_email_format(self):
         """Test forgot password with invalid email format."""
         client = TestClient(app)
-        
+
         response = client.post(
             "/api/auth/forgot-password",
             json={"email": "not-an-email"},
         )
-        
+
         assert response.status_code == 422
 
 
@@ -83,12 +83,12 @@ class TestResetPassword:
     def test_reset_password_invalid_token(self):
         """Test password reset fails with invalid token."""
         client = TestClient(app)
-        
+
         with patch("app.api.routes.auth.get_email_service") as mock_get_email:
             mock_email_service = MagicMock()
             mock_email_service.verify_password_reset_token.return_value = None
             mock_get_email.return_value = mock_email_service
-            
+
             response = client.post(
                 "/api/auth/reset-password",
                 json={
@@ -96,14 +96,14 @@ class TestResetPassword:
                     "new_password": "NewSecurePassword123",
                 },
             )
-            
+
         assert response.status_code == 400
         assert "Invalid or expired" in response.json()["detail"]
 
     def test_reset_password_weak_password(self):
         """Test password reset fails with weak password."""
         client = TestClient(app)
-        
+
         response = client.post(
             "/api/auth/reset-password",
             json={
@@ -111,7 +111,7 @@ class TestResetPassword:
                 "new_password": "short",
             },
         )
-        
+
         # Pydantic validation should catch this
         assert response.status_code == 422
 
@@ -119,10 +119,11 @@ class TestResetPassword:
         """Test successful password reset."""
         client = TestClient(app)
         user_id = uuid4()
-        
-        with patch("app.api.routes.auth.get_email_service") as mock_get_email, \
-             patch("app.api.routes.auth.AuthService") as MockAuthService:
-            
+
+        with (
+            patch("app.api.routes.auth.get_email_service") as mock_get_email,
+            patch("app.api.routes.auth.AuthService") as MockAuthService,
+        ):
             # Mock email service token verification
             mock_email_service = MagicMock()
             mock_email_service.verify_password_reset_token.return_value = {
@@ -131,7 +132,7 @@ class TestResetPassword:
                 "type": "password_reset",
             }
             mock_get_email.return_value = mock_email_service
-            
+
             # Mock auth service
             mock_auth = AsyncMock()
             mock_user = MagicMock(spec=User)
@@ -140,7 +141,7 @@ class TestResetPassword:
             mock_auth.get_user_by_id.return_value = mock_user
             mock_auth.hash_password.return_value = "hashed_password"
             MockAuthService.return_value = mock_auth
-            
+
             response = client.post(
                 "/api/auth/reset-password",
                 json={
@@ -148,7 +149,7 @@ class TestResetPassword:
                     "new_password": "NewSecurePassword123",
                 },
             )
-            
+
         assert response.status_code == 200
         data = response.json()
         assert "reset successfully" in data["message"].lower()
@@ -157,10 +158,11 @@ class TestResetPassword:
         """Test password reset fails when user not found."""
         client = TestClient(app)
         user_id = uuid4()
-        
-        with patch("app.api.routes.auth.get_email_service") as mock_get_email, \
-             patch("app.api.routes.auth.AuthService") as MockAuthService:
-            
+
+        with (
+            patch("app.api.routes.auth.get_email_service") as mock_get_email,
+            patch("app.api.routes.auth.AuthService") as MockAuthService,
+        ):
             mock_email_service = MagicMock()
             mock_email_service.verify_password_reset_token.return_value = {
                 "sub": str(user_id),
@@ -168,11 +170,11 @@ class TestResetPassword:
                 "type": "password_reset",
             }
             mock_get_email.return_value = mock_email_service
-            
+
             mock_auth = AsyncMock()
             mock_auth.get_user_by_id.return_value = None
             MockAuthService.return_value = mock_auth
-            
+
             response = client.post(
                 "/api/auth/reset-password",
                 json={
@@ -180,7 +182,7 @@ class TestResetPassword:
                     "new_password": "NewSecurePassword123",
                 },
             )
-            
+
         assert response.status_code == 400
         assert "User not found" in response.json()["detail"]
 
@@ -188,10 +190,11 @@ class TestResetPassword:
         """Test password reset fails if token email doesn't match user."""
         client = TestClient(app)
         user_id = uuid4()
-        
-        with patch("app.api.routes.auth.get_email_service") as mock_get_email, \
-             patch("app.api.routes.auth.AuthService") as MockAuthService:
-            
+
+        with (
+            patch("app.api.routes.auth.get_email_service") as mock_get_email,
+            patch("app.api.routes.auth.AuthService") as MockAuthService,
+        ):
             # Token has different email
             mock_email_service = MagicMock()
             mock_email_service.verify_password_reset_token.return_value = {
@@ -200,14 +203,14 @@ class TestResetPassword:
                 "type": "password_reset",
             }
             mock_get_email.return_value = mock_email_service
-            
+
             mock_auth = AsyncMock()
             mock_user = MagicMock(spec=User)
             mock_user.id = user_id
             mock_user.email = "test@example.com"  # Different from token
             mock_auth.get_user_by_id.return_value = mock_user
             MockAuthService.return_value = mock_auth
-            
+
             response = client.post(
                 "/api/auth/reset-password",
                 json={
@@ -215,7 +218,7 @@ class TestResetPassword:
                     "new_password": "NewSecurePassword123",
                 },
             )
-            
+
         assert response.status_code == 400
         assert "does not match" in response.json()["detail"]
 
@@ -227,10 +230,8 @@ class TestEmailService:
         """Test password reset token creation and verification."""
         email_service = get_email_service()
         user_id = uuid4()
-        
-        token = email_service._create_password_reset_token(
-            user_id, "test@example.com"
-        )
+
+        token = email_service._create_password_reset_token(user_id, "test@example.com")
 
         payload = email_service.verify_password_reset_token(token)
         assert payload is not None
@@ -242,7 +243,7 @@ class TestEmailService:
         """Test email verification token creation and verification."""
         email_service = get_email_service()
         user_id = uuid4()
-        
+
         token = email_service._create_email_verification_token(
             user_id, "test@example.com"
         )
@@ -255,7 +256,7 @@ class TestEmailService:
     def test_invalid_token_verification(self):
         """Test that invalid tokens are rejected."""
         email_service = get_email_service()
-        
+
         payload = email_service.verify_password_reset_token("invalid-token")
         assert payload is None
 
@@ -263,12 +264,12 @@ class TestEmailService:
         """Test that using wrong token type fails."""
         email_service = get_email_service()
         user_id = uuid4()
-        
+
         # Create email verification token
         email_token = email_service._create_email_verification_token(
             user_id, "test@example.com"
         )
-        
+
         # Try to use it as password reset token
         payload = email_service.verify_password_reset_token(email_token)
         assert payload is None
@@ -283,8 +284,9 @@ class TestEmailService:
             settings.jwt_secret_key = "test-secret"
             settings.jwt_algorithm = "HS256"
             mock_settings.return_value = settings
-            
+
             from app.services.email import EmailService
+
             service = EmailService()
             assert service.is_configured() is False
 
@@ -298,8 +300,9 @@ class TestEmailService:
             settings.jwt_secret_key = "test-secret"
             settings.jwt_algorithm = "HS256"
             mock_settings.return_value = settings
-            
+
             from app.services.email import EmailService
+
             service = EmailService()
             assert service.is_configured() is True
 
@@ -312,63 +315,68 @@ class TestRegisterWithWelcomeEmail:
         """Test that registration triggers welcome email via background task."""
         from app.api.routes.auth import register, RegisterRequest
         from fastapi import BackgroundTasks
-        
+
         # Create mock session with proper sync/async method configuration
         mock_session = MagicMock()
         mock_session.add = MagicMock()  # sync method
         mock_session.commit = AsyncMock()  # async method
         mock_session.refresh = AsyncMock()  # async method
-        
+
         # Create mock user that session.refresh will "populate"
         mock_user = MagicMock(spec=User)
         mock_user.id = uuid4()
         mock_user.email = "newuser@example.com"
         mock_user.display_name = "New User"
-        
+
         async def mock_refresh(user):
             user.id = mock_user.id
             user.email = mock_user.email
             user.display_name = mock_user.display_name
-        
+
         mock_session.refresh = mock_refresh
-        
+
         # Track background tasks
         background_tasks = BackgroundTasks()
         tasks_added = []
+
         def track_add_task(func, *args, **kwargs):
             tasks_added.append((func, args, kwargs))
+
         background_tasks.add_task = track_add_task
-        
-        with patch("app.api.routes.auth.AuthService") as MockAuthService, \
-             patch("app.api.routes.auth.get_email_service") as mock_get_email:
-            
+
+        with (
+            patch("app.api.routes.auth.AuthService") as MockAuthService,
+            patch("app.api.routes.auth.get_email_service") as mock_get_email,
+        ):
             # Mock auth service
             mock_auth = MagicMock()
-            mock_auth.get_user_by_email = AsyncMock(return_value=None)  # No existing user
+            mock_auth.get_user_by_email = AsyncMock(
+                return_value=None
+            )  # No existing user
             mock_auth.hash_password.return_value = "hashed_password"
             mock_auth.create_access_token.return_value = "access_token"
             mock_auth.create_refresh_token.return_value = "refresh_token"
             MockAuthService.return_value = mock_auth
-            
+
             # Mock email service
             mock_email = MagicMock()
             mock_email.send_welcome = AsyncMock()
             mock_get_email.return_value = mock_email
-            
+
             # Create request
             request = RegisterRequest(
                 email="newuser@example.com",
                 password="SecurePassword123",
                 display_name="New User",
             )
-            
+
             # Call register directly (bypassing TestClient)
             result = await register(request, background_tasks, mock_session)
-        
+
         # Verify tokens returned
         assert result.access_token == "access_token"
         assert result.refresh_token == "refresh_token"
-        
+
         # Verify background task was added for welcome email
         assert len(tasks_added) == 1
         task_func, task_args, _ = tasks_added[0]

@@ -19,7 +19,9 @@ class AIJobService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def enqueue(self, payload: AIJobCreate, requested_by: uuid.UUID | None) -> AIJob:
+    async def enqueue(
+        self, payload: AIJobCreate, requested_by: uuid.UUID | None
+    ) -> AIJob:
         job = AIJob(
             song_id=payload.song_id,
             priority=payload.priority,
@@ -56,34 +58,34 @@ class AIJobService:
         await self._session.commit()
 
     async def update_progress(
-        self, 
-        job_id: uuid.UUID, 
+        self,
+        job_id: uuid.UUID,
         progress_percent: int,
         progress_message: str | None = None,
         stage: str | None = None,
     ) -> AIJob:
         """Update job progress and publish to Redis pub/sub.
-        
+
         Args:
             job_id: The job ID.
             progress_percent: Progress percentage (0-100).
             progress_message: Optional status message.
             stage: Optional pipeline stage name.
-            
+
         Returns:
             The updated AIJob instance.
         """
         job = await self._session.get(AIJob, job_id)
         if job is None:
             raise ValueError("Job not found")
-        
+
         now = datetime.now(timezone.utc)
         job.last_heartbeat = now
         job.progress_percent = progress_percent
         job.progress_message = progress_message
         await self._session.commit()
         await self._session.refresh(job)
-        
+
         # Publish progress update to Redis for SSE streaming
         try:
             redis = await get_redis()
@@ -98,17 +100,21 @@ class AIJobService:
         except Exception:
             # Don't fail the update if Redis publish fails
             pass
-        
+
         return job
 
-    async def mark_finished(self, job_id: uuid.UUID, *, error: str | None = None) -> None:
+    async def mark_finished(
+        self, job_id: uuid.UUID, *, error: str | None = None
+    ) -> None:
         """Mark a job as complete or failed."""
         job = await self._session.get(AIJob, job_id)
         if job is None:
             raise ValueError("Job not found")
         job.finished_at = datetime.now(timezone.utc)
         job.progress_percent = 100 if not error else job.progress_percent
-        job.progress_message = "Complete" if not error else error[:255] if error else None
+        job.progress_message = (
+            "Complete" if not error else error[:255] if error else None
+        )
         if error:
             job.state = AIJobState.FAILED
             job.error_message = error
@@ -130,7 +136,7 @@ class AIJobService:
 
     async def get_next_queued_job(self) -> AIJob | None:
         """Get the next queued job for processing (priority then FIFO).
-        
+
         Only returns jobs that are ready to process (no pending retry delay).
         """
         now = datetime.now(timezone.utc)
@@ -175,18 +181,20 @@ class AIJobService:
         await self._session.refresh(job)
         return job
 
-    async def claim_job_directly(self, job_id: uuid.UUID, worker_id: uuid.UUID) -> AIJob:
+    async def claim_job_directly(
+        self, job_id: uuid.UUID, worker_id: uuid.UUID
+    ) -> AIJob:
         """Claim a specific job by ID for processing.
-        
+
         Used for Modal GPU orchestration where we know the job ID upfront.
-        
+
         Args:
             job_id: The job ID to claim.
             worker_id: The worker ID (or Modal pseudo-ID).
-            
+
         Returns:
             The updated AIJob instance.
-            
+
         Raises:
             ValueError: If job not found or not in QUEUED state.
         """
@@ -195,7 +203,7 @@ class AIJobService:
             raise ValueError("Job not found")
         if job.state != AIJobState.QUEUED:
             raise ValueError(f"Cannot claim job in state {job.state}")
-        
+
         job.state = AIJobState.PROCESSING
         job.started_at = datetime.now(timezone.utc)
         job.worker_id = worker_id
@@ -221,7 +229,9 @@ class AIJobService:
 
     async def find_stale_jobs(self, stale_threshold_seconds: int = 300) -> list[AIJob]:
         """Find processing jobs with stale heartbeats."""
-        threshold = datetime.now(timezone.utc) - timedelta(seconds=stale_threshold_seconds)
+        threshold = datetime.now(timezone.utc) - timedelta(
+            seconds=stale_threshold_seconds
+        )
         stmt = (
             select(AIJob)
             .where(AIJob.state == AIJobState.PROCESSING)
@@ -232,7 +242,11 @@ class AIJobService:
 
     async def get_queue_length(self) -> int:
         """Get total number of jobs in the queue."""
-        stmt = select(func.count()).select_from(AIJob).where(AIJob.state == AIJobState.QUEUED)
+        stmt = (
+            select(func.count())
+            .select_from(AIJob)
+            .where(AIJob.state == AIJobState.QUEUED)
+        )
         result = await self._session.execute(stmt)
         return result.scalar_one()
 
@@ -241,7 +255,7 @@ class AIJobService:
         job = await self._session.get(AIJob, job_id)
         if job is None or job.state != AIJobState.QUEUED:
             return None
-        
+
         # Count jobs with higher priority or same priority but earlier creation
         stmt = (
             select(func.count())
@@ -252,8 +266,8 @@ class AIJobService:
                     AIJob.priority > job.priority,
                     and_(
                         AIJob.priority == job.priority,
-                        AIJob.created_at < job.created_at
-                    )
+                        AIJob.created_at < job.created_at,
+                    ),
                 )
             )
         )

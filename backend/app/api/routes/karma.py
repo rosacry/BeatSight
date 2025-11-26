@@ -174,7 +174,9 @@ async def get_my_karma_history(
 ) -> KarmaHistoryResponse:
     """Get the current user's karma history."""
     service = KarmaService(session)
-    entries = await service.get_karma_history(current_user.id, limit=limit, offset=offset)
+    entries = await service.get_karma_history(
+        current_user.id, limit=limit, offset=offset
+    )
     total_count = await service.get_karma_history_count(current_user.id)
 
     items = [
@@ -266,10 +268,24 @@ async def get_roles_info() -> RolesInfoResponse:
     This endpoint does not require authentication.
     """
     roles = [
-        RoleThreshold(role=RoleCode.FIXER.value, min_karma=ROLE_KARMA_THRESHOLDS[RoleCode.FIXER]),
-        RoleThreshold(role=RoleCode.VERIFIER.value, min_karma=ROLE_KARMA_THRESHOLDS[RoleCode.VERIFIER], requires_phone=True),
-        RoleThreshold(role=RoleCode.CURATOR.value, min_karma=ROLE_KARMA_THRESHOLDS[RoleCode.CURATOR], requires_phone=True),
-        RoleThreshold(role=RoleCode.ADMIN.value, min_karma=ROLE_KARMA_THRESHOLDS[RoleCode.ADMIN], requires_phone=True),
+        RoleThreshold(
+            role=RoleCode.FIXER.value, min_karma=ROLE_KARMA_THRESHOLDS[RoleCode.FIXER]
+        ),
+        RoleThreshold(
+            role=RoleCode.VERIFIER.value,
+            min_karma=ROLE_KARMA_THRESHOLDS[RoleCode.VERIFIER],
+            requires_phone=True,
+        ),
+        RoleThreshold(
+            role=RoleCode.CURATOR.value,
+            min_karma=ROLE_KARMA_THRESHOLDS[RoleCode.CURATOR],
+            requires_phone=True,
+        ),
+        RoleThreshold(
+            role=RoleCode.ADMIN.value,
+            min_karma=ROLE_KARMA_THRESHOLDS[RoleCode.ADMIN],
+            requires_phone=True,
+        ),
     ]
 
     return RolesInfoResponse(roles=roles)

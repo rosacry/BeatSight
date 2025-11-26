@@ -47,19 +47,21 @@ class RetryResult:
 class RetryService:
     """Handles retry logic for failed AI jobs."""
 
-    def __init__(self, session: AsyncSession, config: RetryConfig | None = None) -> None:
+    def __init__(
+        self, session: AsyncSession, config: RetryConfig | None = None
+    ) -> None:
         self._session = session
         self._config = config or RetryConfig()
 
     def calculate_backoff(self, retry_count: int) -> timedelta:
         """Calculate exponential backoff delay with jitter.
-        
+
         Uses exponential backoff: base_delay * (exponential_base ^ retry_count)
         Capped at max_delay_seconds.
-        
+
         Args:
             retry_count: Number of retries already attempted (0-based).
-            
+
         Returns:
             Delay before next retry attempt.
         """
@@ -67,25 +69,25 @@ class RetryService:
 
         # Exponential backoff
         delay = self._config.base_delay_seconds * (
-            self._config.exponential_base ** retry_count
+            self._config.exponential_base**retry_count
         )
-        
+
         # Cap at maximum
         delay = min(delay, self._config.max_delay_seconds)
-        
+
         # Add jitter (±jitter_factor)
         jitter = delay * self._config.jitter_factor
         delay += random.uniform(-jitter, jitter)
-        
+
         return timedelta(seconds=max(delay, 0))
 
     async def schedule_retry(self, job_id: uuid.UUID, error: str) -> RetryResult:
         """Schedule a failed job for retry if retries remain.
-        
+
         Args:
             job_id: The job that failed.
             error: Error message from the failure.
-            
+
         Returns:
             RetryResult indicating what action was taken.
         """
@@ -110,17 +112,19 @@ class RetryService:
         # Check if retries exhausted
         if job.retry_count >= job.max_retries:
             job.state = AIJobState.FAILED
-            job.error_message = f"Max retries ({job.max_retries}) exhausted. Last error: {error[:400]}"
+            job.error_message = (
+                f"Max retries ({job.max_retries}) exhausted. Last error: {error[:400]}"
+            )
             job.finished_at = datetime.now(timezone.utc)
             await self._session.commit()
-            
+
             logger.warning(
                 "Job %s exhausted retries after %d attempts: %s",
                 job_id,
                 job.retry_count,
                 error[:100],
             )
-            
+
             return RetryResult(
                 job_id=job_id,
                 action="exhausted",
@@ -132,7 +136,7 @@ class RetryService:
         delay = self.calculate_backoff(job.retry_count)
         now = datetime.now(timezone.utc)
         next_retry = now + delay
-        
+
         job.retry_count += 1
         job.next_retry_at = next_retry
         job.last_error = error[:1024] if error else None
@@ -142,9 +146,9 @@ class RetryService:
         job.last_heartbeat = None
         job.progress_percent = None
         job.progress_message = f"Retry {job.retry_count}/{job.max_retries} scheduled"
-        
+
         await self._session.commit()
-        
+
         logger.info(
             "Job %s scheduled for retry %d/%d at %s (delay: %s)",
             job_id,
@@ -153,7 +157,7 @@ class RetryService:
             next_retry.isoformat(),
             delay,
         )
-        
+
         return RetryResult(
             job_id=job_id,
             action="scheduled",
@@ -164,7 +168,7 @@ class RetryService:
 
     async def get_jobs_ready_for_retry(self) -> list[AIJob]:
         """Get queued jobs whose next_retry_at has passed.
-        
+
         Returns:
             List of jobs ready to be claimed by workers.
         """
@@ -183,7 +187,7 @@ class RetryService:
 
     async def get_pending_retries(self) -> list[AIJob]:
         """Get jobs waiting for their retry time.
-        
+
         Returns:
             List of jobs with future next_retry_at timestamps.
         """
@@ -197,16 +201,20 @@ class RetryService:
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
-    async def reset_stale_jobs(self, stale_threshold_seconds: int = 300) -> list[RetryResult]:
+    async def reset_stale_jobs(
+        self, stale_threshold_seconds: int = 300
+    ) -> list[RetryResult]:
         """Find stale jobs and schedule them for retry.
-        
+
         Args:
             stale_threshold_seconds: How long without heartbeat before job is stale.
-            
+
         Returns:
             List of retry results for processed stale jobs.
         """
-        threshold = datetime.now(timezone.utc) - timedelta(seconds=stale_threshold_seconds)
+        threshold = datetime.now(timezone.utc) - timedelta(
+            seconds=stale_threshold_seconds
+        )
         stmt = (
             select(AIJob)
             .where(AIJob.state == AIJobState.PROCESSING)
@@ -214,7 +222,7 @@ class RetryService:
         )
         result = await self._session.execute(stmt)
         stale_jobs = list(result.scalars().all())
-        
+
         results = []
         for job in stale_jobs:
             logger.warning(
@@ -227,31 +235,29 @@ class RetryService:
                 f"Worker timeout (no heartbeat for {stale_threshold_seconds}s)",
             )
             results.append(retry_result)
-        
+
         return results
 
     async def get_retry_stats(self) -> dict:
         """Get statistics about job retries.
-        
+
         Returns:
             Dictionary with retry statistics.
         """
         from sqlalchemy import func
-        
+
         # Jobs with retries
         stmt_with_retries = (
-            select(func.count())
-            .select_from(AIJob)
-            .where(AIJob.retry_count > 0)
+            select(func.count()).select_from(AIJob).where(AIJob.retry_count > 0)
         )
         result = await self._session.execute(stmt_with_retries)
         jobs_with_retries = result.scalar_one()
-        
+
         # Total retry count
         stmt_total_retries = select(func.sum(AIJob.retry_count)).select_from(AIJob)
         result = await self._session.execute(stmt_total_retries)
         total_retries = result.scalar_one() or 0
-        
+
         # Jobs exhausted (failed with retry_count >= max_retries)
         stmt_exhausted = (
             select(func.count())
@@ -261,7 +267,7 @@ class RetryService:
         )
         result = await self._session.execute(stmt_exhausted)
         exhausted_count = result.scalar_one()
-        
+
         # Pending retries
         now = datetime.now(timezone.utc)
         stmt_pending = (
@@ -272,7 +278,7 @@ class RetryService:
         )
         result = await self._session.execute(stmt_pending)
         pending_retries = result.scalar_one()
-        
+
         return {
             "jobs_with_retries": jobs_with_retries,
             "total_retry_attempts": total_retries,

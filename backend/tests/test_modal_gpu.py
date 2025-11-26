@@ -89,30 +89,30 @@ class TestModalService:
     async def test_trigger_job_success(self, enabled_config: ModalConfig) -> None:
         """Test successful job trigger."""
         service = ModalService(enabled_config)
-        
+
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "accepted": True,
             "call_id": "modal-call-xyz789",
         }
-        
+
         with patch.object(service, "_get_client") as mock_get_client:
             mock_client = AsyncMock()
             mock_client.post.return_value = mock_response
             mock_get_client.return_value = mock_client
-            
+
             result = await service.trigger_job(
                 job_id="test-job-123",
                 audio_url="https://storage.example.com/audio.wav",
                 song_id="song-456",
                 options={"detection_sensitivity": 80},
             )
-            
+
             assert result.accepted is True
             assert result.call_id == "modal-call-xyz789"
             assert result.error is None
-            
+
             # Verify the call was made correctly
             mock_client.post.assert_called_once()
             call_args = mock_client.post.call_args
@@ -127,24 +127,24 @@ class TestModalService:
     async def test_trigger_job_rejected(self, enabled_config: ModalConfig) -> None:
         """Test job rejection from Modal."""
         service = ModalService(enabled_config)
-        
+
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "accepted": False,
             "error": "Invalid audio format",
         }
-        
+
         mock_client = AsyncMock()
         mock_client.post.return_value = mock_response
         service._client = mock_client
-        
+
         result = await service.trigger_job(
             job_id="test-job-123",
             audio_url="https://storage.example.com/audio.txt",
             song_id="song-456",
         )
-        
+
         assert result.accepted is False
         assert result.error == "Invalid audio format"
 
@@ -152,72 +152,74 @@ class TestModalService:
     async def test_trigger_job_http_error(self, enabled_config: ModalConfig) -> None:
         """Test HTTP error from Modal endpoint."""
         service = ModalService(enabled_config)
-        
+
         mock_response = MagicMock()
         mock_response.status_code = 500
         mock_response.text = "Internal server error"
-        
+
         mock_client = AsyncMock()
         mock_client.post.return_value = mock_response
         service._client = mock_client
-        
+
         with pytest.raises(ModalJobError) as exc_info:
             await service.trigger_job(
                 job_id="test-job-123",
                 audio_url="https://storage.example.com/audio.wav",
                 song_id="song-456",
             )
-        
+
         assert "500" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_trigger_job_connection_error(self, enabled_config: ModalConfig) -> None:
+    async def test_trigger_job_connection_error(
+        self, enabled_config: ModalConfig
+    ) -> None:
         """Test connection error to Modal."""
         service = ModalService(enabled_config)
-        
+
         mock_client = AsyncMock()
         mock_client.post.side_effect = httpx.ConnectError("Connection refused")
         service._client = mock_client
-        
+
         with pytest.raises(ModalConnectionError) as exc_info:
             await service.trigger_job(
                 job_id="test-job-123",
                 audio_url="https://storage.example.com/audio.wav",
                 song_id="song-456",
             )
-        
+
         assert "Connection" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_trigger_job_timeout(self, enabled_config: ModalConfig) -> None:
         """Test timeout when triggering job."""
         service = ModalService(enabled_config)
-        
+
         mock_client = AsyncMock()
         mock_client.post.side_effect = httpx.TimeoutException("Request timed out")
         service._client = mock_client
-        
+
         with pytest.raises(ModalConnectionError) as exc_info:
             await service.trigger_job(
                 job_id="test-job-123",
                 audio_url="https://storage.example.com/audio.wav",
                 song_id="song-456",
             )
-        
+
         assert "timed out" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
     async def test_check_health_success(self, enabled_config: ModalConfig) -> None:
         """Test successful health check."""
         service = ModalService(enabled_config)
-        
+
         mock_response = MagicMock()
         mock_response.status_code = 200
-        
+
         mock_client = AsyncMock()
         mock_client.get.return_value = mock_response
         service._client = mock_client
-        
+
         is_healthy = await service.check_health()
         assert is_healthy is True
 
@@ -225,11 +227,11 @@ class TestModalService:
     async def test_check_health_failure(self, enabled_config: ModalConfig) -> None:
         """Test health check failure."""
         service = ModalService(enabled_config)
-        
+
         mock_client = AsyncMock()
         mock_client.get.side_effect = httpx.ConnectError("Connection refused")
         service._client = mock_client
-        
+
         is_healthy = await service.check_health()
         assert is_healthy is False
 
@@ -244,13 +246,13 @@ class TestModalService:
     async def test_close_client(self, enabled_config: ModalConfig) -> None:
         """Test closing the HTTP client."""
         service = ModalService(enabled_config)
-        
+
         # Create and get the client
         mock_client = AsyncMock()
         service._client = mock_client
-        
+
         await service.close()
-        
+
         mock_client.aclose.assert_called_once()
         assert service._client is None
 
@@ -291,37 +293,37 @@ class TestFullJobFlowWithModal:
     async def test_job_enqueue_triggers_modal(self, mock_session: AsyncMock) -> None:
         """Test that enqueuing a job triggers Modal dispatch."""
         from app.models.ai_job import AIJob, AIJobState
-        
+
         job_id = uuid.uuid4()
         song_id = uuid.uuid4()
-        
+
         # Mock the job
         mock_job = MagicMock(spec=AIJob)
         mock_job.id = job_id
         mock_job.song_id = song_id
         mock_job.state = AIJobState.QUEUED
-        
+
         # Create Modal service with mocked client
         config = ModalConfig(enabled=True, webhook_url="https://test.modal.run")
         modal_service = ModalService(config)
-        
+
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "accepted": True,
             "call_id": "modal-call-123",
         }
-        
+
         mock_client = AsyncMock()
         mock_client.post.return_value = mock_response
         modal_service._client = mock_client
-        
+
         result = await modal_service.trigger_job(
             job_id=str(job_id),
             audio_url="https://storage.example.com/song.wav",
             song_id=str(song_id),
         )
-        
+
         assert result.accepted is True
         assert result.call_id == "modal-call-123"
 
@@ -330,11 +332,11 @@ class TestFullJobFlowWithModal:
         """Test that Modal failure allows fallback to local processing."""
         config = ModalConfig(enabled=True, webhook_url="https://modal.run/fail")
         service = ModalService(config)
-        
+
         mock_client = AsyncMock()
         mock_client.post.side_effect = httpx.ConnectError("Modal unavailable")
         service._client = mock_client
-        
+
         try:
             await service.trigger_job(
                 job_id="job-123",

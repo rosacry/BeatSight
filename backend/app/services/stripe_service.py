@@ -43,7 +43,7 @@ class StripeService:
         self.pro_monthly_price_id = settings.stripe_pro_monthly_price_id
         self.pro_yearly_price_id = settings.stripe_pro_yearly_price_id
         self.frontend_url = settings.frontend_url or "http://localhost:5173"
-        
+
         if self.secret_key:
             stripe.api_key = self.secret_key
 
@@ -57,7 +57,7 @@ class StripeService:
         user: User,
     ) -> str:
         """Get existing Stripe customer ID or create a new one.
-        
+
         Stores the customer ID in the user's subscription record.
         """
         # Check if user already has a Stripe customer ID
@@ -67,7 +67,7 @@ class StripeService:
             .order_by(Subscription.current_period_start.desc())
         )
         existing_sub = result.scalars().first()
-        
+
         # Look for existing customer ID in transactions
         if existing_sub:
             tx_result = await db.execute(
@@ -91,7 +91,7 @@ class StripeService:
                 "display_name": user.display_name,
             },
         )
-        
+
         logger.info(f"Created Stripe customer {customer.id} for user {user.id}")
         return customer.id
 
@@ -104,7 +104,7 @@ class StripeService:
         cancel_url: str | None = None,
     ) -> dict[str, Any]:
         """Create a Stripe checkout session for subscription.
-        
+
         Returns:
             Dict with session_id and checkout_url
         """
@@ -117,9 +117,11 @@ class StripeService:
             raise ValueError(f"No Stripe price configured for plan: {plan}")
 
         customer_id = await self.get_or_create_customer(db, user)
-        
+
         # Default URLs
-        success_url = success_url or f"{self.frontend_url}/settings/subscription?success=true"
+        success_url = (
+            success_url or f"{self.frontend_url}/settings/subscription?success=true"
+        )
         cancel_url = cancel_url or f"{self.frontend_url}/pricing?cancelled=true"
 
         session = stripe.checkout.Session.create(
@@ -147,8 +149,10 @@ class StripeService:
             allow_promotion_codes=True,
         )
 
-        logger.info(f"Created checkout session {session.id} for user {user.id}, plan {plan}")
-        
+        logger.info(
+            f"Created checkout session {session.id} for user {user.id}, plan {plan}"
+        )
+
         return {
             "session_id": session.id,
             "checkout_url": session.url,
@@ -161,7 +165,7 @@ class StripeService:
         return_url: str | None = None,
     ) -> dict[str, Any]:
         """Create a Stripe customer portal session for managing subscription.
-        
+
         Returns:
             Dict with portal_url
         """
@@ -185,7 +189,7 @@ class StripeService:
         signature: str,
     ) -> dict[str, Any]:
         """Process incoming Stripe webhook.
-        
+
         Returns:
             Dict with event_type and any relevant data
         """
@@ -218,7 +222,7 @@ class StripeService:
         if handler:
             result = await handler(db, data)
             return {"event_type": event_type, "processed": True, **result}
-        
+
         return {"event_type": event_type, "processed": False}
 
     async def _handle_checkout_completed(
@@ -236,8 +240,10 @@ class StripeService:
         customer_id = session.get("customer")
         plan = session.get("metadata", {}).get("plan", "pro_monthly")
 
-        logger.info(f"Checkout completed for user {user_id}, subscription {subscription_id}")
-        
+        logger.info(
+            f"Checkout completed for user {user_id}, subscription {subscription_id}"
+        )
+
         return {
             "user_id": user_id,
             "subscription_id": subscription_id,
@@ -277,7 +283,7 @@ class StripeService:
             .order_by(Subscription.current_period_start.desc())
         )
         subscription = result.scalars().first()
-        
+
         if subscription:
             subscription.status = SubscriptionStatus.CANCELLED
             subscription.plan_code = SubscriptionPlan.FREE
@@ -304,7 +310,7 @@ class StripeService:
             try:
                 stripe_sub = stripe.Subscription.retrieve(subscription_id)
                 user_id = stripe_sub.metadata.get("user_id")
-                
+
                 if user_id:
                     # Record transaction
                     transaction = BillingTransaction(
@@ -318,9 +324,15 @@ class StripeService:
                     )
                     db.add(transaction)
                     await db.commit()
-                    
-                    logger.info(f"Recorded payment of {amount_paid} {currency} for user {user_id}")
-                    return {"user_id": user_id, "amount": amount_paid, "currency": currency}
+
+                    logger.info(
+                        f"Recorded payment of {amount_paid} {currency} for user {user_id}"
+                    )
+                    return {
+                        "user_id": user_id,
+                        "amount": amount_paid,
+                        "currency": currency,
+                    }
             except Exception as e:
                 logger.error(f"Failed to record payment: {e}")
 
@@ -333,12 +345,12 @@ class StripeService:
     ) -> dict[str, Any]:
         """Handle failed payment - mark subscription as past due."""
         subscription_id = invoice.get("subscription")
-        
+
         if subscription_id:
             try:
                 stripe_sub = stripe.Subscription.retrieve(subscription_id)
                 user_id = stripe_sub.metadata.get("user_id")
-                
+
                 if user_id:
                     result = await db.execute(
                         select(Subscription)
@@ -346,12 +358,12 @@ class StripeService:
                         .order_by(Subscription.current_period_start.desc())
                     )
                     subscription = result.scalars().first()
-                    
+
                     if subscription:
                         subscription.status = SubscriptionStatus.PAST_DUE
                         subscription.last_synced_at = datetime.now(timezone.utc)
                         await db.commit()
-                        
+
                         logger.warning(f"Payment failed for user {user_id}")
                         return {"user_id": user_id, "status": "past_due"}
             except Exception as e:
@@ -429,8 +441,10 @@ class StripeService:
             db.add(subscription)
 
         await db.commit()
-        
-        logger.info(f"Synced subscription for user {user_id}: plan={plan}, status={status}")
+
+        logger.info(
+            f"Synced subscription for user {user_id}: plan={plan}, status={status}"
+        )
         return {"user_id": user_id, "plan": plan.value, "status": status.value}
 
     def _get_price_id(self, plan: SubscriptionPlan) -> str | None:

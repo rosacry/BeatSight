@@ -48,9 +48,7 @@ class SongService:
 
     async def get_song(self, song_id: uuid.UUID) -> Song:
         result = await self._session.execute(
-            select(Song)
-            .where(Song.id == song_id)
-            .options(selectinload(Song.maps))
+            select(Song).where(Song.id == song_id).options(selectinload(Song.maps))
         )
         song = result.scalar_one_or_none()
         if not song:

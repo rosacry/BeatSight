@@ -81,7 +81,9 @@ class MessageResponse(BaseModel):
     message: str
 
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED
+)
 async def register(
     request: RegisterRequest,
     background_tasks: BackgroundTasks,
@@ -115,9 +117,7 @@ async def register(
 
     # Send welcome email in background
     email_service = get_email_service()
-    background_tasks.add_task(
-        email_service.send_welcome, user.email, user.display_name
-    )
+    background_tasks.add_task(email_service.send_welcome, user.email, user.display_name)
 
     # Generate tokens
     access_token = auth_service.create_access_token(user.id)
@@ -220,7 +220,7 @@ async def forgot_password(
 ) -> MessageResponse:
     """
     Request a password reset email.
-    
+
     Always returns success to prevent email enumeration attacks.
     """
     auth_service = AuthService(session)

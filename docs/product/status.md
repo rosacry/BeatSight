@@ -66,17 +66,14 @@
 - ✅ **Docker Build Fixes**:
   - Fixed missing `README.md` copy for pyproject.toml metadata (commit fce3e4d)
   - Fixed missing `app/` source copy before pip install (commit b09tbcd)
-  - Docker build now passes: `./scripts/ci-backend-docker.sh`
+  - Docker build now passes via `act`
 
-- ✅ **Local CI Scripts Created** (`scripts/` directory):
-  - `ci-backend-lint.sh` - Ruff lint + format check
-  - `ci-backend-docker.sh` - Docker image build
-  - `ci-backend-test.sh` - pytest (requires Postgres/Redis)
-  - `ci-backend-security.sh` - Bandit + Safety scans
-  - `ci-desktop-build.sh` - dotnet restore + build + test
-  - `ci-ai-pipeline.sh` - AI pipeline pytest
-  - `ci-all.sh` - Runs all checks sequentially
-  - **All scripts match GitHub Actions workflow jobs 1:1**
+- ✅ **Local CI with `act`** (replaced manual scripts):
+  - Uses [`act`](https://github.com/nektos/act) to run **actual GitHub Actions workflows** in Docker
+  - `./scripts/act-local.sh` - Lists jobs and runs them locally
+  - Example: `./scripts/act-local.sh backend-lint` runs the real `ci.yml` backend-lint job
+  - **100% parity with GitHub Actions** - no more "works locally, fails in CI"
+  - Requires: Docker Desktop + `winget install nektos.act`
 
 - ✅ **AI Pipeline Test Import Fixes**:
   - Fixed `ModuleNotFoundError` for `tests.test_utils` 
@@ -88,7 +85,7 @@
   - Backend lint: 0 errors
   - .NET: 90 tests passing
   - AI pipeline: 99 tests passing (2 skipped)
-  - Updated `docs/CONTRIBUTING.md` with requirement to run `./scripts/ci-all.sh` before pushing
+  - Updated `docs/CONTRIBUTING.md` with requirement to run `./scripts/act-local.sh` before pushing
 
 ### Desktop/Web Alignment Audit (Deep Dive)
 

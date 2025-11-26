@@ -69,20 +69,18 @@ Example: `feat(editor): add waveform zoom controls`
 
 1. Update documentation if needed
 2. Add tests for new functionality
-3. **Run local CI checks before pushing:**
+3. **Run local CI checks before pushing** (uses [`act`](https://github.com/nektos/act) to run real GitHub Actions in Docker):
    ```bash
-   # Run all CI checks (recommended before every push)
-   ./scripts/ci-all.sh
+   # List all available CI jobs
+   ./scripts/act-local.sh
    
-   # Or run individual checks:
-   ./scripts/ci-backend-lint.sh      # Ruff lint + format
-   ./scripts/ci-backend-docker.sh    # Docker build
-   ./scripts/ci-backend-test.sh      # pytest (requires Postgres/Redis)
-   ./scripts/ci-backend-security.sh  # Bandit + Safety
-   ./scripts/ci-desktop-build.sh     # dotnet build + test
-   ./scripts/ci-ai-pipeline.sh       # AI pipeline pytest
+   # Run specific jobs:
+   ./scripts/act-local.sh backend-lint       # Ruff lint + format
+   ./scripts/act-local.sh backend-test       # pytest with Postgres/Redis
+   ./scripts/act-local.sh desktop-build      # .NET build + test
+   ./scripts/act-local.sh ai-pipeline-test   # AI pipeline tests
    ```
-   **All checks must pass with no warnings, skips, or errors before pushing.**
+   **All checks must pass before pushing.** Requires Docker Desktop and `act` (`winget install nektos.act`).
 4. Ensure all tests pass: `dotnet test` / `pytest`
 5. Update CHANGELOG.md (if applicable)
 6. Create pull request with:

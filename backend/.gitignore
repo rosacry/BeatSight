@@ -9,3 +9,4 @@ htmlcov/
 .coverage*
 .cache/
 coverage.xml
+.venv-ci-test/

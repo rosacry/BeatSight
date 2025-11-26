@@ -320,9 +320,11 @@ run_train_warmup() {
       --channels-last \
       --seed 1337 \
       --checkpoint-every 1 \
+      --checkpoint-every-batches 25000 \
       --output "${BEATSIGHT_RUN_WARMUP}" \
       --metrics-json "${BEATSIGHT_METRICS_DIR}/prod_combined_warmup.json" \
       --wandb-project beatsight-classifier \
+      --wandb-mode offline \
       --wandb-tags prod_combined_24class richer_subset warmup \
       --wandb-run-name prod_combined_warmup_probe_$(date +%Y%m%d) \
       --grad-accum-steps 1 \
@@ -359,9 +361,11 @@ run_train_quick() {
       --channels-last \
       --seed 1337 \
       --checkpoint-every 10 \
+      --checkpoint-every-batches 25000 \
       --output "${BEATSIGHT_RUN_QUICK}" \
       --metrics-json "${BEATSIGHT_METRICS_DIR}/prod_combined_quick.json" \
       --wandb-project beatsight-classifier \
+      --wandb-mode offline \
       --wandb-tags prod_combined_24class quick_refresh cached \
       --wandb-run-name prod_combined_quick_refresh_$(date +%Y%m%d) \
       ${CLASS_WEIGHTS_FLAG:-} \
@@ -412,8 +416,10 @@ run_train_long() {
       --channels-last \
       --seed 1337 \
       --checkpoint-every 20 \
+      --checkpoint-every-batches 25000 \
       --output "${BEATSIGHT_RUN_LONG}" \
       --metrics-json "${BEATSIGHT_METRICS_DIR}/prod_combined_longrun.json" \
+      --wandb-mode offline \
       --wandb-tags prod_combined_24class full_corpus longrun lr28e5 richer_split \
       --wandb-run-name prod_combined_longrun_lr28e5_$(date +%Y%m%d) \
       ${CLASS_WEIGHTS_FLAG:-} \

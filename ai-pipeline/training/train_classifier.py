@@ -18,7 +18,7 @@ import random
 import warnings
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import torch
 import torch.nn as nn
@@ -337,8 +337,15 @@ def train_epoch(
     grad_clip_norm: Optional[float] = None,
     channels_last: bool = False,
     grad_accum_steps: int = 1,
+    checkpoint_callback: Optional[Callable[[int, int], None]] = None,
+    checkpoint_every_batches: int = 0,
 ) -> tuple[float, float]:
-    """Train for one epoch with optional AMP."""
+    """Train for one epoch with optional AMP and mid-epoch checkpointing.
+    
+    Args:
+        checkpoint_callback: Optional callback(batch_index, total_batches) for mid-epoch saves
+        checkpoint_every_batches: Save checkpoint every N batches (0 disables)
+    """
 
     model.train()
     total_loss = 0.0
@@ -346,6 +353,7 @@ def train_epoch(
     total = 0
     non_blocking = device.type == "cuda"
     accum_steps = max(1, grad_accum_steps)
+    total_batches = len(dataloader)
 
     optimizer.zero_grad(set_to_none=True)
 
@@ -363,7 +371,7 @@ def train_epoch(
 
         if amp_enabled and scaler is not None:
             scaler.scale(loss_for_backward).backward()
-            should_step = batch_index % accum_steps == 0 or batch_index == len(dataloader)
+            should_step = batch_index % accum_steps == 0 or batch_index == total_batches
             if should_step:
                 if grad_clip_norm is not None:
                     scaler.unscale_(optimizer)
@@ -373,7 +381,7 @@ def train_epoch(
                 optimizer.zero_grad(set_to_none=True)
         else:
             loss_for_backward.backward()
-            should_step = batch_index % accum_steps == 0 or batch_index == len(dataloader)
+            should_step = batch_index % accum_steps == 0 or batch_index == total_batches
             if should_step:
                 if grad_clip_norm is not None:
                     clip_grad_norm_(model.parameters(), grad_clip_norm)
@@ -386,6 +394,11 @@ def train_epoch(
         correct += (predicted == labels).sum().item()
 
         pbar.set_postfix({"loss": f"{loss.item():.4f}", "acc": f"{100 * correct / max(total, 1):.2f}%"})
+
+        # Mid-epoch checkpoint (protects against crashes during long epochs)
+        if checkpoint_callback and checkpoint_every_batches > 0:
+            if batch_index % checkpoint_every_batches == 0 and batch_index < total_batches:
+                checkpoint_callback(batch_index, total_batches)
 
     mean_loss = total_loss / max(len(dataloader), 1)
     accuracy = 100 * correct / max(total, 1)
@@ -503,6 +516,12 @@ def main():
         type=int,
         default=0,
         help="Save a training checkpoint every N epochs (0 disables mid-run checkpoints)",
+    )
+    parser.add_argument(
+        "--checkpoint-every-batches",
+        type=int,
+        default=0,
+        help="Save a mid-epoch checkpoint every N batches (0 disables; recommended: 10000-50000 for long epochs)",
     )
     parser.add_argument(
         "--checkpoint-dir",
@@ -903,6 +922,7 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
     checkpoint_dir = Path(args.checkpoint_dir) if args.checkpoint_dir else output_dir / "checkpoints"
     checkpoint_interval = args.checkpoint_every if args.checkpoint_every > 0 else None
+    checkpoint_batch_interval = args.checkpoint_every_batches if args.checkpoint_every_batches > 0 else None
 
     # Training loop
     best_val_acc = 0.0
@@ -911,10 +931,25 @@ def main():
     history: List[Dict[str, float]] = []
     start_epoch = 0
     last_completed_epoch = 0
+    current_batch_in_epoch = 0  # Track batch progress for mid-epoch checkpoints
     resumed_from: Optional[str] = str(args.resume_from) if args.resume_from else None
 
-    def save_checkpoint(epoch_index: int, *, reason: Optional[str] = None) -> Path:
-        """Persist model/optimizer state for later resumption."""
+    def save_checkpoint(
+        epoch_index: int,
+        *,
+        reason: Optional[str] = None,
+        batch_index: Optional[int] = None,
+        total_batches: Optional[int] = None,
+    ) -> Path:
+        """Persist model/optimizer state for later resumption.
+        
+        Args:
+            epoch_index: Current epoch (0-indexed internally, saved as 1-indexed)
+            reason: Optional description for the checkpoint
+            batch_index: If mid-epoch, the current batch number
+            total_batches: If mid-epoch, total batches in the epoch
+        """
+        is_mid_epoch = batch_index is not None
 
         checkpoint_payload = {
             "epoch": int(epoch_index),
@@ -928,15 +963,34 @@ def main():
             "best_epoch": int(best_epoch),
             "best_model_path": str(best_model_path) if best_model_path else None,
             "args": vars(args),
+            # Mid-epoch resume info
+            "batch_index": batch_index,
+            "total_batches": total_batches,
         }
 
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
-        checkpoint_path = checkpoint_dir / f"checkpoint_epoch_{epoch_index:04d}.pth"
+        
+        if is_mid_epoch:
+            # Mid-epoch checkpoint: use a fixed name that gets overwritten
+            checkpoint_path = checkpoint_dir / f"checkpoint_epoch_{epoch_index:04d}_mid.pth"
+        else:
+            # End-of-epoch checkpoint
+            checkpoint_path = checkpoint_dir / f"checkpoint_epoch_{epoch_index:04d}.pth"
+            # Clean up mid-epoch checkpoint when epoch completes
+            mid_epoch_path = checkpoint_dir / f"checkpoint_epoch_{epoch_index:04d}_mid.pth"
+            if mid_epoch_path.exists():
+                mid_epoch_path.unlink()
+                
         torch.save(checkpoint_payload, checkpoint_path)
+        
+        # Always update latest_checkpoint.pth for easy resumption
         latest_path = checkpoint_dir / "latest_checkpoint.pth"
         torch.save(checkpoint_payload, latest_path)
 
-        if reason:
+        if is_mid_epoch:
+            pct = 100 * batch_index / total_batches if total_batches else 0
+            print(f"\n💾 Mid-epoch checkpoint saved (epoch {epoch_index}, batch {batch_index}/{total_batches}, {pct:.0f}%)")
+        elif reason:
             print(f"Checkpoint saved ({reason}) at epoch {epoch_index}")
         else:
             print(f"Checkpoint saved at epoch {epoch_index}")
@@ -1034,6 +1088,15 @@ def main():
                 for group in optimizer.param_groups:
                     group["lr"] = warmup_lr
 
+            # Create mid-epoch checkpoint callback for this epoch
+            def mid_epoch_checkpoint(batch_idx: int, total_batches: int) -> None:
+                save_checkpoint(
+                    epoch + 1,
+                    reason="mid-epoch",
+                    batch_index=batch_idx,
+                    total_batches=total_batches,
+                )
+
             train_loss, train_acc = train_epoch(
                 model,
                 train_loader,
@@ -1046,6 +1109,8 @@ def main():
                 grad_clip_norm=args.grad_clip_norm,
                 channels_last=args.channels_last,
                 grad_accum_steps=args.grad_accum_steps,
+                checkpoint_callback=mid_epoch_checkpoint if checkpoint_batch_interval else None,
+                checkpoint_every_batches=checkpoint_batch_interval or 0,
             )
             val_loss, val_acc = validate(
                 model,

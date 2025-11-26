@@ -23,11 +23,12 @@
 
 set -e
 
-# Find act executable (winget installs to a dynamic path)
+# Add Docker and act to PATH (winget installs to dynamic paths)
+export PATH="$PATH:/c/Program Files/Docker/Docker/resources/bin"
 ACT_PATH=$(find /c/Users/*/AppData/Local/Microsoft/WinGet/Packages -name "act.exe" 2>/dev/null | head -1)
 
 if [[ -z "$ACT_PATH" ]]; then
-    # Try common locations
+    # Try if act is already in PATH
     if command -v act &> /dev/null; then
         ACT_PATH="act"
     else
@@ -53,8 +54,11 @@ if [[ $# -eq 0 ]]; then
     echo "Usage: ./scripts/act-local.sh <job-name>"
     echo "Example: ./scripts/act-local.sh backend-test"
 else
-    echo "=== Running GitHub Actions Job: $1 ==="
+    JOB_NAME="$1"
+    shift
+    echo "=== Running GitHub Actions Job: $JOB_NAME ==="
     echo ""
     # Use medium-sized Ubuntu image for better compatibility
-    "$ACT_PATH" -j "$1" -P ubuntu-latest=catthehacker/ubuntu:act-latest "$@"
+    # -W specifies the workflow file to avoid conflicts with duplicate job names
+    "$ACT_PATH" -j "$JOB_NAME" -W .github/workflows/ci.yml -P ubuntu-latest=catthehacker/ubuntu:act-latest "$@"
 fi

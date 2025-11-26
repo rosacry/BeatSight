@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import json
 import uuid
 from datetime import datetime, timezone
 from typing import AsyncGenerator, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user_optional, get_db_session
-from app.db.redis import ProgressUpdate, RedisKeys, get_redis, subscribe_progress
+from app.db.redis import ProgressUpdate, RedisKeys, get_redis
 from app.models.ai_job import AIJobState
 from app.models.user import User
 from app.schemas.ai_jobs import (
@@ -140,7 +143,6 @@ async def enqueue_job(
             )
     
     # Get queue position
-    queue_length = await ai_service.get_queue_length()
     position = await ai_service.get_queue_position(job.id)
     
     # Estimate wait time (rough: ~3 min per job)
@@ -328,7 +330,7 @@ async def _progress_event_generator(
     # First, send current job status
     job = await service.get_by_id(job_id)
     if not job:
-        yield f"event: error\ndata: {{\"message\": \"Job not found\"}}\n\n"
+        yield "event: error\ndata: {\"message\": \"Job not found\"}\n\n"
         return
     
     # Send initial state
@@ -389,7 +391,7 @@ async def _progress_event_generator(
                 job = await service.get_by_id(job_id)
                 
                 if not job:
-                    yield f"event: error\ndata: {{\"message\": \"Job deleted\"}}\n\n"
+                    yield "event: error\ndata: {\"message\": \"Job deleted\"}\n\n"
                     break
                 
                 if job.state == AIJobState.COMPLETE:
@@ -419,7 +421,7 @@ async def _progress_event_generator(
             
             # Check idle timeout
             if (now - idle_since).total_seconds() >= max_idle:
-                yield f"event: timeout\ndata: {{\"message\": \"Connection timed out due to inactivity\"}}\n\n"
+                yield "event: timeout\ndata: {\"message\": \"Connection timed out due to inactivity\"}\n\n"
                 break
     
     finally:
@@ -429,7 +431,6 @@ async def _progress_event_generator(
 
 def _json_dumps(data: dict) -> str:
     """JSON serialize data, handling None values."""
-    import json
     return json.dumps({k: v for k, v in data.items() if v is not None})
 
 
@@ -489,10 +490,6 @@ async def stream_job_progress(
 # =============================================================================
 # Modal Webhook (Receive results from GPU processing)
 # =============================================================================
-
-from pydantic import BaseModel, Field
-import base64
-import os
 
 
 class ModalJobResult(BaseModel):
@@ -558,9 +555,8 @@ async def modal_webhook(
             beatmap_content = base64.b64decode(result.beatmap)
             
             # Upload to storage
-            from app.services.storage import get_storage, BeatmapStorage
+            from app.services.storage import get_storage
             storage = await get_storage()
-            beatmap_storage = BeatmapStorage(storage)
             
             # Create a map and version for this beatmap
             from app.models.song import Map, MapState

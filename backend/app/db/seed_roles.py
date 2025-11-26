@@ -6,7 +6,6 @@ Run this after database migrations to set up the RBAC system.
 """
 
 import asyncio
-from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

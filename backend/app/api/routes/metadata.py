@@ -12,18 +12,15 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 
 from app.api.deps import get_current_user, get_current_user_optional
 from app.logging import get_logger
 from app.models.user import User
 from app.services.acoustid import (
-    AcoustIDService,
-    MetadataResult,
     get_acoustid_service,
     AcoustIDError,
     FingerprintError,

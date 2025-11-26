@@ -17,7 +17,6 @@ from app.services.modal_gpu import (
     ModalJobError,
     ModalService,
     TriggerResult,
-    get_modal_service,
 )
 
 

@@ -824,7 +824,7 @@ async def get_user_stats(
     
     # Verified users
     verified = (await db.execute(
-        select(func.count(User.id)).where(User.email_verified == True)
+        select(func.count(User.id)).where(User.email_verified.is_(True))
     )).scalar() or 0
     
     # Pro users (active subscription)

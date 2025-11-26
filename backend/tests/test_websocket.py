@@ -4,7 +4,6 @@ Tests for WebSocket job updates endpoint.
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from fastapi.testclient import TestClient
 from fastapi.websockets import WebSocket
 
 from app.api.routes.websocket import ConnectionManager, publish_job_update

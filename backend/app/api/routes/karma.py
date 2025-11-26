@@ -7,14 +7,12 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db_session
-from app.models.karma import KarmaReason
 from app.models.user import User
 from app.services.karma import (
-    InsufficientKarmaError,
     KarmaError,
     KarmaService,
     RoleCode,
@@ -344,7 +342,8 @@ async def get_user_karma(
     service = KarmaService(session)
 
     try:
-        karma = await service.get_user_karma(user_id)
+        # Check if user exists by attempting to get karma
+        await service.get_user_karma(user_id)
     except KarmaError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

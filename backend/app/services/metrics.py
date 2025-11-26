@@ -12,14 +12,13 @@ from __future__ import annotations
 
 import time
 from contextlib import contextmanager
-from typing import Callable, Generator
+from typing import Generator
 
 from prometheus_client import (
     Counter,
     Gauge,
     Histogram,
     Info,
-    CollectorRegistry,
     generate_latest,
     CONTENT_TYPE_LATEST,
     REGISTRY,
@@ -27,7 +26,6 @@ from prometheus_client import (
 from fastapi import FastAPI, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.routing import Match
-from starlette.types import ASGIApp
 
 # =============================================================================
 # Registry & Info

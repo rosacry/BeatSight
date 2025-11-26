@@ -13,15 +13,12 @@ import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, AsyncIterator
+from typing import Any, AsyncIterator
 
 import redis.asyncio as redis
 from redis.asyncio import Redis
 
 from app.config import get_settings
-
-if TYPE_CHECKING:
-    from app.models.ai_job import AIJobPriority
 
 settings = get_settings()
 

@@ -1,8 +1,6 @@
 """Tests for notification service."""
 
 import uuid
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -10,7 +8,6 @@ from app.services.notifications import (
     EmailBackend,
     NotificationEvent,
     NotificationPayload,
-    NotificationResult,
     NotificationService,
     NotificationType,
     WebPushBackend,

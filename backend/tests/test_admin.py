@@ -6,10 +6,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-from fastapi import status
 
 from app.models.ai_job import AIJob, AIJobState, AIJobPriority
 from app.api.routes.admin import (

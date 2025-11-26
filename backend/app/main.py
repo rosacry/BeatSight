@@ -6,7 +6,6 @@ from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
 from fastapi import FastAPI
-from fastapi.openapi.utils import get_openapi
 
 from app.api.routes import admin, ai_jobs, auth, billing, health, karma, map_edits, metadata, roles, songs, storage, sync, verifier, websocket
 from app.config import get_settings

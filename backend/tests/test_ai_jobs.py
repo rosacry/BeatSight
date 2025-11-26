@@ -44,7 +44,7 @@ class TestAIJobService:
         user_id = uuid.uuid4()
         payload = AIJobCreate(song_id=song_id, priority=AIJobPriority.PRIORITY)
 
-        result = await service.enqueue(payload, requested_by=user_id)
+        await service.enqueue(payload, requested_by=user_id)
 
         mock_session.add.assert_called_once()
         added_job = mock_session.add.call_args[0][0]
@@ -63,7 +63,7 @@ class TestAIJobService:
         song_id = uuid.uuid4()
         payload = AIJobCreate(song_id=song_id)
 
-        result = await service.enqueue(payload, requested_by=None)
+        await service.enqueue(payload, requested_by=None)
 
         added_job = mock_session.add.call_args[0][0]
         assert added_job.requested_by_id is None
@@ -75,7 +75,7 @@ class TestAIJobService:
         """Test that jobs default to standard priority."""
         payload = AIJobCreate(song_id=uuid.uuid4())
 
-        result = await service.enqueue(payload, requested_by=None)
+        await service.enqueue(payload, requested_by=None)
 
         added_job = mock_session.add.call_args[0][0]
         assert added_job.priority == AIJobPriority.STANDARD
@@ -459,12 +459,8 @@ class TestWorkerCoordination:
             state=AIJobState.PROCESSING,
             last_heartbeat=now - timedelta(minutes=10),
         )
-        fresh_job = AIJob(
-            id=uuid.uuid4(),
-            song_id=uuid.uuid4(),
-            state=AIJobState.PROCESSING,
-            last_heartbeat=now - timedelta(minutes=2),
-        )
+        # Note: fresh_job would have last_heartbeat=now - timedelta(minutes=2)
+        # but we only test that stale jobs are returned
 
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [stale_job]

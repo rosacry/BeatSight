@@ -7,12 +7,12 @@ They use an in-memory SQLite database for isolation.
 from __future__ import annotations
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from app.models.song import Song, SongStatus
+from app.models.song import Song
 from app.schemas.songs import SongCreate, SongUpdate
 from app.services.songs import SongAlreadyExistsError, SongNotFoundError, SongService
 
@@ -47,7 +47,7 @@ class TestSongService:
             bpm=120,
         )
 
-        result = await service.create_song(payload)
+        await service.create_song(payload)
 
         mock_session.add.assert_called_once()
         mock_session.commit.assert_called_once()

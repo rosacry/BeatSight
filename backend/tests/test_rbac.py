@@ -5,13 +5,11 @@ Ticket E4-001: RBAC System
 """
 
 import uuid
-from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.models.role import Role, UserRole
-from app.models.user import User
 from app.services.rbac import (
     Permission,
     RBACService,

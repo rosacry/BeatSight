@@ -13,14 +13,12 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
-import logging
 import os
 import subprocess
 import tempfile
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
 import httpx
 
@@ -148,7 +146,6 @@ class AcoustIDService:
             api_key: AcoustID API key. Falls back to ACOUSTID_API_KEY env var.
             cache_ttl: Cache TTL in seconds for lookup results.
         """
-        settings = get_settings()
         self.api_key = api_key or os.getenv("ACOUSTID_API_KEY") or os.getenv("ACOUSTID_KEY")
         self.cache_ttl = cache_ttl
         self._cache: dict[str, tuple[datetime, list[AcoustIDResult]]] = {}

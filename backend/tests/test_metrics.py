@@ -5,7 +5,6 @@ Tests for Prometheus metrics service.
 from __future__ import annotations
 
 import pytest
-from unittest.mock import patch
 
 # Skip all tests if prometheus_client is not installed
 pytest.importorskip("prometheus_client")
@@ -33,10 +32,8 @@ from app.services.metrics import (
     update_processing_count,
     record_storage_bytes,
     record_notification_sent,
-    record_notification_rate_limited,
     record_quota_exceeded,
 )
-from prometheus_client import REGISTRY
 
 
 class TestHTTPMetrics:

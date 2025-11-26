@@ -2,9 +2,8 @@
 Tests for rate limiting middleware.
 """
 
-import time
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from fastapi import Request
 from starlette.responses import Response
 
@@ -75,7 +74,7 @@ class TestRateLimitMiddleware:
         request = self._create_request(path="/health")
         call_next = AsyncMock(return_value=Response(content="OK"))
 
-        response = await self.middleware.dispatch(request, call_next)
+        await self.middleware.dispatch(request, call_next)
 
         call_next.assert_called_once()
         self.redis_getter.assert_not_called()
@@ -86,7 +85,7 @@ class TestRateLimitMiddleware:
         request = self._create_request(path="/ws/jobs")
         call_next = AsyncMock(return_value=Response(content="OK"))
 
-        response = await self.middleware.dispatch(request, call_next)
+        await self.middleware.dispatch(request, call_next)
 
         call_next.assert_called_once()
         self.redis_getter.assert_not_called()
@@ -98,7 +97,7 @@ class TestRateLimitMiddleware:
         request = self._create_request(path="/api/test")
         call_next = AsyncMock(return_value=Response(content="OK"))
 
-        response = await self.middleware.dispatch(request, call_next)
+        await self.middleware.dispatch(request, call_next)
 
         call_next.assert_called_once()
 

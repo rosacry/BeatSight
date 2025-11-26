@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -14,7 +12,6 @@ from app.models.sync import (
     SyncAction,
     SyncClient,
     SyncConflict,
-    SyncLog,
     SyncManifestEntry,
     SyncState,
     UserPreferences,

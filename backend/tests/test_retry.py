@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from app.models.ai_job import AIJob, AIJobState
-from app.services.retry import RetryConfig, RetryResult, RetryService
+from app.services.retry import RetryConfig, RetryService
 
 
 class TestRetryConfig:

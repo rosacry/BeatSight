@@ -19,7 +19,7 @@ import pytest
 
 from app.models.ai_job import AIJob, AIJobPriority, AIJobState
 from app.models.song import Song, SongStatus
-from app.models.subscription import Subscription, SubscriptionPlan, SubscriptionStatus
+from app.models.subscription import Subscription, SubscriptionPlan
 from app.models.user import User
 from app.services.ai_jobs import AIJobService
 from app.services.quota import JobPriority, QuotaService
@@ -134,7 +134,7 @@ class TestAIJobQueueIntegration:
             service = AIJobService(mock_session)
             payload = AIJobCreate(song_id=test_song.id, priority=AIJobPriority.STANDARD)
             
-            job = await service.enqueue(payload, requested_by=test_user.id)
+            await service.enqueue(payload, requested_by=test_user.id)
             
             # Verify AIJob was constructed with correct args
             MockAIJob.assert_called_once()

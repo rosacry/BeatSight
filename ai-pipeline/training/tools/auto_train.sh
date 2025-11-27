@@ -78,7 +78,9 @@ V5_GRADIENT_CENTRALIZATION_FLAGS="--use-gradient-centralization"
 # Multi-task learning: velocity + hi-hat openness auxiliary heads (improves feature learning)
 V5_MULTI_TASK_FLAGS="--use-multi-task"
 # Waveform augmentation: audio-level augmentation before spectrogram extraction
-V5_WAVEFORM_AUGMENT_FLAGS="--waveform-augment drum"
+# DISABLED: Bypasses SSD feature cache, reads raw audio from HDD (too slow)
+# Re-enable if dataset is moved to SSD: V5_WAVEFORM_AUGMENT_FLAGS="--waveform-augment drum"
+V5_WAVEFORM_AUGMENT_FLAGS=""
 # FMix: Fourier-domain mixup (better than CutMix for spectrograms)
 V5_FMIX_FLAGS="--use-fmix --fmix-alpha 1.0"
 # Progressive augmentation: starts weak, ramps up during training
@@ -101,7 +103,8 @@ V5_MIXUP_CUTOFF_FLAGS="--mixup-cutoff-ratio 0.85"
 V5_POOLING_FLAGS="--pooling-type asp"
 # Hard Negative Mining: +0.5-1% by focusing on confusing pairs (snare/rimshot, crash/china)
 # Reference: "Training Region-based Object Detectors with Online Hard Example Mining" (CVPR 2016)
-V5_HARD_NEGATIVE_FLAGS="--use-hard-negatives --hnm-strategy curriculum --hnm-ratio 0.7 --hnm-confusion-weight 2.0"
+# Added: Contrastive loss pushes embeddings apart in feature space (+0.3-0.5% on confused pairs)
+V5_HARD_NEGATIVE_FLAGS="--use-hard-negatives --hnm-strategy curriculum --hnm-ratio 0.7 --hnm-confusion-weight 2.0 --hnm-use-contrastive --hnm-margin 0.5"
 # Class weighting for imbalanced dataset: +0.5-1% on rare classes
 V5_CLASS_WEIGHT_FLAGS="--class-weights effective --max-class-weight 10.0"
 # Gradient accumulation for larger effective batch size (32 * 4 = 128)
@@ -1467,21 +1470,28 @@ ENSEMBLE_PY
             mkdir -p "${BEATSIGHT_RUN_CUTTING_EDGE}/audits"
             
             # Run label noise detection
+            # PERF: 16M cached .pt files = high syscall overhead even on NVMe.
+            # Using 12 workers (75% of 16 threads) with prefetch 4 to saturate I/O.
+            # Larger batch (256) amortizes per-batch overhead.
+            # 9800X3D: 8c/16t, leave 4 threads for OS/GPU driver
             PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
               --dataset "${BEATSIGHT_DATASET_DIR}" \
+              --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
               --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
               --epochs 20 \
               --warmup-epochs 2 \
               --scheduler cosine \
-              --batch-size 64 \
+              --batch-size 256 \
               --lr 0.001 \
               --device cuda \
               --train-fraction 0.5 \
               --val-fraction 0.2 \
-              --num-workers 6 \
-              --val-num-workers 4 \
+              --num-workers 12 \
+              --val-num-workers 6 \
+              --prefetch-factor 4 \
               --persistent-workers \
               --pin-memory \
+              --amp-dtype float16 \
               --seed 1337 \
               --output "${BEATSIGHT_RUN_CUTTING_EDGE}/audits" \
               --model-version v2 \
@@ -1522,7 +1532,6 @@ ENSEMBLE_PY
               --output-dir "${BEATSIGHT_RUN_CUTTING_EDGE}/temporal/warmup" \
               --seed 1337 \
               --save-every 10 \
-              --wandb \
               --wandb-project beatsight-temporal
             ;;
         
@@ -1546,7 +1555,6 @@ ENSEMBLE_PY
               --output-dir "${BEATSIGHT_RUN_CUTTING_EDGE}/temporal/quick" \
               --seed 1337 \
               --save-every 10 \
-              --wandb \
               --wandb-project beatsight-temporal
             ;;
         
@@ -1571,7 +1579,6 @@ ENSEMBLE_PY
               --output-dir "${BEATSIGHT_RUN_CUTTING_EDGE}/temporal/long" \
               --seed 1337 \
               --save-every 10 \
-              --wandb \
               --wandb-project beatsight-temporal
             ;;
         
@@ -1613,7 +1620,6 @@ ENSEMBLE_PY
               --output-dir "${BEATSIGHT_RUN_CUTTING_EDGE}/temporal/full" \
               --seed 1337 \
               --save-every 10 \
-              --wandb \
               --wandb-project beatsight-temporal \
               $PRETRAIN_FLAG
             
@@ -1652,7 +1658,6 @@ ENSEMBLE_PY
               --output-dir "${BEATSIGHT_RUN_CUTTING_EDGE}/ultimate/warmup" \
               --seed 1337 \
               --save-every 10 \
-              --wandb \
               --wandb-project beatsight-ultimate
             ;;
         
@@ -1681,7 +1686,6 @@ ENSEMBLE_PY
               --output-dir "${BEATSIGHT_RUN_CUTTING_EDGE}/ultimate/quick" \
               --seed 1337 \
               --save-every 10 \
-              --wandb \
               --wandb-project beatsight-ultimate
             ;;
         
@@ -1710,7 +1714,6 @@ ENSEMBLE_PY
               --output-dir "${BEATSIGHT_RUN_CUTTING_EDGE}/ultimate/long" \
               --seed 1337 \
               --save-every 10 \
-              --wandb \
               --wandb-project beatsight-ultimate
             ;;
         
@@ -1756,7 +1759,6 @@ ENSEMBLE_PY
               --output-dir "${BEATSIGHT_RUN_CUTTING_EDGE}/ultimate/full" \
               --seed 1337 \
               --save-every 10 \
-              --wandb \
               --wandb-project beatsight-ultimate \
               $PRETRAIN_FLAG
             
@@ -1781,9 +1783,14 @@ ENSEMBLE_PY
             
             PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
               --dataset "${BEATSIGHT_DATASET_DIR}" \
+              --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
+              --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
+              --device cuda \
               --epochs 20 \
-              --batch-size 32 \
+              --batch-size 128 \
               --lr 0.001 \
+              --num-workers 2 --val-num-workers 2 --prefetch-factor 4 \
+              --pin-memory --amp-dtype float16 \
               ${V5_ULTIMATE_FLAGS} \
               ${CUTTING_EDGE_MIXUP_FLAGS} \
               ${CUTTING_EDGE_SPECAUGMENT_FLAGS} \
@@ -1795,7 +1802,6 @@ ENSEMBLE_PY
               --output "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/warmup" \
               --seed 1337 \
               --checkpoint-every 5 \
-              --wandb \
               --wandb-project beatsight-v5
             ;;
         
@@ -1806,8 +1812,13 @@ ENSEMBLE_PY
             
             PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
               --dataset "${BEATSIGHT_DATASET_DIR}" \
+              --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
+              --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
+              --device cuda \
+              --num-workers 2 --val-num-workers 2 --prefetch-factor 4 \
+              --pin-memory --amp-dtype float16 \
               --epochs 50 \
-              --batch-size 32 \
+              --batch-size 128 \
               --lr 0.0008 \
               ${V5_ULTIMATE_FLAGS} \
               ${CUTTING_EDGE_MIXUP_FLAGS} \
@@ -1822,7 +1833,6 @@ ENSEMBLE_PY
               --output "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/quick" \
               --seed 1337 \
               --checkpoint-every 10 \
-              --wandb \
               --wandb-project beatsight-v5
             ;;
         
@@ -1834,8 +1844,13 @@ ENSEMBLE_PY
             
             PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
               --dataset "${BEATSIGHT_DATASET_DIR}" \
+              --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
+              --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
+              --device cuda \
+              --num-workers 2 --val-num-workers 2 --prefetch-factor 4 \
+              --pin-memory --amp-dtype float16 \
               --epochs 100 \
-              --batch-size 32 \
+              --batch-size 128 \
               --lr 0.0006 \
               ${V5_ULTIMATE_FLAGS} \
               ${CUTTING_EDGE_MIXUP_FLAGS} \
@@ -1858,7 +1873,6 @@ ENSEMBLE_PY
               --output "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/long" \
               --seed 1337 \
               --checkpoint-every 10 \
-              --wandb \
               --wandb-project beatsight-v5
             ;;
         
@@ -1867,12 +1881,19 @@ ENSEMBLE_PY
             log "   All innovations + Large model + Extended training..."
             log "   + Lookahead + Cosine Warm Restarts + Mixup Cutoff + Self-Distillation Ready..."
             log "   + Attentive Statistics Pooling (Option A enhancement: +0.3-0.5%)..."
+            log "   + Hard Negative Contrastive Loss (embedding-space separation)..."
+            log "   + TTA Validation (3 augmentations for accurate quality estimate)..."
             export WANDB_RUN_GROUP=v5_full_auto
             
             PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
               --dataset "${BEATSIGHT_DATASET_DIR}" \
+              --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
+              --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
+              --device cuda \
+              --num-workers 2 --val-num-workers 2 --prefetch-factor 4 \
+              --pin-memory --amp-dtype float16 \
               --epochs 150 \
-              --batch-size 32 \
+              --batch-size 128 \
               --lr 0.0005 \
               --model-version v5 \
               --v5-size large \
@@ -1887,6 +1908,7 @@ ENSEMBLE_PY
               ${V5_LOOKAHEAD_FLAGS} \
               ${V5_MIXUP_CUTOFF_FLAGS} \
               ${V5_POOLING_FLAGS} \
+              ${V5_HARD_NEGATIVE_FLAGS} \
               ${CUTTING_EDGE_MIXUP_FLAGS} \
               ${CUTTING_EDGE_SPECAUGMENT_FLAGS} \
               ${CUTTING_EDGE_FOCAL_FLAGS} \
@@ -1899,15 +1921,15 @@ ENSEMBLE_PY
               --scheduler cosine_warm_restarts \
               --warm-restart-t0 30 \
               --warm-restart-mult 2 \
-              --warmup-epochs 15 \
-              --warmup-lr-factor 0.1 \
+              --warmup-epochs 20 \
+              --warmup-lr-factor 0.05 \
+              --val-tta --val-tta-augmentations 3 \
               --grad-clip-norm 1.0 \
               --weight-decay 0.01 \
               --channels-last \
               --output "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full" \
               --seed 1337 \
               --checkpoint-every 10 \
-              --wandb \
               --wandb-project beatsight-v5
             
             log ""
@@ -1928,9 +1950,12 @@ ENSEMBLE_PY
             log " 13. Lookahead Optimizer (slow weights for stability)"
             log " 14. Cosine Warm Restarts (escape local minima)"
             log " 15. Mixup Cutoff (cleaner decision boundaries in final phase)"
-            log " 16. Attentive Statistics Pooling (focus on attack transients) [NEW]"
+            log " 16. Attentive Statistics Pooling (focus on attack transients)"
+            log " 17. Hard Negative Contrastive Loss (embedding separation for confused pairs)"
+            log " 18. TTA Validation (accurate quality estimate during training)"
+            log " 19. Extended Warmup (20 epochs for SAM+Lookahead stability)"
             log ""
-            log "📌 NEXT STEP (Optional): Self-Distillation for +1-2% more accuracy"
+            log "📌 NEXT STEP (Recommended): Self-Distillation for +1-2% more accuracy"
             log "   Run: ./auto_train.sh v5-self-distill"
             ;;
         
@@ -1963,8 +1988,13 @@ ENSEMBLE_PY
             
             PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
               --dataset "${BEATSIGHT_DATASET_DIR}" \
+              --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
+              --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
+              --device cuda \
+              --num-workers 2 --val-num-workers 2 --prefetch-factor 4 \
+              --pin-memory --amp-dtype float16 \
               --epochs 150 \
-              --batch-size 32 \
+              --batch-size 128 \
               --lr 0.0005 \
               --model-version v5 \
               --v5-size large \
@@ -1979,6 +2009,7 @@ ENSEMBLE_PY
               ${V5_LOOKAHEAD_FLAGS} \
               ${V5_MIXUP_CUTOFF_FLAGS} \
               ${V5_POOLING_FLAGS} \
+              ${V5_HARD_NEGATIVE_FLAGS} \
               ${CUTTING_EDGE_MIXUP_FLAGS} \
               ${CUTTING_EDGE_SPECAUGMENT_FLAGS} \
               ${CUTTING_EDGE_FOCAL_FLAGS} \
@@ -1991,8 +2022,9 @@ ENSEMBLE_PY
               --scheduler cosine_warm_restarts \
               --warm-restart-t0 30 \
               --warm-restart-mult 2 \
-              --warmup-epochs 15 \
-              --warmup-lr-factor 0.1 \
+              --warmup-epochs 20 \
+              --warmup-lr-factor 0.05 \
+              --val-tta --val-tta-augmentations 3 \
               --grad-clip-norm 1.0 \
               --weight-decay 0.01 \
               --channels-last \
@@ -2002,7 +2034,6 @@ ENSEMBLE_PY
               --output "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/self-distill" \
               --seed 2024 \
               --checkpoint-every 10 \
-              --wandb \
               --wandb-project beatsight-v5
             
             log ""
@@ -2035,7 +2066,6 @@ ENSEMBLE_PY
               --output "${BEATSIGHT_RUN_CUTTING_EDGE}/beats/warmup" \
               --seed 1337 \
               --checkpoint-every 5 \
-              --wandb \
               --wandb-project beatsight-beats
             ;;
         
@@ -2058,7 +2088,6 @@ ENSEMBLE_PY
               --output "${BEATSIGHT_RUN_CUTTING_EDGE}/beats/quick" \
               --seed 1337 \
               --checkpoint-every 5 \
-              --wandb \
               --wandb-project beatsight-beats
             ;;
         
@@ -2085,7 +2114,6 @@ ENSEMBLE_PY
               --output "${BEATSIGHT_RUN_CUTTING_EDGE}/beats/long" \
               --seed 1337 \
               --checkpoint-every 10 \
-              --wandb \
               --wandb-project beatsight-beats
             
             log ""

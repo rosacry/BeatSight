@@ -193,6 +193,135 @@ run_precompute_cache() {
       --cache-dtype float16
 }
 
+run_consolidate_cache() {
+    echo ">>> Consolidating Feature Cache (100x training speedup)..."
+    echo ""
+    echo "  This converts 16M individual .pt files into ~256 memory-mapped shards."
+    echo ""
+    echo "  Benefits:"
+    echo "    • 100x faster training (eliminates syscall overhead)"
+    echo "    • Memory-mapped for zero-copy tensor access"
+    echo "    • OS-level page caching (hot data stays in RAM)"
+    echo ""
+    
+    # Determine input/output paths
+    CACHE_PARENT=$(dirname "${BEATSIGHT_CACHE_DIR}")
+    CACHE_NAME=$(basename "${BEATSIGHT_CACHE_DIR}")
+    CONSOLIDATED_CACHE_DIR="${CACHE_PARENT}/${CACHE_NAME}_consolidated"
+    
+    echo "  Input:  ${BEATSIGHT_CACHE_DIR}"
+    echo "  Output: ${CONSOLIDATED_CACHE_DIR}"
+    echo ""
+    echo "  ⚡ IN-PLACE MODE: Deletes source .pt files after each shard"
+    echo "     Peak storage overhead: ~8 GB (instead of ~500 GB)"
+    echo ""
+    
+    # Check for existing partial conversion
+    RESUME_FLAG=""
+    if [[ -f "${CONSOLIDATED_CACHE_DIR}/train/index.json" ]] || [[ -f "${CONSOLIDATED_CACHE_DIR}/val/index.json" ]]; then
+        echo "  📋 Found existing partial conversion!"
+        echo ""
+        read -p "  Resume previous conversion? [Y/n]: " resume_confirm
+        case "${resume_confirm,,}" in
+            n|no)
+                echo "  → Starting fresh (will overwrite existing shards)"
+                ;;
+            *)
+                RESUME_FLAG="--resume"
+                echo "  → Resuming from checkpoint"
+                ;;
+        esac
+        echo ""
+    fi
+    
+    read -p "  Proceed with in-place consolidation? [Y/n]: " confirm
+    case "${confirm,,}" in
+        n|no)
+            echo "  → Cancelled."
+            return 0
+            ;;
+    esac
+    
+    # Run in-place consolidation for train and val splits
+    # Uses 4 workers to limit peak storage overhead
+    if [[ -n "${RESUME_FLAG}" ]]; then
+        PYTHONPATH=ai-pipeline python -m training.utils.consolidated_cache convert-inplace \
+          --input-dir "${BEATSIGHT_CACHE_DIR}" \
+          --output-dir "${CONSOLIDATED_CACHE_DIR}" \
+          --split train \
+          --split val \
+          --workers 4 \
+          --dtype float16 \
+          ${RESUME_FLAG}
+    else
+        PYTHONPATH=ai-pipeline python -m training.utils.consolidated_cache convert-inplace \
+          --input-dir "${BEATSIGHT_CACHE_DIR}" \
+          --output-dir "${CONSOLIDATED_CACHE_DIR}" \
+          --split train \
+          --split val \
+          --workers 4 \
+          --dtype float16 <<< "y"
+    fi
+    
+    echo ""
+    echo "  ✅ Consolidation complete!"
+    echo ""
+    echo "  The training pipeline will automatically detect and use the consolidated cache."
+    echo "  Empty directories can be cleaned up with:"
+    echo "    find ${BEATSIGHT_CACHE_DIR} -type d -empty -delete"
+    echo ""
+}
+
+run_rebuild_cache() {
+    echo ">>> Full Cache Rebuild (4 + 4c combined)..."
+    echo ""
+    echo "  This runs both steps in sequence:"
+    echo "    1. Precompute Feature Cache (raw audio → .pt files)"
+    echo "    2. Consolidate Cache (.pt files → memory-mapped shards)"
+    echo ""
+    echo "  Use this when:"
+    echo "    • Starting with a new dataset"
+    echo "    • Rebuilding from scratch after changes"
+    echo ""
+    
+    read -p "  Proceed with full cache rebuild? [y/N]: " confirm
+    case "${confirm,,}" in
+        y|yes)
+            echo ""
+            echo "============================================================"
+            echo "Step 1/2: Precomputing Feature Cache..."
+            echo "============================================================"
+            run_precompute_cache
+            
+            echo ""
+            echo "============================================================"
+            echo "Step 2/2: Consolidating Cache..."
+            echo "============================================================"
+            # Run consolidation non-interactively (already confirmed above)
+            CACHE_PARENT=$(dirname "${BEATSIGHT_CACHE_DIR}")
+            CACHE_NAME=$(basename "${BEATSIGHT_CACHE_DIR}")
+            CONSOLIDATED_CACHE_DIR="${CACHE_PARENT}/${CACHE_NAME}_consolidated"
+            
+            PYTHONPATH=ai-pipeline python -m training.utils.consolidated_cache convert-inplace \
+              --input-dir "${BEATSIGHT_CACHE_DIR}" \
+              --output-dir "${CONSOLIDATED_CACHE_DIR}" \
+              --split train \
+              --split val \
+              --workers 4 \
+              --dtype float16 <<< "y"
+            
+            echo ""
+            echo "  ✅ Full cache rebuild complete!"
+            echo "  Empty directories can be cleaned up with:"
+            echo "    find ${BEATSIGHT_CACHE_DIR} -type d -empty -delete"
+            ;;
+        *)
+            echo "  → Cancelled."
+            return 0
+            ;;
+    esac
+}
+
 # Prompt user for resume vs fresh start for training runs
 prompt_training_mode() {
     local run_name="$1"
@@ -856,6 +985,8 @@ while true; do
     echo "║   2) Sanity Snapshot (Metadata)                                     ║"
     echo "║   3) Smoke Tests (pytest)                                           ║"
     echo "║   4) Precompute Feature Cache                                       ║"
+    echo "║   4c) Consolidate Cache (100x speedup)                              ║"
+    echo "║   4r) Rebuild Cache (4 + 4c combined) ⚡ NEW DATA                    ║"
     echo "╠═════════════════════════════════════════════════════════════════════╣"
     echo "║  💎 V5 ULTIMATE - PRODUCTION PATH (⭐ RECOMMENDED)                   ║"
     echo "║─────────────────────────────────────────────────────────────────────║"
@@ -885,6 +1016,8 @@ while true; do
         2) run_sanity_snapshot ;;
         3) run_smoke_tests ;;
         4) run_precompute_cache ;;
+        4c) run_consolidate_cache ;;
+        4r) run_rebuild_cache ;;
         # V5 ULTIMATE: Single Model with All Innovations (⭐ RECOMMENDED)
         14) run_auto_train label-audit ;;
         17a) run_auto_train v5-warmup ;;

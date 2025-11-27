@@ -13,8 +13,8 @@ from training.utils.distillation import (
 from training.utils.stochastic_depth import (
     DropPath,
     StochasticDepthBlock,
-    get_drop_path_rate,
-    apply_stochastic_depth_to_model,
+    get_stochastic_depth_rates,
+    add_drop_path_to_model,
 )
 
 __all__ = [
@@ -39,6 +39,6 @@ __all__ = [
     # Stochastic Depth
     "DropPath",
     "StochasticDepthBlock",
-    "get_drop_path_rate",
-    "apply_stochastic_depth_to_model",
+    "get_stochastic_depth_rates",
+    "add_drop_path_to_model",
 ]

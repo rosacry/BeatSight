@@ -10,7 +10,7 @@ Available Methods:
 - DINO: Self-distillation without labels (coming soon)
 
 Usage:
-    from training.ssl import pretrain_mae, MaskedAutoencoder, UnlabeledDataset
+    from training.ssl_training import pretrain_mae, MaskedAutoencoder, UnlabeledDataset
     
     # Collect unlabeled data
     audio_paths = collect_unlabeled_audio([Path("data/unlabeled")])

@@ -20,7 +20,7 @@ Paper References:
 Expected improvement: +5-10% when pretrained on large unlabeled corpus
 
 Usage:
-    from training.ssl.pretrain import (
+    from training.ssl_training.pretrain import (
         MaskedAutoencoderPretrainer,
         ContrastivePretrainer,
         pretrain_mae,

@@ -189,3 +189,6 @@ site/
 
 # Experiments
 exp/
+
+# Dataset index files (labels cache - regenerated locally)
+data/dataset_index/

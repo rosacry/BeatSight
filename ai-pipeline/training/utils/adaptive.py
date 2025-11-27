@@ -242,7 +242,7 @@ class ProgressiveAugmentation:
         
         lines = ["Progressive Augmentation Schedule:"]
         lines.append("-" * 60)
-        lines.append(f"{'Epoch':>8} | {'Mixup α':>10} | {'CutMix α':>10} | {'SpecAug P':>10}")
+        lines.append(f"{'Epoch':>8} | {'Mixup a':>10} | {'CutMix a':>10} | {'SpecAug P':>10}")
         lines.append("-" * 60)
         
         for epoch in epochs_to_show:

@@ -478,14 +478,14 @@ if __name__ == "__main__":
     
     # Test mixup
     mixed_x, y_a, y_b, lam = mixup_data(features, labels, alpha=0.4)
-    print(f"\nMixup (α=0.4):")
+    print(f"\nMixup (alpha=0.4):")
     print(f"  λ = {lam:.3f}")
     print(f"  y_a: {y_a.tolist()}")
     print(f"  y_b: {y_b.tolist()}")
     
     # Test cutmix
     mixed_x, y_a, y_b, lam = cutmix_data(features, labels, alpha=1.0)
-    print(f"\nCutMix (α=1.0):")
+    print(f"\nCutMix (alpha=1.0):")
     print(f"  λ = {lam:.3f}")
     print(f"  y_a: {y_a.tolist()}")
     print(f"  y_b: {y_b.tolist()}")

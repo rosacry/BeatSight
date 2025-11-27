@@ -11,6 +11,12 @@ from .gradient_centralization import (
     centralize_gradient,
     wrap_optimizer_with_gc,
 )
+from .lookahead import (
+    Lookahead,
+    LookaheadAdam,
+    LookaheadSGD,
+    wrap_with_lookahead,
+)
 
 __all__ = [
     'SAM',
@@ -21,4 +27,9 @@ __all__ = [
     'GradientCentralization',
     'centralize_gradient',
     'wrap_optimizer_with_gc',
+    # Lookahead
+    'Lookahead',
+    'LookaheadAdam',
+    'LookaheadSGD',
+    'wrap_with_lookahead',
 ]

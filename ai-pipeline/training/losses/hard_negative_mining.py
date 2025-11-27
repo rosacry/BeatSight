@@ -14,12 +14,14 @@ This module provides:
 1. Online Hard Negative Mining (OHEM) - Mine within each batch
 2. Semi-Hard Negative Mining - Margin-based selection
 3. Curriculum-aware Mining - Start easy, gradually add hard negatives
+4. Contrastive Loss - Embedding-space separation for confused pairs
 
 Reference:
 - "Training Region-based Object Detectors with Online Hard Example Mining" (CVPR 2016)
 - "FaceNet: A Unified Embedding for Face Recognition and Clustering" (CVPR 2015)
+- "Dimensionality Reduction by Learning an Invariant Mapping" (CVPR 2006) - Contrastive Loss
 
-Expected improvement: +0.5-1% on confusable classes
+Expected improvement: +0.5-1% on confusable classes (+0.3-0.5% with contrastive)
 """
 
 from __future__ import annotations
@@ -56,6 +58,11 @@ class HardNegativeConfig:
     
     # Class confusion weighting
     confusion_weight: float = 2.0  # Extra weight for commonly confused pairs
+    
+    # Contrastive loss (embedding-space separation)
+    use_contrastive: bool = False  # Enable contrastive loss
+    contrastive_margin: float = 0.5  # Margin for contrastive loss
+    contrastive_weight: float = 0.3  # Weight for contrastive term
 
 
 class OnlineHardNegativeMiner(nn.Module):
@@ -300,6 +307,92 @@ class SemiHardNegativeMiner(nn.Module):
         )
 
 
+class ContrastiveLoss(nn.Module):
+    """
+    Contrastive loss for embedding-space separation.
+    
+    Pushes embeddings of different classes apart while pulling same-class
+    embeddings together. This complements cross-entropy by operating in
+    feature space rather than logit space.
+    
+    For drum classification, this helps separate acoustically similar sounds:
+    - Snare vs Rimshot (similar attack characteristics)
+    - Crash vs China (similar frequency content)
+    - Hi-hat closed vs Pedal (similar short duration)
+    
+    Reference: "Dimensionality Reduction by Learning an Invariant Mapping" (CVPR 2006)
+    
+    Args:
+        margin: Minimum distance between different-class embeddings
+        
+    Usage:
+        contrastive = ContrastiveLoss(margin=0.5)
+        embeddings = model.get_embeddings(batch)
+        loss = contrastive(embeddings, labels)
+    """
+    
+    def __init__(self, margin: float = 0.5):
+        super().__init__()
+        self.margin = margin
+    
+    def forward(
+        self,
+        embeddings: torch.Tensor,
+        labels: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Compute contrastive loss.
+        
+        Args:
+            embeddings: Feature embeddings [B, D]
+            labels: Class labels [B]
+            
+        Returns:
+            Contrastive loss (scalar)
+        """
+        B = embeddings.shape[0]
+        device = embeddings.device
+        
+        if B < 2:
+            return torch.tensor(0.0, device=device)
+        
+        # Normalize embeddings for cosine similarity
+        embeddings = F.normalize(embeddings, p=2, dim=1)
+        
+        # Compute pairwise cosine similarity (higher = more similar)
+        similarity = torch.mm(embeddings, embeddings.t())  # [B, B]
+        
+        # Create masks
+        labels_equal = labels.unsqueeze(0) == labels.unsqueeze(1)  # [B, B]
+        labels_not_equal = ~labels_equal
+        
+        # Remove diagonal (self-comparisons)
+        mask_diag = ~torch.eye(B, dtype=torch.bool, device=device)
+        
+        # Positive pairs: same class, should have high similarity (close to 1)
+        pos_mask = labels_equal & mask_diag
+        pos_sim = similarity[pos_mask]
+        
+        # Negative pairs: different class, should have low similarity (below margin)
+        neg_mask = labels_not_equal
+        neg_sim = similarity[neg_mask]
+        
+        # Loss: pull positives together (maximize similarity)
+        if pos_sim.numel() > 0:
+            pos_loss = (1.0 - pos_sim).mean()
+        else:
+            pos_loss = torch.tensor(0.0, device=device)
+        
+        # Loss: push negatives apart (similarity should be below 1 - margin)
+        # Using hinge loss: max(0, similarity - (1 - margin))
+        if neg_sim.numel() > 0:
+            neg_loss = F.relu(neg_sim - (1.0 - self.margin)).mean()
+        else:
+            neg_loss = torch.tensor(0.0, device=device)
+        
+        return pos_loss + neg_loss
+
+
 class HardNegativeLoss(nn.Module):
     """
     Combined loss with hard negative mining.
@@ -329,6 +422,12 @@ class HardNegativeLoss(nn.Module):
         self.miner = OnlineHardNegativeMiner(config)
         self.config = config or HardNegativeConfig()
         
+        # Contrastive loss for embedding-space separation
+        if self.config.use_contrastive:
+            self.contrastive_loss = ContrastiveLoss(margin=self.config.contrastive_margin)
+        else:
+            self.contrastive_loss = None
+        
         self.current_epoch = 0
         self.max_epochs = 100
     
@@ -340,7 +439,8 @@ class HardNegativeLoss(nn.Module):
     def forward(
         self,
         logits: torch.Tensor,
-        targets: torch.Tensor
+        targets: torch.Tensor,
+        embeddings: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         """
         Compute loss with hard negative mining.
@@ -348,6 +448,7 @@ class HardNegativeLoss(nn.Module):
         Args:
             logits: Model predictions [B, num_classes]
             targets: Ground truth labels [B]
+            embeddings: Optional feature embeddings [B, D] for contrastive loss
             
         Returns:
             Mined loss (scalar)
@@ -370,12 +471,18 @@ class HardNegativeLoss(nn.Module):
         weighted_loss = per_sample_loss * mask * confusion_weights
         
         # Mean over selected samples
-        loss = weighted_loss.sum() / (mask.sum() + 1e-6)
+        ce_loss = weighted_loss.sum() / (mask.sum() + 1e-6)
         
         # Update confusion statistics
         self.miner.update_confusion(logits, targets, logits.shape[1])
         
-        return loss
+        # Add contrastive loss if enabled and embeddings provided
+        if self.contrastive_loss is not None and embeddings is not None:
+            contrastive = self.contrastive_loss(embeddings, targets)
+            total_loss = ce_loss + self.config.contrastive_weight * contrastive
+            return total_loss
+        
+        return ce_loss
 
 
 # Common confusion pairs for drum classification

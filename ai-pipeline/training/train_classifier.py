@@ -20,6 +20,14 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
+# Use orjson for memory-efficient JSON parsing (important for large label files)
+try:
+    import orjson
+    HAS_ORJSON = True
+except ImportError:
+    orjson = None  # type: ignore
+    HAS_ORJSON = False
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -221,7 +229,7 @@ except ImportError:
 
 # Optional Self-Training
 try:
-    from training.ssl.self_training import SelfTrainer, run_self_training
+    from training.ssl_training.self_training import SelfTrainer, run_self_training
     HAS_SELF_TRAINING = True
 except ImportError:
     HAS_SELF_TRAINING = False
@@ -236,6 +244,15 @@ except ImportError:
     HAS_GRADIENT_CENTRALIZATION = False
     GradientCentralization = None  # type: ignore
     wrap_optimizer_with_gc = None  # type: ignore
+
+# Optional Lookahead Optimizer (Zhang et al., NeurIPS 2019 - smoother optimization)
+try:
+    from training.optimizers.lookahead import Lookahead, wrap_with_lookahead
+    HAS_LOOKAHEAD = True
+except ImportError:
+    HAS_LOOKAHEAD = False
+    Lookahead = None  # type: ignore
+    wrap_with_lookahead = None  # type: ignore
 
 # Optional Deep Supervision (NEW - auxiliary losses at intermediate layers)
 try:
@@ -296,6 +313,14 @@ except ImportError:
     WaveformAugment = None  # type: ignore
     FastWaveformAugment = None  # type: ignore
     get_waveform_augment = None  # type: ignore
+
+# Consolidated Memory-Mapped Cache (HIGH-PERFORMANCE - 100x faster than individual .pt files)
+try:
+    from training.utils.consolidated_cache import ConsolidatedCacheReader
+    HAS_CONSOLIDATED_CACHE = True
+except ImportError:
+    HAS_CONSOLIDATED_CACHE = False
+    ConsolidatedCacheReader = None  # type: ignore
 
 
 class DrumSampleDataset(Dataset):
@@ -359,19 +384,149 @@ class DrumSampleDataset(Dataset):
             )
             self._amplitude_to_db = ta_T.AmplitudeToDB(stype="power")
 
-        with self.labels_path.open("r", encoding="utf-8") as handle:
-            labels_data = json.load(handle)
+        # Try to load consolidated cache (100x faster than individual .pt files)
+        self._consolidated_reader: Optional[Any] = None
+        if self.cache_dir is not None and HAS_CONSOLIDATED_CACHE:
+            # Check for consolidated cache in cache_dir itself
+            # Expected structure: cache_dir/manifest.json
+            consolidated_manifest = self.cache_dir / "manifest.json"
+            if consolidated_manifest.exists():
+                try:
+                    self._consolidated_reader = ConsolidatedCacheReader(self.cache_dir)
+                    print(f"[CACHE] Using CONSOLIDATED cache: {len(self._consolidated_reader):,} samples, "
+                          f"{self._consolidated_reader.num_shards} shards (100x faster)")
+                except Exception as e:
+                    print(f"[CACHE] Failed to load consolidated cache: {e}")
+                    self._consolidated_reader = None
+            else:
+                # Check for consolidated cache in sibling directory
+                # e.g., cache_dir = .../prod_combined_warmup/train
+                #       consolidated = .../prod_combined_warmup_consolidated/train
+                cache_parent = self.cache_dir.parent  # .../prod_combined_warmup
+                cache_grandparent = cache_parent.parent  # .../feature_cache
+                split_name = self.cache_dir.name  # train
+                consolidated_parent = cache_grandparent / f"{cache_parent.name}_consolidated"
+                consolidated_alt = consolidated_parent / split_name
+                
+                if (consolidated_alt / "manifest.json").exists():
+                    try:
+                        self._consolidated_reader = ConsolidatedCacheReader(consolidated_alt)
+                        print(f"[CACHE] Using CONSOLIDATED cache: {len(self._consolidated_reader):,} samples, "
+                              f"{self._consolidated_reader.num_shards} shards (100x faster)")
+                    except Exception as e:
+                        print(f"[CACHE] Failed to load consolidated cache from {consolidated_alt}: {e}")
+                        self._consolidated_reader = None
+
+        # Load labels - support multiple formats for memory efficiency
+        labels_data = self._load_labels()
         if not isinstance(labels_data, list):
             raise ValueError(f"Expected list of labels in {self.labels_path}, found {type(labels_data)!r}")
         self.labels: List[Dict[str, Any]] = labels_data
+        
+        # Initialize lazy-reload flags (used after pickle/unpickle)
+        self._numpy_needs_reload = False
+        self._consolidated_needs_reload = False
+
+    def _load_labels(self) -> List[Dict[str, Any]]:
+        """Load labels from numpy, JSON, pickle, or sharded pickle format."""
+        import pickle
+        
+        # Check for separate numpy files first (most memory-efficient)
+        # These are created by convert_labels_to_numpy.py as {stem}_files.npy and {stem}_labels.npy
+        npy_files_path = self.labels_path.parent / f"{self.labels_path.stem}_files.npy"
+        npy_labels_path = self.labels_path.parent / f"{self.labels_path.stem}_labels.npy"
+        if npy_files_path.exists() and npy_labels_path.exists():
+            print(f"[LABELS] Loading from numpy files: {npy_files_path.parent}")
+            # Load into RAM (mmap can cause segfaults with certain access patterns)
+            files = np.load(npy_files_path)
+            labels = np.load(npy_labels_path)
+            total_size = npy_files_path.stat().st_size + npy_labels_path.stat().st_size
+            print(f"[LABELS] Loaded {len(labels):,} items from numpy ({total_size / 1e6:.1f} MB)")
+            # Store numpy arrays directly, decode file paths on access
+            self._numpy_files = files
+            self._numpy_labels = labels
+            self._use_numpy = True
+            self._files_are_bytes = files.dtype.kind == 'S'  # Check if byte strings
+            return []  # Return empty list, use numpy arrays directly
+        
+        # Check for combined .npz format (legacy)
+        npz_path = self.labels_path.with_suffix(".npz")
+        if npz_path.exists():
+            print(f"[LABELS] Loading from numpy npz: {npz_path}")
+            data = np.load(npz_path, allow_pickle=False)
+            files = data['files']  # byte strings (S dtype) or unicode (U dtype)
+            labels = data['labels']
+            print(f"[LABELS] Loaded {len(labels):,} items from numpy ({npz_path.stat().st_size / 1e6:.1f} MB)")
+            # Store numpy arrays directly, decode file paths on access
+            self._numpy_files = files
+            self._numpy_labels = labels
+            self._use_numpy = True
+            self._files_are_bytes = files.dtype.kind == 'S'  # Check if byte strings
+            return []  # Return empty list, use numpy arrays directly
+        
+        self._use_numpy = False
+        
+        # Check for sharded pickle directory (memory-efficient streaming)
+        shards_dir = self.labels_path.parent / (self.labels_path.stem + "_shards")
+        if shards_dir.exists() and (shards_dir / "meta.pkl").exists():
+            print(f"[LABELS] Loading from sharded pickles: {shards_dir}")
+            with open(shards_dir / "meta.pkl", "rb") as f:
+                meta = pickle.load(f)
+            items = []
+            for i in range(meta['num_shards']):
+                shard_path = shards_dir / f"shard_{i:04d}.pkl"
+                with open(shard_path, "rb") as f:
+                    shard_data = pickle.load(f)
+                    items.extend(shard_data)
+                    del shard_data  # Free memory immediately
+                if (i + 1) % 5 == 0:
+                    print(f"[LABELS]   Loaded {i+1}/{meta['num_shards']} shards ({len(items):,} items)...")
+            print(f"[LABELS] Loaded {len(items):,} items from {meta['num_shards']} shards")
+            return items
+        
+        # Check for single pickle file
+        pkl_path = self.labels_path.with_suffix(".pkl")
+        if pkl_path.exists():
+            print(f"[LABELS] Loading from pickle: {pkl_path}")
+            with open(pkl_path, "rb") as f:
+                return pickle.load(f)
+        
+        # Fall back to JSON (may OOM for large files)
+        print(f"[LABELS] Loading from JSON: {self.labels_path}")
+        if HAS_ORJSON:
+            with self.labels_path.open("rb") as handle:
+                return orjson.loads(handle.read())
+        else:
+            with self.labels_path.open("r", encoding="utf-8") as handle:
+                return json.load(handle)
 
     def __len__(self) -> int:
+        # Handle case where numpy was not yet reloaded after pickle
+        if getattr(self, '_numpy_needs_reload', False):
+            return getattr(self, '_numpy_length', 0)
+        if getattr(self, '_use_numpy', False):
+            return len(self._numpy_labels)
         return len(self.labels)
 
     def __getitem__(self, idx: int):
-        item = self.labels[idx]
-        audio_path = self.data_dir / item["file"]
-        label = int(item["component_idx"])
+        # Ensure data is loaded (handles lazy reload after unpickling)
+        self._ensure_numpy_loaded()
+        self._ensure_consolidated_cache_loaded()
+        
+        # Get file path and label, supporting both numpy and dict formats
+        if getattr(self, '_use_numpy', False):
+            # Decode bytes to string if needed
+            file_bytes = self._numpy_files[idx]
+            if getattr(self, '_files_are_bytes', False):
+                file_path = file_bytes.decode('utf-8')
+            else:
+                file_path = str(file_bytes)
+            label = int(self._numpy_labels[idx])
+            audio_path = self.data_dir / file_path
+        else:
+            item = self.labels[idx]
+            audio_path = self.data_dir / item["file"]
+            label = int(item["component_idx"])
 
         # If waveform augmentation is enabled, we must recompute spectrograms each time
         # (can't use cached spectrograms since augmentation is stochastic)
@@ -381,7 +536,23 @@ class DrumSampleDataset(Dataset):
             features = self._extract_features(waveform)
             return features.float().contiguous(), label
 
-        # Standard path: use cache if available
+        # FAST PATH: Consolidated memory-mapped cache (100x faster)
+        if self._consolidated_reader is not None:
+            # Build relative path for lookup (audio/XX/filename.pt format)
+            try:
+                relative = audio_path.relative_to(self.data_dir)
+            except ValueError:
+                relative = Path(audio_path.name)
+            cache_key = str(relative.with_suffix(".pt"))
+            
+            features = self._consolidated_reader.get_by_path(cache_key)
+            if features is not None:
+                return features.float().contiguous(), label
+            elif self._cache_debug:
+                print(f"[CONSOLIDATED CACHE MISS] {cache_key}", flush=True)
+            # Fall through to individual file cache or recompute
+
+        # Standard path: use individual .pt file cache if available
         features = None
         cache_path: Optional[Path] = None
         if self.cache_dir is not None:
@@ -470,6 +641,104 @@ class DrumSampleDataset(Dataset):
 
         return mel.unsqueeze(0)
 
+    def __getstate__(self) -> dict:
+        """
+        Prepare state for pickling (required for multiprocessing on Windows).
+        
+        Excludes large numpy arrays and consolidated cache reader since they cannot
+        be efficiently pickled. Workers will reload them on demand.
+        """
+        state = self.__dict__.copy()
+        
+        # Mark that numpy data needs to be reloaded (store metadata only)
+        if getattr(self, '_use_numpy', False):
+            state['_numpy_files'] = None
+            state['_numpy_labels'] = None
+            state['_numpy_needs_reload'] = True
+            # Store the length so __len__ works before reload
+            state['_numpy_length'] = len(self._numpy_labels)
+        
+        # Remove consolidated cache reader - will be re-created in workers
+        state['_consolidated_reader'] = None
+        state['_consolidated_needs_reload'] = self._consolidated_reader is not None
+        
+        # Remove unpicklable transforms (will be re-created)
+        state['_mel_transform'] = None
+        state['_amplitude_to_db'] = None
+        
+        return state
+
+    def __setstate__(self, state: dict) -> None:
+        """
+        Restore state after unpickling.
+        
+        Large data structures are reloaded lazily on first access.
+        """
+        self.__dict__.update(state)
+        
+        # Re-create transforms if torchaudio is enabled
+        if getattr(self, '_torchaudio_enabled', False) and torchaudio is not None and ta_T is not None:
+            self._mel_transform = ta_T.MelSpectrogram(
+                sample_rate=self.sr,
+                n_fft=self.n_fft,
+                hop_length=self.hop_length,
+                win_length=self.win_length,
+                n_mels=self.n_mels,
+                f_max=self.fmax,
+                pad_mode="reflect",
+                power=2.0,
+                center=True,
+                normalized=False,
+            )
+            self._amplitude_to_db = ta_T.AmplitudeToDB(stype="power")
+
+    def _ensure_numpy_loaded(self) -> None:
+        """Lazily reload numpy arrays after unpickling."""
+        if not getattr(self, '_numpy_needs_reload', False):
+            return
+        
+        # Reload from disk
+        npy_files_path = self.labels_path.parent / f"{self.labels_path.stem}_files.npy"
+        npy_labels_path = self.labels_path.parent / f"{self.labels_path.stem}_labels.npy"
+        
+        if npy_files_path.exists() and npy_labels_path.exists():
+            self._numpy_files = np.load(npy_files_path)
+            self._numpy_labels = np.load(npy_labels_path)
+            self._files_are_bytes = self._numpy_files.dtype.kind == 'S'
+        else:
+            raise FileNotFoundError(f"Could not reload numpy labels from {npy_files_path.parent}")
+        
+        self._numpy_needs_reload = False
+
+    def _ensure_consolidated_cache_loaded(self) -> None:
+        """Lazily reload consolidated cache after unpickling."""
+        if not getattr(self, '_consolidated_needs_reload', False):
+            return
+        
+        if self.cache_dir is not None and HAS_CONSOLIDATED_CACHE:
+            # Check for consolidated cache in cache_dir itself
+            consolidated_manifest = self.cache_dir / "manifest.json"
+            if consolidated_manifest.exists():
+                try:
+                    self._consolidated_reader = ConsolidatedCacheReader(self.cache_dir)
+                except Exception:
+                    self._consolidated_reader = None
+            else:
+                # Check for consolidated cache in sibling directory
+                cache_parent = self.cache_dir.parent
+                cache_grandparent = cache_parent.parent
+                split_name = self.cache_dir.name
+                consolidated_parent = cache_grandparent / f"{cache_parent.name}_consolidated"
+                consolidated_alt = consolidated_parent / split_name
+                
+                if (consolidated_alt / "manifest.json").exists():
+                    try:
+                        self._consolidated_reader = ConsolidatedCacheReader(consolidated_alt)
+                    except Exception:
+                        self._consolidated_reader = None
+        
+        self._consolidated_needs_reload = False
+
 
 def _normalize_state_dict_keys(state_dict: Dict[str, torch.Tensor]) -> OrderedDict[str, torch.Tensor]:
     """Strip torch.compile's `_orig_mod.` prefix so checkpoints are portable."""
@@ -545,18 +814,40 @@ def compute_class_weights(
     return weights
 
 
-def stratified_sample_indices(labels: List[Dict[str, Any]], fraction: float, seed: int) -> List[int]:
-    """Create stratified subset indices retaining class balance."""
+def stratified_sample_indices(labels_or_dataset, fraction: float, seed: int) -> List[int]:
+    """Create stratified subset indices retaining class balance.
+    
+    Args:
+        labels_or_dataset: Either a list of label dicts or a DrumSampleDataset
+        fraction: Fraction of samples to keep (0-1)
+        seed: Random seed for reproducibility
+    """
+    # Handle DrumSampleDataset with numpy labels
+    if hasattr(labels_or_dataset, '_use_numpy') and labels_or_dataset._use_numpy:
+        label_array = labels_or_dataset._numpy_labels
+        n_samples = len(label_array)
+        
+        if fraction >= 1.0:
+            return list(range(n_samples))
+        if fraction <= 0.0:
+            raise ValueError("fraction must be greater than 0 when creating a subset")
+        
+        by_class: Dict[int, List[int]] = {}
+        for idx in range(n_samples):
+            component = int(label_array[idx])
+            by_class.setdefault(component, []).append(idx)
+    else:
+        # Original list-of-dicts path
+        labels = labels_or_dataset
+        if fraction >= 1.0:
+            return list(range(len(labels)))
+        if fraction <= 0.0:
+            raise ValueError("fraction must be greater than 0 when creating a subset")
 
-    if fraction >= 1.0:
-        return list(range(len(labels)))
-    if fraction <= 0.0:
-        raise ValueError("fraction must be greater than 0 when creating a subset")
-
-    by_class: Dict[int, List[int]] = {}
-    for idx, item in enumerate(labels):
-        component = int(item.get("component_idx", -1))
-        by_class.setdefault(component, []).append(idx)
+        by_class: Dict[int, List[int]] = {}
+        for idx, item in enumerate(labels):
+            component = int(item.get("component_idx", -1))
+            by_class.setdefault(component, []).append(idx)
 
     rng = random.Random(seed)
     sampled: List[int] = []
@@ -691,12 +982,47 @@ def train_epoch(
             scaler.scale(loss_for_backward).backward()
             should_step = batch_index % accum_steps == 0 or batch_index == total_batches
             if should_step:
-                if grad_clip_norm is not None:
+                if use_sam:
+                    # SAM + AMP: Manual two-step optimization
+                    # Step 1: Unscale gradients and move to adversarial point
                     scaler.unscale_(optimizer)
-                    clip_grad_norm_(model.parameters(), grad_clip_norm)
-                scaler.step(optimizer)
-                scaler.update()
-                optimizer.zero_grad(set_to_none=True)
+                    if grad_clip_norm is not None:
+                        clip_grad_norm_(model.parameters(), grad_clip_norm)
+                    optimizer.first_step(zero_grad=True)
+                    
+                    # Step 2: Compute loss at adversarial point (no scaling needed - manual backward)
+                    with autocast(device_type=device.type, dtype=autocast_dtype, enabled=True):
+                        if use_rdrop and rdrop_criterion is not None:
+                            adv_outputs1 = model(features)
+                            adv_outputs2 = model(features)
+                            if use_mixup:
+                                adv_ce1 = lam * criterion(adv_outputs1, labels_a) + (1 - lam) * criterion(adv_outputs1, labels_b)
+                                adv_ce2 = lam * criterion(adv_outputs2, labels_a) + (1 - lam) * criterion(adv_outputs2, labels_b)
+                                adv_ce = (adv_ce1 + adv_ce2) / 2
+                            else:
+                                adv_ce = (criterion(adv_outputs1, labels) + criterion(adv_outputs2, labels)) / 2
+                            adv_rdrop = rdrop_criterion.compute_kl_loss(adv_outputs1, adv_outputs2)
+                            adv_loss = adv_ce + adv_rdrop
+                        elif use_mixup:
+                            adv_loss = lam * criterion(model(features), labels_a) + (1 - lam) * criterion(model(features), labels_b)
+                        else:
+                            adv_loss = criterion(model(features), labels)
+                    # Use regular backward for adversarial step (gradients already unscaled)
+                    adv_loss.backward()
+                    if grad_clip_norm is not None:
+                        clip_grad_norm_(model.parameters(), grad_clip_norm)
+                    
+                    # Step 3: Apply update using adversarial gradients
+                    optimizer.second_step(zero_grad=True)
+                    scaler.update()
+                else:
+                    if grad_clip_norm is not None:
+                        scaler.unscale_(optimizer)
+                        clip_grad_norm_(model.parameters(), grad_clip_norm)
+                    scaler.step(optimizer)
+                    scaler.update()
+                    optimizer.zero_grad(set_to_none=True)
+                
                 # Update EMA after optimizer step
                 if ema is not None:
                     ema.update(model)
@@ -804,6 +1130,137 @@ def validate(
     return mean_loss, accuracy
 
 
+def validate_with_tta(
+    model: nn.Module,
+    dataloader: DataLoader,
+    criterion: nn.Module,
+    device: torch.device,
+    num_augmentations: int = 3,
+    *,
+    amp_enabled: bool = False,
+    autocast_dtype: Optional[torch.dtype] = None,
+    channels_last: bool = False,
+) -> tuple[float, float]:
+    """
+    Validate the model with Test-Time Augmentation (TTA).
+    
+    Applies multiple augmented views of each sample and averages predictions
+    for more robust accuracy estimation during training.
+    
+    Augmentations used:
+    - Time shift (roll along time axis)
+    - Frequency masking (mask random frequency bands)
+    - Amplitude scaling (slight volume changes)
+    
+    Args:
+        model: Model to evaluate
+        dataloader: Validation data loader
+        criterion: Loss criterion
+        device: Device to run on
+        num_augmentations: Number of augmented views per sample (default: 3)
+        amp_enabled: Use automatic mixed precision
+        autocast_dtype: AMP dtype
+        channels_last: Use channels-last memory format
+        
+    Returns:
+        (mean_loss, accuracy) with TTA
+    """
+    model.eval()
+    total_loss = 0.0
+    correct = 0
+    total = 0
+    non_blocking = device.type == "cuda"
+
+    with torch.no_grad():
+        for features, labels in tqdm(dataloader, desc="Validation (TTA)"):
+            features = features.to(device, non_blocking=non_blocking)
+            labels = labels.to(device, non_blocking=non_blocking)
+            if channels_last:
+                features = features.to(memory_format=torch.channels_last)
+            
+            # Collect predictions from original and augmented views
+            all_logits = []
+            
+            with autocast(device_type=device.type, dtype=autocast_dtype, enabled=amp_enabled):
+                # Original view
+                outputs = model(features)
+                main_outputs = extract_main_output(outputs)
+                all_logits.append(main_outputs)
+                
+                # Augmented views
+                for aug_idx in range(num_augmentations):
+                    aug_features = apply_tta_augmentation(features, aug_idx)
+                    if channels_last:
+                        aug_features = aug_features.to(memory_format=torch.channels_last)
+                    outputs = model(aug_features)
+                    main_outputs = extract_main_output(outputs)
+                    all_logits.append(main_outputs)
+            
+            # Average predictions (in probability space for better calibration)
+            avg_probs = torch.stack([F.softmax(logits, dim=1) for logits in all_logits]).mean(dim=0)
+            avg_logits = torch.log(avg_probs + 1e-8)  # Convert back to log-space for loss
+            
+            # Compute loss on averaged predictions
+            loss = criterion(avg_logits, labels)
+            total_loss += loss.item()
+            
+            # Accuracy from averaged predictions
+            _, predicted = torch.max(avg_probs, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+    mean_loss = total_loss / max(len(dataloader), 1)
+    accuracy = 100 * correct / max(total, 1)
+    return mean_loss, accuracy
+
+
+def apply_tta_augmentation(features: torch.Tensor, aug_idx: int) -> torch.Tensor:
+    """
+    Apply TTA augmentation to spectrogram features.
+    
+    Augmentation types cycle based on aug_idx:
+    - 0: Time shift (roll along time axis)
+    - 1: Frequency masking (mask random frequency bands)
+    - 2: Amplitude scaling
+    - 3+: Combinations
+    
+    Args:
+        features: Input features [B, C, H, W] (spectrogram)
+        aug_idx: Augmentation index to determine which transform
+        
+    Returns:
+        Augmented features
+    """
+    B, C, H, W = features.shape
+    aug_type = aug_idx % 3
+    
+    if aug_type == 0:
+        # Time shift: roll along time axis (W dimension)
+        # Shift by 5-15% of width
+        shift = int(W * (0.05 + 0.1 * (aug_idx // 3) / max(1, aug_idx // 3 + 1)))
+        shift = max(1, min(shift, W // 4))
+        # Randomly choose direction
+        if aug_idx % 2 == 0:
+            shift = -shift
+        return torch.roll(features, shifts=shift, dims=3)
+    
+    elif aug_type == 1:
+        # Frequency masking: mask 1-3 frequency bands
+        aug_features = features.clone()
+        num_masks = 1 + (aug_idx // 3) % 3
+        for _ in range(num_masks):
+            mask_height = max(1, int(H * 0.1))  # 10% of height
+            mask_start = torch.randint(0, max(1, H - mask_height), (1,)).item()
+            aug_features[:, :, mask_start:mask_start + mask_height, :] *= 0.1
+        return aug_features
+    
+    else:  # aug_type == 2
+        # Amplitude scaling: slight volume change
+        # Scale between 0.9 and 1.1
+        scale = 0.9 + 0.2 * ((aug_idx + 1) % 5) / 4
+        return features * scale
+
+
 def main():
     parser = argparse.ArgumentParser(description="Train Drum Classifier CNN")
     parser.add_argument(
@@ -908,6 +1365,15 @@ def main():
         choices=["float32", "float16", "bfloat16"],
         default="float32",
         help="Data type used when persisting cached spectrograms (float16 reduces disk usage by ~2x)",
+    )
+    parser.add_argument(
+        "--labels-cache-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Optional directory containing cached label JSON files (train_labels.json, val_labels.json). "
+            "Use this to read labels from a fast SSD when dataset is on a slow HDD."
+        ),
     )
     parser.add_argument("--num-workers", type=int, help="DataLoader worker processes for training")
     parser.add_argument("--val-num-workers", type=int, help="DataLoader worker processes for validation")
@@ -1396,6 +1862,71 @@ def main():
         default=2.0,
         help="Extra weight for commonly confused class pairs (default: 2.0)",
     )
+    parser.add_argument(
+        "--hnm-use-contrastive",
+        action="store_true",
+        help="Add contrastive loss to push embeddings apart in feature space (+0.3-0.5%% improvement)",
+    )
+    parser.add_argument(
+        "--hnm-margin",
+        type=float,
+        default=0.5,
+        help="Margin for contrastive loss (default: 0.5)",
+    )
+    parser.add_argument(
+        "--hnm-contrastive-weight",
+        type=float,
+        default=0.3,
+        help="Weight for contrastive loss term (default: 0.3)",
+    )
+    
+    # Lookahead Optimizer (Zhang et al., NeurIPS 2019 - smoother optimization)
+    parser.add_argument(
+        "--use-lookahead",
+        action="store_true",
+        help="Wrap optimizer with Lookahead for smoother convergence (+0.5-1%% improvement)",
+    )
+    parser.add_argument(
+        "--lookahead-k",
+        type=int,
+        default=5,
+        help="Lookahead: number of fast steps before slow update (default: 5)",
+    )
+    parser.add_argument(
+        "--lookahead-alpha",
+        type=float,
+        default=0.5,
+        help="Lookahead: interpolation coefficient for slow update (default: 0.5)",
+    )
+    
+    # Mixup Cutoff (disable mixup in final training phase for cleaner decision boundaries)
+    parser.add_argument(
+        "--mixup-cutoff-ratio",
+        type=float,
+        default=1.0,
+        help="Disable mixup after this fraction of training (default: 1.0 = never, 0.85 = disable in final 15%%)",
+    )
+    
+    # Warmup LR Factor (controls initial learning rate during warmup)
+    parser.add_argument(
+        "--warmup-lr-factor",
+        type=float,
+        default=0.1,
+        help="Initial LR multiplier during warmup phase (default: 0.1 = start at 10%% of base LR)",
+    )
+    
+    # Test-Time Augmentation for Validation (more accurate quality estimate)
+    parser.add_argument(
+        "--val-tta",
+        action="store_true",
+        help="Use Test-Time Augmentation during validation for more accurate quality estimates",
+    )
+    parser.add_argument(
+        "--val-tta-augmentations",
+        type=int,
+        default=3,
+        help="Number of augmented views per sample during TTA validation (default: 3)",
+    )
     
     args = parser.parse_args()
 
@@ -1467,10 +1998,18 @@ def main():
     dataset_path = Path(args.dataset)
 
     def resolve_labels(split: str, filename: str) -> Path:
-        """Locate the label JSON, supporting both flat and split-local layouts."""
+        """Locate the label JSON, supporting labels-cache-dir, flat, and split-local layouts."""
+        # First check labels-cache-dir (for fast SSD when dataset is on slow HDD)
+        if args.labels_cache_dir:
+            cached = args.labels_cache_dir / filename
+            if cached.exists():
+                print(f"[LABELS] Using cached labels from fast storage: {cached}")
+                return cached
+        # Then check flat layout
         candidate = dataset_path / filename
         if candidate.exists():
             return candidate
+        # Finally check split-local layout
         nested = dataset_path / split / filename
         if nested.exists():
             return nested
@@ -1525,14 +2064,14 @@ def main():
 
     train_subset_indices = None
     if args.train_fraction < 1.0:
-        train_subset_indices = stratified_sample_indices(train_dataset_full.labels, args.train_fraction, args.subset_seed)
+        train_subset_indices = stratified_sample_indices(train_dataset_full, args.train_fraction, args.subset_seed)
         train_dataset = Subset(train_dataset_full, train_subset_indices)
     else:
         train_dataset = train_dataset_full
 
     val_subset_indices = None
     if args.val_fraction < 1.0:
-        val_subset_indices = stratified_sample_indices(val_dataset_full.labels, args.val_fraction, args.subset_seed)
+        val_subset_indices = stratified_sample_indices(val_dataset_full, args.val_fraction, args.subset_seed)
         val_dataset = Subset(val_dataset_full, val_subset_indices)
     else:
         val_dataset = val_dataset_full
@@ -1774,6 +2313,9 @@ def main():
             ohem_ratio=getattr(args, 'hnm_ratio', 0.7),
             confusion_weight=getattr(args, 'hnm_confusion_weight', 2.0),
             curriculum_epochs=args.epochs,
+            use_contrastive=getattr(args, 'hnm_use_contrastive', False),
+            contrastive_margin=getattr(args, 'hnm_margin', 0.5),
+            contrastive_weight=getattr(args, 'hnm_contrastive_weight', 0.3),
         )
         # Create a per-sample loss criterion for HNM (requires reduction='none')
         if use_focal:
@@ -1840,6 +2382,16 @@ def main():
     elif use_gc and use_sam:
         print("Note: Gradient Centralization is applied within SAM's base optimizer automatically")
     
+    # Apply Lookahead wrapper if requested (Zhang et al., NeurIPS 2019)
+    use_lookahead = args.use_lookahead and HAS_LOOKAHEAD
+    if use_lookahead:
+        optimizer = wrap_with_lookahead(
+            optimizer,
+            k=args.lookahead_k,
+            alpha=args.lookahead_alpha,
+        )
+        print(f"Lookahead enabled: k={args.lookahead_k} steps, alpha={args.lookahead_alpha}")
+    
     for group in optimizer.param_groups:
         group.setdefault("initial_lr", args.lr)
 
@@ -1882,7 +2434,7 @@ def main():
             cutmix_alpha=args.cutmix_alpha,
             prob=args.mixup_prob,
         )
-        print(f"Mixup/CutMix enabled: mixup_α={args.mixup_alpha}, cutmix_α={args.cutmix_alpha}, prob={args.mixup_prob}")
+        print(f"Mixup/CutMix enabled: mixup_alpha={args.mixup_alpha}, cutmix_alpha={args.cutmix_alpha}, prob={args.mixup_prob}")
     
     # Initialize SpecAugment if requested
     specaugment_fn = None
@@ -2156,6 +2708,107 @@ def main():
         if wandb_run is not None:
             wandb_run.log({"status": "initialized"})
     
+    # =========================================================================
+    # LABEL AUDIT MODE (Confident Learning)
+    # =========================================================================
+    if getattr(args, 'clean_labels', False) and HAS_CONFIDENT_LEARNING:
+        print("\n" + "=" * 60)
+        print("LABEL AUDIT MODE (Confident Learning)")
+        print("=" * 60)
+        
+        audit_only = getattr(args, 'label_noise_audit_only', False)
+        noise_threshold = getattr(args, 'label_noise_threshold', 0.5)
+        
+        # First train for a few epochs to get meaningful predictions
+        audit_warmup_epochs = min(5, args.epochs)  # Train for 5 epochs or less
+        print(f"\n[LABEL AUDIT] Training for {audit_warmup_epochs} epochs before audit...")
+        
+        for epoch in range(audit_warmup_epochs):
+            print(f"\nAudit Warmup Epoch {epoch + 1}/{audit_warmup_epochs}")
+            print("-" * 40)
+            
+            train_loss, train_acc = train_epoch(
+                model, train_loader, criterion, optimizer, torch_device,
+                grad_accum_steps=args.grad_accum_steps,
+                scaler=scaler,
+                amp_enabled=amp_enabled,
+                autocast_dtype=autocast_dtype,
+                mixup_fn=None,  # No mixup during audit warmup
+                grad_clip_norm=args.grad_clip_norm if args.grad_clip_norm and args.grad_clip_norm > 0 else None,
+                channels_last=args.channels_last,
+            )
+            val_loss, val_acc = validate(model, val_loader, criterion, torch_device, channels_last=args.channels_last)
+            print(f"Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%")
+            print(f"Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%")
+        
+        print(f"\n[LABEL AUDIT] Running label noise detection...")
+        print(f"  Threshold: {noise_threshold}")
+        print(f"  Audit only: {audit_only}")
+        print(f"  Training samples: {len(train_dataset):,}")
+        
+        # Get class names from components.json if available
+        components_path = Path(args.dataset) / "components.json"
+        class_names = None
+        if components_path.exists():
+            with open(components_path, "r") as f:
+                components = json.load(f)
+                class_names = [c["name"] for c in components]
+                print(f"  Classes: {len(class_names)}")
+        
+        # Run the label audit
+        output_dir = Path(args.output)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        issues, pred_probs = run_label_audit(
+            model=model,
+            dataset=train_dataset,
+            device=torch_device,
+            batch_size=args.batch_size,
+            num_workers=num_workers,
+            output_dir=output_dir,
+            class_names=class_names,
+        )
+        
+        print(f"\n[LABEL AUDIT] Found {len(issues):,} potential label issues ({100*len(issues)/len(train_dataset):.2f}%)")
+        
+        # Save detailed report
+        report_path = output_dir / "label_noise_report.json"
+        report = {
+            "total_samples": len(train_dataset),
+            "issues_found": len(issues),
+            "issues_percent": 100 * len(issues) / len(train_dataset),
+            "threshold": noise_threshold,
+            "class_names": class_names,
+            "top_issues": [issue.to_dict() for issue in issues[:1000]],  # Top 1000 issues
+        }
+        with open(report_path, "w") as f:
+            json.dump(report, f, indent=2)
+        print(f"[LABEL AUDIT] Report saved to: {report_path}")
+        
+        if audit_only:
+            print("\n[LABEL AUDIT] Audit-only mode - exiting without training")
+            print(f"To train with cleaned labels, remove --label-noise-audit-only flag")
+            return
+        
+        # Filter issues based on threshold and continue training with cleaned dataset
+        print(f"\n[LABEL AUDIT] Filtering samples with confidence < {noise_threshold}...")
+        clean_indices = [i for i in range(len(train_dataset)) 
+                        if i not in {issue.index for issue in issues if issue.confidence > noise_threshold}]
+        print(f"[LABEL AUDIT] Keeping {len(clean_indices):,} clean samples ({100*len(clean_indices)/len(train_dataset):.2f}%)")
+        
+        # Update train_dataset to use only clean samples
+        train_dataset = Subset(train_dataset, clean_indices)
+        train_loader = build_loader(
+            train_dataset,
+            batch_size=args.batch_size,
+            shuffle=True,
+            workers=num_workers,
+            prefetch=train_prefetch,
+            persistent=train_persistent,
+        )
+        print(f"[LABEL AUDIT] Updated training dataset and loader")
+        print("=" * 60 + "\n")
+    
     try:
         for epoch in range(start_epoch, args.epochs):
             print(f"\nEpoch {epoch + 1}/{args.epochs}")
@@ -2169,8 +2822,8 @@ def main():
                 if specaugment_fn is not None:
                     specaugment_fn.prob = prog_values["specaugment_prob"]
                 if epoch % 10 == 0 or epoch == start_epoch:
-                    print(f"  Progressive aug: mixup_α={prog_values['mixup_alpha']:.3f}, "
-                          f"cutmix_α={prog_values['cutmix_alpha']:.3f}, "
+                    print(f"  Progressive aug: mixup_alpha={prog_values['mixup_alpha']:.3f}, "
+                          f"cutmix_alpha={prog_values['cutmix_alpha']:.3f}, "
                           f"specaug_p={prog_values['specaugment_prob']:.3f}")
 
             # Update curriculum learning sampler if enabled
@@ -2198,7 +2851,10 @@ def main():
                 )
 
             if args.warmup_epochs > 0 and epoch < args.warmup_epochs:
-                warmup_factor = float(epoch + 1) / float(max(1, args.warmup_epochs))
+                # Linear warmup from (lr * warmup_lr_factor) to lr
+                # warmup_factor goes from warmup_lr_factor at epoch 0 to 1.0 at warmup_epochs-1
+                progress = float(epoch + 1) / float(max(1, args.warmup_epochs))
+                warmup_factor = args.warmup_lr_factor + (1.0 - args.warmup_lr_factor) * progress
                 warmup_lr = args.lr * warmup_factor
                 for group in optimizer.param_groups:
                     group["lr"] = warmup_lr
@@ -2211,6 +2867,15 @@ def main():
                     batch_index=batch_idx,
                     total_batches=total_batches,
                 )
+
+            # Apply mixup cutoff: disable mixup in final phase of training for cleaner decision boundaries
+            epoch_mixup_fn = mixup_fn
+            if mixup_fn is not None and args.mixup_cutoff_ratio < 1.0:
+                training_progress = (epoch + 1) / args.epochs
+                if training_progress > args.mixup_cutoff_ratio:
+                    epoch_mixup_fn = None
+                    if epoch == int(args.epochs * args.mixup_cutoff_ratio):
+                        print(f"  Mixup cutoff: disabled at {training_progress*100:.0f}% of training (epoch {epoch+1})")
 
             train_loss, train_acc = train_epoch(
                 model,
@@ -2226,7 +2891,7 @@ def main():
                 grad_accum_steps=args.grad_accum_steps,
                 checkpoint_callback=mid_epoch_checkpoint if checkpoint_batch_interval else None,
                 checkpoint_every_batches=checkpoint_batch_interval or 0,
-                mixup_fn=mixup_fn,
+                mixup_fn=epoch_mixup_fn,
                 specaugment_fn=specaugment_fn,
                 ema=ema,
                 use_sam=use_sam,
@@ -2239,15 +2904,29 @@ def main():
             if swa_manager is not None:
                 swa_manager.update(model, epoch, args.epochs)
             
-            val_loss, val_acc = validate(
-                model,
-                val_loader,
-                criterion,
-                torch_device,
-                amp_enabled=amp_enabled,
-                autocast_dtype=autocast_dtype,
-                channels_last=args.channels_last,
-            )
+            # Validation with optional TTA
+            use_val_tta = getattr(args, 'val_tta', False)
+            if use_val_tta:
+                val_loss, val_acc = validate_with_tta(
+                    model,
+                    val_loader,
+                    criterion,
+                    torch_device,
+                    num_augmentations=getattr(args, 'val_tta_augmentations', 3),
+                    amp_enabled=amp_enabled,
+                    autocast_dtype=autocast_dtype,
+                    channels_last=args.channels_last,
+                )
+            else:
+                val_loss, val_acc = validate(
+                    model,
+                    val_loader,
+                    criterion,
+                    torch_device,
+                    amp_enabled=amp_enabled,
+                    autocast_dtype=autocast_dtype,
+                    channels_last=args.channels_last,
+                )
 
             history.append(
                 {
@@ -2379,7 +3058,6 @@ def main():
             
             # Save calibration temperature
             calib_path = output_dir / "calibration_temperature.json"
-            import json
             with open(calib_path, "w") as f:
                 json.dump({
                     "temperature": calibrated_temp,

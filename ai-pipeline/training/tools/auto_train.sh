@@ -1470,10 +1470,9 @@ ENSEMBLE_PY
             mkdir -p "${BEATSIGHT_RUN_CUTTING_EDGE}/audits"
             
             # Run label noise detection
-            # PERF: 16M cached .pt files = high syscall overhead even on NVMe.
-            # Using 12 workers (75% of 16 threads) with prefetch 4 to saturate I/O.
-            # Larger batch (256) amortizes per-batch overhead.
-            # 9800X3D: 8c/16t, leave 4 threads for OS/GPU driver
+            # PERF: Using consolidated cache now (100x faster than individual .pt files)
+            # Reduced workers to 4+2 to stay within 32GB RAM limit
+            # Each worker loads ~1GB numpy arrays after pickle fix
             PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
               --dataset "${BEATSIGHT_DATASET_DIR}" \
               --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
@@ -1486,9 +1485,9 @@ ENSEMBLE_PY
               --device cuda \
               --train-fraction 0.5 \
               --val-fraction 0.2 \
-              --num-workers 12 \
-              --val-num-workers 6 \
-              --prefetch-factor 4 \
+              --num-workers 4 \
+              --val-num-workers 2 \
+              --prefetch-factor 2 \
               --persistent-workers \
               --pin-memory \
               --amp-dtype float16 \

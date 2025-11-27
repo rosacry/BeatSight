@@ -456,6 +456,239 @@ run_analysis() {
       --topk-misclassified 100
 }
 
+# ============================================================================
+# CUTTING-EDGE TRAINING (v2 model + Mixup/CutMix)
+# ============================================================================
+# These use the latest improvements:
+#   - v2 model with Squeeze-Excitation attention blocks
+#   - Mixup data augmentation (blends samples for regularization)
+#   - CutMix augmentation (patches samples together)
+#   - Effective class weighting + label smoothing
+
+BEATSIGHT_RUN_CUTTING_EDGE="${BEATSIGHT_RUN_ROOT}/cutting_edge"
+
+# Common cutting-edge flags (v2 model + ALL revolutionary features + Progressive + SAM + SWA + R-Drop + Curriculum + Calibration)
+CUTTING_EDGE_MODEL_FLAGS="--model-version v2 --use-se"
+CUTTING_EDGE_MIXUP_FLAGS="--mixup-alpha 0.4 --cutmix-alpha 1.0 --mixup-prob 0.5"
+CUTTING_EDGE_SPECAUGMENT_FLAGS="--specaugment drum"
+CUTTING_EDGE_FOCAL_FLAGS="--focal-loss --focal-gamma 2.0"
+CUTTING_EDGE_EMA_FLAGS="--use-ema --ema-decay 0.999"
+CUTTING_EDGE_PROGRESSIVE_FLAGS="--progressive-augmentation"
+CUTTING_EDGE_REGULARIZATION_FLAGS="--label-smoothing 0.05"
+CUTTING_EDGE_SAM_FLAGS="--use-sam --sam-rho 0.05"
+CUTTING_EDGE_SWA_FLAGS="--use-swa --swa-start 0.75"
+# R-Drop: Regularized Dropout with consistency loss (0.5-1% improvement)
+# Using alpha=0.3 (conservative) when combined with SAM to avoid over-smoothing
+CUTTING_EDGE_RDROP_FLAGS="--use-rdrop --rdrop-alpha 0.3"
+# Curriculum Learning: Easy-to-hard training progression (0.5-1.5% improvement)
+# Using start-fraction=0.5 (conservative) to avoid overfitting to easy patterns early
+CUTTING_EDGE_CURRICULUM_FLAGS="--use-curriculum --curriculum-start-fraction 0.5 --curriculum-strategy cosine"
+# Temperature Calibration: Post-training confidence calibration (better probability estimates)
+CUTTING_EDGE_CALIBRATION_FLAGS="--calibrate --calibration-method temperature"
+
+# ============================================================================
+# V5 ULTIMATE FLAGS (2024 - All innovations in single model)
+# ============================================================================
+# v5 model combines: CoordAttn + DropPath + DeepSupervision + MultiScale + GradCentralization
+V5_MODEL_FLAGS="--model-version v5 --v5-size medium --drop-path-rate 0.1"
+V5_DEEP_SUPERVISION_FLAGS="--use-deep-supervision --deep-supervision-weights 0.4,0.6"
+V5_GRADIENT_CENTRALIZATION_FLAGS="--use-gradient-centralization"
+
+# BEATs Model Flags (Microsoft's Audio Foundation Model)
+BEATS_MODEL_FLAGS="--model-version beats --beats-freeze-encoder --beats-layer-decay 0.75"
+BEATS_FINETUNE_FLAGS="--model-version beats --beats-layer-decay 0.75"
+
+run_train_cutting_edge_warmup() {
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  🚀 CUTTING-EDGE WARMUP (v2 + ALL Revolutionary Features)"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "  Features enabled:"
+    echo "    ✓ v2 model with Squeeze-Excitation attention (~406K params)"
+    echo "    ✓ Progressive augmentation (starts weak, ramps up)"
+    echo "    ✓ Mixup augmentation (α=0.3) - blends samples"
+    echo "    ✓ CutMix augmentation (α=1.0) - patches samples"
+    echo "    ✓ SpecAugment (drum preset) - time/freq masking"
+    echo "    ✓ Focal Loss (γ=2.0) - focuses on hard examples"
+    echo "    ✓ EMA (decay=0.999) - smoother final weights"
+    echo "    ✓ SAM optimizer (ρ=0.05) - seeks flat minima"
+    echo "    ✓ SWA (start=75%) - weight averaging"
+    echo "    ✓ Effective class weighting + label smoothing (0.1)"
+    echo ""
+    echo "  Expected improvement: 8-18% over baseline v1"
+    echo "  Duration: ~45-60 minutes (8 epochs)"
+    echo ""
+    
+    local output_dir="${BEATSIGHT_RUN_CUTTING_EDGE}/warmup"
+    mkdir -p "$output_dir"
+    
+    echo ">>> Starting Cutting-Edge Warmup Training..."
+    PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
+      --dataset "${BEATSIGHT_DATASET_DIR}" \
+      --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
+      --epochs 8 \
+      --warmup-epochs 2 \
+      --scheduler cosine \
+      --min-lr 0.00002 \
+      --batch-size 128 \
+      --lr 0.0006 \
+      --device cuda \
+      --val-fraction 0.12 \
+      --cache-dtype float16 \
+      --num-workers 6 \
+      --val-num-workers 4 \
+      --prefetch-factor 4 \
+      --val-prefetch-factor 2 \
+      --persistent-workers \
+      --pin-memory \
+      --grad-clip-norm 1.0 \
+      --weight-decay 0.0001 \
+      --channels-last \
+      --seed 1337 \
+      --checkpoint-every 1 \
+      --checkpoint-every-batches 25000 \
+      --output "$output_dir" \
+      --metrics-json "${BEATSIGHT_METRICS_DIR}/cutting_edge_warmup.json" \
+      --wandb-project beatsight-classifier \
+      --wandb-mode offline \
+      --wandb-tags cutting_edge v2_model mixup specaugment focal ema sam swa rdrop curriculum calibration warmup \
+      --wandb-run-name "cutting_edge_warmup_$(date +%Y%m%d_%H%M)" \
+      --class-weights effective \
+      --max-class-weight 10.0 \
+      ${CUTTING_EDGE_MODEL_FLAGS} \
+      ${CUTTING_EDGE_MIXUP_FLAGS} \
+      ${CUTTING_EDGE_SPECAUGMENT_FLAGS} \
+      ${CUTTING_EDGE_FOCAL_FLAGS} \
+      ${CUTTING_EDGE_EMA_FLAGS} \
+      ${CUTTING_EDGE_PROGRESSIVE_FLAGS} \
+      ${CUTTING_EDGE_SAM_FLAGS} \
+      ${CUTTING_EDGE_SWA_FLAGS} \
+      ${CUTTING_EDGE_REGULARIZATION_FLAGS} \
+      ${CUTTING_EDGE_RDROP_FLAGS} \
+      ${CUTTING_EDGE_CURRICULUM_FLAGS} \
+      ${CUTTING_EDGE_CALIBRATION_FLAGS}
+}
+
+run_train_cutting_edge_quick() {
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  🚀 CUTTING-EDGE QUICK (v2 + ALL Revolutionary Features)"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "  Duration: ~2-3 hours (60 epochs)"
+    echo ""
+    
+    local output_dir="${BEATSIGHT_RUN_CUTTING_EDGE}/quick"
+    mkdir -p "$output_dir"
+    
+    echo ">>> Starting Cutting-Edge Quick Training..."
+    PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
+      --dataset "${BEATSIGHT_DATASET_DIR}" \
+      --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
+      --epochs 60 \
+      --warmup-epochs 5 \
+      --scheduler cosine \
+      --min-lr 0.00001 \
+      --batch-size 128 \
+      --lr 0.0005 \
+      --device cuda \
+      --val-fraction 0.2 \
+      --cache-dtype float16 \
+      --num-workers 6 \
+      --val-num-workers 4 \
+      --prefetch-factor 4 \
+      --val-prefetch-factor 2 \
+      --persistent-workers \
+      --pin-memory \
+      --grad-clip-norm 1.0 \
+      --weight-decay 0.0001 \
+      --channels-last \
+      --seed 1337 \
+      --checkpoint-every 10 \
+      --checkpoint-every-batches 25000 \
+      --output "$output_dir" \
+      --metrics-json "${BEATSIGHT_METRICS_DIR}/cutting_edge_quick.json" \
+      --wandb-project beatsight-classifier \
+      --wandb-mode offline \
+      --wandb-tags cutting_edge v2_model mixup specaugment focal ema sam swa rdrop curriculum calibration quick \
+      --wandb-run-name "cutting_edge_quick_$(date +%Y%m%d_%H%M)" \
+      --class-weights effective \
+      --max-class-weight 10.0 \
+      ${CUTTING_EDGE_MODEL_FLAGS} \
+      ${CUTTING_EDGE_MIXUP_FLAGS} \
+      ${CUTTING_EDGE_SPECAUGMENT_FLAGS} \
+      ${CUTTING_EDGE_FOCAL_FLAGS} \
+      ${CUTTING_EDGE_EMA_FLAGS} \
+      ${CUTTING_EDGE_PROGRESSIVE_FLAGS} \
+      ${CUTTING_EDGE_SAM_FLAGS} \
+      ${CUTTING_EDGE_SWA_FLAGS} \
+      ${CUTTING_EDGE_REGULARIZATION_FLAGS} \
+      ${CUTTING_EDGE_RDROP_FLAGS} \
+      ${CUTTING_EDGE_CURRICULUM_FLAGS} \
+      ${CUTTING_EDGE_CALIBRATION_FLAGS}
+}
+
+run_train_cutting_edge_long() {
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  🚀 CUTTING-EDGE LONG (v2 + ALL Revolutionary Features)"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "  Duration: ~10-14 hours (220 epochs)"
+    echo ""
+    
+    local output_dir="${BEATSIGHT_RUN_CUTTING_EDGE}/long"
+    mkdir -p "$output_dir"
+    
+    echo ">>> Starting Cutting-Edge Long Training..."
+    PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
+      --dataset "${BEATSIGHT_DATASET_DIR}" \
+      --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
+      --epochs 220 \
+      --warmup-epochs 10 \
+      --scheduler cosine \
+      --min-lr 0.00001 \
+      --batch-size 128 \
+      --lr 0.0005 \
+      --device cuda \
+      --train-fraction 1.0 \
+      --val-fraction 0.3 \
+      --cache-dtype float16 \
+      --num-workers 6 \
+      --val-num-workers 4 \
+      --prefetch-factor 4 \
+      --val-prefetch-factor 2 \
+      --persistent-workers \
+      --pin-memory \
+      --grad-clip-norm 1.0 \
+      --weight-decay 0.0001 \
+      --channels-last \
+      --seed 1337 \
+      --checkpoint-every 20 \
+      --checkpoint-every-batches 25000 \
+      --output "$output_dir" \
+      --metrics-json "${BEATSIGHT_METRICS_DIR}/cutting_edge_long.json" \
+      --wandb-project beatsight-classifier \
+      --wandb-mode offline \
+      --wandb-tags cutting_edge v2_model mixup specaugment focal ema sam swa rdrop curriculum calibration long \
+      --wandb-run-name "cutting_edge_long_$(date +%Y%m%d_%H%M)" \
+      --class-weights effective \
+      --max-class-weight 10.0 \
+      ${CUTTING_EDGE_MODEL_FLAGS} \
+      ${CUTTING_EDGE_MIXUP_FLAGS} \
+      ${CUTTING_EDGE_SPECAUGMENT_FLAGS} \
+      ${CUTTING_EDGE_FOCAL_FLAGS} \
+      ${CUTTING_EDGE_EMA_FLAGS} \
+      ${CUTTING_EDGE_PROGRESSIVE_FLAGS} \
+      ${CUTTING_EDGE_SAM_FLAGS} \
+      ${CUTTING_EDGE_SWA_FLAGS} \
+      ${CUTTING_EDGE_REGULARIZATION_FLAGS} \
+      ${CUTTING_EDGE_RDROP_FLAGS} \
+      ${CUTTING_EDGE_CURRICULUM_FLAGS} \
+      ${CUTTING_EDGE_CALIBRATION_FLAGS}
+}
+
 # --- Auto-Training Functions (run until complete, auto-resume on crash) ---
 
 run_auto_train() {
@@ -497,33 +730,153 @@ run_auto_train() {
     bash "$script" "$mode"
 }
 
+# --- Legacy Training Menu (archived paths) ---
+
+show_legacy_menu() {
+    while true; do
+        echo
+        echo "┌─────────────────────────────────────────────────────────────────────┐"
+        echo "│  LEGACY TRAINING MODES (for experimentation/research)              │"
+        echo "│  See docs/archive/CUTTING_EDGE_TRAINING_FEATURES_FULL.md          │"
+        echo "├─────────────────────────────────────────────────────────────────────┤"
+        echo "│  BASELINE (v1):                                                    │"
+        echo "│   5a) Train: Warmup Probe                                          │"
+        echo "│   5b) Train: Quick Refresh                                         │"
+        echo "│   5c) Train: Long Run                                              │"
+        echo "├─────────────────────────────────────────────────────────────────────┤"
+        echo "│  CUTTING-EDGE (v2 + Mixup):                                        │"
+        echo "│   7a) Cutting-Edge: Warmup (~1hr)                                  │"
+        echo "│   7b) Cutting-Edge: Quick  (~3hr)                                  │"
+        echo "│   7c) Cutting-Edge: Long   (~12hr)                                 │"
+        echo "│   8a-c) Auto-Train Cutting-Edge (unattended)                       │"
+        echo "├─────────────────────────────────────────────────────────────────────┤"
+        echo "│  ENSEMBLE:                                                         │"
+        echo "│   9a) Ensemble: Warmup (5 models, ~5hr)                            │"
+        echo "│   9b) Ensemble: Quick  (5 models, ~15hr)                           │"
+        echo "│   9c) Ensemble: Long   (5 models, ~60hr)                           │"
+        echo "├─────────────────────────────────────────────────────────────────────┤"
+        echo "│  TRANSFORMER:                                                      │"
+        echo "│   10a) AST: Warmup (~1hr)                                          │"
+        echo "│   10b) AST: Quick  (~3hr)                                          │"
+        echo "│   10c) AST: Long   (~12hr)                                         │"
+        echo "├─────────────────────────────────────────────────────────────────────┤"
+        echo "│  DISTILLATION:                                                     │"
+        echo "│   11a) Distill: Quick (~2hr)                                       │"
+        echo "│   11b) Distill: Long  (~8hr)                                       │"
+        echo "├─────────────────────────────────────────────────────────────────────┤"
+        echo "│  ENHANCED v4:                                                      │"
+        echo "│   12a) Enhanced: Warmup (~2hr)                                     │"
+        echo "│   12b) Enhanced: Quick  (~6hr)                                     │"
+        echo "│   12c) Enhanced: Long   (~18hr)                                    │"
+        echo "├─────────────────────────────────────────────────────────────────────┤"
+        echo "│  SSL PRETRAINING:                                                  │"
+        echo "│   13a) SSL: Warmup (~4hr)                                          │"
+        echo "│   13b) SSL: Full   (~12hr)                                         │"
+        echo "├─────────────────────────────────────────────────────────────────────┤"
+        echo "│  TEMPORAL MAMBA (Novel Research):                                  │"
+        echo "│   15a-d) Temporal models (~3-24hr)                                 │"
+        echo "├─────────────────────────────────────────────────────────────────────┤"
+        echo "│  ULTIMATE (Wav2Vec2+MultiRes+Mamba):                               │"
+        echo "│   16a-d) Ultimate models (~5-40hr)                                 │"
+        echo "├─────────────────────────────────────────────────────────────────────┤"
+        echo "│  BEATs (Microsoft Audio Foundation):                               │"
+        echo "│   18a) BEATs: Warmup (~1hr)                                        │"
+        echo "│   18b) BEATs: Quick  (~4hr)                                        │"
+        echo "│   18c) BEATs: Long   (~12hr)                                       │"
+        echo "├─────────────────────────────────────────────────────────────────────┤"
+        echo "│   back) Return to main menu                                        │"
+        echo "└─────────────────────────────────────────────────────────────────────┘"
+        read -p "Select legacy mode: " legacy_choice
+
+        case $legacy_choice in
+            # Baseline
+            5a) run_train_warmup; break ;;
+            5b) run_train_quick; break ;;
+            5c) run_train_long; break ;;
+            # Auto-training baseline
+            6a) run_auto_train warmup; break ;;
+            6b) run_auto_train quick; break ;;
+            6c) run_auto_train long; break ;;
+            # Cutting-edge
+            7a) run_train_cutting_edge_warmup; break ;;
+            7b) run_train_cutting_edge_quick; break ;;
+            7c) run_train_cutting_edge_long; break ;;
+            8a) run_auto_train cutting-edge-warmup; break ;;
+            8b) run_auto_train cutting-edge-quick; break ;;
+            8c) run_auto_train cutting-edge-long; break ;;
+            # Ensemble
+            9a) run_auto_train ensemble-warmup; break ;;
+            9b) run_auto_train ensemble-quick; break ;;
+            9c) run_auto_train ensemble-long; break ;;
+            # AST Transformer
+            10a) run_auto_train ast-warmup; break ;;
+            10b) run_auto_train ast-quick; break ;;
+            10c) run_auto_train ast-long; break ;;
+            # Distillation
+            11a) run_auto_train distill-quick; break ;;
+            11b) run_auto_train distill-long; break ;;
+            # Enhanced v4
+            12a) run_auto_train enhanced-warmup; break ;;
+            12b) run_auto_train enhanced-quick; break ;;
+            12c) run_auto_train enhanced-long; break ;;
+            # SSL Pretraining
+            13a) run_auto_train ssl-pretrain-warmup; break ;;
+            13b) run_auto_train ssl-pretrain-full; break ;;
+            # Temporal Mamba
+            15a) run_auto_train temporal-warmup; break ;;
+            15b) run_auto_train temporal-quick; break ;;
+            15c) run_auto_train temporal-long; break ;;
+            15d) run_auto_train temporal-full; break ;;
+            # Ultimate
+            16a) run_auto_train ultimate-warmup; break ;;
+            16b) run_auto_train ultimate-quick; break ;;
+            16c) run_auto_train ultimate-long; break ;;
+            16d) run_auto_train ultimate-full; break ;;
+            # BEATs
+            18a) run_auto_train beats-warmup; break ;;
+            18b) run_auto_train beats-quick; break ;;
+            18c) run_auto_train beats-long; break ;;
+            # Return
+            back|b) return ;;
+            *) echo "Invalid option." ;;
+        esac
+    done
+}
+
 # --- Interactive Menu ---
 
 while true; do
     echo
-    echo "========================================="
-    echo "   BeatSight Post-Export Checklist"
-    echo "========================================="
-    echo " 0) Sync W&B (Offline Runs)"
-    echo " 1) Dataset Health Check"
-    echo " 2) Sanity Snapshot (Metadata)"
-    echo " 3) Smoke Tests (pytest)"
-    echo " 4) Precompute Feature Cache"
-    echo "-----------------------------------------"
-    echo " MANUAL TRAINING (interactive):"
-    echo " 5a) Train: Warmup Probe (Recommended First)"
-    echo " 5b) Train: Quick Refresh"
-    echo " 5c) Train: Long Run"
-    echo "-----------------------------------------"
-    echo " 🤖 AUTO-TRAINING (unattended, crash-proof):"
-    echo " 6a) Auto-Train: Warmup (runs until complete)"
-    echo " 6b) Auto-Train: Quick  (runs until complete)"
-    echo " 6c) Auto-Train: Long   (runs until complete)"
-    echo "-----------------------------------------"
-    echo " 7) Evaluation (Validation Snapshot)"
-    echo " 8) Analysis (Post-Run)"
-    echo " q) Quit"
-    echo "========================================="
+    echo "╔═════════════════════════════════════════════════════════════════════╗"
+    echo "║               BeatSight Post-Export Checklist                       ║"
+    echo "╠═════════════════════════════════════════════════════════════════════╣"
+    echo "║  UTILITIES:                                                         ║"
+    echo "║   0) Sync W&B (Offline Runs)                                        ║"
+    echo "║   1) Dataset Health Check                                           ║"
+    echo "║   2) Sanity Snapshot (Metadata)                                     ║"
+    echo "║   3) Smoke Tests (pytest)                                           ║"
+    echo "║   4) Precompute Feature Cache                                       ║"
+    echo "╠═════════════════════════════════════════════════════════════════════╣"
+    echo "║  💎 V5 ULTIMATE - PRODUCTION PATH (⭐ RECOMMENDED)                   ║"
+    echo "║─────────────────────────────────────────────────────────────────────║"
+    echo "║   14)  Label Audit: Find noisy labels (~30min) ⭐ RUN FIRST!        ║"
+    echo "║   17a) V5: Warmup - validates all innovations (~2hr)                ║"
+    echo "║   17b) V5: Quick  - all innovations in one (~5hr)                   ║"
+    echo "║   17c) V5: Long   - production quality (~12hr)                      ║"
+    echo "║   17d) V5: Full   - large model, max quality (~24hr) ⭐ RECOMMENDED ║"
+    echo "║   17e) V5: Self-Distill - Born-Again +1-2% (~24hr)                  ║"
+    echo "║                                                                     ║"
+    echo "║   ⭐ PATH: 14 → 17a → 17d → 17e (~50.5 hours total)                 ║"
+    echo "╠═════════════════════════════════════════════════════════════════════╣"
+    echo "║  EVALUATION & ANALYSIS:                                             ║"
+    echo "║   eval)    Evaluation (Validation Snapshot)                         ║"
+    echo "║   analyze) Analysis (Post-Run)                                      ║"
+    echo "╠═════════════════════════════════════════════════════════════════════╣"
+    echo "║  LEGACY OPTIONS (see docs/archive for details):                     ║"
+    echo "║   legacy) Show all legacy training modes                            ║"
+    echo "╠═════════════════════════════════════════════════════════════════════╣"
+    echo "║   q) Quit                                                           ║"
+    echo "╚═════════════════════════════════════════════════════════════════════╝"
     read -p "Select a step to run: " choice
 
     case $choice in
@@ -532,16 +885,20 @@ while true; do
         2) run_sanity_snapshot ;;
         3) run_smoke_tests ;;
         4) run_precompute_cache ;;
-        5a) run_train_warmup ;;
-        5b) run_train_quick ;;
-        5c) run_train_long ;;
-        6a) run_auto_train warmup ;;
-        6b) run_auto_train quick ;;
-        6c) run_auto_train long ;;
-        7) run_eval ;;
-        8) run_analysis ;;
+        # V5 ULTIMATE: Single Model with All Innovations (⭐ RECOMMENDED)
+        14) run_auto_train label-audit ;;
+        17a) run_auto_train v5-warmup ;;
+        17b) run_auto_train v5-quick ;;
+        17c) run_auto_train v5-long ;;
+        17d) run_auto_train v5-full ;;
+        17e) run_auto_train v5-self-distill ;;
+        # Evaluation & Analysis
+        eval) run_eval ;;
+        analyze) run_analysis ;;
+        # Legacy menu
+        legacy) show_legacy_menu ;;
         q|Q) echo "Exiting."; exit 0 ;;
-        *) echo "Invalid option." ;;
+        *) echo "Invalid option. Use 'legacy' to see all training modes." ;;
     esac
     
     echo

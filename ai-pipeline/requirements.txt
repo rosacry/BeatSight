@@ -88,6 +88,7 @@ threadpoolctl==3.6.0
 tomli==2.3.0
 torch==2.4.1
 torchaudio==2.4.1
+transformers>=4.35.0
 tqdm==4.67.1
 treetable==0.2.6
 triton==3.0.0

@@ -69,9 +69,10 @@ source ai-pipeline/training/tools/beatsight_env.sh
 
 ## 5. Active Workstreams (sync with status doc)
 
+- **⭐ AI Training:** Run Path G (V5 Ultimate, modes 17a-17d) via `post_export_commands.sh` - this is the recommended default for production
 - **Storage migration:** move the production dataset to the new HDD mount; verify permissions so the training pipeline can stream directly
 - **Probe evaluation:** follow the warm-up probe notes in `docs/ml_training_runbook.md` before kicking off long trainings
-- **Desktop polishing:** see the “Critical Actions” section in `docs/product/status.md` for the UI backlog
+- **Desktop polishing:** see the "Critical Actions" section in `docs/product/status.md` for the UI backlog
 
 Always record progress in `docs/product/status.md`; we archive completed milestones from there into `docs/product/roadmap.md`.
 

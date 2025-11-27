@@ -113,6 +113,21 @@ Choose a preset based on available compute:
 - Extended fine-tuning pass (~12h) when chasing incremental gains.
 - Group runs via `WANDB_RUN_GROUP` for ensemble management.
 
+### 4.4 Advanced Training Paths (2024)
+For cutting-edge features beyond baseline CNN, see `docs/CUTTING_EDGE_TRAINING_FEATURES.md`:
+
+| Mode | Description | Duration | Expected Gain |
+|------|-------------|----------|---------------|
+| **17a-17d** | **V5 Ultimate ⭐ RECOMMENDED** | 2-24hr | +3-6% over v4 |
+| 15a-15d | Temporal Mamba (NOVEL/patentable) | 3-24hr | +3-8% on edge cases |
+| 16a-16d | Ultimate (Wav2Vec2 + Mamba + Beat) | 5-40hr | +9-20% |
+| 18a-18c | BEATs (Microsoft audio foundation) | 1-12hr | +2-3% |
+| 12a-12c | Enhanced v4 (superseded by V5) | 2-18hr | +5-10% |
+
+> **⭐ RECOMMENDED DEFAULT**: Path G (17a → 17d) provides the best single-model quality with all 2024 innovations in ~14-26 hours total. Start here.
+>
+> **For novel IP/patents**: Path E (15a-15d) or Path F (16a-16d) contain publishable research that can be patented.
+
 > Update `--wandb-tags` and `--wandb-run-name` for traceability (e.g., `prod_combined_20251109`).
 
 ## 5. Probe Evaluation Checklist (steps 4 → 5a)

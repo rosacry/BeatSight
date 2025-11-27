@@ -100,20 +100,35 @@ If you want the model to be **exceptional and extraordinary**, the bottleneck is
 
 ### 2. Architecture Improvements (High Impact, Minimal Compute Cost)
 
-- Consider adding **Squeeze-Excitation blocks** for channel attention
-- Experiment with **EfficientNet-style** compound scaling
-- Add **temporal context** via LSTM/Transformer head on top of CNN
+- ✅ **Squeeze-Excitation blocks** implemented → `transcription/ml_drum_classifier_v2.py`
+  - `DrumClassifierCNNv2` is a drop-in replacement with channel attention
+  - Configurable width/depth multipliers for scaling
+  - ~10% more parameters with SE enabled, minimal compute overhead
+- Experiment with **EfficientNet-style** compound scaling (supported via `width_mult`, `depth_mult`)
+- Add **temporal context** via LSTM/Transformer head on top of CNN (future work)
 
 ### 3. Training Refinements (Already Partially Implemented)
 
 - Class weighting (`sqrt`, `log`, `effective` strategies) ✓
 - Label smoothing ✓
-- Mixup/CutMix augmentation (not yet implemented—high value)
+- ✅ **Mixup/CutMix augmentation** implemented → `training/augmentation/mixup.py`
+  - Ready to integrate: add `--mixup-alpha 0.4 --cutmix-alpha 1.0` to training
+  - Includes uncertainty visualization tools
+  - See module docstring for training loop integration
 
 ### 4. Ensemble Methods (For Production)
 
-- Train 3-5 models with different seeds
-- Average predictions for ~2-3% accuracy boost at inference
+- ✅ **Ensemble inference** implemented → `transcription/ensemble.py`
+  - `EnsembleClassifier` combines 3-5 models with weighted averaging
+  - Uncertainty estimation via model disagreement
+  - Supports both v1 and v2 architectures
+  - Usage: Train multiple runs with different seeds, then combine:
+    ```python
+    ensemble = EnsembleClassifier(
+        model_paths=["runs/seed_1337/best.pth", "runs/seed_42/best.pth"],
+        weights=[0.6, 0.4],  # Weight by val accuracy
+    )
+    ```
 
 ---
 

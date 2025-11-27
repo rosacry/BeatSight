@@ -59,6 +59,244 @@ from transcription.ml_drum_classifier import DrumClassifierCNN
 from training.common_paths import dataset_root as default_dataset_root
 from training.common_paths import feature_cache_root as default_feature_cache_root
 
+# Optional v2 model with Squeeze-Excitation attention
+try:
+    from transcription.ml_drum_classifier_v2 import DrumClassifierCNNv2
+    HAS_V2_MODEL = True
+except ImportError:
+    HAS_V2_MODEL = False
+    DrumClassifierCNNv2 = None  # type: ignore
+
+# Optional Mixup/CutMix augmentation
+try:
+    from training.augmentation.mixup import MixupCutmix, mixed_criterion
+    HAS_MIXUP = True
+except ImportError:
+    HAS_MIXUP = False
+    MixupCutmix = None  # type: ignore
+    mixed_criterion = None  # type: ignore
+
+# Optional SpecAugment
+try:
+    from training.augmentation.specaugment import SpecAugment, get_specaugment
+    HAS_SPECAUGMENT = True
+except ImportError:
+    HAS_SPECAUGMENT = False
+    SpecAugment = None  # type: ignore
+    get_specaugment = None  # type: ignore
+
+# Optional Focal Loss
+try:
+    from training.losses.focal_loss import FocalLoss, FocalLossWithMixup, get_focal_loss
+    HAS_FOCAL_LOSS = True
+except ImportError:
+    HAS_FOCAL_LOSS = False
+    FocalLoss = None  # type: ignore
+    FocalLossWithMixup = None  # type: ignore
+    get_focal_loss = None  # type: ignore
+
+# Optional EMA (Exponential Moving Average)
+try:
+    from training.utils.ema import ModelEMA, get_ema_decay
+    HAS_EMA = True
+except ImportError:
+    HAS_EMA = False
+    ModelEMA = None  # type: ignore
+    get_ema_decay = None  # type: ignore
+
+# Optional Progressive/Adaptive Augmentation
+try:
+    from training.utils.adaptive import ProgressiveAugmentation, get_recommended_schedules
+    HAS_PROGRESSIVE = True
+except ImportError:
+    HAS_PROGRESSIVE = False
+    ProgressiveAugmentation = None  # type: ignore
+    get_recommended_schedules = None  # type: ignore
+
+# Optional SAM (Sharpness-Aware Minimization) optimizer
+try:
+    from training.optimizers.sam import SAM, ESAM, enable_running_stats, disable_running_stats
+    HAS_SAM = True
+except ImportError:
+    HAS_SAM = False
+    SAM = None  # type: ignore
+    ESAM = None  # type: ignore
+    enable_running_stats = None  # type: ignore
+    disable_running_stats = None  # type: ignore
+
+# Optional SWA (Stochastic Weight Averaging)
+try:
+    from training.utils.swa import SWAManager, SWAPlusEMA
+    HAS_SWA = True
+except ImportError:
+    HAS_SWA = False
+    SWAManager = None  # type: ignore
+    SWAPlusEMA = None  # type: ignore
+
+# Optional R-Drop (Regularized Dropout)
+try:
+    from training.losses.rdrop import RDropLoss, rdrop_forward, get_rdrop_loss
+    HAS_RDROP = True
+except ImportError:
+    HAS_RDROP = False
+    RDropLoss = None  # type: ignore
+    rdrop_forward = None  # type: ignore
+    get_rdrop_loss = None  # type: ignore
+
+# Optional Curriculum Learning
+try:
+    from training.utils.curriculum import CurriculumScheduler, DifficultyScorer, compute_difficulty_scores
+    HAS_CURRICULUM = True
+except ImportError:
+    HAS_CURRICULUM = False
+    CurriculumScheduler = None  # type: ignore
+    DifficultyScorer = None  # type: ignore
+    compute_difficulty_scores = None  # type: ignore
+
+# Optional Temperature Calibration
+try:
+    from training.calibration.temperature_scaling import TemperatureScaler, calibrate_model
+    HAS_CALIBRATION = True
+except ImportError:
+    HAS_CALIBRATION = False
+    TemperatureScaler = None  # type: ignore
+    calibrate_model = None  # type: ignore
+
+# Optional CBAM v3 model
+try:
+    from training.models.cbam import DrumClassifierCNNv3
+    HAS_V3_MODEL = True
+except ImportError:
+    HAS_V3_MODEL = False
+    DrumClassifierCNNv3 = None  # type: ignore
+
+# Optional Coordinate Attention v4 model
+try:
+    from training.models.coord_attention import DrumClassifierCNNv4, CoordinateAttention
+    HAS_V4_MODEL = True
+except ImportError:
+    HAS_V4_MODEL = False
+    DrumClassifierCNNv4 = None  # type: ignore
+    CoordinateAttention = None  # type: ignore
+
+# Optional FMix augmentation
+try:
+    from training.augmentation.fmix import FMix, FMixCutmix, fmix_criterion
+    HAS_FMIX = True
+except ImportError:
+    HAS_FMIX = False
+    FMix = None  # type: ignore
+    FMixCutmix = None  # type: ignore
+    fmix_criterion = None  # type: ignore
+
+# Optional Confident Learning (label noise detection)
+try:
+    from training.utils.confident_learning import (
+        find_label_issues, estimate_noise_matrix, clean_labels,
+        LabelNoiseDataset, run_label_audit
+    )
+    HAS_CONFIDENT_LEARNING = True
+except ImportError:
+    HAS_CONFIDENT_LEARNING = False
+    find_label_issues = None  # type: ignore
+    estimate_noise_matrix = None  # type: ignore
+    clean_labels = None  # type: ignore
+    LabelNoiseDataset = None  # type: ignore
+    run_label_audit = None  # type: ignore
+
+# Optional Active Learning
+try:
+    from training.active.sampler import (
+        ActiveLearner, ActiveLearningConfig,
+        UncertaintySampler, DiversitySampler, HybridSampler
+    )
+    HAS_ACTIVE_LEARNING = True
+except ImportError:
+    HAS_ACTIVE_LEARNING = False
+    ActiveLearner = None  # type: ignore
+    ActiveLearningConfig = None  # type: ignore
+    UncertaintySampler = None  # type: ignore
+    DiversitySampler = None  # type: ignore
+    HybridSampler = None  # type: ignore
+
+# Optional Self-Training
+try:
+    from training.ssl.self_training import SelfTrainer, run_self_training
+    HAS_SELF_TRAINING = True
+except ImportError:
+    HAS_SELF_TRAINING = False
+    SelfTrainer = None  # type: ignore
+    run_self_training = None  # type: ignore
+
+# Optional Gradient Centralization (NEW - improves generalization)
+try:
+    from training.optimizers.gradient_centralization import GradientCentralization, wrap_optimizer_with_gc
+    HAS_GRADIENT_CENTRALIZATION = True
+except ImportError:
+    HAS_GRADIENT_CENTRALIZATION = False
+    GradientCentralization = None  # type: ignore
+    wrap_optimizer_with_gc = None  # type: ignore
+
+# Optional Deep Supervision (NEW - auxiliary losses at intermediate layers)
+try:
+    from training.losses.deep_supervision import DeepSupervisionLoss, DeepSupervisionWrapper
+    HAS_DEEP_SUPERVISION = True
+except ImportError:
+    HAS_DEEP_SUPERVISION = False
+    DeepSupervisionLoss = None  # type: ignore
+    DeepSupervisionWrapper = None  # type: ignore
+
+# Optional Hard Negative Mining (Option A enhancement - focus on confusing pairs)
+try:
+    from training.losses.hard_negative_mining import (
+        HardNegativeLoss, HardNegativeConfig, OnlineHardNegativeMiner
+    )
+    HAS_HARD_NEGATIVE_MINING = True
+except ImportError:
+    HAS_HARD_NEGATIVE_MINING = False
+    HardNegativeLoss = None  # type: ignore
+    HardNegativeConfig = None  # type: ignore
+    OnlineHardNegativeMiner = None  # type: ignore
+
+# Optional CNN v5 (ULTIMATE model with all innovations)
+try:
+    from training.models.cnn_v5 import DrumClassifierCNNv5, cnn_v5_small, cnn_v5_medium, cnn_v5_large
+    HAS_V5_MODEL = True
+except ImportError:
+    HAS_V5_MODEL = False
+    DrumClassifierCNNv5 = None  # type: ignore
+    cnn_v5_small = None  # type: ignore
+    cnn_v5_medium = None  # type: ignore
+    cnn_v5_large = None  # type: ignore
+
+# Optional BEATs Audio Foundation Model
+try:
+    from training.models.beats import BEATsDrumClassifier, create_beats_encoder
+    HAS_BEATS = True
+except ImportError:
+    HAS_BEATS = False
+    BEATsDrumClassifier = None  # type: ignore
+    create_beats_encoder = None  # type: ignore
+
+# Optional Stochastic Depth (DropPath regularization)
+try:
+    from training.utils.stochastic_depth import DropPath, get_drop_path_rate
+    HAS_STOCHASTIC_DEPTH = True
+except ImportError:
+    HAS_STOCHASTIC_DEPTH = False
+    DropPath = None  # type: ignore
+    get_drop_path_rate = None  # type: ignore
+
+# Optional Waveform Augmentation (NEW - audio-level augmentation)
+try:
+    from training.augmentation.waveform import WaveformAugment, FastWaveformAugment, get_waveform_augment
+    HAS_WAVEFORM_AUGMENT = True
+except ImportError:
+    HAS_WAVEFORM_AUGMENT = False
+    WaveformAugment = None  # type: ignore
+    FastWaveformAugment = None  # type: ignore
+    get_waveform_augment = None  # type: ignore
+
 
 class DrumSampleDataset(Dataset):
     """PyTorch dataset for drum samples with optional feature caching."""
@@ -77,6 +315,7 @@ class DrumSampleDataset(Dataset):
         fmax: Optional[int] = 8000,
         target_frames: int = 128,
         cache_dtype: str = "float32",
+        waveform_transform: Optional[Any] = None,
     ) -> None:
         self.data_dir = Path(data_dir)
         self.labels_path = Path(labels_file)
@@ -92,6 +331,7 @@ class DrumSampleDataset(Dataset):
         self._mel_transform = None
         self._amplitude_to_db = None
         self._cache_debug = bool(os.environ.get("BS_CACHE_DEBUG"))
+        self.waveform_transform = waveform_transform
 
         cache_dtype_key = cache_dtype.lower().strip()
         cache_dtype_map: Dict[str, torch.dtype] = {
@@ -133,6 +373,15 @@ class DrumSampleDataset(Dataset):
         audio_path = self.data_dir / item["file"]
         label = int(item["component_idx"])
 
+        # If waveform augmentation is enabled, we must recompute spectrograms each time
+        # (can't use cached spectrograms since augmentation is stochastic)
+        if self.waveform_transform is not None:
+            waveform = self._load_audio(audio_path)
+            waveform = self.waveform_transform(waveform, self.sr)
+            features = self._extract_features(waveform)
+            return features.float().contiguous(), label
+
+        # Standard path: use cache if available
         features = None
         cache_path: Optional[Path] = None
         if self.cache_dir is not None:
@@ -324,6 +573,20 @@ def stratified_sample_indices(labels: List[Dict[str, Any]], fraction: float, see
     return sampled
 
 
+def extract_main_output(outputs):
+    """Extract main classification output, handling deep supervision tuple returns.
+    
+    Args:
+        outputs: Either a tensor (regular model) or tuple of (main_output, aux_outputs) for deep supervision
+    
+    Returns:
+        main_output: The primary classification logits tensor
+    """
+    if isinstance(outputs, tuple):
+        return outputs[0]  # First element is main output
+    return outputs
+
+
 def train_epoch(
     model: nn.Module,
     dataloader: DataLoader,
@@ -339,12 +602,26 @@ def train_epoch(
     grad_accum_steps: int = 1,
     checkpoint_callback: Optional[Callable[[int, int], None]] = None,
     checkpoint_every_batches: int = 0,
+    mixup_fn: Optional[Any] = None,
+    specaugment_fn: Optional[Any] = None,
+    ema: Optional[Any] = None,
+    use_sam: bool = False,
+    use_rdrop: bool = False,
+    rdrop_criterion: Optional[Any] = None,
+    deep_sup_criterion: Optional[Any] = None,
 ) -> tuple[float, float]:
-    """Train for one epoch with optional AMP and mid-epoch checkpointing.
+    """Train for one epoch with optional AMP, mixup, specaugment, EMA, SAM, R-Drop, deep supervision.
     
     Args:
         checkpoint_callback: Optional callback(batch_index, total_batches) for mid-epoch saves
         checkpoint_every_batches: Save checkpoint every N batches (0 disables)
+        mixup_fn: Optional MixupCutmix instance for data augmentation
+        specaugment_fn: Optional SpecAugment instance for spectrogram augmentation
+        ema: Optional ModelEMA instance for exponential moving average
+        use_sam: If True, use SAM's two-step optimization (requires SAM optimizer)
+        use_rdrop: If True, use R-Drop regularization (two forward passes)
+        rdrop_criterion: R-Drop loss function (required if use_rdrop=True)
+        deep_sup_criterion: Deep supervision loss wrapper (if model outputs aux heads)
     """
 
     model.train()
@@ -364,9 +641,50 @@ def train_epoch(
         if channels_last:
             features = features.to(memory_format=torch.channels_last)
 
+        # Apply SpecAugment (time/frequency masking) if enabled
+        if specaugment_fn is not None:
+            features = specaugment_fn(features)
+
+        # Apply Mixup/CutMix augmentation if enabled
+        use_mixup = mixup_fn is not None
+        if use_mixup:
+            mixup_result = mixup_fn(features, labels)
+            features = mixup_result.features
+            labels_a, labels_b, lam = mixup_result.labels_a, mixup_result.labels_b, mixup_result.lam
+        
         with autocast(device_type=device.type, dtype=autocast_dtype, enabled=amp_enabled):
-            outputs = model(features)
-            loss = criterion(outputs, labels)
+            if use_rdrop and rdrop_criterion is not None:
+                # R-Drop: Two forward passes with different dropout masks
+                outputs1 = model(features)
+                outputs2 = model(features)
+                
+                if use_mixup:
+                    # Mixed loss for soft labels with R-Drop
+                    ce_loss1 = lam * criterion(outputs1, labels_a) + (1 - lam) * criterion(outputs1, labels_b)
+                    ce_loss2 = lam * criterion(outputs2, labels_a) + (1 - lam) * criterion(outputs2, labels_b)
+                    ce_loss = (ce_loss1 + ce_loss2) / 2
+                else:
+                    ce_loss1 = criterion(outputs1, labels)
+                    ce_loss2 = criterion(outputs2, labels)
+                    ce_loss = (ce_loss1 + ce_loss2) / 2
+                
+                # R-Drop consistency loss (symmetric KL divergence)
+                main_out1 = extract_main_output(outputs1)
+                main_out2 = extract_main_output(outputs2)
+                rdrop_loss = rdrop_criterion.compute_kl_loss(main_out1, main_out2)
+                loss = ce_loss + rdrop_loss
+                outputs = main_out1  # Use first output for accuracy computation
+            else:
+                outputs = model(features)
+                # Select criterion (deep supervision or regular)
+                active_criterion = deep_sup_criterion if deep_sup_criterion is not None else criterion
+                if use_mixup:
+                    # Mixed loss for soft labels
+                    loss = lam * active_criterion(outputs, labels_a) + (1 - lam) * active_criterion(outputs, labels_b)
+                else:
+                    loss = active_criterion(outputs, labels)
+                # Extract main output for accuracy (handles deep supervision tuple)
+                outputs = extract_main_output(outputs)
             loss_for_backward = loss / accum_steps
 
         if amp_enabled and scaler is not None:
@@ -379,19 +697,59 @@ def train_epoch(
                 scaler.step(optimizer)
                 scaler.update()
                 optimizer.zero_grad(set_to_none=True)
+                # Update EMA after optimizer step
+                if ema is not None:
+                    ema.update(model)
         else:
             loss_for_backward.backward()
             should_step = batch_index % accum_steps == 0 or batch_index == total_batches
             if should_step:
                 if grad_clip_norm is not None:
                     clip_grad_norm_(model.parameters(), grad_clip_norm)
-                optimizer.step()
-                optimizer.zero_grad(set_to_none=True)
+                
+                if use_sam:
+                    # SAM two-step optimization
+                    # Step 1: First step moves to adversarial point
+                    optimizer.first_step(zero_grad=True)
+                    
+                    # Step 2: Compute loss at adversarial point
+                    with autocast(device_type=device.type, dtype=autocast_dtype, enabled=amp_enabled):
+                        if use_rdrop and rdrop_criterion is not None:
+                            adv_outputs1 = model(features)
+                            adv_outputs2 = model(features)
+                            if use_mixup:
+                                adv_ce1 = lam * criterion(adv_outputs1, labels_a) + (1 - lam) * criterion(adv_outputs1, labels_b)
+                                adv_ce2 = lam * criterion(adv_outputs2, labels_a) + (1 - lam) * criterion(adv_outputs2, labels_b)
+                                adv_ce = (adv_ce1 + adv_ce2) / 2
+                            else:
+                                adv_ce = (criterion(adv_outputs1, labels) + criterion(adv_outputs2, labels)) / 2
+                            adv_rdrop = rdrop_criterion.compute_kl_loss(adv_outputs1, adv_outputs2)
+                            adv_loss = adv_ce + adv_rdrop
+                        elif use_mixup:
+                            adv_loss = lam * criterion(model(features), labels_a) + (1 - lam) * criterion(model(features), labels_b)
+                        else:
+                            adv_loss = criterion(model(features), labels)
+                    adv_loss.backward()
+                    
+                    # Step 3: Apply update using adversarial gradients
+                    optimizer.second_step(zero_grad=True)
+                else:
+                    optimizer.step()
+                    optimizer.zero_grad(set_to_none=True)
+                
+                # Update EMA after optimizer step
+                if ema is not None:
+                    ema.update(model)
 
         total_loss += loss.item()
         _, predicted = torch.max(outputs.data, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
+        # For accuracy calculation, use original labels (not mixed) for fair comparison
+        if use_mixup:
+            total += labels_a.size(0)
+            correct += (lam * (predicted == labels_a).sum().item() + (1 - lam) * (predicted == labels_b).sum().item())
+        else:
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
 
         pbar.set_postfix({"loss": f"{loss.item():.4f}", "acc": f"{100 * correct / max(total, 1):.2f}%"})
 
@@ -432,10 +790,12 @@ def validate(
 
             with autocast(device_type=device.type, dtype=autocast_dtype, enabled=amp_enabled):
                 outputs = model(features)
-                loss = criterion(outputs, labels)
+                # Extract main output for models with deep supervision
+                main_outputs = extract_main_output(outputs)
+                loss = criterion(main_outputs, labels)
 
             total_loss += loss.item()
-            _, predicted = torch.max(outputs.data, 1)
+            _, predicted = torch.max(main_outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
@@ -649,6 +1009,394 @@ def main():
         help="Label smoothing factor for cross-entropy loss (0.0-0.2 typical)",
     )
     
+    # === CUTTING-EDGE FEATURES ===
+    parser.add_argument(
+        "--model-version",
+        choices=["v1", "v2", "v3", "v4", "v5", "beats"],
+        default="v1",
+        help="Model architecture: v1 (baseline), v2 (SE), v3 (CBAM), v4 (CoordAttn), v5 (Ultimate), beats (BEATs foundation)",
+    )
+    parser.add_argument(
+        "--use-se",
+        action="store_true",
+        help="Enable Squeeze-Excitation attention blocks (only for v2 model)",
+    )
+    parser.add_argument(
+        "--use-cbam",
+        action="store_true",
+        help="Enable CBAM attention blocks (only for v3 model, default True for v3)",
+    )
+    parser.add_argument(
+        "--use-coord-attention",
+        action="store_true",
+        help="Enable Coordinate Attention (only for v4 model, default True for v4)",
+    )
+    parser.add_argument(
+        "--use-multi-task",
+        action="store_true",
+        help="Enable multi-task heads for velocity and hi-hat openness (v4 only)",
+    )
+    parser.add_argument(
+        "--velocity-weight",
+        type=float,
+        default=0.1,
+        help="Weight for velocity prediction auxiliary loss (default: 0.1)",
+    )
+    parser.add_argument(
+        "--openness-weight",
+        type=float,
+        default=0.1,
+        help="Weight for hi-hat openness prediction auxiliary loss (default: 0.1)",
+    )
+    parser.add_argument(
+        "--width-mult",
+        type=float,
+        default=1.0,
+        help="Channel width multiplier for v2 model (1.0 = base, 1.5 = 50%% wider)",
+    )
+    parser.add_argument(
+        "--mixup-alpha",
+        type=float,
+        default=0.0,
+        help="Mixup alpha parameter (0 to disable, 0.2-0.4 typical for regularization)",
+    )
+    parser.add_argument(
+        "--cutmix-alpha",
+        type=float,
+        default=0.0,
+        help="CutMix alpha parameter (0 to disable, 1.0 typical)",
+    )
+    parser.add_argument(
+        "--mixup-prob",
+        type=float,
+        default=0.5,
+        help="Probability of applying mixup/cutmix per batch (default: 0.5)",
+    )
+    
+    # SpecAugment arguments
+    parser.add_argument(
+        "--specaugment",
+        type=str,
+        default="none",
+        choices=["none", "light", "default", "strong", "drum"],
+        help="SpecAugment preset (none=disabled, drum=optimized for drums)",
+    )
+    parser.add_argument(
+        "--specaugment-freq-masks",
+        type=int,
+        default=2,
+        help="Number of frequency masks for SpecAugment (default: 2)",
+    )
+    parser.add_argument(
+        "--specaugment-time-masks",
+        type=int,
+        default=2,
+        help="Number of time masks for SpecAugment (default: 2)",
+    )
+    
+    # FMix (Fourier-domain Mixup) arguments
+    parser.add_argument(
+        "--use-fmix",
+        action="store_true",
+        help="Use FMix (Fourier-domain mixup) augmentation instead of standard Mixup",
+    )
+    parser.add_argument(
+        "--fmix-alpha",
+        type=float,
+        default=1.0,
+        help="FMix alpha parameter for Beta distribution (default: 1.0)",
+    )
+    parser.add_argument(
+        "--fmix-decay",
+        type=float,
+        default=3.0,
+        help="FMix decay power for mask generation (default: 3.0)",
+    )
+    parser.add_argument(
+        "--fmix-with-cutmix",
+        action="store_true",
+        help="Combine FMix with CutMix in random selection",
+    )
+    
+    # Waveform Augmentation (audio-level augmentation before spectrogram)
+    parser.add_argument(
+        "--waveform-augment",
+        type=str,
+        default="none",
+        choices=["none", "light", "drum", "heavy", "fast"],
+        help="Waveform augmentation preset: none, light, drum (recommended), heavy, fast (no time stretch)",
+    )
+    parser.add_argument(
+        "--waveform-time-stretch",
+        type=float,
+        nargs=2,
+        metavar=("MIN", "MAX"),
+        default=[0.95, 1.05],
+        help="Time stretch range (default: 0.95 1.05 = ±5%%)",
+    )
+    parser.add_argument(
+        "--waveform-pitch-shift",
+        type=float,
+        nargs=2,
+        metavar=("MIN", "MAX"),
+        default=[-2.0, 2.0],
+        help="Pitch shift range in semitones (default: -2 2 = ±2 semitones)",
+    )
+    parser.add_argument(
+        "--waveform-gain-db",
+        type=float,
+        nargs=2,
+        metavar=("MIN", "MAX"),
+        default=[-4.0, 4.0],
+        help="Gain variation range in dB (default: -4 4 = ±4 dB)",
+    )
+    
+    # Confident Learning (label noise detection)
+    parser.add_argument(
+        "--clean-labels",
+        action="store_true",
+        help="Run confident learning to detect and filter label noise before training",
+    )
+    parser.add_argument(
+        "--label-noise-threshold",
+        type=float,
+        default=0.5,
+        help="Threshold for detecting label noise (default: 0.5, lower=more aggressive filtering)",
+    )
+    parser.add_argument(
+        "--label-noise-audit-only",
+        action="store_true",
+        help="Only audit labels without filtering (prints report)",
+    )
+    
+    # Self-Training
+    parser.add_argument(
+        "--use-self-training",
+        action="store_true",
+        help="Use self-training with pseudo-labels from unlabeled data",
+    )
+    parser.add_argument(
+        "--unlabeled-dir",
+        type=Path,
+        default=None,
+        help="Directory containing unlabeled audio samples for self-training",
+    )
+    parser.add_argument(
+        "--pseudo-label-threshold",
+        type=float,
+        default=0.9,
+        help="Confidence threshold for pseudo-label generation (default: 0.9)",
+    )
+    parser.add_argument(
+        "--self-training-epochs",
+        type=int,
+        default=3,
+        help="Number of self-training iterations (default: 3)",
+    )
+    
+    # Focal Loss arguments
+    parser.add_argument(
+        "--focal-loss",
+        action="store_true",
+        help="Use Focal Loss instead of Cross-Entropy (better for imbalanced classes)",
+    )
+    parser.add_argument(
+        "--focal-gamma",
+        type=float,
+        default=2.0,
+        help="Focal loss gamma (focusing parameter, higher=more focus on hard examples)",
+    )
+    
+    # EMA arguments
+    parser.add_argument(
+        "--use-ema",
+        action="store_true",
+        help="Use Exponential Moving Average of weights (improves final model)",
+    )
+    parser.add_argument(
+        "--ema-decay",
+        type=float,
+        default=0.999,
+        help="EMA decay rate (default: 0.999, higher=more smoothing)",
+    )
+    parser.add_argument(
+        "--ema-warmup-steps",
+        type=int,
+        default=0,
+        help="EMA warmup steps (linear warmup from 0.5 to target decay)",
+    )
+    
+    # Progressive/Adaptive augmentation
+    parser.add_argument(
+        "--progressive-augmentation",
+        action="store_true",
+        help="Enable progressive augmentation (start weak, ramp up strength during training)",
+    )
+    
+    # SAM (Sharpness-Aware Minimization) optimizer
+    parser.add_argument(
+        "--use-sam",
+        action="store_true",
+        help="Use SAM optimizer for better generalization (seeks flat minima)",
+    )
+    parser.add_argument(
+        "--sam-rho",
+        type=float,
+        default=0.05,
+        help="SAM neighborhood size for perturbation (default: 0.05, higher=more regularization)",
+    )
+    parser.add_argument(
+        "--sam-adaptive",
+        action="store_true",
+        help="Use Adaptive SAM which normalizes perturbations per-parameter",
+    )
+    
+    # SWA (Stochastic Weight Averaging)
+    parser.add_argument(
+        "--use-swa",
+        action="store_true",
+        help="Use Stochastic Weight Averaging in the final training phase",
+    )
+    parser.add_argument(
+        "--swa-start",
+        type=float,
+        default=0.75,
+        help="When to start SWA (fraction of total training, default: 0.75 = last 25%%)",
+    )
+    parser.add_argument(
+        "--swa-lr",
+        type=float,
+        default=None,
+        help="Learning rate for SWA phase (default: 10%% of base LR)",
+    )
+    
+    # R-Drop (Regularized Dropout)
+    parser.add_argument(
+        "--use-rdrop",
+        action="store_true",
+        help="Use R-Drop regularization (two forward passes with consistency loss)",
+    )
+    parser.add_argument(
+        "--rdrop-alpha",
+        type=float,
+        default=0.5,
+        help="R-Drop consistency loss weight (default: 0.5, higher=stronger regularization)",
+    )
+    
+    # Curriculum Learning
+    parser.add_argument(
+        "--use-curriculum",
+        action="store_true",
+        help="Use curriculum learning (easy-to-hard training progression)",
+    )
+    parser.add_argument(
+        "--curriculum-start-fraction",
+        type=float,
+        default=0.4,
+        help="Initial fraction of easiest samples to train on (default: 0.4)",
+    )
+    parser.add_argument(
+        "--curriculum-strategy",
+        choices=["linear", "cosine", "exponential", "step"],
+        default="cosine",
+        help="Curriculum progression strategy (default: cosine)",
+    )
+    
+    # Temperature Calibration
+    parser.add_argument(
+        "--calibrate",
+        action="store_true",
+        help="Perform temperature scaling calibration after training",
+    )
+    parser.add_argument(
+        "--calibration-method",
+        choices=["temperature", "vector"],
+        default="temperature",
+        help="Calibration method: temperature (single param) or vector (per-class)",
+    )
+    
+    # === NEW CUTTING-EDGE FEATURES (2024) ===
+    
+    # Gradient Centralization
+    parser.add_argument(
+        "--use-gradient-centralization",
+        action="store_true",
+        help="Apply Gradient Centralization to optimizer (improves generalization +0.5-1%%)",
+    )
+    
+    # Deep Supervision
+    parser.add_argument(
+        "--use-deep-supervision",
+        action="store_true",
+        help="Enable deep supervision (auxiliary losses at intermediate layers)",
+    )
+    parser.add_argument(
+        "--deep-supervision-weights",
+        type=str,
+        default="0.4,0.6",
+        help="Comma-separated weights for intermediate auxiliary losses (default: '0.4,0.6')",
+    )
+    
+    # V5 Model-specific
+    parser.add_argument(
+        "--v5-size",
+        choices=["small", "medium", "large"],
+        default="medium",
+        help="CNN v5 model size variant (default: medium)",
+    )
+    parser.add_argument(
+        "--drop-path-rate",
+        type=float,
+        default=0.1,
+        help="Stochastic depth drop path rate for v5 model (default: 0.1)",
+    )
+    
+    # BEATs-specific
+    parser.add_argument(
+        "--beats-freeze-encoder",
+        action="store_true",
+        help="Freeze the BEATs encoder weights (fine-tune only classification head)",
+    )
+    parser.add_argument(
+        "--beats-layer-decay",
+        type=float,
+        default=0.75,
+        help="Layer-wise learning rate decay for BEATs (default: 0.75, lower=more decay)",
+    )
+    
+    # V5 Advanced Pooling (Option A enhancement: +0.3-0.5%)
+    parser.add_argument(
+        "--pooling-type",
+        choices=["gap", "asp", "mha", "hybrid"],
+        default="gap",
+        help="Pooling strategy for v5 model: gap (global average), asp (attentive statistics), mha (multi-head attention), hybrid (default: gap)",
+    )
+    
+    # Hard Negative Mining (Option A enhancement: +0.5-1%)
+    parser.add_argument(
+        "--use-hard-negatives",
+        action="store_true",
+        help="Enable hard negative mining to focus on confusing sample pairs",
+    )
+    parser.add_argument(
+        "--hnm-strategy",
+        choices=["ohem", "semi_hard", "curriculum"],
+        default="curriculum",
+        help="Hard negative mining strategy (default: curriculum)",
+    )
+    parser.add_argument(
+        "--hnm-ratio",
+        type=float,
+        default=0.7,
+        help="OHEM: keep top N%% hardest samples per batch (default: 0.7)",
+    )
+    parser.add_argument(
+        "--hnm-confusion-weight",
+        type=float,
+        default=2.0,
+        help="Extra weight for commonly confused class pairs (default: 2.0)",
+    )
+    
     args = parser.parse_args()
 
     args.dataset = Path(args.dataset).expanduser().resolve()
@@ -734,6 +1482,19 @@ def main():
         feature_cache_root.mkdir(parents=True, exist_ok=True)
     prefer_torchaudio = not args.no_torchaudio
 
+    # Setup waveform augmentation (audio-level augmentation before spectrogram)
+    waveform_transform = None
+    if args.waveform_augment != "none" and HAS_WAVEFORM_AUGMENT:
+        use_fast = (args.waveform_augment == "fast")
+        preset = "drum" if use_fast else args.waveform_augment
+        waveform_transform = get_waveform_augment(
+            preset=preset,
+            fast=use_fast,
+        )
+        print(f"[WAVEFORM AUGMENT] Using '{args.waveform_augment}' preset (disables feature caching for training)")
+    elif args.waveform_augment != "none" and not HAS_WAVEFORM_AUGMENT:
+        print(f"[WARNING] Waveform augmentation requested but librosa not available. Skipping.")
+
     train_dataset_full = DrumSampleDataset(
         dataset_path / "train",
         resolve_labels("train", "train_labels.json"),
@@ -746,6 +1507,7 @@ def main():
         fmax=fmax,
         target_frames=args.target_frames,
         cache_dtype=args.cache_dtype,
+        waveform_transform=waveform_transform,  # Apply augmentation to training data
     )
     val_dataset_full = DrumSampleDataset(
         dataset_path / "val",
@@ -853,8 +1615,91 @@ def main():
         components_info = json.load(f)
     num_classes = components_info['num_classes']
     
-    # Initialize model
-    model = DrumClassifierCNN(num_classes=num_classes)
+    # Initialize model (v1 baseline, v2 with SE, v3 with CBAM, v4 with CoordAttn, v5 Ultimate, or BEATs)
+    # Multi-task now supported for v4 AND v5
+    use_multi_task = args.use_multi_task and args.model_version in ("v4", "v5")
+    
+    if args.model_version == "beats":
+        if not HAS_BEATS:
+            raise SystemExit("BEATs model requested but beats.py not found. Use --model-version v1/v2/v3/v4/v5.")
+        model = BEATsDrumClassifier(
+            num_classes=num_classes,
+            freeze_encoder=args.beats_freeze_encoder,
+            use_deep_supervision=args.use_deep_supervision,
+        )
+        param_count = sum(p.numel() for p in model.parameters())
+        trainable_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        print(f"Using BEATs model (freeze={args.beats_freeze_encoder}): {param_count:,} params ({trainable_count:,} trainable)")
+    elif args.model_version == "v5":
+        if not HAS_V5_MODEL:
+            raise SystemExit("v5 model requested but cnn_v5.py not found. Use --model-version v1/v2/v3/v4.")
+        # Select v5 size variant - now with multi-task support and advanced pooling
+        pooling_type = getattr(args, 'pooling_type', 'gap')
+        if args.v5_size == "small":
+            model = cnn_v5_small(
+                num_classes=num_classes,
+                drop_path_rate=args.drop_path_rate,
+                use_deep_supervision=args.use_deep_supervision,
+                use_multi_task=use_multi_task,
+                pooling_type=pooling_type,
+            )
+        elif args.v5_size == "large":
+            model = cnn_v5_large(
+                num_classes=num_classes,
+                drop_path_rate=args.drop_path_rate,
+                use_deep_supervision=args.use_deep_supervision,
+                use_multi_task=use_multi_task,
+                pooling_type=pooling_type,
+            )
+        else:  # medium (default)
+            model = cnn_v5_medium(
+                num_classes=num_classes,
+                drop_path_rate=args.drop_path_rate,
+                use_deep_supervision=args.use_deep_supervision,
+                use_multi_task=use_multi_task,
+                pooling_type=pooling_type,
+            )
+        param_count = sum(p.numel() for p in model.parameters())
+        pooling_str = f", pooling={pooling_type}" if pooling_type != 'gap' else ""
+        print(f"Using v5 ULTIMATE model (size={args.v5_size}, drop_path={args.drop_path_rate}, deep_sup={args.use_deep_supervision}, multi_task={use_multi_task}{pooling_str}): {param_count:,} params")
+    elif args.model_version == "v4":
+        if not HAS_V4_MODEL:
+            raise SystemExit("v4 model requested but coord_attention.py not found. Use --model-version v1/v2/v3.")
+        model = DrumClassifierCNNv4(
+            num_classes=num_classes,
+            use_coord_attention=args.use_coord_attention or True,  # Default True for v4
+            use_multi_task=use_multi_task,
+            width_mult=args.width_mult,
+        )
+        param_count = sum(p.numel() for p in model.parameters())
+        print(f"Using v4 model (CoordAttn=True, MultiTask={use_multi_task}, width={args.width_mult}x): {param_count:,} parameters")
+    elif args.model_version == "v3":
+        if not HAS_V3_MODEL:
+            raise SystemExit("v3 model requested but cbam.py not found. Use --model-version v1 or v2.")
+        model = DrumClassifierCNNv3(
+            num_classes=num_classes,
+            use_cbam=args.use_cbam or True,  # Default True for v3
+            width_mult=args.width_mult,
+        )
+        param_count = sum(p.numel() for p in model.parameters())
+        print(f"Using v3 model (CBAM=True, width={args.width_mult}x): {param_count:,} parameters")
+    elif args.model_version == "v2":
+        if not HAS_V2_MODEL:
+            raise SystemExit("v2 model requested but ml_drum_classifier_v2.py not found. Use --model-version v1 or install the module.")
+        use_se = args.use_se
+        width_mult = args.width_mult
+        model = DrumClassifierCNNv2(
+            num_classes=num_classes,
+            use_se=use_se,
+            width_mult=width_mult,
+        )
+        param_count = sum(p.numel() for p in model.parameters())
+        print(f"Using v2 model (SE={use_se}, width={width_mult}x): {param_count:,} parameters")
+    else:
+        model = DrumClassifierCNN(num_classes=num_classes)
+        param_count = sum(p.numel() for p in model.parameters())
+        print(f"Using v1 model: {param_count:,} parameters")
+    
     if args.channels_last:
         model = model.to(memory_format=torch.channels_last)
     model.to(device)
@@ -880,12 +1725,121 @@ def main():
         ).to(torch_device)
         print(f"Class weighting enabled ({args.class_weights}): min={class_weights_tensor.min():.3f}, max={class_weights_tensor.max():.3f}")
     
-    criterion = nn.CrossEntropyLoss(
-        weight=class_weights_tensor,
-        label_smoothing=args.label_smoothing,
-    )
+    # Initialize loss function (standard CrossEntropy or Focal Loss)
+    use_focal = args.focal_loss and HAS_FOCAL_LOSS
+    if use_focal:
+        if args.mixup_alpha > 0 or args.cutmix_alpha > 0:
+            # Use mixup-compatible focal loss
+            criterion = FocalLossWithMixup(
+                gamma=args.focal_gamma,
+                alpha=class_weights_tensor,
+                label_smoothing=args.label_smoothing,
+            )
+        else:
+            criterion = FocalLoss(
+                gamma=args.focal_gamma,
+                alpha=class_weights_tensor,
+                label_smoothing=args.label_smoothing,
+            )
+        print(f"Focal Loss enabled: gamma={args.focal_gamma}")
+    else:
+        criterion = nn.CrossEntropyLoss(
+            weight=class_weights_tensor,
+            label_smoothing=args.label_smoothing,
+        )
     
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    # Wrap with Deep Supervision if enabled and model supports it
+    use_deep_sup = args.use_deep_supervision and HAS_DEEP_SUPERVISION
+    deep_sup_criterion = None
+    if use_deep_sup and args.model_version in ["v5", "beats"]:
+        # Parse weights from comma-separated string
+        try:
+            aux_weights = [float(w.strip()) for w in args.deep_supervision_weights.split(",")]
+        except ValueError:
+            aux_weights = [0.4, 0.6]
+        deep_sup_criterion = DeepSupervisionLoss(
+            base_criterion=criterion,
+            aux_weights=aux_weights,
+        )
+        print(f"Deep Supervision enabled: aux_weights={aux_weights}")
+    elif use_deep_sup:
+        print(f"Note: Deep supervision only supported for v5 and beats models, ignoring")
+    
+    # Wrap with Hard Negative Mining if enabled (Option A enhancement: +0.5-1%)
+    use_hard_negatives = getattr(args, 'use_hard_negatives', False) and HAS_HARD_NEGATIVE_MINING
+    hard_negative_criterion = None
+    if use_hard_negatives:
+        hnm_config = HardNegativeConfig(
+            strategy=getattr(args, 'hnm_strategy', 'curriculum'),
+            ohem_ratio=getattr(args, 'hnm_ratio', 0.7),
+            confusion_weight=getattr(args, 'hnm_confusion_weight', 2.0),
+            curriculum_epochs=args.epochs,
+        )
+        # Create a per-sample loss criterion for HNM (requires reduction='none')
+        if use_focal:
+            if args.mixup_alpha > 0 or args.cutmix_alpha > 0:
+                hnm_base_criterion = FocalLossWithMixup(
+                    gamma=args.focal_gamma,
+                    alpha=class_weights_tensor,
+                    label_smoothing=args.label_smoothing,
+                    reduction='none',
+                )
+            else:
+                hnm_base_criterion = FocalLoss(
+                    gamma=args.focal_gamma,
+                    alpha=class_weights_tensor,
+                    label_smoothing=args.label_smoothing,
+                    reduction='none',
+                )
+        else:
+            hnm_base_criterion = nn.CrossEntropyLoss(
+                weight=class_weights_tensor,
+                label_smoothing=args.label_smoothing,
+                reduction='none',
+            )
+        hard_negative_criterion = HardNegativeLoss(
+            base_criterion=hnm_base_criterion,
+            config=hnm_config,
+        )
+        print(f"Hard Negative Mining enabled: strategy={hnm_config.strategy}, ratio={hnm_config.ohem_ratio}, confusion_weight={hnm_config.confusion_weight}")
+
+    
+    # Warn about potential over-regularization when using multiple regularization techniques
+    regularization_count = sum([
+        args.mixup_alpha > 0 or args.cutmix_alpha > 0,  # Mixup/CutMix
+        args.use_rdrop and HAS_RDROP,                    # R-Drop
+        args.label_smoothing > 0,                        # Label smoothing
+        args.use_curriculum and HAS_CURRICULUM,          # Curriculum (soft sampling)
+    ])
+    if regularization_count >= 3 and args.label_smoothing > 0.05:
+        print(f"⚠️  Warning: Using {regularization_count} regularization techniques with label_smoothing={args.label_smoothing}")
+        print(f"   This may cause over-regularization. Consider reducing --label-smoothing to 0.05")
+    
+    # Initialize optimizer (SAM or standard Adam)
+    use_sam = args.use_sam and HAS_SAM
+    use_gc = args.use_gradient_centralization and HAS_GRADIENT_CENTRALIZATION
+    
+    if use_sam:
+        # SAM wraps a base optimizer
+        optimizer = SAM(
+            model.parameters(),
+            base_optimizer=optim.Adam,
+            rho=args.sam_rho,
+            adaptive=args.sam_adaptive,
+            lr=args.lr,
+            weight_decay=args.weight_decay,
+        )
+        print(f"SAM optimizer enabled: rho={args.sam_rho}, adaptive={args.sam_adaptive}")
+    else:
+        optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    
+    # Apply Gradient Centralization wrapper if requested
+    if use_gc and not use_sam:  # GC is applied to base optimizer, SAM handles its own gradients
+        optimizer = wrap_optimizer_with_gc(optimizer)
+        print("Gradient Centralization enabled (improves generalization)")
+    elif use_gc and use_sam:
+        print("Note: Gradient Centralization is applied within SAM's base optimizer automatically")
+    
     for group in optimizer.param_groups:
         group.setdefault("initial_lr", args.lr)
 
@@ -917,6 +1871,131 @@ def main():
         scaler = GradScaler(**scaler_kwargs)
     else:
         scaler = None
+    
+    # Initialize Mixup/CutMix augmentation if requested
+    mixup_fn = None
+    if args.mixup_alpha > 0 or args.cutmix_alpha > 0:
+        if not HAS_MIXUP:
+            raise SystemExit("Mixup/CutMix requested but training.augmentation.mixup module not found.")
+        mixup_fn = MixupCutmix(
+            mixup_alpha=args.mixup_alpha,
+            cutmix_alpha=args.cutmix_alpha,
+            prob=args.mixup_prob,
+        )
+        print(f"Mixup/CutMix enabled: mixup_α={args.mixup_alpha}, cutmix_α={args.cutmix_alpha}, prob={args.mixup_prob}")
+    
+    # Initialize SpecAugment if requested
+    specaugment_fn = None
+    if args.specaugment != "none":
+        if not HAS_SPECAUGMENT:
+            raise SystemExit("SpecAugment requested but training.augmentation.specaugment module not found.")
+        specaugment_fn = get_specaugment(
+            config=args.specaugment,
+            n_mels=args.n_mels,
+            n_frames=args.target_frames,
+        )
+        print(f"SpecAugment enabled: preset={args.specaugment}, freq_masks={specaugment_fn.n_freq_masks}, time_masks={specaugment_fn.n_time_masks}")
+    
+    # Initialize EMA if requested
+    ema = None
+    if args.use_ema:
+        if not HAS_EMA:
+            raise SystemExit("EMA requested but training.utils.ema module not found.")
+        ema = ModelEMA(
+            model=model,
+            decay=args.ema_decay,
+            warmup_steps=args.ema_warmup_steps,
+        )
+        print(f"EMA enabled: decay={args.ema_decay}, warmup_steps={args.ema_warmup_steps}")
+    
+    # Initialize Progressive Augmentation if requested
+    progressive_aug = None
+    if args.progressive_augmentation:
+        if not HAS_PROGRESSIVE:
+            raise SystemExit("Progressive augmentation requested but training.utils.adaptive module not found.")
+        progressive_aug = ProgressiveAugmentation(
+            total_epochs=args.epochs,
+            mixup_start=0.1,
+            mixup_end=args.mixup_alpha if args.mixup_alpha > 0 else 0.4,
+            cutmix_start=0.3,
+            cutmix_end=args.cutmix_alpha if args.cutmix_alpha > 0 else 1.0,
+            specaug_start_prob=0.3,
+            specaug_end_prob=0.8,
+        )
+        print(f"Progressive Augmentation enabled: augmentation strength will ramp up during training")
+        print(progressive_aug.log_schedule())
+    
+    # Initialize SWA (Stochastic Weight Averaging) if requested
+    swa_manager = None
+    use_swa = args.use_swa and HAS_SWA
+    if use_swa:
+        swa_lr = args.swa_lr if args.swa_lr is not None else args.lr * 0.1
+        swa_manager = SWAManager(
+            model=model,
+            swa_start=args.swa_start,
+            swa_lr=swa_lr,
+            device=torch_device,
+        )
+        print(f"SWA enabled: start={args.swa_start * 100:.0f}% of training, lr={swa_lr}")
+    
+    # Initialize R-Drop (Regularized Dropout) if requested
+    use_rdrop = args.use_rdrop and HAS_RDROP
+    rdrop_criterion = None
+    if use_rdrop:
+        rdrop_criterion = get_rdrop_loss(
+            alpha=args.rdrop_alpha,
+            base_loss='focal' if use_focal else 'ce',
+            focal_gamma=args.focal_gamma if use_focal else 2.0,
+            label_smoothing=args.label_smoothing,
+            class_weights=class_weights_tensor,
+        )
+        print(f"R-Drop enabled: alpha={args.rdrop_alpha} (consistency regularization)")
+    
+    # Initialize Curriculum Learning if requested
+    curriculum_scheduler = None
+    use_curriculum = args.use_curriculum and HAS_CURRICULUM
+    if use_curriculum:
+        # We'll compute difficulty scores after loading or with a pre-trained model
+        # For now, use class-based difficulty (no model needed)
+        from training.utils.curriculum import get_drum_class_difficulty, CurriculumScheduler
+        
+        class_difficulty = get_drum_class_difficulty()
+        class_names = components_info.get('class_names', DrumClassifierCNN.DRUM_COMPONENTS[:num_classes])
+        
+        # Get labels for training set
+        if train_subset_indices is not None:
+            train_labels = [train_dataset_full.labels[i]['component_idx'] for i in train_subset_indices]
+        else:
+            train_labels = [item['component_idx'] for item in train_dataset_full.labels]
+        
+        # Compute per-sample difficulty blending domain knowledge with class frequency
+        # This mitigates the risk of hardcoded difficulty scores being wrong
+        try:
+            from training.utils.curriculum import compute_frequency_adjusted_difficulty
+            difficulty_scores = compute_frequency_adjusted_difficulty(
+                labels=train_labels,
+                class_names=class_names,
+                frequency_weight=0.3,  # 30% frequency, 70% domain knowledge
+            )
+            print(f"  Using frequency-adjusted difficulty scores (30% frequency + 70% domain knowledge)")
+        except ImportError:
+            # Fallback to pure domain knowledge
+            difficulty_scores = np.array([
+                class_difficulty.get(class_names[label] if label < len(class_names) else 'aux_percussion', 0.5)
+                for label in train_labels
+            ])
+        
+        curriculum_scheduler = CurriculumScheduler(
+            difficulty_scores=difficulty_scores,
+            total_epochs=args.epochs,
+            warmup_epochs=max(2, args.epochs // 10),
+            start_fraction=args.curriculum_start_fraction,
+            strategy=args.curriculum_strategy,
+        )
+        print(f"Curriculum Learning enabled: start={args.curriculum_start_fraction:.0%}, strategy={args.curriculum_strategy}")
+        print(f"  Epoch 0: {curriculum_scheduler.get_fraction(0):.0%} of data")
+        print(f"  Epoch {args.epochs//2}: {curriculum_scheduler.get_fraction(args.epochs//2):.0%} of data")
+        print(f"  Epoch {args.epochs-1}: {curriculum_scheduler.get_fraction(args.epochs-1):.0%} of data")
     
     output_dir = Path(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -1082,6 +2161,42 @@ def main():
             print(f"\nEpoch {epoch + 1}/{args.epochs}")
             print("-" * 60)
 
+            # Update progressive augmentation if enabled
+            if progressive_aug is not None and mixup_fn is not None:
+                prog_values = progressive_aug.get_all(epoch)
+                mixup_fn.mixup_alpha = prog_values["mixup_alpha"]
+                mixup_fn.cutmix_alpha = prog_values["cutmix_alpha"]
+                if specaugment_fn is not None:
+                    specaugment_fn.prob = prog_values["specaugment_prob"]
+                if epoch % 10 == 0 or epoch == start_epoch:
+                    print(f"  Progressive aug: mixup_α={prog_values['mixup_alpha']:.3f}, "
+                          f"cutmix_α={prog_values['cutmix_alpha']:.3f}, "
+                          f"specaug_p={prog_values['specaugment_prob']:.3f}")
+
+            # Update curriculum learning sampler if enabled
+            if curriculum_scheduler is not None:
+                curriculum_scheduler.step(epoch)
+                if epoch % 10 == 0 or epoch == start_epoch:
+                    print(f"  Curriculum: fraction={curriculum_scheduler.get_current_fraction():.3f}")
+                # Rebuild train_loader with updated sampler weights
+                from torch.utils.data import WeightedRandomSampler
+                sample_weights = curriculum_scheduler.get_sample_weights(train_dataset.labels)
+                curriculum_sampler = WeightedRandomSampler(
+                    weights=sample_weights,
+                    num_samples=len(train_dataset),
+                    replacement=True,
+                )
+                train_loader = DataLoader(
+                    train_dataset,
+                    batch_size=args.batch_size,
+                    sampler=curriculum_sampler,
+                    num_workers=args.workers,
+                    pin_memory=True,
+                    prefetch_factor=args.prefetch_factor,
+                    persistent_workers=args.workers > 0,
+                    drop_last=True,
+                )
+
             if args.warmup_epochs > 0 and epoch < args.warmup_epochs:
                 warmup_factor = float(epoch + 1) / float(max(1, args.warmup_epochs))
                 warmup_lr = args.lr * warmup_factor
@@ -1111,7 +2226,19 @@ def main():
                 grad_accum_steps=args.grad_accum_steps,
                 checkpoint_callback=mid_epoch_checkpoint if checkpoint_batch_interval else None,
                 checkpoint_every_batches=checkpoint_batch_interval or 0,
+                mixup_fn=mixup_fn,
+                specaugment_fn=specaugment_fn,
+                ema=ema,
+                use_sam=use_sam,
+                use_rdrop=args.use_rdrop and HAS_RDROP,
+                rdrop_criterion=rdrop_criterion,
+                deep_sup_criterion=deep_sup_criterion,
             )
+            
+            # Update SWA if in SWA phase
+            if swa_manager is not None:
+                swa_manager.update(model, epoch, args.epochs)
+            
             val_loss, val_acc = validate(
                 model,
                 val_loader,
@@ -1161,6 +2288,13 @@ def main():
                 torch.save(model.state_dict(), model_path)
                 best_model_path = model_path
                 print(f"✓ Saved best model (acc: {val_acc:.2f}%)")
+                
+                # Also save EMA model if enabled (often performs even better)
+                if ema is not None:
+                    ema_model_path = output_dir / "best_drum_classifier_ema.pth"
+                    torch.save(ema.ema_model.state_dict(), ema_model_path)
+                    print(f"✓ Saved best EMA model (acc: {val_acc:.2f}%)")
+                
                 if wandb_run is not None:
                     wandb_run.summary["best_val_accuracy"] = best_val_acc  # type: ignore[index]
                     wandb_run.summary["best_epoch"] = best_epoch  # type: ignore[index]
@@ -1207,10 +2341,64 @@ def main():
     final_model_path = output_dir / "final_drum_classifier.pth"
     torch.save(model.state_dict(), final_model_path)
     
+    # Save final EMA model if enabled
+    if ema is not None:
+        final_ema_path = output_dir / "final_drum_classifier_ema.pth"
+        torch.save(ema.ema_model.state_dict(), final_ema_path)
+        print(f"Final EMA model saved to: {final_ema_path}")
+    
+    # Save SWA model if enabled (requires updating BN statistics)
+    if swa_manager is not None and swa_manager.started:
+        print("Updating BatchNorm statistics for SWA model...")
+        swa_manager.update_batch_norm(train_loader)
+        final_swa_path = output_dir / "final_drum_classifier_swa.pth"
+        torch.save(swa_manager.get_averaged_model().state_dict(), final_swa_path)
+        print(f"Final SWA model saved to: {final_swa_path}")
+    
+    # Post-training calibration if enabled
+    if args.calibrate and HAS_CALIBRATION:
+        print("\n" + "=" * 60)
+        print("Running post-training temperature calibration...")
+        print("=" * 60)
+        try:
+            from training.calibration.temperature_scaling import calibrate_model, compute_calibration_metrics
+            
+            # Calibrate the model using validation set
+            calibrated_temp, metrics = calibrate_model(
+                model=model,
+                val_loader=val_loader,
+                device=torch_device,
+                method=args.calibration_method,
+            )
+            
+            print(f"Calibration complete:")
+            print(f"  Method: {args.calibration_method}")
+            print(f"  Optimal temperature: {calibrated_temp:.4f}")
+            print(f"  ECE before: {metrics.get('ece_before', 0):.4f}, ECE after: {metrics.get('ece_after', 0):.4f}")
+            print(f"  NLL before: {metrics.get('nll_before', 0):.4f}, NLL after: {metrics.get('nll_after', 0):.4f}")
+            
+            # Save calibration temperature
+            calib_path = output_dir / "calibration_temperature.json"
+            import json
+            with open(calib_path, "w") as f:
+                json.dump({
+                    "temperature": calibrated_temp,
+                    "method": args.calibration_method,
+                    "metrics": metrics,
+                }, f, indent=2)
+            print(f"Calibration parameters saved to: {calib_path}")
+            
+        except Exception as e:
+            print(f"⚠ Calibration failed: {e} (continuing without calibration)")
+    
     print("\n" + "=" * 60)
     print(f"Training complete!")
     print(f"Best validation accuracy: {best_val_acc:.2f}%")
     print(f"Models saved to: {output_dir}")
+    if ema is not None:
+        print(f"EMA models also saved (often perform 0.5-1% better)")
+    if swa_manager is not None and swa_manager.started:
+        print(f"SWA model also saved (typically best generalization)")
     print("=" * 60)
 
     if wandb_run is not None:

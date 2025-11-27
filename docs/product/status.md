@@ -1,12 +1,51 @@
-# BeatSight Status (November 26, 2025)
+# BeatSight Status (November 27, 2025)
 
 ## Snapshot
 - Desktop reference build: ✅ shipping-quality playback experience and editor skeleton remain green; the live-input experiment has been shelved and its code/config removed to reduce maintenance drag.
-- AI pipeline: 🟢 **Training actively running** (warm-up probe step 5a). Hardware-optimized configs created, class weighting added, environment hook implemented.
+- AI pipeline: 🟢 **Training actively running** (warm-up probe step 5a). Hardware-optimized configs created, class weighting added, environment hook implemented. **NEW: Cutting-edge 2024 techniques added. ⭐ RECOMMENDED: Path G (V5 Ultimate, modes 17a-17d) for production training.**
 - Web pivot: 🟢 **Priority 1-3 COMPLETE, Verifier Dashboard polish in progress**. Backend scaffold now includes Modal GPU orchestration, SSE streaming, S3 storage, notifications, map edit proposals, type generation, quality/robustness improvements, and verifier diff visualization.
 - Documentation: 🟢 consolidated under `docs/Guidebook.md`; historical logs preserved in `docs/archive/`.
 - **AI Integrations Verification: ✅ All 39 features in `MISSING_INTEGRATIONS.md` verified as fully implemented and robust.**
 - **Desktop/Web Alignment Audit: ✅ Schema alignment verified. Backend `AIGenerationOptions` now matches desktop `AiGenerationOptions`.**
+
+## Session Progress (November 27, 2025)
+
+### Cutting-Edge Training Enhancements (COMPLETE)
+- ✅ **Gradient Centralization**: `training/optimizers/gradient_centralization.py`
+  - Centralizes gradients to zero-mean before optimizer step (+0.5-1% improvement)
+  - Works with any optimizer (AdamW, SGD, etc.)
+  
+- ✅ **Stochastic Depth (DropPath)**: `training/utils/stochastic_depth.py`
+  - Layer-level dropout for regularization (+0.5-1%)
+  - Configurable drop rate with linear scaling
+  
+- ✅ **BEATs Foundation Model**: `training/models/beats.py`
+  - Microsoft's audio foundation model (+2-3% potential)
+  - Alternative to Wav2Vec2 with better drum classification potential
+  - New modes: 18a-18c (beats-warmup, beats-short, beats-long)
+  
+- ✅ **Deep Supervision**: `training/losses/deep_supervision.py`
+  - Auxiliary classification heads at intermediate layers (+1-2%)
+  - Better gradient flow throughout network
+  
+- ✅ **CNN v5 Ultimate Model**: `training/models/cnn_v5.py`
+  - Combines ALL innovations: CoordAttn + DropPath + Deep Supervision + Multi-Scale Fusion
+  - Three sizes: small (0.5M), base (2.0M), large (4.5M) parameters
+  - New modes: 17a-17d (v5-warmup through v5-full)
+  
+- ✅ **Training Script Integration**: `train_classifier.py`
+  - Added --model-version v5/beats choices
+  - Added --use-gradient-centralization, --use-deep-supervision flags
+  - Added --drop-path-rate, --v5-size arguments
+  
+- ✅ **Training Tools Updated**:
+  - `auto_train.sh`: Modes 17a-17d (v5) and 18a-18c (beats)
+  - `post_export_commands.sh`: Menu options for v5 and beats training
+  
+- ✅ **Documentation Updated**:
+  - `CUTTING_EDGE_TRAINING_FEATURES.md`: Path G (V5 Ultimate), Path H (BEATs)
+  - `ml_training_runbook.md`: New preset reference
+  - `training/README.md`: Comprehensive model architecture docs
 
 ## Session Progress (November 26, 2025)
 

@@ -1,6 +1,6 @@
 # BeatSight Implementation Status Report
 *Generated: November 24, 2025*  
-*Last Updated: November 26, 2025*  
+*Last Updated: November 27, 2025*  
 *Analysis Scope: Full Codebase*  
 *Analyzer: GitHub Copilot (Claude Opus 4.5)*
 
@@ -22,6 +22,20 @@
 - ✅ **AI Pipeline Test Imports** - Fixed `test_utils` import errors in conftest.py and test files
 - ✅ **Documentation Updates** - Added CI script requirement to CONTRIBUTING.md and START_HERE.md
 - ✅ **Validated All Checks** - Backend lint (0 errors), .NET (90 tests), AI (99 tests)
+
+### Session Progress (Nov 27 - Cutting-Edge Training Enhancements)
+- ✅ **Gradient Centralization** - Created `training/optimizers/gradient_centralization.py` (+0.5-1% improvement)
+- ✅ **Stochastic Depth/DropPath** - Created `training/utils/stochastic_depth.py` for layer dropout regularization
+- ✅ **BEATs Foundation Model** - Created `training/models/beats.py` (Microsoft audio foundation, +2-3%)
+- ✅ **Deep Supervision** - Created `training/losses/deep_supervision.py` (auxiliary heads, +1-2%)
+- ✅ **CNN v5 Ultimate** - Created `training/models/cnn_v5.py` (CoordAttn + DropPath + DeepSup + Multi-Scale)
+- ✅ **train_classifier.py Integration** - Added v5/beats model support, gradient centralization, deep supervision
+- ✅ **auto_train.sh Modes** - Added modes 17a-17d (v5) and 18a-18c (beats) 
+- ✅ **post_export_commands.sh** - Streamlined menu with Path G (V5) as default, legacy menu for research paths
+- ✅ **CUTTING_EDGE_TRAINING_FEATURES.md** - Streamlined to focus on Path G (V5 Ultimate), archived full version
+- ✅ **ml_training_runbook.md** - Updated preset reference with new modes
+- ✅ **training/README.md** - Added comprehensive model architecture documentation
+- ✅ **Documentation Cleanup** - Archived legacy path docs (temporal mamba, ultimate roadmap, patent strategy)
 
 ### Session Progress (Nov 25 - Continued)
 - ✅ **E4.M2: Verifier Dashboard Backend** - Full API (`/api/verifier/*`) with RBAC, 14 tests

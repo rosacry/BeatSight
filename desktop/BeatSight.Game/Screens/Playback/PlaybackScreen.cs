@@ -279,10 +279,11 @@ namespace BeatSight.Game.Screens.Playback
             backgroundBlurContainer = new BufferedContainer
             {
                 RelativeSizeAxes = Axes.Both,
+                BackgroundColour = new Color4(10, 10, 18, 255), // Clear framebuffer to solid color to prevent random flashing
                 Child = backgroundBase = new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = new Color4(10, 10, 18, 255).Opacity(0.8f) // Semi-transparent
+                    Colour = new Color4(10, 10, 18, 255) // Fully opaque to prevent uninitialized framebuffer showing through
                 }
             };
 
@@ -1335,13 +1336,7 @@ namespace BeatSight.Game.Screens.Playback
 
         private void onPlayfieldResult(HitResult result, double offset, Color4 accentColour, string component)
         {
-            if (hitLightingEnabled?.Value == true && (result == HitResult.Perfect || result == HitResult.Great))
-            {
-                hitLightingOverlay.Colour = new Color4(accentColour.R, accentColour.G, accentColour.B, 255);
-                hitLightingOverlay.FadeTo(0.4f, 60, Easing.OutQuint)
-                    .Then()
-                    .FadeOut(260, Easing.OutQuad);
-            }
+            // Hit lighting overlay disabled - was causing seizure-inducing flashing
 
             if (result != HitResult.Miss && result != HitResult.None)
             {

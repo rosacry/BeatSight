@@ -119,6 +119,9 @@ namespace BeatSight.Game.Configuration
             setDefault(BeatSightSetting.DefaultQuantization, "sixteenth");
             setDefault(BeatSightSetting.DefaultSensitivity, 60.0);
 
+            // Developer Mode - enables local AI processing for developers only
+            setDefault(BeatSightSetting.DeveloperModeEnabled, false);
+
             // Key Bindings (serialized as comma-separated key names)
             setDefault(BeatSightSetting.LaneKeys4, "D,F,J,K");
             setDefault(BeatSightSetting.LaneKeys5, "S,D,Space,J,K");
@@ -271,6 +274,9 @@ namespace BeatSight.Game.Configuration
         DefaultQuantization,
         DefaultSensitivity,
         AutoGenerateOnImport,
+
+        // Developer Mode
+        DeveloperModeEnabled,
 
         // Key Bindings
         LaneKeys4,

@@ -1009,13 +1009,15 @@ namespace BeatSight.Game.Screens.Editor
                 waveformSliderContainer,
                 createTimelineMiniButton("Reset", () => setWaveformScale(1.0), 58),
                 waveformScaleValueText,
-                new BeatSightCheckbox
+                new Container
                 {
-                    LabelText = "Drums",
-                    Current = showDrumStem,
-                    Width = 80,
-                    Height = 20,
-                    Margin = new MarginPadding { Left = 10 }
+                    AutoSizeAxes = Axes.Both,
+                    Margin = new MarginPadding { Left = 10 },
+                    Child = new BeatSightCheckbox
+                    {
+                        LabelText = "Drums",
+                        Current = showDrumStem,
+                    }
                 });
 
             var snapSection = createTimelineSection("Snap",

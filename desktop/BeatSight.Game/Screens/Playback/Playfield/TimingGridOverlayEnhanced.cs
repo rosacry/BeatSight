@@ -470,7 +470,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 glow.Alpha = 0;
                 accentStripe.Alpha = 0;
 
-                this.FadeTo(alpha, DesignSystem.AnimationFast, Easing.OutQuint);
+                // Set alpha directly instead of using transforms to prevent accumulation
+                Alpha = alpha;
             }
 
             private void Update3DStyle(GridMarkerType type, float y, float drawHeight)
@@ -507,7 +508,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 accentStripe.Alpha = 0;
 
                 float targetAlpha = baseAlpha * depthFade;
-                this.FadeTo(targetAlpha, DesignSystem.AnimationFast, Easing.OutQuint);
+                // Set alpha directly instead of using transforms to prevent accumulation
+                Alpha = targetAlpha;
             }
 
             private void Update2DStyle(GridMarkerType type)
@@ -547,11 +549,14 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     accentStripe.Alpha = 0;
                 }
 
-                this.FadeTo(alpha, DesignSystem.AnimationFast, Easing.OutQuint);
+                // Set alpha directly instead of using transforms to prevent accumulation
+                Alpha = alpha;
             }
 
             public void Deactivate()
             {
+                // Clear any pending transforms to prevent accumulation, then fade out
+                this.ClearTransforms();
                 this.FadeOut(DesignSystem.AnimationMedium, Easing.OutQuint);
             }
         }
@@ -598,11 +603,14 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 text.Text = measureNumber.ToString();
 
                 float targetAlpha = mode == LaneViewMode.ThreeDimensional ? 0.6f : 0.8f;
-                this.FadeTo(targetAlpha, DesignSystem.AnimationFast, Easing.OutQuint);
+                // Set alpha directly instead of using transforms to prevent accumulation
+                Alpha = targetAlpha;
             }
 
             public void Deactivate()
             {
+                // Clear any pending transforms to prevent accumulation, then fade out
+                this.ClearTransforms();
                 this.FadeOut(DesignSystem.AnimationMedium, Easing.OutQuint);
             }
         }

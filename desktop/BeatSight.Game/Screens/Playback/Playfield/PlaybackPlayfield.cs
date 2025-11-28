@@ -760,11 +760,11 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             else
             {
                 threeDHighwayBackground = null;
-                // Add 2D background
+                // Add 2D background - fully opaque to prevent any bleed-through
                 laneBackgroundContainer.Add(new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = new Color4(20, 20, 30, 200)
+                    Colour = new Color4(20, 20, 30, 255)
                 });
 
                 // Add lane separators

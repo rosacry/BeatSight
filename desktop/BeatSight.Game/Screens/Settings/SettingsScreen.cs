@@ -1771,9 +1771,36 @@ namespace BeatSight.Game.Screens.Settings
                         "Switch between a shared timing line or a dedicated lane for kick hits.",
                         formatKickLaneMode
                     ),
+                    createOpenSongsFolderButton(),
                     createResetSettingsButton()
                 }
             };
+        }
+
+        private SettingItem createOpenSongsFolderButton()
+        {
+            var openButton = new BeatSightButton
+            {
+                Width = 220,
+                Height = 36,
+                Text = "Open Songs Folder",
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+                Action = () => SettingsScreen.OpenDirectoryExternally(host, UserAssetDirectories.Songs)
+            };
+
+            var control = new Container
+            {
+                AutoSizeAxes = Axes.Both,
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+                Child = openButton
+            };
+
+            return CreateSettingItem(
+                "Songs Library",
+                "Open the folder where your beatmaps are stored. Drop .bsm files here to add new songs.",
+                control);
         }
 
         private SettingItem createResetSettingsButton()
@@ -2687,9 +2714,13 @@ namespace BeatSight.Game.Screens.Settings
     {
         private readonly BeatSightConfigManager config;
         private readonly GameHost host;
+        private FillFlowContainer developerContent = null!;
+        private Container developerUnlockSection = null!;
+        private Bindable<bool> developerModeEnabled = null!;
+        private const string DEVELOPER_PASSWORD = "beatsight-dev-2024";
 
         public AISettingsSection(BeatSightConfigManager config, GameHost host, Container dropdownOverlay, SettingsTooltipOverlay tooltipOverlay)
-            : base("AI / Generation", dropdownOverlay, tooltipOverlay)
+            : base("AI / Processing", dropdownOverlay, tooltipOverlay)
         {
             this.config = config;
             this.host = host;
@@ -2697,6 +2728,26 @@ namespace BeatSight.Game.Screens.Settings
 
         protected override Drawable createContent()
         {
+            developerModeEnabled = config.GetBindable<bool>(BeatSightSetting.DeveloperModeEnabled);
+
+            developerContent = new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(0, 12),
+                Alpha = developerModeEnabled.Value ? 1 : 0
+            };
+
+            developerUnlockSection = new Container
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y
+            };
+
+            updateDeveloperUI();
+            developerModeEnabled.BindValueChanged(_ => updateDeveloperUI(), true);
+
             return new FillFlowContainer
             {
                 RelativeSizeAxes = Axes.X,
@@ -2705,84 +2756,293 @@ namespace BeatSight.Game.Screens.Settings
                 Spacing = new Vector2(0, 12),
                 Children = new Drawable[]
                 {
-                    createHeader("AI Pipeline Configuration"),
-                    createTextBox("Python Environment Path", config.GetBindable<string>(BeatSightSetting.PythonPath)),
-                    createDropdown("Model Checkpoints", config.GetBindable<string>(BeatSightSetting.ModelVersion), new[] { "v1.0", "v2.0" }),
-                    CreateCheckbox("Use GPU / CUDA", config.GetBindable<bool>(BeatSightSetting.UseGpu)),
-                    createTextBox("Custom Model Path", config.GetBindable<string>(BeatSightSetting.CustomModelPath)),
-
-                    createHeader("External Services"),
-                    createTextBox("AcoustID API Key", config.GetBindable<string>(BeatSightSetting.AcoustIdApiKey), masked: true),
-
-                    createHeader("Default Generation Settings"),
-                    createDropdown("Default Quantization", config.GetBindable<string>(BeatSightSetting.DefaultQuantization), new[] { "quarter", "eighth", "sixteenth" }),
-                    CreateSlider("Default Sensitivity", config.GetBindable<double>(BeatSightSetting.DefaultSensitivity), 0, 100, 1),
-                    CreateCheckbox("Auto-generate on Import", config.GetBindable<bool>(BeatSightSetting.AutoGenerateOnImport)),
-
-                    createHeader("Cache Management"),
-                    createButton("Clear Feature Cache", () =>
-                    {
-                        try
-                        {
-                            // Attempt to locate the feature cache relative to the execution path
-                            // In development, this is likely in the repo root.
-                            string currentDir = Directory.GetCurrentDirectory();
-                            string featureCachePath = Path.Combine(currentDir, "data", "feature_cache");
-
-                            // If not found, try walking up directories (dev environment)
-                            if (!Directory.Exists(featureCachePath))
-                            {
-                                var dir = new DirectoryInfo(currentDir);
-                                while (dir != null)
-                                {
-                                    string check = Path.Combine(dir.FullName, "data", "feature_cache");
-                                    if (Directory.Exists(check))
-                                    {
-                                        featureCachePath = check;
-                                        break;
-                                    }
-                                    dir = dir.Parent;
-                                }
-                            }
-
-                            if (Directory.Exists(featureCachePath))
-                            {
-                                Directory.Delete(featureCachePath, true);
-                                Directory.CreateDirectory(featureCachePath);
-                                Logger.Log($"Cleared feature cache at {featureCachePath}", LoggingTarget.Runtime, LogLevel.Important);
-                            }
-                            else
-                            {
-                                Logger.Log("Feature cache directory not found.", LoggingTarget.Runtime, LogLevel.Important);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Log($"Failed to clear feature cache: {ex.Message}", LoggingTarget.Runtime, LogLevel.Error);
-                        }
-                    }),
-                    createButton("Clear Separation Temp", () =>
-                    {
-                        try
-                        {
-                            string tempPath = Path.Combine(Path.GetTempPath(), "beatsight_demucs");
-                            if (Directory.Exists(tempPath))
-                            {
-                                Directory.Delete(tempPath, true);
-                                Logger.Log($"Cleared separation temp at {tempPath}", LoggingTarget.Runtime, LogLevel.Important);
-                            }
-                            else
-                            {
-                                Logger.Log("Separation temp directory not found.", LoggingTarget.Runtime, LogLevel.Important);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Log($"Failed to clear separation temp: {ex.Message}", LoggingTarget.Runtime, LogLevel.Error);
-                        }
-                    })
+                    createInfoBox(),
+                    developerUnlockSection,
+                    developerContent
                 }
             };
+        }
+
+        private void updateDeveloperUI()
+        {
+            if (developerModeEnabled.Value)
+            {
+                developerContent.ClearTransforms();
+                developerContent.FadeIn(200);
+                populateDeveloperContent();
+                developerUnlockSection.Child = createDeveloperDisableButton();
+            }
+            else
+            {
+                developerContent.ClearTransforms();
+                developerContent.FadeOut(200);
+                developerUnlockSection.Child = createDeveloperUnlockUI();
+            }
+        }
+
+        private Drawable createInfoBox()
+        {
+            return new Container
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Masking = true,
+                CornerRadius = 8,
+                Children = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = UITheme.AccentPrimary.Opacity(0.1f)
+                    },
+                    new FillFlowContainer
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Vertical,
+                        Padding = new MarginPadding(16),
+                        Spacing = new Vector2(0, 8),
+                        Children = new Drawable[]
+                        {
+                            new SpriteText
+                            {
+                                Text = "AI Processing",
+                                Font = BeatSightFont.Section(18f),
+                                Colour = UITheme.AccentPrimary
+                            },
+                            new SpriteText
+                            {
+                                Text = "BeatSight uses server-side AI processing to analyze your songs.",
+                                Font = BeatSightFont.Body(14f),
+                                Colour = UITheme.TextSecondary
+                            },
+                            new SpriteText
+                            {
+                                Text = "All AI computation runs on our servers - no local GPU or processing required.",
+                                Font = BeatSightFont.Body(14f),
+                                Colour = UITheme.TextSecondary
+                            },
+                            new SpriteText
+                            {
+                                Text = "This ensures consistent results and keeps your computer running smoothly.",
+                                Font = BeatSightFont.Body(14f),
+                                Colour = UITheme.TextMuted
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        private Drawable createDeveloperUnlockUI()
+        {
+            BasicTextBox passwordBox = null!;
+
+            return new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(0, 8),
+                Margin = new MarginPadding { Top = 20 },
+                Children = new Drawable[]
+                {
+                    new SpriteText
+                    {
+                        Text = "Developer Mode",
+                        Font = BeatSightFont.Caption(14f),
+                        Colour = UITheme.TextMuted
+                    },
+                    new SpriteText
+                    {
+                        Text = "For BeatSight developers only. Enables local AI processing.",
+                        Font = BeatSightFont.Caption(12f),
+                        Colour = UITheme.TextMuted
+                    },
+                    new FillFlowContainer
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Horizontal,
+                        Spacing = new Vector2(8, 0),
+                        Children = new Drawable[]
+                        {
+                            passwordBox = new BasicTextBox
+                            {
+                                Width = 200,
+                                Height = 32,
+                                PlaceholderText = "Enter password...",
+                                CommitOnFocusLost = false
+                            },
+                            new BeatSightButton
+                            {
+                                Text = "Unlock",
+                                Width = 80,
+                                Height = 32,
+                                Action = () =>
+                                {
+                                    if (passwordBox.Text == DEVELOPER_PASSWORD)
+                                    {
+                                        developerModeEnabled.Value = true;
+                                        Logger.Log("Developer mode enabled", LoggingTarget.Runtime, LogLevel.Important);
+                                    }
+                                    else
+                                    {
+                                        passwordBox.Text = string.Empty;
+                                        passwordBox.FlashColour(UITheme.AccentError, 500);
+                                    }
+                                },
+                                BackgroundColour = UITheme.SurfaceAlt
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        private Drawable createDeveloperDisableButton()
+        {
+            return new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(0, 8),
+                Margin = new MarginPadding { Top = 20 },
+                Children = new Drawable[]
+                {
+                    new FillFlowContainer
+                    {
+                        AutoSizeAxes = Axes.Both,
+                        Direction = FillDirection.Horizontal,
+                        Spacing = new Vector2(8, 0),
+                        Children = new Drawable[]
+                        {
+                            new Container
+                            {
+                                AutoSizeAxes = Axes.Both,
+                                Masking = true,
+                                CornerRadius = 4,
+                                Children = new Drawable[]
+                                {
+                                    new Box
+                                    {
+                                        RelativeSizeAxes = Axes.Both,
+                                        Colour = UITheme.AccentSuccess.Opacity(0.2f)
+                                    },
+                                    new SpriteText
+                                    {
+                                        Text = "DEVELOPER MODE ACTIVE",
+                                        Font = BeatSightFont.Caption(12f),
+                                        Colour = UITheme.AccentSuccess,
+                                        Padding = new MarginPadding { Horizontal = 8, Vertical = 4 }
+                                    }
+                                }
+                            },
+                            new BeatSightButton
+                            {
+                                Text = "Disable",
+                                Width = 80,
+                                Height = 28,
+                                Action = () =>
+                                {
+                                    developerModeEnabled.Value = false;
+                                    Logger.Log("Developer mode disabled", LoggingTarget.Runtime, LogLevel.Important);
+                                },
+                                BackgroundColour = UITheme.AccentError
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        private void populateDeveloperContent()
+        {
+            developerContent.Clear();
+            developerContent.AddRange(new Drawable[]
+            {
+                createHeader("Local AI Pipeline (Developer Only)"),
+                new SpriteText
+                {
+                    Text = "Warning: These settings use your local computer for AI processing.",
+                    Font = BeatSightFont.Caption(12f),
+                    Colour = UITheme.AccentWarning,
+                    Margin = new MarginPadding { Bottom = 8 }
+                },
+                createTextBox("Python Environment Path", config.GetBindable<string>(BeatSightSetting.PythonPath)),
+                createDropdown("Model Checkpoints", config.GetBindable<string>(BeatSightSetting.ModelVersion), new[] { "v1.0", "v2.0" }),
+                CreateCheckbox("Use GPU / CUDA", config.GetBindable<bool>(BeatSightSetting.UseGpu)),
+                createTextBox("Custom Model Path", config.GetBindable<string>(BeatSightSetting.CustomModelPath)),
+
+                createHeader("External Services"),
+                createTextBox("AcoustID API Key", config.GetBindable<string>(BeatSightSetting.AcoustIdApiKey), masked: true),
+
+                createHeader("Default Generation Settings"),
+                createDropdown("Default Quantization", config.GetBindable<string>(BeatSightSetting.DefaultQuantization), new[] { "quarter", "eighth", "sixteenth" }),
+                CreateSlider("Default Sensitivity", config.GetBindable<double>(BeatSightSetting.DefaultSensitivity), 0, 100, 1),
+                CreateCheckbox("Auto-generate on Import", config.GetBindable<bool>(BeatSightSetting.AutoGenerateOnImport)),
+
+                createHeader("Cache Management"),
+                createButton("Clear Feature Cache", () =>
+                {
+                    try
+                    {
+                        string currentDir = Directory.GetCurrentDirectory();
+                        string featureCachePath = Path.Combine(currentDir, "data", "feature_cache");
+
+                        if (!Directory.Exists(featureCachePath))
+                        {
+                            var dir = new DirectoryInfo(currentDir);
+                            while (dir != null)
+                            {
+                                string check = Path.Combine(dir.FullName, "data", "feature_cache");
+                                if (Directory.Exists(check))
+                                {
+                                    featureCachePath = check;
+                                    break;
+                                }
+                                dir = dir.Parent;
+                            }
+                        }
+
+                        if (Directory.Exists(featureCachePath))
+                        {
+                            Directory.Delete(featureCachePath, true);
+                            Directory.CreateDirectory(featureCachePath);
+                            Logger.Log($"Cleared feature cache at {featureCachePath}", LoggingTarget.Runtime, LogLevel.Important);
+                        }
+                        else
+                        {
+                            Logger.Log("Feature cache directory not found.", LoggingTarget.Runtime, LogLevel.Important);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log($"Failed to clear feature cache: {ex.Message}", LoggingTarget.Runtime, LogLevel.Error);
+                    }
+                }),
+                createButton("Clear Separation Temp", () =>
+                {
+                    try
+                    {
+                        string tempPath = Path.Combine(Path.GetTempPath(), "beatsight_demucs");
+                        if (Directory.Exists(tempPath))
+                        {
+                            Directory.Delete(tempPath, true);
+                            Logger.Log($"Cleared separation temp at {tempPath}", LoggingTarget.Runtime, LogLevel.Important);
+                        }
+                        else
+                        {
+                            Logger.Log("Separation temp directory not found.", LoggingTarget.Runtime, LogLevel.Important);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log($"Failed to clear separation temp: {ex.Message}", LoggingTarget.Runtime, LogLevel.Error);
+                    }
+                })
+            });
         }
 
         private Drawable createHeader(string text)
@@ -2834,274 +3094,132 @@ namespace BeatSight.Game.Screens.Settings
     }
 
     /// <summary>
-    /// Settings section for keyboard controls and key bindings.
+    /// Settings section for keyboard controls reference.
+    /// Displays built-in keybindings for playback and editor functionality.
     /// </summary>
     public partial class ControlsSettingsSection : SettingsSection
     {
-        private readonly BeatSightConfigManager config;
-        private readonly GameHost host;
-        private FillFlowContainer keyBindingsList = null!;
-
         public ControlsSettingsSection(BeatSightConfigManager config, GameHost host, Container dropdownOverlay, SettingsTooltipOverlay tooltipOverlay)
-            : base("Controls", dropdownOverlay, tooltipOverlay)
+            : base("Keyboard Shortcuts", dropdownOverlay, tooltipOverlay)
         {
-            this.config = config;
-            this.host = host;
         }
 
         protected override Drawable createContent()
         {
-            keyBindingsList = new FillFlowContainer
+            return new FillFlowContainer
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
                 Direction = FillDirection.Vertical,
-                Spacing = new Vector2(0, 8)
+                Spacing = new Vector2(0, 24),
+                Children = new Drawable[]
+                {
+                    createShortcutSection("Global", new[]
+                    {
+                        ("Escape", "Go back / Close overlay"),
+                        ("F1 or Shift+?", "Toggle help overlay"),
+                    }),
+                    createShortcutSection("Playback Screen", new[]
+                    {
+                        ("Space", "Play / Pause"),
+                        ("R", "Restart from beginning"),
+                        ("[", "Set loop start point"),
+                        ("]", "Set loop end point"),
+                        ("Backspace", "Clear loop points"),
+                    }),
+                    createShortcutSection("Editor Screen", new[]
+                    {
+                        ("Space", "Play / Pause"),
+                        ("Shift+Space", "Rewind to start"),
+                        ("Left Arrow", "Seek backward 5 seconds"),
+                        ("Right Arrow", "Seek forward 5 seconds"),
+                        ("Alt+Left", "Nudge selected note earlier"),
+                        ("Alt+Right", "Nudge selected note later"),
+                        (",", "Jump to previous note"),
+                        (".", "Jump to next note"),
+                        ("Delete / Backspace", "Delete selected note"),
+                        ("[ / ]", "Adjust snap divisor"),
+                        ("Ctrl++ / Ctrl+-", "Zoom timeline"),
+                        ("Ctrl+Alt++ / Ctrl+Alt+-", "Scale waveform"),
+                    }),
+                }
+            };
+        }
+
+        private Drawable createShortcutSection(string title, (string key, string action)[] shortcuts)
+        {
+            var rows = new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(0, 6)
             };
 
-            populateKeyBindings();
+            foreach (var (key, action) in shortcuts)
+            {
+                rows.Add(createShortcutRow(key, action));
+            }
 
             return new FillFlowContainer
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
                 Direction = FillDirection.Vertical,
-                Spacing = new Vector2(0, 20),
+                Spacing = new Vector2(0, 10),
                 Children = new Drawable[]
                 {
                     new SpriteText
                     {
-                        Text = "Lane Key Bindings",
+                        Text = title,
                         Font = BeatSightFont.Caption(16f),
-                        Colour = UITheme.TextSecondary
+                        Colour = UITheme.AccentPrimary
                     },
-                    new SpriteText
-                    {
-                        Text = "Configure keyboard keys for each lane count. Changes apply immediately.",
-                        Font = BeatSightFont.Caption(12f),
-                        Colour = UITheme.TextMuted,
-                        Margin = new MarginPadding { Bottom = 10 }
-                    },
-                    keyBindingsList,
-                    createResetAllButton()
+                    rows
                 }
             };
         }
 
-        private void populateKeyBindings()
+        private Drawable createShortcutRow(string key, string action)
         {
-            keyBindingsList.Clear();
-
-            // Create binding rows for each supported lane count
-            foreach (int laneCount in new[] { 4, 5, 6, 7, 8 })
-            {
-                keyBindingsList.Add(createKeyBindingRow(laneCount));
-            }
-        }
-
-        private Drawable createKeyBindingRow(int laneCount)
-        {
-            var currentKeys = KeyBindingHelper.GetLaneKeys(config, laneCount);
-            var keyDisplays = new FillFlowContainer
-            {
-                AutoSizeAxes = Axes.Both,
-                Direction = FillDirection.Horizontal,
-                Spacing = new Vector2(6, 0)
-            };
-
-            for (int i = 0; i < currentKeys.Length; i++)
-            {
-                int laneIndex = i;
-                var key = currentKeys[i];
-
-                var keyBox = new KeyBindingBox(key, newKey =>
-                {
-                    // Update the key binding
-                    var keys = KeyBindingHelper.GetLaneKeys(config, laneCount);
-                    if (laneIndex < keys.Length)
-                    {
-                        keys[laneIndex] = newKey;
-                        KeyBindingHelper.SetLaneKeys(config, laneCount, keys);
-                    }
-                });
-
-                keyDisplays.Add(keyBox);
-            }
-
             return new Container
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
                 Children = new Drawable[]
                 {
-                    new FillFlowContainer
+                    new Container
                     {
-                        RelativeSizeAxes = Axes.X,
-                        AutoSizeAxes = Axes.Y,
-                        Direction = FillDirection.Horizontal,
-                        Spacing = new Vector2(15, 0),
+                        AutoSizeAxes = Axes.Both,
+                        Masking = true,
+                        CornerRadius = 4,
                         Children = new Drawable[]
                         {
+                            new Box
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Colour = UITheme.SurfaceAlt
+                            },
                             new SpriteText
                             {
-                                Text = $"{laneCount} Lanes:",
-                                Font = BeatSightFont.Caption(14f),
+                                Text = key,
+                                Font = BeatSightFont.Caption(12f),
                                 Colour = UITheme.TextPrimary,
-                                Width = 70
-                            },
-                            keyDisplays,
-                            createResetButton(laneCount)
+                                Padding = new MarginPadding { Horizontal = 8, Vertical = 4 }
+                            }
                         }
-                    }
-                }
-            };
-        }
-
-        private Drawable createResetButton(int laneCount)
-        {
-            return new BeatSightButton
-            {
-                Text = "Reset",
-                Width = 60,
-                Height = 28,
-                Action = () =>
-                {
-                    KeyBindingHelper.ResetToDefaults(config, laneCount);
-                    populateKeyBindings();
-                },
-                BackgroundColour = UITheme.SurfaceAlt
-            };
-        }
-
-        private Drawable createResetAllButton()
-        {
-            return new BeatSightButton
-            {
-                Text = "Reset All Key Bindings to Defaults",
-                RelativeSizeAxes = Axes.X,
-                Height = 40,
-                Action = () =>
-                {
-                    foreach (int laneCount in new[] { 4, 5, 6, 7, 8 })
+                    },
+                    new SpriteText
                     {
-                        KeyBindingHelper.ResetToDefaults(config, laneCount);
+                        Text = action,
+                        Font = BeatSightFont.Caption(13f),
+                        Colour = UITheme.TextSecondary,
+                        X = 180,
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft
                     }
-                    populateKeyBindings();
-                },
-                BackgroundColour = UITheme.AccentError,
-                Margin = new MarginPadding { Top = 20 }
-            };
-        }
-    }
-
-    /// <summary>
-    /// Interactive key binding box that captures key presses.
-    /// </summary>
-    public partial class KeyBindingBox : CompositeDrawable
-    {
-        private osuTK.Input.Key currentKey;
-        private readonly Action<osuTK.Input.Key> onKeyChanged;
-        private Box background = null!;
-        private SpriteText keyText = null!;
-        private bool isCapturing;
-
-        private const float box_width = 50;
-        private const float box_height = 32;
-
-        public KeyBindingBox(osuTK.Input.Key initialKey, Action<osuTK.Input.Key> onKeyChanged)
-        {
-            currentKey = initialKey;
-            this.onKeyChanged = onKeyChanged;
-
-            Size = new Vector2(box_width, box_height);
-        }
-
-        [BackgroundDependencyLoader]
-        private void load()
-        {
-            Masking = true;
-            CornerRadius = 4;
-
-            InternalChildren = new Drawable[]
-            {
-                background = new Box
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Colour = UITheme.SurfaceAlt
-                },
-                keyText = new SpriteText
-                {
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    Text = KeyBindingHelper.GetKeyDisplayName(currentKey),
-                    Font = BeatSightFont.Caption(12f),
-                    Colour = UITheme.TextPrimary
                 }
             };
         }
-
-        protected override bool OnClick(ClickEvent e)
-        {
-            startCapture();
-            return true;
-        }
-
-        protected override bool OnKeyDown(KeyDownEvent e)
-        {
-            if (!isCapturing)
-                return base.OnKeyDown(e);
-
-            // Ignore modifier keys alone
-            if (e.Key == osuTK.Input.Key.ShiftLeft || e.Key == osuTK.Input.Key.ShiftRight ||
-                e.Key == osuTK.Input.Key.ControlLeft || e.Key == osuTK.Input.Key.ControlRight ||
-                e.Key == osuTK.Input.Key.AltLeft || e.Key == osuTK.Input.Key.AltRight)
-            {
-                return true;
-            }
-
-            // Escape cancels
-            if (e.Key == osuTK.Input.Key.Escape)
-            {
-                stopCapture();
-                return true;
-            }
-
-            // Assign the new key
-            currentKey = e.Key;
-            keyText.Text = KeyBindingHelper.GetKeyDisplayName(currentKey);
-            onKeyChanged?.Invoke(currentKey);
-            stopCapture();
-
-            return true;
-        }
-
-        protected override void OnFocusLost(FocusLostEvent e)
-        {
-            if (isCapturing)
-                stopCapture();
-
-            base.OnFocusLost(e);
-        }
-
-        private void startCapture()
-        {
-            isCapturing = true;
-            background.Colour = UITheme.AccentPrimary;
-            keyText.Text = "...";
-            keyText.Colour = UITheme.Background;
-
-            // Request focus to capture key events
-            GetContainingFocusManager()?.ChangeFocus(this);
-        }
-
-        private void stopCapture()
-        {
-            isCapturing = false;
-            background.Colour = UITheme.SurfaceAlt;
-            keyText.Text = KeyBindingHelper.GetKeyDisplayName(currentKey);
-            keyText.Colour = UITheme.TextPrimary;
-        }
-
-        public override bool AcceptsFocus => true;
     }
 }

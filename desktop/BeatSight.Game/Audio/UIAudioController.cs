@@ -24,10 +24,6 @@ namespace BeatSight.Game.Audio
         private Sample? impactSample;
         private Sample? glitchSample;
 
-        private int clickCombo = 0;
-        private double lastClickTime = 0;
-        private const double COMBO_RESET_TIME = 500; // ms
-
         public event Action? OnClickEvent;
 
         // Master switch for audio output. Default to false as per user request.
@@ -82,7 +78,7 @@ namespace BeatSight.Game.Audio
         }
 
         /// <summary>
-        /// Plays a click sound. Rapid clicks will increase in pitch (combo system).
+        /// Plays a click sound with slight pitch variation for a natural feel.
         /// </summary>
         public void PlayClick(bool important = false)
         {
@@ -94,31 +90,18 @@ namespace BeatSight.Game.Audio
             var sample = clickSample ?? impactSample;
             if (sample == null) return;
 
-            double currentTime = Time.Current;
-            if (currentTime - lastClickTime < COMBO_RESET_TIME)
-            {
-                clickCombo++;
-            }
-            else
-            {
-                clickCombo = 0;
-            }
-            lastClickTime = currentTime;
-
             var channel = sample.GetChannel();
-
-            // Pitch goes up with combo, capped at some limit
-            double pitchOffset = Math.Min(clickCombo * 0.05, 0.5);
 
             if (important)
             {
-                // Important clicks are deeper but still affected by combo slightly
-                channel.Frequency.Value = 0.8 + (pitchOffset * 0.5);
+                // Important clicks are deeper and louder
+                channel.Frequency.Value = 0.8;
                 channel.Volume.Value = 1.0;
             }
             else
             {
-                channel.Frequency.Value = 1.0 + pitchOffset + RNG.NextDouble(-0.02, 0.02);
+                // Add slight pitch variation for natural feel
+                channel.Frequency.Value = 1.0 + RNG.NextDouble(-0.02, 0.02);
                 channel.Volume.Value = 0.8;
             }
 

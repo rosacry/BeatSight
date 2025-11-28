@@ -49,6 +49,9 @@ namespace BeatSight.Game.Screens.SongSelect
         [Resolved]
         private UserProgressManager progressManager { get; set; } = null!;
 
+        [Resolved]
+        private Collections.CollectionManager collectionManager { get; set; } = null!;
+
         private readonly bool editorMode;
         private readonly bool previewMode;
         private BeatmapCarousel carousel = null!;
@@ -238,6 +241,66 @@ namespace BeatSight.Game.Screens.SongSelect
             // To fully implement, we need a TrackStore that can load from files.
             // var trackPath = Path.Combine(Path.GetDirectoryName(entry.Path), entry.Beatmap.Audio.Filename);
             // currentTrack = audio.Tracks.Get(trackPath); // This requires the track to be in the store.
+        }
+
+        private void openBeatmapInEditor(BeatmapLibrary.BeatmapEntry entry)
+        {
+            this.Push(new EditorScreen(entry.Path));
+        }
+
+        private void deleteBeatmap(BeatmapLibrary.BeatmapEntry entry)
+        {
+            // TODO: Show confirmation dialog before deleting
+            try
+            {
+                if (File.Exists(entry.Path))
+                {
+                    File.Delete(entry.Path);
+                    Logger.Log($"Deleted beatmap: {entry.Path}", LoggingTarget.Runtime, LogLevel.Important);
+
+                    // Clear selection if the deleted beatmap was selected
+                    if (selectedBeatmap == entry)
+                    {
+                        selectedBeatmap = null;
+                    }
+
+                    // Schedule the refresh on the main thread to ensure UI updates properly
+                    Schedule(() =>
+                    {
+                        var beatmaps = BeatmapLibrary.GetAvailableBeatmaps();
+                        carousel.SetBeatmaps(beatmaps);
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Failed to delete beatmap: {ex.Message}", LoggingTarget.Runtime, LogLevel.Error);
+            }
+        }
+
+        private void addBeatmapToCollection(BeatmapLibrary.BeatmapEntry entry)
+        {
+            var beatmapId = UserProgressManager.GenerateBeatmapId(
+                entry.Path,
+                entry.Beatmap.Metadata.Title,
+                entry.Beatmap.Metadata.Artist);
+
+            var collections = collectionManager.Collections;
+
+            if (collections.Count == 0)
+            {
+                // Create a default collection if none exist
+                var defaultCollection = collectionManager.CreateCollection("Favorites");
+                collectionManager.AddToCollection(defaultCollection.Id, beatmapId);
+                Logger.Log($"Created 'Favorites' collection and added: {entry.Beatmap.Metadata.Title}", LoggingTarget.Runtime, LogLevel.Important);
+            }
+            else
+            {
+                // For now, add to the first collection. A proper UI picker will be added later.
+                var firstCollection = collections.First();
+                collectionManager.AddToCollection(firstCollection.Id, beatmapId);
+                Logger.Log($"Added to collection '{firstCollection.Name}': {entry.Beatmap.Metadata.Title}", LoggingTarget.Runtime, LogLevel.Important);
+            }
         }
 
         public override void OnEntering(ScreenTransitionEvent e)
@@ -667,7 +730,7 @@ namespace BeatSight.Game.Screens.SongSelect
                                 // Favorite button
                                 favoriteButton = new BeatSightButton
                                 {
-                                    Text = "☆ Add to Favorites",
+                                    Text = "Add to Favorites",
                                     Width = 180,
                                     Height = 36,
                                     BackgroundColour = UITheme.SurfaceAlt,
@@ -785,12 +848,12 @@ namespace BeatSight.Game.Screens.SongSelect
             {
                 if (isFavorite)
                 {
-                    favoriteButton.Text = "★ Favorite";
+                    favoriteButton.Text = "Favorited";
                     favoriteButton.BackgroundColour = UITheme.AccentWarning;
                 }
                 else
                 {
-                    favoriteButton.Text = "☆ Add to Favorites";
+                    favoriteButton.Text = "Add to Favorites";
                     favoriteButton.BackgroundColour = UITheme.SurfaceAlt;
                 }
             }
@@ -882,7 +945,10 @@ namespace BeatSight.Game.Screens.SongSelect
                         Padding = new MarginPadding { Top = 100, Bottom = 0, Right = 0 },
                         Child = carousel = new BeatmapCarousel
                         {
-                            BeatmapSelected = selectBeatmap
+                            BeatmapSelected = selectBeatmap,
+                            OpenInEditorRequested = openBeatmapInEditor,
+                            DeleteRequested = deleteBeatmap,
+                            AddToCollectionRequested = addBeatmapToCollection
                         }
                     }
                 }
@@ -938,7 +1004,7 @@ namespace BeatSight.Game.Screens.SongSelect
 
             favoritesFilter = new BeatSightCheckbox
             {
-                LabelText = "★ Favorites",
+                LabelText = "Favorites",
                 Anchor = Anchor.CentreRight,
                 Origin = Anchor.CentreRight,
             };
@@ -965,7 +1031,7 @@ namespace BeatSight.Game.Screens.SongSelect
 
             var randomButton = new BeatSightButton
             {
-                Text = "🎲 Random",
+                Text = "Random",
                 Width = 100,
                 Height = 40,
                 Anchor = Anchor.CentreRight,
@@ -989,32 +1055,21 @@ namespace BeatSight.Game.Screens.SongSelect
                     {
                         RelativeSizeAxes = Axes.Both,
                         Padding = new MarginPadding { Horizontal = 40 },
-                        Children = new Drawable[]
+                        Child = new FillFlowContainer
                         {
-                            new SpriteText
+                            AutoSizeAxes = Axes.Both,
+                            Direction = FillDirection.Horizontal,
+                            Anchor = Anchor.CentreRight,
+                            Origin = Anchor.CentreRight,
+                            Spacing = new Vector2(12, 0),
+                            Children = new Drawable[]
                             {
-                                Text = editorMode ? "EDITOR" : "PLAYBACK",
-                                Font = BeatSightFont.Title(40f),
-                                Colour = UITheme.AccentPrimary,
-                                Anchor = Anchor.Centre,
-                                Origin = Anchor.Centre,
-                            },
-                            new FillFlowContainer
-                            {
-                                AutoSizeAxes = Axes.Both,
-                                Direction = FillDirection.Horizontal,
-                                Anchor = Anchor.CentreRight,
-                                Origin = Anchor.CentreRight,
-                                Spacing = new Vector2(20, 0),
-                                Children = new Drawable[]
-                                {
-                                    sortDropdown,
-                                    searchBox,
-                                    genreDropdown,
-                                    favoritesFilter,
-                                    confidenceFilter,
-                                    randomButton
-                                }
+                                sortDropdown,
+                                searchBox,
+                                genreDropdown,
+                                favoritesFilter,
+                                confidenceFilter,
+                                randomButton
                             }
                         }
                     }

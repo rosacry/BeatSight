@@ -199,9 +199,9 @@ namespace BeatSight.Game.Screens.Playback
             currentMode = mode;
             modeText.Text = mode switch
             {
-                GameplayMode.Manual => "🎵 Manual",
-                GameplayMode.Auto => "🤖 Guided",
-                _ => $"📍 {mode}"
+                GameplayMode.Manual => "Manual Mode",
+                GameplayMode.Auto => "Guided Mode",
+                _ => mode.ToString()
             };
         }
 
@@ -261,8 +261,8 @@ namespace BeatSight.Game.Screens.Playback
         public void SetSpeed(double speed)
         {
             currentSpeed = speed;
-            string icon = speed < 0.8 ? "🐢" : speed > 1.2 ? "🐇" : "⏱";
-            speedText.Text = $"{icon} {speed:0.00}×";
+            string speedLabel = speed < 0.8 ? "Slow" : speed > 1.2 ? "Fast" : "Speed";
+            speedText.Text = $"{speedLabel}: {speed:0.00}x";
 
             // Color coding for speed
             speedText.Colour = speed switch
@@ -278,7 +278,7 @@ namespace BeatSight.Game.Screens.Playback
         public void SetMetronome(bool enabled)
         {
             metronomeEnabled = enabled;
-            metronomeText.Text = enabled ? "🔊 Metro" : "🔇 Metro";
+            metronomeText.Text = enabled ? "Metro: ON" : "Metro: OFF";
             metronomeText.Colour = enabled ? LoopActiveColor : UITheme.TextMuted;
         }
 
@@ -286,7 +286,7 @@ namespace BeatSight.Game.Screens.Playback
         {
             string sessionStr = FormatDuration(sessionElapsed.TotalMilliseconds);
             string loopedStr = FormatDuration(loopedDuration.TotalMilliseconds);
-            statsText.Text = $"📊 {sessionStr} / {loopedStr} looped";
+            statsText.Text = $"Session: {sessionStr} / {loopedStr} looped";
         }
 
         public void PulseLoop()

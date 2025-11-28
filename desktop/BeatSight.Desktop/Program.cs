@@ -181,6 +181,10 @@ namespace BeatSight.Desktop
 
         private static void ensureConsoleAttachment()
         {
+            // Windows-specific console attachment; skip on other platforms
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return;
+
             bool attached = AttachConsole(ATTACH_PARENT_PROCESS);
 
             if (attached)

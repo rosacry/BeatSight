@@ -304,7 +304,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             centerLine.Colour = borderColor.Lighten(0.3f);
             centerLine.Alpha = 0.6f;
 
-            this.FadeTo(0.95f, DesignSystem.AnimationFast);
+            // Set alpha directly instead of using transforms to prevent accumulation
+            Alpha = 0.95f;
         }
 
         private void Update3DAppearance()
@@ -328,7 +329,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             centerLine.Colour = borderColor;
             centerLine.Alpha = 0.4f;
 
-            this.FadeTo(0.9f, DesignSystem.AnimationFast);
+            // Set alpha directly instead of using transforms to prevent accumulation
+            Alpha = 0.9f;
         }
 
         private void UpdateManuscriptAppearance()
@@ -346,7 +348,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             centerLine.Alpha = 0;
 
-            this.FadeTo(0.85f, DesignSystem.AnimationFast);
+            // Set alpha directly instead of using transforms to prevent accumulation
+            Alpha = 0.85f;
         }
 
         #endregion

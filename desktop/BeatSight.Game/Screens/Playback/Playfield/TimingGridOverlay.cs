@@ -306,7 +306,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
                     line.Colour = inkColour;
                     glow.Alpha = 0;
-                    this.FadeTo(1f, 80, Easing.OutQuint);
+                    // Set alpha directly instead of using transforms to prevent accumulation
+                    Alpha = 1f;
                     return;
                 }
 
@@ -340,11 +341,14 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 line.Colour = lineColour;
                 glow.Colour = UITheme.Emphasise(lineColour, 1.25f);
                 glow.Alpha = targetAlpha * 0.4f;
-                this.FadeTo(targetAlpha, 80, Easing.OutQuint);
+                // Set alpha directly instead of using transforms to prevent accumulation
+                Alpha = targetAlpha;
             }
 
             public void Deactivate()
             {
+                // Clear any pending transforms to prevent accumulation, then fade out
+                this.ClearTransforms();
                 this.FadeOut(140, Easing.OutQuint);
             }
         }

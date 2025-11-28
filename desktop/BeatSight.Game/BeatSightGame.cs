@@ -219,6 +219,9 @@ namespace BeatSight.Game
             var progressManager = new UserProgressManager(Host.Storage);
             dependencies.Cache(progressManager);
 
+            var collectionManager = new Collections.CollectionManager(Host.Storage);
+            dependencies.Cache(collectionManager);
+
             generationPipeline = new GenerationPipeline(audioEngine, decodeService, onsetDetectionService, aiGenerator, new DemucsExternalProcessBackend(), new PassthroughBackend());
             dependencies.Cache(generationPipeline);
             dependencies.CacheAs<IGenerationPipeline>(generationPipeline);
@@ -243,10 +246,14 @@ namespace BeatSight.Game
                     RelativeSizeAxes = Axes.None,
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
-                    Child = new TooltipContainer
+                    Child = new BeatSightContextMenuContainer
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Child = screenStack = new ScreenStack { RelativeSizeAxes = Axes.Both }
+                        Child = new TooltipContainer
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Child = screenStack = new ScreenStack { RelativeSizeAxes = Axes.Both }
+                        }
                     }
                 },
                 uiScaleWizard,

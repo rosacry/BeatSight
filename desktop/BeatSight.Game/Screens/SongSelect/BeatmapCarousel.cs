@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BeatSight.Game.Beatmaps;
+using BeatSight.Game.UI.Components;
 using BeatSight.Game.UI.Theming;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
@@ -21,9 +23,24 @@ namespace BeatSight.Game.Screens.SongSelect
     {
         public Action<BeatmapLibrary.BeatmapEntry>? BeatmapSelected;
 
+        /// <summary>
+        /// Called when user requests to open a beatmap in the editor via context menu.
+        /// </summary>
+        public Action<BeatmapLibrary.BeatmapEntry>? OpenInEditorRequested;
+
+        /// <summary>
+        /// Called when user requests to delete a beatmap via context menu.
+        /// </summary>
+        public Action<BeatmapLibrary.BeatmapEntry>? DeleteRequested;
+
+        /// <summary>
+        /// Called when user requests to add a beatmap to a collection via context menu.
+        /// </summary>
+        public Action<BeatmapLibrary.BeatmapEntry>? AddToCollectionRequested;
+
         private readonly Bindable<BeatmapLibrary.BeatmapEntry?> selectedBeatmap = new();
         private FillFlowContainer<BeatmapPanel> flow = null!;
-        private BasicScrollContainer scroll = null!;
+        private BeatSightScrollContainer scroll = null!;
 
         private List<BeatmapLibrary.BeatmapEntry> allBeatmaps = new();
         private string currentFilter = string.Empty;
@@ -37,7 +54,7 @@ namespace BeatSight.Game.Screens.SongSelect
         {
             RelativeSizeAxes = Axes.Both;
 
-            InternalChild = scroll = new BasicScrollContainer
+            InternalChild = scroll = new BeatSightScrollContainer
             {
                 RelativeSizeAxes = Axes.Both,
                 Masking = false,
@@ -148,7 +165,12 @@ namespace BeatSight.Game.Screens.SongSelect
                 }
                 else
                 {
-                    panel = new BeatmapPanel(beatmap);
+                    panel = new BeatmapPanel(beatmap)
+                    {
+                        OnOpenInEditor = entry => OpenInEditorRequested?.Invoke(entry),
+                        OnDelete = entry => DeleteRequested?.Invoke(entry),
+                        OnAddToCollection = entry => AddToCollectionRequested?.Invoke(entry)
+                    };
                     panel.Action = () => select(beatmap, panel);
                     isNew = true;
                 }
@@ -241,10 +263,25 @@ namespace BeatSight.Game.Screens.SongSelect
             BeatmapSelected?.Invoke(entry);
         }
 
-        private partial class BeatmapPanel : ClickableContainer
+        private partial class BeatmapPanel : ClickableContainer, IHasContextMenu
         {
             public readonly BeatmapLibrary.BeatmapEntry Entry;
             public readonly Bindable<PanelState> State = new(PanelState.NotSelected);
+
+            /// <summary>
+            /// Action to invoke when "Open in Editor" is selected from context menu.
+            /// </summary>
+            public Action<BeatmapLibrary.BeatmapEntry>? OnOpenInEditor;
+
+            /// <summary>
+            /// Action to invoke when "Delete" is selected from context menu.
+            /// </summary>
+            public Action<BeatmapLibrary.BeatmapEntry>? OnDelete;
+
+            /// <summary>
+            /// Action to invoke when "Add to Collection" is selected from context menu.
+            /// </summary>
+            public Action<BeatmapLibrary.BeatmapEntry>? OnAddToCollection;
 
             private Box background = null!;
             private Box leftBar = null!;
@@ -253,6 +290,13 @@ namespace BeatSight.Game.Screens.SongSelect
             private SpriteText title = null!;
             private SpriteText artist = null!;
             private SpriteText difficulty = null!;
+
+            public MenuItem[]? ContextMenuItems => new MenuItem[]
+            {
+                new MenuItem("Open in Editor", () => OnOpenInEditor?.Invoke(Entry)),
+                new MenuItem("Add to Collection", () => OnAddToCollection?.Invoke(Entry)),
+                new MenuItem("Delete", () => OnDelete?.Invoke(Entry))
+            };
 
             public enum PanelState
             {
@@ -325,7 +369,7 @@ namespace BeatSight.Game.Screens.SongSelect
                                     },
                                     difficulty = new BeatSight.Game.UI.Components.BeatSightSpriteText
                                     {
-                                        Text = $"[{entry.Beatmap.Metadata.Difficulty:F1}★] mapped by {entry.Beatmap.Metadata.Creator}",
+                                        Text = $"[{entry.Beatmap.Metadata.Difficulty:F1}] mapped by {entry.Beatmap.Metadata.Creator}",
                                         Font = BeatSightFont.Caption(14f),
                                         Colour = getDifficultyColour((float)entry.Beatmap.Metadata.Difficulty),
                                         Truncate = true,

@@ -134,14 +134,18 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             currentBeatIntensity = (float)Math.Clamp(intensity, 0, 1);
 
+            // Clear previous transforms to prevent accumulation
+            beatPulseOverlay.ClearTransforms();
+
             // Flash the overlay
-            beatPulseOverlay.Alpha = 0.15f * currentBeatIntensity;
-            beatPulseOverlay.FadeOut(beatInterval * 0.8, Easing.OutQuad);
+            beatPulseOverlay.Alpha = 0.12f * currentBeatIntensity;
+            beatPulseOverlay.FadeOut(beatInterval * 0.7, Easing.OutQuad);
 
             // Pulse the horizon glow
-            horizonGlow?.TransformTo(nameof(horizonGlow.Alpha), 0.5f * currentBeatIntensity, 50)
+            horizonGlow?.ClearTransforms();
+            horizonGlow?.TransformTo(nameof(horizonGlow.Alpha), 0.4f * currentBeatIntensity, 50)
                 .Then()
-                .TransformTo(nameof(horizonGlow.Alpha), 0.25f, (beatInterval * 0.7), Easing.OutQuad);
+                .TransformTo(nameof(horizonGlow.Alpha), 0.2f, (beatInterval * 0.6), Easing.OutQuad);
         }
 
         /// <summary>
@@ -153,8 +157,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 return;
 
             var glow = lanePulseLights[laneIndex];
-            glow.Alpha = 0.8f * intensity;
-            glow.FadeOut(300, Easing.OutQuad);
+            glow.ClearTransforms();
+            glow.Alpha = 0.6f * intensity;
+            glow.FadeOut(250, Easing.OutQuad);
         }
 
         protected override void LoadComplete()

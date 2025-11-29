@@ -10,12 +10,14 @@ from . import (
     health,
     karma,
     map_edits,
+    maps,
     metadata,
     roles,
     songs,
     storage,
     sync,
     verifier,
+    votes,
     websocket,
 )
 
@@ -27,11 +29,13 @@ __all__ = [
     "health",
     "karma",
     "map_edits",
+    "maps",
     "metadata",
     "roles",
     "songs",
     "storage",
     "sync",
     "verifier",
+    "votes",
     "websocket",
 ]

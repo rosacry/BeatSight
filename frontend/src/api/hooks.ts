@@ -101,3 +101,31 @@ export function useSong(songId: string | undefined) {
         enabled: !!songId,
     })
 }
+
+// --- Vote Hooks ---
+
+import { getMapVotes, getBulkVotes } from '@/api/votes'
+import type { VoteCountsResponse, BulkVoteResponse } from '@/types/votes'
+
+export const voteQueryKeys = {
+    mapVotes: (mapId: string) => ['mapVotes', mapId] as const,
+    bulkVotes: (mapIds: string[]) => ['bulkVotes', mapIds.sort().join(',')] as const,
+}
+
+export function useMapVotes(mapId: string | undefined) {
+    return useQuery<VoteCountsResponse>({
+        queryKey: mapId ? voteQueryKeys.mapVotes(mapId) : ['mapVotes-undefined'],
+        queryFn: () => (mapId ? getMapVotes(mapId) : Promise.reject('No map ID')),
+        enabled: !!mapId,
+        staleTime: 30000, // Cache for 30s
+    })
+}
+
+export function useBulkVotes(mapIds: string[]) {
+    return useQuery<BulkVoteResponse>({
+        queryKey: voteQueryKeys.bulkVotes(mapIds),
+        queryFn: () => getBulkVotes(mapIds),
+        enabled: mapIds.length > 0,
+        staleTime: 30000,
+    })
+}

@@ -25,6 +25,7 @@ from app.db.base import Base
 if TYPE_CHECKING:  # pragma: no cover
     from .ai_job import AIJob
     from .map_version import MapVersion
+    from .map_vote import MapVote
     from .user import User
 
 
@@ -129,4 +130,7 @@ class Map(Base):
     )
     current_version: Mapped["MapVersion | None"] = relationship(
         "MapVersion", foreign_keys=[current_version_id], post_update=True
+    )
+    votes: Mapped[list["MapVote"]] = relationship(
+        "MapVote", back_populates="map", cascade="all, delete-orphan"
     )

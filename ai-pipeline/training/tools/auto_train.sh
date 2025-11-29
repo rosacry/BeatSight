@@ -76,7 +76,7 @@ V5_MODEL_FLAGS="--model-version v5 --v5-size medium --drop-path-rate 0.1"
 V5_DEEP_SUPERVISION_FLAGS="--use-deep-supervision --deep-supervision-weights 0.4,0.6"
 V5_GRADIENT_CENTRALIZATION_FLAGS="--use-gradient-centralization"
 # Multi-task learning: velocity + hi-hat openness auxiliary heads (improves feature learning)
-V5_MULTI_TASK_FLAGS="--use-multi-task"
+V5_MULTI_TASK_FLAGS="--use-multi-task --velocity-labels-suffix _with_velocity --velocity-weight 0.1"
 # Waveform augmentation: audio-level augmentation before spectrogram extraction
 # DISABLED: Bypasses SSD feature cache, reads raw audio from HDD (too slow)
 # Re-enable if dataset is moved to SSD: V5_WAVEFORM_AUGMENT_FLAGS="--waveform-augment drum"
@@ -302,6 +302,22 @@ case "$TRAIN_MODE" in
         RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/v5/self-distill"
         ;;
     # =====================================================================
+    # MULTI-LABEL TRAINING (19a/19b/19c) - Simultaneous Drum Hit Detection
+    # Uses BCEWithLogitsLoss + Sigmoid for detecting multiple drums at once
+    # =====================================================================
+    multilabel-warmup|19a)
+        TRAIN_MODE="multilabel-warmup"
+        RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/multilabel/warmup"
+        ;;
+    multilabel-full|19b)
+        TRAIN_MODE="multilabel-full"
+        RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/multilabel/full"
+        ;;
+    multilabel-finetune|19c)
+        TRAIN_MODE="multilabel-finetune"
+        RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/multilabel/finetune"
+        ;;
+    # =====================================================================
     # BEATs AUDIO FOUNDATION (18a/18b/18c) - Microsoft's BEATs Model
     # Pretrained audio transformer, potentially better than Wav2Vec2
     # =====================================================================
@@ -393,6 +409,16 @@ case "$TRAIN_MODE" in
         echo "    beats-warmup (18a) - BEATs frozen encoder (~1hr)"
         echo "    beats-quick  (18b) - BEATs fine-tuned (~4hr)"
         echo "    beats-long   (18c) - BEATs maximum quality (~12hr)"
+        echo ""
+        echo "  🥁 MULTI-LABEL (Simultaneous Drum Detection):"
+        echo ""
+        echo "  BCEWithLogitsLoss + Sigmoid for detecting kick+hihat, snare+crash, etc:"
+        echo "    multilabel-warmup  (19a) - Multi-label warmup (~2hr)"
+        echo "    multilabel-full    (19b) - Multi-label production (~12hr)"
+        echo "    multilabel-finetune(19c) - From V5 pretrained (~6hr)"
+        echo ""
+        echo "  ⭐ FULL PATH: 14 → 17a → 17d → 17e → 19c"
+        echo "     (label audit → v5 warmup → v5 full → self-distill → multi-label finetune)"
         exit 1
         ;;
 esac
@@ -1469,10 +1495,21 @@ ENSEMBLE_PY
             
             mkdir -p "${BEATSIGHT_RUN_CUTTING_EDGE}/audits"
             
+            # WINDOWS FIX: Use num_workers=0 to avoid shared memory exhaustion
+            # Windows has strict limits on shared memory mappings (error 1455)
+            # Using single-threaded loading with consolidated cache is still fast
+            # because memory-mapped shards avoid syscall overhead
+            # This is ~2x slower but doesn't crash
+            local workers=0
+            local val_workers=0
+            if [[ "$(uname -s)" != *"MINGW"* && "$(uname -s)" != *"MSYS"* ]]; then
+                # Linux/macOS can use multiprocessing safely
+                workers=4
+                val_workers=2
+            fi
+            
             # Run label noise detection
             # PERF: Using consolidated cache now (100x faster than individual .pt files)
-            # Reduced workers to 4+2 to stay within 32GB RAM limit
-            # Each worker loads ~1GB numpy arrays after pickle fix
             PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
               --dataset "${BEATSIGHT_DATASET_DIR}" \
               --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
@@ -1485,10 +1522,9 @@ ENSEMBLE_PY
               --device cuda \
               --train-fraction 0.5 \
               --val-fraction 0.2 \
-              --num-workers 4 \
-              --val-num-workers 2 \
+              --num-workers $workers \
+              --val-num-workers $val_workers \
               --prefetch-factor 2 \
-              --persistent-workers \
               --pin-memory \
               --amp-dtype float16 \
               --seed 1337 \
@@ -1778,7 +1814,8 @@ ENSEMBLE_PY
         
         v5-warmup)
             log "💎 Starting V5 ULTIMATE training (warmup)..."
-            log "   CoordAttn + DropPath + DeepSup + MultiTask + WaveformAug + FMix..."
+            log "   CoordAttn + DropPath + DeepSup + MultiTask + Velocity + FMix..."
+            log "   Using velocity-enriched labels: train_labels_with_velocity.json"
             export WANDB_RUN_GROUP=v5_warmup_auto
             
             PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
@@ -1808,7 +1845,8 @@ ENSEMBLE_PY
         
         v5-quick)
             log "💎 Starting V5 ULTIMATE training (quick)..."
-            log "   CoordAttn + DropPath + DeepSup + MultiTask + WaveformAug + FMix + SWA + RDrop..."
+            log "   CoordAttn + DropPath + DeepSup + MultiTask + Velocity + FMix + SWA + RDrop..."
+            log "   Using velocity-enriched labels: train_labels_with_velocity.json"
             export WANDB_RUN_GROUP=v5_quick_auto
             
             PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
@@ -1840,8 +1878,9 @@ ENSEMBLE_PY
         
         v5-long)
             log "💎 Starting V5 ULTIMATE training (long - Production Quality)..."
-            log "   CoordAttn + DropPath + DeepSup + MultiTask + WaveformAug + FMix + All extras..."
+            log "   CoordAttn + DropPath + DeepSup + MultiTask + Velocity + FMix + All extras..."
             log "   + Lookahead + Cosine Warm Restarts + Mixup Cutoff..."
+            log "   Using velocity-enriched labels: train_labels_with_velocity.json"
             export WANDB_RUN_GROUP=v5_long_auto
             
             PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
@@ -1881,10 +1920,11 @@ ENSEMBLE_PY
         
         v5-full)
             log "💎 Starting V5 ULTIMATE training (full - MAXIMUM Quality)..."
-            log "   All innovations + Large model + Extended training..."
+            log "   All innovations + Large model + Extended training + Velocity..."
             log "   + Lookahead + Cosine Warm Restarts + Mixup Cutoff + Self-Distillation Ready..."
             log "   + Attentive Statistics Pooling (Option A enhancement: +0.3-0.5%)..."
             log "   + Hard Negative Contrastive Loss (embedding-space separation)..."
+            log "   Using velocity-enriched labels: train_labels_with_velocity.json"
             export WANDB_RUN_GROUP=v5_full_auto
             
             PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
@@ -2122,6 +2162,128 @@ ENSEMBLE_PY
             log "🎵 BEATs model training complete!"
             log "Using Microsoft's state-of-the-art audio foundation model"
             log "Expected to outperform Wav2Vec2 for classification tasks!"
+            ;;
+        
+        # =====================================================================
+        # MULTI-LABEL TRAINING (19a/19b/19c) - Simultaneous Drum Hit Detection
+        # Uses BCEWithLogitsLoss + Sigmoid for detecting multiple drums at once
+        # e.g., kick + hi-hat, snare + crash playing simultaneously
+        # =====================================================================
+        
+        multilabel-warmup)
+            log "🥁 Starting MULTI-LABEL training (warmup - validate setup)..."
+            log "   BCEWithLogitsLoss + Sigmoid for simultaneous drum detection..."
+            log "   Using V5 backbone with focal loss..."
+            export WANDB_RUN_GROUP=multilabel_warmup_auto
+            
+            PYTHONPATH=ai-pipeline python ai-pipeline/training/multilabel/train_multilabel.py \
+              --dataset "${BEATSIGHT_DATASET_DIR}" \
+              --labels-file "labels.json" \
+              --cache-dir "${BEATSIGHT_CACHE_DIR}" \
+              --model-version v5 \
+              --v5-size medium \
+              --drop-path-rate 0.1 \
+              --loss-type focal \
+              --gamma 2.0 \
+              --label-smoothing 0.05 \
+              --use-pos-weight \
+              --epochs 15 \
+              --batch-size 64 \
+              --lr 0.0005 \
+              --weight-decay 0.01 \
+              --use-amp \
+              --output-dir "${BEATSIGHT_RUN_CUTTING_EDGE}/multilabel/warmup" \
+              --wandb-project beatsight-multilabel
+            
+            log ""
+            log "🥁 Multi-label warmup complete!"
+            log "This validates that simultaneous drum detection is working."
+            log "Run 19b (multilabel-full) for production quality."
+            ;;
+        
+        multilabel-full)
+            log "🥁 Starting MULTI-LABEL training (full - production quality)..."
+            log "   V5 large backbone + focal loss + all optimizations..."
+            log "   Detects simultaneous drums: kick+hihat, snare+crash, etc..."
+            export WANDB_RUN_GROUP=multilabel_full_auto
+            
+            PYTHONPATH=ai-pipeline python ai-pipeline/training/multilabel/train_multilabel.py \
+              --dataset "${BEATSIGHT_DATASET_DIR}" \
+              --labels-file "labels.json" \
+              --cache-dir "${BEATSIGHT_CACHE_DIR}" \
+              --model-version v5 \
+              --v5-size large \
+              --drop-path-rate 0.15 \
+              --loss-type focal \
+              --gamma 2.0 \
+              --label-smoothing 0.05 \
+              --use-pos-weight \
+              --epochs 100 \
+              --batch-size 64 \
+              --lr 0.0003 \
+              --weight-decay 0.01 \
+              --use-amp \
+              --output-dir "${BEATSIGHT_RUN_CUTTING_EDGE}/multilabel/full" \
+              --wandb-project beatsight-multilabel
+            
+            log ""
+            log "🥁 Multi-label FULL training complete!"
+            log "This model can detect simultaneous drum hits:"
+            log "  - Kick + Hi-hat (most common)"
+            log "  - Snare + Crash (accents)"
+            log "  - Multiple cymbals"
+            log "  - Any combination!"
+            log ""
+            log "📁 Best model: ${BEATSIGHT_RUN_CUTTING_EDGE}/multilabel/full/best_multilabel_model.pt"
+            log "📁 Thresholds: ${BEATSIGHT_RUN_CUTTING_EDGE}/multilabel/full/optimal_thresholds.json"
+            ;;
+        
+        multilabel-finetune)
+            log "🥁 Starting MULTI-LABEL fine-tuning (from V5 pretrained)..."
+            log "   Uses V5-full checkpoint as backbone initialization..."
+            log "   Faster convergence + better features..."
+            export WANDB_RUN_GROUP=multilabel_finetune_auto
+            
+            # Check for V5-full pretrained model
+            PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full/best_drum_classifier.pth"
+            if [ ! -f "$PRETRAINED_MODEL" ]; then
+                PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full/best_drum_classifier_ema.pth"
+            fi
+            
+            PRETRAINED_FLAG=""
+            if [ -f "$PRETRAINED_MODEL" ]; then
+                log "   Found pretrained model: $PRETRAINED_MODEL"
+                PRETRAINED_FLAG="--pretrained-checkpoint ${PRETRAINED_MODEL}"
+            else
+                log "   WARNING: No V5 pretrained model found. Training from scratch."
+                log "   For best results, run v5-full (17d) first, then multilabel-finetune (19c)."
+            fi
+            
+            PYTHONPATH=ai-pipeline python ai-pipeline/training/multilabel/train_multilabel.py \
+              --dataset "${BEATSIGHT_DATASET_DIR}" \
+              --labels-file "labels.json" \
+              --cache-dir "${BEATSIGHT_CACHE_DIR}" \
+              --model-version v5 \
+              --v5-size large \
+              --drop-path-rate 0.15 \
+              ${PRETRAINED_FLAG} \
+              --loss-type focal \
+              --gamma 2.0 \
+              --label-smoothing 0.05 \
+              --use-pos-weight \
+              --epochs 50 \
+              --batch-size 64 \
+              --lr 0.0001 \
+              --weight-decay 0.01 \
+              --use-amp \
+              --output-dir "${BEATSIGHT_RUN_CUTTING_EDGE}/multilabel/finetune" \
+              --wandb-project beatsight-multilabel
+            
+            log ""
+            log "🥁 Multi-label fine-tuning complete!"
+            log "Used V5-full features + adapted for multi-label output."
+            log ""
+            log "📁 Best model: ${BEATSIGHT_RUN_CUTTING_EDGE}/multilabel/finetune/best_multilabel_model.pt"
             ;;
     esac
 }

@@ -15,12 +15,14 @@ from app.api.routes import (
     health,
     karma,
     map_edits,
+    maps,
     metadata,
     roles,
     songs,
     storage,
     sync,
     verifier,
+    votes,
     websocket,
 )
 from app.config import get_settings
@@ -114,6 +116,14 @@ Authorization: Bearer <access_token>
             "description": "User karma system: reputation, community contributions",
         },
         {
+            "name": "votes",
+            "description": "Map voting: upvote/downvote maps for community curation",
+        },
+        {
+            "name": "maps",
+            "description": "Map management: verification, archiving, state control",
+        },
+        {
             "name": "metadata",
             "description": "Song metadata: AcoustID lookup, metadata enrichment",
         },
@@ -160,6 +170,8 @@ app.include_router(sync.router, prefix=settings.api_prefix)
 app.include_router(billing.router, prefix=settings.api_prefix)
 app.include_router(verifier.router, prefix=settings.api_prefix)
 app.include_router(map_edits.router, prefix=settings.api_prefix)
+app.include_router(maps.router, prefix=settings.api_prefix)
+app.include_router(votes.router, prefix=settings.api_prefix)
 app.include_router(websocket.router)  # No prefix - /ws/jobs
 
 

@@ -272,6 +272,43 @@ run_consolidate_cache() {
     echo ""
 }
 
+run_validate_cache() {
+    echo ">>> Validating Consolidated Feature Cache..."
+    echo ""
+    
+    # Determine consolidated cache path
+    CACHE_PARENT=$(dirname "${BEATSIGHT_CACHE_DIR}")
+    CACHE_NAME=$(basename "${BEATSIGHT_CACHE_DIR}")
+    CONSOLIDATED_CACHE_DIR="${CACHE_PARENT}/${CACHE_NAME}_consolidated"
+    
+    if [[ ! -d "${CONSOLIDATED_CACHE_DIR}" ]]; then
+        echo "  ❌ Consolidated cache not found: ${CONSOLIDATED_CACHE_DIR}"
+        echo "  Run option 4c first to consolidate the cache."
+        return 1
+    fi
+    
+    echo "  Cache: ${CONSOLIDATED_CACHE_DIR}"
+    echo ""
+    
+    read -p "  Also attempt to repair corrupted shards? [y/N]: " repair_confirm
+    REPAIR_FLAG=""
+    case "${repair_confirm,,}" in
+        y|yes)
+            REPAIR_FLAG="--repair"
+            ;;
+    esac
+    
+    PYTHONPATH=ai-pipeline python ai-pipeline/training/tools/validate_consolidated_cache.py \
+      --cache-dir "${CONSOLIDATED_CACHE_DIR}" \
+      --split both \
+      --json "${BEATSIGHT_HEALTH_DIR}/cache_validation.json" \
+      $REPAIR_FLAG
+    
+    echo ""
+    echo "  Validation results saved to: ${BEATSIGHT_HEALTH_DIR}/cache_validation.json"
+    echo ""
+}
+
 run_rebuild_cache() {
     echo ">>> Full Cache Rebuild (4 + 4c combined)..."
     echo ""
@@ -622,6 +659,9 @@ CUTTING_EDGE_CALIBRATION_FLAGS="--calibrate --calibration-method temperature"
 V5_MODEL_FLAGS="--model-version v5 --v5-size medium --drop-path-rate 0.1"
 V5_DEEP_SUPERVISION_FLAGS="--use-deep-supervision --deep-supervision-weights 0.4,0.6"
 V5_GRADIENT_CENTRALIZATION_FLAGS="--use-gradient-centralization"
+# Multi-task learning: velocity + hi-hat openness auxiliary heads (improves feature learning)
+# Uses velocity-enriched labels: train_labels_with_velocity.json, val_labels_with_velocity.json
+V5_MULTI_TASK_FLAGS="--use-multi-task --velocity-labels-suffix _with_velocity --velocity-weight 0.1"
 
 # BEATs Model Flags (Microsoft's Audio Foundation Model)
 BEATS_MODEL_FLAGS="--model-version beats --beats-freeze-encoder --beats-layer-decay 0.75"
@@ -986,6 +1026,7 @@ while true; do
     echo "║   3) Smoke Tests (pytest)                                           ║"
     echo "║   4) Precompute Feature Cache                                       ║"
     echo "║   4c) Consolidate Cache (100x speedup)                              ║"
+    echo "║   4v) Validate Cache (check for corruption)                         ║"
     echo "║   4r) Rebuild Cache (4 + 4c combined) ⚡ NEW DATA                    ║"
     echo "╠═════════════════════════════════════════════════════════════════════╣"
     echo "║  💎 V5 ULTIMATE - PRODUCTION PATH (⭐ RECOMMENDED)                   ║"
@@ -998,6 +1039,15 @@ while true; do
     echo "║   17e) V5: Self-Distill - Born-Again +1-2% (~24hr)                  ║"
     echo "║                                                                     ║"
     echo "║   ⭐ PATH: 14 → 17a → 17d → 17e (~50.5 hours total)                 ║"
+    echo "╠═════════════════════════════════════════════════════════════════════╣"
+    echo "║  🥁 MULTI-LABEL - SIMULTANEOUS DRUM DETECTION                       ║"
+    echo "║─────────────────────────────────────────────────────────────────────║"
+    echo "║   19a) Multi-Label: Warmup - validate setup (~2hr)                  ║"
+    echo "║   19b) Multi-Label: Full   - production quality (~12hr)             ║"
+    echo "║   19c) Multi-Label: Finetune - from V5 pretrained (~6hr) ⭐ BEST    ║"
+    echo "║                                                                     ║"
+    echo "║   Detects: kick+hihat, snare+crash, any simultaneous combo!         ║"
+    echo "║   ⭐ FULL PATH: 14 → 17a → 17d → 17e → 19c (~56.5 hours total)      ║"
     echo "╠═════════════════════════════════════════════════════════════════════╣"
     echo "║  EVALUATION & ANALYSIS:                                             ║"
     echo "║   eval)    Evaluation (Validation Snapshot)                         ║"
@@ -1017,6 +1067,7 @@ while true; do
         3) run_smoke_tests ;;
         4) run_precompute_cache ;;
         4c) run_consolidate_cache ;;
+        4v) run_validate_cache ;;
         4r) run_rebuild_cache ;;
         # V5 ULTIMATE: Single Model with All Innovations (⭐ RECOMMENDED)
         14) run_auto_train label-audit ;;
@@ -1025,6 +1076,10 @@ while true; do
         17c) run_auto_train v5-long ;;
         17d) run_auto_train v5-full ;;
         17e) run_auto_train v5-self-distill ;;
+        # Multi-Label: Simultaneous Drum Detection
+        19a) run_auto_train multilabel-warmup ;;
+        19b) run_auto_train multilabel-full ;;
+        19c) run_auto_train multilabel-finetune ;;
         # Evaluation & Analysis
         eval) run_eval ;;
         analyze) run_analysis ;;

@@ -53,6 +53,8 @@ KARMA_REWARDS = {
     KarmaReason.VERIFICATION_COMPLETE: 10,
     KarmaReason.VERIFICATION_REJECTED: -15,
     KarmaReason.SUBSCRIPTION_BONUS: 50,
+    KarmaReason.MAP_UPVOTED: 5,  # Small reward for receiving upvotes
+    KarmaReason.MAP_DOWNVOTED: -3,  # Small penalty for receiving downvotes
 }
 
 # Daily AI generation quotas by karma tier

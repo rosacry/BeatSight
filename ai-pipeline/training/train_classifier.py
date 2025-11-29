@@ -341,6 +341,7 @@ class DrumSampleDataset(Dataset):
         target_frames: int = 128,
         cache_dtype: str = "float32",
         waveform_transform: Optional[Any] = None,
+        return_velocity: bool = False,
     ) -> None:
         self.data_dir = Path(data_dir)
         self.labels_path = Path(labels_file)
@@ -357,6 +358,7 @@ class DrumSampleDataset(Dataset):
         self._amplitude_to_db = None
         self._cache_debug = bool(os.environ.get("BS_CACHE_DEBUG"))
         self.waveform_transform = waveform_transform
+        self.return_velocity = return_velocity
 
         cache_dtype_key = cache_dtype.lower().strip()
         cache_dtype_map: Dict[str, torch.dtype] = {
@@ -426,6 +428,17 @@ class DrumSampleDataset(Dataset):
         # Initialize lazy-reload flags (used after pickle/unpickle)
         self._numpy_needs_reload = False
         self._consolidated_needs_reload = False
+        
+        # Load velocity array if using numpy format and velocity is requested
+        self._numpy_velocities = None
+        if self.return_velocity and getattr(self, '_use_numpy', False):
+            # Try to load velocity from separate numpy file
+            npy_velocities_path = self.labels_path.parent / f"{self.labels_path.stem}_velocities.npy"
+            if npy_velocities_path.exists():
+                self._numpy_velocities = np.load(npy_velocities_path)
+                print(f"[LABELS] Loaded velocity data from numpy ({len(self._numpy_velocities):,} items)")
+            else:
+                print(f"[WARNING] Velocity requested but {npy_velocities_path} not found. Using default 0.7.")
 
     def _load_labels(self) -> List[Dict[str, Any]]:
         """Load labels from numpy, JSON, pickle, or sharded pickle format."""
@@ -513,7 +526,8 @@ class DrumSampleDataset(Dataset):
         self._ensure_numpy_loaded()
         self._ensure_consolidated_cache_loaded()
         
-        # Get file path and label, supporting both numpy and dict formats
+        # Get file path, label, and velocity, supporting both numpy and dict formats
+        velocity = 0.7  # Default velocity (medium)
         if getattr(self, '_use_numpy', False):
             # Decode bytes to string if needed
             file_bytes = self._numpy_files[idx]
@@ -523,10 +537,21 @@ class DrumSampleDataset(Dataset):
                 file_path = str(file_bytes)
             label = int(self._numpy_labels[idx])
             audio_path = self.data_dir / file_path
+            # Get velocity from numpy array if available
+            if self._numpy_velocities is not None:
+                velocity = float(self._numpy_velocities[idx])
         else:
             item = self.labels[idx]
             audio_path = self.data_dir / item["file"]
             label = int(item["component_idx"])
+            # Get velocity from JSON if available
+            velocity = float(item.get("velocity", 0.7))
+
+        # Helper to return result with or without velocity
+        def make_result(features_tensor):
+            if self.return_velocity:
+                return features_tensor.float().contiguous(), label, velocity
+            return features_tensor.float().contiguous(), label
 
         # If waveform augmentation is enabled, we must recompute spectrograms each time
         # (can't use cached spectrograms since augmentation is stochastic)
@@ -534,7 +559,7 @@ class DrumSampleDataset(Dataset):
             waveform = self._load_audio(audio_path)
             waveform = self.waveform_transform(waveform, self.sr)
             features = self._extract_features(waveform)
-            return features.float().contiguous(), label
+            return make_result(features)
 
         # FAST PATH: Consolidated memory-mapped cache (100x faster)
         if self._consolidated_reader is not None:
@@ -547,7 +572,7 @@ class DrumSampleDataset(Dataset):
             
             features = self._consolidated_reader.get_by_path(cache_key)
             if features is not None:
-                return features.float().contiguous(), label
+                return make_result(features)
             elif self._cache_debug:
                 print(f"[CONSOLIDATED CACHE MISS] {cache_key}", flush=True)
             # Fall through to individual file cache or recompute
@@ -579,7 +604,7 @@ class DrumSampleDataset(Dataset):
                 if self._cache_debug:
                     print(f"[CACHE WRITE] stored features: {cache_path}", flush=True)
 
-        return features.float().contiguous(), label
+        return make_result(features)
 
     def _cache_path(self, audio_path: Path) -> Path:
         try:
@@ -836,8 +861,22 @@ def stratified_sample_indices(labels_or_dataset, fraction: float, seed: int) -> 
         for idx in range(n_samples):
             component = int(label_array[idx])
             by_class.setdefault(component, []).append(idx)
+    elif hasattr(labels_or_dataset, 'labels'):
+        # DrumSampleDataset with JSON labels (list of dicts)
+        labels = labels_or_dataset.labels
+        n_samples = len(labels_or_dataset)
+        
+        if fraction >= 1.0:
+            return list(range(n_samples))
+        if fraction <= 0.0:
+            raise ValueError("fraction must be greater than 0 when creating a subset")
+        
+        by_class: Dict[int, List[int]] = {}
+        for idx, item in enumerate(labels):
+            component = int(item.get("component_idx", -1))
+            by_class.setdefault(component, []).append(idx)
     else:
-        # Original list-of-dicts path
+        # Original list-of-dicts path (raw list passed directly)
         labels = labels_or_dataset
         if fraction >= 1.0:
             return list(range(len(labels)))
@@ -900,8 +939,11 @@ def train_epoch(
     use_rdrop: bool = False,
     rdrop_criterion: Optional[Any] = None,
     deep_sup_criterion: Optional[Any] = None,
+    use_velocity: bool = False,
+    velocity_weight: float = 0.1,
+    velocity_criterion: Optional[nn.Module] = None,
 ) -> tuple[float, float]:
-    """Train for one epoch with optional AMP, mixup, specaugment, EMA, SAM, R-Drop, deep supervision.
+    """Train for one epoch with optional AMP, mixup, specaugment, EMA, SAM, R-Drop, deep supervision, velocity.
     
     Args:
         checkpoint_callback: Optional callback(batch_index, total_batches) for mid-epoch saves
@@ -913,6 +955,9 @@ def train_epoch(
         use_rdrop: If True, use R-Drop regularization (two forward passes)
         rdrop_criterion: R-Drop loss function (required if use_rdrop=True)
         deep_sup_criterion: Deep supervision loss wrapper (if model outputs aux heads)
+        use_velocity: If True, train velocity head (multi-task, requires return_all=True)
+        velocity_weight: Weight for velocity loss (default: 0.1)
+        velocity_criterion: Loss function for velocity (default: MSELoss)
     """
 
     model.train()
@@ -926,7 +971,15 @@ def train_epoch(
     optimizer.zero_grad(set_to_none=True)
 
     pbar = tqdm(dataloader, desc="Training")
-    for batch_index, (features, labels) in enumerate(pbar, start=1):
+    for batch_index, batch_data in enumerate(pbar, start=1):
+        # Handle both (features, labels) and (features, labels, velocities) formats
+        if use_velocity and len(batch_data) == 3:
+            features, labels, velocities = batch_data
+            velocities = torch.tensor(velocities, dtype=torch.float32).to(device, non_blocking=non_blocking)
+        else:
+            features, labels = batch_data[:2]
+            velocities = None
+        
         features = features.to(device, non_blocking=non_blocking)
         labels = labels.to(device, non_blocking=non_blocking)
         if channels_last:
@@ -965,6 +1018,26 @@ def train_epoch(
                 rdrop_loss = rdrop_criterion.compute_kl_loss(main_out1, main_out2)
                 loss = ce_loss + rdrop_loss
                 outputs = main_out1  # Use first output for accuracy computation
+            elif use_velocity and velocities is not None:
+                # Multi-task learning with velocity prediction
+                outputs = model(features, return_all=True)
+                logits, aux_outputs, velocity_pred, openness_pred = outputs
+                
+                # Classification loss
+                if use_mixup:
+                    ce_loss = lam * criterion(logits, labels_a) + (1 - lam) * criterion(logits, labels_b)
+                else:
+                    ce_loss = criterion(logits, labels)
+                
+                # Velocity loss (MSE)
+                if velocity_pred is not None and velocity_criterion is not None:
+                    vel_loss = velocity_criterion(velocity_pred, velocities)
+                    loss = ce_loss + velocity_weight * vel_loss
+                else:
+                    loss = ce_loss
+                
+                # Use logits for accuracy computation
+                outputs = logits
             else:
                 outputs = model(features)
                 # Select criterion (deep supervision or regular)
@@ -1098,8 +1171,11 @@ def validate(
     amp_enabled: bool = False,
     autocast_dtype: Optional[torch.dtype] = None,
     channels_last: bool = False,
+    use_velocity: bool = False,
+    velocity_weight: float = 0.1,
+    velocity_criterion: Optional[nn.Module] = None,
 ) -> tuple[float, float]:
-    """Validate the model with optional AMP."""
+    """Validate the model with optional AMP and velocity prediction."""
 
     model.eval()
     total_loss = 0.0
@@ -1108,17 +1184,37 @@ def validate(
     non_blocking = device.type == "cuda"
 
     with torch.no_grad():
-        for features, labels in tqdm(dataloader, desc="Validation"):
+        for batch_data in tqdm(dataloader, desc="Validation"):
+            # Handle both (features, labels) and (features, labels, velocities) formats
+            if use_velocity and len(batch_data) == 3:
+                features, labels, velocities = batch_data
+                velocities = torch.tensor(velocities, dtype=torch.float32).to(device, non_blocking=non_blocking)
+            else:
+                features, labels = batch_data[:2]
+                velocities = None
+            
             features = features.to(device, non_blocking=non_blocking)
             labels = labels.to(device, non_blocking=non_blocking)
             if channels_last:
                 features = features.to(memory_format=torch.channels_last)
 
             with autocast(device_type=device.type, dtype=autocast_dtype, enabled=amp_enabled):
-                outputs = model(features)
-                # Extract main output for models with deep supervision
-                main_outputs = extract_main_output(outputs)
-                loss = criterion(main_outputs, labels)
+                if use_velocity and velocities is not None:
+                    # Multi-task inference
+                    outputs = model(features, return_all=True)
+                    logits, aux_outputs, velocity_pred, openness_pred = outputs
+                    ce_loss = criterion(logits, labels)
+                    if velocity_pred is not None and velocity_criterion is not None:
+                        vel_loss = velocity_criterion(velocity_pred, velocities)
+                        loss = ce_loss + velocity_weight * vel_loss
+                    else:
+                        loss = ce_loss
+                    main_outputs = logits
+                else:
+                    outputs = model(features)
+                    # Extract main output for models with deep supervision
+                    main_outputs = extract_main_output(outputs)
+                    loss = criterion(main_outputs, labels)
 
             total_loss += loss.item()
             _, predicted = torch.max(main_outputs.data, 1)
@@ -1500,7 +1596,13 @@ def main():
     parser.add_argument(
         "--use-multi-task",
         action="store_true",
-        help="Enable multi-task heads for velocity and hi-hat openness (v4 only)",
+        help="Enable multi-task heads for velocity and hi-hat openness (v4/v5 models)",
+    )
+    parser.add_argument(
+        "--velocity-labels-suffix",
+        type=str,
+        default="",
+        help="Suffix to add to labels filename for velocity-enriched labels (e.g., '_with_velocity' to use train_labels_with_velocity.json)",
     )
     parser.add_argument(
         "--velocity-weight",
@@ -2034,9 +2136,21 @@ def main():
     elif args.waveform_augment != "none" and not HAS_WAVEFORM_AUGMENT:
         print(f"[WARNING] Waveform augmentation requested but librosa not available. Skipping.")
 
+    # Determine if velocity training is enabled
+    use_velocity_training = args.use_multi_task and args.model_version in ("v4", "v5")
+    velocity_labels_suffix = args.velocity_labels_suffix if use_velocity_training else ""
+    
+    # Construct labels filenames with optional velocity suffix
+    train_labels_file = f"train_labels{velocity_labels_suffix}.json"
+    val_labels_file = f"val_labels{velocity_labels_suffix}.json"
+    
+    if use_velocity_training:
+        print(f"[VELOCITY] Multi-task training enabled with velocity prediction")
+        print(f"[VELOCITY] Using labels: {train_labels_file}, {val_labels_file}")
+
     train_dataset_full = DrumSampleDataset(
         dataset_path / "train",
-        resolve_labels("train", "train_labels.json"),
+        resolve_labels("train", train_labels_file),
         sr=args.sample_rate,
         cache_dir=feature_cache_root / "train" if feature_cache_root else None,
         prefer_torchaudio=prefer_torchaudio,
@@ -2047,10 +2161,11 @@ def main():
         target_frames=args.target_frames,
         cache_dtype=args.cache_dtype,
         waveform_transform=waveform_transform,  # Apply augmentation to training data
+        return_velocity=use_velocity_training,
     )
     val_dataset_full = DrumSampleDataset(
         dataset_path / "val",
-        resolve_labels("val", "val_labels.json"),
+        resolve_labels("val", val_labels_file),
         sr=args.sample_rate,
         cache_dir=feature_cache_root / "val" if feature_cache_root else None,
         prefer_torchaudio=prefer_torchaudio,
@@ -2060,6 +2175,7 @@ def main():
         fmax=fmax,
         target_frames=args.target_frames,
         cache_dtype=args.cache_dtype,
+        return_velocity=use_velocity_training,
     )
 
     train_subset_indices = None
@@ -2286,6 +2402,12 @@ def main():
             weight=class_weights_tensor,
             label_smoothing=args.label_smoothing,
         )
+    
+    # Velocity criterion for multi-task learning
+    velocity_criterion = None
+    if use_velocity_training:
+        velocity_criterion = nn.MSELoss()
+        print(f"[VELOCITY] Using MSELoss for velocity prediction (weight={args.velocity_weight})")
     
     # Wrap with Deep Supervision if enabled and model supports it
     use_deep_sup = args.use_deep_supervision and HAS_DEEP_SUPERVISION
@@ -2922,6 +3044,9 @@ def main():
                 use_rdrop=args.use_rdrop and HAS_RDROP,
                 rdrop_criterion=rdrop_criterion,
                 deep_sup_criterion=deep_sup_criterion,
+                use_velocity=use_velocity_training,
+                velocity_weight=args.velocity_weight,
+                velocity_criterion=velocity_criterion,
             )
             
             # Update SWA if in SWA phase
@@ -2950,6 +3075,9 @@ def main():
                     amp_enabled=amp_enabled,
                     autocast_dtype=autocast_dtype,
                     channels_last=args.channels_last,
+                    use_velocity=use_velocity_training,
+                    velocity_weight=args.velocity_weight,
+                    velocity_criterion=velocity_criterion,
                 )
 
             history.append(

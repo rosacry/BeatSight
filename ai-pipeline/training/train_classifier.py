@@ -2631,7 +2631,8 @@ def main():
     if args.resume_from:
         if not args.resume_from.exists():
             raise FileNotFoundError(f"Checkpoint not found: {args.resume_from}")
-        checkpoint_state = torch.load(args.resume_from, map_location=torch_device)
+        # weights_only=False needed for checkpoints containing pathlib.WindowsPath (PyTorch 2.6+)
+        checkpoint_state = torch.load(args.resume_from, map_location=torch_device, weights_only=False)
         if "model_state" not in checkpoint_state or "optimizer_state" not in checkpoint_state:
             raise KeyError(f"Invalid checkpoint format: {args.resume_from}")
         model_state = checkpoint_state["model_state"]
@@ -2721,25 +2722,39 @@ def main():
         
         # First train for a few epochs to get meaningful predictions
         audit_warmup_epochs = min(5, args.epochs)  # Train for 5 epochs or less
-        print(f"\n[LABEL AUDIT] Training for {audit_warmup_epochs} epochs before audit...")
         
-        for epoch in range(audit_warmup_epochs):
-            print(f"\nAudit Warmup Epoch {epoch + 1}/{audit_warmup_epochs}")
-            print("-" * 40)
+        # Check if resuming from a checkpoint - skip already-completed epochs
+        resume_from_epoch = start_epoch if args.resume_from else 0
+        if resume_from_epoch >= audit_warmup_epochs:
+            print(f"\n[LABEL AUDIT] Warmup already complete (epoch {resume_from_epoch}/{audit_warmup_epochs})")
+            print(f"[LABEL AUDIT] Skipping to label noise detection...")
+        else:
+            remaining_epochs = audit_warmup_epochs - resume_from_epoch
+            print(f"\n[LABEL AUDIT] Training for {remaining_epochs} epochs before audit...")
+            if resume_from_epoch > 0:
+                print(f"[LABEL AUDIT] Resuming from epoch {resume_from_epoch + 1}")
             
-            train_loss, train_acc = train_epoch(
-                model, train_loader, criterion, optimizer, torch_device,
-                grad_accum_steps=args.grad_accum_steps,
-                scaler=scaler,
-                amp_enabled=amp_enabled,
-                autocast_dtype=autocast_dtype,
-                mixup_fn=None,  # No mixup during audit warmup
-                grad_clip_norm=args.grad_clip_norm if args.grad_clip_norm and args.grad_clip_norm > 0 else None,
-                channels_last=args.channels_last,
-            )
-            val_loss, val_acc = validate(model, val_loader, criterion, torch_device, channels_last=args.channels_last)
-            print(f"Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%")
-            print(f"Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%")
+            for epoch in range(resume_from_epoch, audit_warmup_epochs):
+                print(f"\nAudit Warmup Epoch {epoch + 1}/{audit_warmup_epochs}")
+                print("-" * 40)
+            
+                train_loss, train_acc = train_epoch(
+                    model, train_loader, criterion, optimizer, torch_device,
+                    grad_accum_steps=args.grad_accum_steps,
+                    scaler=scaler,
+                    amp_enabled=amp_enabled,
+                    autocast_dtype=autocast_dtype,
+                    mixup_fn=None,  # No mixup during audit warmup
+                    grad_clip_norm=args.grad_clip_norm if args.grad_clip_norm and args.grad_clip_norm > 0 else None,
+                    channels_last=args.channels_last,
+                )
+                val_loss, val_acc = validate(model, val_loader, criterion, torch_device, channels_last=args.channels_last)
+                print(f"Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%")
+                print(f"Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%")
+            
+                # Save checkpoint after each warmup epoch to avoid losing progress
+                save_checkpoint(epoch, reason=f"audit_warmup_epoch_{epoch+1}")
+                print(f"[LABEL AUDIT] Checkpoint saved after warmup epoch {epoch + 1}")
         
         print(f"\n[LABEL AUDIT] Running label noise detection...")
         print(f"  Threshold: {noise_threshold}")
@@ -2751,9 +2766,18 @@ def main():
         class_names = None
         if components_path.exists():
             with open(components_path, "r") as f:
-                components = json.load(f)
-                class_names = [c["name"] for c in components]
-                print(f"  Classes: {len(class_names)}")
+                components_data = json.load(f)
+                # Handle different components.json formats
+                if isinstance(components_data, list):
+                    # Old format: list of {"name": "...", ...} dicts
+                    class_names = [c["name"] if isinstance(c, dict) else c for c in components_data]
+                elif isinstance(components_data, dict):
+                    # New format: {"components": ["kick", "snare", ...], ...}
+                    if "components" in components_data:
+                        class_names = components_data["components"]
+                    elif "classes" in components_data:
+                        class_names = components_data["classes"]
+                print(f"  Classes: {len(class_names) if class_names else 'unknown'}")
         
         # Run the label audit
         output_dir = Path(args.output)

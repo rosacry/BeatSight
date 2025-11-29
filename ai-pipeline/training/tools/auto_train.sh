@@ -1497,7 +1497,8 @@ ENSEMBLE_PY
               --use-se \
               --clean-labels \
               --label-noise-audit-only \
-              --label-noise-threshold 0.5
+              --label-noise-threshold 0.5 \
+              $resume_flag
             
             log ""
             log "Label audit complete. Check:"
@@ -1801,7 +1802,8 @@ ENSEMBLE_PY
               --output "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/warmup" \
               --seed 1337 \
               --checkpoint-every 5 \
-              --wandb-project beatsight-v5
+              --wandb-project beatsight-v5 \
+              $resume_flag
             ;;
         
         v5-quick)
@@ -1832,7 +1834,8 @@ ENSEMBLE_PY
               --output "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/quick" \
               --seed 1337 \
               --checkpoint-every 10 \
-              --wandb-project beatsight-v5
+              --wandb-project beatsight-v5 \
+              $resume_flag
             ;;
         
         v5-long)
@@ -1872,7 +1875,8 @@ ENSEMBLE_PY
               --output "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/long" \
               --seed 1337 \
               --checkpoint-every 10 \
-              --wandb-project beatsight-v5
+              --wandb-project beatsight-v5 \
+              $resume_flag
             ;;
         
         v5-full)
@@ -1929,7 +1933,8 @@ ENSEMBLE_PY
               --output "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full" \
               --seed 1337 \
               --checkpoint-every 10 \
-              --wandb-project beatsight-v5
+              --wandb-project beatsight-v5 \
+              $resume_flag
             
             log ""
             log "💎 V5 ULTIMATE model training complete!"
@@ -2033,7 +2038,8 @@ ENSEMBLE_PY
               --output "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/self-distill" \
               --seed 2024 \
               --checkpoint-every 10 \
-              --wandb-project beatsight-v5
+              --wandb-project beatsight-v5 \
+              $resume_flag
             
             log ""
             log "🔄 V5 Self-Distillation complete!"

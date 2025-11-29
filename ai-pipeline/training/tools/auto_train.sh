@@ -1787,9 +1787,9 @@ ENSEMBLE_PY
               --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
               --device cuda \
               --epochs 20 \
-              --batch-size 128 \
-              --lr 0.001 \
-              --num-workers 2 --val-num-workers 2 --prefetch-factor 4 \
+              --batch-size 256 \
+              --lr 0.002 \
+              --num-workers 4 --val-num-workers 4 --prefetch-factor 4 \
               --pin-memory --amp-dtype float16 \
               ${V5_ULTIMATE_FLAGS} \
               ${CUTTING_EDGE_MIXUP_FLAGS} \
@@ -1816,11 +1816,11 @@ ENSEMBLE_PY
               --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
               --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
               --device cuda \
-              --num-workers 2 --val-num-workers 2 --prefetch-factor 4 \
+              --num-workers 4 --val-num-workers 4 --prefetch-factor 4 \
               --pin-memory --amp-dtype float16 \
               --epochs 50 \
-              --batch-size 128 \
-              --lr 0.0008 \
+              --batch-size 256 \
+              --lr 0.0016 \
               ${V5_ULTIMATE_FLAGS} \
               ${CUTTING_EDGE_MIXUP_FLAGS} \
               ${CUTTING_EDGE_SPECAUGMENT_FLAGS} \
@@ -1849,11 +1849,11 @@ ENSEMBLE_PY
               --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
               --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
               --device cuda \
-              --num-workers 2 --val-num-workers 2 --prefetch-factor 4 \
+              --num-workers 4 --val-num-workers 4 --prefetch-factor 4 \
               --pin-memory --amp-dtype float16 \
               --epochs 100 \
-              --batch-size 128 \
-              --lr 0.0006 \
+              --batch-size 256 \
+              --lr 0.0012 \
               ${V5_ULTIMATE_FLAGS} \
               ${CUTTING_EDGE_MIXUP_FLAGS} \
               ${CUTTING_EDGE_SPECAUGMENT_FLAGS} \
@@ -1885,7 +1885,6 @@ ENSEMBLE_PY
             log "   + Lookahead + Cosine Warm Restarts + Mixup Cutoff + Self-Distillation Ready..."
             log "   + Attentive Statistics Pooling (Option A enhancement: +0.3-0.5%)..."
             log "   + Hard Negative Contrastive Loss (embedding-space separation)..."
-            log "   + TTA Validation (3 augmentations for accurate quality estimate)..."
             export WANDB_RUN_GROUP=v5_full_auto
             
             PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
@@ -1893,11 +1892,11 @@ ENSEMBLE_PY
               --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
               --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
               --device cuda \
-              --num-workers 2 --val-num-workers 2 --prefetch-factor 4 \
+              --num-workers 4 --val-num-workers 4 --prefetch-factor 4 \
               --pin-memory --amp-dtype float16 \
               --epochs 150 \
-              --batch-size 128 \
-              --lr 0.0005 \
+              --batch-size 256 \
+              --lr 0.001 \
               --model-version v5 \
               --v5-size large \
               --drop-path-rate 0.15 \
@@ -1926,7 +1925,6 @@ ENSEMBLE_PY
               --warm-restart-mult 2 \
               --warmup-epochs 20 \
               --warmup-lr-factor 0.05 \
-              --val-tta --val-tta-augmentations 3 \
               --grad-clip-norm 1.0 \
               --weight-decay 0.01 \
               --channels-last \
@@ -1995,11 +1993,11 @@ ENSEMBLE_PY
               --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
               --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
               --device cuda \
-              --num-workers 2 --val-num-workers 2 --prefetch-factor 4 \
+              --num-workers 4 --val-num-workers 4 --prefetch-factor 4 \
               --pin-memory --amp-dtype float16 \
               --epochs 150 \
-              --batch-size 128 \
-              --lr 0.0005 \
+              --batch-size 256 \
+              --lr 0.001 \
               --model-version v5 \
               --v5-size large \
               --drop-path-rate 0.15 \
@@ -2028,7 +2026,6 @@ ENSEMBLE_PY
               --warm-restart-mult 2 \
               --warmup-epochs 20 \
               --warmup-lr-factor 0.05 \
-              --val-tta --val-tta-augmentations 3 \
               --grad-clip-norm 1.0 \
               --weight-decay 0.01 \
               --channels-last \

@@ -26,6 +26,13 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
+# Add parent to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+try:
+    from training.utils.safe_print import safe_print
+except ImportError:
+    safe_print = print  # Fallback to regular print
+
 
 # Constants (must match consolidated_cache.py)
 MAGIC_BYTES = b"BSFC"
@@ -167,33 +174,33 @@ def print_validation_report(results: Dict):
     print(f"  Valid shards: {results['valid_shards']}")
     
     if results.get("error"):
-        print(f"\n  ❌ ERROR: {results['error']}")
+        safe_print(f"\n  ❌ ERROR: {results['error']}")
         return
     
     if results["corrupted_shards"]:
-        print(f"\n  ❌ Corrupted shards: {len(results['corrupted_shards'])}")
+        safe_print(f"\n  ❌ Corrupted shards: {len(results['corrupted_shards'])}")
         for item in results["corrupted_shards"][:5]:
             print(f"     - Shard {item['shard_id']}: {item['error']}")
     
     if results["truncated_shards"]:
-        print(f"\n  ⚠ Truncated shards: {len(results['truncated_shards'])}")
+        safe_print(f"\n  ⚠ Truncated shards: {len(results['truncated_shards'])}")
         for item in results["truncated_shards"][:5]:
             print(f"     - Shard {item['shard_id']}: missing {item['missing_bytes']:,} bytes")
             print(f"       Path: {item['path']}")
     
     if results["missing_shards"]:
-        print(f"\n  ❌ Missing shards: {len(results['missing_shards'])}")
+        safe_print(f"\n  ❌ Missing shards: {len(results['missing_shards'])}")
         print(f"     IDs: {results['missing_shards'][:10]}...")
     
     if results["index_issues"]:
-        print(f"\n  ⚠ Index issues: {len(results['index_issues'])}")
+        safe_print(f"\n  ⚠ Index issues: {len(results['index_issues'])}")
         for item in results["index_issues"][:5]:
             print(f"     - {item['sample']}: {item['issue']}")
     
     if results["valid"]:
-        print(f"\n  ✅ Cache is VALID")
+        safe_print(f"\n  ✅ Cache is VALID")
     else:
-        print(f"\n  ❌ Cache has ISSUES - consider regenerating affected shards")
+        safe_print(f"\n  ❌ Cache has ISSUES - consider regenerating affected shards")
     
     print("=" * 60)
 

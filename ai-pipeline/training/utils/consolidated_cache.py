@@ -39,6 +39,12 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 import numpy as np
 import torch
 
+# Safe print for Windows console encoding issues
+try:
+    from training.utils.safe_print import safe_print
+except ImportError:
+    safe_print = print  # Fallback
+
 
 # =============================================================================
 # Constants
@@ -758,7 +764,7 @@ def convert_individual_to_consolidated_inplace(
     if not pt_files:
         if existing_index:
             print("[CACHE] No new files to process - all files already converted!")
-            print(f"[CACHE] ✅ Resume complete with {len(existing_index):,} samples in {len(existing_shards)} shards")
+            safe_print(f"[CACHE] ✅ Resume complete with {len(existing_index):,} samples in {len(existing_shards)} shards")
         else:
             print("[CACHE] No files found, exiting")
         return
@@ -866,7 +872,7 @@ def convert_individual_to_consolidated_inplace(
     with open(manifest_path, "w") as f:
         json.dump(manifest, f, indent=2)
     
-    print(f"[CACHE] ✅ Conversion complete!")
+    safe_print(f"[CACHE] ✅ Conversion complete!")
     print(f"[CACHE]    Samples: {len(all_index_entries):,}")
     print(f"[CACHE]    Shards: {len(shard_info)}")
     print(f"[CACHE]    Space freed: {total_freed_gb:.1f} GB")
@@ -953,11 +959,11 @@ Examples:
         
         if args.resume:
             print("\n" + "="*60)
-            print("🔄 RESUME MODE - Continuing previous conversion")
+            safe_print("🔄 RESUME MODE - Continuing previous conversion")
             print("="*60)
         else:
             print("\n" + "="*60)
-            print("⚠️  IN-PLACE CONVERSION MODE")
+            safe_print("⚠️  IN-PLACE CONVERSION MODE")
             print("="*60)
             print(f"This will DELETE source .pt files after converting each shard.")
             print(f"Peak storage overhead: ~{args.workers * SAMPLES_PER_SHARD * 34 / 1024:.1f} MB")

@@ -4,13 +4,25 @@ from __future__ import annotations
 
 import dataclasses
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Any
 
 import numpy as np
 import librosa
 from scipy import ndimage
 from importlib import import_module
 from typing import Callable
+
+# Import adaptive parameters (optional)
+try:
+    from pipeline.adaptive_parameters import (
+        AdaptivePreprocessingParams,
+        AudioCharacteristics,
+        adapt_to_audio,
+    )
+    HAS_ADAPTIVE = True
+except ImportError:
+    HAS_ADAPTIVE = False
+    AdaptivePreprocessingParams = None  # type: ignore
 
 
 def _librosa_version_tuple(version_str: str) -> tuple[int, int]:
@@ -95,10 +107,23 @@ class OnsetDetectionResult:
         }
 
 
-def _compute_percussive_stem(audio: np.ndarray) -> np.ndarray:
-    """Extract the percussive component using HPSS."""
-
-    harmonic, percussive = librosa.effects.hpss(audio, margin=(1.2, 2.5), power=2.0)
+def _compute_percussive_stem(
+    audio: np.ndarray,
+    harmonic_margin: float = 1.2,
+    percussive_margin: float = 2.5,
+) -> np.ndarray:
+    """Extract the percussive component using HPSS.
+    
+    Args:
+        audio: Input audio
+        harmonic_margin: HPSS harmonic margin (adaptive)
+        percussive_margin: HPSS percussive margin (adaptive)
+    """
+    harmonic, percussive = librosa.effects.hpss(
+        audio, 
+        margin=(harmonic_margin, percussive_margin), 
+        power=2.0
+    )
     # Keep only the percussive layer; ensure contiguous copy to avoid view surprises.
     return np.array(percussive, dtype=np.float32, copy=True)
 
@@ -109,18 +134,34 @@ def _mel_spectral_flux(
     hop_length: int,
     n_fft: int,
     n_mels: int,
+    preemphasis_coef: float = 0.97,
+    fmin: float = 30.0,
+    fmax: Optional[float] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """Return percussive mel spectrogram and spectral flux onset envelope."""
-
-    pre_emphasised = librosa.effects.preemphasis(audio, coef=0.97)
+    """Return percussive mel spectrogram and spectral flux onset envelope.
+    
+    Args:
+        audio: Input audio
+        sr: Sample rate
+        hop_length: Hop length
+        n_fft: FFT size
+        n_mels: Number of mel bands
+        preemphasis_coef: Pre-emphasis coefficient (adaptive)
+        fmin: Minimum frequency (adaptive)
+        fmax: Maximum frequency (adaptive, defaults to sr/2 - 100)
+    """
+    if fmax is None:
+        fmax = min(sr / 2 - 100, 14000.0)
+    
+    pre_emphasised = librosa.effects.preemphasis(audio, coef=preemphasis_coef)
     mel = librosa.feature.melspectrogram(
         y=pre_emphasised,
         sr=sr,
         n_fft=n_fft,
         hop_length=hop_length,
         n_mels=n_mels,
-        fmin=30.0,
-        fmax=min(sr / 2 - 100, 14000.0),
+        fmin=fmin,
+        fmax=fmax,
         power=2.0,
         htk=True,
     )
@@ -216,6 +257,8 @@ def detect_onsets(
     sensitivity: float = 60.0,
     tempo_hint: Optional[float] = None,
     threshold_window_seconds: float = 0.35,
+    adaptive_params: Any = None,
+    use_adaptive: bool = True,
 ) -> OnsetDetectionResult:
     """Detect onsets from audio with adaptive thresholding.
 
@@ -227,14 +270,52 @@ def detect_onsets(
         sensitivity: User-provided sensitivity [0, 100]
         tempo_hint: Optional BPM hint to guide the minimum IOI calculation
         threshold_window_seconds: Window for adaptive threshold (in seconds)
+        adaptive_params: Optional AdaptivePreprocessingParams for signal-adaptive processing
+        use_adaptive: Whether to auto-detect adaptive parameters from audio
 
     Returns:
         OnsetDetectionResult describing detected onsets and debug artefacts.
     """
 
     audio_data, sr = audio
-    percussive = _compute_percussive_stem(audio_data)
-    mel, envelope = _mel_spectral_flux(percussive, sr, hop_length, n_fft, n_mels)
+    
+    # Get adaptive preprocessing parameters
+    hpss_h_margin = 1.2
+    hpss_p_margin = 2.5
+    preemph_coef = 0.97
+    fmin = 30.0
+    fmax = None
+    
+    if adaptive_params is not None and HAS_ADAPTIVE:
+        hpss_h_margin = adaptive_params.hpss_harmonic_margin
+        hpss_p_margin = adaptive_params.hpss_percussive_margin
+        preemph_coef = adaptive_params.preemphasis_coef
+        fmin = adaptive_params.fmin
+        fmax = adaptive_params.fmax
+    elif use_adaptive and HAS_ADAPTIVE:
+        # Auto-detect from audio
+        try:
+            config = adapt_to_audio(audio_data, sr, tempo_hint)
+            params = config.get_preprocessing_params()
+            hpss_h_margin = params.hpss_harmonic_margin
+            hpss_p_margin = params.hpss_percussive_margin
+            preemph_coef = params.preemphasis_coef
+            fmin = params.fmin
+            fmax = params.fmax
+        except Exception:
+            pass  # Fall back to defaults
+    
+    percussive = _compute_percussive_stem(
+        audio_data, 
+        harmonic_margin=hpss_h_margin,
+        percussive_margin=hpss_p_margin,
+    )
+    mel, envelope = _mel_spectral_flux(
+        percussive, sr, hop_length, n_fft, n_mels,
+        preemphasis_coef=preemph_coef,
+        fmin=fmin,
+        fmax=fmax,
+    )
 
     candidates = _tempo_candidates(envelope, sr, hop_length)
     estimated_tempo = tempo_hint if tempo_hint is not None else candidates[0]

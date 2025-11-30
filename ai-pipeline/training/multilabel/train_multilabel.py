@@ -325,6 +325,8 @@ def main():
     # Data
     parser.add_argument('--dataset', type=str, required=True,
                         help='Path to dataset directory')
+    parser.add_argument('--events-file', type=str, default='prod_combined_events.jsonl',
+                        help='Events JSONL file name (relative to dataset)')
     parser.add_argument('--labels-file', type=str, default='labels.json',
                         help='Labels file name (relative to dataset)')
     parser.add_argument('--cache-dir', type=str, default=None,
@@ -390,13 +392,20 @@ def main():
     # Load dataset
     print(f"\nLoading dataset from {args.dataset}...")
     dataset_path = Path(args.dataset)
-    labels_path = dataset_path / args.labels_file
+    
+    # Use events_file for multi-label samples (labels_file is for component names mapping)
+    events_path = dataset_path / args.events_file
+    if not events_path.exists():
+        # Fallback to labels_file for backwards compatibility
+        events_path = dataset_path / args.labels_file
+    
+    print(f"Events file: {events_path}")
     
     cache_dir = Path(args.cache_dir) if args.cache_dir else None
     
     full_dataset = MultiLabelDrumDataset(
         data_dir=dataset_path,
-        labels_file=labels_path,
+        labels_file=events_path,  # This can be .jsonl or .json
         num_classes=args.num_classes,
         cache_dir=cache_dir,
     )

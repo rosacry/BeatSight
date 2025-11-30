@@ -40,8 +40,7 @@ from .temporal_mamba import (
 
 from .cnn_v5 import (
     DrumClassifierCNNv5,
-    CoordAttentionDropPathBlock,
-    MultiScaleFusion,
+    CoordAttentionBlock,
     cnn_v5_small,
     cnn_v5_medium,
     cnn_v5_large,
@@ -50,7 +49,7 @@ from .cnn_v5 import (
 from .beats import (
     BEATsEncoder,
     BEATsFeatureExtractor,
-    BEATsDrumClassifier,
+    BEATsCompatibleEncoder,
     create_beats_encoder,
 )
 
@@ -84,15 +83,14 @@ __all__ = [
     'temporal_large',
     # CNN v5 (Ultimate)
     'DrumClassifierCNNv5',
-    'CoordAttentionDropPathBlock',
-    'MultiScaleFusion',
+    'CoordAttentionBlock',
     'cnn_v5_small',
     'cnn_v5_medium',
     'cnn_v5_large',
     # BEATs Audio Foundation
     'BEATsEncoder',
     'BEATsFeatureExtractor',
-    'BEATsDrumClassifier',
+    'BEATsCompatibleEncoder',
     'create_beats_encoder',
 ]
 

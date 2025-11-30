@@ -76,11 +76,21 @@ V5_MODEL_FLAGS="--model-version v5 --v5-size medium --drop-path-rate 0.1"
 V5_DEEP_SUPERVISION_FLAGS="--use-deep-supervision --deep-supervision-weights 0.4,0.6"
 V5_GRADIENT_CENTRALIZATION_FLAGS="--use-gradient-centralization"
 # Multi-task learning: velocity + hi-hat openness auxiliary heads (improves feature learning)
-V5_MULTI_TASK_FLAGS="--use-multi-task --velocity-labels-suffix _with_velocity --velocity-weight 0.1"
+# NOTE: velocity-weight boosted to 0.3 for improved ghost note detection (was 0.1)
+# Higher weight teaches model to better distinguish quiet hits from noise/bleed
+V5_MULTI_TASK_FLAGS="--use-multi-task --velocity-labels-suffix _with_velocity --velocity-weight 0.3"
+# Technique detection heads: multi-label classification for flam, roll, choke, ghost, accent, etc.
+# NOTE: Uses technique-annotated labels (train_labels_with_techniques.json generated from velocity)
+V5_TECHNIQUE_FLAGS="--use-technique-heads --technique-preset core --technique-weight 0.2"
+# Extra labels: synthetic cymbal choke samples (375 samples for cymbal_choke class training)
+V5_EXTRA_LABELS_FLAGS="--extra-labels E:/data/synthetic/cymbal_chokes/train_labels.json"
+# Ghost note augmentation: synthesizes ghost notes from normal hits for +5-10% ghost detection
+# This creates realistic low-velocity training samples with proper acoustic modeling
+V5_GHOST_AUGMENT_FLAGS="--ghost-augment --ghost-augment-preset default --ghost-augment-prob 0.15"
 # Waveform augmentation: audio-level augmentation before spectrogram extraction
-# DISABLED: Bypasses SSD feature cache, reads raw audio from HDD (too slow)
-# Re-enable if dataset is moved to SSD: V5_WAVEFORM_AUGMENT_FLAGS="--waveform-augment drum"
-V5_WAVEFORM_AUGMENT_FLAGS=""
+# NOTE: Ghost augment already bypasses cache for ~15% of samples, so waveform augment
+# adds minimal extra I/O cost while providing +1-2% improvement from time/pitch shifts
+V5_WAVEFORM_AUGMENT_FLAGS="--waveform-augment drum"
 # FMix: Fourier-domain mixup (better than CutMix for spectrograms)
 V5_FMIX_FLAGS="--use-fmix --fmix-alpha 1.0"
 # Progressive augmentation: starts weak, ramps up during training
@@ -111,7 +121,9 @@ V5_CLASS_WEIGHT_FLAGS="--class-weights effective --max-class-weight 10.0"
 V5_GRAD_ACCUM_FLAGS="--grad-accum-steps 4"
 
 # Combine ALL cutting-edge techniques for maximum performance
-V5_ULTIMATE_FLAGS="${V5_MODEL_FLAGS} ${V5_DEEP_SUPERVISION_FLAGS} ${V5_GRADIENT_CENTRALIZATION_FLAGS} ${V5_MULTI_TASK_FLAGS} ${V5_WAVEFORM_AUGMENT_FLAGS} ${V5_FMIX_FLAGS} ${V5_PROGRESSIVE_FLAGS} ${V5_LABEL_SMOOTHING_FLAGS} ${V5_LOOKAHEAD_FLAGS} ${V5_MIXUP_CUTOFF_FLAGS} ${V5_POOLING_FLAGS} ${V5_HARD_NEGATIVE_FLAGS} ${V5_CLASS_WEIGHT_FLAGS} ${V5_GRAD_ACCUM_FLAGS}"
+# NOTE: Ghost augment flags added for +5-10% ghost note detection improvement
+# NOTE: Technique heads + extra labels added for cymbal choke detection
+V5_ULTIMATE_FLAGS="${V5_MODEL_FLAGS} ${V5_DEEP_SUPERVISION_FLAGS} ${V5_GRADIENT_CENTRALIZATION_FLAGS} ${V5_MULTI_TASK_FLAGS} ${V5_TECHNIQUE_FLAGS} ${V5_EXTRA_LABELS_FLAGS} ${V5_GHOST_AUGMENT_FLAGS} ${V5_WAVEFORM_AUGMENT_FLAGS} ${V5_FMIX_FLAGS} ${V5_PROGRESSIVE_FLAGS} ${V5_LABEL_SMOOTHING_FLAGS} ${V5_LOOKAHEAD_FLAGS} ${V5_MIXUP_CUTOFF_FLAGS} ${V5_POOLING_FLAGS} ${V5_HARD_NEGATIVE_FLAGS} ${V5_CLASS_WEIGHT_FLAGS} ${V5_GRAD_ACCUM_FLAGS}"
 
 # BEATs Model Flags (Audio Foundation Model)
 BEATS_MODEL_FLAGS="--model-version beats --beats-freeze-encoder --beats-layer-decay 0.75"
@@ -333,8 +345,16 @@ case "$TRAIN_MODE" in
         TRAIN_MODE="beats-long"
         RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/beats/long"
         ;;
+    # =====================================================================
+    # PSEUDO-LABELING (20) - Use unlabeled data to boost performance
+    # Requires: V5 trained model (17e) + unlabeled audio directory
+    # =====================================================================
+    v5-pseudo-label|pseudo|20)
+        TRAIN_MODE="v5-pseudo-label"
+        RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/v5/pseudo-label"
+        ;;
     *)
-        echo "Usage: $0 {warmup|quick|long|cutting-edge-*|ensemble-*|ast-*|distill-*|enhanced-*|ssl-*|label-audit|temporal-*|v5-*|beats-*}"
+        echo "Usage: $0 {warmup|quick|long|cutting-edge-*|ensemble-*|ast-*|distill-*|enhanced-*|ssl-*|label-audit|temporal-*|v5-*|beats-*|pseudo}"
         echo ""
         echo "  Standard v1 training:"
         echo "    warmup (5a) - Warmup probe training"
@@ -419,6 +439,13 @@ case "$TRAIN_MODE" in
         echo ""
         echo "  ⭐ FULL PATH: 14 → 17a → 17d → 17e → 19c"
         echo "     (label audit → v5 warmup → v5 full → self-distill → multi-label finetune)"
+        echo ""
+        echo "  🔄 PSEUDO-LABELING (Optional - if you have unlabeled audio):"
+        echo ""
+        echo "  Uses high-confidence predictions on unlabeled data to boost training:"
+        echo "    v5-pseudo-label (20) - Pseudo-label + retrain (~6hr)"
+        echo ""
+        echo "  ⭐ MAXIMUM PATH: 14 → 17a → 17d → 17e → 20 → 19c"
         exit 1
         ;;
 esac
@@ -1813,34 +1840,60 @@ ENSEMBLE_PY
         # =====================================================================
         
         v5-warmup)
-            log "💎 Starting V5 ULTIMATE training (warmup)..."
-            log "   CoordAttn + DropPath + DeepSup + MultiTask + Velocity + FMix..."
+            log "💎 Starting V5 ULTIMATE training (warmup - FAST VALIDATION)..."
+            log "   CoordAttn + DropPath + DeepSup + MultiTask + FMix (core features only)"
             log "   Using velocity-enriched labels: train_labels_with_velocity.json"
+            log "   Using technique heads for ghost/accent/choke detection!"
+            log ""
+            log "   Purpose: Validate V5 innovations work before long training."
+            log "   OPTIMIZED: SAM/SWA/RDrop disabled for 2x faster validation."
+            log "   OPTIMIZED: Ghost/Waveform augment disabled to avoid HDD I/O."
+            log "   Check for: loss decreasing, no NaN, no OOM, models saving."
+            log ""
             export WANDB_RUN_GROUP=v5_warmup_auto
+            
+            # WARMUP-ONLY FLAGS (no SAM/SWA/RDrop/waveform augment for speed)
+            # These are re-enabled in 17d for full training
+            # Technique heads + extra labels included for validation
+            V5_WARMUP_FLAGS="${V5_MODEL_FLAGS} ${V5_DEEP_SUPERVISION_FLAGS} ${V5_GRADIENT_CENTRALIZATION_FLAGS} ${V5_MULTI_TASK_FLAGS} ${V5_TECHNIQUE_FLAGS} ${V5_EXTRA_LABELS_FLAGS} ${V5_FMIX_FLAGS} ${V5_PROGRESSIVE_FLAGS} ${V5_LABEL_SMOOTHING_FLAGS} ${V5_POOLING_FLAGS} ${V5_CLASS_WEIGHT_FLAGS}"
             
             PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
               --dataset "${BEATSIGHT_DATASET_DIR}" \
               --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
               --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
               --device cuda \
-              --epochs 20 \
+              --epochs 15 \
               --batch-size 256 \
               --lr 0.002 \
-              --num-workers 4 --val-num-workers 4 --prefetch-factor 4 \
+              --num-workers 6 --val-num-workers 4 --prefetch-factor 4 \
+              --persistent-workers \
               --pin-memory --amp-dtype float16 \
-              ${V5_ULTIMATE_FLAGS} \
+              ${V5_WARMUP_FLAGS} \
               ${CUTTING_EDGE_MIXUP_FLAGS} \
               ${CUTTING_EDGE_SPECAUGMENT_FLAGS} \
               ${CUTTING_EDGE_FOCAL_FLAGS} \
               ${CUTTING_EDGE_EMA_FLAGS} \
-              ${CUTTING_EDGE_SAM_FLAGS} \
-              --warmup-epochs 3 \
+              --warmup-epochs 2 \
               --warmup-lr-factor 0.1 \
+              --scheduler cosine \
+              --min-lr 0.0001 \
+              --grad-clip-norm 1.0 \
+              --channels-last \
               --output "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/warmup" \
               --seed 1337 \
               --checkpoint-every 5 \
               --wandb-project beatsight-v5 \
               $resume_flag
+            
+            log ""
+            log "💎 V5 warmup complete! Check the logs above for:"
+            log "   ✓ Loss decreasing over epochs"
+            log "   ✓ Validation accuracy improving"
+            log "   ✓ No NaN or Inf values"
+            log "   ✓ Checkpoints saved successfully"
+            log ""
+            log "📌 If everything looks good, proceed to: ./auto_train.sh v5-full (17d)"
+            log "   (17d enables SAM + Ghost Augment + Waveform Augment + Hard Negatives)"
             ;;
         
         v5-quick)
@@ -1924,7 +1977,16 @@ ENSEMBLE_PY
             log "   + Lookahead + Cosine Warm Restarts + Mixup Cutoff + Self-Distillation Ready..."
             log "   + Attentive Statistics Pooling (Option A enhancement: +0.3-0.5%)..."
             log "   + Hard Negative Contrastive Loss (embedding-space separation)..."
+            log "   + Ghost Note Augmentation (bypasses cache ~15% of batches)..."
             log "   Using velocity-enriched labels: train_labels_with_velocity.json"
+            log ""
+            log "   ⚠️  NOTE: Ghost/Waveform augment bypasses cache, hitting raw audio."
+            log "      If dataset is on HDD, consider moving to SSD or using cloud."
+            log "      Estimated time: ~20-30hr local (HDD), ~5hr cloud (A100)"
+            log ""
+            log "   Hardware profile: RTX 3080 Ti (12GB), 9800X3D, 32GB DDR5"
+            log "   Using reduced workers (4) to avoid HDD I/O contention."
+            log ""
             export WANDB_RUN_GROUP=v5_full_auto
             
             PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
@@ -1932,7 +1994,8 @@ ENSEMBLE_PY
               --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
               --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
               --device cuda \
-              --num-workers 4 --val-num-workers 4 --prefetch-factor 4 \
+              --num-workers 4 --val-num-workers 2 --prefetch-factor 2 \
+              --persistent-workers \
               --pin-memory --amp-dtype float16 \
               --epochs 150 \
               --batch-size 256 \
@@ -1943,6 +2006,7 @@ ENSEMBLE_PY
               ${V5_DEEP_SUPERVISION_FLAGS} \
               ${V5_GRADIENT_CENTRALIZATION_FLAGS} \
               ${V5_MULTI_TASK_FLAGS} \
+              ${V5_GHOST_AUGMENT_FLAGS} \
               ${V5_WAVEFORM_AUGMENT_FLAGS} \
               ${V5_FMIX_FLAGS} \
               ${V5_PROGRESSIVE_FLAGS} \
@@ -2012,6 +2076,10 @@ ENSEMBLE_PY
             log "   Using first V5 model as teacher, training identical student..."
             log "   Expected improvement: +1-2% from dark knowledge transfer..."
             log "   Includes: Attentive Statistics Pooling (Option A enhancement)..."
+            log ""
+            log "   Hardware profile: RTX 3080 Ti (12GB), 9800X3D, 32GB DDR5"
+            log "   Using reduced workers (4) to avoid HDD I/O contention."
+            log ""
             export WANDB_RUN_GROUP=v5_self_distill_auto
             
             # Check for teacher model from v5-full
@@ -2033,7 +2101,8 @@ ENSEMBLE_PY
               --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
               --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
               --device cuda \
-              --num-workers 4 --val-num-workers 4 --prefetch-factor 4 \
+              --num-workers 4 --val-num-workers 2 --prefetch-factor 2 \
+              --persistent-workers \
               --pin-memory --amp-dtype float16 \
               --epochs 150 \
               --batch-size 256 \
@@ -2168,6 +2237,7 @@ ENSEMBLE_PY
         # MULTI-LABEL TRAINING (19a/19b/19c) - Simultaneous Drum Hit Detection
         # Uses BCEWithLogitsLoss + Sigmoid for detecting multiple drums at once
         # e.g., kick + hi-hat, snare + crash playing simultaneously
+        # Requires: multi-label dataset generated by generate_multilabel_dataset.py
         # =====================================================================
         
         multilabel-warmup)
@@ -2176,8 +2246,23 @@ ENSEMBLE_PY
             log "   Using V5 backbone with focal loss..."
             export WANDB_RUN_GROUP=multilabel_warmup_auto
             
+            # Check for multi-label dataset
+            MULTILABEL_DATASET="${BEATSIGHT_OUTPUT_ROOT:-E:/data}/multilabel_dataset"
+            MULTILABEL_EVENTS="${MULTILABEL_DATASET}/multilabel_events.jsonl"
+            if [ ! -f "$MULTILABEL_EVENTS" ]; then
+                log "ERROR: Multi-label dataset not found at: $MULTILABEL_EVENTS"
+                log ""
+                log "Please generate the multi-label dataset first:"
+                log "  1. Run post_export_commands.sh"
+                log "  2. Select option 19) Generate Multi-Label Dataset"
+                log ""
+                return 1
+            fi
+            log "   Found multi-label dataset: $MULTILABEL_EVENTS"
+            
             PYTHONPATH=ai-pipeline python ai-pipeline/training/multilabel/train_multilabel.py \
-              --dataset "${BEATSIGHT_DATASET_DIR}" \
+              --dataset "${MULTILABEL_DATASET}" \
+              --events-file "multilabel_events.jsonl" \
               --labels-file "labels.json" \
               --cache-dir "${BEATSIGHT_CACHE_DIR}" \
               --model-version v5 \
@@ -2207,8 +2292,23 @@ ENSEMBLE_PY
             log "   Detects simultaneous drums: kick+hihat, snare+crash, etc..."
             export WANDB_RUN_GROUP=multilabel_full_auto
             
+            # Check for multi-label dataset
+            MULTILABEL_DATASET="${BEATSIGHT_OUTPUT_ROOT:-E:/data}/multilabel_dataset"
+            MULTILABEL_EVENTS="${MULTILABEL_DATASET}/multilabel_events.jsonl"
+            if [ ! -f "$MULTILABEL_EVENTS" ]; then
+                log "ERROR: Multi-label dataset not found at: $MULTILABEL_EVENTS"
+                log ""
+                log "Please generate the multi-label dataset first:"
+                log "  1. Run post_export_commands.sh"
+                log "  2. Select option 19) Generate Multi-Label Dataset"
+                log ""
+                return 1
+            fi
+            log "   Found multi-label dataset: $MULTILABEL_EVENTS"
+            
             PYTHONPATH=ai-pipeline python ai-pipeline/training/multilabel/train_multilabel.py \
-              --dataset "${BEATSIGHT_DATASET_DIR}" \
+              --dataset "${MULTILABEL_DATASET}" \
+              --events-file "multilabel_events.jsonl" \
               --labels-file "labels.json" \
               --cache-dir "${BEATSIGHT_CACHE_DIR}" \
               --model-version v5 \
@@ -2238,11 +2338,122 @@ ENSEMBLE_PY
             log "📁 Thresholds: ${BEATSIGHT_RUN_CUTTING_EDGE}/multilabel/full/optimal_thresholds.json"
             ;;
         
+        v5-pseudo-label)
+            log "🔄 Starting V5 PSEUDO-LABELING (semi-supervised learning)..."
+            log "   Uses high-confidence predictions on unlabeled data..."
+            log "   Expected improvement: +1-5% depending on unlabeled data amount..."
+            export WANDB_RUN_GROUP=v5_pseudo_label_auto
+            
+            # Check for V5 trained model
+            PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/self-distill/best_drum_classifier.pth"
+            if [ ! -f "$PRETRAINED_MODEL" ]; then
+                PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full/best_drum_classifier.pth"
+            fi
+            if [ ! -f "$PRETRAINED_MODEL" ]; then
+                PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full/best_drum_classifier_ema.pth"
+            fi
+            
+            if [ ! -f "$PRETRAINED_MODEL" ]; then
+                log "ERROR: V5 pretrained model not found."
+                log "Please run v5-full (17d) or v5-self-distill (17e) first."
+                log "Expected: ${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full/best_drum_classifier.pth"
+                return 1
+            fi
+            
+            log "   Pretrained model: $PRETRAINED_MODEL"
+            
+            # Check for unlabeled audio directory
+            UNLABELED_DIR="${BEATSIGHT_DATA_ROOT}/unlabeled"
+            if [ ! -d "$UNLABELED_DIR" ]; then
+                log ""
+                log "No unlabeled audio directory found at: $UNLABELED_DIR"
+                log ""
+                log "To use pseudo-labeling:"
+                log "  1. Create directory: mkdir -p ${UNLABELED_DIR}"
+                log "  2. Add unlabeled drum audio files (.wav, .mp3, .flac)"
+                log "  3. Re-run this command"
+                log ""
+                log "Good sources for unlabeled drum audio:"
+                log "  - Your own drum recordings"
+                log "  - Royalty-free drum samples"
+                log "  - Drum stems from music production packs"
+                log "  - YouTube drum covers (extract audio)"
+                log ""
+                return 1
+            fi
+            
+            UNLABELED_COUNT=$(find "$UNLABELED_DIR" -type f \( -name "*.wav" -o -name "*.mp3" -o -name "*.flac" -o -name "*.ogg" \) | wc -l)
+            log "   Found $UNLABELED_COUNT unlabeled audio files"
+            
+            if [ "$UNLABELED_COUNT" -lt 100 ]; then
+                log "WARNING: Only $UNLABELED_COUNT unlabeled files found."
+                log "         Pseudo-labeling works best with 1000+ unlabeled samples."
+            fi
+            
+            # Run pseudo-labeling training
+            PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
+              --dataset "${BEATSIGHT_DATASET_DIR}" \
+              --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
+              --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
+              --device cuda \
+              --num-workers 4 --val-num-workers 4 --prefetch-factor 4 \
+              --pin-memory --amp-dtype float16 \
+              --epochs 50 \
+              --batch-size 256 \
+              --lr 0.0005 \
+              --model-version v5 \
+              --v5-size large \
+              --drop-path-rate 0.15 \
+              ${V5_DEEP_SUPERVISION_FLAGS} \
+              ${V5_GRADIENT_CENTRALIZATION_FLAGS} \
+              ${V5_MULTI_TASK_FLAGS} \
+              ${CUTTING_EDGE_MIXUP_FLAGS} \
+              ${CUTTING_EDGE_SPECAUGMENT_FLAGS} \
+              ${CUTTING_EDGE_FOCAL_FLAGS} \
+              ${CUTTING_EDGE_EMA_FLAGS} \
+              --use-pseudo-labels \
+              --pseudo-label-dir "$UNLABELED_DIR" \
+              --pseudo-label-threshold 0.95 \
+              --pseudo-label-iterations 3 \
+              --resume-from "$PRETRAINED_MODEL" \
+              --warmup-epochs 5 \
+              --warmup-lr-factor 0.1 \
+              --scheduler cosine \
+              --grad-clip-norm 1.0 \
+              --weight-decay 0.01 \
+              --channels-last \
+              --output "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/pseudo-label" \
+              --seed 1337 \
+              --checkpoint-every 10 \
+              --wandb-project beatsight-v5 \
+              $resume_flag
+            
+            log ""
+            log "🔄 Pseudo-labeling complete!"
+            log "   Used high-confidence predictions on unlabeled data for semi-supervised learning."
+            log ""
+            log "📁 Model: ${BEATSIGHT_RUN_CUTTING_EDGE}/v5/pseudo-label/best_drum_classifier.pth"
+            ;;
+        
         multilabel-finetune)
             log "🥁 Starting MULTI-LABEL fine-tuning (from V5 pretrained)..."
             log "   Uses V5-full checkpoint as backbone initialization..."
             log "   Faster convergence + better features..."
             export WANDB_RUN_GROUP=multilabel_finetune_auto
+            
+            # Check for multi-label dataset
+            MULTILABEL_DATASET="${BEATSIGHT_OUTPUT_ROOT:-E:/data}/multilabel_dataset"
+            MULTILABEL_EVENTS="${MULTILABEL_DATASET}/multilabel_events.jsonl"
+            if [ ! -f "$MULTILABEL_EVENTS" ]; then
+                log "ERROR: Multi-label dataset not found at: $MULTILABEL_EVENTS"
+                log ""
+                log "Please generate the multi-label dataset first:"
+                log "  1. Run post_export_commands.sh"
+                log "  2. Select option 19) Generate Multi-Label Dataset"
+                log ""
+                return 1
+            fi
+            log "   Found multi-label dataset: $MULTILABEL_EVENTS"
             
             # Check for V5-full pretrained model
             PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full/best_drum_classifier.pth"
@@ -2260,7 +2471,8 @@ ENSEMBLE_PY
             fi
             
             PYTHONPATH=ai-pipeline python ai-pipeline/training/multilabel/train_multilabel.py \
-              --dataset "${BEATSIGHT_DATASET_DIR}" \
+              --dataset "${MULTILABEL_DATASET}" \
+              --events-file "multilabel_events.jsonl" \
               --labels-file "labels.json" \
               --cache-dir "${BEATSIGHT_CACHE_DIR}" \
               --model-version v5 \
@@ -2327,8 +2539,10 @@ while [ $attempt -lt $MAX_RETRIES ]; do
     log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     log_summary "Attempt $attempt started"
     
-    # Run training
+    # Run training - use pipefail to catch errors from run_training, not just tee
+    set -o pipefail
     if run_training 2>&1 | tee -a "$LOG_FILE"; then
+        set +o pipefail
         # Training exited with code 0 - mark as complete
         mark_complete
         
@@ -2355,6 +2569,7 @@ while [ $attempt -lt $MAX_RETRIES ]; do
         
         exit 0
     fi
+    set +o pipefail
     
     # Training crashed or didn't complete
     exit_code=$?

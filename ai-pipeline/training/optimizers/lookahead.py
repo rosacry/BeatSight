@@ -250,27 +250,82 @@ class Lookahead(Optimizer):
         """
         Loads the Lookahead optimizer state.
         
+        Handles multiple formats for backward compatibility:
+            1. Lookahead format: {'optimizer': {...}, 'slow_state': {...}, ...}
+            2. Standard optimizer format: {'state': {...}, 'param_groups': [...]}
+               (When resuming with Lookahead from a non-Lookahead checkpoint)
+            3. GradientCentralization format: {'optimizer': {...}, 'gc_config': {...}}
+        
         Args:
             state_dict: Optimizer state from state_dict()
         """
-        self.optimizer.load_state_dict(state_dict['optimizer'])
-        self._step_count = state_dict.get('step_count', 0)
-        self.k = state_dict.get('k', self.k)
-        self.alpha = state_dict.get('alpha', self.alpha)
-        self.pullback_momentum = state_dict.get('pullback_momentum', self.pullback_momentum)
+        # Format 1: Standard Lookahead format with 'optimizer' and 'slow_state'
+        if 'optimizer' in state_dict and 'slow_state' in state_dict:
+            self.optimizer.load_state_dict(state_dict['optimizer'])
+            self._step_count = state_dict.get('step_count', 0)
+            self.k = state_dict.get('k', self.k)
+            self.alpha = state_dict.get('alpha', self.alpha)
+            self.pullback_momentum = state_dict.get('pullback_momentum', self.pullback_momentum)
+            
+            # Rebuild slow_state mapping using current param objects
+            # Note: This assumes params are in the same order as when saved
+            slow_by_id = state_dict.get('slow_state', {})
+            idx = 0
+            for group in self.optimizer.param_groups:
+                for p in group['params']:
+                    if p.requires_grad:
+                        if idx < len(slow_by_id):
+                            # Find matching slow weight by position
+                            # This is a simplification; in practice you'd need proper mapping
+                            pass
+                        idx += 1
+            return
         
-        # Rebuild slow_state mapping using current param objects
-        # Note: This assumes params are in the same order as when saved
-        slow_by_id = state_dict.get('slow_state', {})
-        idx = 0
+        # Format 2: Standard optimizer format (state + param_groups)
+        # This happens when resuming with Lookahead from a non-Lookahead checkpoint
+        if 'param_groups' in state_dict and 'state' in state_dict:
+            print("[Lookahead] Note: Loading from non-Lookahead checkpoint (initializing slow weights fresh)")
+            self.optimizer.load_state_dict(state_dict)
+            self._step_count = 0
+            # Re-initialize slow_state from current weights
+            self.slow_state = {}
+            for group in self.optimizer.param_groups:
+                for p in group['params']:
+                    if p.requires_grad:
+                        self.slow_state[p] = p.data.clone()
+            return
+        
+        # Format 3: GradientCentralization format (has 'optimizer' and 'gc_config')
+        if 'optimizer' in state_dict and 'gc_config' in state_dict:
+            print("[Lookahead] Note: Loading from GC checkpoint (initializing slow weights fresh)")
+            self.optimizer.load_state_dict(state_dict)
+            self._step_count = 0
+            self.slow_state = {}
+            for group in self.optimizer.param_groups:
+                for p in group['params']:
+                    if p.requires_grad:
+                        self.slow_state[p] = p.data.clone()
+            return
+        
+        # Format 4: Just has 'optimizer' key (possibly old Lookahead without slow_state)
+        if 'optimizer' in state_dict:
+            print("[Lookahead] Note: Loading from partial Lookahead checkpoint")
+            self.optimizer.load_state_dict(state_dict['optimizer'])
+            self._step_count = state_dict.get('step_count', 0)
+            self.k = state_dict.get('k', self.k)
+            self.alpha = state_dict.get('alpha', self.alpha)
+            self.pullback_momentum = state_dict.get('pullback_momentum', self.pullback_momentum)
+            return
+        
+        # Last resort: try passing directly to inner optimizer
+        print("[Lookahead] Warning: Unrecognized state dict format, passing to inner optimizer")
+        self.optimizer.load_state_dict(state_dict)
+        self._step_count = 0
+        self.slow_state = {}
         for group in self.optimizer.param_groups:
             for p in group['params']:
                 if p.requires_grad:
-                    if idx < len(slow_by_id):
-                        # Find matching slow weight by position
-                        # This is a simplification; in practice you'd need proper mapping
-                        pass
-                    idx += 1
+                    self.slow_state[p] = p.data.clone()
     
     def add_param_group(self, param_group: Dict[str, Any]) -> None:
         """Add a param group to the inner optimizer and initialize slow weights."""

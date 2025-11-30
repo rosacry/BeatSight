@@ -104,12 +104,13 @@ def centralize_gradient(
             grad.add_(-grad.mean(dim=dims_to_reduce, keepdim=True))
 
 
-class GradientCentralization:
+class GradientCentralization(Optimizer):
     """
     Optimizer wrapper that applies gradient centralization before updates.
     
     This wraps any PyTorch optimizer and applies GC to gradients
-    before the optimization step.
+    before the optimization step. Inherits from Optimizer for compatibility
+    with PyTorch LR schedulers.
     
     Args:
         optimizer: Base optimizer to wrap
@@ -132,6 +133,7 @@ class GradientCentralization:
         use_gc: bool = True,
         gc_conv_only: bool = False
     ):
+        # Store the base optimizer
         self.optimizer = optimizer
         self.use_gc = use_gc
         self.gc_conv_only = gc_conv_only
@@ -140,6 +142,11 @@ class GradientCentralization:
         self._params = []
         for group in optimizer.param_groups:
             self._params.extend(group['params'])
+        
+        # Initialize Optimizer base class with the same param_groups and defaults
+        # This is required for LR scheduler compatibility
+        self._param_groups = optimizer.param_groups
+        self._defaults = getattr(optimizer, 'defaults', {})
     
     @property
     def param_groups(self):
@@ -149,6 +156,22 @@ class GradientCentralization:
     def param_groups(self, value):
         self.optimizer.param_groups = value
     
+    @property
+    def defaults(self):
+        return self._defaults
+    
+    @defaults.setter
+    def defaults(self, value):
+        self._defaults = value
+    
+    @property
+    def state(self):
+        return self.optimizer.state
+    
+    @state.setter
+    def state(self, value):
+        self.optimizer.state = value
+    
     def zero_grad(self, set_to_none: bool = False):
         self.optimizer.zero_grad(set_to_none=set_to_none)
     
@@ -157,23 +180,99 @@ class GradientCentralization:
         centralize_gradient(self._params, self.use_gc, self.gc_conv_only)
         return self.optimizer.step(closure)
     
-    def state_dict(self):
-        return self.optimizer.state_dict()
+    def state_dict(self) -> Dict[str, Any]:
+        """
+        Return state dict that captures both the wrapper and underlying optimizer state.
+        
+        Returns a dict with:
+            - 'optimizer': The underlying optimizer's state dict (has 'state' and 'param_groups')
+            - 'gc_config': GradientCentralization configuration (use_gc, gc_conv_only)
+        """
+        return {
+            'optimizer': self.optimizer.state_dict(),
+            'gc_config': {
+                'use_gc': self.use_gc,
+                'gc_conv_only': self.gc_conv_only
+            }
+        }
     
-    def load_state_dict(self, state_dict: dict):
-        self.optimizer.load_state_dict(state_dict)
+    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
+        """
+        Load state dict, handling multiple formats for backward compatibility.
+        
+        Supported formats:
+            1. GradientCentralization format: {'optimizer': {...}, 'gc_config': {...}}
+            2. Raw optimizer format: {'state': {...}, 'param_groups': [...]}
+            3. Lookahead wrapper format: {'optimizer': {...}, 'slow_state': {...}, ...}
+               (When resuming without Lookahead from a checkpoint saved with Lookahead)
+            4. Legacy format (for old checkpoints that directly saved underlying optimizer)
+        """
+        # Format 1: New GradientCentralization wrapper format
+        if 'optimizer' in state_dict and 'gc_config' in state_dict:
+            self.optimizer.load_state_dict(state_dict['optimizer'])
+            gc_config = state_dict.get('gc_config', {})
+            self.use_gc = gc_config.get('use_gc', self.use_gc)
+            self.gc_conv_only = gc_config.get('gc_conv_only', self.gc_conv_only)
+            return
+        
+        # Format 2: Standard PyTorch optimizer format (has 'state' and 'param_groups')
+        if 'param_groups' in state_dict and 'state' in state_dict:
+            self.optimizer.load_state_dict(state_dict)
+            return
+        
+        # Format 3: Lookahead wrapper format - extract inner optimizer state
+        # This happens when resuming without Lookahead from a checkpoint saved with Lookahead
+        if 'optimizer' in state_dict and 'slow_state' in state_dict:
+            print("[GC] Note: Loading from Lookahead checkpoint (Lookahead state will be ignored)")
+            inner_state = state_dict['optimizer']
+            # The inner state should be a standard optimizer format or GC format
+            self.load_state_dict(inner_state)
+            return
+        
+        # Format 3b: Just has 'optimizer' key without gc_config (old GC format or partial Lookahead)
+        if 'optimizer' in state_dict and 'gc_config' not in state_dict and 'slow_state' not in state_dict:
+            inner_state = state_dict['optimizer']
+            if isinstance(inner_state, dict):
+                self.load_state_dict(inner_state)
+                return
+        
+        # Format 4: Legacy - might just have 'state' without 'param_groups' 
+        # This can happen if someone accidentally saved partial state
+        # Try to reconstruct a valid state dict
+        if 'state' in state_dict and 'param_groups' not in state_dict:
+            # Create a minimal valid state dict using current param_groups
+            reconstructed = {
+                'state': state_dict['state'],
+                'param_groups': self.optimizer.param_groups
+            }
+            try:
+                self.optimizer.load_state_dict(reconstructed)
+                print("[GC] Warning: Loaded partial state dict (missing param_groups), "
+                      "using current param_groups. LR may have been reset.")
+                return
+            except Exception as e:
+                print(f"[GC] Warning: Could not reconstruct state dict: {e}")
+        
+        # Format 5: Possibly the entire checkpoint was passed instead of just optimizer state
+        # This shouldn't happen, but let's be defensive
+        if 'optimizer_state' in state_dict:
+            print("[GC] Warning: Received full checkpoint instead of optimizer state, extracting...")
+            self.load_state_dict(state_dict['optimizer_state'])
+            return
+        
+        # Last resort: try to load directly and hope for the best
+        try:
+            self.optimizer.load_state_dict(state_dict)
+        except Exception as e:
+            raise ValueError(
+                f"[GC] Could not load optimizer state dict. "
+                f"Expected format with 'param_groups' and 'state' keys, "
+                f"but got keys: {list(state_dict.keys())}. Error: {e}"
+            )
     
     def add_param_group(self, param_group: dict):
         self.optimizer.add_param_group(param_group)
         self._params.extend(param_group['params'])
-    
-    @property
-    def state(self):
-        return self.optimizer.state
-    
-    @property
-    def defaults(self):
-        return self.optimizer.defaults
 
 
 class GC_SGD(torch.optim.SGD):

@@ -203,6 +203,8 @@ class DrumClassifierCNNv5(nn.Module):
         use_coord_attention: Whether to use CoordAttn
         use_deep_supervision: Whether to add auxiliary heads
         use_multi_task: Whether to add velocity/openness heads
+        use_technique_heads: Whether to add technique detection heads
+        technique_preset: Technique heads preset ("core", "full", "minimal", "articulation")
         drop_path_rate: Maximum stochastic depth rate
         dropout: Dropout rate for classifiers
         pooling_type: "gap" (default), "asp" (attentive stats), "mha" (multi-head attn), "hybrid"
@@ -217,6 +219,8 @@ class DrumClassifierCNNv5(nn.Module):
         use_coord_attention: bool = True,
         use_deep_supervision: bool = True,
         use_multi_task: bool = False,
+        use_technique_heads: bool = False,
+        technique_preset: str = "core",
         drop_path_rate: float = 0.1,
         dropout: float = 0.3,
         aux_weight: float = 0.4,
@@ -227,6 +231,8 @@ class DrumClassifierCNNv5(nn.Module):
         self.num_classes = num_classes
         self.use_deep_supervision = use_deep_supervision
         self.use_multi_task = use_multi_task
+        self.use_technique_heads = use_technique_heads
+        self.technique_preset = technique_preset
         self.aux_weight = aux_weight
         self.pooling_type = pooling_type
         
@@ -309,6 +315,23 @@ class DrumClassifierCNNv5(nn.Module):
             self.velocity_head = None
             self.openness_head = None
         
+        # Technique detection heads (NEW)
+        if use_technique_heads:
+            try:
+                from training.models.technique_heads import get_technique_heads
+                self.technique_head = get_technique_heads(
+                    preset=technique_preset,
+                    input_dim=self.feature_dim,
+                    dropout=dropout,
+                )
+                logger.info(f"Technique heads enabled: preset={technique_preset}")
+            except ImportError:
+                logger.warning("TechniqueHeads not available, disabling technique detection")
+                self.technique_head = None
+                self.use_technique_heads = False
+        else:
+            self.technique_head = None
+        
         # Initialize weights
         self._init_weights()
     
@@ -381,18 +404,19 @@ class DrumClassifierCNNv5(nn.Module):
         x: torch.Tensor,
         return_all: bool = False
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, List[torch.Tensor], 
-                                    Optional[torch.Tensor], Optional[torch.Tensor]]]:
+                                    Optional[torch.Tensor], Optional[torch.Tensor],
+                                    Optional[torch.Tensor]]]:
         """
         Forward pass.
         
         Args:
             x: Input tensor [B, C, H, W]
-            return_all: If True, return (main, aux_list, velocity, openness)
+            return_all: If True, return (main, aux_list, velocity, openness, techniques)
                        If False, return only main logits
         
         Returns:
             If return_all=False: logits [B, num_classes]
-            If return_all=True: (logits, aux_outputs, velocity, openness)
+            If return_all=True: (logits, aux_outputs, velocity, openness, techniques)
         """
         aux_outputs = []
         
@@ -420,11 +444,16 @@ class DrumClassifierCNNv5(nn.Module):
         # Multi-task outputs
         velocity = None
         openness = None
+        techniques = None
+        
         if self.use_multi_task:
             velocity = self.velocity_head(flat).squeeze(-1)
             openness = self.openness_head(flat).squeeze(-1)
         
-        return logits, aux_outputs, velocity, openness
+        if self.use_technique_heads and self.technique_head is not None:
+            techniques = self.technique_head(flat)
+        
+        return logits, aux_outputs, velocity, openness, techniques
     
     def get_aux_weights(self) -> Dict[str, float]:
         """Get weights for auxiliary losses (linear decay)."""
@@ -465,6 +494,7 @@ class V5Loss(nn.Module):
     - Main classification loss (with optional focal/label smoothing)
     - Auxiliary deep supervision losses
     - Multi-task losses (velocity, openness)
+    - Technique detection loss (multi-label)
     """
     
     def __init__(
@@ -473,6 +503,7 @@ class V5Loss(nn.Module):
         aux_weight: float = 0.4,
         velocity_weight: float = 0.1,
         openness_weight: float = 0.1,
+        technique_weight: float = 0.2,
         openness_classes: Optional[List[int]] = None
     ):
         super().__init__()
@@ -481,6 +512,7 @@ class V5Loss(nn.Module):
         self.aux_weight = aux_weight
         self.velocity_weight = velocity_weight
         self.openness_weight = openness_weight
+        self.technique_weight = technique_weight
         self.openness_classes = openness_classes or [4, 5, 6, 7, 8]  # hi-hat indices
         
         self.mse = nn.MSELoss()
@@ -494,7 +526,10 @@ class V5Loss(nn.Module):
         targets: torch.Tensor,
         velocity_targets: Optional[torch.Tensor] = None,
         openness_targets: Optional[torch.Tensor] = None,
-        aux_weights: Optional[Dict[str, float]] = None
+        aux_weights: Optional[Dict[str, float]] = None,
+        technique_pred: Optional[torch.Tensor] = None,
+        technique_targets: Optional[torch.Tensor] = None,
+        technique_head: Optional[nn.Module] = None,
     ) -> Tuple[torch.Tensor, Dict[str, float]]:
         """Compute combined loss."""
         loss_dict = {}
@@ -531,6 +566,19 @@ class V5Loss(nn.Module):
                 total_loss = total_loss + self.openness_weight * open_loss
                 loss_dict["openness"] = open_loss.item()
         
+        # Technique detection loss (multi-label focal/BCE)
+        if technique_pred is not None and technique_targets is not None:
+            if technique_head is not None and hasattr(technique_head, 'compute_loss'):
+                # Use technique head's own loss computation (handles focal loss, class weights)
+                tech_loss = technique_head.compute_loss(technique_pred, technique_targets)
+            else:
+                # Fallback to simple BCE
+                tech_loss = F.binary_cross_entropy_with_logits(
+                    technique_pred, technique_targets.float()
+                )
+            total_loss = total_loss + self.technique_weight * tech_loss
+            loss_dict["technique"] = tech_loss.item()
+        
         loss_dict["total"] = total_loss.item()
         return total_loss, loss_dict
 
@@ -544,6 +592,8 @@ def create_v5_model(
     size: str = "medium",
     use_deep_supervision: bool = True,
     use_multi_task: bool = False,
+    use_technique_heads: bool = False,
+    technique_preset: str = "core",
     drop_path_rate: float = 0.1,
     pooling_type: str = "gap"
 ) -> DrumClassifierCNNv5:
@@ -555,6 +605,8 @@ def create_v5_model(
         size: "small", "medium", or "large"
         use_deep_supervision: Enable auxiliary heads
         use_multi_task: Enable velocity/openness prediction
+        use_technique_heads: Enable technique detection heads
+        technique_preset: Technique preset ("core", "full", "minimal", "articulation")
         drop_path_rate: Stochastic depth rate
         pooling_type: "gap" (default), "asp" (attentive stats), "mha" (multi-head), "hybrid"
         
@@ -575,6 +627,8 @@ def create_v5_model(
         num_blocks=cfg["num_blocks"],
         use_deep_supervision=use_deep_supervision,
         use_multi_task=use_multi_task,
+        use_technique_heads=use_technique_heads,
+        technique_preset=technique_preset,
         drop_path_rate=drop_path_rate,
         pooling_type=pooling_type
     )
@@ -585,6 +639,8 @@ def cnn_v5_small(
     drop_path_rate: float = 0.1,
     use_deep_supervision: bool = True,
     use_multi_task: bool = False,
+    use_technique_heads: bool = False,
+    technique_preset: str = "core",
     pooling_type: str = "gap",
 ) -> DrumClassifierCNNv5:
     """Create a small v5 model (~200K params)."""
@@ -593,6 +649,8 @@ def cnn_v5_small(
         size="small",
         use_deep_supervision=use_deep_supervision,
         use_multi_task=use_multi_task,
+        use_technique_heads=use_technique_heads,
+        technique_preset=technique_preset,
         drop_path_rate=drop_path_rate,
         pooling_type=pooling_type
     )
@@ -603,6 +661,8 @@ def cnn_v5_medium(
     drop_path_rate: float = 0.1,
     use_deep_supervision: bool = True,
     use_multi_task: bool = False,
+    use_technique_heads: bool = False,
+    technique_preset: str = "core",
     pooling_type: str = "gap",
 ) -> DrumClassifierCNNv5:
     """Create a medium v5 model (~600K params) - RECOMMENDED."""
@@ -611,6 +671,8 @@ def cnn_v5_medium(
         size="medium",
         use_deep_supervision=use_deep_supervision,
         use_multi_task=use_multi_task,
+        use_technique_heads=use_technique_heads,
+        technique_preset=technique_preset,
         drop_path_rate=drop_path_rate,
         pooling_type=pooling_type
     )
@@ -621,6 +683,8 @@ def cnn_v5_large(
     drop_path_rate: float = 0.1,
     use_deep_supervision: bool = True,
     use_multi_task: bool = False,
+    use_technique_heads: bool = False,
+    technique_preset: str = "core",
     pooling_type: str = "gap",
 ) -> DrumClassifierCNNv5:
     """Create a large v5 model (~1.5M params) - Maximum quality."""
@@ -629,6 +693,8 @@ def cnn_v5_large(
         size="large",
         use_deep_supervision=use_deep_supervision,
         use_multi_task=use_multi_task,
+        use_technique_heads=use_technique_heads,
+        technique_preset=technique_preset,
         drop_path_rate=drop_path_rate,
         pooling_type=pooling_type
     )
@@ -656,11 +722,12 @@ if __name__ == "__main__":
     print(f"Inference output: {logits.shape}")
     
     # Training mode
-    main, aux, vel, opn = model(x, return_all=True)
+    main, aux, vel, opn, tech = model(x, return_all=True)
     print(f"Main: {main.shape}")
     print(f"Aux heads: {[a.shape for a in aux]}")
     print(f"Velocity: {vel.shape if vel is not None else None}")
     print(f"Openness: {opn.shape if opn is not None else None}")
+    print(f"Techniques: {tech.shape if tech is not None else None}")
     
     # Test loss
     criterion = V5Loss()
@@ -679,5 +746,36 @@ if __name__ == "__main__":
     # Parameter count
     params = model.count_parameters()
     print(f"\nParameters: {params}")
+    
+    # Test with technique heads
+    print("\n--- Testing with Technique Heads ---")
+    model_tech = DrumClassifierCNNv5(
+        num_classes=21,
+        use_deep_supervision=True,
+        use_multi_task=True,
+        use_technique_heads=True,
+        technique_preset="core",
+        drop_path_rate=0.1
+    )
+    
+    main, aux, vel, opn, tech = model_tech(x, return_all=True)
+    print(f"Main: {main.shape}")
+    print(f"Techniques: {tech.shape if tech is not None else 'N/A (import failed)'}")
+    
+    if tech is not None:
+        # Test technique loss
+        criterion_tech = V5Loss(technique_weight=0.2)
+        tech_targets = torch.randint(0, 2, (4, tech.shape[1])).float()
+        
+        loss, loss_dict = criterion_tech(
+            main, aux, vel, opn, targets,
+            vel_targets, opn_targets,
+            model_tech.get_aux_weights(),
+            technique_pred=tech,
+            technique_targets=tech_targets,
+            technique_head=model_tech.technique_head,
+        )
+        print(f"Loss with techniques: {loss.item():.4f}")
+        print(f"Loss components: {loss_dict}")
     
     print("\n✅ DrumClassifierCNNv5 working!")

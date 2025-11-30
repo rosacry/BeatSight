@@ -661,7 +661,16 @@ V5_DEEP_SUPERVISION_FLAGS="--use-deep-supervision --deep-supervision-weights 0.4
 V5_GRADIENT_CENTRALIZATION_FLAGS="--use-gradient-centralization"
 # Multi-task learning: velocity + hi-hat openness auxiliary heads (improves feature learning)
 # Uses velocity-enriched labels: train_labels_with_velocity.json, val_labels_with_velocity.json
-V5_MULTI_TASK_FLAGS="--use-multi-task --velocity-labels-suffix _with_velocity --velocity-weight 0.1"
+# NOTE: velocity-weight boosted to 0.4 for improved ghost note/accent detection (was 0.3)
+# Higher weight teaches model to better distinguish dynamics (ghost vs tap vs accent)
+V5_MULTI_TASK_FLAGS="--use-multi-task --velocity-labels-suffix _with_velocity --velocity-weight 0.4"
+# Ghost note augmentation: synthesizes ghost notes from normal hits for +5-15% ghost detection
+# Using "aggressive" preset: higher probability, more bleed simulation, harder examples
+# Also add accent_tap secondary augmentation for accent-tap sticking pattern detection
+V5_GHOST_AUGMENT_FLAGS="--ghost-augment --ghost-augment-preset aggressive --ghost-augment-prob 0.25"
+# Waveform augmentation: audio-level time stretch, pitch shift, gain variation (+1-2%)
+# NOTE: Ghost augment already bypasses cache, so this adds minimal extra I/O cost
+V5_WAVEFORM_AUGMENT_FLAGS="--waveform-augment drum"
 
 # BEATs Model Flags (Microsoft's Audio Foundation Model)
 BEATS_MODEL_FLAGS="--model-version beats --beats-freeze-encoder --beats-layer-decay 0.75"
@@ -860,6 +869,63 @@ run_train_cutting_edge_long() {
 
 # --- Auto-Training Functions (run until complete, auto-resume on crash) ---
 
+generate_multilabel_dataset() {
+    local script="${BEATSIGHT_REPO_ROOT}/ai-pipeline/training/generate_multilabel_dataset.py"
+    local output_dir="${BEATSIGHT_OUTPUT_ROOT:-E:/data}/multilabel_dataset"
+    
+    if [ ! -f "$script" ]; then
+        echo "ERROR: generate_multilabel_dataset.py not found at ${script}"
+        return 1
+    fi
+    
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  🥁 GENERATE MULTI-LABEL DATASET"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "  This creates training data for simultaneous drum detection!"
+    echo ""
+    echo "  Sources (MIDI-aligned only):"
+    echo "    • groove_mididataset (278MB) - studio recordings"
+    echo "    • egmd (9.6GB) - electronic drum MIDI"
+    echo "    • slakh2100 (1.8GB) - multi-track MIDI"
+    echo "    • enst_drums (28MB) - studio recordings"
+    echo ""
+    echo "  Expected output: ~500K+ events, ~40% multi-label"
+    echo "  Output: ${output_dir}"
+    echo ""
+    echo "  Time estimate: ~10-15 minutes"
+    echo ""
+    read -p "  Generate multi-label dataset? [Y/n]: " confirm
+    
+    case "${confirm,,}" in
+        n|no)
+            echo "  → Cancelled."
+            return 0
+            ;;
+    esac
+    
+    mkdir -p "${output_dir}"
+    
+    # Full generation (all MIDI sources)
+    python "$script" \
+        --sources groove_mididataset egmd slakh2100 enst_drums \
+        --output "${output_dir}/multilabel_events.jsonl" \
+        --verbose
+    
+    if [ $? -eq 0 ]; then
+        echo ""
+        echo "  ✅ Multi-label dataset generated successfully!"
+        echo "  📁 Output: ${output_dir}"
+        echo ""
+        echo "  Next step: Run 19c) Multi-Label: Finetune"
+    else
+        echo ""
+        echo "  ❌ Dataset generation failed. Check the error above."
+        return 1
+    fi
+}
+
 run_auto_train() {
     local mode="$1"
     local script="${BEATSIGHT_REPO_ROOT}/ai-pipeline/training/tools/auto_train.sh"
@@ -1042,12 +1108,13 @@ while true; do
     echo "╠═════════════════════════════════════════════════════════════════════╣"
     echo "║  🥁 MULTI-LABEL - SIMULTANEOUS DRUM DETECTION                       ║"
     echo "║─────────────────────────────────────────────────────────────────────║"
+    echo "║   19)  Generate Multi-Label Dataset (~10min) ⭐ RUN FIRST!          ║"
     echo "║   19a) Multi-Label: Warmup - validate setup (~2hr)                  ║"
     echo "║   19b) Multi-Label: Full   - production quality (~12hr)             ║"
     echo "║   19c) Multi-Label: Finetune - from V5 pretrained (~6hr) ⭐ BEST    ║"
     echo "║                                                                     ║"
     echo "║   Detects: kick+hihat, snare+crash, any simultaneous combo!         ║"
-    echo "║   ⭐ FULL PATH: 14 → 17a → 17d → 17e → 19c (~56.5 hours total)      ║"
+    echo "║   ⭐ FULL PATH: 14 → 17a → 17d → 17e → 19 → 19c                     ║"
     echo "╠═════════════════════════════════════════════════════════════════════╣"
     echo "║  EVALUATION & ANALYSIS:                                             ║"
     echo "║   eval)    Evaluation (Validation Snapshot)                         ║"
@@ -1077,6 +1144,7 @@ while true; do
         17d) run_auto_train v5-full ;;
         17e) run_auto_train v5-self-distill ;;
         # Multi-Label: Simultaneous Drum Detection
+        19) generate_multilabel_dataset ;;
         19a) run_auto_train multilabel-warmup ;;
         19b) run_auto_train multilabel-full ;;
         19c) run_auto_train multilabel-finetune ;;

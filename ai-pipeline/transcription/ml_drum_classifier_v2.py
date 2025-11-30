@@ -162,6 +162,7 @@ class DrumClassifierCNNv2(nn.Module):
         "china",
         "crash",
         "cross_stick",
+        "cymbal_choke",  # NEW: Choked crash/china/ride detection
         "hihat_closed",
         "hihat_foot_splash",
         "hihat_open",

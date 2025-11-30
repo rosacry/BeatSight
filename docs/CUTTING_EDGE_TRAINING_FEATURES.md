@@ -13,9 +13,10 @@ This document describes BeatSight's production training pipeline using the **V5 
 ./auto_train.sh v5-warmup        # 17a - Validate system (~2hr)
 ./auto_train.sh v5-full          # 17d - Full training (~24hr)
 ./auto_train.sh v5-self-distill  # 17e - Born-Again boost (~24hr) [optional]
+./auto_train.sh v5-pseudo-label  # 20  - Semi-supervised boost (~6hr) [optional, needs unlabeled data]
 ```
 
-**Total: ~26.5 hours minimum, ~50.5 hours maximum quality**
+**Total: ~26.5 hours minimum, ~56.5 hours maximum quality (with pseudo-labeling)**
 
 ---
 
@@ -29,6 +30,7 @@ This document describes BeatSight's production training pipeline using the **V5 
 | **17c** | ~12 hours | V5 long - Production quality |
 | **17d** | ~24 hours | V5 full - Large model, maximum quality (⭐ RECOMMENDED) |
 | **17e** | ~24 hours | V5 Self-Distill - Born-Again Networks (+1-2% boost) |
+| **20** | ~6 hours | Pseudo-Labeling - Semi-supervised learning (+1-5% with unlabeled data) |
 
 ---
 
@@ -112,7 +114,7 @@ Maximum:    14 → 17a → 17d → 17e                 (~50.5 hours total)  ⭐ 
 
 ---
 
-## V5 Model Features (22 Techniques)
+## V5 Model Features (23 Techniques)
 
 | Feature | Expected Improvement | Description |
 |---------|---------------------|-------------|
@@ -122,6 +124,7 @@ Maximum:    14 → 17a → 17d → 17e                 (~50.5 hours total)  ⭐ 
 | Multi-Scale Fusion | +0.5-1% | Temporal context aggregation |
 | Gradient Centralization | +0.5-1% | Optimizer enhancement |
 | Multi-Task Learning | +0.5-1% | Velocity + openness auxiliary heads |
+| **Ghost Note Augmentation** | **+5-10% on ghosts** | **Synthesizes ghost notes from normal hits** |
 | Waveform Augmentation | +1-2% | Audio-level time/pitch/gain augmentation |
 | FMix | +0.5-1% | Fourier mixup (better than CutMix for spectrograms) |
 | Progressive Augmentation | +0.3-0.5% | Curriculum-style augmentation ramping |
@@ -138,6 +141,25 @@ Maximum:    14 → 17a → 17d → 17e                 (~50.5 hours total)  ⭐ 
 | Gradient Accumulation | +0.2-0.5% | Larger effective batch (32×4=128) |
 | Monte Carlo Dropout | Premium tier | Uncertainty estimation at inference |
 | **TOTAL** | **+14-25% over baseline** | All combined in optimized pipeline |
+
+### Ghost Note Augmentation (NEW)
+
+Ghost notes are one of the hardest challenges in drum transcription because:
+- Low amplitude (10-20% of normal hits)
+- Often masked by other instruments
+- Similar to audio bleed
+- Subtle transients that are hard to distinguish from noise
+
+The new `GhostNoteAugmenter` synthesizes realistic ghost notes from normal hits by:
+1. **Attenuation**: Reduces amplitude by 12-18 dB based on target velocity
+2. **HF Roll-off**: Ghost notes lose high frequencies faster (physics-accurate)
+3. **Attack Softening**: Gentle fade-in mimics softer stick attack
+4. **Bleed Simulation**: Adds realistic bleed from hi-hats/cymbals
+5. **Masking**: Occasionally adds instrument masking (guitar, bass)
+6. **Noise Floor**: Realistic room noise at appropriate levels
+
+**Velocity Weight Boost**: Multi-task velocity weight increased from 0.1 to 0.3
+to improve the model's ability to distinguish quiet hits from noise.
 
 ---
 

@@ -388,4 +388,4 @@ if __name__ == "__main__":
     x = torch.randn(2, 64, 16, 16)
     model.train()
     out = model(x)
-    print(f"\n✅ StochasticDepthSequential working! Output shape: {out.shape}")
+    print(f"\n[OK] StochasticDepthSequential working! Output shape: {out.shape}")

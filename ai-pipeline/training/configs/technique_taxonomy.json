@@ -1,13 +1,21 @@
 {
-    "version": 1,
-    "generated_at": "2025-11-07T00:00:00Z",
+    "version": 2,
+    "generated_at": "2025-11-30T00:00:00Z",
     "source": "additionaldrummertech.txt",
     "description": "Canonical list of drummer techniques, gestures, timbres, and timing feels curated for ingestion, sampling, and health gating.",
+    "detection_status": {
+        "ml_detectable": "Techniques that can be detected by the ML model via acoustic/spectral analysis",
+        "velocity_inferred": "Techniques inferred from velocity values (ghost notes, accents)",
+        "pattern_detectable": "Techniques detected by analyzing sequences of events",
+        "not_detectable": "Techniques that cannot be detected from audio alone (require visual/MIDI data)"
+    },
     "techniques": [
         {
             "id": "flam",
             "category": "snare_rudiment",
             "priority": "core",
+            "detection": "ml_detectable",
+            "detection_method": "Double transient within 30-50ms window",
             "aliases": [
                 "Flam"
             ],
@@ -21,6 +29,8 @@
             "id": "drag",
             "category": "snare_rudiment",
             "priority": "core",
+            "detection": "ml_detectable",
+            "detection_method": "Multiple transients within 20-60ms before main hit",
             "aliases": [
                 "Drag",
                 "Ruff"
@@ -34,6 +44,8 @@
             "id": "double_stroke",
             "category": "snare_rudiment",
             "priority": "core",
+            "detection": "ml_detectable",
+            "detection_method": "Paired transients with 20-50ms spacing",
             "aliases": [
                 "Double-stroke",
                 "Diddle"
@@ -48,6 +60,8 @@
             "id": "buzz_roll",
             "category": "snare_rudiment",
             "priority": "core",
+            "detection": "ml_detectable",
+            "detection_method": "Tremolo envelope with dense transients >10Hz",
             "aliases": [
                 "Buzz roll",
                 "Press roll"
@@ -58,9 +72,26 @@
             "description": "Sustained stroke using multiple stick bounces per hand for a papery continuous tone."
         },
         {
+            "id": "open_roll",
+            "category": "snare_rudiment",
+            "priority": "core",
+            "detection": "ml_detectable",
+            "detection_method": "Sustained alternating transients 4-10Hz",
+            "aliases": [
+                "Open roll",
+                "Double-stroke roll"
+            ],
+            "keywords": [
+                "alternating doubles"
+            ],
+            "description": "Sustained roll using open double strokes with discernible individual hits."
+        },
+        {
             "id": "rimshot",
             "category": "snare_articulation",
             "priority": "core",
+            "detection": "ml_detectable",
+            "detection_method": "Distinct harmonic signature from head+rim strike",
             "aliases": [
                 "Rimshot"
             ],
@@ -73,6 +104,8 @@
             "id": "cross_stick",
             "category": "snare_articulation",
             "priority": "core",
+            "detection": "ml_detectable",
+            "detection_method": "Woody timbre, distinct spectral shape from snare hits",
             "aliases": [
                 "Cross-stick",
                 "Side-stick"
@@ -86,6 +119,9 @@
             "id": "ghost_note",
             "category": "snare_articulation",
             "priority": "core",
+            "detection": "velocity_inferred",
+            "detection_method": "Velocity < 0.25 with snare spectral signature",
+            "detection_threshold": 0.25,
             "aliases": [
                 "Ghost note"
             ],
@@ -96,9 +132,28 @@
             "description": "Very soft strokes between primary hits that add feel and texture."
         },
         {
+            "id": "accent",
+            "category": "snare_articulation",
+            "priority": "core",
+            "detection": "velocity_inferred",
+            "detection_method": "Velocity > 0.80 within a pattern context",
+            "detection_threshold": 0.80,
+            "aliases": [
+                "Accent",
+                "Accented hit"
+            ],
+            "keywords": [
+                "loud",
+                "emphasized"
+            ],
+            "description": "Emphasized hit with higher velocity than surrounding notes."
+        },
+        {
             "id": "stick_shot",
             "category": "snare_articulation",
             "priority": "supporting",
+            "detection": "ml_detectable",
+            "detection_method": "Unique harmonic content from braced stick strike",
             "aliases": [
                 "Stick shot",
                 "Shot"
@@ -112,6 +167,8 @@
             "id": "dead_stroke",
             "category": "snare_articulation",
             "priority": "supporting",
+            "detection": "ml_detectable",
+            "detection_method": "Short decay envelope from stick remaining on head",
             "aliases": [
                 "Dead stroke",
                 "Muffle stroke"
@@ -125,6 +182,8 @@
             "id": "snares_off",
             "category": "snare_articulation",
             "priority": "supporting",
+            "detection": "ml_detectable",
+            "detection_method": "Missing snare wire rattle/buzz in spectral signature",
             "aliases": [
                 "Snares off"
             ],
@@ -148,20 +207,28 @@
         {
             "id": "accent_tap_flow",
             "category": "snare_rudiment",
-            "priority": "supporting",
+            "priority": "core",
+            "detection": "pattern_detectable",
+            "detection_method": "Alternating velocity pattern: high (>0.65) then low (<0.35) repeated 3+ times",
+            "detection_module": "training.analysis.velocity_patterns.VelocityPatternAnalyzer",
             "aliases": [
                 "Accent-tap",
-                "Flow sticking"
+                "Flow sticking",
+                "Moeller technique"
             ],
             "keywords": [
-                "moeller"
+                "moeller",
+                "alternating dynamics",
+                "loud soft"
             ],
-            "description": "Alternating loud and soft notes to sculpt groove dynamics."
+            "description": "Alternating loud (accent) and soft (tap) notes with the same hand to sculpt groove dynamics. Often using Moeller whip technique."
         },
         {
             "id": "hihat_bark",
             "category": "hihat_articulation",
             "priority": "core",
+            "detection": "ml_detectable",
+            "detection_method": "Quick open-close sequence within 50-150ms",
             "aliases": [
                 "Hi-hat bark",
                 "Continuous barking"
@@ -300,6 +367,8 @@
             "id": "mallet_swells",
             "category": "cymbal_articulation",
             "priority": "stretch",
+            "detection": "ml_detectable",
+            "detection_method": "Crescendo envelope with soft attack transients",
             "aliases": [
                 "Mallet swells",
                 "Cymbal rolls"
@@ -313,11 +382,18 @@
             "id": "cymbal_choke",
             "category": "cymbal_articulation",
             "priority": "core",
+            "detection": "ml_detectable",
+            "detection_method": "Abrupt amplitude decay within 50-200ms of cymbal onset (vs normal 2-5s decay)",
+            "is_primary_class": true,
             "aliases": [
-                "Cymbal choke"
+                "Cymbal choke",
+                "Choked crash",
+                "Choked china"
             ],
             "keywords": [
-                "grab mute"
+                "grab mute",
+                "cut sustain",
+                "abrupt decay"
             ],
             "description": "Grabbing the cymbal immediately after strike to halt sustain."
         },
@@ -325,6 +401,8 @@
             "id": "cymbal_scrape",
             "category": "cymbal_articulation",
             "priority": "stretch",
+            "detection": "ml_detectable",
+            "detection_method": "Continuous noise-like signal with rising pitch contour",
             "aliases": [
                 "Cymbal scrape"
             ],
@@ -337,6 +415,8 @@
             "id": "cymbal_stack_hit",
             "category": "cymbal_articulation",
             "priority": "stretch",
+            "detection": "ml_detectable",
+            "detection_method": "Short decay, trashy harmonic content distinct from single cymbal",
             "aliases": [
                 "Cymbal stack"
             ],
@@ -349,6 +429,8 @@
             "id": "crash_build",
             "category": "cymbal_pattern",
             "priority": "core",
+            "detection": "pattern_detectable",
+            "detection_method": "Sequence of cymbal hits with increasing velocity over time",
             "aliases": [
                 "Crash build"
             ],
@@ -362,6 +444,8 @@
             "id": "crash_riding",
             "category": "cymbal_pattern",
             "priority": "core",
+            "detection": "pattern_detectable",
+            "detection_method": "Repeated crash hits at steady tempo intervals (8ths/16ths)",
             "aliases": [
                 "Crash riding"
             ],

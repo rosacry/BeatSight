@@ -1,5 +1,7 @@
 """
 Beatmap generation from classified drum hits
+
+Supports both static 7-lane layout and dynamic lane detection based on kit usage.
 """
 
 import json
@@ -11,6 +13,20 @@ import math
 
 import librosa
 import numpy as np
+
+# Try to import dynamic lane layout (optional enhancement)
+try:
+    from .dynamic_lane_layout import (
+        DynamicLaneLayout,
+        DynamicLaneLayoutBuilder,
+        LaneDefinition,
+    )
+    HAS_DYNAMIC_LANES = True
+except ImportError:
+    HAS_DYNAMIC_LANES = False
+    DynamicLaneLayout = None
+    DynamicLaneLayoutBuilder = None
+    LaneDefinition = None
 
 
 LANE_DEFAULT = 4
@@ -126,6 +142,23 @@ def _resolve_lane(component: str) -> int:
     return LANE_DEFAULT
 
 
+def _detect_time_signature_from_hits(hits: List[Dict]) -> str:
+    """
+    Extract time signature from hits if detected via structured decoding,
+    otherwise return default 4/4.
+    """
+    if not hits:
+        return "4/4"
+    
+    # Check if any hit has time_signature from structured decoding
+    for hit in hits:
+        ts = hit.get('time_signature')
+        if ts and isinstance(ts, str) and '/' in ts:
+            return ts
+    
+    return "4/4"
+
+
 def calculate_difficulty(hits: List[Dict]) -> float:
     """
     Calculate difficulty rating based on hit patterns.
@@ -170,67 +203,187 @@ def calculate_difficulty(hits: List[Dict]) -> float:
     return min(difficulty, 10.0)
 
 
-def assign_lanes(hits: List[Dict]) -> List[Dict]:
+def assign_lanes_dynamic(hits: List[Dict], num_lanes: int = 7) -> List[Dict]:
     """
-    Assign visual lanes using the same layout as the LiveInput HUD.
-
-    Heuristics emphasise the centre kick lane and mirrored cymbal/tom placement:
-    - Kick drums anchor lane 3 (Space)
-    - Snare, rimshot and clap-style hits lean to lane 1 (D)
-    - Stick hi-hat strikes sit on lane 5 (K) while pedal splashes use lane 0 (S)
-    - High toms prefer lane 2, mid/low toms favour lane 4
-    - Cymbals (crash/ride/china) default to lane 6 with alternates fanning to lane 0
-    Unknown parts fall back to lane 4 to stay in view without colliding with the kick lane.
+    Assign lanes dynamically based on actual kit usage in the song.
+    
+    This is the REVOLUTIONARY approach - instead of a fixed 7-lane layout,
+    we analyze what components are actually used and create an optimal
+    lane arrangement for that specific song.
+    
+    Benefits:
+    - Jazz with brushes might only need 4 lanes
+    - Metal with double bass + china might use all 8
+    - Pop with simple kick/snare/hat might use 3-4 lanes
+    - Progressive with full kit uses optimal layout for that kit
+    
+    Args:
+        hits: List of hit dictionaries with 'component' keys
+        num_lanes: Maximum lanes available (default 7)
+        
+    Returns:
+        Hits with 'lane' key assigned via dynamic layout
     """
-
+    if not HAS_DYNAMIC_LANES or not hits:
+        # Fall back to static assignment
+        return assign_lanes_static(hits)
+    
+    # Build dynamic layout from the hits
+    builder = DynamicLaneLayoutBuilder(
+        min_lanes=3,
+        max_lanes=num_lanes,
+        merge_ghost_notes=True,
+        merge_similar_cymbals=True,
+        merge_tom_varieties=False,
+    )
+    layout = builder.build_from_hits(hits)
+    
+    # Apply dynamic assignments with alternation for collisions
     cymbal_last_time = None
     cymbal_last_lane = None
-    cymbal_window = 0.45  # seconds window to alternate clustered cymbal hits
+    cymbal_window = 0.45
     tom_last_time = None
     tom_last_lane = None
     tom_window = 0.35
     cymbal_switches = 0
     tom_switches = 0
-
+    
     for hit in hits:
         component = hit.get("component", "")
-        lane = _resolve_lane(component)
-
+        
+        # Get lane from dynamic layout
+        lane = layout.get_lane(component)
+        
+        # Apply alternation logic for closely-timed cymbals/toms
         if _is_cymbal_component(component):
             time = float(hit.get("time", 0) or 0.0)
             if cymbal_last_time is not None and abs(time - cymbal_last_time) <= cymbal_window:
-                lane = 0 if cymbal_last_lane == 6 else 6
-            else:
-                if lane not in (0, 6):
-                    lane = 6
-
+                # Find alternate cymbal lane from layout
+                cymbal_lanes = [
+                    ln.index for ln in layout.lanes 
+                    if ln.category.name == "CYMBAL" and ln.index != lane
+                ]
+                if cymbal_lanes:
+                    lane = cymbal_lanes[0]
+                else:
+                    lane = 0 if lane == layout.lane_count - 1 else layout.lane_count - 1
+                    
             if cymbal_last_lane is not None and lane != cymbal_last_lane:
                 cymbal_switches += 1
-
             cymbal_last_time = time
             cymbal_last_lane = lane
+            
         elif _is_tom_component(component):
             time = float(hit.get("time", 0) or 0.0)
             if tom_last_time is not None and abs(time - tom_last_time) <= tom_window:
-                lane = 2 if tom_last_lane == 4 else 4
-            else:
-                if lane not in (2, 4):
-                    lane = 4
-
+                # Find alternate tom lane from layout
+                tom_lanes = [
+                    ln.index for ln in layout.lanes
+                    if ln.category.name == "TOM" and ln.index != lane
+                ]
+                if tom_lanes:
+                    lane = tom_lanes[0]
+                else:
+                    lane = (lane + 1) % layout.lane_count
+                    
             if tom_last_lane is not None and lane != tom_last_lane:
                 tom_switches += 1
-
             tom_last_time = time
             tom_last_lane = lane
-
+        
         hit["lane"] = lane
-
-    assign_lanes._lane_stats = {  # type: ignore[attr-defined]
+    
+    # Store stats for debugging
+    assign_lanes_dynamic._lane_stats = {  # type: ignore[attr-defined]
         "cymbal_switches": cymbal_switches,
         "tom_switches": tom_switches,
+        "dynamic_layout": True,
+        "active_lanes": layout.lane_count,
+        "components_mapped": len(layout.unique_components),
+        "layout_info": layout.to_dict(),
     }
-
+    
     return hits
+
+
+def assign_lanes(hits: List[Dict], num_lanes: int = 7) -> List[Dict]:
+    """
+    Assign visual lanes to hits using dynamic lane detection.
+    
+    AI-generated beatmaps ALWAYS use dynamic lane detection, which analyzes
+    the actual drum components present in the song and creates an optimal
+    lane layout for that specific song.
+    
+    Args:
+        hits: List of hit dictionaries
+        num_lanes: Maximum number of lanes for dynamic layout (4-8)
+        
+    Returns:
+        Hits with 'lane' key assigned
+    """
+    return assign_lanes_dynamic(hits, num_lanes=num_lanes)
+
+
+def detect_lane_count(hits: List[Dict]) -> Dict[str, Any]:
+    """
+    Detect the optimal number of lanes for a song without assigning lanes.
+    
+    This is used when a user wants to manually map a song but wants the AI
+    to suggest how many lanes they should use based on the drum kit detected.
+    
+    Args:
+        hits: List of hit dictionaries with 'component' keys
+        
+    Returns:
+        Dictionary with:
+        - suggested_lanes: Recommended lane count
+        - detected_components: List of unique drum components found
+        - component_categories: Grouped by category (kick, snare, etc.)
+        - layout_preview: What the dynamic layout would look like
+    """
+    if not HAS_DYNAMIC_LANES or not hits:
+        return {
+            "suggested_lanes": 7,
+            "detected_components": [],
+            "component_categories": {},
+            "layout_preview": None,
+            "message": "Dynamic lane detection not available, defaulting to 7 lanes",
+        }
+    
+    # Build dynamic layout to analyze
+    builder = DynamicLaneLayoutBuilder(
+        min_lanes=3,
+        max_lanes=12,  # Allow more for detection
+        merge_ghost_notes=True,
+        merge_similar_cymbals=True,
+        merge_tom_varieties=False,
+    )
+    layout = builder.build_from_hits(hits)
+    
+    # Extract component info
+    component_categories = {}
+    for lane in layout.lanes:
+        cat_name = lane.category.name.lower()
+        if cat_name not in component_categories:
+            component_categories[cat_name] = []
+        component_categories[cat_name].extend(lane.components)
+    
+    return {
+        "suggested_lanes": layout.lane_count,
+        "detected_components": list(layout.unique_components),
+        "component_categories": component_categories,
+        "layout_preview": [
+            {
+                "lane": lane.index,
+                "name": lane.name,
+                "components": lane.components,
+                "color": lane.color,
+            }
+            for lane in layout.lanes
+        ],
+        "message": f"Detected {len(layout.unique_components)} unique drum sounds, "
+                   f"recommend {layout.lane_count} lanes for optimal playability",
+    }
 
 
 def detect_bpm(audio: np.ndarray, sr: int) -> float:
@@ -531,6 +684,10 @@ def generate_beatmap(
     forced_step: Optional[float] = None,
     force_quantization: bool = False,
     start_time: float = 0.0,
+    # Lane layout options
+    num_lanes: int = 7,  # Max lanes for dynamic layout
+    # Ghost notes setting (experimental)
+    include_ghost_notes: bool = True,
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """
     Generate complete .bsm beatmap file.
@@ -591,9 +748,23 @@ def generate_beatmap(
         classified_hits = _generate_fallback_hits(duration_seconds, bpm_estimate, start_time=drum_start)
         used_fallback = True
 
-    # Assign lanes
-    hits_with_lanes = assign_lanes(classified_hits)
-    lane_stats = getattr(assign_lanes, "_lane_stats", {"cymbal_switches": 0, "tom_switches": 0})
+    # Filter ghost notes if disabled globally
+    if not include_ghost_notes:
+        classified_hits = [
+            hit for hit in classified_hits 
+            if 'ghost' not in hit.get('component', '').lower()
+        ]
+        print("   👻 Ghost notes disabled (experimental feature)")
+
+    # Assign lanes using dynamic lane detection (always dynamic for AI beatmaps)
+    hits_with_lanes = assign_lanes(classified_hits, num_lanes=num_lanes)
+    
+    # Get lane stats from dynamic layout
+    lane_stats = getattr(assign_lanes_dynamic, "_lane_stats", {
+        "cymbal_switches": 0, 
+        "tom_switches": 0,
+        "dynamic_layout": True,
+    })
 
     times_seconds = np.array([hit["time"] for hit in hits_with_lanes], dtype=float)
     tolerance = max_snap_error_ms / 1000.0
@@ -718,7 +889,7 @@ def generate_beatmap(
         "timing": {
             "bpm": round(quantization_result["bpm"], 2),
             "offset": int(round((quantization_result.get("offset", 0.0) + start_time) * 1000.0)),
-            "timeSignature": "4/4",
+            "timeSignature": _detect_time_signature_from_hits(classified_hits),
         },
         "drumKit": {
             "components": drum_components,

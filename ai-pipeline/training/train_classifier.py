@@ -314,6 +314,36 @@ except ImportError:
     FastWaveformAugment = None  # type: ignore
     get_waveform_augment = None  # type: ignore
 
+# Optional Ghost Note Augmentation (NEW - synthesize ghost notes from normal hits)
+try:
+    from training.augmentation.ghost_note_augment import GhostNoteAugmenter, GhostNoteConfig, get_ghost_augmenter
+    HAS_GHOST_AUGMENT = True
+except ImportError:
+    HAS_GHOST_AUGMENT = False
+    GhostNoteAugmenter = None  # type: ignore
+    GhostNoteConfig = None  # type: ignore
+    get_ghost_augmenter = None  # type: ignore
+
+# Optional Technique Detection Heads (NEW - multi-label technique classification)
+try:
+    from training.models.technique_heads import (
+        TechniqueHeads,
+        TechniqueConfig,
+        IntegratedTechniqueModel,
+        get_technique_heads,
+        CORE_TECHNIQUES,
+        ALL_TECHNIQUES,
+    )
+    HAS_TECHNIQUE_HEADS = True
+except ImportError:
+    HAS_TECHNIQUE_HEADS = False
+    TechniqueHeads = None  # type: ignore
+    TechniqueConfig = None  # type: ignore
+    IntegratedTechniqueModel = None  # type: ignore
+    get_technique_heads = None  # type: ignore
+    CORE_TECHNIQUES = []  # type: ignore
+    ALL_TECHNIQUES = []  # type: ignore
+
 # Consolidated Memory-Mapped Cache (HIGH-PERFORMANCE - 100x faster than individual .pt files)
 try:
     from training.utils.consolidated_cache import ConsolidatedCacheReader
@@ -321,6 +351,30 @@ try:
 except ImportError:
     HAS_CONSOLIDATED_CACHE = False
     ConsolidatedCacheReader = None  # type: ignore
+
+# Safe print for Windows console encoding issues (cp1252 can't handle emoji)
+try:
+    from training.utils.safe_print import safe_print as _safe_print
+except ImportError:
+    # Fallback inline implementation if module not found
+    def _safe_print(*args, **kwargs) -> None:
+        """Print with fallback for Windows encoding issues."""
+        import sys
+        import io
+        try:
+            print(*args, **kwargs)
+        except UnicodeEncodeError:
+            output = io.StringIO()
+            print(*args, file=output, **kwargs)
+            text = output.getvalue()
+            replacements = {'⚠️': '[!]', '⚠': '[!]', '✓': '[OK]', '✗': '[X]', '❌': '[X]', 
+                          '✅': '[OK]', '→': '->', '🎉': '[SUCCESS]'}
+            for emoji, ascii_rep in replacements.items():
+                text = text.replace(emoji, ascii_rep)
+            if sys.stdout.encoding:
+                text = text.encode(sys.stdout.encoding, errors='replace').decode(sys.stdout.encoding, errors='replace')
+            sys.stdout.write(text)
+            sys.stdout.flush()
 
 
 class DrumSampleDataset(Dataset):
@@ -341,10 +395,14 @@ class DrumSampleDataset(Dataset):
         target_frames: int = 128,
         cache_dtype: str = "float32",
         waveform_transform: Optional[Any] = None,
+        ghost_augmenter: Optional[Any] = None,
         return_velocity: bool = False,
+        class_names: Optional[List[str]] = None,
+        extra_labels: Optional[List[str | Path]] = None,
     ) -> None:
         self.data_dir = Path(data_dir)
         self.labels_path = Path(labels_file)
+        self.extra_labels = [Path(p) for p in extra_labels] if extra_labels else []
         self.sr = sr
         self.cache_dir = Path(cache_dir) if cache_dir else None
         self.n_fft = n_fft
@@ -358,7 +416,9 @@ class DrumSampleDataset(Dataset):
         self._amplitude_to_db = None
         self._cache_debug = bool(os.environ.get("BS_CACHE_DEBUG"))
         self.waveform_transform = waveform_transform
+        self.ghost_augmenter = ghost_augmenter
         self.return_velocity = return_velocity
+        self.class_names = class_names  # For ghost augmenter label lookup
 
         cache_dtype_key = cache_dtype.lower().strip()
         cache_dtype_map: Dict[str, torch.dtype] = {
@@ -508,10 +568,31 @@ class DrumSampleDataset(Dataset):
         print(f"[LABELS] Loading from JSON: {self.labels_path}")
         if HAS_ORJSON:
             with self.labels_path.open("rb") as handle:
-                return orjson.loads(handle.read())
+                main_labels = orjson.loads(handle.read())
         else:
             with self.labels_path.open("r", encoding="utf-8") as handle:
-                return json.load(handle)
+                main_labels = json.load(handle)
+        
+        # Merge extra label sources (e.g., synthetic cymbal chokes)
+        if self.extra_labels:
+            for extra_path in self.extra_labels:
+                if not extra_path.exists():
+                    print(f"[LABELS] Warning: Extra labels file not found: {extra_path}")
+                    continue
+                print(f"[LABELS] Loading extra labels from: {extra_path}")
+                if HAS_ORJSON:
+                    with extra_path.open("rb") as handle:
+                        extra_data = orjson.loads(handle.read())
+                else:
+                    with extra_path.open("r", encoding="utf-8") as handle:
+                        extra_data = json.load(handle)
+                if isinstance(extra_data, list):
+                    print(f"[LABELS]   Merged {len(extra_data):,} extra samples")
+                    main_labels.extend(extra_data)
+                else:
+                    print(f"[LABELS]   Warning: Extra labels not a list, skipping")
+        
+        return main_labels
 
     def __len__(self) -> int:
         # Handle case where numpy was not yet reloaded after pickle
@@ -548,18 +629,37 @@ class DrumSampleDataset(Dataset):
             velocity = float(item.get("velocity", 0.7))
 
         # Helper to return result with or without velocity
-        def make_result(features_tensor):
+        def make_result(features_tensor, final_velocity=velocity):
             if self.return_velocity:
-                return features_tensor.float().contiguous(), label, velocity
+                return features_tensor.float().contiguous(), label, final_velocity
             return features_tensor.float().contiguous(), label
 
-        # If waveform augmentation is enabled, we must recompute spectrograms each time
+        # If waveform or ghost augmentation is enabled, we must recompute spectrograms each time
         # (can't use cached spectrograms since augmentation is stochastic)
-        if self.waveform_transform is not None:
+        if self.waveform_transform is not None or self.ghost_augmenter is not None:
             waveform = self._load_audio(audio_path)
-            waveform = self.waveform_transform(waveform, self.sr)
+            
+            # Apply waveform augmentation first
+            if self.waveform_transform is not None:
+                waveform = self.waveform_transform(waveform, self.sr)
+            
+            # Apply ghost note augmentation (converts some normal hits to ghost notes)
+            if self.ghost_augmenter is not None:
+                # Get label name for ghost augmenter
+                label_name = "unknown"
+                if self.class_names is not None and 0 <= label < len(self.class_names):
+                    label_name = self.class_names[label]
+                
+                # Check if we should create a ghost from this sample
+                if self.ghost_augmenter.should_augment(label_name, velocity):
+                    waveform, velocity = self.ghost_augmenter.create_ghost(
+                        waveform,
+                        source_velocity=velocity,
+                        label=label_name,
+                    )
+            
             features = self._extract_features(waveform)
-            return make_result(features)
+            return make_result(features, velocity)
 
         # FAST PATH: Consolidated memory-mapped cache (100x faster)
         if self._consolidated_reader is not None:
@@ -1380,7 +1480,7 @@ def main():
     )
     parser.add_argument(
         "--scheduler",
-        choices=["plateau", "cosine"],
+        choices=["plateau", "cosine", "cosine_warm_restarts"],
         default="plateau",
         help="Learning rate scheduler (default: plateau)",
     )
@@ -1395,6 +1495,18 @@ def main():
         type=float,
         default=None,
         help="Minimum LR for cosine scheduler (default: 10%% of base LR)",
+    )
+    parser.add_argument(
+        "--warm-restart-t0",
+        type=int,
+        default=30,
+        help="Initial restart period for cosine_warm_restarts (default: 30 epochs)",
+    )
+    parser.add_argument(
+        "--warm-restart-mult",
+        type=int,
+        default=2,
+        help="Multiplier for restart period after each restart (default: 2)",
     )
     parser.add_argument(
         "--wandb-project",
@@ -1617,6 +1729,38 @@ def main():
         help="Weight for hi-hat openness prediction auxiliary loss (default: 0.1)",
     )
     parser.add_argument(
+        "--extra-labels",
+        type=str,
+        nargs="+",
+        default=[],
+        help="Additional label JSON files to merge into training data (e.g., synthetic cymbal chokes)",
+    )
+    # Technique Detection arguments (NEW - multi-label technique classification)
+    parser.add_argument(
+        "--use-technique-heads",
+        action="store_true",
+        help="Enable technique detection heads for multi-label technique classification (flam, roll, choke, ghost, etc.)",
+    )
+    parser.add_argument(
+        "--technique-preset",
+        type=str,
+        default="core",
+        choices=["core", "full", "minimal", "articulation"],
+        help="Technique detection preset: core=8 techniques, full=14, minimal=3, articulation=5 (default: core)",
+    )
+    parser.add_argument(
+        "--technique-weight",
+        type=float,
+        default=0.2,
+        help="Weight for technique detection auxiliary loss (default: 0.2)",
+    )
+    parser.add_argument(
+        "--technique-labels-suffix",
+        type=str,
+        default="_with_techniques",
+        help="Suffix for technique labels file (e.g., train_labels_with_techniques.json)",
+    )
+    parser.add_argument(
         "--width-mult",
         type=float,
         default=1.0,
@@ -1717,6 +1861,26 @@ def main():
         metavar=("MIN", "MAX"),
         default=[-4.0, 4.0],
         help="Gain variation range in dB (default: -4 4 = ±4 dB)",
+    )
+    
+    # Ghost Note Augmentation (synthesize ghost notes from normal hits)
+    parser.add_argument(
+        "--ghost-augment",
+        action="store_true",
+        help="Enable ghost note augmentation (synthesize ghost notes from normal hits for improved ghost detection)",
+    )
+    parser.add_argument(
+        "--ghost-augment-prob",
+        type=float,
+        default=0.15,
+        help="Probability of converting eligible sample to ghost note (default: 0.15)",
+    )
+    parser.add_argument(
+        "--ghost-augment-preset",
+        type=str,
+        default="default",
+        choices=["default", "aggressive", "conservative"],
+        help="Ghost augmentation preset: default (balanced), aggressive (more ghosts, harder), conservative (fewer, realistic)",
     )
     
     # Confident Learning (label noise detection)
@@ -2136,6 +2300,21 @@ def main():
     elif args.waveform_augment != "none" and not HAS_WAVEFORM_AUGMENT:
         print(f"[WARNING] Waveform augmentation requested but librosa not available. Skipping.")
 
+    # Setup ghost note augmentation (synthesize ghost notes from normal hits)
+    ghost_augmenter = None
+    if args.ghost_augment and HAS_GHOST_AUGMENT:
+        ghost_augmenter = get_ghost_augmenter(
+            preset=args.ghost_augment_preset,
+            sample_rate=args.sample_rate,
+        )
+        # Override probability if specified
+        if args.ghost_augment_prob != 0.15:
+            ghost_augmenter.config.ghost_prob = args.ghost_augment_prob
+        print(f"[GHOST AUGMENT] Enabled with preset='{args.ghost_augment_preset}', prob={ghost_augmenter.config.ghost_prob:.2f}")
+        print(f"[GHOST AUGMENT] This synthesizes ghost notes from normal hits for improved ghost detection")
+    elif args.ghost_augment and not HAS_GHOST_AUGMENT:
+        print(f"[WARNING] Ghost augmentation requested but module not available. Skipping.")
+
     # Determine if velocity training is enabled
     use_velocity_training = args.use_multi_task and args.model_version in ("v4", "v5")
     velocity_labels_suffix = args.velocity_labels_suffix if use_velocity_training else ""
@@ -2147,6 +2326,27 @@ def main():
     if use_velocity_training:
         print(f"[VELOCITY] Multi-task training enabled with velocity prediction")
         print(f"[VELOCITY] Using labels: {train_labels_file}, {val_labels_file}")
+
+    # Load class names for ghost augmenter (from components.json)
+    class_names = None
+    components_path = dataset_path / "components.json"
+    if components_path.exists():
+        with open(components_path, "r") as f:
+            components_data = json.load(f)
+            if isinstance(components_data, list):
+                class_names = [c["name"] if isinstance(c, dict) else c for c in components_data]
+            elif isinstance(components_data, dict):
+                if "components" in components_data:
+                    class_names = components_data["components"]
+                elif "classes" in components_data:
+                    class_names = components_data["classes"]
+        if ghost_augmenter is not None and class_names:
+            print(f"[GHOST AUGMENT] Loaded {len(class_names)} class names for label-aware augmentation")
+
+    # Extra labels (e.g., synthetic cymbal chokes)
+    extra_labels = args.extra_labels if hasattr(args, 'extra_labels') else []
+    if extra_labels:
+        print(f"[EXTRA LABELS] Will merge {len(extra_labels)} additional label source(s)")
 
     train_dataset_full = DrumSampleDataset(
         dataset_path / "train",
@@ -2161,7 +2361,10 @@ def main():
         target_frames=args.target_frames,
         cache_dtype=args.cache_dtype,
         waveform_transform=waveform_transform,  # Apply augmentation to training data
+        ghost_augmenter=ghost_augmenter,  # Ghost note synthesis for improved detection
         return_velocity=use_velocity_training,
+        class_names=class_names,
+        extra_labels=extra_labels,  # Merge additional label sources (e.g., synthetic chokes)
     )
     val_dataset_full = DrumSampleDataset(
         dataset_path / "val",
@@ -2176,6 +2379,7 @@ def main():
         target_frames=args.target_frames,
         cache_dtype=args.cache_dtype,
         return_velocity=use_velocity_training,
+        # NOTE: No ghost augmentation for validation - we want to measure true accuracy
     )
 
     train_subset_indices = None
@@ -2288,14 +2492,18 @@ def main():
     elif args.model_version == "v5":
         if not HAS_V5_MODEL:
             raise SystemExit("v5 model requested but cnn_v5.py not found. Use --model-version v1/v2/v3/v4.")
-        # Select v5 size variant - now with multi-task support and advanced pooling
+        # Select v5 size variant - now with multi-task support, advanced pooling, and technique heads
         pooling_type = getattr(args, 'pooling_type', 'gap')
+        use_technique = getattr(args, 'use_technique_heads', False) and HAS_TECHNIQUE_HEADS
+        technique_preset = getattr(args, 'technique_preset', 'core')
         if args.v5_size == "small":
             model = cnn_v5_small(
                 num_classes=num_classes,
                 drop_path_rate=args.drop_path_rate,
                 use_deep_supervision=args.use_deep_supervision,
                 use_multi_task=use_multi_task,
+                use_technique_heads=use_technique,
+                technique_preset=technique_preset,
                 pooling_type=pooling_type,
             )
         elif args.v5_size == "large":
@@ -2304,6 +2512,8 @@ def main():
                 drop_path_rate=args.drop_path_rate,
                 use_deep_supervision=args.use_deep_supervision,
                 use_multi_task=use_multi_task,
+                use_technique_heads=use_technique,
+                technique_preset=technique_preset,
                 pooling_type=pooling_type,
             )
         else:  # medium (default)
@@ -2312,11 +2522,14 @@ def main():
                 drop_path_rate=args.drop_path_rate,
                 use_deep_supervision=args.use_deep_supervision,
                 use_multi_task=use_multi_task,
+                use_technique_heads=use_technique,
+                technique_preset=technique_preset,
                 pooling_type=pooling_type,
             )
         param_count = sum(p.numel() for p in model.parameters())
         pooling_str = f", pooling={pooling_type}" if pooling_type != 'gap' else ""
-        print(f"Using v5 ULTIMATE model (size={args.v5_size}, drop_path={args.drop_path_rate}, deep_sup={args.use_deep_supervision}, multi_task={use_multi_task}{pooling_str}): {param_count:,} params")
+        technique_str = f", techniques={technique_preset}" if use_technique else ""
+        print(f"Using v5 ULTIMATE model (size={args.v5_size}, drop_path={args.drop_path_rate}, deep_sup={args.use_deep_supervision}, multi_task={use_multi_task}{pooling_str}{technique_str}): {param_count:,} params")
     elif args.model_version == "v4":
         if not HAS_V4_MODEL:
             raise SystemExit("v4 model requested but coord_attention.py not found. Use --model-version v1/v2/v3.")
@@ -2476,8 +2689,8 @@ def main():
         args.use_curriculum and HAS_CURRICULUM,          # Curriculum (soft sampling)
     ])
     if regularization_count >= 3 and args.label_smoothing > 0.05:
-        print(f"⚠️  Warning: Using {regularization_count} regularization techniques with label_smoothing={args.label_smoothing}")
-        print(f"   This may cause over-regularization. Consider reducing --label-smoothing to 0.05")
+        _safe_print(f"⚠️  Warning: Using {regularization_count} regularization techniques with label_smoothing={args.label_smoothing}")
+        _safe_print(f"   This may cause over-regularization. Consider reducing --label-smoothing to 0.05")
     
     # Initialize optimizer (SAM or standard Adam)
     use_sam = args.use_sam and HAS_SAM
@@ -2519,7 +2732,17 @@ def main():
 
     if args.scheduler == "plateau":
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5)
-    else:
+    elif args.scheduler == "cosine_warm_restarts":
+        # Cosine annealing with warm restarts - helps escape local minima
+        eta_min = args.min_lr if args.min_lr is not None else args.lr * 0.01
+        scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer,
+            T_0=args.warm_restart_t0,
+            T_mult=args.warm_restart_mult,
+            eta_min=eta_min,
+        )
+        print(f"Using CosineAnnealingWarmRestarts: T_0={args.warm_restart_t0}, T_mult={args.warm_restart_mult}, eta_min={eta_min}")
+    else:  # cosine
         t_max = max(1, args.epochs - args.warmup_epochs)
         eta_min = args.min_lr if args.min_lr is not None else args.lr * 0.1
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=t_max, eta_min=eta_min)
@@ -2757,6 +2980,19 @@ def main():
         checkpoint_state = torch.load(args.resume_from, map_location=torch_device, weights_only=False)
         if "model_state" not in checkpoint_state or "optimizer_state" not in checkpoint_state:
             raise KeyError(f"Invalid checkpoint format: {args.resume_from}")
+        
+        # Check for optimizer configuration mismatch and warn user
+        checkpoint_args = checkpoint_state.get("args", {})
+        ckpt_use_sam = checkpoint_args.get("use_sam", False)
+        ckpt_use_gc = checkpoint_args.get("use_gradient_centralization", False)
+        ckpt_use_lookahead = checkpoint_args.get("use_lookahead", False)
+        
+        if ckpt_use_sam != use_sam or ckpt_use_gc != use_gc or ckpt_use_lookahead != use_lookahead:
+            _safe_print(f"\n⚠️  Warning: Optimizer configuration changed from checkpoint:")
+            _safe_print(f"    Checkpoint: SAM={ckpt_use_sam}, GC={ckpt_use_gc}, Lookahead={ckpt_use_lookahead}")
+            _safe_print(f"    Current:    SAM={use_sam}, GC={use_gc}, Lookahead={use_lookahead}")
+            _safe_print(f"    Optimizer momentum/state may be partially reset.\n")
+        
         model_state = checkpoint_state["model_state"]
         if isinstance(model_state, dict):
             model_state = _normalize_state_dict_keys(model_state)
@@ -3118,13 +3354,13 @@ def main():
                 model_path = output_dir / "best_drum_classifier.pth"
                 torch.save(model.state_dict(), model_path)
                 best_model_path = model_path
-                print(f"✓ Saved best model (acc: {val_acc:.2f}%)")
+                _safe_print(f"✓ Saved best model (acc: {val_acc:.2f}%)")
                 
                 # Also save EMA model if enabled (often performs even better)
                 if ema is not None:
                     ema_model_path = output_dir / "best_drum_classifier_ema.pth"
                     torch.save(ema.ema_model.state_dict(), ema_model_path)
-                    print(f"✓ Saved best EMA model (acc: {val_acc:.2f}%)")
+                    _safe_print(f"✓ Saved best EMA model (acc: {val_acc:.2f}%)")
                 
                 if wandb_run is not None:
                     wandb_run.summary["best_val_accuracy"] = best_val_acc  # type: ignore[index]
@@ -3145,7 +3381,7 @@ def main():
                 except OSError as e:
                     # Fallback: log artifact instead if save still fails
                     if "WinError 1314" in str(e) or "privilege" in str(e).lower():
-                        print(f"⚠ wandb.save() failed (Windows symlink issue), using artifact instead")
+                        _safe_print(f"⚠ wandb.save() failed (Windows symlink issue), using artifact instead")
                         try:
                             artifact = wandb.Artifact(
                                 name=f"best_model_epoch_{best_epoch}",
@@ -3155,11 +3391,11 @@ def main():
                             artifact.add_file(str(model_path))
                             wandb_run.log_artifact(artifact)
                         except Exception as artifact_err:
-                            print(f"⚠ Artifact upload also failed: {artifact_err} (continuing anyway)")
+                            _safe_print(f"⚠ Artifact upload also failed: {artifact_err} (continuing anyway)")
                     else:
-                        print(f"⚠ wandb.save() failed: {e} (continuing anyway)")
+                        _safe_print(f"⚠ wandb.save() failed: {e} (continuing anyway)")
                 except Exception as e:
-                    print(f"⚠ wandb.save() failed: {e} (continuing anyway)")
+                    _safe_print(f"⚠ wandb.save() failed: {e} (continuing anyway)")
 
     except KeyboardInterrupt:
         print("Training interrupted by user. Saving checkpoint before exiting...")
@@ -3219,7 +3455,54 @@ def main():
             print(f"Calibration parameters saved to: {calib_path}")
             
         except Exception as e:
-            print(f"⚠ Calibration failed: {e} (continuing without calibration)")
+            _safe_print(f"⚠ Calibration failed: {e} (continuing without calibration)")
+    
+    # Self-training with pseudo-labels (if enabled)
+    if getattr(args, 'use_self_training', False) and args.unlabeled_dir:
+        if not HAS_SELF_TRAINING or run_self_training is None:
+            _safe_print("⚠ Self-training requested but module not available (skipping)")
+        else:
+            print("\n" + "=" * 60)
+            print("Running self-training with pseudo-labels...")
+            print("=" * 60)
+            try:
+                from training.ssl_training.self_training import SelfTrainingConfig
+                
+                # Use the best model for pseudo-labeling
+                teacher_path = best_model_path or final_model_path
+                
+                self_training_config = SelfTrainingConfig(
+                    teacher_model_path=teacher_path,
+                    unlabeled_data_dir=Path(args.unlabeled_dir),
+                    output_dir=output_dir / "self_training",
+                    labeled_data_path=args.data,
+                    num_iterations=getattr(args, 'self_training_epochs', 3),
+                    initial_threshold=getattr(args, 'pseudo_label_threshold', 0.9),
+                    final_threshold=max(0.7, getattr(args, 'pseudo_label_threshold', 0.9) - 0.15),
+                    noisy_student=True,
+                    class_balancing=True,
+                )
+                
+                result = run_self_training(
+                    config=self_training_config,
+                    base_training_args=args,
+                    device=torch_device,
+                )
+                
+                if result and result.improved:
+                    _safe_print(f"✓ Self-training improved accuracy: {result.initial_accuracy:.2f}% → {result.final_accuracy:.2f}%")
+                    _safe_print(f"  Pseudo-labels generated: {result.num_pseudo_labels}")
+                    if result.best_model_path:
+                        _safe_print(f"  Improved model saved to: {result.best_model_path}")
+                        best_model_path = result.best_model_path
+                        best_val_acc = result.final_accuracy
+                else:
+                    _safe_print(f"Self-training did not improve accuracy (keeping original model)")
+                    
+            except Exception as e:
+                _safe_print(f"⚠ Self-training failed: {e} (continuing with original model)")
+                import traceback
+                traceback.print_exc()
     
     print("\n" + "=" * 60)
     print(f"Training complete!")
@@ -3244,7 +3527,7 @@ def main():
             wandb_run.save(str(final_model_path), policy="now")  # type: ignore[arg-type]
         except OSError as e:
             if "WinError 1314" in str(e) or "privilege" in str(e).lower():
-                print(f"⚠ wandb.save() failed (Windows symlink issue), using artifact instead")
+                _safe_print(f"⚠ wandb.save() failed (Windows symlink issue), using artifact instead")
                 artifact = wandb.Artifact(
                     name="final_model",
                     type="model",

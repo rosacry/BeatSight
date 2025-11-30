@@ -16,8 +16,12 @@ from training.utils.stochastic_depth import (
     get_stochastic_depth_rates,
     add_drop_path_to_model,
 )
+from training.utils.safe_print import safe_print, safe_format
 
 __all__ = [
+    # Safe print (Windows encoding compatibility)
+    "safe_print",
+    "safe_format",
     # EMA
     "ModelEMA",
     "ModelEMAWithBackup",

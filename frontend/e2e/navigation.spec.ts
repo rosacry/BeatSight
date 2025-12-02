@@ -1,14 +1,18 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Navigation', () => {
-    test('should display navigation bar', async ({ page }) => {
+    test('should display navigation bar', async ({ page, browserName }) => {
         await page.goto('/');
 
-        // Check logo/brand - use first() to handle multiple matches
-        await expect(page.locator('text=BeatSight').first()).toBeVisible();
-
-        // Check main nav links
+        // Check nav element is visible (works on all viewports)
         await expect(page.locator('nav')).toBeVisible();
+
+        // Check logo/brand - only on desktop (hidden on mobile via hidden sm:block)
+        const isMobile = browserName === 'Mobile Chrome' || browserName === 'Mobile Safari' ||
+                         page.viewportSize()?.width !== undefined && page.viewportSize()!.width < 640;
+        if (!isMobile) {
+            await expect(page.locator('text=BeatSight').first()).toBeVisible();
+        }
     });
 
     test('should navigate to home page', async ({ page }) => {

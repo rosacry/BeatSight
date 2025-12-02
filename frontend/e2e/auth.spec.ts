@@ -30,10 +30,9 @@ test.describe('Authentication Flow', () => {
         test('should have link to registration', async ({ page }) => {
             await page.goto('/login');
 
-            // Use first() since there may be multiple register links (nav and form)
-            const registerLink = page.locator('a[href="/register"]').first();
+            // Use getByRole to find visible link (works on desktop and mobile)
+            const registerLink = page.getByRole('link', { name: /sign up/i }).first();
             await expect(registerLink).toBeVisible();
-            await expect(registerLink).toContainText(/sign up/i);
 
             // Click and verify navigation
             await registerLink.click();
@@ -74,8 +73,8 @@ test.describe('Authentication Flow', () => {
         test('should have link to login', async ({ page }) => {
             await page.goto('/register');
 
-            // Use first() since there may be multiple login links (nav and form)
-            const loginLink = page.locator('a[href="/login"]').first();
+            // Use getByRole to find visible link (works on desktop and mobile)
+            const loginLink = page.getByRole('link', { name: /log in|sign in/i }).first();
             await expect(loginLink).toBeVisible();
 
             await loginLink.click();

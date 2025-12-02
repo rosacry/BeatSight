@@ -50,6 +50,28 @@ namespace BeatSight.Game.UI.Theming
 
         #endregion
 
+        #region UI Element Sizes
+
+        /// <summary>Standard button height (40px).</summary>
+        public const float ButtonHeight = SpacingUnit * 5f;
+
+        /// <summary>Small button height (32px).</summary>
+        public const float ButtonHeightSmall = SpacingUnit * 4f;
+
+        /// <summary>Large button height (48px).</summary>
+        public const float ButtonHeightLarge = SpacingUnit * 6f;
+
+        /// <summary>Standard input/control height (40px).</summary>
+        public const float ControlHeight = SpacingUnit * 5f;
+
+        /// <summary>Standard slider width (400px).</summary>
+        public const float SliderWidth = SpacingUnit * 50f;
+
+        /// <summary>Dialog max width (400px).</summary>
+        public const float DialogMaxWidth = SpacingUnit * 50f;
+
+        #endregion
+
         #region Border Radius
 
         /// <summary>Small border radius for buttons and small elements (4px).</summary>

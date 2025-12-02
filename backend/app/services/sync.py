@@ -58,7 +58,18 @@ class SyncService:
             "hitsound_volume": 1.0,
             "theme": "dark",
             "language": "en",
-            "custom_settings": {},
+            "custom_settings": {
+                "autoGenerateBeatmap": True,
+                "defaultQuantization": "16th",
+                "defaultSensitivity": 0.5,
+                "showConfidenceOverlay": True,
+                "enableOfflineMode": False,
+                "emailJobComplete": True,
+                "emailJobFailed": True,
+                "pushNotifications": True,
+                "marketingEmails": False,
+                "developerModeEnabled": False,
+            },
         }
         checksum = self._compute_checksum(defaults)
 

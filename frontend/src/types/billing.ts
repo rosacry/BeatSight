@@ -1,8 +1,9 @@
 /**
  * Stripe and billing type definitions.
+ * Must match backend app/models/subscription.py
  */
 
-export type SubscriptionPlan = 'free' | 'pro_monthly' | 'pro_yearly'
+export type SubscriptionPlan = 'free' | 'basic_monthly' | 'basic_yearly' | 'pro_monthly' | 'pro_yearly'
 export type SubscriptionStatus = 'active' | 'past_due' | 'cancelled'
 
 export interface StripeConfig {
@@ -45,7 +46,7 @@ export const PRICING_PLANS: PricingPlan[] = [
         description: 'Perfect for trying out BeatSight',
         priceMonthly: 0,
         features: [
-            '3 AI beatmap generations/month',
+            '5 AI beatmap generations/month',
             'Basic drum detection',
             'Export to .osu format',
             'Community support',
@@ -53,18 +54,32 @@ export const PRICING_PLANS: PricingPlan[] = [
         cta: 'Get Started',
     },
     {
+        id: 'basic_monthly',
+        name: 'Basic',
+        description: 'For casual drummers',
+        priceMonthly: 8,
+        priceYearly: 6,
+        features: [
+            '30 AI beatmap generations/month',
+            'Advanced drum detection',
+            'All export formats',
+            'Email support',
+        ],
+        cta: 'Upgrade to Basic',
+    },
+    {
         id: 'pro_monthly',
         name: 'Pro',
         description: 'For serious drummers and creators',
-        priceMonthly: 9.99,
-        priceYearly: 7.99,
+        priceMonthly: 15,
+        priceYearly: 12,
         features: [
-            '100 AI beatmap generations/month',
+            'Unlimited AI beatmap generations',
             'Advanced 19-class drum detection',
             'Priority processing queue',
             'All export formats',
             'Cloud sync across devices',
-            'Email support',
+            'Priority email support',
             'Early access to new features',
         ],
         highlighted: true,

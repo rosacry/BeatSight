@@ -4,6 +4,9 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('PWA')
 
 interface BeforeInstallPromptEvent extends Event {
     prompt: () => Promise<void>
@@ -22,7 +25,7 @@ interface PWAStatus {
  */
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
     if (!('serviceWorker' in navigator)) {
-        console.log('[PWA] Service workers not supported')
+        logger.info('Service workers not supported')
         return null
     }
 
@@ -31,7 +34,7 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
             scope: '/',
         })
 
-        console.log('[PWA] Service worker registered:', registration.scope)
+        logger.info('Service worker registered:', registration.scope)
 
         // Check for updates periodically
         setInterval(() => {
@@ -40,7 +43,7 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
 
         return registration
     } catch (error) {
-        console.error('[PWA] Service worker registration failed:', error)
+        logger.error('Service worker registration failed:', error)
         return null
     }
 }

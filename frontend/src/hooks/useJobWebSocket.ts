@@ -9,6 +9,9 @@ import { useEffect, useRef, useCallback, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
 import { queryKeys } from '@/api/hooks'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('WebSocket')
 
 export type JobUpdateType = 'job_progress' | 'job_complete' | 'job_failed' | 'subscribed' | 'unsubscribed' | 'pong'
 
@@ -75,7 +78,7 @@ export function useJobWebSocket(options: UseJobWebSocketOptions = {}) {
 
         ws.onopen = () => {
             setIsConnected(true)
-            console.log('[WS] Connected to job updates')
+            logger.info('Connected to job updates')
 
             // Re-subscribe to any jobs we were tracking
             subscribedJobs.current.forEach((jobId) => {
@@ -128,13 +131,13 @@ export function useJobWebSocket(options: UseJobWebSocketOptions = {}) {
                     }
                 }
             } catch (err) {
-                console.error('[WS] Failed to parse message:', err)
+                logger.error('Failed to parse message:', err)
             }
         }
 
         ws.onclose = (event) => {
             setIsConnected(false)
-            console.log('[WS] Disconnected:', event.code, event.reason)
+            logger.info('Disconnected:', event.code, event.reason)
 
             // Auto-reconnect if enabled and not a clean close
             if (autoReconnect && event.code !== 1000) {
@@ -143,7 +146,7 @@ export function useJobWebSocket(options: UseJobWebSocketOptions = {}) {
         }
 
         ws.onerror = (error) => {
-            console.error('[WS] Error:', error)
+            logger.error('Error:', error)
         }
     }, [accessToken, autoReconnect, reconnectInterval, onProgress, onComplete, onFailed, queryClient])
 

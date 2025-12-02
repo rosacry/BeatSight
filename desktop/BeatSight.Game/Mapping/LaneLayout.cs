@@ -106,25 +106,49 @@ namespace BeatSight.Game.Mapping
         public IReadOnlyList<int> Lanes => laneIndices;
     }
 
+    /// <summary>
+    /// Drum component categories for lane assignment.
+    /// Must match:
+    /// - Frontend: types/beatmap.ts DrumComponent
+    /// - AI Pipeline: transcription/ml_drum_classifier.py DRUM_COMPONENTS
+    /// - Backend: Uses frontend types via API
+    /// </summary>
     public enum DrumComponentCategory
     {
         Unknown,
+        // Kick/Bass
         Kick,
+        // Snare variations
         Snare,
+        SnareCenter,
+        SnareRimshot,
+        SnareCrossStick,
         Rimshot,
         CrossStick,
+        // Hi-hat variations
         HiHatClosed,
         HiHatOpen,
         HiHatPedal,
+        HiHatFootSplash,
+        HiHatSplash,
+        // Toms
         TomHigh,
         TomMid,
         TomLow,
+        // Ride variations
         Ride,
+        RideBow,
+        RideBell,
+        // Crashes and cymbals
         Crash,
-        China,
+        Crash2,
         Splash,
+        China,
+        CymbalChoke,
+        // Other
         Cowbell,
-        Percussion
+        AuxPercussion,
+        Percussion  // Legacy alias for AuxPercussion
     }
 
     public enum SidePreference

@@ -18,6 +18,7 @@ class QuantizationGrid(str, Enum):
     NONE = "none"
     QUARTER = "quarter"  # 1/4
     EIGHTH = "eighth"  # 1/8
+    TRIPLET = "triplet"  # 1/3 (triplet feel)
     SIXTEENTH = "sixteenth"  # 1/16 (default)
     THIRTY_SECOND = "thirty_second"  # 1/32
 
@@ -122,6 +123,9 @@ class AIJobRead(AIJobBase):
     last_heartbeat: datetime | None = None
     progress_percent: int | None = None
     progress_message: str | None = None
+    # Retry tracking fields
+    retry_count: int = 0
+    max_retries: int = 3
 
     model_config = ConfigDict(from_attributes=True)
 

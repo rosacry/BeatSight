@@ -341,6 +341,80 @@ If you didn't create a BeatSight account, you can ignore this email.
 """
         return await self._send_email(email, subject, html_content, text_content)
 
+    async def send_subscription_confirmation(
+        self, email: str, display_name: str, plan_name: str
+    ) -> bool:
+        """Send subscription confirmation email."""
+        subject = f"Welcome to BeatSight {plan_name}! 🎉"
+        html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background: #111827; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .card {{ background: #1f2937; border-radius: 12px; overflow: hidden; }}
+        .header {{ background: linear-gradient(135deg, #7c3aed, #ec4899); padding: 30px; text-align: center; }}
+        .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+        .content {{ padding: 30px; color: #d1d5db; }}
+        .content p {{ line-height: 1.6; margin: 0 0 16px 0; }}
+        .plan-badge {{ display: inline-block; background: #7c3aed; color: white; padding: 8px 16px; 
+                       border-radius: 20px; font-weight: 600; margin: 10px 0; }}
+        .button {{ display: inline-block; background: #7c3aed; color: white !important; padding: 14px 28px; 
+                   text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }}
+        .footer {{ padding: 20px 30px; color: #6b7280; font-size: 12px; border-top: 1px solid #374151; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <h1>🎉 Subscription Confirmed!</h1>
+            </div>
+            <div class="content">
+                <p>Hi {display_name},</p>
+                <p>Thank you for subscribing to BeatSight!</p>
+                <p style="text-align: center;">
+                    <span class="plan-badge">{plan_name}</span>
+                </p>
+                <p>Your subscription is now active. You now have access to:</p>
+                <ul style="color: #d1d5db; line-height: 1.8;">
+                    <li>Increased AI transcription quota</li>
+                    <li>Priority processing queue</li>
+                    <li>Advanced export options</li>
+                    <li>Premium support</li>
+                </ul>
+                <p style="text-align: center;">
+                    <a href="{self.frontend_url}/upload" class="button">Start Creating</a>
+                </p>
+            </div>
+            <div class="footer">
+                <p>Manage your subscription anytime in your <a href="{self.frontend_url}/settings/subscription" style="color: #7c3aed;">account settings</a>.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+"""
+        text_content = f"""
+Hi {display_name},
+
+Thank you for subscribing to BeatSight {plan_name}!
+
+Your subscription is now active. You now have access to:
+- Increased AI transcription quota
+- Priority processing queue
+- Advanced export options
+- Premium support
+
+Start creating: {self.frontend_url}/upload
+
+Manage your subscription: {self.frontend_url}/settings/subscription
+
+The BeatSight Team
+"""
+        return await self._send_email(email, subject, html_content, text_content)
+
 
 # Singleton instance
 _email_service: EmailService | None = None

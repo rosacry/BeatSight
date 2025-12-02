@@ -44,11 +44,14 @@ Usage:
 
 import numpy as np
 import librosa
+import logging
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple, Set
 from collections import defaultdict
 from enum import Enum
 import warnings
+
+logger = logging.getLogger(__name__)
 
 
 class RankingStrategy(Enum):
@@ -346,21 +349,24 @@ class InstrumentPitchRanker:
             try:
                 centroid = librosa.feature.spectral_centroid(y=segment, sr=sr)
                 event.spectral_centroid = float(np.mean(centroid))
-            except Exception:
+            except (ValueError, librosa.util.exceptions.ParameterError) as e:
+                logger.debug("Spectral centroid extraction failed at %.3fs: %s", event.timestamp, e)
                 event.spectral_centroid = 0.0
             
             # MFCCs - timbre fingerprint
             try:
                 mfcc = librosa.feature.mfcc(y=segment, sr=sr, n_mfcc=13)
                 event.mfcc = np.mean(mfcc, axis=1)
-            except Exception:
+            except (ValueError, librosa.util.exceptions.ParameterError) as e:
+                logger.debug("MFCC extraction failed at %.3fs: %s", event.timestamp, e)
                 event.mfcc = np.zeros(13)
             
             # RMS energy
             try:
                 rms = librosa.feature.rms(y=segment)
                 event.rms_energy = float(np.mean(rms))
-            except Exception:
+            except (ValueError, librosa.util.exceptions.ParameterError) as e:
+                logger.debug("RMS extraction failed at %.3fs: %s", event.timestamp, e)
                 event.rms_energy = 0.0
             
             # Attack and decay estimation
@@ -386,7 +392,8 @@ class InstrumentPitchRanker:
                 if envelope[i] >= threshold:
                     return (i / sr) * 1000  # Convert to ms
             return (peak_idx / sr) * 1000
-        except Exception:
+        except (ValueError, IndexError, ZeroDivisionError) as e:
+            logger.debug("Attack estimation failed: %s", e)
             return 0.0
     
     def _estimate_decay(self, segment: np.ndarray, sr: int) -> float:
@@ -411,7 +418,8 @@ class InstrumentPitchRanker:
             
             # Didn't decay to -20dB within segment
             return ((len(envelope) - peak_idx) / sr) * 1000
-        except Exception:
+        except (ValueError, IndexError, ZeroDivisionError) as e:
+            logger.debug("Decay estimation failed: %s", e)
             return 0.0
     
     def _cluster_and_rank(

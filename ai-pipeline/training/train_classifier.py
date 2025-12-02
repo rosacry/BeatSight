@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import inspect
 import json
+import logging
 import math
 import os
 import random
@@ -20,6 +21,8 @@ import warnings
 from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 # Use orjson for memory-efficient JSON parsing (important for large label files)
 try:
@@ -921,7 +924,8 @@ class DrumSampleDataset(Dataset):
                     features = torch.load(cache_path, map_location="cpu", weights_only=True)
                     if isinstance(features, torch.Tensor):
                         features = features.to(dtype=torch.float32)
-                except Exception:
+                except (RuntimeError, EOFError, OSError, ValueError) as e:
+                    logger.debug("Cache load failed for %s: %s", cache_path, e)
                     if self._cache_debug:
                         print(f"[CACHE MISS] failed to load cached features: {cache_path}", flush=True)
                     features = None  # Fallback to recompute if cache is corrupt.
@@ -1151,7 +1155,8 @@ class DrumSampleDataset(Dataset):
                     self._consolidated_reader = ConsolidatedCacheReader(
                         self.cache_dir, skip_index=skip_index
                     )
-                except Exception:
+                except (OSError, ValueError, KeyError, json.JSONDecodeError) as e:
+                    logger.debug("Failed to load consolidated cache from %s: %s", self.cache_dir, e)
                     self._consolidated_reader = None
             else:
                 # Check for consolidated cache in sibling directory
@@ -1166,7 +1171,8 @@ class DrumSampleDataset(Dataset):
                         self._consolidated_reader = ConsolidatedCacheReader(
                             consolidated_alt, skip_index=skip_index
                         )
-                    except Exception:
+                    except (OSError, ValueError, KeyError, json.JSONDecodeError) as e:
+                        logger.debug("Failed to load consolidated cache from %s: %s", consolidated_alt, e)
                         self._consolidated_reader = None
         
         self._consolidated_needs_reload = False
@@ -1188,8 +1194,9 @@ class DrumSampleDataset(Dataset):
                 self._cache_mapping_shards = mapping_data['shard_ids']
                 self._cache_mapping_offsets = mapping_data['offsets']
                 self._cache_mapping_valid = mapping_data['valid']
-            except Exception:
+            except (OSError, ValueError, KeyError) as e:
                 # If reload fails, disable cache mapping
+                logger.debug("Cache mapping reload failed: %s", e)
                 self._use_cache_mapping = False
         
         self._cache_mapping_needs_reload = False
@@ -1261,10 +1268,11 @@ def _worker_init_fn(worker_id: int) -> None:
                     try:
                         # Just get the mmap handle (opens the file)
                         reader._get_mmap(shard_id)
-                    except Exception:
-                        pass  # Ignore errors during warmup
-    except Exception:
-        pass  # Don't fail training if worker init has issues
+                    except (OSError, ValueError) as e:
+                        logger.debug("Shard warmup failed for shard %d: %s", shard_id, e)
+    except (AttributeError, TypeError, RuntimeError) as e:
+        # Don't fail training if worker init has issues
+        logger.debug("Worker init failed: %s", e)
 
 
 def compute_class_weights(

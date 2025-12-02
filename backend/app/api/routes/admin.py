@@ -859,7 +859,7 @@ async def get_user_stats(
     # Pro users (active subscription)
     pro_query = select(func.count(func.distinct(Subscription.user_id))).where(
         and_(
-            Subscription.plan == SubscriptionPlan.PRO,
+            Subscription.plan_code == SubscriptionPlan.PRO,
             Subscription.status == SubscriptionStatus.ACTIVE,
         )
     )
@@ -1053,7 +1053,7 @@ async def get_system_overview(
     # Pro subscribers
     pro_query = select(func.count(func.distinct(Subscription.user_id))).where(
         and_(
-            Subscription.plan == SubscriptionPlan.PRO,
+            Subscription.plan_code == SubscriptionPlan.PRO,
             Subscription.status == SubscriptionStatus.ACTIVE,
         )
     )

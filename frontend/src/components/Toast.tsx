@@ -180,20 +180,31 @@ if (styleTag) {
 
 /**
  * Simple toast utility for use outside of React components.
- * Falls back to console if ToastProvider not available.
+ * Falls back to dev logging if ToastProvider not available.
  * For full functionality, use useToast() hook inside components.
  */
 export const toast = {
     success: (message: string) => {
-        console.log('[Toast Success]', message)
+        if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.log('[Toast Success]', message)
+        }
     },
     error: (message: string) => {
+        // Always log errors
+        // eslint-disable-next-line no-console
         console.error('[Toast Error]', message)
     },
     warning: (message: string) => {
-        console.warn('[Toast Warning]', message)
+        if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.warn('[Toast Warning]', message)
+        }
     },
     info: (message: string) => {
-        console.info('[Toast Info]', message)
+        if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.info('[Toast Info]', message)
+        }
     },
 }

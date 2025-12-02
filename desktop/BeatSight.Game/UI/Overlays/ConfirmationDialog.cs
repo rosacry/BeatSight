@@ -108,7 +108,7 @@ namespace BeatSight.Game.UI.Overlays
                                     Colour = UITheme.TextSecondary,
                                     Anchor = Anchor.TopCentre,
                                     Origin = Anchor.TopCentre,
-                                    MaxWidth = 400,
+                                    MaxWidth = DesignSystem.DialogMaxWidth,
                                 },
                                 // Buttons
                                 new FillFlowContainer
@@ -197,7 +197,7 @@ namespace BeatSight.Game.UI.Overlays
             public DialogButton(string text, Color4 colour)
             {
                 Text = text;
-                Size = new Vector2(120, 40);
+                Size = new Vector2(120, DesignSystem.ButtonHeight);
                 BackgroundColour = colour;
             }
 

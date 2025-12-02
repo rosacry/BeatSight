@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { TimelineEditor } from '../components/timeline'
-import { Layout } from '../components/Layout'
+import { Layout } from '../components/NavigationShell'
 import type { Beatmap, NoteEdit } from '../types/beatmap'
 import { api } from '../lib/api'
 

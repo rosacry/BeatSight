@@ -10,6 +10,9 @@ import { useNavigate } from 'react-router-dom'
 import { LiveRecorder } from '@/components'
 import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/components/Toast'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('RecordPage')
 
 interface RecordingMetadata {
     duration: number
@@ -115,7 +118,7 @@ export function RecordPage() {
             navigate(`/library/${song.id}`)
 
         } catch (error) {
-            console.error('Upload error:', error)
+            logger.error('Upload error:', error)
             showError(error instanceof Error ? error.message : 'Failed to upload recording')
         } finally {
             setIsUploading(false)

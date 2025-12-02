@@ -1,4 +1,4 @@
-export { Layout } from './Layout'
+export { Layout } from './NavigationShell'
 export { JobStatusBadge } from './JobStatusBadge'
 export { ProgressBar } from './ProgressBar'
 export { JobCard } from './JobCard'

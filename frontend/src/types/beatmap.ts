@@ -49,13 +49,16 @@ export interface DrumKit {
  * 
  * Must match:
  * - Desktop: BeatSight.Game.Mapping.DrumComponentCategory enum
- * - AI Pipeline: training/configs/health_required_labels_prod.txt
+ * - AI Pipeline: transcription/ml_drum_classifier.py DRUM_COMPONENTS
  */
 export type DrumComponent =
     // Kick/Bass
     | 'kick'
     // Snare variations
     | 'snare'
+    | 'snare_center'
+    | 'snare_rimshot'
+    | 'snare_cross_stick'
     | 'rimshot'
     | 'cross_stick'
     // Hi-hat variations
@@ -63,6 +66,7 @@ export type DrumComponent =
     | 'hihat_open'
     | 'hihat_pedal'
     | 'hihat_foot_splash'
+    | 'hihat_splash'
     // Toms
     | 'tom_high'
     | 'tom_mid'
@@ -76,6 +80,7 @@ export type DrumComponent =
     | 'crash2'
     | 'splash'
     | 'china'
+    | 'cymbal_choke'
     // Other
     | 'cowbell'
     | 'aux_percussion'
@@ -168,6 +173,9 @@ export const LANE_COLORS: Record<DrumComponent, string> = {
     kick: '#ef4444', // red-500
     // Snare variations
     snare: '#f59e0b', // amber-500
+    snare_center: '#f59e0b', // amber-500 (same as snare)
+    snare_rimshot: '#fbbf24', // amber-400
+    snare_cross_stick: '#d97706', // amber-600
     rimshot: '#fbbf24', // amber-400
     cross_stick: '#d97706', // amber-600
     // Hi-hat variations
@@ -175,6 +183,7 @@ export const LANE_COLORS: Record<DrumComponent, string> = {
     hihat_open: '#14b8a6', // teal-500
     hihat_pedal: '#059669', // emerald-600
     hihat_foot_splash: '#0d9488', // teal-600
+    hihat_splash: '#0d9488', // teal-600
     // Toms
     tom_high: '#3b82f6', // blue-500
     tom_mid: '#6366f1', // indigo-500
@@ -188,6 +197,7 @@ export const LANE_COLORS: Record<DrumComponent, string> = {
     crash2: '#db2777', // pink-600
     splash: '#06b6d4', // cyan-500
     china: '#f43f5e', // rose-500
+    cymbal_choke: '#be123c', // rose-700
     // Other
     cowbell: '#f97316', // orange-500
     aux_percussion: '#84cc16', // lime-500
@@ -197,12 +207,16 @@ export const LANE_COLORS: Record<DrumComponent, string> = {
 export const LANE_LABELS: Record<DrumComponent, string> = {
     kick: 'Kick',
     snare: 'Snare',
+    snare_center: 'Snare (C)',
+    snare_rimshot: 'Snare Rim',
+    snare_cross_stick: 'Snare X',
     rimshot: 'Rimshot',
     cross_stick: 'X-Stick',
     hihat_closed: 'HH (C)',
     hihat_open: 'HH (O)',
     hihat_pedal: 'HH Pedal',
     hihat_foot_splash: 'HH Splash',
+    hihat_splash: 'HH Splash',
     tom_high: 'Tom H',
     tom_mid: 'Tom M',
     tom_low: 'Tom L',
@@ -213,6 +227,7 @@ export const LANE_LABELS: Record<DrumComponent, string> = {
     crash2: 'Crash 2',
     splash: 'Splash',
     china: 'China',
+    cymbal_choke: 'Choke',
     cowbell: 'Cowbell',
     aux_percussion: 'Aux Perc',
     unknown: 'Unknown',

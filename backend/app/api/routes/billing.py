@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db_session
 from app.config import get_settings
-from app.core.pricing import get_pricing_table, get_monthly_quota, FREE_TIER
+from app.core.pricing import get_pricing_table, FREE_TIER
 from app.models.subscription import Subscription, SubscriptionPlan, SubscriptionStatus
 from app.models.user import User
 from app.services.stripe_service import get_stripe_service

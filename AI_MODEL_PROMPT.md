@@ -327,7 +327,7 @@ beatmap = generate_beatmap(
     "artist": "DragonForce",
     "creator": "BeatSight AI",
     "difficulty": 9.2,
-    "beatmapId": "uuid",
+    "beatmapId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
     "createdAt": "2025-12-01T00:00:00Z"
   },
   "audio": {

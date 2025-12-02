@@ -10,9 +10,13 @@ from typing import List, Dict, Any, Optional, Sequence, Tuple
 from datetime import datetime
 import hashlib
 import math
+import uuid
 
 import librosa
 import numpy as np
+
+# Schema version - keep in sync with desktop and docs
+BEATMAP_SCHEMA_VERSION = "1.1.0"
 
 # Try to import dynamic lane layout (optional enhancement)
 try:
@@ -829,13 +833,14 @@ def generate_beatmap(
             hit["time"] = float(snapped)
         hit["quantization_error"] = float(err)
     
-    # Convert to hitObjects format
+    # Convert to hitObjects format with UUIDs for each hit
     hit_objects = []
     for hit in hits_with_lanes:
         hit_objects.append({
+            "id": str(uuid.uuid4()),
             "time": int(round((hit["time"] + start_time) * 1000)),
             "component": hit["component"],
-            "velocity": 0.8,
+            "velocity": round(hit.get("velocity", 0.8), 3),
             "lane": hit["lane"],
         })
     
@@ -866,7 +871,7 @@ def generate_beatmap(
     }[_resolve_grid(quantization_grid)]
 
     beatmap = {
-        "version": "1.0.0",
+        "version": BEATMAP_SCHEMA_VERSION,
         "metadata": {
             "title": metadata.get("title", Path(audio_path).stem),
             "artist": metadata.get("artist", "Unknown Artist"),
@@ -874,7 +879,7 @@ def generate_beatmap(
             "tags": tags,
             "difficulty": round(difficulty, 2),
             "previewTime": 10000,  # 10 seconds in
-            "beatmapId": metadata.get("beatmap_id", str(hash(audio_path))),
+            "beatmapId": metadata.get("beatmap_id", str(uuid.uuid4())),
             "createdAt": datetime.utcnow().isoformat() + "Z",
             "modifiedAt": datetime.utcnow().isoformat() + "Z",
             "source": metadata.get("source"),

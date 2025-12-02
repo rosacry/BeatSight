@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from enum import Enum
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -12,7 +11,6 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db_session
-from app.models.song import MapState
 from app.models.user import User
 from app.services.maps import (
     DuplicateVerifiedMapError,

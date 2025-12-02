@@ -10,12 +10,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response,
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db_session
+from app.api.deps import get_current_user, get_db_session, require_cloud_sync
 from app.models.sync import ConflictResolution, SyncAction, SyncState
 from app.models.user import User
 from app.services.sync import SyncService
 
-router = APIRouter(prefix="/sync", tags=["sync"])
+# All sync routes require cloud_sync feature to be enabled
+router = APIRouter(
+    prefix="/sync",
+    tags=["sync"],
+    dependencies=[Depends(require_cloud_sync)],
+)
 
 
 # -------------------------------------------------------------------------

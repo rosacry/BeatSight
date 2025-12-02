@@ -135,6 +135,11 @@ class Settings(BaseSettings):
     modal_token_secret: Optional[str] = Field(default=None, alias="MODAL_TOKEN_SECRET")
     modal_app_name: str = Field(default="beatsight-ai", alias="MODAL_APP_NAME")
     modal_environment: str = Field(default="main", alias="MODAL_ENVIRONMENT")
+    modal_webhook_secret: str = Field(
+        default="CHANGE_ME_IN_PRODUCTION",
+        alias="MODAL_WEBHOOK_SECRET",
+        description="Shared secret for Modal webhook authentication"
+    )
 
     # -------------------------------------------------------------------------
     # Rate Limiting

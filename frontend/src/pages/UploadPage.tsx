@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { uploadFile, createJob, getQuota } from '@/api/client'
+import { uploadFileWithProgress, createJob, getQuota } from '@/api/client'
 import { QuotaDisplay } from '@/components/QuotaDisplay'
 
 type UploadState = 'idle' | 'uploading' | 'processing' | 'complete' | 'error'
@@ -27,14 +27,10 @@ export function UploadPage() {
             setUploadState('uploading')
             setUploadProgress(0)
 
-            // Simulated progress - in real app, use XMLHttpRequest with progress events
-            const progressInterval = setInterval(() => {
-                setUploadProgress((prev) => Math.min(prev + 10, 90))
-            }, 200)
-
-            const result = await uploadFile(file, 'audio')
-            clearInterval(progressInterval)
-            setUploadProgress(100)
+            // Real upload progress via XMLHttpRequest
+            const result = await uploadFileWithProgress(file, 'audio', (percent) => {
+                setUploadProgress(percent)
+            })
 
             return result
         },

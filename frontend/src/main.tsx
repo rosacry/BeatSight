@@ -5,6 +5,10 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import './index.css'
 import { registerServiceWorker } from './hooks/usePWA'
+import { initErrorReporting, ErrorBoundary } from './lib/errorReporting'
+
+// Initialize error reporting early
+initErrorReporting();
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -22,10 +26,12 @@ if (import.meta.env.PROD) {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-        <QueryClientProvider client={queryClient}>
-            <BrowserRouter>
-                <App />
-            </BrowserRouter>
-        </QueryClientProvider>
+        <ErrorBoundary>
+            <QueryClientProvider client={queryClient}>
+                <BrowserRouter>
+                    <App />
+                </BrowserRouter>
+            </QueryClientProvider>
+        </ErrorBoundary>
     </React.StrictMode>,
 )

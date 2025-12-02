@@ -9,12 +9,13 @@ import uuid
 from datetime import datetime, timezone
 from typing import AsyncGenerator, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user_optional, get_db_session
+from app.config import get_settings
 from app.db.redis import ProgressUpdate, RedisKeys, get_redis
 from app.models.ai_job import AIJobState
 from app.models.user import User
@@ -125,10 +126,14 @@ async def enqueue_job(
                     continue
 
             if audio_url:
+                # Convert options to dict for Modal
+                modal_options = payload.options.model_dump(exclude_none=True) if payload.options else None
+                
                 result = await modal_service.trigger_job(
                     job_id=str(job.id),
                     audio_url=audio_url,
                     song_id=str(payload.song_id),
+                    options=modal_options,
                 )
 
                 if result.accepted:
@@ -532,6 +537,7 @@ class ModalJobResult(BaseModel):
 )
 async def modal_webhook(
     result: ModalJobResult,
+    x_webhook_secret: str = Header(..., alias="X-Webhook-Secret"),
     session: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """
@@ -545,11 +551,20 @@ async def modal_webhook(
     4. Marking the job as complete
     5. Triggering notifications
 
-    Security: In production, this should verify a shared secret.
+    Security: Verifies shared secret from Modal.
     """
     import logging
 
     logger = logging.getLogger(__name__)
+
+    # Verify webhook secret
+    settings = get_settings()
+    if x_webhook_secret != settings.modal_webhook_secret:
+        logger.warning("Invalid webhook secret received")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid webhook secret",
+        )
 
     # Parse job ID
     try:

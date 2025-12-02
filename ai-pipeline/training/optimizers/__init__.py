@@ -17,6 +17,11 @@ from .lookahead import (
     LookaheadSGD,
     wrap_with_lookahead,
 )
+from .awp import (
+    AWP,
+    AWPWithSAM,
+    get_awp,
+)
 
 __all__ = [
     'SAM',
@@ -32,4 +37,8 @@ __all__ = [
     'LookaheadAdam',
     'LookaheadSGD',
     'wrap_with_lookahead',
+    # AWP
+    'AWP',
+    'AWPWithSAM',
+    'get_awp',
 ]

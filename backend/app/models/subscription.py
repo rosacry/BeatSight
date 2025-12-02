@@ -18,9 +18,17 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class SubscriptionPlan(str, enum.Enum):
-    """Subscription tiers."""
+    """Subscription tiers.
+    
+    Pricing Strategy (December 2025):
+    - FREE: 5 songs/month - Get users hooked
+    - BASIC: $8/mo, 30 songs/month - Casual drummers
+    - PRO: $15/mo, unlimited - Serious musicians
+    """
 
     FREE = "free"
+    BASIC_MONTHLY = "basic_monthly"
+    BASIC_YEARLY = "basic_yearly"
     PRO_MONTHLY = "pro_monthly"
     PRO_YEARLY = "pro_yearly"
 

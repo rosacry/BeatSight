@@ -173,6 +173,14 @@ run_smoke_tests() {
       || { echo "pytest failures detected"; return 1; }
 }
 
+run_preflight_check() {
+    echo ">>> Running Pre-flight Check (before expensive cloud training)..."
+    echo ""
+    echo "  This validates all Python scripts, imports, and model instantiation"
+    echo "  to catch errors BEFORE you pay for Lambda Labs compute time."
+    echo ""
+    PYTHONPATH=ai-pipeline python ai-pipeline/training/tools/preflight_check.py
+}
 run_precompute_cache() {
     echo ">>> Precomputing Feature Cache..."
     # Defaults tuned for 3080 Ti / 9800X3D on Windows.
@@ -306,6 +314,214 @@ run_validate_cache() {
     
     echo ""
     echo "  Validation results saved to: ${BEATSIGHT_HEALTH_DIR}/cache_validation.json"
+    echo ""
+}
+
+run_convert_index_binary() {
+    echo ">>> Converting Cache Index to Binary Format (10x faster loading)..."
+    echo ""
+    
+    # Determine consolidated cache path
+    CACHE_PARENT=$(dirname "${BEATSIGHT_CACHE_DIR}")
+    CACHE_NAME=$(basename "${BEATSIGHT_CACHE_DIR}")
+    CONSOLIDATED_CACHE_DIR="${CACHE_PARENT}/${CACHE_NAME}_consolidated"
+    
+    if [[ ! -d "${CONSOLIDATED_CACHE_DIR}" ]]; then
+        echo "  ❌ Consolidated cache not found: ${CONSOLIDATED_CACHE_DIR}"
+        echo "  Run option 4c first to consolidate the cache."
+        return 1
+    fi
+    
+    echo "  Cache: ${CONSOLIDATED_CACHE_DIR}"
+    echo ""
+    echo "  This converts index.json (~1GB) to index.npz (~400MB) for 10x faster loading."
+    echo "  This is critical for training speed on Windows - each worker must load the index."
+    echo ""
+    
+    for split in train val; do
+        split_dir="${CONSOLIDATED_CACHE_DIR}/${split}"
+        if [[ -f "${split_dir}/index.json" ]]; then
+            echo "  Converting ${split} index..."
+            PYTHONPATH=ai-pipeline python -m training.utils.consolidated_cache convert-index \
+              --cache-dir "${split_dir}" <<< "y"
+            echo ""
+        else
+            echo "  ⚠️  No index.json found for ${split} split"
+        fi
+    done
+    
+    echo "  ✅ Index conversion complete!"
+    echo "  Training will now use binary index automatically (10x faster worker startup)"
+    echo ""
+}
+
+run_generate_cache_mapping() {
+    echo ">>> Generating Cache Index Mapping (O(1) lookup, 50x faster training!)..."
+    echo ""
+    
+    # Determine paths
+    CACHE_PARENT=$(dirname "${BEATSIGHT_CACHE_DIR}")
+    CACHE_NAME=$(basename "${BEATSIGHT_CACHE_DIR}")
+    CONSOLIDATED_CACHE_DIR="${CACHE_PARENT}/${CACHE_NAME}_consolidated"
+    LABELS_DIR="${BEATSIGHT_DATA_ROOT}/dataset_index"
+    
+    if [[ ! -d "${CONSOLIDATED_CACHE_DIR}" ]]; then
+        echo "  ❌ Consolidated cache not found: ${CONSOLIDATED_CACHE_DIR}"
+        echo "  Run option 4c first to consolidate the cache."
+        return 1
+    fi
+    
+    echo "  This generates a direct mapping from sample index to cache (shard, offset)."
+    echo ""
+    echo "  Benefits:"
+    echo "    • Eliminates O(log n) binary search on 14M entries"
+    echo "    • Reduces first-epoch time by 50x or more"
+    echo "    • No string encoding/comparison overhead"
+    echo ""
+    echo "  Cache: ${CONSOLIDATED_CACHE_DIR}"
+    echo "  Labels: ${LABELS_DIR}"
+    echo ""
+    
+    # Generate for train
+    TRAIN_FILES="${LABELS_DIR}/train_labels_with_velocity_files.npy"
+    if [[ -f "${TRAIN_FILES}" ]]; then
+        echo "  📄 Generating train mapping..."
+        python tools/generate_cache_index_mapping.py \
+          --labels "${TRAIN_FILES}" \
+          --cache "${CONSOLIDATED_CACHE_DIR}/train" \
+          --output "${LABELS_DIR}/train_cache_mapping.npz"
+        echo ""
+    else
+        echo "  ⚠️  Train labels not found: ${TRAIN_FILES}"
+        echo "  Run option 4n first to convert labels to numpy format."
+    fi
+    
+    # Generate for val
+    VAL_FILES="${LABELS_DIR}/val_labels_with_velocity_files.npy"
+    if [[ -f "${VAL_FILES}" ]]; then
+        echo "  📄 Generating val mapping..."
+        python tools/generate_cache_index_mapping.py \
+          --labels "${VAL_FILES}" \
+          --cache "${CONSOLIDATED_CACHE_DIR}/val" \
+          --output "${LABELS_DIR}/val_cache_mapping.npz"
+        echo ""
+    else
+        echo "  ⚠️  Val labels not found: ${VAL_FILES}"
+    fi
+    
+    echo "  ✅ Cache mapping generation complete!"
+    echo "  Training will now automatically use O(1) lookups (50x faster first epoch)"
+    echo ""
+}
+
+run_convert_labels_numpy() {
+    echo ">>> Converting Labels to NumPy Format (10x faster, 90% less RAM)..."
+    echo ""
+    echo "  This converts large JSON label files (~5GB) to memory-efficient numpy format."
+    echo "  Benefits:"
+    echo "    • 10x smaller file size"
+    echo "    • 90% less RAM usage during training"
+    echo "    • Eliminates MemoryError on Windows multiprocessing"
+    echo "    • Faster worker spawn time"
+    echo ""
+    echo "  Dataset: ${BEATSIGHT_DATASET_DIR}"
+    echo ""
+    
+    # Check which velocity label files exist
+    TRAIN_LABELS=""
+    VAL_LABELS=""
+    
+    if [[ -f "${BEATSIGHT_DATASET_DIR}/train/train_labels_with_velocity.json" ]]; then
+        TRAIN_LABELS="${BEATSIGHT_DATASET_DIR}/train/train_labels_with_velocity.json"
+        echo "  Train labels: train_labels_with_velocity.json"
+    elif [[ -f "${BEATSIGHT_DATASET_DIR}/train/train_labels.json" ]]; then
+        TRAIN_LABELS="${BEATSIGHT_DATASET_DIR}/train/train_labels.json"
+        echo "  Train labels: train_labels.json"
+    else
+        echo "  ❌ No train labels found!"
+        return 1
+    fi
+    
+    if [[ -f "${BEATSIGHT_DATASET_DIR}/val/val_labels_with_velocity.json" ]]; then
+        VAL_LABELS="${BEATSIGHT_DATASET_DIR}/val/val_labels_with_velocity.json"
+        echo "  Val labels: val_labels_with_velocity.json"
+    elif [[ -f "${BEATSIGHT_DATASET_DIR}/val/val_labels.json" ]]; then
+        VAL_LABELS="${BEATSIGHT_DATASET_DIR}/val/val_labels.json"
+        echo "  Val labels: val_labels.json"
+    else
+        echo "  ❌ No val labels found!"
+        return 1
+    fi
+    
+    # Check if numpy files already exist
+    TRAIN_NPY="${TRAIN_LABELS%.json}_labels.npy"
+    VAL_NPY="${VAL_LABELS%.json}_labels.npy"
+    
+    if [[ -f "${TRAIN_NPY}" ]]; then
+        echo ""
+        echo "  ⚠️  Train numpy files already exist!"
+        read -p "  Overwrite? [y/N]: " overwrite_train
+        case "${overwrite_train,,}" in
+            y|yes)
+                ;;
+            *)
+                TRAIN_LABELS=""
+                echo "  → Skipping train labels"
+                ;;
+        esac
+    fi
+    
+    if [[ -f "${VAL_NPY}" ]]; then
+        echo ""
+        echo "  ⚠️  Val numpy files already exist!"
+        read -p "  Overwrite? [y/N]: " overwrite_val
+        case "${overwrite_val,,}" in
+            y|yes)
+                ;;
+            *)
+                VAL_LABELS=""
+                echo "  → Skipping val labels"
+                ;;
+        esac
+    fi
+    
+    if [[ -z "${TRAIN_LABELS}" && -z "${VAL_LABELS}" ]]; then
+        echo ""
+        echo "  Nothing to convert."
+        return 0
+    fi
+    
+    echo ""
+    read -p "  Proceed with conversion? [Y/n]: " confirm
+    case "${confirm,,}" in
+        n|no)
+            echo "  → Cancelled."
+            return 0
+            ;;
+    esac
+    
+    echo ""
+    
+    if [[ -n "${TRAIN_LABELS}" ]]; then
+        echo "============================================================"
+        echo "Converting train labels..."
+        echo "============================================================"
+        python tools/convert_labels_to_numpy.py "${TRAIN_LABELS}"
+        echo ""
+    fi
+    
+    if [[ -n "${VAL_LABELS}" ]]; then
+        echo "============================================================"
+        echo "Converting val labels..."
+        echo "============================================================"
+        python tools/convert_labels_to_numpy.py "${VAL_LABELS}"
+        echo ""
+    fi
+    
+    echo "  ✅ Conversion complete!"
+    echo ""
+    echo "  The training pipeline will automatically detect and use numpy labels."
+    echo "  Original JSON files are preserved as backup."
     echo ""
 }
 
@@ -656,7 +872,9 @@ CUTTING_EDGE_CALIBRATION_FLAGS="--calibrate --calibration-method temperature"
 # V5 ULTIMATE FLAGS (2024 - All innovations in single model)
 # ============================================================================
 # v5 model combines: CoordAttn + DropPath + DeepSupervision + MultiScale + GradCentralization
-V5_MODEL_FLAGS="--model-version v5 --v5-size medium --drop-path-rate 0.1"
+# SINGLE-TIER STRATEGY: Use V5-Large for maximum quality, INT8 quantization for speed
+# This gives best accuracy while maintaining fast inference via quantization
+V5_MODEL_FLAGS="--model-version v5 --v5-size large --drop-path-rate 0.15"
 V5_DEEP_SUPERVISION_FLAGS="--use-deep-supervision --deep-supervision-weights 0.4,0.6"
 V5_GRADIENT_CENTRALIZATION_FLAGS="--use-gradient-centralization"
 # Multi-task learning: velocity + hi-hat openness auxiliary heads (improves feature learning)
@@ -1086,25 +1304,31 @@ while true; do
     echo "║               BeatSight Post-Export Checklist                       ║"
     echo "╠═════════════════════════════════════════════════════════════════════╣"
     echo "║  UTILITIES:                                                         ║"
+    echo "║   pre) Pre-flight Check (run before cloud!) ⭐ REQUIRED             ║"
     echo "║   0) Sync W&B (Offline Runs)                                        ║"
     echo "║   1) Dataset Health Check                                           ║"
     echo "║   2) Sanity Snapshot (Metadata)                                     ║"
     echo "║   3) Smoke Tests (pytest)                                           ║"
     echo "║   4) Precompute Feature Cache                                       ║"
     echo "║   4c) Consolidate Cache (100x speedup)                              ║"
+    echo "║   4i) Convert Index to Binary (10x faster worker loading) ⭐ PERF   ║"
+    echo "║   4m) Generate Cache Mapping (O(1) lookup, 50x faster!) ⭐ FAST     ║"
     echo "║   4v) Validate Cache (check for corruption)                         ║"
     echo "║   4r) Rebuild Cache (4 + 4c combined) ⚡ NEW DATA                    ║"
+    echo "║   4n) Convert Labels to NumPy (fixes MemoryError) ⭐ REQUIRED       ║"
     echo "╠═════════════════════════════════════════════════════════════════════╣"
     echo "║  💎 V5 ULTIMATE - PRODUCTION PATH (⭐ RECOMMENDED)                   ║"
     echo "║─────────────────────────────────────────────────────────────────────║"
     echo "║   14)  Label Audit: Find noisy labels (~30min) ⭐ RUN FIRST!        ║"
-    echo "║   17a) V5: Warmup - validates all innovations (~2hr)                ║"
+    echo "║   14k) Label Audit K-Fold: 5-fold cross-val (~2hr) 🔬 RIGOROUS      ║"
+    echo "║   17a) V5: Warmup - validates all innovations (~1hr)                ║"
     echo "║   17b) V5: Quick  - all innovations in one (~5hr)                   ║"
     echo "║   17c) V5: Long   - production quality (~12hr)                      ║"
     echo "║   17d) V5: Full   - large model, max quality (~24hr) ⭐ RECOMMENDED ║"
     echo "║   17e) V5: Self-Distill - Born-Again +1-2% (~24hr)                  ║"
     echo "║                                                                     ║"
-    echo "║   ⭐ PATH: 14 → 17a → 17d → 17e (~50.5 hours total)                 ║"
+    echo "║   ⭐ PATH: 14 → 17a → 17d → 17e (~50 hours total)                  ║"
+    echo "║   🔬 RIGOROUS: 14 → 17a → 17d → 17e → 21 (+ holdout eval)          ║"
     echo "╠═════════════════════════════════════════════════════════════════════╣"
     echo "║  🥁 MULTI-LABEL - SIMULTANEOUS DRUM DETECTION                       ║"
     echo "║─────────────────────────────────────────────────────────────────────║"
@@ -1117,7 +1341,8 @@ while true; do
     echo "║   ⭐ FULL PATH: 14 → 17a → 17d → 17e → 19 → 19c                     ║"
     echo "╠═════════════════════════════════════════════════════════════════════╣"
     echo "║  EVALUATION & ANALYSIS:                                             ║"
-    echo "║   eval)    Evaluation (Validation Snapshot)                         ║"
+    echo "║   21)     Holdout Eval: Final test on unseen sources (~15min) 🔬    ║"
+    echo "║   eval)   Evaluation (Validation Snapshot)                          ║"
     echo "║   analyze) Analysis (Post-Run)                                      ║"
     echo "╠═════════════════════════════════════════════════════════════════════╣"
     echo "║  LEGACY OPTIONS (see docs/archive for details):                     ║"
@@ -1134,10 +1359,16 @@ while true; do
         3) run_smoke_tests ;;
         4) run_precompute_cache ;;
         4c) run_consolidate_cache ;;
+        4i) run_convert_index_binary ;;
+        4m) run_generate_cache_mapping ;;
         4v) run_validate_cache ;;
         4r) run_rebuild_cache ;;
+        4n) run_convert_labels_numpy ;;
+        # Pre-flight check
+        pre) run_preflight_check ;;
         # V5 ULTIMATE: Single Model with All Innovations (⭐ RECOMMENDED)
         14) run_auto_train label-audit ;;
+        14k) run_auto_train label-audit-kfold ;;
         17a) run_auto_train v5-warmup ;;
         17b) run_auto_train v5-quick ;;
         17c) run_auto_train v5-long ;;
@@ -1149,6 +1380,7 @@ while true; do
         19b) run_auto_train multilabel-full ;;
         19c) run_auto_train multilabel-finetune ;;
         # Evaluation & Analysis
+        21) run_auto_train evaluate-holdout ;;
         eval) run_eval ;;
         analyze) run_analysis ;;
         # Legacy menu

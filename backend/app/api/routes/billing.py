@@ -1,6 +1,7 @@
 """Stripe payment routes for subscription management.
 
 Endpoints:
+- GET /billing/pricing - Get pricing table (public)
 - POST /billing/checkout - Create checkout session for subscription upgrade
 - POST /billing/portal - Create customer portal session
 - POST /billing/webhook - Handle Stripe webhooks
@@ -11,7 +12,7 @@ Endpoints:
 from __future__ import annotations
 
 import logging
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, Field
@@ -20,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db_session
 from app.config import get_settings
+from app.core.pricing import get_pricing_table, get_monthly_quota, FREE_TIER
 from app.models.subscription import Subscription, SubscriptionPlan, SubscriptionStatus
 from app.models.user import User
 from app.services.stripe_service import get_stripe_service
@@ -77,6 +79,16 @@ class StripeConfigResponse(BaseModel):
 # -------------------------------------------------------------------------
 
 
+@router.get("/pricing")
+async def get_pricing() -> dict[str, Any]:
+    """Get pricing table for display.
+
+    Returns all subscription tiers with features and pricing.
+    No authentication required - public endpoint for pricing page.
+    """
+    return get_pricing_table()
+
+
 @router.get("/config", response_model=StripeConfigResponse)
 async def get_stripe_config():
     """Get public Stripe configuration.
@@ -124,7 +136,7 @@ async def get_subscription(
     return SubscriptionResponse(
         plan=SubscriptionPlan.FREE,
         status=SubscriptionStatus.ACTIVE,
-        ai_quota_remaining=3,  # Free tier quota
+        ai_quota_remaining=FREE_TIER.monthly_quota,  # 5 songs/month
         current_period_end=None,
         is_active=True,
     )

@@ -122,6 +122,13 @@ namespace BeatSight.Game.Configuration
             // Developer Mode - enables local AI processing for developers only
             setDefault(BeatSightSetting.DeveloperModeEnabled, false);
 
+            // Local Inference Settings (Developer Mode only)
+            setDefault(BeatSightSetting.UseLocalInference, false);
+            setDefault(BeatSightSetting.LocalModelPath, "");  // Path to .pth or .onnx model
+            setDefault(BeatSightSetting.LocalModelVariant, "full");  // "full", "distilled", or "tiny"
+            setDefault(BeatSightSetting.LocalInferenceDevice, "cuda");  // "cuda" or "cpu"
+            setDefault(BeatSightSetting.ShowLocalInferenceOption, true);  // Show option in drag-drop dialog
+
             // Key Bindings (serialized as comma-separated key names)
             setDefault(BeatSightSetting.LaneKeys4, "D,F,J,K");
             setDefault(BeatSightSetting.LaneKeys5, "S,D,Space,J,K");
@@ -277,6 +284,13 @@ namespace BeatSight.Game.Configuration
 
         // Developer Mode
         DeveloperModeEnabled,
+
+        // Local Inference (Developer Mode only)
+        UseLocalInference,
+        LocalModelPath,
+        LocalModelVariant,
+        LocalInferenceDevice,
+        ShowLocalInferenceOption,
 
         // Key Bindings
         LaneKeys4,

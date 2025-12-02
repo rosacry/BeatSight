@@ -40,6 +40,12 @@ BEATSIGHT_DATASET_DIR=${BEATSIGHT_DATASET_DIR:-${BEATSIGHT_SECONDARY_ROOT}/prod_
 # Feature cache for precomputed mel spectrograms
 BEATSIGHT_CACHE_DIR=${BEATSIGHT_CACHE_DIR:-${BEATSIGHT_DATA_ROOT}/feature_cache/prod_combined_warmup}
 
+# Labels cache for fast SSD access to label numpy files
+# IMPORTANT: Velocity labels should be copied here for fast loading during training
+#   cp /e/data/prod_combined_profile_run/train/train_labels_with_velocity_*.npy data/dataset_index/
+#   cp /e/data/prod_combined_profile_run/val/val_labels_with_velocity_*.npy data/dataset_index/
+BEATSIGHT_LABELS_CACHE_DIR=${BEATSIGHT_LABELS_CACHE_DIR:-${BEATSIGHT_DATA_ROOT}/dataset_index}
+
 # ============================================================================
 # OUTPUT PATHS
 # ============================================================================
@@ -61,7 +67,41 @@ BEATSIGHT_RUN_LONG=${BEATSIGHT_RUN_LONG:-${BEATSIGHT_RUN_ROOT}/prod_combined_lon
 BEATSIGHT_WANDB_ROOT=${BEATSIGHT_WANDB_ROOT:-${BEATSIGHT_REPO_ROOT}/wandb}
 
 # ============================================================================
-# TRAINING HYPERPARAMETERS (Hardware-Optimized Defaults for RTX 3080 Ti)
+# HARDWARE AUTO-DETECTION
+# ============================================================================
+# Detect CPU cores/threads (works on Linux, macOS, Windows/MSYS2)
+if [ -z "${BEATSIGHT_CPU_CORES:-}" ]; then
+    if [ -f /proc/cpuinfo ]; then
+        # Linux: count physical cores
+        BEATSIGHT_CPU_CORES=$(grep -c "^processor" /proc/cpuinfo 2>/dev/null || echo "8")
+    elif command -v sysctl >/dev/null 2>&1; then
+        # macOS
+        BEATSIGHT_CPU_CORES=$(sysctl -n hw.physicalcpu 2>/dev/null || echo "8")
+    elif command -v nproc >/dev/null 2>&1; then
+        # Windows with nproc available
+        BEATSIGHT_CPU_CORES=$(nproc 2>/dev/null || echo "8")
+    else
+        # Fallback
+        BEATSIGHT_CPU_CORES=8
+    fi
+fi
+
+# Detect GPU VRAM (NVIDIA only)
+if [ -z "${BEATSIGHT_GPU_VRAM_GB:-}" ]; then
+    if command -v nvidia-smi >/dev/null 2>&1; then
+        BEATSIGHT_GPU_VRAM_MB=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -d ' ')
+        if [ -n "$BEATSIGHT_GPU_VRAM_MB" ]; then
+            BEATSIGHT_GPU_VRAM_GB=$((BEATSIGHT_GPU_VRAM_MB / 1024))
+        else
+            BEATSIGHT_GPU_VRAM_GB=12  # Fallback for RTX 3080 Ti
+        fi
+    else
+        BEATSIGHT_GPU_VRAM_GB=12  # Fallback
+    fi
+fi
+
+# ============================================================================
+# TRAINING HYPERPARAMETERS (Auto-tuned based on hardware)
 # ============================================================================
 # Feature cache batch size during precomputation
 BEATSIGHT_CACHE_BATCH_SIZE=${BEATSIGHT_CACHE_BATCH_SIZE:-96}
@@ -69,20 +109,49 @@ BEATSIGHT_CACHE_BATCH_SIZE=${BEATSIGHT_CACHE_BATCH_SIZE:-96}
 # Number of workers for cache precomputation
 BEATSIGHT_CACHE_WORKERS=${BEATSIGHT_CACHE_WORKERS:-4}
 
-# Training batch size (effective batch = batch_size * grad_accum_steps)
-BEATSIGHT_TRAIN_BATCH_SIZE=${BEATSIGHT_TRAIN_BATCH_SIZE:-32}
+# Training batch size based on GPU VRAM:
+#   - 8GB:  batch_size=128
+#   - 12GB: batch_size=256-384 (RTX 3080 Ti, RTX 3090, etc.)
+#   - 16GB: batch_size=384-512
+#   - 24GB: batch_size=512-768
+if [ -z "${BEATSIGHT_TRAIN_BATCH_SIZE:-}" ]; then
+    if [ "$BEATSIGHT_GPU_VRAM_GB" -ge 24 ]; then
+        BEATSIGHT_TRAIN_BATCH_SIZE=512
+    elif [ "$BEATSIGHT_GPU_VRAM_GB" -ge 16 ]; then
+        BEATSIGHT_TRAIN_BATCH_SIZE=384
+    elif [ "$BEATSIGHT_GPU_VRAM_GB" -ge 12 ]; then
+        BEATSIGHT_TRAIN_BATCH_SIZE=256
+    else
+        BEATSIGHT_TRAIN_BATCH_SIZE=128
+    fi
+fi
 
-# Gradient accumulation steps (effective batch = 32 * 4 = 128)
-BEATSIGHT_GRAD_ACCUM_STEPS=${BEATSIGHT_GRAD_ACCUM_STEPS:-4}
+# Gradient accumulation steps (target effective batch = 1024)
+if [ -z "${BEATSIGHT_GRAD_ACCUM_STEPS:-}" ]; then
+    BEATSIGHT_GRAD_ACCUM_STEPS=$((1024 / BEATSIGHT_TRAIN_BATCH_SIZE))
+    # Clamp to minimum of 1
+    [ "$BEATSIGHT_GRAD_ACCUM_STEPS" -lt 1 ] && BEATSIGHT_GRAD_ACCUM_STEPS=1
+fi
 
-# DataLoader workers for training (2-4 optimal for Windows with NVMe)
-BEATSIGHT_TRAIN_WORKERS=${BEATSIGHT_TRAIN_WORKERS:-2}
+# DataLoader workers based on CPU cores:
+#   - Use cores + 2 workers (oversubscription helps with I/O-bound mmap)
+#   - persistent_workers=True eliminates Windows spawn overhead
+if [ -z "${BEATSIGHT_TRAIN_WORKERS:-}" ]; then
+    BEATSIGHT_TRAIN_WORKERS=$((BEATSIGHT_CPU_CORES + 2))
+    # Cap at 16 workers max (diminishing returns)
+    [ "$BEATSIGHT_TRAIN_WORKERS" -gt 16 ] && BEATSIGHT_TRAIN_WORKERS=16
+fi
 
-# DataLoader workers for validation
-BEATSIGHT_VAL_WORKERS=${BEATSIGHT_VAL_WORKERS:-2}
+# DataLoader workers for validation (half of training workers)
+if [ -z "${BEATSIGHT_VAL_WORKERS:-}" ]; then
+    BEATSIGHT_VAL_WORKERS=$((BEATSIGHT_TRAIN_WORKERS / 2))
+    # Minimum of 2
+    [ "$BEATSIGHT_VAL_WORKERS" -lt 2 ] && BEATSIGHT_VAL_WORKERS=2
+fi
 
 # Prefetch factor (samples per worker to prefetch)
-BEATSIGHT_PREFETCH_FACTOR=${BEATSIGHT_PREFETCH_FACTOR:-2}
+# Higher prefetch hides I/O latency - 4-8 is optimal for NVMe SSD + memory-mapped cache
+BEATSIGHT_PREFETCH_FACTOR=${BEATSIGHT_PREFETCH_FACTOR:-6}
 
 set +a  # Stop auto-exporting
 
@@ -99,7 +168,11 @@ if [ "${BEATSIGHT_ENV_QUIET:-0}" != "1" ]; then
     echo "║ Cache:         ${BEATSIGHT_CACHE_DIR}"
     echo "║ Run Output:    ${BEATSIGHT_RUN_ROOT}"
     echo "╠══════════════════════════════════════════════════════════════════╣"
-    echo "║ Training Defaults (RTX 3080 Ti optimized):                       ║"
+    echo "║ Hardware Detected:                                               ║"
+    echo "║   CPU Cores:      ${BEATSIGHT_CPU_CORES}"
+    echo "║   GPU VRAM:       ${BEATSIGHT_GPU_VRAM_GB}GB"
+    echo "╠══════════════════════════════════════════════════════════════════╣"
+    echo "║ Training Defaults (auto-tuned):                                  ║"
     echo "║   Batch Size:     ${BEATSIGHT_TRAIN_BATCH_SIZE} (effective: $((BEATSIGHT_TRAIN_BATCH_SIZE * BEATSIGHT_GRAD_ACCUM_STEPS)) with grad_accum)"
     echo "║   Workers:        ${BEATSIGHT_TRAIN_WORKERS} train / ${BEATSIGHT_VAL_WORKERS} val"
     echo "║   Prefetch:       ${BEATSIGHT_PREFETCH_FACTOR}"

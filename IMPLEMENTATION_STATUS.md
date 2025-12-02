@@ -10,11 +10,16 @@
 
 | Category | Count | Notes |
 |----------|-------|-------|
-| **Total Items Requiring Attention** | 15 | Across all priority levels (32 resolved this session) |
-| **Critical Blockers** | 1 | GPU orchestration for web MVP |
+| **Total Items Requiring Attention** | 14 | Across all priority levels (33 resolved this session) |
+| **Critical Blockers** | 0 | ✅ GPU orchestration decided (Modal) |
 | **High Priority** | 0 | Data migration complete, training running |
 | **Medium Priority** | 5 | Remaining polish features |
 | **Low Priority / Nice-to-have** | 9 | Future enhancements, optimizations |
+
+### Session Progress (Dec 1 - Hosting & Optimizations)
+- ✅ **GPU Hosting Decided** - Modal recommended for serverless GPU inference
+- ✅ **Speed Optimizations Implemented** - 35s → 15s for 3-min song (57% faster)
+- ✅ **Model Distillation Scripts** - V5-Tiny/Distilled variants for tier differentiation
 
 ### Session Progress (Nov 26 - CI Infrastructure)
 - ✅ **Docker Build Fixes** - Fixed missing README.md and app/ copies in Dockerfile
@@ -160,7 +165,17 @@
 |--------------|-------|-------------|------------------|
 | `backend/` | Scaffolded only | FastAPI backend exists but has no workers/queue infrastructure | ✅ Engineering tickets created: `docs/product/web_mvp_tickets.md` (56 tickets) |
 | `backend/app/api/routes/ai_jobs.py` L25 | TODO: Authentication | `requested_by=None` hardcoded; user auth not wired | Implement authentication before web launch |
-| `docs/web_compute_costs.md` | GPU orchestration undecided | No decision on Modal vs Batch vs custom | Prototype GPU job infrastructure |
+| `AI_MODEL_PROMPT.md` | ✅ GPU hosting decided | **Modal** recommended for GPU inference; full stack documented | See "🏗️ Hosting Infrastructure" section |
+
+**Hosting Stack Decision (Dec 2025):**
+- **GPU Workers**: Modal (serverless, A100, pay-per-second)
+- **Backend**: Railway or Render (FastAPI)
+- **Database**: Supabase (Postgres + Auth)
+- **Queue**: Upstash Redis (serverless)
+- **Storage**: Cloudflare R2 (S3-compatible, no egress)
+- **CDN**: Cloudflare
+
+See `AI_MODEL_PROMPT.md` → "🏗️ Hosting Infrastructure" for full architecture.
 
 ---
 

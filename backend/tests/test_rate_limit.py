@@ -22,13 +22,15 @@ class TestRateLimitConfiguration:
         """Test that rate limits are defined for all tiers."""
         assert "anonymous" in RATE_LIMITS
         assert "authenticated" in RATE_LIMITS
+        assert "basic" in RATE_LIMITS
         assert "premium" in RATE_LIMITS
         assert "admin" in RATE_LIMITS
 
     def test_rate_limits_hierarchy(self):
         """Test that higher tiers have higher limits."""
         assert RATE_LIMITS["anonymous"] < RATE_LIMITS["authenticated"]
-        assert RATE_LIMITS["authenticated"] < RATE_LIMITS["premium"]
+        assert RATE_LIMITS["authenticated"] < RATE_LIMITS["basic"]
+        assert RATE_LIMITS["basic"] < RATE_LIMITS["premium"]
         assert RATE_LIMITS["premium"] < RATE_LIMITS["admin"]
 
     def test_endpoint_limits_exist(self):

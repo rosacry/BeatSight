@@ -36,7 +36,11 @@ namespace BeatSight.Game.AI.Generation
         int DetectionSensitivity,
         QuantizationGrid Quantization,
         bool DebugOverlayEnabled,
-        TempoOverride? TempoOverride = null);
+        TempoOverride? TempoOverride = null,
+        bool UseLocalInference = false,
+        string? LocalModelPath = null,
+        string LocalModelVariant = "full",
+        string LocalInferenceDevice = "cuda");
 
     public readonly record struct GenerationProgress(
         GenStage Stage,

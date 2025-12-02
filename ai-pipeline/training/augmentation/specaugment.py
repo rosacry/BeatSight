@@ -28,9 +28,10 @@ Usage:
 
 from __future__ import annotations
 
+import os
 import random
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -180,6 +181,7 @@ class SpecAugmentBatched(nn.Module):
         n_time_masks: int = 2,
         mask_value: float = 0.0,
         prob: float = 1.0,
+        inplace: bool = False,
     ):
         super().__init__()
         self.freq_mask_param = freq_mask_param
@@ -188,7 +190,8 @@ class SpecAugmentBatched(nn.Module):
         self.n_time_masks = n_time_masks
         self.mask_value = mask_value
         self.prob = prob
-    
+        self.inplace = inplace
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Apply SpecAugment with vectorized mask generation."""
         if not self.training:
@@ -197,7 +200,8 @@ class SpecAugmentBatched(nn.Module):
         if random.random() > self.prob:
             return x
         
-        x = x.clone()
+        if not self.inplace:
+            x = x.clone()
         device = x.device
         
         if x.dim() == 3:
@@ -207,46 +211,66 @@ class SpecAugmentBatched(nn.Module):
             batch_size, n_channels, n_freq, n_time = x.shape
         
         # Generate all frequency masks
+        freq_range = torch.arange(n_freq, device=device)
         for _ in range(self.n_freq_masks):
-            # Random mask widths for entire batch
-            f_widths = torch.randint(0, min(self.freq_mask_param, n_freq), (batch_size,), device=device)
-            f_starts = torch.randint(0, n_freq, (batch_size,), device=device)
-            f_starts = torch.clamp(f_starts, max=n_freq - 1)
-            
-            # Create masks
-            freq_range = torch.arange(n_freq, device=device).unsqueeze(0)  # (1, n_freq)
-            mask = (freq_range >= f_starts.unsqueeze(1)) & (freq_range < (f_starts + f_widths).unsqueeze(1))
-            
+            max_width = min(self.freq_mask_param, max(0, n_freq - 1))
+            if max_width <= 0:
+                continue
+            widths = torch.randint(0, max_width + 1, (batch_size,), device=device)
+            if torch.all(widths == 0):
+                continue
+            max_start = torch.clamp(n_freq - widths, min=0)
+            starts = torch.floor(
+                torch.rand(batch_size, device=device) * (max_start.to(torch.float32) + 1.0)
+            ).to(torch.int64)
+            mask = (freq_range.unsqueeze(0) >= starts.unsqueeze(1)) & (freq_range.unsqueeze(0) < (starts + widths).unsqueeze(1))
             if x.dim() == 3:
-                mask = mask.unsqueeze(-1).expand(-1, -1, n_time)  # (batch, freq, time)
+                mask = mask.unsqueeze(-1).expand(-1, -1, n_time)
             else:
                 mask = mask.unsqueeze(1).unsqueeze(-1).expand(-1, n_channels, -1, n_time)
-            
             x = x.masked_fill(mask, self.mask_value)
         
-        # Generate all time masks
+        time_range = torch.arange(n_time, device=device)
         for _ in range(self.n_time_masks):
-            t_widths = torch.randint(0, min(self.time_mask_param, n_time), (batch_size,), device=device)
-            t_starts = torch.randint(0, n_time, (batch_size,), device=device)
-            t_starts = torch.clamp(t_starts, max=n_time - 1)
-            
-            time_range = torch.arange(n_time, device=device).unsqueeze(0)
-            mask = (time_range >= t_starts.unsqueeze(1)) & (time_range < (t_starts + t_widths).unsqueeze(1))
-            
+            max_width = min(self.time_mask_param, max(0, n_time - 1))
+            if max_width <= 0:
+                continue
+            widths = torch.randint(0, max_width + 1, (batch_size,), device=device)
+            if torch.all(widths == 0):
+                continue
+            max_start = torch.clamp(n_time - widths, min=0)
+            starts = torch.floor(
+                torch.rand(batch_size, device=device) * (max_start.to(torch.float32) + 1.0)
+            ).to(torch.int64)
+            mask = (time_range.unsqueeze(0) >= starts.unsqueeze(1)) & (time_range.unsqueeze(0) < (starts + widths).unsqueeze(1))
             if x.dim() == 3:
-                mask = mask.unsqueeze(1).expand(-1, n_freq, -1)  # (batch, freq, time)
+                mask = mask.unsqueeze(1).expand(-1, n_freq, -1)
             else:
                 mask = mask.unsqueeze(1).unsqueeze(2).expand(-1, n_channels, n_freq, -1)
-            
             x = x.masked_fill(mask, self.mask_value)
         
         return x
 
 
+def _resolve_default_threshold() -> int:
+    value = os.environ.get("BEATSIGHT_SPECAUG_BATCH_THRESHOLD", "128")
+    try:
+        return max(1, int(value))
+    except (TypeError, ValueError):
+        return 128
+
+
+DEFAULT_BATCHED_THRESHOLD = _resolve_default_threshold()
+
+
 def get_specaugment(
     config: str = "default",
     n_mels: int = 80,
-    n_frames: int = 64
+    n_frames: int = 64,
+    *,
+    batch_size: int = 0,
+    mode: str = "auto",
+    batched_threshold: Optional[int] = None,
 ) -> SpecAugment:
     """
     Factory function to get SpecAugment with preset configurations.
@@ -309,8 +333,25 @@ def get_specaugment(
     
     if config not in configs:
         raise ValueError(f"Unknown config '{config}'. Available: {list(configs.keys())}")
-    
-    return SpecAugment(**configs[config])
+
+    impl_mode = (mode or "auto").lower()
+    if impl_mode not in {"auto", "classic", "batched"}:
+        raise ValueError("SpecAugment mode must be one of: auto, classic, batched")
+
+    threshold = batched_threshold or DEFAULT_BATCHED_THRESHOLD
+    use_batched = False
+    if impl_mode == "batched":
+        use_batched = True
+    elif impl_mode == "auto":
+        # Large batches benefit the most; allow opt-in via env/threshold
+        use_batched = batch_size >= threshold
+        if not use_batched and batch_size >= max(64, threshold // 2):
+            use_batched = torch.cuda.is_available()
+
+    augmenter_cls = SpecAugmentBatched if use_batched else SpecAugment
+    augmenter = augmenter_cls(**configs[config])
+    setattr(augmenter, "implementation", "batched" if use_batched else "classic")
+    return augmenter
 
 
 # Convenience for common drum classification setup

@@ -12,7 +12,7 @@ import sys
 import uuid
 import wave
 import yaml
-from typing import Dict, List, Optional, Set, Tuple, Sequence
+from typing import Dict, List, Optional, Tuple
 
 try:
     import soundfile as _sf

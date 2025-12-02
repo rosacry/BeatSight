@@ -50,11 +50,10 @@ Usage:
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import Sampler, Dataset, DataLoader
+from torch.utils.data import Sampler, DataLoader
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Iterator
+from typing import Dict, List, Optional, Iterator
 from tqdm import tqdm
-import json
 from pathlib import Path
 
 

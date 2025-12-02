@@ -12,8 +12,6 @@ Tests cover:
 """
 
 import pytest
-import numpy as np
-from typing import List
 
 # Add ai-pipeline to path for imports
 import sys
@@ -26,7 +24,6 @@ from transcription.pattern_detector import (
     PatternType,
     PatternCategory,
     DrumEvent,
-    DetectedPattern,
     CrashBuildDetector,
     AccentTapDetector,
     HiHatBarkDetector,

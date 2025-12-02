@@ -44,14 +44,12 @@ References:
 from __future__ import annotations
 
 import logging
-import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 logger = logging.getLogger(__name__)
 
@@ -137,12 +135,12 @@ class BEATsFeatureExtractor(nn.Module):
     def _load_huggingface_beats(self):
         """Attempt to load BEATs from HuggingFace Hub."""
         try:
-            from transformers import AutoModel, AutoConfig
+            from transformers import AutoModel
             
             # Try various BEATs model names on HuggingFace
             model_names = [
                 f"microsoft/{self.config.model_name}",
-                f"m-a-p/MERT-v1-95M",  # Similar audio model
+                "m-a-p/MERT-v1-95M",  # Similar audio model
                 "facebook/wav2vec2-base",  # Fallback
             ]
             
@@ -578,7 +576,7 @@ if __name__ == "__main__":
     features = compatible(audio)
     print(f"   Input: {audio.shape}")
     print(f"   Output: {features.shape}")
-    print(f"   ✅ Compatible encoder working!")
+    print("   ✅ Compatible encoder working!")
     
     # Test full encoder
     print("\n2. Testing BEATsEncoder...")
@@ -587,7 +585,7 @@ if __name__ == "__main__":
         features = encoder(audio)
         print(f"   Input: {audio.shape}")
         print(f"   Output: {features.shape}")
-        print(f"   ✅ BEATsEncoder working!")
+        print("   ✅ BEATsEncoder working!")
     except Exception as e:
         print(f"   ⚠️ BEATsEncoder issue: {e}")
     
@@ -598,6 +596,6 @@ if __name__ == "__main__":
         features = unified(audio)
         print(f"   Model type: {unified.model_type}")
         print(f"   Output: {features.shape}")
-        print(f"   ✅ Unified encoder working!")
+        print("   ✅ Unified encoder working!")
     except Exception as e:
         print(f"   ⚠️ Unified encoder issue: {e}")

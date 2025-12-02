@@ -44,7 +44,7 @@ def admin_client(mock_admin_user, mock_db):
     # Override both get_session and RequireAdminDashboard
     app.dependency_overrides[get_session] = lambda: mock_db
     app.dependency_overrides[RequireAdminDashboard] = lambda: mock_admin_user
-    
+
     yield TestClient(app)
     app.dependency_overrides.clear()
 
@@ -52,6 +52,7 @@ def admin_client(mock_admin_user, mock_db):
 # -------------------------------------------------------------------
 # GET /api/admin/ai-jobs - List AI Jobs Tests
 # -------------------------------------------------------------------
+
 
 class TestListAIJobs:
     """Tests for listing AI jobs."""
@@ -85,9 +86,7 @@ class TestListAIJobs:
         mock_scalars.all.return_value = [mock_job]
         mock_jobs_result.scalars.return_value = mock_scalars
 
-        mock_db.execute = AsyncMock(
-            side_effect=[mock_count_result, mock_jobs_result]
-        )
+        mock_db.execute = AsyncMock(side_effect=[mock_count_result, mock_jobs_result])
 
         app.dependency_overrides[get_session] = lambda: mock_db
         app.dependency_overrides[RequireAdminDashboard] = lambda: mock_admin_user
@@ -115,9 +114,7 @@ class TestListAIJobs:
         mock_scalars.all.return_value = []
         mock_jobs_result.scalars.return_value = mock_scalars
 
-        mock_db.execute = AsyncMock(
-            side_effect=[mock_count_result, mock_jobs_result]
-        )
+        mock_db.execute = AsyncMock(side_effect=[mock_count_result, mock_jobs_result])
 
         app.dependency_overrides[get_session] = lambda: mock_db
         app.dependency_overrides[RequireAdminDashboard] = lambda: mock_admin_user
@@ -142,9 +139,7 @@ class TestListAIJobs:
         mock_scalars.all.return_value = []
         mock_jobs_result.scalars.return_value = mock_scalars
 
-        mock_db.execute = AsyncMock(
-            side_effect=[mock_count_result, mock_jobs_result]
-        )
+        mock_db.execute = AsyncMock(side_effect=[mock_count_result, mock_jobs_result])
 
         app.dependency_overrides[get_session] = lambda: mock_db
         app.dependency_overrides[RequireAdminDashboard] = lambda: mock_admin_user
@@ -166,6 +161,7 @@ class TestListAIJobs:
 # GET /api/admin/ai-jobs/stats - Queue Statistics Tests
 # -------------------------------------------------------------------
 
+
 class TestQueueStats:
     """Tests for queue statistics endpoint."""
 
@@ -175,15 +171,15 @@ class TestQueueStats:
         mock_result = MagicMock()
         mock_result.scalar.side_effect = [
             10,  # queued
-            5,   # processing
-            100, # complete
-            3,   # failed
-            2,   # cancelled
+            5,  # processing
+            100,  # complete
+            3,  # failed
+            2,  # cancelled
             45.5,  # avg time
             15,  # jobs today
-            5,   # jobs this hour
+            5,  # jobs this hour
         ]
-        
+
         mock_db.execute = AsyncMock(return_value=mock_result)
 
         app.dependency_overrides[get_session] = lambda: mock_db
@@ -207,6 +203,7 @@ class TestQueueStats:
 # -------------------------------------------------------------------
 # GET /api/admin/ai-jobs/{job_id} - Job Detail Tests
 # -------------------------------------------------------------------
+
 
 class TestGetJobDetail:
     """Tests for getting job detail."""
@@ -238,14 +235,12 @@ class TestGetJobDetail:
         # Mock job query
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_job
-        
+
         # Mock email query
         mock_email_result = MagicMock()
         mock_email_result.scalar.return_value = "user@example.com"
 
-        mock_db.execute = AsyncMock(
-            side_effect=[mock_result, mock_email_result]
-        )
+        mock_db.execute = AsyncMock(side_effect=[mock_result, mock_email_result])
 
         app.dependency_overrides[get_session] = lambda: mock_db
         app.dependency_overrides[RequireAdminDashboard] = lambda: mock_admin_user
@@ -285,6 +280,7 @@ class TestGetJobDetail:
 # POST /api/admin/ai-jobs/{job_id}/retry - Retry Job Tests
 # -------------------------------------------------------------------
 
+
 class TestRetryJob:
     """Tests for retrying a job."""
 
@@ -317,11 +313,16 @@ class TestRetryJob:
             return mock_admin_user
 
         app.dependency_overrides[get_session] = lambda: mock_db
-        
+
         # Need to patch the require_permission dependency
-        with patch("app.api.routes.admin.require_permission", return_value=lambda: mock_admin_user):
-            app.dependency_overrides[require_permission] = lambda perm: lambda: mock_admin_user
-            
+        with patch(
+            "app.api.routes.admin.require_permission",
+            return_value=lambda: mock_admin_user,
+        ):
+            app.dependency_overrides[require_permission] = (
+                lambda perm: lambda: mock_admin_user
+            )
+
             client = TestClient(app)
 
             response = client.post(f"{BASE_URL}/ai-jobs/{job_id}/retry")
@@ -342,8 +343,10 @@ class TestRetryJob:
         mock_db.execute = AsyncMock(return_value=mock_result)
 
         app.dependency_overrides[get_session] = lambda: mock_db
-        
-        with patch.object(RBACService, "user_has_permission", new_callable=AsyncMock) as mock_perm:
+
+        with patch.object(
+            RBACService, "user_has_permission", new_callable=AsyncMock
+        ) as mock_perm:
             mock_perm.return_value = True
             app.dependency_overrides[get_current_user] = lambda: mock_admin_user
 
@@ -360,6 +363,7 @@ class TestRetryJob:
 # -------------------------------------------------------------------
 # POST /api/admin/ai-jobs/{job_id}/cancel - Cancel Job Tests
 # -------------------------------------------------------------------
+
 
 class TestCancelJob:
     """Tests for cancelling a job."""
@@ -391,7 +395,9 @@ class TestCancelJob:
         app.dependency_overrides[get_session] = lambda: mock_db
         app.dependency_overrides[RequireAdminDashboard] = lambda: mock_admin_user
 
-        with patch.object(RBACService, "user_has_permission", new_callable=AsyncMock) as mock_perm:
+        with patch.object(
+            RBACService, "user_has_permission", new_callable=AsyncMock
+        ) as mock_perm:
             mock_perm.return_value = True
 
             client = TestClient(app, raise_server_exceptions=False)
@@ -405,6 +411,7 @@ class TestCancelJob:
 # -------------------------------------------------------------------
 # POST /api/admin/ai-jobs/{job_id}/set-priority - Set Priority Tests
 # -------------------------------------------------------------------
+
 
 class TestSetPriority:
     """Tests for setting job priority."""
@@ -436,11 +443,15 @@ class TestSetPriority:
         app.dependency_overrides[get_session] = lambda: mock_db
         app.dependency_overrides[RequireAdminDashboard] = lambda: mock_admin_user
 
-        with patch.object(RBACService, "user_has_permission", new_callable=AsyncMock) as mock_perm:
+        with patch.object(
+            RBACService, "user_has_permission", new_callable=AsyncMock
+        ) as mock_perm:
             mock_perm.return_value = True
 
             client = TestClient(app, raise_server_exceptions=False)
-            response = client.post(f"{BASE_URL}/ai-jobs/{job_id}/set-priority?priority=priority")
+            response = client.post(
+                f"{BASE_URL}/ai-jobs/{job_id}/set-priority?priority=priority"
+            )
             # Accept various responses - auth is complex
             assert response.status_code in [200, 400, 403, 500]
 
@@ -450,6 +461,7 @@ class TestSetPriority:
 # -------------------------------------------------------------------
 # GET /api/admin/ai-jobs/{job_id}/logs - Job Logs Tests
 # -------------------------------------------------------------------
+
 
 class TestGetJobLogs:
     """Tests for getting job logs."""
@@ -515,6 +527,7 @@ class TestGetJobLogs:
 # GET /api/admin/users - List Users Tests
 # -------------------------------------------------------------------
 
+
 class TestListUsers:
     """Tests for listing users."""
 
@@ -528,9 +541,7 @@ class TestListUsers:
         mock_scalars.all.return_value = []
         mock_users_result.scalars.return_value = mock_scalars
 
-        mock_db.execute = AsyncMock(
-            side_effect=[mock_count_result, mock_users_result]
-        )
+        mock_db.execute = AsyncMock(side_effect=[mock_count_result, mock_users_result])
 
         app.dependency_overrides[get_session] = lambda: mock_db
         app.dependency_overrides[RequireAdminDashboard] = lambda: mock_admin_user
@@ -553,9 +564,7 @@ class TestListUsers:
         mock_scalars.all.return_value = []
         mock_users_result.scalars.return_value = mock_scalars
 
-        mock_db.execute = AsyncMock(
-            side_effect=[mock_count_result, mock_users_result]
-        )
+        mock_db.execute = AsyncMock(side_effect=[mock_count_result, mock_users_result])
 
         app.dependency_overrides[get_session] = lambda: mock_db
         app.dependency_overrides[RequireAdminDashboard] = lambda: mock_admin_user
@@ -575,6 +584,7 @@ class TestListUsers:
 # GET /api/admin/users/stats - User Statistics Tests
 # -------------------------------------------------------------------
 
+
 class TestUserStats:
     """Tests for user statistics endpoint."""
 
@@ -583,12 +593,12 @@ class TestUserStats:
         # Mock multiple scalar calls
         mock_result = MagicMock()
         mock_result.scalar.side_effect = [
-            1000,   # total users
-            800,    # verified users  
-            50,     # pro users
-            10,     # users today
-            75,     # users this week
-            200,    # users this month
+            1000,  # total users
+            800,  # verified users
+            50,  # pro users
+            10,  # users today
+            75,  # users this week
+            200,  # users this month
         ]
         mock_db.execute = AsyncMock(return_value=mock_result)
 
@@ -608,6 +618,7 @@ class TestUserStats:
 # -------------------------------------------------------------------
 # GET /api/admin/users/{user_id} - User Detail Tests
 # -------------------------------------------------------------------
+
 
 class TestGetUserDetail:
     """Tests for getting user detail."""
@@ -649,6 +660,7 @@ class TestGetUserDetail:
 # POST /api/admin/users/{user_id}/role - Update User Role Tests
 # -------------------------------------------------------------------
 
+
 class TestUpdateUserRole:
     """Tests for updating user roles."""
 
@@ -667,14 +679,15 @@ class TestUpdateUserRole:
         app.dependency_overrides[get_session] = lambda: mock_db
         app.dependency_overrides[get_current_user] = lambda: mock_admin_user
 
-        with patch.object(RBACService, "user_has_permission", new_callable=AsyncMock) as mock_perm:
+        with patch.object(
+            RBACService, "user_has_permission", new_callable=AsyncMock
+        ) as mock_perm:
             mock_perm.return_value = True
 
             client = TestClient(app)
 
             response = client.post(
-                f"{BASE_URL}/users/{user_id}/role",
-                json={"role": "verifier"}
+                f"{BASE_URL}/users/{user_id}/role", json={"role": "verifier"}
             )
 
             # Verify endpoint exists
@@ -687,6 +700,7 @@ class TestUpdateUserRole:
 # GET /api/admin/overview - System Overview Tests
 # -------------------------------------------------------------------
 
+
 class TestSystemOverview:
     """Tests for system overview endpoint."""
 
@@ -695,13 +709,13 @@ class TestSystemOverview:
         # Mock multiple scalar calls for various stats
         mock_result = MagicMock()
         mock_result.scalar.side_effect = [
-            1000,   # total users
-            100,    # active users
-            50,     # pro subscribers
-            5000,   # total jobs
-            25,     # jobs today
-            3,      # queued jobs
-            2,      # processing jobs
+            1000,  # total users
+            100,  # active users
+            50,  # pro subscribers
+            5000,  # total jobs
+            25,  # jobs today
+            3,  # queued jobs
+            2,  # processing jobs
         ]
         mock_db.execute = AsyncMock(return_value=mock_result)
 
@@ -722,10 +736,13 @@ class TestSystemOverview:
 # Authorization Tests
 # -------------------------------------------------------------------
 
+
 class TestAdminAuthorization:
     """Tests for admin authorization."""
 
-    def test_ai_jobs_endpoint_without_auth_returns_error(self, mock_admin_user, mock_db):
+    def test_ai_jobs_endpoint_without_auth_returns_error(
+        self, mock_admin_user, mock_db
+    ):
         """Admin endpoint without admin auth should return error."""
         # Mock the response to return list
         mock_count_result = MagicMock()
@@ -736,9 +753,7 @@ class TestAdminAuthorization:
         mock_scalars.all.return_value = []
         mock_jobs_result.scalars.return_value = mock_scalars
 
-        mock_db.execute = AsyncMock(
-            side_effect=[mock_count_result, mock_jobs_result]
-        )
+        mock_db.execute = AsyncMock(side_effect=[mock_count_result, mock_jobs_result])
 
         app.dependency_overrides[get_session] = lambda: mock_db
         app.dependency_overrides[RequireAdminDashboard] = lambda: mock_admin_user
@@ -761,9 +776,7 @@ class TestAdminAuthorization:
         mock_scalars.all.return_value = []
         mock_users_result.scalars.return_value = mock_scalars
 
-        mock_db.execute = AsyncMock(
-            side_effect=[mock_count_result, mock_users_result]
-        )
+        mock_db.execute = AsyncMock(side_effect=[mock_count_result, mock_users_result])
 
         app.dependency_overrides[get_session] = lambda: mock_db
         app.dependency_overrides[RequireAdminDashboard] = lambda: mock_admin_user

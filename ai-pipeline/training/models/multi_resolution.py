@@ -46,8 +46,7 @@ Usage:
 
 from __future__ import annotations
 
-import math
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 
 import numpy as np
@@ -496,7 +495,6 @@ class PrecomputedMultiResDataset:
     
     def precompute(self):
         """Precompute all spectrograms and save to cache."""
-        import os
         from pathlib import Path
         from tqdm import tqdm
         

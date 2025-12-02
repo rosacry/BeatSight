@@ -60,37 +60,37 @@ export function createLogger(namespace: string): Logger {
     return {
         debug: (message: string, ...args: unknown[]) => {
             if (shouldLog('debug')) {
-                // eslint-disable-next-line no-console
+                 
                 console.debug(formatMessage(namespace, message), ...args);
             }
         },
         info: (message: string, ...args: unknown[]) => {
             if (shouldLog('info')) {
-                // eslint-disable-next-line no-console
+                 
                 console.info(formatMessage(namespace, message), ...args);
             }
         },
         warn: (message: string, ...args: unknown[]) => {
             if (shouldLog('warn')) {
-                // eslint-disable-next-line no-console
+                 
                 console.warn(formatMessage(namespace, message), ...args);
             }
         },
         error: (message: string, ...args: unknown[]) => {
             if (shouldLog('error')) {
-                // eslint-disable-next-line no-console
+                 
                 console.error(formatMessage(namespace, message), ...args);
             }
         },
         group: (label: string) => {
             if (shouldLog('debug')) {
-                // eslint-disable-next-line no-console
+                 
                 console.group(formatMessage(namespace, label));
             }
         },
         groupEnd: () => {
             if (shouldLog('debug')) {
-                // eslint-disable-next-line no-console
+                 
                 console.groupEnd();
             }
         },
@@ -120,7 +120,7 @@ export function disableDeveloperMode(): void {
     if (typeof localStorage !== 'undefined') {
         localStorage.removeItem('beatsight:developerMode');
         // Use console directly since logger might now be silenced
-        // eslint-disable-next-line no-console
+         
         console.info('[BeatSight] Developer Mode disabled.');
     }
 }

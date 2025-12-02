@@ -20,12 +20,10 @@ Expected benefits:
 from __future__ import annotations
 
 import argparse
-import json
 import logging
-import os
 import random
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 import numpy as np
 import torch
@@ -700,11 +698,11 @@ def main():
     
     # Print summary
     final_loss = history['loss'][-1] if history['loss'] else float('inf')
-    logger.info(f"\nPretraining complete!")
+    logger.info("\nPretraining complete!")
     logger.info(f"  Method: {args.method}")
     logger.info(f"  Epochs: {args.epochs}")
     logger.info(f"  Final loss: {final_loss:.4f}")
-    logger.info(f"\nNext steps:")
+    logger.info("\nNext steps:")
     logger.info(f"  1. Fine-tune with: python train_classifier.py --pretrained-backbone {args.output}")
 
 

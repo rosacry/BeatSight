@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 try:
     from pipeline.adaptive_parameters import (
         AdaptivePreprocessingParams,
-        AudioCharacteristics,
         adapt_to_audio,
     )
+
     HAS_ADAPTIVE = True
 except ImportError:
     HAS_ADAPTIVE = False
@@ -116,16 +116,14 @@ def _compute_percussive_stem(
     percussive_margin: float = 2.5,
 ) -> np.ndarray:
     """Extract the percussive component using HPSS.
-    
+
     Args:
         audio: Input audio
         harmonic_margin: HPSS harmonic margin (adaptive)
         percussive_margin: HPSS percussive margin (adaptive)
     """
     harmonic, percussive = librosa.effects.hpss(
-        audio, 
-        margin=(harmonic_margin, percussive_margin), 
-        power=2.0
+        audio, margin=(harmonic_margin, percussive_margin), power=2.0
     )
     # Keep only the percussive layer; ensure contiguous copy to avoid view surprises.
     return np.array(percussive, dtype=np.float32, copy=True)
@@ -142,7 +140,7 @@ def _mel_spectral_flux(
     fmax: Optional[float] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Return percussive mel spectrogram and spectral flux onset envelope.
-    
+
     Args:
         audio: Input audio
         sr: Sample rate
@@ -155,7 +153,7 @@ def _mel_spectral_flux(
     """
     if fmax is None:
         fmax = min(sr / 2 - 100, 14000.0)
-    
+
     pre_emphasised = librosa.effects.preemphasis(audio, coef=preemphasis_coef)
     mel = librosa.feature.melspectrogram(
         y=pre_emphasised,
@@ -222,11 +220,7 @@ def _tempo_candidates(
     else:
         # librosa returns an ndarray; take unique rounded tempos to avoid duplicates.
         rounded = sorted(
-            {
-                float(t)
-                for t in raw
-                if np.isfinite(t) and t > 0 and t >= 60.0
-            }
+            {float(t) for t in raw if np.isfinite(t) and t > 0 and t >= 60.0}
         )
         if not rounded:
             rounded = [120.0]
@@ -281,14 +275,14 @@ def detect_onsets(
     """
 
     audio_data, sr = audio
-    
+
     # Get adaptive preprocessing parameters
     hpss_h_margin = 1.2
     hpss_p_margin = 2.5
     preemph_coef = 0.97
     fmin = 30.0
     fmax = None
-    
+
     if adaptive_params is not None and HAS_ADAPTIVE:
         hpss_h_margin = adaptive_params.hpss_harmonic_margin
         hpss_p_margin = adaptive_params.hpss_percussive_margin
@@ -307,14 +301,18 @@ def detect_onsets(
             fmax = params.fmax
         except (ValueError, RuntimeError, librosa.util.exceptions.ParameterError) as e:
             logger.debug("Adaptive parameter detection failed, using defaults: %s", e)
-    
+
     percussive = _compute_percussive_stem(
-        audio_data, 
+        audio_data,
         harmonic_margin=hpss_h_margin,
         percussive_margin=hpss_p_margin,
     )
     mel, envelope = _mel_spectral_flux(
-        percussive, sr, hop_length, n_fft, n_mels,
+        percussive,
+        sr,
+        hop_length,
+        n_fft,
+        n_mels,
         preemphasis_coef=preemph_coef,
         fmin=fmin,
         fmax=fmax,
@@ -338,7 +336,7 @@ def detect_onsets(
     peak_window = 2  # frames on either side to check for local maxima
 
     onsets: List[DetectedOnset] = []
-    last_onset_time = -np.inf
+    _last_onset_time = -np.inf
     last_onset_frame = -10_000
 
     for frame_index, (env_val, thr_val) in enumerate(zip(envelope, adaptive_threshold)):
@@ -355,8 +353,14 @@ def detect_onsets(
         if frame_index - last_onset_frame < min_separation_frames:
             continue
 
-        band_energy = mel[:, frame_index] if frame_index < mel.shape[1] else np.zeros(mel.shape[0])
-        confidence = float(np.clip((env_val - thr_val) / (1.0 - thr_val + 1e-6), 0.0, 1.0))
+        band_energy = (
+            mel[:, frame_index]
+            if frame_index < mel.shape[1]
+            else np.zeros(mel.shape[0])
+        )
+        confidence = float(
+            np.clip((env_val - thr_val) / (1.0 - thr_val + 1e-6), 0.0, 1.0)
+        )
         onsets.append(
             DetectedOnset(
                 time=float(time_seconds),
@@ -367,7 +371,7 @@ def detect_onsets(
                 band_energies=np.asarray(band_energy, dtype=np.float32),
             )
         )
-        last_onset_time = time_seconds
+        _last_onset_time = time_seconds
         last_onset_frame = frame_index
 
     return OnsetDetectionResult(

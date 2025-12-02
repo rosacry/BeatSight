@@ -127,8 +127,12 @@ async def enqueue_job(
 
             if audio_url:
                 # Convert options to dict for Modal
-                modal_options = payload.options.model_dump(exclude_none=True) if payload.options else None
-                
+                modal_options = (
+                    payload.options.model_dump(exclude_none=True)
+                    if payload.options
+                    else None
+                )
+
                 result = await modal_service.trigger_job(
                     job_id=str(job.id),
                     audio_url=audio_url,

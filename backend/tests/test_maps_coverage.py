@@ -51,7 +51,7 @@ class TestVerifyMapRoute:
     async def test_verify_map_success(self):
         """Test successful map verification."""
         from app.api.routes.maps import verify_map, VerifyMapRequest
-        
+
         mock_session = create_mock_session()
         mock_user = create_mock_user()
         mock_map = create_mock_map(state=MapState.VERIFIED, is_canonical=True)
@@ -59,6 +59,7 @@ class TestVerifyMapRoute:
 
         # Mock the service
         from unittest.mock import patch
+
         with patch("app.api.routes.maps.MapService") as mock_service_cls:
             mock_service = AsyncMock()
             mock_service.verify_map = AsyncMock(return_value=mock_map)
@@ -80,14 +81,17 @@ class TestVerifyMapRoute:
         """Test verify_map raises 404 when map not found."""
         from app.api.routes.maps import verify_map, VerifyMapRequest
         from app.services.maps import MapNotFoundError
-        
+
         mock_session = create_mock_session()
         mock_user = create_mock_user()
 
         from unittest.mock import patch
+
         with patch("app.api.routes.maps.MapService") as mock_service_cls:
             mock_service = AsyncMock()
-            mock_service.verify_map = AsyncMock(side_effect=MapNotFoundError("Not found"))
+            mock_service.verify_map = AsyncMock(
+                side_effect=MapNotFoundError("Not found")
+            )
             mock_service_cls.return_value = mock_service
 
             with pytest.raises(HTTPException) as exc_info:
@@ -106,13 +110,14 @@ class TestVerifyMapRoute:
         """Test verify_map raises 409 when song already has verified map."""
         from app.api.routes.maps import verify_map, VerifyMapRequest
         from app.services.maps import DuplicateVerifiedMapError
-        
+
         mock_session = create_mock_session()
         mock_user = create_mock_user()
         existing_map_id = uuid4()
         song_id = uuid4()
 
         from unittest.mock import patch
+
         with patch("app.api.routes.maps.MapService") as mock_service_cls:
             mock_service = AsyncMock()
             mock_service.verify_map = AsyncMock(
@@ -139,13 +144,14 @@ class TestUnverifyMapRoute:
     async def test_unverify_map_success(self):
         """Test successful map unverification."""
         from app.api.routes.maps import unverify_map
-        
+
         mock_session = create_mock_session()
         mock_user = create_mock_user()
         mock_map = create_mock_map(state=MapState.UNVERIFIED, is_canonical=False)
         map_id = mock_map.id
 
         from unittest.mock import patch
+
         with patch("app.api.routes.maps.MapService") as mock_service_cls:
             mock_service = AsyncMock()
             mock_service.unverify_map = AsyncMock(return_value=mock_map)
@@ -166,14 +172,17 @@ class TestUnverifyMapRoute:
         """Test unverify_map raises 404 when map not found."""
         from app.api.routes.maps import unverify_map
         from app.services.maps import MapNotFoundError
-        
+
         mock_session = create_mock_session()
         mock_user = create_mock_user()
 
         from unittest.mock import patch
+
         with patch("app.api.routes.maps.MapService") as mock_service_cls:
             mock_service = AsyncMock()
-            mock_service.unverify_map = AsyncMock(side_effect=MapNotFoundError("Not found"))
+            mock_service.unverify_map = AsyncMock(
+                side_effect=MapNotFoundError("Not found")
+            )
             mock_service_cls.return_value = mock_service
 
             with pytest.raises(HTTPException) as exc_info:
@@ -193,13 +202,14 @@ class TestArchiveMapRoute:
     async def test_archive_map_success(self):
         """Test successful map archival."""
         from app.api.routes.maps import archive_map
-        
+
         mock_session = create_mock_session()
         mock_user = create_mock_user()
         mock_map = create_mock_map(state=MapState.ARCHIVED, is_canonical=False)
         map_id = mock_map.id
 
         from unittest.mock import patch
+
         with patch("app.api.routes.maps.MapService") as mock_service_cls:
             mock_service = AsyncMock()
             mock_service.archive_map = AsyncMock(return_value=mock_map)
@@ -220,14 +230,17 @@ class TestArchiveMapRoute:
         """Test archive_map raises 404 when map not found."""
         from app.api.routes.maps import archive_map
         from app.services.maps import MapNotFoundError
-        
+
         mock_session = create_mock_session()
         mock_user = create_mock_user()
 
         from unittest.mock import patch
+
         with patch("app.api.routes.maps.MapService") as mock_service_cls:
             mock_service = AsyncMock()
-            mock_service.archive_map = AsyncMock(side_effect=MapNotFoundError("Not found"))
+            mock_service.archive_map = AsyncMock(
+                side_effect=MapNotFoundError("Not found")
+            )
             mock_service_cls.return_value = mock_service
 
             with pytest.raises(HTTPException) as exc_info:

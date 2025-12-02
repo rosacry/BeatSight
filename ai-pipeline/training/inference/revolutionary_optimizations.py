@@ -82,10 +82,9 @@ Usage:
 from __future__ import annotations
 
 import logging
-import os
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -355,7 +354,7 @@ def export_fp8_tensorrt(
     logger.info(f"FP8 TensorRT engine saved: {output_path}")
     logger.info(f"  Size: {size_mb:.1f} MB")
     logger.info(f"  Build time: {build_time:.1f} seconds")
-    logger.info(f"  Expected speedup: 2× over INT8")
+    logger.info("  Expected speedup: 2× over INT8")
     
     return output_path
 

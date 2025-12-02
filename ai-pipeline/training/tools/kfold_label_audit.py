@@ -23,10 +23,9 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import sys
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -34,7 +33,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, Dataset, Subset
+from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
@@ -418,7 +417,7 @@ def run_kfold_audit(
     logger.info(f"Aggregated issues (single-fold): {len(aggregated_issues)}")
     logger.info(f"Multi-fold issues (≥{config.min_folds_flagged} folds): {len(multi_fold_issues)}")
     logger.info(f"Duration: {duration/60:.1f} minutes")
-    logger.info(f"\nTop 10 noisiest classes:")
+    logger.info("\nTop 10 noisiest classes:")
     for class_name, rate in sorted(class_noise_rates.items(), key=lambda x: x[1], reverse=True)[:10]:
         logger.info(f"  {class_name}: {rate*100:.2f}%")
     logger.info(f"\nResults saved to: {output_dir}")
@@ -504,7 +503,7 @@ def main():
         class_names=class_names,
     )
     
-    print(f"\n✅ K-fold audit complete!")
+    print("\n✅ K-fold audit complete!")
     print(f"   Multi-fold issues: {len(result.multi_fold_issues)}")
     print(f"   Results: {output_dir / 'kfold_label_audit.json'}")
 

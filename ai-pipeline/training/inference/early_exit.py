@@ -770,7 +770,7 @@ def benchmark_early_exit(
         "exit_distribution": dict(model.stats.exits_per_stage),
     }
     
-    logger.info(f"Early Exit Benchmark Results:")
+    logger.info("Early Exit Benchmark Results:")
     logger.info(f"  Speedup: {speedup:.2f}x")
     logger.info(f"  Accuracy (early): {accuracy_early:.4f}")
     logger.info(f"  Accuracy (full):  {accuracy_full:.4f}")

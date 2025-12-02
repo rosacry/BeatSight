@@ -122,7 +122,9 @@ async def vote_on_map(
     """
     service = VoteService(session)
 
-    vote_type = VoteType.UPVOTE if payload.action == VoteAction.UPVOTE else VoteType.DOWNVOTE
+    vote_type = (
+        VoteType.UPVOTE if payload.action == VoteAction.UPVOTE else VoteType.DOWNVOTE
+    )
 
     try:
         counts = await service.cast_vote(
@@ -200,7 +202,9 @@ async def get_bulk_votes(
             counts = await service.get_vote_counts(map_id)
             user_vote = None
             if map_id in user_votes:
-                user_vote = "upvote" if user_votes[map_id] == VoteType.UPVOTE else "downvote"
+                user_vote = (
+                    "upvote" if user_votes[map_id] == VoteType.UPVOTE else "downvote"
+                )
 
             result[str(map_id)] = VoteCountsResponse(
                 map_id=map_id,

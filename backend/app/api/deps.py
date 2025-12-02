@@ -23,33 +23,35 @@ if TYPE_CHECKING:
 # Feature Flag Dependencies
 # =============================================================================
 
+
 def require_feature(feature_name: str) -> Callable[[], None]:
     """
     Create a dependency that checks if a feature flag is enabled.
-    
+
     Usage:
         @router.get("/sync", dependencies=[Depends(require_feature("cloud_sync"))])
         async def sync_endpoint():
             ...
-    
+
     Args:
         feature_name: Name of the feature (without 'feature_' prefix).
                       Maps to settings.feature_{feature_name}
-    
+
     Raises:
         HTTPException 404 if feature is disabled
     """
+
     def check_feature() -> None:
         settings = get_settings()
         flag_name = f"feature_{feature_name}"
         is_enabled = getattr(settings, flag_name, False)
-        
+
         if not is_enabled:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="This feature is not currently available",
             )
-    
+
     return check_feature
 
 

@@ -6,20 +6,19 @@ import uuid
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.main import app
 from app.api.deps import get_current_user, get_db_session, require_cloud_sync
 from app.models.user import User
-from app.models.sync import ConflictResolution, SyncAction, SyncState
 from app.services.sync import SyncService
 
 
 # =============================================================================
 # Test Fixtures
 # =============================================================================
+
 
 def create_mock_user(user_id: uuid.UUID | None = None) -> MagicMock:
     """Create a mock user object."""
@@ -88,6 +87,7 @@ def create_mock_sync_client(client_id: uuid.UUID | None = None) -> MagicMock:
 # Test Get Preferences
 # =============================================================================
 
+
 class TestGetPreferences:
     """Tests for GET /sync/preferences endpoint."""
 
@@ -96,24 +96,26 @@ class TestGetPreferences:
         mock_user = create_mock_user()
         mock_session = create_mock_session()
         mock_prefs = create_mock_preferences(user_id=mock_user.id)
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
-            with patch.object(SyncService, "get_user_preferences", new_callable=AsyncMock) as mock_get:
+            with patch.object(
+                SyncService, "get_user_preferences", new_callable=AsyncMock
+            ) as mock_get:
                 mock_get.return_value = mock_prefs
-                
+
                 client = TestClient(app)
                 response = client.get("/api/sync/preferences")
-                
+
                 assert response.status_code == 200
                 data = response.json()
                 assert data["version"] == 1
@@ -127,26 +129,32 @@ class TestGetPreferences:
         mock_user = create_mock_user()
         mock_session = create_mock_session()
         mock_prefs = create_mock_preferences(user_id=mock_user.id)
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
-            with patch.object(SyncService, "get_user_preferences", new_callable=AsyncMock) as mock_get, \
-                 patch.object(SyncService, "create_default_preferences", new_callable=AsyncMock) as mock_create:
+            with (
+                patch.object(
+                    SyncService, "get_user_preferences", new_callable=AsyncMock
+                ) as mock_get,
+                patch.object(
+                    SyncService, "create_default_preferences", new_callable=AsyncMock
+                ) as mock_create,
+            ):
                 mock_get.return_value = None  # No existing prefs
                 mock_create.return_value = mock_prefs
-                
+
                 client = TestClient(app)
                 response = client.get("/api/sync/preferences")
-                
+
                 assert response.status_code == 200
                 mock_create.assert_called_once()
         finally:
@@ -156,11 +164,11 @@ class TestGetPreferences:
         """Test getting preferences without auth."""
         app.dependency_overrides.clear()
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
             client = TestClient(app, raise_server_exceptions=False)
             response = client.get("/api/sync/preferences")
-            
+
             assert response.status_code in [401, 403]
         finally:
             app.dependency_overrides.clear()
@@ -170,6 +178,7 @@ class TestGetPreferences:
 # Test Update Preferences
 # =============================================================================
 
+
 class TestUpdatePreferences:
     """Tests for PUT /sync/preferences endpoint."""
 
@@ -177,14 +186,11 @@ class TestUpdatePreferences:
         """Test that update preferences requires authentication."""
         app.dependency_overrides.clear()
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
             client = TestClient(app, raise_server_exceptions=False)
-            response = client.put(
-                "/api/sync/preferences",
-                json={"scroll_speed": 1.5}
-            )
-            
+            response = client.put("/api/sync/preferences", json={"scroll_speed": 1.5})
+
             assert response.status_code in [401, 403]
         finally:
             app.dependency_overrides.clear()
@@ -193,25 +199,22 @@ class TestUpdatePreferences:
         """Test preferences update validation."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
             client = TestClient(app, raise_server_exceptions=False)
-            
+
             # Should accept empty update
-            response = client.put(
-                "/api/sync/preferences",
-                json={}
-            )
+            response = client.put("/api/sync/preferences", json={})
             # May fail in service layer but validation should pass
             assert response.status_code in [200, 422, 500]
         finally:
@@ -222,6 +225,7 @@ class TestUpdatePreferences:
 # Test Sync Clients
 # =============================================================================
 
+
 class TestSyncClients:
     """Tests for sync client endpoints."""
 
@@ -230,24 +234,26 @@ class TestSyncClients:
         mock_user = create_mock_user()
         mock_session = create_mock_session()
         mock_clients = [create_mock_sync_client() for _ in range(3)]
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
-            with patch.object(SyncService, "get_user_clients", new_callable=AsyncMock) as mock_get:
+            with patch.object(
+                SyncService, "get_user_clients", new_callable=AsyncMock
+            ) as mock_get:
                 mock_get.return_value = mock_clients
-                
+
                 client = TestClient(app)
                 response = client.get("/api/sync/clients")
-                
+
                 assert response.status_code == 200
                 data = response.json()
                 assert len(data) == 3
@@ -258,24 +264,26 @@ class TestSyncClients:
         """Test listing clients when none exist."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
-            with patch.object(SyncService, "get_user_clients", new_callable=AsyncMock) as mock_get:
+            with patch.object(
+                SyncService, "get_user_clients", new_callable=AsyncMock
+            ) as mock_get:
                 mock_get.return_value = []
-                
+
                 client = TestClient(app)
                 response = client.get("/api/sync/clients")
-                
+
                 assert response.status_code == 200
                 data = response.json()
                 assert len(data) == 0
@@ -286,24 +294,24 @@ class TestSyncClients:
         """Test that register client endpoint exists and requires proper input."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
             client = TestClient(app, raise_server_exceptions=False)
             response = client.post(
                 "/api/sync/clients",
-                json={"client_name": "My Desktop", "client_type": "desktop"}
+                json={"client_name": "My Desktop", "client_type": "desktop"},
             )
-            
+
             # Either success or server error (service layer issue)
             assert response.status_code in [201, 500]
         finally:
@@ -313,24 +321,24 @@ class TestSyncClients:
         """Test registering client with invalid type."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
             client = TestClient(app, raise_server_exceptions=False)
             response = client.post(
                 "/api/sync/clients",
-                json={"client_name": "Test", "client_type": "invalid"}
+                json={"client_name": "Test", "client_type": "invalid"},
             )
-            
+
             # Should fail validation - only desktop/web/mobile allowed
             assert response.status_code == 422
         finally:
@@ -340,11 +348,11 @@ class TestSyncClients:
         """Test that unregister client requires authentication."""
         app.dependency_overrides.clear()
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
             client = TestClient(app, raise_server_exceptions=False)
             response = client.delete(f"/api/sync/clients/{uuid.uuid4()}")
-            
+
             assert response.status_code in [401, 403]
         finally:
             app.dependency_overrides.clear()
@@ -354,6 +362,7 @@ class TestSyncClients:
 # Test Manifest Sync
 # =============================================================================
 
+
 class TestManifestSync:
     """Tests for manifest sync endpoints."""
 
@@ -361,27 +370,26 @@ class TestManifestSync:
         """Test comparing client manifest with server."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
-            with patch.object(SyncService, "compare_manifest", new_callable=AsyncMock) as mock_compare:
+            with patch.object(
+                SyncService, "compare_manifest", new_callable=AsyncMock
+            ) as mock_compare:
                 mock_compare.return_value = []
-                
+
                 client = TestClient(app)
-                response = client.post(
-                    "/api/sync/manifest",
-                    json={"beatmaps": []}
-                )
-                
+                response = client.post("/api/sync/manifest", json={"beatmaps": []})
+
                 assert response.status_code == 200
                 data = response.json()
                 assert "actions" in data
@@ -393,28 +401,26 @@ class TestManifestSync:
         """Test comparing manifest with beatmap entries."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
             client = TestClient(app, raise_server_exceptions=False)
             response = client.post(
                 "/api/sync/manifest",
                 json={
-                    "beatmaps": [
-                        {"map_id": "test-id", "version": 1, "checksum": "old"}
-                    ]
-                }
+                    "beatmaps": [{"map_id": "test-id", "version": 1, "checksum": "old"}]
+                },
             )
-            
+
             # May fail in service layer but validation should pass
             assert response.status_code in [200, 500]
         finally:
@@ -425,6 +431,7 @@ class TestManifestSync:
 # Test Conflicts
 # =============================================================================
 
+
 class TestSyncConflicts:
     """Tests for sync conflict endpoints."""
 
@@ -432,11 +439,11 @@ class TestSyncConflicts:
         """Test listing conflicts requires authentication."""
         app.dependency_overrides.clear()
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
             client = TestClient(app, raise_server_exceptions=False)
             response = client.get("/api/sync/conflicts")
-            
+
             assert response.status_code in [401, 403]
         finally:
             app.dependency_overrides.clear()
@@ -445,14 +452,14 @@ class TestSyncConflicts:
         """Test resolving conflict requires authentication."""
         app.dependency_overrides.clear()
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
             client = TestClient(app, raise_server_exceptions=False)
             response = client.post(
                 f"/api/sync/conflicts/{uuid.uuid4()}/resolve",
-                json={"resolution": "KEEP_SERVER"}
+                json={"resolution": "KEEP_SERVER"},
             )
-            
+
             assert response.status_code in [401, 403]
         finally:
             app.dependency_overrides.clear()
@@ -461,24 +468,24 @@ class TestSyncConflicts:
         """Test resolving conflict with invalid UUID."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
             client = TestClient(app, raise_server_exceptions=False)
             response = client.post(
                 "/api/sync/conflicts/invalid-uuid/resolve",
-                json={"resolution": "KEEP_SERVER"}
+                json={"resolution": "KEEP_SERVER"},
             )
-            
+
             assert response.status_code == 422
         finally:
             app.dependency_overrides.clear()
@@ -488,6 +495,7 @@ class TestSyncConflicts:
 # Test Sync History
 # =============================================================================
 
+
 class TestSyncHistory:
     """Tests for GET /sync/history endpoint."""
 
@@ -495,7 +503,7 @@ class TestSyncHistory:
         """Test getting sync history."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         mock_log = MagicMock()
         mock_log.id = uuid.uuid4()
         mock_log.action = "upload"
@@ -503,24 +511,26 @@ class TestSyncHistory:
         mock_log.maps_synced = 5
         mock_log.bytes_transferred = 1024
         mock_log.timestamp = datetime.utcnow()
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
-            with patch.object(SyncService, "get_sync_history", new_callable=AsyncMock) as mock_get:
+            with patch.object(
+                SyncService, "get_sync_history", new_callable=AsyncMock
+            ) as mock_get:
                 mock_get.return_value = [mock_log]
-                
+
                 client = TestClient(app)
                 response = client.get("/api/sync/history")
-                
+
                 assert response.status_code == 200
                 data = response.json()
                 assert len(data) == 1
@@ -533,6 +543,7 @@ class TestSyncHistory:
 # Test Sync Status
 # =============================================================================
 
+
 class TestSyncStatus:
     """Tests for GET /sync/status endpoint."""
 
@@ -540,11 +551,11 @@ class TestSyncStatus:
         """Test that getting sync status requires authentication."""
         app.dependency_overrides.clear()
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
             client = TestClient(app, raise_server_exceptions=False)
             response = client.get("/api/sync/status")
-            
+
             assert response.status_code in [401, 403]
         finally:
             app.dependency_overrides.clear()
@@ -553,21 +564,21 @@ class TestSyncStatus:
         """Test that status endpoint exists."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
             client = TestClient(app, raise_server_exceptions=False)
             response = client.get("/api/sync/status")
-            
+
             # Either success or server error - not 404
             assert response.status_code != 404
         finally:
@@ -578,6 +589,7 @@ class TestSyncStatus:
 # Test Authorization
 # =============================================================================
 
+
 class TestSyncAuthorization:
     """Tests for sync route authorization."""
 
@@ -585,11 +597,11 @@ class TestSyncAuthorization:
         """Test that preferences endpoint requires authentication."""
         app.dependency_overrides.clear()
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
             client = TestClient(app, raise_server_exceptions=False)
             response = client.get("/api/sync/preferences")
-            
+
             assert response.status_code in [401, 403]
         finally:
             app.dependency_overrides.clear()
@@ -598,11 +610,11 @@ class TestSyncAuthorization:
         """Test that clients endpoint requires authentication."""
         app.dependency_overrides.clear()
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
             client = TestClient(app, raise_server_exceptions=False)
             response = client.get("/api/sync/clients")
-            
+
             assert response.status_code in [401, 403]
         finally:
             app.dependency_overrides.clear()
@@ -611,11 +623,11 @@ class TestSyncAuthorization:
         """Test that history endpoint requires authentication."""
         app.dependency_overrides.clear()
         app.dependency_overrides[require_cloud_sync] = override_require_cloud_sync
-        
+
         try:
             client = TestClient(app, raise_server_exceptions=False)
             response = client.get("/api/sync/history")
-            
+
             assert response.status_code in [401, 403]
         finally:
             app.dependency_overrides.clear()
@@ -625,6 +637,7 @@ class TestSyncAuthorization:
 # Test Feature Flag
 # =============================================================================
 
+
 class TestSyncFeatureFlag:
     """Tests for sync feature flag handling."""
 
@@ -632,9 +645,9 @@ class TestSyncFeatureFlag:
         """Test that sync endpoints return 404 when feature is disabled."""
         app.dependency_overrides.clear()
         # Don't override require_cloud_sync - let it check the feature flag
-        
+
         client = TestClient(app, raise_server_exceptions=False)
         response = client.get("/api/sync/preferences")
-        
+
         # Either auth error or feature disabled (404)
         assert response.status_code in [401, 403, 404]

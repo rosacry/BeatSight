@@ -34,7 +34,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-import torch
 
 
 @dataclass
@@ -52,11 +51,11 @@ class ModelConfig:
     def to_cli_args(self) -> List[str]:
         """Convert to CLI arguments for train_classifier.py."""
         args = [
-            f"--seed", str(self.seed),
-            f"--model-version", self.model_version,
-            f"--lr", str(self.learning_rate),
-            f"--weight-decay", str(self.weight_decay),
-            f"--epochs", str(self.epochs),
+            "--seed", str(self.seed),
+            "--model-version", self.model_version,
+            "--lr", str(self.learning_rate),
+            "--weight-decay", str(self.weight_decay),
+            "--epochs", str(self.epochs),
         ]
         
         if self.use_se:

@@ -2,7 +2,6 @@ import json
 
 import librosa
 import numpy as np
-import pytest
 from scipy.io import wavfile
 
 from pipeline.process import process_audio_file

@@ -50,7 +50,7 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 from torch.optim import Optimizer
-from typing import Any, Callable, Dict, Iterable, List, Optional, Union
+from typing import Any, Callable, Dict, Iterable, Optional
 
 
 def centralize_gradient(
@@ -494,7 +494,7 @@ if __name__ == "__main__":
     # Step (applies GC internally)
     optimizer.step()
     
-    print(f"✅ GC_AdamW working!")
+    print("✅ GC_AdamW working!")
     print(f"   Conv1 gradient shape: {conv1_grad_before.shape}")
     print(f"   Mean before GC (dim=1,2,3): {conv1_grad_before.mean(dim=(1,2,3)).abs().mean():.6f}")
     
@@ -509,4 +509,4 @@ if __name__ == "__main__":
     loss2.backward()
     wrapped_opt.step()
     
-    print(f"✅ Wrapped optimizer working!")
+    print("✅ Wrapped optimizer working!")

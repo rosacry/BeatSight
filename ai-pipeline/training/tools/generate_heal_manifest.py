@@ -29,7 +29,7 @@ import json
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Iterable, Iterator, List, Mapping, MutableMapping, Optional, Sequence, Set, Tuple
+from typing import Dict, Iterator, List, Mapping, Optional, Sequence, Set, Tuple
 
 
 @dataclass(frozen=True)

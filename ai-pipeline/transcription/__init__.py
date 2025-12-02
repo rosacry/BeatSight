@@ -46,4 +46,3 @@ __all__ = [
     "patterns_to_json",
     "annotate_transcription_result",
 ]
-

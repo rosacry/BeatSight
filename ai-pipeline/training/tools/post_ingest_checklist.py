@@ -19,7 +19,7 @@ import shlex
 import subprocess
 import sys
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence
+from typing import List, Optional, Sequence
 
 
 def _as_shell(cmd: Sequence[str]) -> str:

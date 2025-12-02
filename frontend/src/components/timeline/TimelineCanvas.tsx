@@ -402,6 +402,8 @@ export function TimelineCanvas({
         noteDiffs,
         timeToX,
         laneToY,
+        isSelecting,
+        selectStart,
     ])
 
     // Handle canvas resize
@@ -437,6 +439,8 @@ export function TimelineCanvas({
 
         resizeObserver.observe(container)
         return () => resizeObserver.disconnect()
+        // We only want to re-run when zoom changes, not on every viewport update
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [totalHeight, viewport.zoom, onViewportChange, draw])
 
     // Redraw when dependencies change

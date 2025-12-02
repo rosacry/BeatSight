@@ -47,11 +47,7 @@ Usage:
 
 from __future__ import annotations
 
-import json
 import logging
-import os
-import sys
-import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -60,7 +56,6 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 logger = logging.getLogger(__name__)
 
@@ -232,7 +227,7 @@ def export_embedded_tensorrt_engine(
         logger.info(f"✓ EPContext model saved: {output_path}")
         logger.info(f"  Size: {size_mb:.1f} MB")
         logger.info(f"  Build time: {build_time:.1f} seconds")
-        logger.info(f"  Cold start: <2 seconds (was 30-60s)")
+        logger.info("  Cold start: <2 seconds (was 30-60s)")
         logger.info("=" * 60)
     else:
         # Check for _ctx.onnx variant

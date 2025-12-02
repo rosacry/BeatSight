@@ -544,7 +544,6 @@ async def _process_audio_impl(
     """
     import asyncio
     import base64
-    import json
     import tempfile
     
     import httpx
@@ -817,7 +816,6 @@ async def trigger_job(job_data: dict) -> dict:
         "call_id": "..."  // Modal function call ID for tracking
     }
     """
-    import json
     
     # Validate request
     required = ["job_id", "audio_url", "song_id"]

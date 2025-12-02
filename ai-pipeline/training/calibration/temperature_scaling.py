@@ -45,9 +45,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-import numpy as np
-from typing import Dict, List, Optional, Tuple
-from pathlib import Path
+from typing import Dict, Optional, Tuple
 import json
 from tqdm import tqdm
 
@@ -240,7 +238,7 @@ class VectorScaler(nn.Module):
             final_loss = nll_criterion(final_logits, all_labels).item()
         
         if verbose:
-            print(f"Vector scaling complete.")
+            print("Vector scaling complete.")
             print(f"Weight range: [{self.weights.min():.3f}, {self.weights.max():.3f}]")
             print(f"Calibrated NLL: {final_loss:.4f}")
         
@@ -371,7 +369,7 @@ def calibrate_model(
     # Compute uncalibrated metrics
     uncal_probs = F.softmax(all_logits, dim=-1)
     uncal_metrics = compute_calibration_metrics(uncal_probs, all_labels)
-    print(f"\nBefore calibration:")
+    print("\nBefore calibration:")
     print(f"  ECE: {uncal_metrics['ece']:.4f}")
     print(f"  MCE: {uncal_metrics['mce']:.4f}")
     print(f"  Brier: {uncal_metrics['brier']:.4f}")
@@ -393,7 +391,7 @@ def calibrate_model(
     cal_logits = scaler(all_logits.to(device)).cpu()
     cal_probs = F.softmax(cal_logits, dim=-1)
     cal_metrics = compute_calibration_metrics(cal_probs, all_labels)
-    print(f"\nAfter calibration:")
+    print("\nAfter calibration:")
     print(f"  ECE: {cal_metrics['ece']:.4f} (was {uncal_metrics['ece']:.4f})")
     print(f"  MCE: {cal_metrics['mce']:.4f} (was {uncal_metrics['mce']:.4f})")
     print(f"  Brier: {cal_metrics['brier']:.4f} (was {uncal_metrics['brier']:.4f})")

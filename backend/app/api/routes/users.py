@@ -49,13 +49,9 @@ class DeleteAccountRequest(BaseModel):
     """Account deletion confirmation request."""
 
     confirmation: str = Field(
-        ..., 
-        description="Must be exactly 'DELETE' to confirm account deletion"
+        ..., description="Must be exactly 'DELETE' to confirm account deletion"
     )
-    password: str = Field(
-        ...,
-        description="Current password for verification"
-    )
+    password: str = Field(..., description="Current password for verification")
 
 
 class MessageResponse(BaseModel):
@@ -80,22 +76,22 @@ async def update_current_user(
 ) -> UserResponse:
     """
     Update the current user's profile.
-    
+
     Updatable fields:
     - display_name: User's display name
-    
+
     Note: For preferences, use /api/sync/preferences instead.
     """
     # Update fields if provided
     if request.display_name is not None:
         current_user.display_name = request.display_name
-    
+
     session.add(current_user)
     await session.commit()
     await session.refresh(current_user)
-    
+
     logger.info(f"User {current_user.id} updated their profile")
-    
+
     return UserResponse.model_validate(current_user)
 
 
@@ -107,7 +103,7 @@ async def change_password(
 ) -> MessageResponse:
     """
     Change the current user's password.
-    
+
     Requires the current password for verification.
     Note: Only available for users with password-based auth, not OAuth.
     """
@@ -117,36 +113,36 @@ async def change_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Password change not available for OAuth users",
         )
-    
+
     # Verify current password using bcrypt
     import bcrypt
+
     if not bcrypt.checkpw(
-        request.current_password.encode('utf-8'), 
-        current_user.hashed_password.encode('utf-8')
+        request.current_password.encode("utf-8"),
+        current_user.hashed_password.encode("utf-8"),
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Current password is incorrect",
         )
-    
+
     # Validate new password is different
     if request.current_password == request.new_password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="New password must be different from current password",
         )
-    
+
     # Hash and update password
     new_hash = bcrypt.hashpw(
-        request.new_password.encode('utf-8'), 
-        bcrypt.gensalt()
-    ).decode('utf-8')
+        request.new_password.encode("utf-8"), bcrypt.gensalt()
+    ).decode("utf-8")
     current_user.hashed_password = new_hash
     session.add(current_user)
     await session.commit()
-    
+
     logger.info(f"User {current_user.id} changed their password")
-    
+
     return MessageResponse(message="Password changed successfully")
 
 
@@ -158,12 +154,12 @@ async def delete_account(
 ) -> MessageResponse:
     """
     Delete the current user's account.
-    
+
     This is a destructive operation that:
     1. Deletes all user data
     2. Removes all associated songs, beatmaps, and jobs
     3. Cannot be undone
-    
+
     Requires typing 'DELETE' and password confirmation.
     Note: For OAuth users without password, password field can be empty but
     confirmation text is still required.
@@ -174,26 +170,27 @@ async def delete_account(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Please type 'DELETE' to confirm account deletion",
         )
-    
+
     # Verify password if user has one
     if current_user.hashed_password:
         import bcrypt
+
         if not bcrypt.checkpw(
-            request.password.encode('utf-8'), 
-            current_user.hashed_password.encode('utf-8')
+            request.password.encode("utf-8"),
+            current_user.hashed_password.encode("utf-8"),
         ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Password is incorrect",
             )
-    
+
     user_id = current_user.id
     user_email = current_user.email
-    
+
     # Delete the user (cascade should handle related records)
     await session.delete(current_user)
     await session.commit()
-    
+
     logger.warning(f"User {user_id} ({user_email}) deleted their account")
-    
+
     return MessageResponse(message="Account deleted successfully")

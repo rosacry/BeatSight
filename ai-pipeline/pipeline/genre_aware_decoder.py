@@ -18,7 +18,7 @@ understanding the GENRE context and applying appropriate rules.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple, Sequence
+from typing import Dict, List, Optional, Tuple
 from enum import Enum
 import numpy as np
 
@@ -27,6 +27,7 @@ from .structured_decoder import DrumState, TransitionMatrix, DecodedEvent
 
 class Genre(Enum):
     """Supported musical genres with distinct rhythmic vocabularies."""
+
     ROCK = "rock"
     METAL = "metal"
     JAZZ = "jazz"
@@ -44,50 +45,53 @@ class Genre(Enum):
 class GenreProfile:
     """
     Rhythmic profile for a specific genre.
-    
+
     Encodes musical knowledge about typical patterns, acceptable
     densities, and style-specific transition probabilities.
     """
+
     genre: Genre
     name: str
     description: str
-    
+
     # Typical tempo range
     tempo_range: Tuple[float, float] = (90, 140)
-    
+
     # Dominant time signatures
-    common_time_signatures: List[Tuple[int, int]] = field(default_factory=lambda: [(4, 4)])
-    
+    common_time_signatures: List[Tuple[int, int]] = field(
+        default_factory=lambda: [(4, 4)]
+    )
+
     # Swing characteristics (1.0 = straight, 1.5 = triplet feel)
     typical_swing_ratio: float = 1.0
     swing_tolerance: float = 0.1  # How much swing variance is acceptable
-    
+
     # Dominant subdivision
     primary_subdivision: str = "sixteenth"
-    
+
     # Hi-hat style
     hihat_density: str = "eighth"  # "quarter", "eighth", "sixteenth", "sparse"
-    
+
     # Kick patterns
     kick_on_downbeats: float = 0.9  # Probability of kick on beat 1
     kick_syncopation: float = 0.2  # Probability of syncopated kicks
-    
+
     # Snare characteristics
     backbeat_snare: float = 0.95  # Probability of snare on 2 and 4
     ghost_note_density: float = 0.3  # Relative frequency of ghost notes
-    
+
     # Cymbal usage
     crash_on_sections: float = 0.85  # Crashes on section transitions
     ride_vs_hihat: float = 0.5  # 0 = all hi-hat, 1 = all ride
-    
+
     # Tom fills
     fill_frequency: float = 0.25  # Fills every ~4 measures
     fill_complexity: float = 0.5  # 0 = simple, 1 = complex
-    
+
     # Density limits (notes per second)
     typical_nps: float = 8.0
     max_burst_nps: float = 16.0
-    
+
     # Custom transition modifiers (additive to base)
     transition_modifiers: Dict[Tuple[DrumState, DrumState], float] = field(
         default_factory=dict
@@ -99,7 +103,6 @@ class GenreProfile:
 # =============================================================================
 
 GENRE_PROFILES: Dict[Genre, GenreProfile] = {
-    
     Genre.ROCK: GenreProfile(
         genre=Genre.ROCK,
         name="Rock",
@@ -121,9 +124,8 @@ GENRE_PROFILES: Dict[Genre, GenreProfile] = {
             (DrumState.SNARE, DrumState.HIHAT): 0.2,
             # Crash typically follows section changes (after fill)
             (DrumState.TOM, DrumState.CYMBAL): 0.3,
-        }
+        },
     ),
-    
     Genre.METAL: GenreProfile(
         genre=Genre.METAL,
         name="Metal",
@@ -146,9 +148,8 @@ GENRE_PROFILES: Dict[Genre, GenreProfile] = {
             (DrumState.SNARE, DrumState.SNARE): 0.2,
             # Less hi-hat, more cymbal
             (DrumState.KICK, DrumState.CYMBAL): 0.15,
-        }
+        },
     ),
-    
     Genre.JAZZ: GenreProfile(
         genre=Genre.JAZZ,
         name="Jazz",
@@ -174,9 +175,8 @@ GENRE_PROFILES: Dict[Genre, GenreProfile] = {
             (DrumState.CYMBAL, DrumState.CYMBAL): 0.3,
             # Kick more independent
             (DrumState.CYMBAL, DrumState.KICK): 0.2,
-        }
+        },
     ),
-    
     Genre.FUNK: GenreProfile(
         genre=Genre.FUNK,
         name="Funk",
@@ -199,9 +199,8 @@ GENRE_PROFILES: Dict[Genre, GenreProfile] = {
             # Hi-hat constant flow
             (DrumState.HIHAT, DrumState.HIHAT): 0.3,
             (DrumState.SNARE, DrumState.GHOST): 0.4,
-        }
+        },
     ),
-    
     Genre.PROGRESSIVE: GenreProfile(
         genre=Genre.PROGRESSIVE,
         name="Progressive",
@@ -226,9 +225,8 @@ GENRE_PROFILES: Dict[Genre, GenreProfile] = {
             (DrumState.SNARE, DrumState.TOM): 0.2,
             # Odd patterns allowed
             (DrumState.KICK, DrumState.TOM): 0.15,
-        }
+        },
     ),
-    
     Genre.ELECTRONIC: GenreProfile(
         genre=Genre.ELECTRONIC,
         name="Electronic",
@@ -250,9 +248,8 @@ GENRE_PROFILES: Dict[Genre, GenreProfile] = {
             (DrumState.KICK, DrumState.HIHAT): 0.4,
             (DrumState.HIHAT, DrumState.KICK): 0.2,
             (DrumState.SNARE, DrumState.HIHAT): 0.3,
-        }
+        },
     ),
-    
     Genre.LATIN: GenreProfile(
         genre=Genre.LATIN,
         name="Latin",
@@ -273,9 +270,8 @@ GENRE_PROFILES: Dict[Genre, GenreProfile] = {
             # Latin: Percussion layers
             (DrumState.HIHAT, DrumState.CYMBAL): 0.2,
             (DrumState.TOM, DrumState.SNARE): 0.2,
-        }
+        },
     ),
-    
     Genre.UNKNOWN: GenreProfile(
         genre=Genre.UNKNOWN,
         name="Unknown/General",
@@ -292,6 +288,7 @@ GENRE_PROFILES: Dict[Genre, GenreProfile] = {
 # GENRE DETECTION
 # =============================================================================
 
+
 def detect_genre(
     hits: List[Dict],
     bpm: float,
@@ -300,7 +297,7 @@ def detect_genre(
 ) -> Tuple[Genre, float]:
     """
     Detect the most likely genre from hit patterns and audio features.
-    
+
     Analyzes:
     - Tempo range match
     - Swing ratio match
@@ -308,28 +305,28 @@ def detect_genre(
     - Kick/snare placement
     - Ghost note frequency
     - Fill patterns
-    
+
     Args:
         hits: Classified drum hits
         bpm: Detected tempo
         detected_swing: Detected swing ratio
         audio_features: Optional audio analysis features
-        
+
     Returns:
         Tuple of (detected_genre, confidence)
     """
     if not hits:
         return Genre.UNKNOWN, 0.0
-    
+
     scores: Dict[Genre, float] = {}
-    
+
     for genre, profile in GENRE_PROFILES.items():
         if genre == Genre.UNKNOWN:
             continue
-            
+
         score = 0.0
         max_score = 0.0
-        
+
         # Tempo match (weighted heavily)
         max_score += 2.0
         if profile.tempo_range[0] <= bpm <= profile.tempo_range[1]:
@@ -338,7 +335,7 @@ def detect_genre(
             range_width = profile.tempo_range[1] - profile.tempo_range[0]
             tempo_score = 1.0 - abs(bpm - range_center) / (range_width / 2)
             score += 2.0 * max(0, tempo_score)
-        
+
         # Swing match
         max_score += 1.5
         swing_diff = abs(detected_swing - profile.typical_swing_ratio)
@@ -346,53 +343,53 @@ def detect_genre(
             score += 1.5
         elif swing_diff <= profile.swing_tolerance * 2:
             score += 0.75
-        
+
         # Analyze hit patterns
         hit_analysis = _analyze_hits_for_genre(hits, bpm, profile)
-        
+
         # Ghost note density match
         max_score += 1.0
-        ghost_diff = abs(hit_analysis['ghost_density'] - profile.ghost_note_density)
+        ghost_diff = abs(hit_analysis["ghost_density"] - profile.ghost_note_density)
         if ghost_diff < 0.2:
             score += 1.0
         elif ghost_diff < 0.4:
             score += 0.5
-        
+
         # Backbeat snare match
         max_score += 1.0
-        backbeat_diff = abs(hit_analysis['backbeat_ratio'] - profile.backbeat_snare)
+        backbeat_diff = abs(hit_analysis["backbeat_ratio"] - profile.backbeat_snare)
         if backbeat_diff < 0.15:
             score += 1.0
         elif backbeat_diff < 0.3:
             score += 0.5
-        
+
         # Kick pattern match
         max_score += 1.0
-        synco_diff = abs(hit_analysis['kick_syncopation'] - profile.kick_syncopation)
+        synco_diff = abs(hit_analysis["kick_syncopation"] - profile.kick_syncopation)
         if synco_diff < 0.2:
             score += 1.0
         elif synco_diff < 0.4:
             score += 0.5
-        
+
         # Density match
         max_score += 1.0
-        density_ratio = hit_analysis['avg_nps'] / profile.typical_nps
+        density_ratio = hit_analysis["avg_nps"] / profile.typical_nps
         if 0.7 <= density_ratio <= 1.4:
             score += 1.0
         elif 0.5 <= density_ratio <= 2.0:
             score += 0.5
-        
+
         # Normalize score
         scores[genre] = score / max_score if max_score > 0 else 0
-    
+
     # Find best match
     best_genre = max(scores, key=scores.get)
     best_score = scores[best_genre]
-    
+
     # Require minimum confidence
     if best_score < 0.4:
         return Genre.UNKNOWN, best_score
-    
+
     return best_genre, best_score
 
 
@@ -402,75 +399,75 @@ def _analyze_hits_for_genre(
     profile: GenreProfile,
 ) -> Dict[str, float]:
     """Analyze hit patterns for genre matching."""
-    
+
     beat_duration = 60.0 / bpm
-    
+
     result = {
-        'ghost_density': 0.0,
-        'backbeat_ratio': 0.0,
-        'kick_syncopation': 0.0,
-        'avg_nps': 0.0,
-        'ride_vs_hihat': 0.0,
+        "ghost_density": 0.0,
+        "backbeat_ratio": 0.0,
+        "kick_syncopation": 0.0,
+        "avg_nps": 0.0,
+        "ride_vs_hihat": 0.0,
     }
-    
+
     if not hits:
         return result
-    
-    sorted_hits = sorted(hits, key=lambda h: h.get('time', 0))
-    total_time = sorted_hits[-1].get('time', 1) - sorted_hits[0].get('time', 0)
-    
+
+    sorted_hits = sorted(hits, key=lambda h: h.get("time", 0))
+    total_time = sorted_hits[-1].get("time", 1) - sorted_hits[0].get("time", 0)
+
     if total_time <= 0:
         return result
-    
+
     # Count components
-    ghost_count = sum(1 for h in hits if 'ghost' in h.get('component', '').lower())
-    snare_count = sum(1 for h in hits if 'snare' in h.get('component', '').lower())
-    kick_count = sum(1 for h in hits if 'kick' in h.get('component', '').lower())
-    hihat_count = sum(1 for h in hits if 'hat' in h.get('component', '').lower())
-    ride_count = sum(1 for h in hits if 'ride' in h.get('component', '').lower())
-    
+    ghost_count = sum(1 for h in hits if "ghost" in h.get("component", "").lower())
+    snare_count = sum(1 for h in hits if "snare" in h.get("component", "").lower())
+    _kick_count = sum(1 for h in hits if "kick" in h.get("component", "").lower())
+    hihat_count = sum(1 for h in hits if "hat" in h.get("component", "").lower())
+    ride_count = sum(1 for h in hits if "ride" in h.get("component", "").lower())
+
     # Ghost density (relative to snare hits)
     if snare_count > 0:
-        result['ghost_density'] = ghost_count / (ghost_count + snare_count)
-    
+        result["ghost_density"] = ghost_count / (ghost_count + snare_count)
+
     # Backbeat ratio (snares on beats 2 and 4)
     backbeat_snares = 0
     total_snares = 0
     for h in hits:
-        if 'snare' in h.get('component', '').lower():
+        if "snare" in h.get("component", "").lower():
             total_snares += 1
-            time = h.get('time', 0)
+            time = h.get("time", 0)
             beat_pos = (time / beat_duration) % 4
             if 1.8 <= beat_pos <= 2.2 or 3.8 <= beat_pos <= 4.2 or beat_pos <= 0.2:
                 # On beats 2 or 4 (with tolerance)
                 if 1.8 <= beat_pos <= 2.2 or 3.8 <= beat_pos or beat_pos <= 0.2:
                     backbeat_snares += 1
-    
+
     if total_snares > 0:
-        result['backbeat_ratio'] = backbeat_snares / total_snares
-    
+        result["backbeat_ratio"] = backbeat_snares / total_snares
+
     # Kick syncopation (kicks NOT on downbeat)
     syncopated_kicks = 0
     total_kicks = 0
     for h in hits:
-        if 'kick' in h.get('component', '').lower():
+        if "kick" in h.get("component", "").lower():
             total_kicks += 1
-            time = h.get('time', 0)
+            time = h.get("time", 0)
             beat_pos = (time / beat_duration) % 1
             if beat_pos > 0.15:  # Not on downbeat
                 syncopated_kicks += 1
-    
+
     if total_kicks > 0:
-        result['kick_syncopation'] = syncopated_kicks / total_kicks
-    
+        result["kick_syncopation"] = syncopated_kicks / total_kicks
+
     # Average NPS
-    result['avg_nps'] = len(hits) / total_time
-    
+    result["avg_nps"] = len(hits) / total_time
+
     # Ride vs hi-hat
     cymbal_total = hihat_count + ride_count
     if cymbal_total > 0:
-        result['ride_vs_hihat'] = ride_count / cymbal_total
-    
+        result["ride_vs_hihat"] = ride_count / cymbal_total
+
     return result
 
 
@@ -478,38 +475,42 @@ def _analyze_hits_for_genre(
 # GENRE-AWARE TRANSITION MATRIX
 # =============================================================================
 
+
 class GenreAwareTransitionMatrix(TransitionMatrix):
     """
     Transition matrix modified for a specific genre.
-    
+
     Applies genre-specific modifiers to the base transition probabilities,
     creating more stylistically appropriate sequences.
     """
-    
+
     def __init__(self, genre: Genre = Genre.UNKNOWN):
         super().__init__()
         self.genre = genre
         self.profile = GENRE_PROFILES.get(genre, GENRE_PROFILES[Genre.UNKNOWN])
-        
+
         # Apply genre modifiers
         self._apply_genre_modifiers()
-    
+
     def _apply_genre_modifiers(self):
         """Apply genre-specific transition modifiers."""
-        for (from_state, to_state), modifier in self.profile.transition_modifiers.items():
+        for (
+            from_state,
+            to_state,
+        ), modifier in self.profile.transition_modifiers.items():
             self.base_transitions[from_state.value, to_state.value] += modifier
-        
+
         # Renormalize rows
         row_sums = self.base_transitions.sum(axis=1, keepdims=True)
         self.base_transitions = self.base_transitions / (row_sums + 1e-10)
-        
+
         # Adjust IOI limits based on genre density
         density_factor = self.profile.typical_nps / 8.0  # Relative to default
         if density_factor > 1.0:
             # Higher density genre = allow faster hits
             for state in self.min_ioi:
                 self.min_ioi[state] /= density_factor
-    
+
     def get_transition_probs(
         self,
         beat_position: int,
@@ -521,25 +522,24 @@ class GenreAwareTransitionMatrix(TransitionMatrix):
         probs = super().get_transition_probs(
             beat_position, time_since_last, bpm, adaptive_config
         )
-        
+
         # Additional genre-specific beat modifiers
         if self.genre == Genre.ELECTRONIC:
             # Electronic: Boost kick on every beat
             if beat_position in [0, 1, 2, 3]:
                 probs[:, DrumState.KICK.value] *= 1.2
-        
+
         elif self.genre == Genre.JAZZ:
             # Jazz: Boost ghost notes before backbeat
             if beat_position in [0, 2]:  # Before 2 and 4
                 probs[:, DrumState.GHOST.value] *= 1.3
-        
+
         elif self.genre == Genre.METAL:
             # Metal: Allow kick → kick transitions (double bass)
             probs[DrumState.KICK.value, DrumState.KICK.value] = max(
-                probs[DrumState.KICK.value, DrumState.KICK.value],
-                0.4
+                probs[DrumState.KICK.value, DrumState.KICK.value], 0.4
             )
-        
+
         # Renormalize
         row_sums = probs.sum(axis=1, keepdims=True)
         return probs / (row_sums + 1e-10)
@@ -549,15 +549,16 @@ class GenreAwareTransitionMatrix(TransitionMatrix):
 # GENRE-AWARE DECODER
 # =============================================================================
 
+
 class GenreAwareDecoder:
     """
     Decoder that automatically detects genre and applies
     genre-specific transition probabilities.
-    
+
     This is the key innovation for "human-quality" charting:
     understanding musical CONTEXT, not just raw events.
     """
-    
+
     def __init__(
         self,
         bpm: float = 120.0,
@@ -568,14 +569,14 @@ class GenreAwareDecoder:
         self.bpm = bpm
         self.time_signature = time_signature
         self.swing_ratio = swing_ratio
-        
+
         # If genre provided, use it; otherwise will auto-detect
         self.genre = genre
         self.genre_confidence = 1.0 if genre else 0.0
-        
+
         self.beat_duration = 60.0 / max(bpm, 1.0)
         self.measure_duration = self.beat_duration * time_signature[0]
-    
+
     def decode(
         self,
         events: List[Dict],
@@ -584,120 +585,125 @@ class GenreAwareDecoder:
     ) -> Tuple[List[DecodedEvent], Dict]:
         """
         Decode events with genre awareness.
-        
+
         Args:
             events: Classified hits
             offset: Beat offset
             auto_detect_genre: Whether to auto-detect genre
-            
+
         Returns:
             Tuple of (decoded_events, metadata)
         """
         if not events:
             return [], {"genre": Genre.UNKNOWN, "confidence": 0.0}
-        
+
         # Auto-detect genre if needed
         if auto_detect_genre and self.genre is None:
             self.genre, self.genre_confidence = detect_genre(
                 events, self.bpm, self.swing_ratio
             )
-        
+
         # Create genre-aware transition matrix
         transitions = GenreAwareTransitionMatrix(self.genre or Genre.UNKNOWN)
-        
+
         # Perform Viterbi decoding with genre-aware transitions
-        events = sorted(events, key=lambda e: e.get('time', 0))
+        events = sorted(events, key=lambda e: e.get("time", 0))
         n_events = len(events)
         n_states = len(DrumState)
-        
+
         viterbi = np.zeros((n_events, n_states), dtype=np.float64)
         backpointer = np.zeros((n_events, n_states), dtype=np.int32)
-        
+
         # Initialize
         first_event = events[0]
         emission_probs = self._get_emission_probs(first_event)
         viterbi[0] = np.log(emission_probs + 1e-10)
-        
+
         # Forward pass
-        last_time = first_event.get('time', 0)
+        last_time = first_event.get("time", 0)
         for t in range(1, n_events):
             event = events[t]
-            current_time = event.get('time', 0)
+            current_time = event.get("time", 0)
             time_delta_ms = (current_time - last_time) * 1000
-            
+
             beat_idx = self._get_beat_position(current_time, offset)
-            trans_probs = transitions.get_transition_probs(beat_idx, time_delta_ms, self.bpm)
+            trans_probs = transitions.get_transition_probs(
+                beat_idx, time_delta_ms, self.bpm
+            )
             emission_probs = self._get_emission_probs(event)
-            
+
             for s in range(n_states):
-                scores = viterbi[t-1] + np.log(trans_probs[:, s] + 1e-10)
+                scores = viterbi[t - 1] + np.log(trans_probs[:, s] + 1e-10)
                 best_prev = np.argmax(scores)
                 viterbi[t, s] = scores[best_prev] + np.log(emission_probs[s] + 1e-10)
                 backpointer[t, s] = best_prev
-            
+
             last_time = current_time
-        
+
         # Backtrack
         best_path = np.zeros(n_events, dtype=np.int32)
         best_path[-1] = np.argmax(viterbi[-1])
-        
+
         for t in range(n_events - 2, -1, -1):
             best_path[t] = backpointer[t + 1, best_path[t + 1]]
-        
+
         # Build decoded events
         decoded = []
         for t, event in enumerate(events):
             state = DrumState(best_path[t])
-            current_time = event.get('time', 0)
+            current_time = event.get("time", 0)
             beat_idx = self._get_beat_position(current_time, offset)
-            beat_frac = ((current_time % self.beat_duration) / self.beat_duration)
-            
-            decoded.append(DecodedEvent(
-                time=current_time,
-                state=state,
-                component=event.get('component', ''),
-                confidence=event.get('confidence', 0.0),
-                viterbi_prob=float(np.exp(viterbi[t, best_path[t]])),
-                beat_position=beat_idx + beat_frac,
-                is_backbeat=beat_idx in [1, 3] and beat_frac < 0.1,
-                transition_from=DrumState(best_path[t-1]) if t > 0 else None,
-            ))
-        
+            beat_frac = (current_time % self.beat_duration) / self.beat_duration
+
+            decoded.append(
+                DecodedEvent(
+                    time=current_time,
+                    state=state,
+                    component=event.get("component", ""),
+                    confidence=event.get("confidence", 0.0),
+                    viterbi_prob=float(np.exp(viterbi[t, best_path[t]])),
+                    beat_position=beat_idx + beat_frac,
+                    is_backbeat=beat_idx in [1, 3] and beat_frac < 0.1,
+                    transition_from=DrumState(best_path[t - 1]) if t > 0 else None,
+                )
+            )
+
         metadata = {
             "genre": self.genre,
             "genre_confidence": self.genre_confidence,
-            "profile": GENRE_PROFILES.get(self.genre, GENRE_PROFILES[Genre.UNKNOWN]).name,
+            "profile": GENRE_PROFILES.get(
+                self.genre, GENRE_PROFILES[Genre.UNKNOWN]
+            ).name,
         }
-        
+
         return decoded, metadata
-    
+
     def _get_beat_position(self, time: float, offset: float) -> int:
         """Get beat position for a given time."""
         adjusted_time = max(0, time - offset)
         position_in_measure = adjusted_time % self.measure_duration
         return min(
-            int(position_in_measure / self.beat_duration),
-            self.time_signature[0] - 1
+            int(position_in_measure / self.beat_duration), self.time_signature[0] - 1
         )
-    
+
     def _get_emission_probs(self, event: Dict) -> np.ndarray:
         """Get emission probabilities for an event."""
         n_states = len(DrumState)
         probs = np.ones(n_states) * 0.01  # Small floor probability
-        
-        component = event.get('component', '')
-        confidence = event.get('confidence', 0.5)
-        
+
+        component = event.get("component", "")
+        confidence = event.get("confidence", 0.5)
+
         # Map component to state
         state = DrumState.from_component(component)
         probs[state.value] = confidence
-        
+
         # Add small probability mass to related states
         if state == DrumState.SNARE:
             probs[DrumState.GHOST.value] = 0.1 * confidence
         elif state == DrumState.GHOST:
             probs[DrumState.SNARE.value] = 0.1 * confidence
-        
+
         # Normalize
         probs = probs / probs.sum()
         return probs
@@ -706,6 +712,7 @@ class GenreAwareDecoder:
 # =============================================================================
 # INTEGRATION FUNCTION
 # =============================================================================
+
 
 def apply_genre_aware_decoding(
     classified_hits: List[Dict],
@@ -717,9 +724,9 @@ def apply_genre_aware_decoding(
 ) -> List[Dict]:
     """
     Apply genre-aware structured decoding to classified hits.
-    
+
     This is the main entry point for genre-aware processing.
-    
+
     Args:
         classified_hits: List of classified drum hits
         bpm: Song tempo
@@ -727,7 +734,7 @@ def apply_genre_aware_decoding(
         time_signature: Time signature
         swing_ratio: Detected swing ratio
         genre: Optional forced genre (None = auto-detect)
-        
+
     Returns:
         List of refined hits with genre-aware classification
     """
@@ -737,32 +744,37 @@ def apply_genre_aware_decoding(
         genre=genre,
         swing_ratio=swing_ratio,
     )
-    
+
     decoded, metadata = decoder.decode(
         classified_hits,
         offset=offset,
         auto_detect_genre=(genre is None),
     )
-    
+
     # Convert back to hit dictionaries
     refined_hits = []
-    for event, original in zip(decoded, sorted(classified_hits, key=lambda h: h.get('time', 0))):
+    for event, original in zip(
+        decoded, sorted(classified_hits, key=lambda h: h.get("time", 0))
+    ):
         refined = original.copy()
-        
+
         # Update with decoded state if different
         decoded_component = event.state.to_component_prefix()
-        if decoded_component and decoded_component != refined.get('component', '').lower():
-            refined['original_component'] = refined.get('component', '')
-            refined['component'] = decoded_component
-            refined['state_refined'] = True
-        
+        if (
+            decoded_component
+            and decoded_component != refined.get("component", "").lower()
+        ):
+            refined["original_component"] = refined.get("component", "")
+            refined["component"] = decoded_component
+            refined["state_refined"] = True
+
         # Add genre metadata
-        refined['genre'] = metadata['genre'].value
-        refined['genre_confidence'] = metadata['genre_confidence']
-        refined['viterbi_prob'] = event.viterbi_prob
-        refined['beat_position'] = event.beat_position
-        refined['is_backbeat'] = event.is_backbeat
-        
+        refined["genre"] = metadata["genre"].value
+        refined["genre_confidence"] = metadata["genre_confidence"]
+        refined["viterbi_prob"] = event.viterbi_prob
+        refined["beat_position"] = event.beat_position
+        refined["is_backbeat"] = event.is_backbeat
+
         refined_hits.append(refined)
-    
+
     return refined_hits

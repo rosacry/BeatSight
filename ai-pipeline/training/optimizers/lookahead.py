@@ -57,9 +57,7 @@ from __future__ import annotations
 
 import torch
 from torch.optim import Optimizer
-from typing import Any, Callable, Dict, Iterable, List, Optional, Union
-from collections import defaultdict
-import copy
+from typing import Any, Callable, Dict, List, Optional
 
 
 class Lookahead(Optimizer):

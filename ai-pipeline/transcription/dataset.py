@@ -14,7 +14,7 @@ MODEL_CATALOG = {
             "ride",
             "tom_high",
             "tom_mid",
-            "tom_low"
-        ]
+            "tom_low",
+        ],
     }
 }

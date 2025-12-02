@@ -8,7 +8,7 @@ import json
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Set, Tuple
+from typing import Dict, List, Mapping, MutableMapping, Optional, Sequence, Set, Tuple
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _DEFAULT_MANIFEST = Path("ai-pipeline/training/data/manifests/prod_combined_events.jsonl")

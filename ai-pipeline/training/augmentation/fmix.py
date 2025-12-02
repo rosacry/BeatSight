@@ -26,11 +26,9 @@ Usage:
     loss = fmix_criterion(criterion, model(x_mixed), y, lam)
 """
 
-import math
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from typing import Optional, Tuple, Union
 
 

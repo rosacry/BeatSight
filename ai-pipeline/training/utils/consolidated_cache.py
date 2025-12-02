@@ -28,13 +28,12 @@ from __future__ import annotations
 
 import json
 import mmap
-import os
 import struct
 import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 import torch
@@ -389,7 +388,7 @@ class ConsolidatedCacheReader:
                 if not index_json_path.exists():
                     raise FileNotFoundError(f"Index not found: {index_json_path}")
                 
-                safe_print(f"[CACHE] Loading JSON index (this may take a while for large caches)...")
+                safe_print("[CACHE] Loading JSON index (this may take a while for large caches)...")
                 with open(index_json_path) as f:
                     self.index = json.load(f)
                 safe_print(f"[CACHE] Loaded JSON index: {len(self.index):,} entries")
@@ -1021,7 +1020,7 @@ def convert_individual_to_consolidated_inplace(
     if resume:
         index_path = split_output / INDEX_FILENAME
         if index_path.exists():
-            print(f"[CACHE] RESUME MODE: Loading existing index...")
+            print("[CACHE] RESUME MODE: Loading existing index...")
             with open(index_path) as f:
                 existing_index = json.load(f)
             print(f"[CACHE] Found {len(existing_index):,} already-converted samples")
@@ -1058,7 +1057,7 @@ def convert_individual_to_consolidated_inplace(
     print(f"[CACHE] Estimated remaining size: {total_size_gb:.1f} GB")
     print(f"[CACHE] Peak storage overhead: ~{peak_overhead_gb:.1f} GB (with {num_workers} workers)")
     if delete_source:
-        print(f"[CACHE] IN-PLACE MODE: Source files will be deleted after each shard")
+        print("[CACHE] IN-PLACE MODE: Source files will be deleted after each shard")
     
     # Group into shard batches
     batches: List[List[Path]] = []
@@ -1153,7 +1152,7 @@ def convert_individual_to_consolidated_inplace(
     with open(manifest_path, "w") as f:
         json.dump(manifest, f, indent=2)
     
-    safe_print(f"[CACHE] ✅ Conversion complete!")
+    safe_print("[CACHE] ✅ Conversion complete!")
     print(f"[CACHE]    Samples: {len(all_index_entries):,}")
     print(f"[CACHE]    Shards: {len(shard_info)}")
     print(f"[CACHE]    Space freed: {total_freed_gb:.1f} GB")
@@ -1255,7 +1254,7 @@ Examples:
             print("\n" + "="*60)
             safe_print("⚠️  IN-PLACE CONVERSION MODE")
             print("="*60)
-            print(f"This will DELETE source .pt files after converting each shard.")
+            print("This will DELETE source .pt files after converting each shard.")
             print(f"Peak storage overhead: ~{args.workers * SAMPLES_PER_SHARD * 34 / 1024:.1f} MB")
             print()
             confirm = input("Are you sure you want to proceed? [y/N]: ")
@@ -1360,7 +1359,7 @@ Examples:
         print()
         if corrupt_shards or missing_shards:
             print(f"{'='*60}")
-            print(f"VALIDATION FAILED")
+            print("VALIDATION FAILED")
             print(f"{'='*60}")
             print(f"  Missing shards: {len(missing_shards)}")
             print(f"  Corrupt shards: {len(corrupt_shards)}")
@@ -1402,7 +1401,7 @@ Examples:
                 return
         
         print(f"Loading JSON index from {index_json}...")
-        print(f"  (This may take a while for large indices)")
+        print("  (This may take a while for large indices)")
         
         import time
         start = time.perf_counter()
@@ -1411,7 +1410,7 @@ Examples:
         json_load_time = time.perf_counter() - start
         print(f"  Loaded {len(index_data):,} entries in {json_load_time:.1f}s")
         
-        print(f"Converting to binary format (SORTED for memory-efficient binary search)...")
+        print("Converting to binary format (SORTED for memory-efficient binary search)...")
         start = time.perf_counter()
         
         # Pre-allocate arrays
@@ -1453,14 +1452,14 @@ Examples:
         json_size = index_json.stat().st_size / 1e9
         npz_size = index_npz.stat().st_size / 1e9
         
-        print(f"\n✅ Binary index created (SORTED)!")
+        print("\n✅ Binary index created (SORTED)!")
         print(f"  JSON size: {json_size:.2f} GB")
         print(f"  Binary size: {npz_size:.2f} GB ({100*npz_size/json_size:.0f}% of original)")
         print(f"  JSON load time: {json_load_time:.1f}s")
         print(f"  Binary load time: ~{json_load_time/10:.1f}s (estimated 10x faster)")
-        print(f"\n🚀 Memory-Efficient Mode: Uses binary search (O(log n)) instead of hash table.")
-        print(f"   This saves ~2GB RAM PER WORKER, critical for 10-worker configs!")
-        print(f"\nThe binary index will be used automatically on next training run.")
+        print("\n🚀 Memory-Efficient Mode: Uses binary search (O(log n)) instead of hash table.")
+        print("   This saves ~2GB RAM PER WORKER, critical for 10-worker configs!")
+        print("\nThe binary index will be used automatically on next training run.")
 
 
 if __name__ == "__main__":

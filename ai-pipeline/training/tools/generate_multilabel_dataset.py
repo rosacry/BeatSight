@@ -37,13 +37,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import sys
 import uuid
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 
 try:
@@ -272,19 +270,19 @@ class DatasetStatistics:
         print("MULTI-LABEL DATASET STATISTICS")
         print("="*70)
         
-        print(f"\n📊 OVERALL:")
+        print("\n📊 OVERALL:")
         print(f"   Total events:        {self.total_events:,}")
         print(f"   Single-label:        {self.single_label_events:,} ({100*self.single_label_events/max(1,self.total_events):.1f}%)")
         print(f"   Multi-label:         {self.multi_label_events:,} ({100*self.multi_label_events/max(1,self.total_events):.1f}%)")
         
-        print(f"\n📁 BY SOURCE:")
+        print("\n📁 BY SOURCE:")
         for source, counts in sorted(self.by_source.items()):
             total = counts["total"]
             multi = counts["multi"]
             pct = 100 * multi / max(1, total)
             print(f"   {source:30s}: {total:>8,} total, {multi:>6,} multi-label ({pct:.1f}%)")
         
-        print(f"\n🎯 SIMULTANEOUS HIT DISTRIBUTION:")
+        print("\n🎯 SIMULTANEOUS HIT DISTRIBUTION:")
         for count in sorted(self.simultaneous_count_dist.keys()):
             num = self.simultaneous_count_dist[count]
             pct = 100 * num / max(1, self.total_events)
@@ -297,14 +295,14 @@ class DatasetStatistics:
             pct = 100 * count / max(1, self.multi_label_events)
             print(f"   {pattern:40s}: {count:>6,} ({pct:>5.1f}% of multi-label)")
         
-        print(f"\n🔊 COMPONENT FREQUENCIES:")
+        print("\n🔊 COMPONENT FREQUENCIES:")
         sorted_comps = sorted(self.component_counts.items(), key=lambda x: -x[1])
         for comp, count in sorted_comps[:15]:
             pct = 100 * count / max(1, self.total_events)
             print(f"   {comp:25s}: {count:>8,} ({pct:>5.1f}%)")
         
         # Most common co-occurrences
-        print(f"\n🤝 TOP CO-OCCURRENCES (which drums play together):")
+        print("\n🤝 TOP CO-OCCURRENCES (which drums play together):")
         cooc_pairs = []
         seen = set()
         for d1, partners in self.cooccurrence.items():
@@ -696,13 +694,13 @@ Examples:
     print("\n🎉 Done!")
     
     if total_stats.multi_label_events > 0:
-        print(f"\n💡 Next steps:")
-        print(f"   1. Your V5 training should complete first")
-        print(f"   2. Then run multi-label training with this dataset:")
-        print(f"      bash ai-pipeline/training/tools/post_export_commands.sh")
-        print(f"      Select: 19c (Multi-Label Finetune)")
-        print(f"")
-        print(f"   The multi-label model will detect simultaneous drums!")
+        print("\n💡 Next steps:")
+        print("   1. Your V5 training should complete first")
+        print("   2. Then run multi-label training with this dataset:")
+        print("      bash ai-pipeline/training/tools/post_export_commands.sh")
+        print("      Select: 19c (Multi-Label Finetune)")
+        print("")
+        print("   The multi-label model will detect simultaneous drums!")
 
 
 if __name__ == "__main__":

@@ -67,6 +67,7 @@ def client(mock_user, mock_db, mock_rbac):
 # POST /api/map-edit-proposals - Create Proposal Tests
 # -------------------------------------------------------------------
 
+
 class TestCreateProposal:
     """Tests for creating a map edit proposal."""
 
@@ -128,7 +129,9 @@ class TestCreateProposal:
 
         app.dependency_overrides.clear()
 
-    def test_create_proposal_missing_required_fields(self, mock_user, mock_db, mock_rbac):
+    def test_create_proposal_missing_required_fields(
+        self, mock_user, mock_db, mock_rbac
+    ):
         """Should return 422 when required fields are missing."""
         app.dependency_overrides[get_current_user] = lambda: mock_user
         app.dependency_overrides[get_db_session] = lambda: mock_db
@@ -157,6 +160,7 @@ class TestCreateProposal:
         # Don't override get_current_user to simulate unauthenticated
         async def raise_unauthorized():
             from fastapi import HTTPException
+
             raise HTTPException(status_code=401, detail="Not authenticated")
 
         app.dependency_overrides[get_current_user] = raise_unauthorized
@@ -184,6 +188,7 @@ class TestCreateProposal:
 # -------------------------------------------------------------------
 # GET /api/map-edit-proposals/mine - List My Proposals Tests
 # -------------------------------------------------------------------
+
 
 class TestListMyProposals:
     """Tests for listing current user's proposals."""
@@ -373,6 +378,7 @@ class TestListMyProposals:
 # GET /api/map-edit-proposals/{proposal_id} - Get Proposal Tests
 # -------------------------------------------------------------------
 
+
 class TestGetProposal:
     """Tests for getting a specific proposal."""
 
@@ -514,6 +520,7 @@ class TestGetProposal:
 # -------------------------------------------------------------------
 # DELETE /api/map-edit-proposals/{proposal_id} - Withdraw Proposal Tests
 # -------------------------------------------------------------------
+
 
 class TestWithdrawProposal:
     """Tests for withdrawing a proposal."""
@@ -689,6 +696,7 @@ class TestWithdrawProposal:
 # -------------------------------------------------------------------
 # Edit Status Enum Tests
 # -------------------------------------------------------------------
+
 
 class TestEditStatusEnum:
     """Tests for EditStatus enum values."""

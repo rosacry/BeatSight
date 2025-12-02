@@ -3,13 +3,16 @@ Comprehensive tests for WebSocket endpoint and ConnectionManager methods.
 Targets uncovered lines in app/api/routes/websocket.py.
 """
 
-import asyncio
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from fastapi.websockets import WebSocket, WebSocketState, WebSocketDisconnect
+from unittest.mock import AsyncMock, patch
+from fastapi.websockets import WebSocket, WebSocketState
 from fastapi.testclient import TestClient
 
-from app.api.routes.websocket import ConnectionManager, listen_to_redis, publish_job_update
+from app.api.routes.websocket import (
+    ConnectionManager,
+    listen_to_redis,
+    publish_job_update,
+)
 
 
 class TestConnectionManagerSendToUser:
@@ -75,11 +78,11 @@ class TestConnectionManagerSendToUser:
         ws1 = AsyncMock(spec=WebSocket)
         ws1.client_state = WebSocketState.CONNECTED
         ws1.send_json = AsyncMock()
-        
+
         ws2 = AsyncMock(spec=WebSocket)
         ws2.client_state = WebSocketState.CONNECTED
         ws2.send_json = AsyncMock()
-        
+
         user_id = "user-123"
         self.manager.user_connections[user_id] = [ws1, ws2]
 
@@ -117,11 +120,11 @@ class TestConnectionManagerBroadcastJobUpdate:
         ws1 = AsyncMock(spec=WebSocket)
         ws1.client_state = WebSocketState.CONNECTED
         ws1.send_json = AsyncMock()
-        
+
         ws2 = AsyncMock(spec=WebSocket)
         ws2.client_state = WebSocketState.CONNECTED
         ws2.send_json = AsyncMock()
-        
+
         job_id = "job-123"
         self.manager.job_subscriptions[job_id] = [ws1, ws2]
 
@@ -174,9 +177,8 @@ class TestListenToRedis:
     async def test_listen_to_redis_constructs_correct_channel(self):
         """Test that correct channel is subscribed to."""
         # Simply test that the function exists and has correct signature
-        from app.api.routes.websocket import listen_to_redis
         import inspect
-        
+
         sig = inspect.signature(listen_to_redis)
         params = list(sig.parameters.keys())
         assert "redis" in params
@@ -191,7 +193,7 @@ class TestPublishJobUpdateExtended:
     async def test_publish_job_update_constructs_correct_message(self):
         """Test that message is constructed correctly."""
         import json
-        
+
         redis = AsyncMock()
         redis.publish = AsyncMock()
 
@@ -212,7 +214,7 @@ class TestPublishJobUpdateExtended:
             redis.publish.assert_called_once()
             call_args = redis.publish.call_args
             assert call_args[0][0] == "user:user-123:jobs"
-            
+
             published_data = json.loads(call_args[0][1])
             assert published_data["type"] == "job_progress"
             assert published_data["job_id"] == "job-456"
@@ -250,9 +252,9 @@ class TestWebSocketEndpoint:
     def test_websocket_endpoint_requires_auth(self):
         """Test that websocket requires valid user authentication."""
         from app.main import app
-        
+
         client = TestClient(app)
-        
+
         # Without auth, should fail
         with pytest.raises(Exception):
             with client.websocket_connect("/api/ws/jobs"):
@@ -265,14 +267,14 @@ class TestWebSocketEndpoint:
         ws = AsyncMock(spec=WebSocket)
         ws.client_state = WebSocketState.CONNECTED
         ws.send_json = AsyncMock()
-        
+
         user_id = "user-123"
         await manager.connect(ws, user_id)
-        
+
         # Simulate subscribe
         job_id = "job-456"
         manager.subscribe_to_job(ws, job_id)
-        
+
         assert ws in manager.job_subscriptions[job_id]
 
     @pytest.mark.asyncio
@@ -281,16 +283,16 @@ class TestWebSocketEndpoint:
         manager = ConnectionManager()
         ws = AsyncMock(spec=WebSocket)
         ws.client_state = WebSocketState.CONNECTED
-        
+
         user_id = "user-123"
         job_id = "job-456"
-        
+
         await manager.connect(ws, user_id)
         manager.subscribe_to_job(ws, job_id)
-        
+
         # Unsubscribe
         manager.unsubscribe_from_job(ws, job_id)
-        
+
         assert ws not in manager.job_subscriptions.get(job_id, [])
 
     @pytest.mark.asyncio
@@ -298,17 +300,17 @@ class TestWebSocketEndpoint:
         """Test that disconnect cleans up all state."""
         manager = ConnectionManager()
         ws = AsyncMock(spec=WebSocket)
-        
+
         user_id = "user-123"
         job_id = "job-456"
-        
+
         # Set up connection and subscription
         await manager.connect(ws, user_id)
         manager.subscribe_to_job(ws, job_id)
-        
+
         # Disconnect
         manager.disconnect(ws, user_id)
-        
+
         assert user_id not in manager.user_connections
         assert job_id not in manager.job_subscriptions
 
@@ -325,10 +327,10 @@ class TestWebSocketMessageTypes:
         """Test that subscribe message creates job subscription."""
         ws = AsyncMock(spec=WebSocket)
         ws.send_json = AsyncMock()
-        
+
         job_id = "job-test"
         self.manager.subscribe_to_job(ws, job_id)
-        
+
         assert job_id in self.manager.job_subscriptions
         assert ws in self.manager.job_subscriptions[job_id]
 
@@ -337,10 +339,10 @@ class TestWebSocketMessageTypes:
         """Test that unsubscribe removes from job subscription."""
         ws = AsyncMock(spec=WebSocket)
         job_id = "job-test"
-        
+
         self.manager.job_subscriptions[job_id] = [ws]
         self.manager.unsubscribe_from_job(ws, job_id)
-        
+
         assert ws not in self.manager.job_subscriptions.get(job_id, [])
 
     @pytest.mark.asyncio
@@ -350,7 +352,7 @@ class TestWebSocketMessageTypes:
         ws = AsyncMock(spec=WebSocket)
         ws.client_state = WebSocketState.CONNECTED
         ws.send_json = AsyncMock()
-        
+
         # Simulate ping-pong pattern
         await ws.send_json({"type": "pong"})
         ws.send_json.assert_called_with({"type": "pong"})
@@ -367,7 +369,7 @@ class TestWebSocketStateTracking:
     async def test_multiple_users_multiple_connections(self):
         """Test managing many users with multiple connections each."""
         connections = {}
-        
+
         for i in range(3):
             user_id = f"user-{i}"
             connections[user_id] = []
@@ -375,7 +377,7 @@ class TestWebSocketStateTracking:
                 ws = AsyncMock(spec=WebSocket)
                 await self.manager.connect(ws, user_id)
                 connections[user_id].append(ws)
-        
+
         # Verify all connections tracked
         assert len(self.manager.user_connections) == 3
         for user_id, ws_list in connections.items():
@@ -385,14 +387,14 @@ class TestWebSocketStateTracking:
     async def test_job_subscriptions_across_users(self):
         """Test that multiple users can subscribe to same job."""
         job_id = "shared-job"
-        
+
         ws1 = AsyncMock(spec=WebSocket)
         ws2 = AsyncMock(spec=WebSocket)
-        
+
         await self.manager.connect(ws1, "user-1")
         await self.manager.connect(ws2, "user-2")
-        
+
         self.manager.subscribe_to_job(ws1, job_id)
         self.manager.subscribe_to_job(ws2, job_id)
-        
+
         assert len(self.manager.job_subscriptions[job_id]) == 2

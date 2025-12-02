@@ -1,8 +1,9 @@
-from pipeline.beatmap_generator import assign_lanes
+from pipeline.beatmap_generator import assign_lanes_static
 
 
 def _lane_for(component: str) -> int:
-    hits = assign_lanes([
+    """Get lane for a single component using static layout."""
+    hits = assign_lanes_static([
         {
             "component": component,
             "time": 0.0,
@@ -48,19 +49,21 @@ def test_auxiliary_percussion_prefers_far_left_lane():
 
 
 def test_cymbal_clusters_alternate_between_edges():
-    hits = assign_lanes([
+    """Static layout should alternate cymbals between edge lanes."""
+    hits = assign_lanes_static([
         {"component": "crash", "time": 0.0},
         {"component": "ride", "time": 0.2},
         {"component": "crash", "time": 0.4},
     ])
 
     assert [hit["lane"] for hit in hits] == [6, 0, 6]
-    stats = getattr(assign_lanes, "_lane_stats", {})
+    stats = getattr(assign_lanes_static, "_lane_stats", {})
     assert stats.get("cymbal_switches") == 2
 
 
 def test_cymbals_reset_after_spacing_gap():
-    hits = assign_lanes([
+    """Static layout: cymbals reset to default lane after time gap."""
+    hits = assign_lanes_static([
         {"component": "crash", "time": 0.0},
         {"component": "ride", "time": 1.0},
     ])
@@ -69,19 +72,21 @@ def test_cymbals_reset_after_spacing_gap():
 
 
 def test_tom_rolls_alternate_between_inner_pairs():
-    hits = assign_lanes([
+    """Static layout should alternate toms in rolls."""
+    hits = assign_lanes_static([
         {"component": "tom_low", "time": 0.0},
         {"component": "tom_high", "time": 0.18},
         {"component": "tom_low", "time": 0.32},
     ])
 
     assert [hit["lane"] for hit in hits] == [4, 2, 4]
-    stats = getattr(assign_lanes, "_lane_stats", {})
+    stats = getattr(assign_lanes_static, "_lane_stats", {})
     assert stats.get("tom_switches") == 2
 
 
 def test_tom_spacing_resets_to_default_lane():
-    hits = assign_lanes([
+    """Static layout: toms reset to default lane after time gap."""
+    hits = assign_lanes_static([
         {"component": "tom_high", "time": 0.0},
         {"component": "tom_mid", "time": 1.0},
     ])

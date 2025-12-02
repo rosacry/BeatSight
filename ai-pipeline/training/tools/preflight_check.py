@@ -117,7 +117,7 @@ import sys
 import tempfile
 import traceback
 from pathlib import Path
-from typing import List, Tuple, Dict, Any, Optional
+from typing import List, Tuple
 
 # Colors for output
 class Colors:
@@ -236,7 +236,7 @@ def check_critical_imports() -> Tuple[int, int]:
             version = getattr(mod, '__version__', 'unknown')
             success(f"{name}: {version}")
             passed += 1
-        except ImportError as e:
+        except ImportError:
             error(f"Missing critical dependency: {name} ({module})")
             failed += 1
     
@@ -330,7 +330,7 @@ def check_model_instantiation() -> Tuple[int, int]:
     
     try:
         import torch
-        from training.models.cnn_v5 import DrumClassifierCNNv5, cnn_v5_small, cnn_v5_medium, cnn_v5_large
+        from training.models.cnn_v5 import cnn_v5_small, cnn_v5_medium, cnn_v5_large
         
         # Test factory functions
         factories = [
@@ -426,7 +426,6 @@ def check_augmentation_pipeline() -> Tuple[int, int]:
     
     try:
         import torch
-        import numpy as np
         
         # Test SpecAugment
         subheader("Testing SpecAugment")
@@ -445,7 +444,7 @@ def check_augmentation_pipeline() -> Tuple[int, int]:
         # Test Mixup/CutMix - returns AugmentationResult dataclass
         subheader("Testing Mixup/CutMix")
         try:
-            from training.augmentation.mixup import MixupCutmix, AugmentationResult
+            from training.augmentation.mixup import MixupCutmix
             mixup = MixupCutmix(mixup_alpha=0.4, cutmix_alpha=1.0, prob=1.0)
             x = torch.randn(4, 1, 128, 128)
             y = torch.tensor([0, 1, 2, 3])
@@ -566,7 +565,7 @@ def check_loss_functions() -> Tuple[int, int]:
             # Try alternative signature
             try:
                 ds_loss = DeepSupervisionLoss()
-                success(f"Deep Supervision Loss: OK (default init)")
+                success("Deep Supervision Loss: OK (default init)")
                 passed += 1
             except Exception as e2:
                 error(f"Deep Supervision Loss: {e2}")
@@ -728,9 +727,9 @@ def check_gpu_and_memory() -> Tuple[int, int]:
             info(f"Estimated for batch=384: ~{estimated_384_batch:.1f} GB")
             
             if estimated_384_batch > 40:
-                warning(f"Batch 384 may need >40GB - A100 40GB should work but monitor closely")
+                warning("Batch 384 may need >40GB - A100 40GB should work but monitor closely")
             else:
-                success(f"Batch 384 should fit in A100 40GB")
+                success("Batch 384 should fit in A100 40GB")
             
             passed += 1
             
@@ -1844,7 +1843,6 @@ def check_warmup_schedule() -> Tuple[int, int]:
     subheader("Warmup Schedule Validation")
     
     try:
-        import torch
         
         # Simulate warmup schedule as used in v5-full
         base_lr = 0.0012
@@ -3129,7 +3127,7 @@ def check_training_script_consistency() -> Tuple[int, int]:
     
     if len(undefined_flags) > 10:
         # Probably a parsing issue
-        info(f"Many flags detected - likely includes non-training flags")
+        info("Many flags detected - likely includes non-training flags")
     elif undefined_flags:
         for flag in list(undefined_flags)[:5]:  # Show first 5
             warning(f"Flag --{flag} used in auto_train.sh but may not exist in train_classifier.py")
@@ -3160,7 +3158,6 @@ def check_a100_40gb_vram_budget() -> Tuple[int, int]:
     subheader("A100 40GB VRAM Budget Validation")
     
     try:
-        import torch
         
         # A100 40GB has exactly 40960 MB = 40 GB
         # With PyTorch overhead, we have ~38-39 GB usable
@@ -3363,7 +3360,7 @@ def check_full_pipeline_simulation() -> Tuple[int, int]:
             total_cost += cost
             info(f"  {step_id} → {mode_name}: ~{hours}hr (${cost:.2f})")
         
-        info(f"  ─────────────────────────────────────")
+        info("  ─────────────────────────────────────")
         info(f"  TOTAL: ~{total_hours}hr (${total_cost:.2f})")
     
     return passed, failed
@@ -3618,7 +3615,7 @@ def check_label_audit_completed() -> Tuple[int, int]:
                     warning("  label_issues.json not found - audit may be incomplete")
                 
                 if noise_report.exists():
-                    success(f"  noise_report exists")
+                    success("  noise_report exists")
                     passed += 1
                     
                 break
@@ -3728,7 +3725,7 @@ def check_pipeline_dependencies() -> Tuple[int, int]:
                 status = "⚠ incomplete"
                 status_detail = f" (missing: {', '.join(missing_outputs[:2])})"
                 warning(f"  Step {step}: Has completion marker but missing model files!")
-                info(f"    This may be from a test run. The step will re-run on cloud.")
+                info("    This may be from a test run. The step will re-run on cloud.")
         
         location = "(local)" if is_local else "(cloud)"
         if status == "✓ completed":
@@ -3777,7 +3774,7 @@ def check_a100_40gb_optimal_settings() -> Tuple[int, int]:
     }
     
     info("Target: Lambda Labs 1x A100 40GB SXM4")
-    info(f"  Hourly rate: $1.29/hr")
+    info("  Hourly rate: $1.29/hr")
     info(f"  Optimal batch size: {optimal_settings['batch_size']}")
     info(f"  AMP dtype: {optimal_settings['amp_dtype']}")
     info(f"  Effective batch: {optimal_settings['batch_size'] * optimal_settings['gradient_accumulation']}")
@@ -3915,7 +3912,7 @@ def check_data_upload_readiness() -> Tuple[int, int]:
                     if result.returncode == 0:
                         size_str = result.stdout.split()[0]
                         info(f"  Dataset size: {size_str}")
-                        info(f"  Estimated upload time: ~2-3 hours @ 500 Mbps")
+                        info("  Estimated upload time: ~2-3 hours @ 500 Mbps")
                 except Exception:
                     info("  (Could not calculate exact size)")
                 
@@ -4617,7 +4614,7 @@ Examples:
     results.merge(passed, failed)
     
     if failed == 0:
-        success(f"All critical dependencies available")
+        success("All critical dependencies available")
     
     # =========================================================================
     # 3. Training imports
@@ -4637,7 +4634,7 @@ Examples:
     results.merge(passed, failed)
     
     if failed == 0:
-        success(f"All model variants work correctly")
+        success("All model variants work correctly")
     
     # =========================================================================
     # 5. Augmentation pipeline
@@ -4647,7 +4644,7 @@ Examples:
     results.merge(passed, failed)
     
     if failed == 0:
-        success(f"All augmentation modules work")
+        success("All augmentation modules work")
     
     # =========================================================================
     # 6. Loss functions
@@ -4657,7 +4654,7 @@ Examples:
     results.merge(passed, failed)
     
     if failed == 0:
-        success(f"All loss functions work")
+        success("All loss functions work")
     
     # =========================================================================
     # 7. Optimizer setup
@@ -4667,7 +4664,7 @@ Examples:
     results.merge(passed, failed)
     
     if failed == 0:
-        success(f"All optimizer wrappers work")
+        success("All optimizer wrappers work")
     
     # =========================================================================
     # 8. GPU and memory
@@ -4702,7 +4699,7 @@ Examples:
         results.merge(passed, failed)
         
         if failed == 0:
-            success(f"Dataset files valid")
+            success("Dataset files valid")
         
         # Also check consolidated cache reading
         passed, failed = check_consolidated_cache_reader(dataset_path)
@@ -5095,12 +5092,12 @@ Examples:
         print(f"{Colors.GREEN}  ✓ Safe to proceed with cloud training!{Colors.RESET}")
         print()
         print(f"  {Colors.BOLD}Recommended Training Path:{Colors.RESET}")
-        print(f"    14  → Label Audit (run locally, ~30 min)")
-        print(f"    17a → V5 Warmup (~1.5 hr, $1.94)")
-        print(f"    17d → V5 Full (~22 hr, $28.38)")
-        print(f"    17e → V5 Self-Distill (~22 hr, $28.38)")
-        print(f"    19  → Generate Multi-Label Dataset (run locally)")
-        print(f"    19c → Multi-Label Finetune (~5 hr, $6.45)")
+        print("    14  → Label Audit (run locally, ~30 min)")
+        print("    17a → V5 Warmup (~1.5 hr, $1.94)")
+        print("    17d → V5 Full (~22 hr, $28.38)")
+        print("    17e → V5 Self-Distill (~22 hr, $28.38)")
+        print("    19  → Generate Multi-Label Dataset (run locally)")
+        print("    19c → Multi-Label Finetune (~5 hr, $6.45)")
         print()
         print(f"  {Colors.BOLD}Total Cloud Cost:{Colors.RESET} ~$65 on Lambda A100 40GB @ $1.29/hr")
         print()
@@ -5115,7 +5112,7 @@ Examples:
         print(f"  Time: {elapsed:.1f}s")
         print()
         print(f"{Colors.RED}  ✗ Fix the errors above before running on cloud!{Colors.RESET}")
-        print(f"  Each error could cost $50-100+ in wasted cloud time.")
+        print("  Each error could cost $50-100+ in wasted cloud time.")
         print()
         return 1
 

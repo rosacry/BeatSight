@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from fastapi import status
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -66,6 +65,7 @@ def mock_proposal(mock_verifier_user):
 # -------------------------------------------------------------------
 # GET /api/verifier/proposals - List Proposals Tests
 # -------------------------------------------------------------------
+
 
 class TestListProposals:
     """Tests for listing proposals."""
@@ -174,6 +174,7 @@ class TestListProposals:
 # GET /api/verifier/proposals/{proposal_id} - Get Proposal Tests
 # -------------------------------------------------------------------
 
+
 class TestGetProposal:
     """Tests for getting a specific proposal."""
 
@@ -221,7 +222,9 @@ class TestGetProposal:
 
         app.dependency_overrides.clear()
 
-    def test_get_proposal_with_decision(self, mock_verifier_user, mock_db, mock_proposal):
+    def test_get_proposal_with_decision(
+        self, mock_verifier_user, mock_db, mock_proposal
+    ):
         """Should include decision info when available."""
         # Create decision mock
         decision_verifier = MagicMock(spec=User)
@@ -265,6 +268,7 @@ class TestGetProposal:
 # -------------------------------------------------------------------
 # POST /api/verifier/proposals/{proposal_id}/decision - Create Decision Tests
 # -------------------------------------------------------------------
+
 
 class TestCreateDecision:
     """Tests for creating a verification decision."""
@@ -321,7 +325,9 @@ class TestCreateDecision:
 
         app.dependency_overrides.clear()
 
-    def test_create_decision_needs_changes(self, mock_verifier_user, mock_db, mock_proposal):
+    def test_create_decision_needs_changes(
+        self, mock_verifier_user, mock_db, mock_proposal
+    ):
         """Should request changes on a proposal."""
         mock_result = MagicMock()
         mock_result.scalar.return_value = mock_proposal
@@ -340,7 +346,10 @@ class TestCreateDecision:
 
         response = client.post(
             f"{BASE_URL}/proposals/{mock_proposal.id}/decision",
-            json={"decision": "needs_changes", "notes": "Please fix timing on measure 32"},
+            json={
+                "decision": "needs_changes",
+                "notes": "Please fix timing on measure 32",
+            },
         )
 
         assert response.status_code in [201, 400, 403]
@@ -370,7 +379,9 @@ class TestCreateDecision:
 
         app.dependency_overrides.clear()
 
-    def test_create_decision_already_decided(self, mock_verifier_user, mock_db, mock_proposal):
+    def test_create_decision_already_decided(
+        self, mock_verifier_user, mock_db, mock_proposal
+    ):
         """Should return 400 when proposal already has decision."""
         # Create existing decision
         mock_decision = MagicMock(spec=MapVerificationDecision)
@@ -398,7 +409,9 @@ class TestCreateDecision:
 
         app.dependency_overrides.clear()
 
-    def test_create_decision_not_pending(self, mock_verifier_user, mock_db, mock_proposal):
+    def test_create_decision_not_pending(
+        self, mock_verifier_user, mock_db, mock_proposal
+    ):
         """Should return 400 when proposal is not pending."""
         mock_proposal.status = EditStatus.APPROVED
         mock_proposal.decision = None
@@ -429,6 +442,7 @@ class TestCreateDecision:
 # GET /api/verifier/stats - Verifier Statistics Tests
 # -------------------------------------------------------------------
 
+
 class TestVerifierStats:
     """Tests for verifier statistics endpoint."""
 
@@ -437,10 +451,10 @@ class TestVerifierStats:
         # Mock multiple scalar results
         mock_result = MagicMock()
         mock_result.scalar.side_effect = [
-            15,    # pending count
-            8,     # approved today
-            2,     # rejected today
-            50,    # total reviewed by user
+            15,  # pending count
+            8,  # approved today
+            2,  # rejected today
+            50,  # total reviewed by user
             24.5,  # avg review time hours
         ]
         mock_db.execute = AsyncMock(return_value=mock_result)
@@ -490,10 +504,13 @@ class TestVerifierStats:
 # GET /api/verifier/my-decisions - My Decisions Tests
 # -------------------------------------------------------------------
 
+
 class TestMyDecisions:
     """Tests for user's decision history."""
 
-    def test_list_my_decisions_success(self, mock_verifier_user, mock_db, mock_proposal):
+    def test_list_my_decisions_success(
+        self, mock_verifier_user, mock_db, mock_proposal
+    ):
         """Should return user's verification history."""
         # Add decision to proposal
         mock_decision = MagicMock(spec=MapVerificationDecision)
@@ -604,6 +621,7 @@ class TestMyDecisions:
 # Authorization Tests
 # -------------------------------------------------------------------
 
+
 class TestVerifierAuthorization:
     """Tests for verifier authorization requirements."""
 
@@ -644,6 +662,7 @@ class TestVerifierAuthorization:
 # -------------------------------------------------------------------
 # Input Validation Tests
 # -------------------------------------------------------------------
+
 
 class TestVerifierValidation:
     """Tests for input validation."""

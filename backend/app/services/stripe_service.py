@@ -261,14 +261,12 @@ class StripeService:
     ) -> dict[str, Any]:
         """Handle new subscription creation."""
         result = await self._sync_subscription(db, subscription_data)
-        
+
         # Send confirmation email to user
         if "user_id" in result and "error" not in result:
             try:
                 user_id = UUID(result["user_id"])
-                user_result = await db.execute(
-                    select(User).where(User.id == user_id)
-                )
+                user_result = await db.execute(select(User).where(User.id == user_id))
                 user = user_result.scalar_one_or_none()
                 if user:
                     email_service = get_email_service()
@@ -279,7 +277,7 @@ class StripeService:
                     logger.info(f"Sent subscription confirmation email to {user.email}")
             except Exception as e:
                 logger.warning(f"Failed to send subscription confirmation email: {e}")
-        
+
         return result
 
     async def _handle_subscription_updated(

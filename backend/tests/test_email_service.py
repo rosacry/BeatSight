@@ -4,7 +4,6 @@ Covers token verification, email sending, and template methods.
 """
 
 import uuid
-from datetime import datetime, timedelta, timezone
 from unittest.mock import patch, MagicMock, AsyncMock
 
 import pytest
@@ -24,9 +23,9 @@ class TestEmailServiceInit:
             mock_settings.return_value.frontend_url = "https://test.com"
             mock_settings.return_value.jwt_secret_key = "secret"
             mock_settings.return_value.jwt_algorithm = "HS256"
-            
+
             service = EmailService()
-        
+
         assert service.api_key == "test-key"
         assert service.from_email == "test@example.com"
 
@@ -38,9 +37,9 @@ class TestEmailServiceInit:
             mock_settings.return_value.frontend_url = None
             mock_settings.return_value.jwt_secret_key = "secret"
             mock_settings.return_value.jwt_algorithm = "HS256"
-            
+
             service = EmailService()
-        
+
         assert service.from_email == "noreply@beatsight.io"
 
 
@@ -55,7 +54,7 @@ class TestIsConfigured:
             mock_settings.return_value.frontend_url = None
             mock_settings.return_value.jwt_secret_key = "secret"
             mock_settings.return_value.jwt_algorithm = "HS256"
-            
+
             service = EmailService()
             assert service.is_configured() is True
 
@@ -67,7 +66,7 @@ class TestIsConfigured:
             mock_settings.return_value.frontend_url = None
             mock_settings.return_value.jwt_secret_key = "secret"
             mock_settings.return_value.jwt_algorithm = "HS256"
-            
+
             service = EmailService()
             assert service.is_configured() is False
 
@@ -83,13 +82,13 @@ class TestCreatePasswordResetToken:
             mock_settings.return_value.frontend_url = None
             mock_settings.return_value.jwt_secret_key = "test_secret"
             mock_settings.return_value.jwt_algorithm = "HS256"
-            
+
             service = EmailService()
             user_id = uuid.uuid4()
             email = "user@example.com"
-            
+
             token = service._create_password_reset_token(user_id, email)
-        
+
         # Decode and verify
         payload = jwt.decode(token, "test_secret", algorithms=["HS256"])
         assert payload["sub"] == str(user_id)
@@ -108,13 +107,13 @@ class TestCreateEmailVerificationToken:
             mock_settings.return_value.frontend_url = None
             mock_settings.return_value.jwt_secret_key = "test_secret"
             mock_settings.return_value.jwt_algorithm = "HS256"
-            
+
             service = EmailService()
             user_id = uuid.uuid4()
             email = "verify@example.com"
-            
+
             token = service._create_email_verification_token(user_id, email)
-        
+
         payload = jwt.decode(token, "test_secret", algorithms=["HS256"])
         assert payload["type"] == "email_verification"
 
@@ -130,13 +129,13 @@ class TestVerifyPasswordResetToken:
             mock_settings.return_value.frontend_url = None
             mock_settings.return_value.jwt_secret_key = "test_secret"
             mock_settings.return_value.jwt_algorithm = "HS256"
-            
+
             service = EmailService()
             user_id = uuid.uuid4()
-            
+
             token = service._create_password_reset_token(user_id, "test@test.com")
             result = service.verify_password_reset_token(token)
-        
+
         assert result is not None
         assert result["sub"] == str(user_id)
         assert result["type"] == "password_reset"
@@ -149,13 +148,15 @@ class TestVerifyPasswordResetToken:
             mock_settings.return_value.frontend_url = None
             mock_settings.return_value.jwt_secret_key = "test_secret"
             mock_settings.return_value.jwt_algorithm = "HS256"
-            
+
             service = EmailService()
-            
+
             # Create email verification token, try to use as password reset
-            token = service._create_email_verification_token(uuid.uuid4(), "test@test.com")
+            token = service._create_email_verification_token(
+                uuid.uuid4(), "test@test.com"
+            )
             result = service.verify_password_reset_token(token)
-        
+
         assert result is None
 
     def test_invalid_token(self):
@@ -166,10 +167,10 @@ class TestVerifyPasswordResetToken:
             mock_settings.return_value.frontend_url = None
             mock_settings.return_value.jwt_secret_key = "test_secret"
             mock_settings.return_value.jwt_algorithm = "HS256"
-            
+
             service = EmailService()
             result = service.verify_password_reset_token("invalid.token.here")
-        
+
         assert result is None
 
 
@@ -184,13 +185,13 @@ class TestVerifyEmailVerificationToken:
             mock_settings.return_value.frontend_url = None
             mock_settings.return_value.jwt_secret_key = "test_secret"
             mock_settings.return_value.jwt_algorithm = "HS256"
-            
+
             service = EmailService()
             user_id = uuid.uuid4()
-            
+
             token = service._create_email_verification_token(user_id, "test@test.com")
             result = service.verify_email_verification_token(token)
-        
+
         assert result is not None
         assert result["type"] == "email_verification"
 
@@ -202,12 +203,12 @@ class TestVerifyEmailVerificationToken:
             mock_settings.return_value.frontend_url = None
             mock_settings.return_value.jwt_secret_key = "test_secret"
             mock_settings.return_value.jwt_algorithm = "HS256"
-            
+
             service = EmailService()
-            
+
             token = service._create_password_reset_token(uuid.uuid4(), "test@test.com")
             result = service.verify_email_verification_token(token)
-        
+
         assert result is None
 
 
@@ -223,16 +224,16 @@ class TestSendEmail:
             mock_settings.return_value.frontend_url = None
             mock_settings.return_value.jwt_secret_key = "secret"
             mock_settings.return_value.jwt_algorithm = "HS256"
-            
+
             service = EmailService()
-        
+
         with patch("app.services.email.logger") as mock_logger:
             result = await service._send_email(
                 "test@test.com",
                 "Subject",
                 "<p>HTML</p>",
             )
-        
+
         assert result is True
         mock_logger.warning.assert_called()
 
@@ -245,15 +246,18 @@ class TestSendEmail:
             mock_settings.return_value.frontend_url = "https://test.com"
             mock_settings.return_value.jwt_secret_key = "secret"
             mock_settings.return_value.jwt_algorithm = "HS256"
-            
+
             service = EmailService()
-        
+
         mock_sg = MagicMock()
         mock_response = MagicMock()
         mock_response.status_code = 202
         mock_sg.send.return_value = mock_response
-        
-        with patch.dict("sys.modules", {"sendgrid": MagicMock(), "sendgrid.helpers.mail": MagicMock()}):
+
+        with patch.dict(
+            "sys.modules",
+            {"sendgrid": MagicMock(), "sendgrid.helpers.mail": MagicMock()},
+        ):
             with patch("sendgrid.SendGridAPIClient", return_value=mock_sg):
                 result = await service._send_email(
                     "to@test.com",
@@ -261,7 +265,7 @@ class TestSendEmail:
                     "<p>Content</p>",
                     "Text content",
                 )
-        
+
         assert result is True
 
     @pytest.mark.asyncio
@@ -273,22 +277,25 @@ class TestSendEmail:
             mock_settings.return_value.frontend_url = "https://test.com"
             mock_settings.return_value.jwt_secret_key = "secret"
             mock_settings.return_value.jwt_algorithm = "HS256"
-            
+
             service = EmailService()
-        
+
         mock_sg = MagicMock()
         mock_response = MagicMock()
         mock_response.status_code = 400  # Error
         mock_sg.send.return_value = mock_response
-        
-        with patch.dict("sys.modules", {"sendgrid": MagicMock(), "sendgrid.helpers.mail": MagicMock()}):
+
+        with patch.dict(
+            "sys.modules",
+            {"sendgrid": MagicMock(), "sendgrid.helpers.mail": MagicMock()},
+        ):
             with patch("sendgrid.SendGridAPIClient", return_value=mock_sg):
                 result = await service._send_email(
                     "to@test.com",
                     "Test",
                     "<p>Content</p>",
                 )
-        
+
         assert result is False
 
     @pytest.mark.asyncio
@@ -300,16 +307,16 @@ class TestSendEmail:
             mock_settings.return_value.frontend_url = "https://test.com"
             mock_settings.return_value.jwt_secret_key = "secret"
             mock_settings.return_value.jwt_algorithm = "HS256"
-            
+
             service = EmailService()
-        
+
         with patch("builtins.__import__", side_effect=ImportError("No sendgrid")):
             result = await service._send_email(
                 "to@test.com",
                 "Test",
                 "<p>Content</p>",
             )
-        
+
         assert result is False
 
     @pytest.mark.asyncio
@@ -321,19 +328,22 @@ class TestSendEmail:
             mock_settings.return_value.frontend_url = "https://test.com"
             mock_settings.return_value.jwt_secret_key = "secret"
             mock_settings.return_value.jwt_algorithm = "HS256"
-            
+
             service = EmailService()
-        
-        with patch.dict("sys.modules", {"sendgrid": MagicMock(), "sendgrid.helpers.mail": MagicMock()}):
+
+        with patch.dict(
+            "sys.modules",
+            {"sendgrid": MagicMock(), "sendgrid.helpers.mail": MagicMock()},
+        ):
             with patch("sendgrid.SendGridAPIClient") as mock_client:
                 mock_client.side_effect = Exception("Network error")
-                
+
                 result = await service._send_email(
                     "to@test.com",
                     "Test",
                     "<p>Content</p>",
                 )
-        
+
         assert result is False
 
 
@@ -349,20 +359,20 @@ class TestSendPasswordReset:
             mock_settings.return_value.frontend_url = "https://app.beatsight.io"
             mock_settings.return_value.jwt_secret_key = "secret"
             mock_settings.return_value.jwt_algorithm = "HS256"
-            
+
             service = EmailService()
-        
+
         with patch.object(service, "_send_email", new_callable=AsyncMock) as mock_send:
             mock_send.return_value = True
-            
+
             user_id = uuid.uuid4()
             result = await service.send_password_reset(
                 user_id, "user@test.com", "TestUser"
             )
-        
+
         assert result is True
         mock_send.assert_called_once()
-        
+
         # Check email content includes user name and reset URL
         call_args = mock_send.call_args
         assert "TestUser" in call_args[0][2]  # HTML content
@@ -381,17 +391,17 @@ class TestSendWelcome:
             mock_settings.return_value.frontend_url = "https://app.beatsight.io"
             mock_settings.return_value.jwt_secret_key = "secret"
             mock_settings.return_value.jwt_algorithm = "HS256"
-            
+
             service = EmailService()
-        
+
         with patch.object(service, "_send_email", new_callable=AsyncMock) as mock_send:
             mock_send.return_value = True
-            
+
             result = await service.send_welcome("new@user.com", "NewUser")
-        
+
         assert result is True
         mock_send.assert_called_once()
-        
+
         # Check subject includes welcome
         call_args = mock_send.call_args
         assert "Welcome" in call_args[0][1]
@@ -409,15 +419,15 @@ class TestSendEmailVerification:
             mock_settings.return_value.frontend_url = "https://app.beatsight.io"
             mock_settings.return_value.jwt_secret_key = "secret"
             mock_settings.return_value.jwt_algorithm = "HS256"
-            
+
             service = EmailService()
-        
+
         with patch.object(service, "_send_email", new_callable=AsyncMock) as mock_send:
             mock_send.return_value = True
-            
+
             user_id = uuid.uuid4()
             result = await service.send_email_verification(
-            user_id, "verify@test.com", "VerifyUser"
+                user_id, "verify@test.com", "VerifyUser"
             )
 
         assert result is True
@@ -471,6 +481,10 @@ class TestSendSubscriptionConfirmation:
             )
 
         call_args = mock_send.call_args
-        html_content = call_args[0][2]  # Third arg is HTML (to_email, subject, html, text)
+        html_content = call_args[0][
+            2
+        ]  # Third arg is HTML (to_email, subject, html, text)
         # Check key features are mentioned
-        assert "quota" in html_content.lower() or "Subscription Confirmed" in html_content
+        assert (
+            "quota" in html_content.lower() or "Subscription Confirmed" in html_content
+        )

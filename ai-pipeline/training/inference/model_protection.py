@@ -57,7 +57,6 @@ from datetime import datetime, timezone
 import struct
 import io
 
-import numpy as np
 
 # Conditional imports for encryption
 try:
@@ -263,7 +262,7 @@ class ModelEncryptor:
             # Read and verify magic bytes
             magic = f.read(4)
             if magic != self.MAGIC_BYTES:
-                raise ValueError(f"Invalid encrypted model file (bad magic bytes)")
+                raise ValueError("Invalid encrypted model file (bad magic bytes)")
             
             # Read metadata
             metadata_len = struct.unpack("!I", f.read(4))[0]
@@ -292,7 +291,7 @@ class ModelEncryptor:
             actual_checksum = hashlib.sha256(plaintext).hexdigest()
             if actual_checksum != metadata["checksum"]:
                 raise ValueError(
-                    f"Checksum mismatch! File may be corrupted or tampered with."
+                    "Checksum mismatch! File may be corrupted or tampered with."
                 )
         
         # Deserialize
@@ -792,7 +791,7 @@ Examples:
             model_id=args.model_id,
             obfuscate=not args.no_obfuscate,
         )
-        print(f"✅ Encrypted successfully!")
+        print("✅ Encrypted successfully!")
         print(f"   Model ID: {metadata.model_id}")
         print(f"   Original size: {metadata.original_size:,} bytes")
         print(f"   Encrypted at: {metadata.encrypted_at}")
@@ -806,13 +805,13 @@ Examples:
                 metadata_len = struct.unpack("!I", f.read(4))[0]
                 f.seek(8)
                 metadata = json.loads(f.read(metadata_len).decode("utf-8"))
-                print(f"✅ Valid encrypted model")
+                print("✅ Valid encrypted model")
                 print(f"   Algorithm: {metadata['algorithm']}")
                 print(f"   Model ID: {metadata['model_id']}")
                 print(f"   Encrypted at: {metadata['encrypted_at']}")
                 print(f"   Obfuscated: {metadata.get('obfuscated', False)}")
             else:
-                print(f"❌ Not an encrypted model file")
+                print("❌ Not an encrypted model file")
                 sys.exit(1)
     
     elif args.command == "decrypt":

@@ -87,9 +87,7 @@ class TestAudioUpload:
         with patch("app.api.routes.storage.get_storage", return_value=mock_storage):
             response = client.post(
                 f"/api/storage/audio/{song_id}",
-                files={
-                    "file": ("large.mp3", BytesIO(large_content), "audio/mpeg")
-                },
+                files={"file": ("large.mp3", BytesIO(large_content), "audio/mpeg")},
             )
 
         assert response.status_code == 413

@@ -7,7 +7,7 @@ import argparse
 import json
 from collections import defaultdict, deque
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, Optional, Sequence
 
 from training import event_loader
 

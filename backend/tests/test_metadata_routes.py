@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import io
 import uuid
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -606,7 +605,7 @@ class TestClearCache:
         """Test cache clearing without admin permissions returns 403."""
         # Mock permission check to return False (no admin permission)
         mock_has_permission.return_value = False
-        
+
         response = client_authenticated.delete("/api/metadata/cache")
 
         # Without admin permission, should return 403

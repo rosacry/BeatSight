@@ -362,7 +362,7 @@ def estimate_cache_index_mapping(
     print(f"[CACHE] Index mapping complete: {elapsed:.1f}s, {misses:,} misses ({100*misses/n:.1f}%)")
     
     if misses > n * 0.01:  # More than 1% misses indicates incompatible ordering
-        print(f"[CACHE] Warning: High miss rate suggests labels and cache are in different order")
+        print("[CACHE] Warning: High miss rate suggests labels and cache are in different order")
         return None
     
     return mapping

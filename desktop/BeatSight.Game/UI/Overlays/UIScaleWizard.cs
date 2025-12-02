@@ -78,8 +78,8 @@ namespace BeatSight.Game.UI.Overlays
                                 },
                                 new Container
                                 {
-                                    Width = 400,
-                                    Height = 40,
+                                    Width = DesignSystem.SliderWidth,
+                                    Height = DesignSystem.ControlHeight,
                                     Anchor = Anchor.TopCentre,
                                     Origin = Anchor.TopCentre,
                                     Children = new Drawable[]
@@ -145,7 +145,7 @@ namespace BeatSight.Game.UI.Overlays
                                 {
                                     Text = "Done",
                                     Width = 100,
-                                    Height = 40,
+                                    Height = DesignSystem.ButtonHeight,
                                     Anchor = Anchor.TopCentre,
                                     Origin = Anchor.TopCentre,
                                     Action = Hide

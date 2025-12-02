@@ -284,7 +284,7 @@ class SpectrogramCache:
                 # Remove corrupted file
                 try:
                     path.unlink()
-                except:
+                except OSError:
                     pass
         
         return None

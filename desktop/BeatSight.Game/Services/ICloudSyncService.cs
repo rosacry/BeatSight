@@ -70,7 +70,8 @@ namespace BeatSight.Game.Services
 
     /// <summary>
     /// Stub implementation of cloud sync service.
-    /// Cloud sync is not yet implemented - this is a placeholder.
+    /// Used when cloud sync is disabled or not configured.
+    /// All operations are no-ops that fail gracefully.
     /// </summary>
     public sealed class StubCloudSyncService : ICloudSyncService
     {
@@ -80,7 +81,7 @@ namespace BeatSight.Game.Services
 
         public Task<bool> LoginAsync(string email, string password, CancellationToken cancellationToken = default)
         {
-            // Cloud sync not yet implemented
+            // Cloud sync not configured - login always fails
             return Task.FromResult(false);
         }
 
@@ -91,22 +92,28 @@ namespace BeatSight.Game.Services
 
         public Task SyncPreferencesAsync(CancellationToken cancellationToken = default)
         {
+            // No-op when cloud sync is disabled
             return Task.CompletedTask;
         }
 
         public Task SyncProgressAsync(CancellationToken cancellationToken = default)
         {
+            // No-op when cloud sync is disabled
             return Task.CompletedTask;
         }
 
         public Task<string> UploadBeatmapAsync(string localPath, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException("Cloud sync is not yet available.");
+            // Return empty string to indicate offline/no upload
+            // Callers should check IsAuthenticated before calling this
+            return Task.FromResult(string.Empty);
         }
 
         public Task<string> DownloadBeatmapAsync(string cloudId, string localPath, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException("Cloud sync is not yet available.");
+            // Return empty string to indicate offline/no download
+            // Callers should check IsAuthenticated before calling this
+            return Task.FromResult(string.Empty);
         }
 
         public void Dispose()

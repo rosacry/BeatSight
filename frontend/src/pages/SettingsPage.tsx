@@ -6,35 +6,17 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '@/stores/authStore'
+import { createLogger, getDeveloperModeEnabled, enableDeveloperMode, disableDeveloperMode } from '@/lib/logger'
+import type { UserPreferences } from '@/types/sync'
+import { DEFAULT_CUSTOM_SETTINGS } from '@/types/sync'
 
+const logger = createLogger('Settings')
 const API_BASE = '/api'
 
-type SettingsTab = 'account' | 'preferences' | 'notifications' | 'danger'
+type SettingsTab = 'account' | 'preferences' | 'notifications' | 'developer' | 'danger'
 
-interface Preferences {
-    scroll_speed: number
-    note_skin: string
-    audio_offset_ms: number
-    visual_offset_ms: number
-    background_dim: number
-    master_volume: number
-    music_volume: number
-    effects_volume: number
-    hitsound_volume: number
-    theme: string
-    language: string
-    custom_settings: {
-        autoGenerateBeatmap: boolean
-        defaultQuantization: string
-        defaultSensitivity: number
-        showConfidenceOverlay: boolean
-        enableOfflineMode: boolean
-        emailJobComplete: boolean
-        emailJobFailed: boolean
-        pushNotifications: boolean
-        marketingEmails: boolean
-    }
-}
+// Use the shared Preferences type but make it compatible with our local usage
+type Preferences = Omit<UserPreferences, 'version' | 'checksum' | 'last_modified'>
 
 // API helper with auth
 async function apiRequest<T>(
@@ -83,6 +65,9 @@ export function SettingsPage() {
     const [newPassword, setNewPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
 
+    // Developer mode state (synced with server via custom_settings)
+    const [developerMode, setDeveloperMode] = useState(getDeveloperModeEnabled())
+
     // Preferences from server
     const [preferences, setPreferences] = useState<Preferences | null>(null)
 
@@ -95,31 +80,21 @@ export function SettingsPage() {
             setPreferences(prefs)
             setError(null)
         } catch (err) {
-            console.error('Failed to load preferences:', err)
+            logger.error('Failed to load preferences:', err)
             // Initialize with defaults if not found
             setPreferences({
                 scroll_speed: 1.0,
                 note_skin: 'default',
                 audio_offset_ms: 0,
                 visual_offset_ms: 0,
-                background_dim: 0.7,
+                background_dim: 0.5,  // Match backend default
                 master_volume: 1.0,
                 music_volume: 0.8,
                 effects_volume: 0.8,
                 hitsound_volume: 1.0,
                 theme: 'dark',
                 language: 'en',
-                custom_settings: {
-                    autoGenerateBeatmap: true,
-                    defaultQuantization: '16th',
-                    defaultSensitivity: 0.5,
-                    showConfidenceOverlay: true,
-                    enableOfflineMode: false,
-                    emailJobComplete: true,
-                    emailJobFailed: true,
-                    pushNotifications: true,
-                    marketingEmails: false,
-                },
+                custom_settings: DEFAULT_CUSTOM_SETTINGS,
             })
         } finally {
             setIsLoading(false)
@@ -129,6 +104,29 @@ export function SettingsPage() {
     useEffect(() => {
         loadPreferences()
     }, [loadPreferences])
+
+    // Sync developer mode with server preferences when they load
+    useEffect(() => {
+        if (preferences?.custom_settings?.developerModeEnabled !== undefined) {
+            const serverValue = preferences.custom_settings.developerModeEnabled
+            const localValue = getDeveloperModeEnabled()
+
+            // If server has developer mode enabled but local doesn't, enable locally
+            if (serverValue && !localValue) {
+                enableDeveloperMode()
+                setDeveloperMode(true)
+            }
+            // If server has developer mode disabled but local has it, sync to server state
+            else if (!serverValue && localValue) {
+                disableDeveloperMode()
+                setDeveloperMode(false)
+            }
+            // Otherwise just sync the state
+            else {
+                setDeveloperMode(serverValue)
+            }
+        }
+    }, [preferences?.custom_settings?.developerModeEnabled])
 
     useEffect(() => {
         if (user) {
@@ -261,6 +259,22 @@ export function SettingsPage() {
         })
     }
 
+    // Toggle developer mode - updates both local storage and server preferences
+    const handleDeveloperModeToggle = (enabled: boolean) => {
+        // Update local storage for immediate effect
+        if (enabled) {
+            enableDeveloperMode()
+        } else {
+            disableDeveloperMode()
+        }
+        setDeveloperMode(enabled)
+
+        // Also update server preferences for cross-device sync
+        if (preferences) {
+            updateCustomSetting('developerModeEnabled', enabled)
+        }
+    }
+
     const tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
         {
             id: 'account',
@@ -286,6 +300,15 @@ export function SettingsPage() {
             icon: (
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+            ),
+        },
+        {
+            id: 'developer',
+            label: 'Developer',
+            icon: (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                 </svg>
             ),
         },
@@ -584,6 +607,45 @@ export function SettingsPage() {
 
                                     <button onClick={handleSavePreferences} disabled={isSaving} className="btn btn-primary">
                                         {isSaving ? 'Saving...' : 'Save Notifications'}
+                                    </button>
+                                </div>
+                            )}
+
+                            {activeTab === 'developer' && (
+                                <div className="card space-y-6">
+                                    <h2 className="text-lg font-semibold text-white">Developer Settings</h2>
+                                    <p className="text-gray-400 text-sm">
+                                        Advanced settings for developers and power users. These settings sync across all your devices.
+                                    </p>
+
+                                    <div className="space-y-4">
+                                        <label className="flex items-center justify-between">
+                                            <div>
+                                                <span className="text-white">Developer Mode</span>
+                                                <p className="text-sm text-gray-500">
+                                                    Enable console logging and debug information in production
+                                                </p>
+                                            </div>
+                                            <input
+                                                type="checkbox"
+                                                checked={developerMode}
+                                                onChange={(e) => handleDeveloperModeToggle(e.target.checked)}
+                                                className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-primary-500 focus:ring-primary-500"
+                                            />
+                                        </label>
+
+                                        {developerMode && (
+                                            <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                                                <p className="text-yellow-400 text-sm">
+                                                    <strong>Developer Mode Active:</strong> Console logging is enabled.
+                                                    Open your browser's developer tools (F12) to view logs.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <button onClick={handleSavePreferences} disabled={isSaving} className="btn btn-primary">
+                                        {isSaving ? 'Saving...' : 'Save Developer Settings'}
                                     </button>
                                 </div>
                             )}

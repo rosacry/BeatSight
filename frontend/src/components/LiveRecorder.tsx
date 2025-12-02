@@ -14,6 +14,9 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('LiveRecorder')
 
 interface LiveRecorderProps {
     /** Callback when recording is complete */
@@ -129,7 +132,7 @@ export function LiveRecorder({
 
             return true
         } catch (error) {
-            console.error('Failed to initialize audio:', error)
+            logger.error('Failed to initialize audio:', error)
             return false
         }
     }, [quality])
@@ -606,10 +609,10 @@ export function LiveRecorder({
                                 <div
                                     key={beat}
                                     className={`w-4 h-4 rounded-full transition-all ${beatCount % 4 === beat % 4
-                                            ? beat === 1
-                                                ? 'bg-primary-500 scale-125'
-                                                : 'bg-gray-400 scale-110'
-                                            : 'bg-gray-700'
+                                        ? beat === 1
+                                            ? 'bg-primary-500 scale-125'
+                                            : 'bg-gray-400 scale-110'
+                                        : 'bg-gray-700'
                                         }`}
                                 />
                             ))}

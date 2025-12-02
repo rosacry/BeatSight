@@ -658,6 +658,14 @@ namespace BeatSight.Game.Services
             public double HitsoundVolume { get; set; }
             public string Theme { get; set; } = "";
             public string Language { get; set; } = "";
+
+            /// <summary>
+            /// Custom settings dictionary for extensible preferences.
+            /// Keys include: "developerMode", "showFpsCounter", "enableNotifications",
+            /// "autoCheckUpdates", "crashReporting", "analyticsEnabled",
+            /// "betaFeatures", "debugOverlay", "verboseLogging", "experimentalFeatures"
+            /// </summary>
+            public Dictionary<string, object>? CustomSettings { get; set; }
         }
 
         private class SyncStatusResponse

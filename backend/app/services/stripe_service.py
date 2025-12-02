@@ -29,6 +29,7 @@ from app.models.subscription import (
     SubscriptionStatus,
 )
 from app.models.user import User
+from app.services.email import get_email_service
 
 logger = logging.getLogger(__name__)
 
@@ -259,7 +260,27 @@ class StripeService:
         subscription_data: dict[str, Any],
     ) -> dict[str, Any]:
         """Handle new subscription creation."""
-        return await self._sync_subscription(db, subscription_data)
+        result = await self._sync_subscription(db, subscription_data)
+        
+        # Send confirmation email to user
+        if "user_id" in result and "error" not in result:
+            try:
+                user_id = UUID(result["user_id"])
+                user_result = await db.execute(
+                    select(User).where(User.id == user_id)
+                )
+                user = user_result.scalar_one_or_none()
+                if user:
+                    email_service = get_email_service()
+                    plan_name = result.get("plan", "Pro").replace("_", " ").title()
+                    await email_service.send_subscription_confirmation(
+                        user.email, user.display_name, plan_name
+                    )
+                    logger.info(f"Sent subscription confirmation email to {user.email}")
+            except Exception as e:
+                logger.warning(f"Failed to send subscription confirmation email: {e}")
+        
+        return result
 
     async def _handle_subscription_updated(
         self,

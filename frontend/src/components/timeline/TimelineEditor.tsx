@@ -1,6 +1,7 @@
 import { useCallback, useState, useEffect, useRef, useMemo } from 'react'
 import { TimelineCanvas } from './TimelineCanvas'
 import { TimelineAudioPlayer } from './AudioPlayer'
+import { createLogger } from '@/lib/logger'
 import type {
     HitObject,
     DrumComponent,
@@ -10,6 +11,8 @@ import type {
     NoteEdit,
     Beatmap,
 } from '../../types/beatmap'
+
+const logger = createLogger('Timeline')
 
 interface TimelineEditorProps {
     /** The beatmap being edited */
@@ -184,13 +187,13 @@ export function TimelineEditor({
                 setIsLoading(false)
             },
             onError: (error) => {
-                console.error('Audio error:', error)
+                logger.error('Audio error:', error)
                 setIsLoading(false)
             },
         })
 
         audioPlayerRef.current = player
-        player.loadAudio(audioUrl).catch(console.error)
+        player.loadAudio(audioUrl).catch((err) => logger.error('Failed to load audio:', err))
 
         return () => {
             player.dispose()

@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { Layout } from './components/Layout'
+import { Layout } from './components/NavigationShell'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { InstallPrompt, OfflineIndicator, UpdateNotification } from './components/PWAPrompts'

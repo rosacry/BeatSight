@@ -403,11 +403,11 @@ pytest tests/ -v
 
 1. Read the [Architecture Guide](docs/ARCHITECTURE.md)
 2. Check [Contributing Guidelines](docs/CONTRIBUTING.md)
-3. Join our Discord for help
-4. Try the [Quick Start Tutorial](docs/Guidebook.md)
+3. Try the [Quick Start Tutorial](docs/Guidebook.md)
+4. Review the [Priority Action Plan](docs/PRIORITY_ACTION_PLAN.md)
 
 ## Getting Help
 
-- **Discord**: [BeatSight Community](https://discord.gg/beatsight)
-- **GitHub Issues**: [Report bugs](https://github.com/yourusername/BeatSight/issues)
-- **Discussions**: [Ask questions](https://github.com/yourusername/BeatSight/discussions)
+- **GitHub Issues**: [Report bugs](https://github.com/rosacry/BeatSight/issues)
+- **GitHub Discussions**: [Ask questions](https://github.com/rosacry/BeatSight/discussions)
+

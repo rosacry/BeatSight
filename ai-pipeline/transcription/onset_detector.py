@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Any
 
@@ -11,6 +12,8 @@ import librosa
 from scipy import ndimage
 from importlib import import_module
 from typing import Callable
+
+logger = logging.getLogger(__name__)
 
 # Import adaptive parameters (optional)
 try:
@@ -302,8 +305,8 @@ def detect_onsets(
             preemph_coef = params.preemphasis_coef
             fmin = params.fmin
             fmax = params.fmax
-        except Exception:
-            pass  # Fall back to defaults
+        except (ValueError, RuntimeError, librosa.util.exceptions.ParameterError) as e:
+            logger.debug("Adaptive parameter detection failed, using defaults: %s", e)
     
     percussive = _compute_percussive_stem(
         audio_data, 

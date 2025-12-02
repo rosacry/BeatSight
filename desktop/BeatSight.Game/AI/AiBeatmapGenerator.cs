@@ -17,10 +17,14 @@ using osu.Framework.Platform;
 
 namespace BeatSight.Game.AI
 {
+    /// <summary>
+    /// Options for AI beatmap generation.
+    /// Must be kept in sync with backend app/schemas/ai_jobs.py AIGenerationOptions.
+    /// </summary>
     public class AiGenerationOptions
     {
         public double ConfidenceThreshold { get; set; } = 0.3;  // Lowered from 0.7 to detect more real drum hits
-        public bool EnableDrumSeparation { get; set; }
+        public bool EnableDrumSeparation { get; set; } = true;
         public string? PythonExecutablePath { get; set; }
         public int DetectionSensitivity { get; set; } = 60;
         public QuantizationGrid QuantizationGrid { get; set; } = QuantizationGrid.Sixteenth;
@@ -34,6 +38,12 @@ namespace BeatSight.Game.AI
         public IReadOnlyList<double>? TempoCandidates { get; set; }
         public double? StartTime { get; set; }
         public double? EndTime { get; set; }
+
+        /// <summary>
+        /// Use ML model for drum classification (vs. rule-based).
+        /// Matches backend AIGenerationOptions.use_ml_classifier.
+        /// </summary>
+        public bool UseMlClassifier { get; set; } = true;
     }
 
     public readonly struct AiGenerationProgress
@@ -654,8 +664,13 @@ namespace BeatSight.Game.AI
 
     }
 
+    /// <summary>
+    /// Quantization grid options for snapping detected notes.
+    /// Must match backend app/schemas/ai_jobs.py QuantizationGrid.
+    /// </summary>
     public enum QuantizationGrid
     {
+        None = 0,
         Quarter = 4,
         Eighth = 8,
         Sixteenth = 16,

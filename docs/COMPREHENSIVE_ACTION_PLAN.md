@@ -49,6 +49,10 @@
 > |------|--------|-------|
 > | Python lint fixes | ✅ DONE | Fixed 10 ruff errors (unused imports, f-string issues) |
 > | ESLint config | ✅ DONE | Created `.eslintrc.cjs` for frontend TypeScript |
+> | Verifier role check | ✅ DONE | `map_edits.py` - Implemented using RBACService |
+> | Error reporting integration | ✅ DONE | `ErrorBoundary.tsx` now uses `captureError()` |
+> | RBAC dependency | ✅ DONE | Added `get_rbac_service` to `deps.py` |
+> | ESLint config | ✅ DONE | Created `.eslintrc.cjs` for frontend TypeScript |
 > 
 > ### 🐛 Bugs Fixed This Session
 > 

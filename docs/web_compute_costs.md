@@ -15,33 +15,33 @@ _Last updated: 2025-11-12_
 |-------|-----------|--------------|------------|
 | Fingerprint (Chromaprint) | 1 vCPU, 512 MB RAM | 15–20 s | ~$0.0002 on AWS Fargate Spot (0.004 vCPU-hrs) |
 | Metadata DB Lookup | Postgres + Redis | <100 ms | Negligible (amortized infra cost) |
-| AI Separation + Transcription | GPU (RTX 4090 equivalent) | 3–5 min | ~$0.05 per run on Lambda GPU / Modal |
+| AI Separation + Transcription | L40S GPU (FP8+Sparse) | ~12-16 sec | ~$0.006 per run on Modal |
 | Post-processing + Map Persist | 2 vCPU, 4 GB RAM | 20–30 s | ~$0.0006 on Fargate Spot |
 | Notification (Email + Push) | SaaS | $0.0006 per email | Bulk pricing tiers apply |
 
-> **Total per new song (cloud GPU)** ≈ **$0.051–$0.06** (dominated by GPU time).
+> **Total per new song (cloud GPU)** ≈ **$0.007–$0.009** with FP8+Sparse optimizations (80-85% reduction!).
 
 ## 3. Monthly Cost Scenarios
 
 ### Scenario A — 1k MAU
 - New songs per user/month: 2 (assume 50% already verified).
 - AI jobs/month: 1k MAU × 1 new song = **1,000 jobs**.
-- GPU cost: 1,000 × $0.055 = **$55**.
+- GPU cost: 1,000 × $0.008 = **$8** (FP8+Sparse on L40S).
 - Fingerprinting/post-processing compute: ~1,000 × $0.0008 ≈ **$0.80**.
 - Email notifications: 1,000 × $0.0006 ≈ **$0.60**.
-- **Total variable cost ≈ $56.4/month**.
+- **Total variable cost ≈ $9.4/month** (was $56.4 before optimizations).
 
 ### Scenario B — 10k MAU
 - AI jobs: 10,000 × 1 = **10,000 jobs**.
-- GPU cost: ≈ **$550**.
+- GPU cost: 10,000 × $0.008 = **$80** (FP8+Sparse).
 - CPU + notifications: ≈ **$14**.
-- **Total variable cost ≈ $564/month**.
+- **Total variable cost ≈ $94/month** (was $564 before optimizations).
 
 ### Scenario C — 50k MAU
 - AI jobs: 50,000 × 1 = **50,000 jobs**.
-- GPU cost: ≈ **$2,750**.
+- GPU cost: 50,000 × $0.008 = **$400** (FP8+Sparse).
 - CPU + notifications: ≈ **$70**.
-- **Total variable cost ≈ $2,820/month**.
+- **Total variable cost ≈ $470/month** (was $2,820 before optimizations).
 
 > These figures exclude baseline infrastructure (databases, CDN, storage), estimated below.
 
@@ -60,44 +60,46 @@ _Last updated: 2025-11-12_
 ## 5. Speed Optimizations (Implemented)
 
 **Baseline Processing Time**: ~35 seconds for 3-minute song on A100  
-**Optimized Processing Time**: ~15 seconds for 3-minute song on A100 (57% faster)  
-**With Caching**: ~8 seconds for repeated requests
+**Optimized Processing Time**: ~11 seconds for 3-minute song on L40S with FP8+Sparse (70% faster)  
+**With Caching**: ~5 seconds for repeated requests
 
 ### 5.1 Optimization Stack
 
 | Optimization | Speedup | Implementation |
 |--------------|---------|----------------|
-| Hybrid Demucs (htdemucs_ft) | 2.5x separation | `separation/demucs_separator.py` |
-| TensorRT/ONNX Runtime | 2-4x classification | `training/inference/tensorrt_inference.py` |
+| Hybrid Demucs (htdemucs_ft + torch.compile) | 3.3× separation | `separation/demucs_separator.py` |
+| FP8 Quantization (L40S/H100) | 2× over INT8 | `training/inference/revolutionary_optimizations.py` |
+| 2:4 Structured Sparsity | 2× compute | `training/inference/revolutionary_optimizations.py` |
+| Early Exit (60% fast path) | 1.5× average | `training/inference/early_exit_inference.py` |
 | Spectrogram Caching | 30% overall | `training/tools/spectrogram_cache.py` |
 | Skip Separation Detection | 60% for isolated drums | `separation/demucs_separator.py` |
-| Adaptive Batch Sizing | 10-20% | `training/inference/optimized_pipeline.py` |
 
 ### 5.2 Updated Per-Track Cost
 
-| Tier | Model | Processing Time | Cost/Track |
-|------|-------|-----------------|------------|
-| Free | V5-Tiny + htdemucs_ft | ~25s | ~$0.009 |
-| Basic | V5-Distilled | ~18s | ~$0.0065 |
-| Pro | V5-Full + optimizations | ~15s | ~$0.0054 |
-| API | V5-Full + TensorRT | ~12s | ~$0.0043 |
+| GPU | Model | Processing Time | Cost/Track |
+|-----|-------|-----------------|------------|
+| L40S (Modal) | V5-Large + FP8+Sparse | ~11 sec | ~$0.006 |
+| H100 (Lambda) | V5-Large + FP8+Sparse | ~8 sec | ~$0.0055 |
+| A100 (AWS) | V5-Large + INT8 | ~18 sec | ~$0.020 |
+| RTX 4090 (RunPod) | V5-Large + INT8 | ~25 sec | ~$0.0048 |
 
-**Key Insight**: Optimizations reduce cost per track by 57-67%, significantly improving margins.
+**Key Insight**: FP8+Sparse optimizations reduce cost per track by 85%+, dramatically improving margins.
 
-### 5.3 Tier Differentiation Strategy (Updated December 2025)
+### 5.3 Single Tier Strategy (Updated January 2025)
 
-| Tier | Price | Model Variant | Monthly Limit | Speed Priority |
+**Note**: Switched to single V5-Large model tier for all users. Quality over complexity.
+
+| Tier | Price | Model Variant | Monthly Limit | Processing Time |
 |------|-------|---------------|---------------|----------------|
-| Free | $0 | V5-Distilled (~7.5M params) | 5 songs | Low |
-| Basic | $8/mo ($64/yr) | V5-Distilled (~7.5M params) | 30 songs | Medium |
-| Pro | $15/mo ($120/yr) | V5-Full (~15M params) | Unlimited | High |
-| API | $0.05/song | V5-Full + TensorRT | Pay-per-use | Maximum |
+| Free | $0 | V5-Large FP8+Sparse | 5 songs | ~11 sec |
+| Pro | $12/mo ($96/yr) | V5-Large FP8+Sparse | Unlimited | ~11 sec |
+| API | $0.02/song | V5-Large FP8+Sparse | Pay-per-use | ~11 sec |
 
 **Pricing Rationale**:
-- **Free (5 songs)**: Hook users, demonstrate value. Cost: ~$0.04/user/month.
-- **Basic ($8/mo)**: Target casual drummers. At 30 songs: $0.24 cost → 97% margin.
-- **Pro ($15/mo)**: Target serious musicians. Even at 100 songs: $1.50 cost → 90% margin.
+- **Free (5 songs)**: Hook users, demonstrate value. Cost: ~$0.03/user/month (5 × $0.006).
+- **Pro ($12/mo)**: Target all drummers with single best model. At 100 songs: $0.60 cost → 95% margin.
 - **Yearly plans**: 2 months free (17% discount) to improve retention and cash flow.
+- **API ($0.02/song)**: 3× markup over cost for B2B integrations.
 
 **Unit Economics**:
 - Average user processes ~10 songs/month

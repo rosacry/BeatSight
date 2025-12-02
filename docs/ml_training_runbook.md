@@ -24,7 +24,7 @@ This runbook captures the end-to-end workflow for refreshing the drum classifier
 ## 1. Prerequisites
 - Verified manifest (`prod_combined_events.jsonl`) with health report ✅.
 - All audio roots mounted (`data/raw`, `data/raw/cambridge`, etc.); run `check_cambridge_presence.py` to confirm.
-- GPU node provisioned (RTX 3080 Ti+ locally or cloud A100/A40 equivalent) with CUDA 12 environment.
+- GPU node provisioned (RTX 3080 Ti+ locally or cloud H100/A100 equivalent) with CUDA 12 environment.
 - Python virtualenv activated (`source ai-pipeline/venv/bin/activate`).
 - Weights & Biases logged in (`wandb login`), or W&B offline mode configured.
 - Storage budget: ≥1 TB free for dataset export + cache + checkpoints.

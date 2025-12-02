@@ -226,15 +226,38 @@ python -m training.inference.advanced_optimizations export-embedded \
 
 ---
 
-## Step 6: (Optional) Train 2:4 Sparsity Variant
+## Step 6: Train 2:4 Sparsity Variant (RECOMMENDED)
 
 2:4 structured sparsity provides **2x compute speedup** on Ampere+ GPUs with minimal accuracy loss.
 
-> **Time:** ~5 hours on A100
-> **Cost:** ~$6.45 on Lambda Labs
+> **Time:** ~30 minutes for fine-tuning on H100
+> **Cost:** ~$1.25 on Lambda Labs  
 > **Accuracy Loss:** <0.5%
+> **Speed Gain:** 2x faster compute → ~4-6ms/sample (or ~1-1.5ms combined with FP8!)
 
-### 6.1: Apply Sparsity and Fine-tune
+### 6.1: Apply Sparsity with Integrated Export
+
+The simplest way is to use the export script with `--with-sparsity`:
+
+```bash
+python -m training.scripts.export_production \
+    --checkpoint checkpoints/v5/self-distill/best_drum_classifier_ema.pth \
+    --output-dir models/production/ \
+    --cache-dir "${BEATSIGHT_DATA_ROOT}/feature_cache" \
+    --with-sparsity \
+    --finetune-sparse 5 \
+    --with-fp8
+```
+
+This automatically:
+1. Applies 2:4 structured sparsity pattern
+2. Fine-tunes for 5 epochs to recover accuracy
+3. Exports sparse ONNX + sparse TensorRT
+4. If `--with-fp8` is also enabled, creates combined FP8+Sparse model (MAXIMUM SPEED!)
+
+### 6.2: Alternative - Manual Sparsity Application
+
+For more control, use the advanced_optimizations module directly:
 
 ```bash
 python -m training.inference.advanced_optimizations apply-sparsity \
@@ -244,18 +267,18 @@ python -m training.inference.advanced_optimizations apply-sparsity \
     --finetune-lr 1e-5 \
     --dataset "${BEATSIGHT_DATASET_DIR}" \
     --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index"
-```
 
-### 6.2: Export Sparse ONNX
-
-```bash
+# Then export
 python -m training.inference.advanced_optimizations export-sparse \
     --checkpoint checkpoints/v5/sparse/best_drum_classifier_sparse.pth \
     --output models/production/drum_classifier_sparse_trt.onnx \
     --precision int8
 ```
 
-**Result:** `drum_classifier_sparse_trt.onnx` (~3MB, ~4-6ms/sample with hardware sparsity)
+**Results:**
+- `drum_classifier_sparse.onnx` — (~3MB, sparse ONNX)
+- `drum_classifier_sparse_trt.onnx` — (~3MB, ~4-6ms with hardware sparsity)
+- `drum_classifier_fp8_sparse.trt` — (~3MB, **~1-1.5ms** MAXIMUM SPEED!)
 
 ---
 

@@ -166,7 +166,8 @@ V5_EARLY_STOPPING_FLAGS="--early-stopping --early-stopping-patience 20 --early-s
 # NOTE: Accent-Tap augment added for +2-5% dynamics differentiation
 # NOTE: Technique heads + extra labels added for cymbal choke detection
 # NOTE: AWP + Early Stopping added for better generalization
-V5_ULTIMATE_FLAGS="${V5_MODEL_FLAGS} ${V5_DEEP_SUPERVISION_FLAGS} ${V5_GRADIENT_CENTRALIZATION_FLAGS} ${V5_MULTI_TASK_FLAGS} ${V5_TECHNIQUE_FLAGS} ${V5_EXTRA_LABELS_FLAGS} ${V5_GHOST_AUGMENT_FLAGS} ${V5_ACCENT_TAP_FLAGS} ${V5_WAVEFORM_AUGMENT_FLAGS} ${V5_FMIX_FLAGS} ${V5_PROGRESSIVE_FLAGS} ${V5_LABEL_SMOOTHING_FLAGS} ${V5_LOOKAHEAD_FLAGS} ${V5_MIXUP_CUTOFF_FLAGS} ${V5_POOLING_FLAGS} ${V5_HARD_NEGATIVE_FLAGS} ${V5_CLASS_WEIGHT_FLAGS} ${V5_GRAD_ACCUM_FLAGS} ${V5_AWP_FLAGS} ${V5_EARLY_STOPPING_FLAGS}"
+# NOTE: Layer decay added for better fine-grained learning (+0.2-0.5%)
+V5_ULTIMATE_FLAGS="${V5_MODEL_FLAGS} ${V5_DEEP_SUPERVISION_FLAGS} ${V5_GRADIENT_CENTRALIZATION_FLAGS} ${V5_MULTI_TASK_FLAGS} ${V5_TECHNIQUE_FLAGS} ${V5_EXTRA_LABELS_FLAGS} ${V5_GHOST_AUGMENT_FLAGS} ${V5_ACCENT_TAP_FLAGS} ${V5_WAVEFORM_AUGMENT_FLAGS} ${V5_FMIX_FLAGS} ${V5_PROGRESSIVE_FLAGS} ${V5_LABEL_SMOOTHING_FLAGS} ${V5_LOOKAHEAD_FLAGS} ${V5_MIXUP_CUTOFF_FLAGS} ${V5_POOLING_FLAGS} ${V5_HARD_NEGATIVE_FLAGS} ${V5_CLASS_WEIGHT_FLAGS} ${V5_GRAD_ACCUM_FLAGS} ${V5_LAYER_DECAY_FLAGS} ${V5_AWP_FLAGS} ${V5_EARLY_STOPPING_FLAGS}"
 
 # BEATs Model Flags (Audio Foundation Model)
 BEATS_MODEL_FLAGS="--model-version beats --beats-freeze-encoder --beats-layer-decay 0.75"
@@ -475,15 +476,15 @@ case "$TRAIN_MODE" in
         echo "  💎 V5 ULTIMATE SINGLE MODEL (2024 - ⭐ RECOMMENDED FOR PRODUCTION):"
         echo ""
         echo "  CoordAttn + DropPath + DeepSupervision + Lookahead + Warm Restarts:"
-        echo "    v5-warmup      (17a) - V5 warmup (~2hr)"
-        echo "    v5-quick       (17b) - V5 quick (~5hr)"
-        echo "    v5-long        (17c) - V5 long (~12hr)"
-        echo "    v5-full        (17d) - V5 maximum quality (~22hr @ 300 epochs on A100)"
-        echo "    v5-self-distill(17e) - Self-distillation for +1-2% (~22hr @ 300 epochs)"
-        echo "    v5-ensemble    (17f) - Train 3 models for ensemble +0.5-1.5% (~96hr)"
+        echo "    v5-warmup      (17a) - V5 warmup (~1hr on H100)"
+        echo "    v5-quick       (17b) - V5 quick (~3hr)"
+        echo "    v5-long        (17c) - V5 long (~8hr)"
+        echo "    v5-full        (17d) - V5 maximum quality (~15hr @ 300 epochs on H100)"
+        echo "    v5-self-distill(17e) - Self-distillation for +1-2% (~15hr @ 300 epochs)"
+        echo "    v5-ensemble    (17f) - Train 3 models for ensemble +0.5-1.5% (~60hr)"
         echo ""
         echo "  ⭐ RECOMMENDED PATH: 14 → 17a → 17d → 17e → 19c (label audit → warmup → full → self-distill → multilabel)"
-        echo "  🏆 CLOUD COST: ~53 hours = ~\$68 on Lambda A100"
+        echo "  🏆 CLOUD COST: ~35 hours = ~\$91 on Lambda H100"
         echo ""
         echo "  🎵 BEATs AUDIO FOUNDATION (Microsoft's state-of-the-art):"
         echo ""
@@ -499,7 +500,7 @@ case "$TRAIN_MODE" in
         echo "    multilabel-full    (19b) - Multi-label production (~12hr)"
         echo "    multilabel-finetune(19c) - From V5 pretrained (~6hr)"
         echo ""
-        echo "  ⭐ FULL PATH: 14 → 17a → 17d → 17e → 19 → 19c   (~53 hr, ~\$68 on A100)"
+        echo "  ⭐ FULL PATH: 14 → 17a → 17d → 17e → 19 → 19c   (~35 hr, ~\$91 on H100)"
         echo "     (label audit → v5 warmup → v5 full → self-distill → generate multilabel → finetune)"
         echo ""
         echo "  🔄 PSEUDO-LABELING (Optional - if you have unlabeled audio):"
@@ -2093,8 +2094,8 @@ ENSEMBLE_PY
             log "   Using velocity-enriched labels: train_labels_with_velocity.json"
             log ""
             log "   🔥 CLOUD OPTIMIZED: Using aggressive ghost preset (--ghost-augment-preset aggressive)"
-            log "      A100 with fast NVMe can handle the extra I/O."
-            log "      Estimated time: ~18-20hr on A100 40GB (300 epochs with torch.compile)"
+            log "      H100/A100 with fast NVMe can handle the extra I/O."
+            log "      Estimated time: ~12-15hr on H100 80GB (300 epochs with torch.compile)"
             log ""
             export WANDB_RUN_GROUP=v5_full_auto
             
@@ -2118,24 +2119,29 @@ ENSEMBLE_PY
                         log "      → Enabling torch.compile (max-autotune mode, ~15% speedup)"
                     fi
                     
-                    # Larger batch size for A100 80GB (check VRAM)
+                    # Larger batch size for H100 80GB / A100 80GB (check VRAM)
                     GPU_MEM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -d ' ')
                     if [[ "$GPU_MEM" -gt 70000 ]]; then
-                        CLOUD_BATCH_SIZE="512"
-                        log "      → Using batch size 512 (80GB VRAM detected)"
+                        CLOUD_BATCH_SIZE="768"
+                        CLOUD_NUM_WORKERS="12"
+                        log "      → Using batch size 768 (80GB VRAM detected, optimized for H100)"
                     elif [[ "$GPU_MEM" -gt 38000 ]]; then
                         CLOUD_BATCH_SIZE="384"
+                        CLOUD_NUM_WORKERS="8"
                         log "      → Using batch size 384 (40GB VRAM)"
                     fi
                 fi
             fi
+            
+            # Set default num_workers if not already set by cloud detection
+            CLOUD_NUM_WORKERS=${CLOUD_NUM_WORKERS:-8}
             
             PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
               --dataset "${BEATSIGHT_DATASET_DIR}" \
               --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
               --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
               --device cuda \
-              --num-workers 8 --val-num-workers 4 --prefetch-factor 4 \
+              --num-workers ${CLOUD_NUM_WORKERS} --val-num-workers $((CLOUD_NUM_WORKERS/2)) --prefetch-factor 4 \
               --persistent-workers \
               --pin-memory --amp-dtype ${CLOUD_AMP_DTYPE} \
               ${CLOUD_COMPILE_FLAGS} \
@@ -2174,7 +2180,7 @@ ENSEMBLE_PY
               ${CUTTING_EDGE_CURRICULUM_FLAGS} \
               ${CUTTING_EDGE_CALIBRATION_FLAGS} \
               --scheduler cosine_warm_restarts \
-              --warm-restart-t0 40 \
+              --warm-restart-t0 50 \
               --warm-restart-mult 2 \
               --warmup-epochs 20 \
               --warmup-lr-factor 0.05 \
@@ -2231,8 +2237,8 @@ ENSEMBLE_PY
             log "   Expected improvement: +1-2% from dark knowledge transfer..."
             log "   Includes: Attentive Statistics Pooling (Option A enhancement)..."
             log ""
-            log "   🔥 CLOUD OPTIMIZED: Matching 17d settings for A100 40GB"
-            log "      Estimated time: ~18-20hr on A100 40GB (300 epochs with torch.compile)"
+            log "   🔥 CLOUD OPTIMIZED: Matching 17d settings for H100 80GB"
+            log "      Estimated time: ~12-15hr on H100 80GB (300 epochs with torch.compile)"
             log ""
             export WANDB_RUN_GROUP=v5_self_distill_auto
             
@@ -2272,21 +2278,26 @@ ENSEMBLE_PY
                     
                     GPU_MEM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -d ' ')
                     if [[ "$GPU_MEM" -gt 70000 ]]; then
-                        CLOUD_BATCH_SIZE="512"
-                        log "      → Using batch size 512 (80GB VRAM detected)"
+                        CLOUD_BATCH_SIZE="768"
+                        CLOUD_NUM_WORKERS="12"
+                        log "      → Using batch size 768 (80GB VRAM detected, optimized for H100)"
                     elif [[ "$GPU_MEM" -gt 38000 ]]; then
                         CLOUD_BATCH_SIZE="384"
+                        CLOUD_NUM_WORKERS="8"
                         log "      → Using batch size 384 (40GB VRAM)"
                     fi
                 fi
             fi
+            
+            # Set default num_workers if not already set by cloud detection
+            CLOUD_NUM_WORKERS=${CLOUD_NUM_WORKERS:-8}
             
             PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
               --dataset "${BEATSIGHT_DATASET_DIR}" \
               --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
               --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
               --device cuda \
-              --num-workers 8 --val-num-workers 4 --prefetch-factor 4 \
+              --num-workers ${CLOUD_NUM_WORKERS} --val-num-workers $((CLOUD_NUM_WORKERS/2)) --prefetch-factor 4 \
               --persistent-workers \
               --pin-memory --amp-dtype ${CLOUD_AMP_DTYPE} \
               ${CLOUD_COMPILE_FLAGS} \
@@ -2325,7 +2336,7 @@ ENSEMBLE_PY
               ${CUTTING_EDGE_CURRICULUM_FLAGS} \
               ${CUTTING_EDGE_CALIBRATION_FLAGS} \
               --scheduler cosine_warm_restarts \
-              --warm-restart-t0 40 \
+              --warm-restart-t0 50 \
               --warm-restart-mult 2 \
               --warmup-epochs 20 \
               --warmup-lr-factor 0.05 \

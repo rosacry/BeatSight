@@ -44,10 +44,11 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 # CLOUD CONFIGURATION - Edit these for your setup
 # =============================================================================
 CLOUD_PROVIDER=${CLOUD_PROVIDER:-"lambda"}  # lambda, aws, gcp
-INSTANCE_HOURLY_RATE=${INSTANCE_HOURLY_RATE:-1.29}  # Lambda A100 40GB
+INSTANCE_HOURLY_RATE=${INSTANCE_HOURLY_RATE:-2.49}  # Lambda H100 80GB PCIe (recommended for storage)
 AUTO_SHUTDOWN=${AUTO_SHUTDOWN:-true}
 SHUTDOWN_DELAY_MINUTES=${SHUTDOWN_DELAY_MINUTES:-5}
 IDLE_SHUTDOWN_MINUTES=${IDLE_SHUTDOWN_MINUTES:-30}
+AUTO_ATTACH_TMUX=${AUTO_ATTACH_TMUX:-true}  # Automatically attach to tmux session
 
 # Checkpoint sync configuration
 SYNC_INTERVAL_SECONDS=${SYNC_INTERVAL_SECONDS:-1800}  # 30 minutes
@@ -62,7 +63,7 @@ NTFY_TOPIC=${NTFY_TOPIC:-""}  # ntfy.sh topic for mobile notifications
 # OVERNIGHT PROTECTION - Critical for unattended training
 # =============================================================================
 # Maximum cost before auto-shutdown (prevents runaway costs)
-MAX_COST_USD=${MAX_COST_USD:-100}  # $100 hard limit (your full pipeline is ~$66)
+MAX_COST_USD=${MAX_COST_USD:-150}  # $150 hard limit (your full pipeline is ~$91 on H100)
 
 # Maximum runtime in hours before auto-shutdown (backup protection)
 MAX_RUNTIME_HOURS=${MAX_RUNTIME_HOURS:-60}  # 60 hours max (full pipeline is ~51hr)
@@ -1084,15 +1085,15 @@ show_cost_estimate() {
     echo "  Current Cost:      \$${current_cost}"
     echo ""
     echo "  ┌─────────────────────────────────────────────────────────┐"
-    echo "  │ Estimated Total Cost (Full Pipeline on A100 40GB)      │"
+    echo "  │ Estimated Total Cost (Full Pipeline on H100 80GB)      │"
     echo "  ├─────────────────────────────────────────────────────────┤"
-    echo "  │ v5-warmup:           ~1.5 hr  =  \$1.94                 │"
-    echo "  │ v5-full (300 ep):    ~22 hr   =  \$28.38                │"
-    echo "  │ v5-self-distill:     ~22 hr   =  \$28.38                │"
-    echo "  │ multilabel-generate: ~0.5 hr  =  \$0.65                 │"
-    echo "  │ multilabel-finetune: ~5 hr    =  \$6.45                 │"
+    echo "  │ v5-warmup:           ~1 hr    =  \$2.49                 │"
+    echo "  │ v5-full (300 ep):    ~15 hr   =  \$37.35                │"
+    echo "  │ v5-self-distill:     ~15 hr   =  \$37.35                │"
+    echo "  │ multilabel-generate: ~0.5 hr  =  \$1.25                 │"
+    echo "  │ multilabel-finetune: ~3.5 hr  =  \$8.72                 │"
     echo "  ├─────────────────────────────────────────────────────────┤"
-    echo "  │ TOTAL:               ~51 hr   =  ~\$66                  │"
+    echo "  │ TOTAL:               ~35 hr   =  ~\$87                  │"
     echo "  └─────────────────────────────────────────────────────────┘"
     echo ""
     
@@ -1259,13 +1260,13 @@ setup_tmux_session() {
     echo "    • GPU idle timeout: ${IDLE_SHUTDOWN_MINUTES} minutes"
     echo "    • Max runtime: ${MAX_RUNTIME_HOURS} hours"
     echo ""
-    echo "  📊 Expected Training Path:"
-    echo "    17a → V5 Warmup (~1.5 hr, ~\$1.94)"
-    echo "    17d → V5 Full (~22 hr, ~\$28.38)"
-    echo "    17e → V5 Self-Distill (~22 hr, ~\$28.38)"
-    echo "    19c → Multi-Label Finetune (~5 hr, ~\$6.45)"
+    echo "  📊 Expected Training Path (H100 80GB):"
+    echo "    17a → V5 Warmup (~1 hr, ~\$2.49)"
+    echo "    17d → V5 Full (~15 hr, ~\$37.35)"
+    echo "    17e → V5 Self-Distill (~15 hr, ~\$37.35)"
+    echo "    19c → Multi-Label Finetune (~3.5 hr, ~\$8.72)"
     echo "    ────────────────────────────"
-    echo "    Total: ~51 hr, ~\$65"
+    echo "    Total: ~35 hr, ~\$87"
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "  🎯 To attach now, run:"
@@ -1298,6 +1299,15 @@ export REMOTE_BACKUP_PATH="$REMOTE_BACKUP_PATH"
 EOF
     
     log "✅ Environment saved to $REPO_ROOT/.cloud_env"
+    
+    # Auto-attach to tmux session for monitoring (training continues if you detach)
+    if [ "${AUTO_ATTACH_TMUX:-true}" = "true" ]; then
+        echo ""
+        echo "  🔄 Auto-attaching to tmux session in 3 seconds..."
+        echo "     (Press Ctrl+C to skip, or Ctrl+B,D later to detach)"
+        sleep 3
+        tmux attach -t "$session_name"
+    fi
 }
 
 # =============================================================================
@@ -1646,8 +1656,8 @@ run_auto_full() {
     echo "    4. Run GPU watchdog to prevent idle charges"
     echo "    5. Auto-shutdown when training completes"
     echo ""
-    echo "  Estimated cost: ~\$66 for full V5 pipeline on A100 40GB"
-    echo "  Estimated time: ~51 hours"
+    echo "  Estimated cost: ~\$91 for full V5 pipeline on H100 80GB"
+    echo "  Estimated time: ~35 hours"
     echo ""
     
     # Run full setup

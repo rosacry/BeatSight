@@ -22,6 +22,7 @@ using BeatSight.Game.Services.Decode;
 using BeatSight.Game.Services.Generation;
 using BeatSight.Game.Services.Separation;
 using BeatSight.Game.Services.Metadata;
+using BeatSight.Game.Services;
 using BeatSight.Game.UI;
 using BeatSight.Game.UI.Theming;
 using BeatSight.Game.UI.Components;
@@ -221,6 +222,10 @@ namespace BeatSight.Game
 
             var collectionManager = new Collections.CollectionManager(Host.Storage);
             dependencies.Cache(collectionManager);
+
+            // Cloud sync service - real implementation for syncing with web backend
+            var cloudSyncService = new CloudSyncService();
+            dependencies.CacheAs<ICloudSyncService>(cloudSyncService);
 
             generationPipeline = new GenerationPipeline(audioEngine, decodeService, onsetDetectionService, aiGenerator, new DemucsExternalProcessBackend(), new PassthroughBackend());
             dependencies.Cache(generationPipeline);

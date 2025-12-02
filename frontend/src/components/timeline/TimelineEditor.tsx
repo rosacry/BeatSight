@@ -38,8 +38,12 @@ const LANE_SORT_PRIORITY: Record<DrumComponent, number> = {
     hihat_open: -39,
     hihat_pedal: -38,
     hihat_foot_splash: -37,
+    hihat_splash: -36,
     // Snare variations (center-ish)
     snare: -5,
+    snare_center: -5,
+    snare_rimshot: -4,
+    snare_cross_stick: -3,
     rimshot: -4,
     cross_stick: -3,
     // Kick (center)
@@ -57,6 +61,7 @@ const LANE_SORT_PRIORITY: Record<DrumComponent, number> = {
     crash2: 31,
     splash: 32,
     china: 33,
+    cymbal_choke: 34,
     // Auxiliary percussion (very bottom)
     cowbell: 40,
     aux_percussion: 41,

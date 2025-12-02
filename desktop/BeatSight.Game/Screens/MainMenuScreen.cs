@@ -1,5 +1,6 @@
 using BeatSight.Game.Screens.Editor;
 using BeatSight.Game.Screens.Playback;
+using BeatSight.Game.Screens.Recording;
 using BeatSight.Game.Screens.Settings;
 using BeatSight.Game.Screens.SongSelect;
 using BeatSight.Game.UI.Components;
@@ -115,6 +116,10 @@ namespace BeatSight.Game.Screens
                                     new MenuButton("Editor", UITheme.AccentSecondary)
                                     {
                                         Action = () => this.Push(new SongSelectScreen(editorMode: true))
+                                    },
+                                    new MenuButton("Record", UITheme.AccentSuccess)
+                                    {
+                                        Action = () => this.Push(new RecordingScreen())
                                     },
                                     new MenuButton("Settings", UITheme.AccentWarning)
                                     {

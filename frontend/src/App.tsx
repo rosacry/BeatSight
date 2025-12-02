@@ -20,6 +20,7 @@ import { PricingPage } from './pages/PricingPage'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
 import { VerifierDashboardPage } from './pages/VerifierDashboardPage'
 import { MapEditPage } from './pages/MapEditPage'
+import { RecordPage } from './pages/RecordPage'
 import { useAuthStore } from './stores/authStore'
 import { useServiceWorkerUpdate } from './hooks/usePWA'
 import { KeyboardShortcutsProvider } from './hooks/useKeyboardShortcuts'
@@ -109,6 +110,14 @@ function App() {
                                     element={
                                         <ProtectedRoute>
                                             <MapEditPage />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/record"
+                                    element={
+                                        <ProtectedRoute>
+                                            <RecordPage />
                                         </ProtectedRoute>
                                     }
                                 />

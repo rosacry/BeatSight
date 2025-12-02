@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db_session
+from app.api.deps import get_current_user, get_db_session, require_community
 from app.models.map_vote import VoteType
 from app.models.user import User
 from app.services.votes import (
@@ -19,7 +19,12 @@ from app.services.votes import (
     VoteService,
 )
 
-router = APIRouter(prefix="/maps", tags=["votes"])
+# All voting routes require community feature to be enabled
+router = APIRouter(
+    prefix="/maps",
+    tags=["votes"],
+    dependencies=[Depends(require_community)],
+)
 
 
 # =============================================================================

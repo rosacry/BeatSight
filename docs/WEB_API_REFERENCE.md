@@ -307,6 +307,264 @@ Register a new sync client.
 
 ---
 
+## Billing
+
+#### GET /api/billing/pricing
+Get pricing table for display. No authentication required.
+
+**Response (200):**
+```json
+{
+    "free": {
+        "name": "Free",
+        "price_monthly": 0,
+        "ai_quota": 5,
+        "features": ["Basic beatmap analysis", "5 AI jobs/month"]
+    },
+    "pro": {
+        "name": "Pro",
+        "price_monthly": 9.99,
+        "ai_quota": 100,
+        "features": ["Advanced analysis", "100 AI jobs/month", "Priority processing"]
+    },
+    "studio": {
+        "name": "Studio",
+        "price_monthly": 29.99,
+        "ai_quota": -1,
+        "features": ["Unlimited AI jobs", "API access", "Premium support"]
+    }
+}
+```
+
+#### GET /api/billing/config
+Get Stripe configuration for client-side. No authentication required.
+
+**Response (200):**
+```json
+{
+    "publishable_key": "pk_live_...",
+    "is_configured": true
+}
+```
+
+#### GET /api/billing/subscription
+Get current user's subscription status. Requires authentication.
+
+**Response (200):**
+```json
+{
+    "plan": "pro",
+    "status": "active",
+    "ai_quota_remaining": 85,
+    "current_period_end": "2025-02-01T00:00:00Z",
+    "is_active": true
+}
+```
+
+#### POST /api/billing/checkout
+Create a Stripe checkout session. Requires authentication.
+
+**Request Body:**
+```json
+{
+    "plan": "pro",
+    "success_url": "https://app.beatsight.app/billing/success",
+    "cancel_url": "https://app.beatsight.app/billing/cancel"
+}
+```
+
+**Response (200):**
+```json
+{
+    "session_id": "cs_...",
+    "checkout_url": "https://checkout.stripe.com/..."
+}
+```
+
+#### POST /api/billing/portal
+Create a Stripe customer portal session. Requires authentication.
+
+**Response (200):**
+```json
+{
+    "portal_url": "https://billing.stripe.com/..."
+}
+```
+
+#### POST /api/billing/webhook
+Handle Stripe webhooks. Requires valid Stripe signature.
+
+---
+
+## Karma
+
+#### GET /api/karma
+Get current user's karma summary. Requires authentication.
+
+**Response (200):**
+```json
+{
+    "user_id": "uuid",
+    "karma_score": 150,
+    "rank": 42,
+    "daily_ai_quota": 10,
+    "eligible_roles": ["mapper", "curator"],
+    "current_roles": ["mapper"]
+}
+```
+
+#### GET /api/karma/history
+Get user's karma history. Requires authentication.
+
+**Query Parameters:**
+- `limit` (int, default: 50) - Page size
+- `offset` (int, default: 0) - Pagination offset
+
+**Response (200):**
+```json
+{
+    "items": [
+        {
+            "id": "uuid",
+            "delta": 10,
+            "reason": "map_upvoted",
+            "related_entity_type": "map",
+            "related_entity_id": "uuid",
+            "recorded_at": "2025-01-15T10:30:00Z"
+        }
+    ],
+    "total_count": 25,
+    "limit": 50,
+    "offset": 0
+}
+```
+
+#### GET /api/karma/stats
+Get detailed karma statistics. Requires authentication.
+
+**Response (200):**
+```json
+{
+    "current_score": 150,
+    "rank": 42,
+    "breakdown": [
+        {"reason": "map_upvoted", "total": 100, "count": 10},
+        {"reason": "daily_login", "total": 50, "count": 50}
+    ],
+    "eligible_roles": ["mapper", "curator"],
+    "current_roles": ["mapper"],
+    "daily_ai_quota": 10
+}
+```
+
+#### GET /api/karma/leaderboard
+Get karma leaderboard.
+
+**Query Parameters:**
+- `limit` (int, default: 10) - Number of entries
+- `offset` (int, default: 0) - Pagination offset
+
+**Response (200):**
+```json
+{
+    "entries": [
+        {"rank": 1, "user_id": "uuid", "display_name": "DrumLord", "karma_score": 5000},
+        {"rank": 2, "user_id": "uuid", "display_name": "BeatMaster", "karma_score": 4500}
+    ],
+    "limit": 10,
+    "offset": 0
+}
+```
+
+#### GET /api/karma/thresholds
+Get karma thresholds for roles. No authentication required.
+
+**Response (200):**
+```json
+{
+    "thresholds": [
+        {"role": "mapper", "threshold": 50, "description": "Can submit maps"},
+        {"role": "curator", "threshold": 500, "description": "Can feature maps"}
+    ]
+}
+```
+
+---
+
+## Votes
+
+#### GET /api/maps/{map_id}/votes
+Get vote counts for a map.
+
+**Response (200):**
+```json
+{
+    "map_id": "uuid",
+    "upvotes": 42,
+    "downvotes": 3,
+    "score": 39,
+    "user_vote": "upvote"
+}
+```
+
+#### POST /api/maps/{map_id}/vote
+Vote on a map. Requires authentication.
+
+**Request Body:**
+```json
+{
+    "action": "upvote"
+}
+```
+Allowed values: `upvote`, `downvote`
+
+**Response (200):**
+```json
+{
+    "map_id": "uuid",
+    "upvotes": 43,
+    "downvotes": 3,
+    "score": 40,
+    "user_vote": "upvote"
+}
+```
+
+#### DELETE /api/maps/{map_id}/vote
+Remove vote from a map. Requires authentication.
+
+**Response (200):**
+```json
+{
+    "map_id": "uuid",
+    "upvotes": 42,
+    "downvotes": 3,
+    "score": 39,
+    "user_vote": null
+}
+```
+
+#### POST /api/maps/votes/bulk
+Get vote counts for multiple maps in one request.
+
+**Request Body:**
+```json
+{
+    "map_ids": ["uuid1", "uuid2", "uuid3"]
+}
+```
+
+**Response (200):**
+```json
+{
+    "votes": {
+        "uuid1": {"map_id": "uuid1", "upvotes": 10, "downvotes": 1, "score": 9, "user_vote": null},
+        "uuid2": {"map_id": "uuid2", "upvotes": 25, "downvotes": 2, "score": 23, "user_vote": "upvote"}
+    }
+}
+```
+
+---
+
 ## Admin
 
 #### GET /api/admin/stats

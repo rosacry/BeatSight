@@ -270,8 +270,7 @@ class JobProcessor:
         log: structlog.BoundLogger
     ) -> Path | None:
         """Download audio file from storage."""
-        # TODO: Implement actual S3/storage download
-        # For now, check if there's a local path or URL
+        from .storage_utils import get_storage_client, StorageError
         
         audio_url = song.get("audio_url") or song.get("storage_uri")
         if not audio_url:
@@ -280,23 +279,17 @@ class JobProcessor:
         
         try:
             output_path = Path(self.config.temp_dir) / f"{song['id']}_input.wav"
+            storage = get_storage_client()
             
-            if audio_url.startswith("http"):
-                # Download from URL
-                async with httpx.AsyncClient() as client:
-                    response = await client.get(audio_url, follow_redirects=True)
-                    response.raise_for_status()
-                    output_path.write_bytes(response.content)
-            elif Path(audio_url).exists():
-                # Local file - copy to temp
-                import shutil
-                shutil.copy(audio_url, output_path)
-            else:
-                log.error("Cannot resolve audio path", url=audio_url)
-                return None
+            # Use unified storage client for all URI schemes
+            await storage.download(audio_url, output_path)
             
+            log.info("Audio downloaded", path=str(output_path), size=output_path.stat().st_size)
             return output_path
             
+        except StorageError as e:
+            log.error("Storage download failed", error=str(e), url=audio_url)
+            return None
         except Exception as e:
             log.exception("Audio download failed", error=str(e))
             return None
@@ -346,22 +339,52 @@ class JobProcessor:
         log: structlog.BoundLogger,
     ) -> bool:
         """Upload generated beatmap to storage."""
-        # TODO: Implement actual S3/storage upload
-        # For now, just verify the file exists
+        from .storage_utils import get_storage_client, StorageError
         
         if not beatmap_path.exists():
             log.error("Beatmap file not found", path=str(beatmap_path))
             return False
         
-        log.info(
-            "Results ready for upload",
-            beatmap_size=beatmap_path.stat().st_size,
-            note_count=result.get("note_count", 0),
-            bpm=result.get("bpm"),
-        )
-        
-        # TODO: Upload to S3 and create map_version record
-        return True
+        try:
+            storage = get_storage_client()
+            
+            # Construct storage URI
+            storage_backend = self.config.storage_backend
+            if storage_backend == "s3":
+                bucket = os.getenv("S3_BUCKET", "beatsight-beatmaps")
+                uri = f"s3://{bucket}/beatmaps/{song_id}/{job_id}.bsm"
+            elif storage_backend == "azure":
+                container = os.getenv("AZURE_CONTAINER", "beatmaps")
+                uri = f"az://{container}/beatmaps/{song_id}/{job_id}.bsm"
+            else:
+                # Local storage - just log success
+                log.info(
+                    "Results ready (local mode)",
+                    beatmap_size=beatmap_path.stat().st_size,
+                    note_count=result.get("note_count", 0),
+                    bpm=result.get("bpm"),
+                )
+                return True
+            
+            # Upload beatmap
+            await storage.upload(beatmap_path, uri)
+            
+            log.info(
+                "Results uploaded",
+                uri=uri,
+                beatmap_size=beatmap_path.stat().st_size,
+                note_count=result.get("note_count", 0),
+                bpm=result.get("bpm"),
+            )
+            
+            return True
+            
+        except StorageError as e:
+            log.error("Storage upload failed", error=str(e))
+            return False
+        except Exception as e:
+            log.exception("Unexpected upload error", error=str(e))
+            return False
 
 
 # =============================================================================

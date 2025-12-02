@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db_session
+from app.api.deps import get_current_user, get_db_session, require_karma
 from app.models.user import User
 from app.services.karma import (
     KarmaError,
@@ -19,7 +19,12 @@ from app.services.karma import (
     ROLE_KARMA_THRESHOLDS,
 )
 
-router = APIRouter(prefix="/karma", tags=["karma"])
+# All karma routes require karma feature to be enabled
+router = APIRouter(
+    prefix="/karma",
+    tags=["karma"],
+    dependencies=[Depends(require_karma)],
+)
 
 
 # =============================================================================

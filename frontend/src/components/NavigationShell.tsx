@@ -22,6 +22,7 @@ interface NavItem {
 const navItems: NavItem[] = [
     { path: '/', label: 'Home', icon: <HomeIcon /> },
     { path: '/queue', label: 'Job Queue', icon: <QueueIcon /> },
+    { path: '/record', label: 'Record', requiresAuth: true, icon: <MicIcon /> },
     { path: '/library', label: 'My Library', requiresAuth: true, icon: <LibraryIcon /> },
 ]
 
@@ -37,6 +38,14 @@ function QueueIcon() {
     return (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+        </svg>
+    )
+}
+
+function MicIcon() {
+    return (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
         </svg>
     )
 }

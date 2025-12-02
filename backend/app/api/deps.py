@@ -2,18 +2,98 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, AsyncGenerator, Optional
+from typing import TYPE_CHECKING, AsyncGenerator, Callable, Optional
 
 from fastapi import Depends, HTTPException, Query, WebSocket, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.db.session import get_session
 from app.models.user import User
 from app.services.auth import AuthService
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
+
+
+# =============================================================================
+# Feature Flag Dependencies
+# =============================================================================
+
+def require_feature(feature_name: str) -> Callable[[], None]:
+    """
+    Create a dependency that checks if a feature flag is enabled.
+    
+    Usage:
+        @router.get("/sync", dependencies=[Depends(require_feature("cloud_sync"))])
+        async def sync_endpoint():
+            ...
+    
+    Args:
+        feature_name: Name of the feature (without 'feature_' prefix).
+                      Maps to settings.feature_{feature_name}
+    
+    Raises:
+        HTTPException 404 if feature is disabled
+    """
+    def check_feature() -> None:
+        settings = get_settings()
+        flag_name = f"feature_{feature_name}"
+        is_enabled = getattr(settings, flag_name, False)
+        
+        if not is_enabled:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="This feature is not currently available",
+            )
+    
+    return check_feature
+
+
+def require_beta() -> None:
+    """Dependency that requires beta features to be enabled."""
+    settings = get_settings()
+    if not settings.feature_beta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This feature is in beta and not yet available",
+        )
+
+
+def require_community() -> None:
+    """Dependency that requires community features to be enabled."""
+    settings = get_settings()
+    if not settings.feature_community:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Community features are not currently available",
+        )
+
+
+def require_karma() -> None:
+    """Dependency that requires karma system to be enabled."""
+    settings = get_settings()
+    if not settings.feature_karma:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Karma system is not currently available",
+        )
+
+
+def require_cloud_sync() -> None:
+    """Dependency that requires cloud sync to be enabled."""
+    settings = get_settings()
+    if not settings.feature_cloud_sync:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cloud sync is not currently available",
+        )
+
+
+# =============================================================================
+# Database Session
+# =============================================================================
 
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:

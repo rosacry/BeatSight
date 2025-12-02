@@ -39,7 +39,7 @@ The `.bs` file is a JSON document containing all beatmap data:
     "Tags": ["Sprite Recordings", "ALTER:ANSWERS"],
     "Difficulty": 8.5,
     "PreviewTime": 108169,
-    "BeatmapId": "unique-guid",
+    "BeatmapId": "550e8400-e29b-41d4-a716-446655440000",
     "CreatedAt": "2025-11-02T20:13:45Z",
     "ModifiedAt": "2025-11-02T20:45:22Z",
     "Description": "Epic drum map"

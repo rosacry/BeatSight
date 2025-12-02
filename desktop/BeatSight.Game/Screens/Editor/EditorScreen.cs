@@ -2909,7 +2909,10 @@ namespace BeatSight.Game.Screens.Editor
                         string json = File.ReadAllText(debugPath);
                         timeline?.LoadDebugData(json);
                     }
-                    catch (Exception) { }
+                    catch (Exception ex)
+                    {
+                        osu.Framework.Logging.Logger.Log($"Failed to load debug data: {ex.Message}", LoggingTarget.Runtime, LogLevel.Debug);
+                    }
                 }
 
                 // Load audio track
@@ -3852,7 +3855,10 @@ namespace BeatSight.Game.Screens.Editor
                                         string json = File.ReadAllText(result.DebugAnalysisPath);
                                         timeline?.LoadDebugData(json);
                                     }
-                                    catch { }
+                                    catch (Exception ex)
+                                    {
+                                        osu.Framework.Logging.Logger.Log($"Failed to load debug analysis: {ex.Message}", LoggingTarget.Runtime, LogLevel.Debug);
+                                    }
                                 }
 
                                 setStatusDetail("Generated new beatmap");

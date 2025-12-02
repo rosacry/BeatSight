@@ -28,6 +28,7 @@ using BeatSight.Game.Screens;
 using osu.Framework.Bindables;
 using osu.Framework.Logging;
 using BeatSight.Game.Configuration;
+using BeatSight.Game.UI.Overlays;
 
 namespace BeatSight.Game.Screens.SongSelect
 {
@@ -250,7 +251,22 @@ namespace BeatSight.Game.Screens.SongSelect
 
         private void deleteBeatmap(BeatmapLibrary.BeatmapEntry entry)
         {
-            // TODO: Show confirmation dialog before deleting
+            // Show confirmation dialog before deleting
+            var dialog = new ConfirmationDialog(
+                title: "Delete Beatmap",
+                message: $"Are you sure you want to delete \"{entry.Beatmap.Metadata.Title}\"?\n\nThis action cannot be undone.",
+                confirmText: "Delete",
+                cancelText: "Cancel",
+                onConfirm: () => performDeleteBeatmap(entry),
+                isDangerous: true
+            );
+
+            AddInternal(dialog);
+            dialog.Show();
+        }
+
+        private void performDeleteBeatmap(BeatmapLibrary.BeatmapEntry entry)
+        {
             try
             {
                 if (File.Exists(entry.Path))

@@ -1,19 +1,27 @@
 /**
- * Simple API client utility.
- * Used for unauthenticated endpoints like password reset.
+ * Simple API client utility for unauthenticated endpoints.
+ * 
+ * Re-exports APIError from the main client for consistency.
+ * Use this module for simple unauthenticated requests like password reset.
+ * For authenticated API calls, use '@/api/client' directly.
  */
+
+// Re-export shared types from main client
+export { APIError } from '@/api/client'
 
 const API_BASE = '/api'
 
-class APIError extends Error {
-    constructor(public status: number, message: string) {
-        super(message)
-        this.name = 'APIError'
-    }
-}
-
+/**
+ * Simple API client for unauthenticated endpoints.
+ * Does not require or send authentication tokens.
+ */
 export const api = {
+    /**
+     * Make an unauthenticated POST request.
+     */
     async post<T = unknown>(endpoint: string, data: Record<string, unknown>): Promise<T> {
+        const { APIError } = await import('@/api/client')
+
         const response = await fetch(`${API_BASE}${endpoint}`, {
             method: 'POST',
             headers: {
@@ -30,7 +38,12 @@ export const api = {
         return response.json()
     },
 
+    /**
+     * Make an unauthenticated GET request.
+     */
     async get<T = unknown>(endpoint: string): Promise<T> {
+        const { APIError } = await import('@/api/client')
+
         const response = await fetch(`${API_BASE}${endpoint}`, {
             method: 'GET',
             headers: {

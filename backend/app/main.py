@@ -21,6 +21,7 @@ from app.api.routes import (
     songs,
     storage,
     sync,
+    users,
     verifier,
     votes,
     websocket,
@@ -159,6 +160,7 @@ if settings.environment != "test":
 
 app.include_router(health.router)
 app.include_router(auth.router, prefix=settings.api_prefix)
+app.include_router(users.router, prefix=settings.api_prefix)
 app.include_router(songs.router, prefix=settings.api_prefix)
 app.include_router(ai_jobs.router, prefix=settings.api_prefix)
 app.include_router(karma.router, prefix=settings.api_prefix)

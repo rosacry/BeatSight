@@ -130,6 +130,68 @@ export async function uploadFile(file: File, category: string): Promise<UploadRe
     return response.json()
 }
 
+/**
+ * Upload file with real progress tracking via XMLHttpRequest.
+ * Use this when you need accurate upload progress feedback.
+ */
+export function uploadFileWithProgress(
+    file: File,
+    category: string,
+    onProgress: (percent: number) => void
+): Promise<UploadResponse> {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        const formData = new FormData()
+        formData.append('file', file)
+
+        // Track upload progress
+        xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable) {
+                const percentComplete = Math.round((event.loaded / event.total) * 100)
+                onProgress(percentComplete)
+            }
+        })
+
+        // Handle completion
+        xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                    const response = JSON.parse(xhr.responseText)
+                    resolve(response)
+                } catch {
+                    reject(new APIError(xhr.status, 'Invalid response format'))
+                }
+            } else {
+                try {
+                    const error = JSON.parse(xhr.responseText)
+                    reject(new APIError(xhr.status, error.detail || 'Upload failed'))
+                } catch {
+                    reject(new APIError(xhr.status, 'Upload failed'))
+                }
+            }
+        })
+
+        // Handle errors
+        xhr.addEventListener('error', () => {
+            reject(new APIError(0, 'Network error during upload'))
+        })
+
+        xhr.addEventListener('abort', () => {
+            reject(new APIError(0, 'Upload cancelled'))
+        })
+
+        // Configure and send request
+        xhr.open('POST', `${API_BASE}/storage/upload/${category}`)
+
+        const token = getAccessToken()
+        if (token) {
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+        }
+
+        xhr.send(formData)
+    })
+}
+
 export async function getPresignedUploadUrl(
     category: string,
     filename: string,

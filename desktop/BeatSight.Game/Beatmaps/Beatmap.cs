@@ -8,7 +8,7 @@ namespace BeatSight.Game.Beatmaps
     /// </summary>
     public class Beatmap
     {
-        public string Version { get; set; } = "1.0.0";
+        public string Version { get; set; } = "1.1.0";
         public BeatmapMetadata Metadata { get; set; } = new();
         public AudioInfo Audio { get; set; } = new();
         public TimingInfo Timing { get; set; } = new();

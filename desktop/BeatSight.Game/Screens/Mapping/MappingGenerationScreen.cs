@@ -129,9 +129,12 @@ namespace BeatSight.Game.Screens.Mapping
         [Resolved]
         private Clipboard clipboard { get; set; } = null!;
 
-        public MappingGenerationScreen(ImportedAudioTrack importedTrack)
+        private readonly bool useLocalInference;
+
+        public MappingGenerationScreen(ImportedAudioTrack importedTrack, bool useLocalInference = false)
         {
             this.importedTrack = importedTrack;
+            this.useLocalInference = useLocalInference;
         }
 
         [BackgroundDependencyLoader]
@@ -170,9 +173,13 @@ namespace BeatSight.Game.Screens.Mapping
                         {
                             new SpriteText
                             {
-                                Text = "AI Beatmap Generation",
+                                Text = useLocalInference
+                                    ? "AI Beatmap Generation (Local)"
+                                    : "AI Beatmap Generation",
                                 Font = BeatSightFont.Title(36f),
-                                Colour = Color4.White
+                                Colour = useLocalInference
+                                    ? new Color4(255, 180, 100, 255)
+                                    : Color4.White
                             },
                             createSummaryBox(),
                             createAdvancedSettingsSection(),
@@ -1110,7 +1117,22 @@ namespace BeatSight.Game.Screens.Mapping
         private GenerationParams createSnapshot()
         {
             int sensitivity = (int)Math.Clamp(Math.Round(sensitivityValue.Value), 0, 100);
-            return new GenerationParams(importedTrack, sensitivity, mapQuantizationGrid(quantizationGrid.Value), debugOverlayEnabled.Value);
+
+            // Get local inference settings from config
+            var localModelPath = config.GetBindable<string>(BeatSightSetting.LocalModelPath).Value;
+            var localModelVariant = config.GetBindable<string>(BeatSightSetting.LocalModelVariant).Value;
+            var localDevice = config.GetBindable<string>(BeatSightSetting.LocalInferenceDevice).Value;
+
+            return new GenerationParams(
+                importedTrack,
+                sensitivity,
+                mapQuantizationGrid(quantizationGrid.Value),
+                debugOverlayEnabled.Value,
+                TempoOverride: null,
+                UseLocalInference: useLocalInference,
+                LocalModelPath: useLocalInference ? localModelPath : null,
+                LocalModelVariant: localModelVariant,
+                LocalInferenceDevice: localDevice);
         }
 
         private static QuantizationGrid mapQuantizationGrid(QuantizationGridSetting setting) => setting switch

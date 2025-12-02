@@ -173,12 +173,32 @@ class Settings(BaseSettings):
     stripe_webhook_secret: Optional[str] = Field(
         default=None, alias="STRIPE_WEBHOOK_SECRET"
     )
+    stripe_basic_monthly_price_id: Optional[str] = Field(
+        default=None, alias="STRIPE_BASIC_MONTHLY_PRICE_ID"
+    )
+    stripe_basic_yearly_price_id: Optional[str] = Field(
+        default=None, alias="STRIPE_BASIC_YEARLY_PRICE_ID"
+    )
     stripe_pro_monthly_price_id: Optional[str] = Field(
         default=None, alias="STRIPE_PRO_MONTHLY_PRICE_ID"
     )
     stripe_pro_yearly_price_id: Optional[str] = Field(
         default=None, alias="STRIPE_PRO_YEARLY_PRICE_ID"
     )
+
+    # -------------------------------------------------------------------------
+    # Subscription Quotas & Pricing
+    # -------------------------------------------------------------------------
+    # Monthly AI transcription limits per tier
+    quota_free_monthly: int = Field(default=5, alias="QUOTA_FREE_MONTHLY")
+    quota_basic_monthly: int = Field(default=30, alias="QUOTA_BASIC_MONTHLY")
+    quota_pro_monthly: int = Field(default=999999, alias="QUOTA_PRO_MONTHLY")  # Unlimited
+    
+    # Pricing in cents (for display purposes, Stripe handles actual billing)
+    price_basic_monthly_cents: int = Field(default=800, alias="PRICE_BASIC_MONTHLY")  # $8
+    price_basic_yearly_cents: int = Field(default=6400, alias="PRICE_BASIC_YEARLY")   # $64 (2 months free)
+    price_pro_monthly_cents: int = Field(default=1500, alias="PRICE_PRO_MONTHLY")     # $15
+    price_pro_yearly_cents: int = Field(default=12000, alias="PRICE_PRO_YEARLY")      # $120 (2 months free)
 
     # -------------------------------------------------------------------------
     # Notifications (E2-006)

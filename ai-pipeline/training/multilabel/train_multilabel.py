@@ -352,8 +352,8 @@ def main():
                         help='Loss function type')
     parser.add_argument('--gamma', type=float, default=2.0,
                         help='Focal loss gamma parameter')
-    parser.add_argument('--label-smoothing', type=float, default=0.05,
-                        help='Label smoothing factor')
+    parser.add_argument('--label-smoothing', type=float, default=0.1,
+                        help='Label smoothing factor (0.1 optimal for 21 classes)')
     parser.add_argument('--use-pos-weight', action='store_true',
                         help='Use positive class weighting')
     

@@ -28,8 +28,8 @@ This document describes BeatSight's production training pipeline using the **V5 
 | **17a** | ~2 hours | V5 warmup - Validate all innovations work |
 | **17b** | ~5 hours | V5 quick - All innovations in single model |
 | **17c** | ~12 hours | V5 long - Production quality |
-| **17d** | ~24 hours | V5 full - Large model, maximum quality (⭐ RECOMMENDED) |
-| **17e** | ~24 hours | V5 Self-Distill - Born-Again Networks (+1-2% boost) |
+| **17d** | ~22-24 hours | V5 full - 300 epochs, maximum quality (⭐ RECOMMENDED) |
+| **17e** | ~22-24 hours | V5 Self-Distill - Born-Again Networks (+1-2% boost) |
 | **20** | ~6 hours | Pseudo-Labeling - Semi-supervised learning (+1-5% with unlabeled data) |
 
 ---
@@ -91,15 +91,16 @@ The **V5 Ultimate** architecture combines every proven innovation into a single 
 │                                                                             │
 │  STEP 2: V5 Full Training                                                   │
 │  ────────────────────────                                                   │
-│  Select: 17d (v5-full)                         ~24 hours                    │
-│  → Full training with ALL cutting-edge techniques                           │
+│  Select: 17d (v5-full)                         ~22-24 hours                 │
+│  → Full training with ALL cutting-edge techniques (300 epochs)              │
+│  → Technique heads: flam, roll, choke, ghost, accent detection              │
 │  → Uses: SAM, SWA, EMA, R-Drop, Curriculum, Calibration                     │
-│  → Cosine Warm Restarts (escapes local minima for better generalization)    │
+│  → Cosine Warm Restarts (T0=40, escapes local minima)                       │
 │  → Expected: Best single-model quality (~95%+ accuracy)                     │
 │                                                                             │
 │  STEP 3: Self-Distillation (RECOMMENDED for Maximum Quality)                │
 │  ────────────────────────────────────────────────────────────               │
-│  Select: 17e (v5-self-distill)                 ~24 hours                    │
+│  Select: 17e (v5-self-distill)                 ~22-24 hours                 │
 │  → "Born-Again Networks" - train V5 using first V5 as teacher               │
 │  → Learns from BOTH ground truth AND soft predictions                       │
 │  → "Dark knowledge" transfer improves decision boundaries                   │
@@ -108,8 +109,8 @@ The **V5 Ultimate** architecture combines every proven innovation into a single 
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-Minimum:    14 → 17a → 17d                       (~26.5 hours total)
-Maximum:    14 → 17a → 17d → 17e                 (~50.5 hours total)  ⭐ RECOMMENDED
+Minimum:    14 → 17a → 17d                       (~26 hours total)
+Maximum:    14 → 17a → 17d → 17e                 (~48 hours total)  ⭐ RECOMMENDED
 ```
 
 ---

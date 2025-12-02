@@ -24,18 +24,37 @@ logger = get_logger(__name__)
 
 # Rate limit configurations (requests per minute)
 RATE_LIMITS = {
-    "anonymous": 30,  # Unauthenticated users
-    "authenticated": 100,  # Regular authenticated users
-    "premium": 500,  # Premium/Pro users
+    "anonymous": 20,  # Unauthenticated users - reduced for security
+    "authenticated": 60,  # Regular authenticated users (Free tier)
+    "basic": 120,  # Basic tier users
+    "premium": 300,  # Premium/Pro users
     "admin": 1000,  # Admins (essentially unlimited)
 }
 
 # Endpoints with custom limits (more restrictive)
+# AI generation is the most expensive operation - strict limits to prevent abuse
 ENDPOINT_LIMITS = {
-    "/api/ai-jobs": {"anonymous": 0, "authenticated": 10, "premium": 50},
-    "/api/songs": {"anonymous": 10, "authenticated": 30, "premium": 100},
-    "/api/auth/login": {"anonymous": 10, "authenticated": 10, "premium": 10},
-    "/api/auth/register": {"anonymous": 5, "authenticated": 5, "premium": 5},
+    # AI Generation - CRITICAL: Protect model from extraction attacks
+    "/api/ai-jobs": {
+        "anonymous": 0,  # Must be authenticated
+        "authenticated": 5,  # Free tier: 5 per minute max
+        "basic": 10,  # Basic tier: 10 per minute
+        "premium": 30,  # Pro tier: 30 per minute
+        "admin": 100,
+    },
+    # Song uploads - moderate limits
+    "/api/songs": {
+        "anonymous": 5,
+        "authenticated": 20,
+        "basic": 40,
+        "premium": 100,
+        "admin": 500,
+    },
+    # Auth endpoints - prevent brute force
+    "/api/auth/login": {"anonymous": 5, "authenticated": 5, "basic": 5, "premium": 5, "admin": 20},
+    "/api/auth/register": {"anonymous": 3, "authenticated": 3, "basic": 3, "premium": 3, "admin": 10},
+    # Billing - prevent abuse
+    "/api/billing": {"anonymous": 0, "authenticated": 10, "basic": 10, "premium": 20, "admin": 100},
 }
 
 # Endpoints exempt from rate limiting
@@ -209,8 +228,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             if hasattr(user, "is_admin") and user.is_admin:
                 return "admin"
             if hasattr(user, "subscription_tier"):
-                if user.subscription_tier in ("pro", "premium"):
+                tier = user.subscription_tier
+                if tier in ("pro", "premium"):
                     return "premium"
+                if tier == "basic":
+                    return "basic"
 
         return "authenticated"
 

@@ -23,12 +23,19 @@ Usage:
         find_label_issues,
         estimate_noise_matrix,
         clean_labels,
+        run_comprehensive_audit,  # NEW: Uses Cleanlab Datalab
         LabelNoiseDataset,
     )
     
     # Find potentially mislabeled samples
     issues = find_label_issues(probs, labels)
     print(f"Found {len(issues)} potential label issues")
+    
+    # NEW: Comprehensive audit with Cleanlab Datalab (outliers + duplicates)
+    audit = run_comprehensive_audit(probs, labels, features=embeddings)
+    print(f"Found {audit['summary']['label_issues_count']} label issues")
+    print(f"Found {audit['summary']['outliers_count']} outliers")
+    print(f"Found {audit['summary']['near_duplicates_count']} near-duplicates")
     
     # Optionally use cleanlab if installed
     cleaned_labels = clean_labels(probs, labels, method='prune_by_noise_rate')
@@ -175,6 +182,105 @@ def estimate_noise_matrix(
     noise_matrix = noise_matrix / col_sums
     
     return noise_matrix
+
+
+def run_comprehensive_audit(
+    pred_probs: np.ndarray,
+    labels: np.ndarray,
+    features: Optional[np.ndarray] = None,
+    num_classes: Optional[int] = None,
+) -> Dict[str, Any]:
+    """
+    Run comprehensive label audit using Cleanlab Datalab.
+    
+    Datalab provides unified detection of:
+    - Label errors (mislabeled samples)
+    - Outliers (unusual samples that may hurt training)
+    - Near-duplicates (samples that may bias evaluation)
+    
+    Args:
+        pred_probs: Model predicted probabilities [N, num_classes]
+        labels: Given (possibly noisy) labels [N]
+        features: Optional feature embeddings for outlier/duplicate detection [N, D]
+        num_classes: Number of classes
+    
+    Returns:
+        Dictionary with issue summaries and indices
+    """
+    labels = np.asarray(labels)
+    pred_probs = np.asarray(pred_probs)
+    
+    result = {
+        "label_issues": [],
+        "outliers": [],
+        "near_duplicates": [],
+        "summary": {},
+    }
+    
+    if HAS_CLEANLAB and Datalab is not None:
+        try:
+            # Create dataset dict for Datalab
+            data = {"label": labels.tolist()}
+            
+            # Initialize Datalab
+            lab = Datalab(data=data, label_name="label")
+            
+            # Find all issues
+            if features is not None:
+                lab.find_issues(pred_probs=pred_probs, features=features)
+            else:
+                lab.find_issues(pred_probs=pred_probs)
+            
+            # Get issue summary
+            issues_df = lab.get_issues()
+            
+            # Extract label issues
+            if "is_label_issue" in issues_df.columns:
+                label_issue_mask = issues_df["is_label_issue"].values
+                result["label_issues"] = np.where(label_issue_mask)[0].tolist()
+            
+            # Extract outliers
+            if "is_outlier_issue" in issues_df.columns:
+                outlier_mask = issues_df["is_outlier_issue"].values
+                result["outliers"] = np.where(outlier_mask)[0].tolist()
+            
+            # Extract near-duplicates
+            if "is_near_duplicate_issue" in issues_df.columns:
+                dup_mask = issues_df["is_near_duplicate_issue"].values
+                result["near_duplicates"] = np.where(dup_mask)[0].tolist()
+            
+            # Summary
+            result["summary"] = {
+                "total_samples": len(labels),
+                "label_issues_count": len(result["label_issues"]),
+                "outliers_count": len(result["outliers"]),
+                "near_duplicates_count": len(result["near_duplicates"]),
+                "datalab_version": cleanlab.__version__ if hasattr(cleanlab, "__version__") else "unknown",
+            }
+            
+            logger.info(
+                f"Datalab audit: {result['summary']['label_issues_count']} label issues, "
+                f"{result['summary']['outliers_count']} outliers, "
+                f"{result['summary']['near_duplicates_count']} near-duplicates"
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.warning(f"Datalab audit failed: {e}. Falling back to basic audit.")
+    
+    # Fallback: use basic find_label_issues
+    issues = find_label_issues(pred_probs, labels, num_classes=num_classes)
+    result["label_issues"] = [issue.index for issue in issues]
+    result["summary"] = {
+        "total_samples": len(labels),
+        "label_issues_count": len(issues),
+        "outliers_count": 0,
+        "near_duplicates_count": 0,
+        "datalab_version": "fallback",
+    }
+    
+    return result
 
 
 def find_label_issues(

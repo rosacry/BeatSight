@@ -40,6 +40,8 @@ class StripeService:
         settings = get_settings()
         self.secret_key = settings.stripe_secret_key
         self.webhook_secret = settings.stripe_webhook_secret
+        self.basic_monthly_price_id = settings.stripe_basic_monthly_price_id
+        self.basic_yearly_price_id = settings.stripe_basic_yearly_price_id
         self.pro_monthly_price_id = settings.stripe_pro_monthly_price_id
         self.pro_yearly_price_id = settings.stripe_pro_yearly_price_id
         self.frontend_url = settings.frontend_url or "http://localhost:5173"
@@ -450,13 +452,19 @@ class StripeService:
     def _get_price_id(self, plan: SubscriptionPlan) -> str | None:
         """Get Stripe price ID for a plan."""
         return {
+            SubscriptionPlan.BASIC_MONTHLY: self.basic_monthly_price_id,
+            SubscriptionPlan.BASIC_YEARLY: self.basic_yearly_price_id,
             SubscriptionPlan.PRO_MONTHLY: self.pro_monthly_price_id,
             SubscriptionPlan.PRO_YEARLY: self.pro_yearly_price_id,
         }.get(plan)
 
     def _get_plan_from_price(self, price_id: str | None) -> SubscriptionPlan:
         """Get plan from Stripe price ID."""
-        if price_id == self.pro_monthly_price_id:
+        if price_id == self.basic_monthly_price_id:
+            return SubscriptionPlan.BASIC_MONTHLY
+        elif price_id == self.basic_yearly_price_id:
+            return SubscriptionPlan.BASIC_YEARLY
+        elif price_id == self.pro_monthly_price_id:
             return SubscriptionPlan.PRO_MONTHLY
         elif price_id == self.pro_yearly_price_id:
             return SubscriptionPlan.PRO_YEARLY

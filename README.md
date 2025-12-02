@@ -3,6 +3,9 @@ dotnet run
 pip install -r requirements.txt
 # BeatSight
 
+[![CI](https://github.com/rosacry/BeatSight/actions/workflows/ci.yml/badge.svg)](https://github.com/rosacry/BeatSight/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/rosacry/BeatSight/branch/main/graph/badge.svg)](https://codecov.io/gh/rosacry/BeatSight)
+
 BeatSight is an AI-assisted drum learning environment. It turns any song into a visual, moving score that drummers can follow in real time, edit to taste, and rehearse across 2D, 3D, or manuscript-style views. There is no scoring, tapping, or input latency to chase—just accurate playback surfaces tuned for practice.
 
 ## Vision

@@ -4,8 +4,8 @@ test.describe('Navigation', () => {
     test('should display navigation bar', async ({ page }) => {
         await page.goto('/');
 
-        // Check logo/brand
-        await expect(page.locator('text=BeatSight')).toBeVisible();
+        // Check logo/brand - use first() to handle multiple matches
+        await expect(page.locator('text=BeatSight').first()).toBeVisible();
 
         // Check main nav links
         await expect(page.locator('nav')).toBeVisible();

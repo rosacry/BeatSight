@@ -30,7 +30,8 @@ test.describe('Authentication Flow', () => {
         test('should have link to registration', async ({ page }) => {
             await page.goto('/login');
 
-            const registerLink = page.locator('a[href="/register"]');
+            // Use first() since there may be multiple register links (nav and form)
+            const registerLink = page.locator('a[href="/register"]').first();
             await expect(registerLink).toBeVisible();
             await expect(registerLink).toContainText(/sign up/i);
 
@@ -73,7 +74,8 @@ test.describe('Authentication Flow', () => {
         test('should have link to login', async ({ page }) => {
             await page.goto('/register');
 
-            const loginLink = page.locator('a[href="/login"]');
+            // Use first() since there may be multiple login links (nav and form)
+            const loginLink = page.locator('a[href="/login"]').first();
             await expect(loginLink).toBeVisible();
 
             await loginLink.click();

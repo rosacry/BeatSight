@@ -532,7 +532,7 @@ if __name__ == "__main__":
     probs, preds = heads.predict(features)
     decoded = heads.decode_predictions(preds)
     
-    print(f"\nSample predictions:")
+    print("\nSample predictions:")
     for i, techniques in enumerate(decoded):
         print(f"  Sample {i}: {techniques if techniques else '(none)'}")
     

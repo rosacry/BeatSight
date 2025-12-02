@@ -58,13 +58,10 @@ Total training time:
 """
 
 import argparse
-import json
-import os
 import random
-import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Tuple, Dict
+from typing import Optional, Dict
 
 import numpy as np
 import torch
@@ -81,19 +78,11 @@ sys.path.append(str(Path(__file__).parent.parent))
 from training.models.temporal_mamba import (
     TemporalDrumTranscriber,
     UltimateTemporalDrumTranscriber,
-    TemporalLoss,
-    MambaConfig,
-    temporal_small,
-    temporal_medium,
-    temporal_large,
-    ultimate_small,
-    ultimate_medium,
-    ultimate_large
+    TemporalLoss
 )
 from training.datasets.sequence_dataset import (
     SequenceDrumDataset,
-    SequenceConfig,
-    create_sequence_dataloaders
+    SequenceConfig
 )
 
 # Optional: wandb logging
@@ -639,7 +628,7 @@ def main():
     model = model.to(device)
     
     param_counts = model.count_parameters()
-    print(f"Model parameters:")
+    print("Model parameters:")
     for name, count in param_counts.items():
         print(f"  {name}: {count:,}")
     
@@ -660,11 +649,11 @@ def main():
     # Determine if we need audio
     use_audio = args.use_wav2vec or args.use_multi_res
     if use_audio:
-        print(f"Ultimate mode enabled - audio features will be used")
+        print("Ultimate mode enabled - audio features will be used")
         if args.use_wav2vec:
             print(f"  Wav2Vec2 model: {args.wav2vec_model}")
         if args.use_multi_res:
-            print(f"  Multi-resolution spectrograms enabled")
+            print("  Multi-resolution spectrograms enabled")
     
     # Training loop
     best_val_acc = 0.0

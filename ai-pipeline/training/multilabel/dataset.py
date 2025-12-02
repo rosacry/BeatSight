@@ -19,7 +19,6 @@ Example label formats supported:
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -400,10 +399,10 @@ class MultiLabelDrumDataset(Dataset):
         total = len(self.samples)
         
         print(f"\n{'='*60}")
-        print(f"Multi-Label Dataset Statistics")
+        print("Multi-Label Dataset Statistics")
         print(f"{'='*60}")
         print(f"Total samples: {total:,}")
-        print(f"\nPer-class counts:")
+        print("\nPer-class counts:")
         print(f"{'Class':<25} {'Count':>8} {'%':>8}")
         print(f"{'-'*45}")
         
@@ -414,7 +413,7 @@ class MultiLabelDrumDataset(Dataset):
         
         # Label distribution
         label_counts = [s['label_count'] for s in self.samples]
-        print(f"\nLabels per sample distribution:")
+        print("\nLabels per sample distribution:")
         for n in range(1, max(label_counts) + 1):
             count = sum(1 for lc in label_counts if lc == n)
             if count > 0:
@@ -424,7 +423,7 @@ class MultiLabelDrumDataset(Dataset):
         cooccur = self.get_cooccurrence_matrix()
         np.fill_diagonal(cooccur, 0)  # Remove self-co-occurrence
         
-        print(f"\nTop 10 co-occurring pairs:")
+        print("\nTop 10 co-occurring pairs:")
         flat_idx = np.argsort(cooccur.flatten())[::-1][:10]
         for flat in flat_idx:
             i, j = flat // self.num_classes, flat % self.num_classes

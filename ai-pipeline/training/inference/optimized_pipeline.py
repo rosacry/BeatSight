@@ -41,15 +41,13 @@ Usage:
         print(f"Chunk {chunk_result.chunk_index}: {len(chunk_result.hits)} hits")
 """
 
-import os
 import time
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Dict, List, Tuple, Callable, Any, Union, Literal, AsyncGenerator
+from typing import Optional, Dict, List, Tuple, Callable, Any, Union, AsyncGenerator
 from concurrent.futures import ThreadPoolExecutor, Future
-import threading
 import asyncio
 
 import numpy as np
@@ -648,7 +646,7 @@ class OptimizedPipeline:
     def classifier(self):
         """Lazy-load classifier."""
         if self._classifier is None:
-            from .tensorrt_inference import OptimizedInference, create_optimized_inference
+            from .tensorrt_inference import create_optimized_inference
             
             if self.config.model_path:
                 self._classifier = create_optimized_inference(
@@ -710,7 +708,7 @@ class OptimizedPipeline:
         Returns:
             Tuple of (spectrograms array, cache_hit boolean)
         """
-        from ..tools.spectrogram_cache import SpectrogramParams, get_global_cache
+        from ..tools.spectrogram_cache import SpectrogramParams
         import librosa
         
         cache_hit = False
@@ -1137,7 +1135,6 @@ class OptimizedPipeline:
         
         if not is_isolated:
             # Stream separation results as chunks
-            from ...separation.demucs_separator import DrumSeparator
             
             separator = self.separator
             chunk_drums = []
@@ -1333,7 +1330,7 @@ if __name__ == "__main__":
     else:
         result = process_audio(args.audio, args.tier, args.output)
         
-        print(f"\n=== Processing Complete ===")
+        print("\n=== Processing Complete ===")
         print(f"Duration: {result.audio_duration:.1f}s")
         print(f"Processing time: {result.processing_time:.1f}s")
         print(f"Realtime factor: {result.realtime_factor:.1f}x")

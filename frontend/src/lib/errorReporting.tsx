@@ -97,7 +97,7 @@ export function captureError(error: Error, context?: ErrorContext): void {
     };
 
     // Always log errors (they're important for debugging)
-    // eslint-disable-next-line no-console
+     
     console.error('[ErrorReporting] Captured error:', error, enrichedContext);
 
     // Uncomment when Sentry is installed:
@@ -120,13 +120,13 @@ export function captureMessage(message: string, level: 'info' | 'warning' | 'err
     const isDev = import.meta.env.DEV;
 
     if (level === 'error') {
-        // eslint-disable-next-line no-console
+         
         console.error('[ErrorReporting]', message, enrichedContext);
     } else if (level === 'warning' && isDev) {
-        // eslint-disable-next-line no-console
+         
         console.warn('[ErrorReporting]', message, enrichedContext);
     } else if (isDev) {
-        // eslint-disable-next-line no-console
+         
         console.info('[ErrorReporting]', message, enrichedContext);
     }
 

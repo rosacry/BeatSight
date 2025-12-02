@@ -91,6 +91,7 @@ export function LiveRecorder({
             if (metronomeIntervalRef.current) clearInterval(metronomeIntervalRef.current)
             if (audioContextRef.current) audioContextRef.current.close()
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     // Initialize audio context and request microphone
@@ -257,6 +258,7 @@ export function LiveRecorder({
                 return prev - 1
             })
         }, 60000 / bpm)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [bpm, initAudio, metronomeEnabled, playTick, startMetronome])
 
     // Start recording
@@ -319,6 +321,7 @@ export function LiveRecorder({
             console.error('Failed to start recording:', error)
             setState('idle')
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [quality, duration, bpm, maxDuration, onRecordingComplete, updateVisualization])
 
     // Stop recording

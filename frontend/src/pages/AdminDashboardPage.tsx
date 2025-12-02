@@ -104,6 +104,7 @@ export function AdminDashboardPage() {
         if (accessToken) {
             loadData()
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [accessToken])
 
     const loadUsers = async () => {
@@ -121,6 +122,7 @@ export function AdminDashboardPage() {
         if (activeTab === 'users' && accessToken) {
             loadUsers()
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab, accessToken, searchQuery])
 
     if (loading) {
@@ -173,8 +175,8 @@ export function AdminDashboardPage() {
                         key={tab}
                         onClick={() => setActiveTab(tab)}
                         className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tab
-                                ? 'bg-primary-500 text-white'
-                                : 'text-gray-400 hover:text-white'
+                            ? 'bg-primary-500 text-white'
+                            : 'text-gray-400 hover:text-white'
                             }`}
                     >
                         {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -315,16 +317,16 @@ export function AdminDashboardPage() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex px-2 py-1 text-xs rounded-full ${user.role === 'admin' ? 'bg-red-500/10 text-red-400' :
-                                                    user.role === 'moderator' ? 'bg-yellow-500/10 text-yellow-400' :
-                                                        'bg-gray-500/10 text-gray-400'
+                                                user.role === 'moderator' ? 'bg-yellow-500/10 text-yellow-400' :
+                                                    'bg-gray-500/10 text-gray-400'
                                                 }`}>
                                                 {user.role}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex px-2 py-1 text-xs rounded-full ${user.subscription_plan === 'pro'
-                                                    ? 'bg-primary-500/10 text-primary-400'
-                                                    : 'bg-gray-500/10 text-gray-400'
+                                                ? 'bg-primary-500/10 text-primary-400'
+                                                : 'bg-gray-500/10 text-gray-400'
                                                 }`}>
                                                 {user.subscription_plan || 'free'}
                                             </span>

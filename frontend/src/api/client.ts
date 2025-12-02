@@ -301,7 +301,7 @@ export function subscribeToJobProgress(
         try {
             const data = JSON.parse(event.data) as JobCompleteEvent
             onComplete(data)
-        } catch (e) {
+        } catch {
             onComplete()
         }
         eventSource.close()

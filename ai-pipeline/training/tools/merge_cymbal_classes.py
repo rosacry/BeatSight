@@ -25,7 +25,7 @@ import glob
 from datetime import datetime
 from pathlib import Path
 from collections import defaultdict
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Tuple
 
 # Classes to merge: source -> target
 MERGE_MAP = {
@@ -213,7 +213,7 @@ def main():
     
     # Use backup if available and we're reverting augmentation
     if backup and not args.keep_augmented:
-        print(f"  Restoring from pre-augment backup...")
+        print("  Restoring from pre-augment backup...")
         train_labels = load_labels(backup)
     else:
         train_labels = load_labels(str(train_labels_path))
@@ -222,7 +222,7 @@ def main():
     
     # Show before counts for merged classes
     before_counts = get_class_counts(train_labels)
-    print(f"  Before merge:")
+    print("  Before merge:")
     for cls in list(MERGE_MAP.keys()) + list(set(MERGE_MAP.values())):
         if cls in before_counts:
             print(f"    {cls}: {before_counts[cls]:,}")
@@ -234,7 +234,7 @@ def main():
     print(f"  Merge stats: {train_stats}")
     
     after_counts = get_class_counts(merged_train)
-    print(f"  After merge counts:")
+    print("  After merge counts:")
     for cls in set(MERGE_MAP.values()):
         if cls in after_counts:
             print(f"    {cls}: {after_counts[cls]:,}")

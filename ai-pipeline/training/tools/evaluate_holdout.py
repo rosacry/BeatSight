@@ -28,7 +28,6 @@ import json
 import logging
 import sys
 import time
-from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -482,7 +481,7 @@ def main():
     logger.info(f"\nResults saved to: {output_dir}")
     
     # Per-class breakdown
-    logger.info(f"\nPer-class accuracy (bottom 5):")
+    logger.info("\nPer-class accuracy (bottom 5):")
     sorted_classes = sorted(metrics.per_class_accuracy.items(), key=lambda x: x[1])
     for class_name, acc in sorted_classes[:5]:
         f1 = metrics.per_class_f1.get(class_name, 0)

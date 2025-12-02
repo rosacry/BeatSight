@@ -25,7 +25,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from html import escape
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Set, Tuple
 
 # Bin boundaries for openness histogram (inclusive of upper bound on last bin).
 _OPENNESS_BIN_EDGES: Tuple[float, ...] = tuple(i / 10 for i in range(11))

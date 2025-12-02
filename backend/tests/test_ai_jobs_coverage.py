@@ -10,17 +10,16 @@ import base64
 import json
 import uuid
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi import status
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.api.deps import get_current_user, get_current_user_optional, get_db_session
+from app.api.deps import get_current_user_optional, get_db_session
 from app.models.ai_job import AIJob, AIJobPriority, AIJobState
 from app.models.user import User
-from app.services.modal_gpu import ModalConnectionError, ModalJobError
+from app.services.modal_gpu import ModalConnectionError
 
 
 BASE_URL = "/api/ai-jobs"
@@ -135,9 +134,9 @@ class TestEnqueueJobModalIntegration:
     def test_modal_service_is_enabled_method_exists(self):
         """Test that modal service has is_enabled method."""
         from app.services.modal_gpu import get_modal_service
-        
+
         service = get_modal_service()
-        assert hasattr(service, 'is_enabled')
+        assert hasattr(service, "is_enabled")
         # Method should return a boolean
         result = service.is_enabled()
         assert isinstance(result, bool)
@@ -502,7 +501,7 @@ class TestProgressEventGeneratorPaths:
 
         assert response.status_code == 200
         assert "text/event-stream" in response.headers["content-type"]
-        
+
         content = response.text
         assert "event: status" in content
         assert "event: complete" in content
@@ -781,7 +780,7 @@ class TestSSEProgressGeneratorDirect:
             mock_service_cls.return_value = mock_service
 
             gen = _progress_event_generator(uuid.uuid4(), mock_session)
-            
+
             # Collect events
             events = []
             async for event in gen:
@@ -809,7 +808,7 @@ class TestSSEProgressGeneratorDirect:
             mock_service_cls.return_value = mock_service
 
             gen = _progress_event_generator(mock_job.id, mock_session)
-            
+
             events = []
             async for event in gen:
                 events.append(event)
@@ -838,7 +837,7 @@ class TestSSEProgressGeneratorDirect:
             mock_service_cls.return_value = mock_service
 
             gen = _progress_event_generator(mock_job.id, mock_session)
-            
+
             events = []
             async for event in gen:
                 events.append(event)
@@ -865,7 +864,7 @@ class TestSSEProgressGeneratorDirect:
             mock_service_cls.return_value = mock_service
 
             gen = _progress_event_generator(mock_job.id, mock_session)
-            
+
             events = []
             async for event in gen:
                 events.append(event)
@@ -971,12 +970,13 @@ class TestEnqueueJobModalDispatch:
         app.dependency_overrides[get_current_user_optional] = lambda: mock_user
 
         # We need to also mock storage for audio URL
-        with patch("app.services.storage.get_storage") as mock_get_storage, \
-             patch("app.services.storage.AudioStorage") as mock_audio_storage_cls:
-            
+        with (
+            patch("app.services.storage.get_storage") as mock_get_storage,
+            patch("app.services.storage.AudioStorage") as mock_audio_storage_cls,
+        ):
             mock_storage = AsyncMock()
             mock_get_storage.return_value = mock_storage
-            
+
             mock_audio_storage = AsyncMock()
             mock_url_result = MagicMock()
             mock_url_result.url = "https://example.com/audio.mp3"
@@ -1026,18 +1026,21 @@ class TestEnqueueJobModalDispatch:
         # Modal enabled but trigger fails
         mock_modal = MagicMock()
         mock_modal.is_enabled.return_value = True
-        mock_modal.trigger_job = AsyncMock(side_effect=ModalConnectionError("Connection refused"))
+        mock_modal.trigger_job = AsyncMock(
+            side_effect=ModalConnectionError("Connection refused")
+        )
         mock_modal_factory.return_value = mock_modal
 
         app.dependency_overrides[get_db_session] = lambda: mock_session
         app.dependency_overrides[get_current_user_optional] = lambda: mock_user
 
-        with patch("app.services.storage.get_storage") as mock_get_storage, \
-             patch("app.services.storage.AudioStorage") as mock_audio_storage_cls:
-            
+        with (
+            patch("app.services.storage.get_storage") as mock_get_storage,
+            patch("app.services.storage.AudioStorage") as mock_audio_storage_cls,
+        ):
             mock_storage = AsyncMock()
             mock_get_storage.return_value = mock_storage
-            
+
             mock_audio_storage = AsyncMock()
             mock_url_result = MagicMock()
             mock_url_result.url = "https://example.com/audio.mp3"
@@ -1093,15 +1096,18 @@ class TestEnqueueJobModalDispatch:
         app.dependency_overrides[get_db_session] = lambda: mock_session
         app.dependency_overrides[get_current_user_optional] = lambda: mock_user
 
-        with patch("app.services.storage.get_storage") as mock_get_storage, \
-             patch("app.services.storage.AudioStorage") as mock_audio_storage_cls:
-            
+        with (
+            patch("app.services.storage.get_storage") as mock_get_storage,
+            patch("app.services.storage.AudioStorage") as mock_audio_storage_cls,
+        ):
             mock_storage = AsyncMock()
             mock_get_storage.return_value = mock_storage
-            
+
             # Audio file not found for any format
             mock_audio_storage = AsyncMock()
-            mock_audio_storage.get_audio_url = AsyncMock(side_effect=FileNotFoundError("Not found"))
+            mock_audio_storage.get_audio_url = AsyncMock(
+                side_effect=FileNotFoundError("Not found")
+            )
             mock_audio_storage_cls.return_value = mock_audio_storage
 
             client = TestClient(app)

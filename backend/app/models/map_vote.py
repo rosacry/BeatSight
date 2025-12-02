@@ -27,7 +27,7 @@ class VoteType(int, enum.Enum):
 
 class MapVote(Base):
     """Tracks user votes on maps for community curation.
-    
+
     Each user can cast one vote per map. Votes affect:
     - Map visibility/ranking
     - Map creator's karma (via KarmaLedger)
@@ -51,9 +51,7 @@ class MapVote(Base):
     map_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("maps.id", ondelete="CASCADE"), nullable=False
     )
-    vote_type: Mapped[VoteType] = mapped_column(
-        SAEnum(VoteType), nullable=False
-    )
+    vote_type: Mapped[VoteType] = mapped_column(SAEnum(VoteType), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

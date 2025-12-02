@@ -25,7 +25,7 @@ import sys
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Set
 
 # Add parent to path for imports
 _THIS_FILE = Path(__file__).resolve()

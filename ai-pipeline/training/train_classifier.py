@@ -643,7 +643,7 @@ class DrumSampleDataset(Dataset):
                 print(f"[CACHE] Failed to load cache mapping from {cache_mapping}: {e}")
         elif cache_mapping is not None:
             print(f"[CACHE] Cache mapping file not found: {cache_mapping}")
-            print(f"[CACHE] Generate it with: python tools/generate_cache_index_mapping.py")
+            print("[CACHE] Generate it with: python tools/generate_cache_index_mapping.py")
 
         # Load labels - support multiple formats for memory efficiency
         labels_data = self._load_labels()
@@ -783,7 +783,7 @@ class DrumSampleDataset(Dataset):
                     print(f"[LABELS]   Merged {len(extra_data):,} extra samples")
                     main_labels.extend(extra_data)
                 else:
-                    print(f"[LABELS]   Warning: Extra labels not a list, skipping")
+                    print("[LABELS]   Warning: Extra labels not a list, skipping")
         
         return main_labels
 
@@ -842,8 +842,8 @@ class DrumSampleDataset(Dataset):
         if self.waveform_transform is not None or self.ghost_augmenter is not None or self.accent_tap_augmenter is not None:
             if audio_path is None:
                 raise RuntimeError(
-                    f"Waveform/ghost/accent augmentation requires file paths, but files array was skipped. "
-                    f"Disable these augmentations or regenerate labels without --skip-files."
+                    "Waveform/ghost/accent augmentation requires file paths, but files array was skipped. "
+                    "Disable these augmentations or regenerate labels without --skip-files."
                 )
             waveform = self._load_audio(audio_path)
             
@@ -3089,7 +3089,7 @@ def main():
         )
         print(f"[WAVEFORM AUGMENT] Using '{args.waveform_augment}' preset (disables feature caching for training)")
     elif args.waveform_augment != "none" and not HAS_WAVEFORM_AUGMENT:
-        print(f"[WARNING] Waveform augmentation requested but librosa not available. Skipping.")
+        print("[WARNING] Waveform augmentation requested but librosa not available. Skipping.")
 
     # Setup ghost note augmentation (synthesize ghost notes from normal hits)
     ghost_augmenter = None
@@ -3102,9 +3102,9 @@ def main():
         if args.ghost_augment_prob != 0.15:
             ghost_augmenter.config.ghost_prob = args.ghost_augment_prob
         print(f"[GHOST AUGMENT] Enabled with preset='{args.ghost_augment_preset}', prob={ghost_augmenter.config.ghost_prob:.2f}")
-        print(f"[GHOST AUGMENT] This synthesizes ghost notes from normal hits for improved ghost detection")
+        print("[GHOST AUGMENT] This synthesizes ghost notes from normal hits for improved ghost detection")
     elif args.ghost_augment and not HAS_GHOST_AUGMENT:
-        print(f"[WARNING] Ghost augmentation requested but module not available. Skipping.")
+        print("[WARNING] Ghost augmentation requested but module not available. Skipping.")
 
     # Setup accent-tap augmentation (velocity-based accent/tap pattern synthesis)
     accent_tap_augmenter = None
@@ -3117,9 +3117,9 @@ def main():
         if args.accent_tap_prob != 0.12:
             accent_tap_augmenter.config.augment_prob = args.accent_tap_prob
         print(f"[ACCENT-TAP AUGMENT] Enabled with preset='{args.accent_tap_preset}', prob={accent_tap_augmenter.config.augment_prob:.2f}")
-        print(f"[ACCENT-TAP AUGMENT] This synthesizes accents/taps from normal hits for improved dynamics")
+        print("[ACCENT-TAP AUGMENT] This synthesizes accents/taps from normal hits for improved dynamics")
     elif args.accent_tap_augment and not HAS_ACCENT_TAP_AUGMENT:
-        print(f"[WARNING] Accent-tap augmentation requested but module not available. Skipping.")
+        print("[WARNING] Accent-tap augmentation requested but module not available. Skipping.")
 
     # Determine if velocity training is enabled
     use_velocity_training = args.use_multi_task and args.model_version in ("v4", "v5")
@@ -3130,7 +3130,7 @@ def main():
     val_labels_file = f"val_labels{velocity_labels_suffix}.json"
     
     if use_velocity_training:
-        print(f"[VELOCITY] Multi-task training enabled with velocity prediction")
+        print("[VELOCITY] Multi-task training enabled with velocity prediction")
         print(f"[VELOCITY] Using labels: {train_labels_file}, {val_labels_file}")
 
     # Load class names for ghost augmenter (from components.json)
@@ -3434,7 +3434,7 @@ def main():
     # Print DataLoader configuration summary
     batches_per_epoch = len(train_loader)
     samples_per_epoch = batches_per_epoch * args.batch_size
-    print(f"\nDataLoader Configuration:")
+    print("\nDataLoader Configuration:")
     print(f"   Batch size: {args.batch_size}")
     print(f"   Workers: {num_workers} train / {val_num_workers} val")
     print(f"   Prefetch: {train_prefetch} train / {val_prefetch} val")
@@ -3579,7 +3579,6 @@ def main():
     
     # Enable gradient checkpointing if requested (reduces VRAM ~30-40%, costs ~20% speed)
     if args.gradient_checkpointing:
-        from torch.utils.checkpoint import checkpoint_sequential
         # Enable gradient checkpointing for models that support it
         if hasattr(model, 'gradient_checkpointing_enable'):
             model.gradient_checkpointing_enable()
@@ -3648,7 +3647,7 @@ def main():
             except Exception as compile_exc:  # pragma: no cover - optional path
                 compile_error = str(compile_exc)
                 if "triton" in compile_error.lower():
-                    print(f"Warning: torch.compile failed (triton not available).")
+                    print("Warning: torch.compile failed (triton not available).")
                     print("  On Windows: pip install triton-windows (https://github.com/woct0rdho/triton-windows)")
                     print("  On Linux: pip install triton")
                 else:
@@ -3711,7 +3710,7 @@ def main():
         )
         print(f"Deep Supervision enabled: aux_weights={aux_weights}")
     elif use_deep_sup:
-        print(f"Note: Deep supervision only supported for v5 and beats models, ignoring")
+        print("Note: Deep supervision only supported for v5 and beats models, ignoring")
     
     # Wrap with Hard Negative Mining if enabled (Option A enhancement: +0.5-1%)
     use_hard_negatives = getattr(args, 'use_hard_negatives', False) and HAS_HARD_NEGATIVE_MINING
@@ -3827,7 +3826,7 @@ def main():
         print(f"[DISTILLATION] Teacher loaded: {teacher_params:,} parameters")
         print(f"[DISTILLATION] Temperature: {args.distill_temperature}, Alpha: {args.distill_alpha}")
         print(f"[DISTILLATION] Progressive temperature: {args.distill_progressive_temp}")
-        print(f"[DISTILLATION] Student will learn from both ground truth AND teacher's soft predictions")
+        print("[DISTILLATION] Student will learn from both ground truth AND teacher's soft predictions")
     elif args.distill_from_single is not None and not HAS_DISTILLATION:
         print("Warning: Distillation requested but training.utils.distillation module not found. Ignoring.")
     
@@ -3840,7 +3839,7 @@ def main():
     ])
     if regularization_count >= 3 and args.label_smoothing > 0.05:
         _safe_print(f"⚠️  Warning: Using {regularization_count} regularization techniques with label_smoothing={args.label_smoothing}")
-        _safe_print(f"   This may cause over-regularization. Consider reducing --label-smoothing to 0.05")
+        _safe_print("   This may cause over-regularization. Consider reducing --label-smoothing to 0.05")
     
     # Initialize optimizer (SAM or standard Adam)
     use_sam = args.use_sam and HAS_SAM
@@ -3998,7 +3997,7 @@ def main():
             specaug_start_prob=0.3,
             specaug_end_prob=0.8,
         )
-        print(f"Progressive Augmentation enabled: augmentation strength will ramp up during training")
+        print("Progressive Augmentation enabled: augmentation strength will ramp up during training")
         print(progressive_aug.log_schedule())
     
     # Initialize SWA (Stochastic Weight Averaging) if requested
@@ -4053,7 +4052,7 @@ def main():
                 class_names=class_names,
                 frequency_weight=0.3,  # 30% frequency, 70% domain knowledge
             )
-            print(f"  Using frequency-adjusted difficulty scores (30% frequency + 70% domain knowledge)")
+            print("  Using frequency-adjusted difficulty scores (30% frequency + 70% domain knowledge)")
         except ImportError:
             # Fallback to pure domain knowledge
             difficulty_scores = np.array([
@@ -4084,7 +4083,7 @@ def main():
             adv_eps=args.awp_eps,
             start_epoch=args.awp_start_epoch,
         )
-        print(f"AWP (Adversarial Weight Perturbation) enabled:")
+        print("AWP (Adversarial Weight Perturbation) enabled:")
         print(f"  adv_lr={args.awp_lr}, adv_eps={args.awp_eps}")
         print(f"  start_epoch={args.awp_start_epoch}, freq={args.awp_freq}")
     
@@ -4099,7 +4098,7 @@ def main():
             warmup_epochs=args.early_stopping_warmup,
             verbose=True,
         )
-        print(f"Early Stopping enabled:")
+        print("Early Stopping enabled:")
         print(f"  patience={args.early_stopping_patience} epochs")
         print(f"  min_delta={args.early_stopping_min_delta}")
         print(f"  warmup={args.early_stopping_warmup} epochs")
@@ -4198,10 +4197,10 @@ def main():
         ckpt_use_lookahead = checkpoint_args.get("use_lookahead", False)
         
         if ckpt_use_sam != use_sam or ckpt_use_gc != use_gc or ckpt_use_lookahead != use_lookahead:
-            _safe_print(f"\n⚠️  Warning: Optimizer configuration changed from checkpoint:")
+            _safe_print("\n⚠️  Warning: Optimizer configuration changed from checkpoint:")
             _safe_print(f"    Checkpoint: SAM={ckpt_use_sam}, GC={ckpt_use_gc}, Lookahead={ckpt_use_lookahead}")
             _safe_print(f"    Current:    SAM={use_sam}, GC={use_gc}, Lookahead={use_lookahead}")
-            _safe_print(f"    Optimizer momentum/state may be partially reset.\n")
+            _safe_print("    Optimizer momentum/state may be partially reset.\n")
         
         model_state = checkpoint_state["model_state"]
         if isinstance(model_state, dict):
@@ -4238,7 +4237,7 @@ def main():
         # Report architecture differences
         has_mismatch = bool(missing_keys or size_mismatch_keys)
         if has_mismatch or unexpected_keys:
-            _safe_print(f"\n⚠️  Architecture mismatch detected in checkpoint:")
+            _safe_print("\n⚠️  Architecture mismatch detected in checkpoint:")
             if missing_keys:
                 _safe_print(f"    Missing keys (will be randomly initialized): {len(missing_keys)}")
                 for k in missing_keys[:5]:
@@ -4260,9 +4259,9 @@ def main():
             loaded_pct = 100 * len(compatible_state) / len(current_state)
             _safe_print(f"    ✓ Loaded {len(compatible_state)}/{len(current_state)} parameters ({loaded_pct:.1f}%)")
             if has_mismatch:
-                _safe_print(f"    ℹ️  Remaining parameters initialized randomly - this is fine for architecture upgrades.\n")
+                _safe_print("    ℹ️  Remaining parameters initialized randomly - this is fine for architecture upgrades.\n")
         else:
-            _safe_print(f"    ⚠️  No compatible weights found - starting with fresh model.\n")
+            _safe_print("    ⚠️  No compatible weights found - starting with fresh model.\n")
         
         # Only load optimizer/scheduler state if architecture is fully compatible
         if not has_mismatch:
@@ -4274,7 +4273,7 @@ def main():
             if amp_enabled and scaler_state is not None and scaler is not None:
                 scaler.load_state_dict(scaler_state)
         else:
-            _safe_print(f"    ℹ️  Optimizer/scheduler state reset due to architecture changes.\n")
+            _safe_print("    ℹ️  Optimizer/scheduler state reset due to architecture changes.\n")
         
         history = [dict(item) for item in checkpoint_state.get("history", []) if isinstance(item, dict)]
         best_val_acc = float(checkpoint_state.get("best_val_acc", best_val_acc))
@@ -4291,7 +4290,7 @@ def main():
             best_val_acc = 0.0
             best_epoch = -1
             best_model_path = None
-            _safe_print(f"ℹ️  Starting from epoch 0 due to architecture changes (pretrained weights loaded).")
+            _safe_print("ℹ️  Starting from epoch 0 due to architecture changes (pretrained weights loaded).")
         else:
             start_epoch = int(checkpoint_state.get("epoch", 0))
             last_completed_epoch = start_epoch
@@ -4362,7 +4361,7 @@ def main():
         resume_from_epoch = start_epoch if args.resume_from else 0
         if resume_from_epoch >= audit_warmup_epochs:
             print(f"\n[LABEL AUDIT] Warmup already complete (epoch {resume_from_epoch}/{audit_warmup_epochs})")
-            print(f"[LABEL AUDIT] Skipping to label noise detection...")
+            print("[LABEL AUDIT] Skipping to label noise detection...")
         else:
             remaining_epochs = audit_warmup_epochs - resume_from_epoch
             print(f"\n[LABEL AUDIT] Training for {remaining_epochs} epochs before audit...")
@@ -4391,7 +4390,7 @@ def main():
                 save_checkpoint(epoch, reason=f"audit_warmup_epoch_{epoch+1}")
                 print(f"[LABEL AUDIT] Checkpoint saved after warmup epoch {epoch + 1}")
         
-        print(f"\n[LABEL AUDIT] Running label noise detection...")
+        print("\n[LABEL AUDIT] Running label noise detection...")
         print(f"  Threshold: {noise_threshold}")
         print(f"  Audit only: {audit_only}")
         print(f"  Training samples: {len(train_dataset):,}")
@@ -4446,7 +4445,7 @@ def main():
         
         if audit_only:
             print("\n[LABEL AUDIT] Audit-only mode - exiting without training")
-            print(f"To train with cleaned labels, remove --label-noise-audit-only flag")
+            print("To train with cleaned labels, remove --label-noise-audit-only flag")
             return
         
         # Filter issues based on threshold and continue training with cleaned dataset
@@ -4467,7 +4466,7 @@ def main():
             use_shard_sampler=use_shard_aware,
             num_samples=len(train_dataset),
         )
-        print(f"[LABEL AUDIT] Updated training dataset and loader")
+        print("[LABEL AUDIT] Updated training dataset and loader")
         print("=" * 60 + "\n")
     
     try:
@@ -4685,7 +4684,7 @@ def main():
                 except OSError as e:
                     # Fallback: log artifact instead if save still fails
                     if "WinError 1314" in str(e) or "privilege" in str(e).lower():
-                        _safe_print(f"⚠ wandb.save() failed (Windows symlink issue), using artifact instead")
+                        _safe_print("⚠ wandb.save() failed (Windows symlink issue), using artifact instead")
                         try:
                             artifact = wandb.Artifact(
                                 name=f"best_model_epoch_{best_epoch}",
@@ -4732,7 +4731,7 @@ def main():
         print("Running post-training temperature calibration...")
         print("=" * 60)
         try:
-            from training.calibration.temperature_scaling import calibrate_model, compute_calibration_metrics
+            from training.calibration.temperature_scaling import calibrate_model
             
             # Calibrate the model using validation set
             calibrated_temp, metrics = calibrate_model(
@@ -4742,7 +4741,7 @@ def main():
                 method=args.calibration_method,
             )
             
-            print(f"Calibration complete:")
+            print("Calibration complete:")
             print(f"  Method: {args.calibration_method}")
             print(f"  Optimal temperature: {calibrated_temp:.4f}")
             print(f"  ECE before: {metrics.get('ece_before', 0):.4f}, ECE after: {metrics.get('ece_after', 0):.4f}")
@@ -4801,7 +4800,7 @@ def main():
                         best_model_path = result.best_model_path
                         best_val_acc = result.final_accuracy
                 else:
-                    _safe_print(f"Self-training did not improve accuracy (keeping original model)")
+                    _safe_print("Self-training did not improve accuracy (keeping original model)")
                     
             except Exception as e:
                 _safe_print(f"⚠ Self-training failed: {e} (continuing with original model)")
@@ -4809,13 +4808,13 @@ def main():
                 traceback.print_exc()
     
     print("\n" + "=" * 60)
-    print(f"Training complete!")
+    print("Training complete!")
     print(f"Best validation accuracy: {best_val_acc:.2f}%")
     print(f"Models saved to: {output_dir}")
     if ema is not None:
-        print(f"EMA models also saved (often perform 0.5-1% better)")
+        print("EMA models also saved (often perform 0.5-1% better)")
     if swa_manager is not None and swa_manager.started:
-        print(f"SWA model also saved (typically best generalization)")
+        print("SWA model also saved (typically best generalization)")
     print("=" * 60)
 
     if wandb_run is not None:
@@ -4831,7 +4830,7 @@ def main():
             wandb_run.save(str(final_model_path), policy="now")  # type: ignore[arg-type]
         except OSError as e:
             if "WinError 1314" in str(e) or "privilege" in str(e).lower():
-                _safe_print(f"⚠ wandb.save() failed (Windows symlink issue), using artifact instead")
+                _safe_print("⚠ wandb.save() failed (Windows symlink issue), using artifact instead")
                 artifact = wandb.Artifact(
                     name="final_model",
                     type="model",

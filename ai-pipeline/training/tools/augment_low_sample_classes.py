@@ -26,12 +26,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import random
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 

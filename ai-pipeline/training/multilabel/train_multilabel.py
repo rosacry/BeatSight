@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import time
 from pathlib import Path
@@ -42,7 +41,7 @@ from tqdm import tqdm
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from multilabel.dataset import MultiLabelDrumDataset
-from multilabel.loss import get_multilabel_loss, MultiLabelLoss, FocalBCELoss
+from multilabel.loss import get_multilabel_loss
 from multilabel.metrics import (
     MultiLabelMetricTracker,
     compute_all_metrics,
@@ -458,7 +457,7 @@ def main():
     pos_weight = None
     if args.use_pos_weight:
         pos_weight = full_dataset.get_pos_weights(method="sqrt_inverse").to(device)
-        print(f"Using positive class weights (sqrt_inverse)")
+        print("Using positive class weights (sqrt_inverse)")
     
     criterion = get_multilabel_loss(
         loss_type=args.loss_type,
@@ -575,7 +574,7 @@ def main():
     
     # Final summary
     print(f"\n{'='*60}")
-    print(f"Training complete!")
+    print("Training complete!")
     print(f"Best validation F1: {best_val_f1:.4f} at epoch {best_epoch}")
     print(f"Best model saved to: {output_dir / 'best_multilabel_model.pt'}")
     

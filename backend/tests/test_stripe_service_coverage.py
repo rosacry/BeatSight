@@ -11,14 +11,12 @@ These tests target specific code paths not covered by existing tests:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 
 from app.models.subscription import (
-    BillingProvider,
     BillingTransaction,
     Subscription,
     SubscriptionPlan,
@@ -50,7 +48,9 @@ class TestGetOrCreateCustomerExistingTransaction:
         user_id = uuid4()
         customer_id = "cus_existing123"
 
-        with patch("app.services.stripe_service.get_settings", return_value=mock_settings):
+        with patch(
+            "app.services.stripe_service.get_settings", return_value=mock_settings
+        ):
             service = StripeService()
 
         mock_user = MagicMock(spec=User)
@@ -83,7 +83,9 @@ class TestGetOrCreateCustomerExistingTransaction:
         """Test customer creation when no existing transaction."""
         user_id = uuid4()
 
-        with patch("app.services.stripe_service.get_settings", return_value=mock_settings):
+        with patch(
+            "app.services.stripe_service.get_settings", return_value=mock_settings
+        ):
             service = StripeService()
 
         mock_user = MagicMock(spec=User)
@@ -123,7 +125,7 @@ class TestHandleCheckoutCompleted:
         settings.stripe_pro_monthly_price_id = "price_pro_monthly"
         settings.stripe_pro_yearly_price_id = "price_pro_yearly"
         settings.frontend_url = "http://localhost:5173"
-        
+
         with patch("app.services.stripe_service.get_settings", return_value=settings):
             return StripeService()
 
@@ -189,7 +191,7 @@ class TestHandleInvoicePaid:
         settings.stripe_pro_monthly_price_id = "price_pro_monthly"
         settings.stripe_pro_yearly_price_id = "price_pro_yearly"
         settings.frontend_url = "http://localhost:5173"
-        
+
         with patch("app.services.stripe_service.get_settings", return_value=settings):
             return StripeService()
 
@@ -286,7 +288,7 @@ class TestHandleInvoiceFailed:
         settings.stripe_pro_monthly_price_id = "price_pro_monthly"
         settings.stripe_pro_yearly_price_id = "price_pro_yearly"
         settings.frontend_url = "http://localhost:5173"
-        
+
         with patch("app.services.stripe_service.get_settings", return_value=settings):
             return StripeService()
 
@@ -401,7 +403,7 @@ class TestGetPlanFromPrice:
         settings.stripe_pro_monthly_price_id = "price_pro_monthly"
         settings.stripe_pro_yearly_price_id = "price_pro_yearly"
         settings.frontend_url = "http://localhost:5173"
-        
+
         with patch("app.services.stripe_service.get_settings", return_value=settings):
             return StripeService()
 
@@ -442,10 +444,10 @@ class TestGetStripeServiceSingleton:
     def test_get_stripe_service_creates_instance(self):
         """Test singleton creation."""
         import app.services.stripe_service as stripe_module
-        
+
         # Reset the singleton
         stripe_module._stripe_service = None
-        
+
         settings = MagicMock()
         settings.stripe_secret_key = "sk_test_123"
         settings.stripe_webhook_secret = "whsec_test123"
@@ -454,23 +456,23 @@ class TestGetStripeServiceSingleton:
         settings.stripe_pro_monthly_price_id = None
         settings.stripe_pro_yearly_price_id = None
         settings.frontend_url = None
-        
+
         with patch("app.services.stripe_service.get_settings", return_value=settings):
             service1 = get_stripe_service()
             service2 = get_stripe_service()
 
         assert service1 is service2
-        
+
         # Clean up
         stripe_module._stripe_service = None
 
     def test_get_stripe_service_returns_same_instance(self):
         """Test singleton returns same instance."""
         import app.services.stripe_service as stripe_module
-        
+
         # Reset
         stripe_module._stripe_service = None
-        
+
         settings = MagicMock()
         settings.stripe_secret_key = "sk_test_123"
         settings.stripe_webhook_secret = "whsec_test123"
@@ -479,11 +481,11 @@ class TestGetStripeServiceSingleton:
         settings.stripe_pro_monthly_price_id = None
         settings.stripe_pro_yearly_price_id = None
         settings.frontend_url = None
-        
+
         with patch("app.services.stripe_service.get_settings", return_value=settings):
             service = get_stripe_service()
             assert stripe_module._stripe_service is service
-        
+
         # Clean up
         stripe_module._stripe_service = None
 
@@ -502,7 +504,7 @@ class TestSyncSubscription:
         settings.stripe_pro_monthly_price_id = "price_pro_monthly"
         settings.stripe_pro_yearly_price_id = "price_pro_yearly"
         settings.frontend_url = "http://localhost:5173"
-        
+
         with patch("app.services.stripe_service.get_settings", return_value=settings):
             return StripeService()
 
@@ -514,7 +516,7 @@ class TestSyncSubscription:
         mock_db.commit = AsyncMock()
 
         user_id = str(uuid4())
-        
+
         # No existing subscription
         mock_result = MagicMock()
         mock_result.scalars.return_value.first.return_value = None
@@ -542,7 +544,7 @@ class TestSyncSubscription:
         mock_db.commit = AsyncMock()
 
         user_id = str(uuid4())
-        
+
         # Existing subscription
         mock_subscription = MagicMock(spec=Subscription)
         mock_result = MagicMock()
@@ -567,7 +569,7 @@ class TestSyncSubscription:
     async def test_sync_missing_user_id(self, service):
         """Test syncing with missing user_id returns error."""
         mock_db = AsyncMock()
-        
+
         subscription_data = {
             "metadata": {},
             "status": "active",
@@ -584,7 +586,7 @@ class TestSyncSubscription:
         mock_db.commit = AsyncMock()
 
         user_id = str(uuid4())
-        
+
         mock_subscription = MagicMock(spec=Subscription)
         mock_result = MagicMock()
         mock_result.scalars.return_value.first.return_value = mock_subscription
@@ -610,7 +612,7 @@ class TestSyncSubscription:
         mock_db.commit = AsyncMock()
 
         user_id = str(uuid4())
-        
+
         mock_subscription = MagicMock(spec=Subscription)
         mock_result = MagicMock()
         mock_result.scalars.return_value.first.return_value = mock_subscription
@@ -624,7 +626,7 @@ class TestSyncSubscription:
             "current_period_end": 1706745600,
         }
 
-        result = await service._sync_subscription(mock_db, subscription_data)
+        _result = await service._sync_subscription(mock_db, subscription_data)
 
         assert mock_subscription.status == SubscriptionStatus.CANCELLED
 
@@ -635,7 +637,7 @@ class TestSyncSubscription:
         mock_db.commit = AsyncMock()
 
         user_id = str(uuid4())
-        
+
         mock_subscription = MagicMock(spec=Subscription)
         mock_result = MagicMock()
         mock_result.scalars.return_value.first.return_value = mock_subscription
@@ -649,7 +651,7 @@ class TestSyncSubscription:
             "current_period_end": 1706745600,
         }
 
-        result = await service._sync_subscription(mock_db, subscription_data)
+        _result = await service._sync_subscription(mock_db, subscription_data)
 
         assert mock_subscription.status == SubscriptionStatus.PAST_DUE
 
@@ -668,7 +670,7 @@ class TestSubscriptionCreatedEmailIntegration:
         settings.stripe_pro_monthly_price_id = "price_pro_monthly"
         settings.stripe_pro_yearly_price_id = "price_pro_yearly"
         settings.frontend_url = "http://localhost:5173"
-        
+
         with patch("app.services.stripe_service.get_settings", return_value=settings):
             return StripeService()
 
@@ -680,19 +682,19 @@ class TestSubscriptionCreatedEmailIntegration:
         mock_db.commit = AsyncMock()
 
         user_id = str(uuid4())
-        
+
         # Mock subscription lookup
         mock_subscription = MagicMock(spec=Subscription)
         mock_sub_result = MagicMock()
         mock_sub_result.scalars.return_value.first.return_value = mock_subscription
-        
+
         # Mock user lookup
         mock_user = MagicMock()
         mock_user.email = "subscriber@test.com"
         mock_user.display_name = "Test Subscriber"
         mock_user_result = MagicMock()
         mock_user_result.scalar_one_or_none.return_value = mock_user
-        
+
         mock_db.execute = AsyncMock(side_effect=[mock_sub_result, mock_user_result])
 
         subscription_data = {
@@ -705,10 +707,14 @@ class TestSubscriptionCreatedEmailIntegration:
 
         with patch("app.services.stripe_service.get_email_service") as mock_get_email:
             mock_email_service = MagicMock()
-            mock_email_service.send_subscription_confirmation = AsyncMock(return_value=True)
+            mock_email_service.send_subscription_confirmation = AsyncMock(
+                return_value=True
+            )
             mock_get_email.return_value = mock_email_service
 
-            result = await service._handle_subscription_created(mock_db, subscription_data)
+            _result = await service._handle_subscription_created(
+                mock_db, subscription_data
+            )
 
         # Email should have been sent
         mock_email_service.send_subscription_confirmation.assert_called_once()
@@ -724,17 +730,17 @@ class TestSubscriptionCreatedEmailIntegration:
         mock_db.commit = AsyncMock()
 
         user_id = str(uuid4())
-        
+
         mock_subscription = MagicMock(spec=Subscription)
         mock_sub_result = MagicMock()
         mock_sub_result.scalars.return_value.first.return_value = mock_subscription
-        
+
         mock_user = MagicMock()
         mock_user.email = "subscriber@test.com"
         mock_user.display_name = "Test Subscriber"
         mock_user_result = MagicMock()
         mock_user_result.scalar_one_or_none.return_value = mock_user
-        
+
         mock_db.execute = AsyncMock(side_effect=[mock_sub_result, mock_user_result])
 
         subscription_data = {
@@ -753,7 +759,9 @@ class TestSubscriptionCreatedEmailIntegration:
             mock_get_email.return_value = mock_email_service
 
             # Should not raise even though email fails
-            result = await service._handle_subscription_created(mock_db, subscription_data)
+            result = await service._handle_subscription_created(
+                mock_db, subscription_data
+            )
 
         # Should still return success result
         assert result["user_id"] == user_id

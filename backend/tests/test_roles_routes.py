@@ -75,7 +75,9 @@ class TestListRoles:
         mock_role2.created_at = datetime.now(timezone.utc)
 
         mock_rbac_instance = MagicMock()
-        mock_rbac_instance.get_all_roles = AsyncMock(return_value=[mock_role1, mock_role2])
+        mock_rbac_instance.get_all_roles = AsyncMock(
+            return_value=[mock_role1, mock_role2]
+        )
         mock_rbac_class.return_value = mock_rbac_instance
 
         response = client_authenticated.get("/api/roles")
@@ -326,7 +328,9 @@ class TestAssignRole:
 
         # Mock route RBAC to raise ValueError for invalid role
         mock_route_rbac_instance = MagicMock()
-        mock_route_rbac_instance.assign_role = AsyncMock(side_effect=ValueError("Invalid role"))
+        mock_route_rbac_instance.assign_role = AsyncMock(
+            side_effect=ValueError("Invalid role")
+        )
         mock_route_rbac_class.return_value = mock_route_rbac_instance
 
         app.dependency_overrides[get_current_user] = lambda: mock_user
@@ -524,7 +528,9 @@ class TestRevokeRole:
         mock_db_session.execute = AsyncMock(return_value=mock_result)
 
         mock_route_rbac_instance = MagicMock()
-        mock_route_rbac_instance.revoke_role = AsyncMock(return_value=False)  # User didn't have role
+        mock_route_rbac_instance.revoke_role = AsyncMock(
+            return_value=False
+        )  # User didn't have role
         mock_route_rbac_class.return_value = mock_route_rbac_instance
 
         app.dependency_overrides[get_current_user] = lambda: mock_user

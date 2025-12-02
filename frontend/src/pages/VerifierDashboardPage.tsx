@@ -108,12 +108,14 @@ export function VerifierDashboardPage() {
 
     useEffect(() => {
         loadData()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [accessToken])
 
     useEffect(() => {
         if (activeTab === 'history') {
             loadMyDecisions()
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab])
 
     const handleDecision = async (proposalId: string, decision: 'approve' | 'reject' | 'needs_changes') => {

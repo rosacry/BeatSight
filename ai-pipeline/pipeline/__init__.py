@@ -17,26 +17,26 @@ Key components:
 __version__ = "1.0.0"
 
 # Core exports
-from .process import process_audio_file
+from .process import process_audio_file as process_audio_file
 
 # Structured decoding
 from .structured_decoder import (
-    ViterbiDecoder,
-    DrumState,
-    TransitionMatrix,
-    DecodedEvent,
-    detect_time_signature,
-    detect_swing_ratio,
-    apply_structured_decoding,
+    ViterbiDecoder as ViterbiDecoder,
+    DrumState as DrumState,
+    TransitionMatrix as TransitionMatrix,
+    DecodedEvent as DecodedEvent,
+    detect_time_signature as detect_time_signature,
+    detect_swing_ratio as detect_swing_ratio,
+    apply_structured_decoding as apply_structured_decoding,
 )
 
 # Advanced structured decoding
 try:
     from .advanced_structured_decoder import (
-        BeamSearchDecoder,
-        CRFDecoder,
-        EnsembleDecoder,
-        apply_advanced_structured_decoding,
+        BeamSearchDecoder as BeamSearchDecoder,
+        CRFDecoder as CRFDecoder,
+        EnsembleDecoder as EnsembleDecoder,
+        apply_advanced_structured_decoding as apply_advanced_structured_decoding,
     )
 except ImportError:
     pass  # Optional PyTorch dependency for Transformer
@@ -44,13 +44,13 @@ except ImportError:
 # Genre-aware decoding
 try:
     from .genre_aware_decoder import (
-        GenreAwareDecoder,
-        GenreAwareTransitionMatrix,
-        detect_genre,
-        apply_genre_aware_decoding,
-        Genre,
-        GenreProfile,
-        GENRE_PROFILES,
+        GenreAwareDecoder as GenreAwareDecoder,
+        GenreAwareTransitionMatrix as GenreAwareTransitionMatrix,
+        detect_genre as detect_genre,
+        apply_genre_aware_decoding as apply_genre_aware_decoding,
+        Genre as Genre,
+        GenreProfile as GenreProfile,
+        GENRE_PROFILES as GENRE_PROFILES,
     )
 except ImportError:
     pass
@@ -58,92 +58,93 @@ except ImportError:
 # Pattern library
 try:
     from .pattern_library import (
-        PatternLibrary,
-        DrumPattern,
-        PatternCategory,
-        PatternComplexity,
-        get_pattern_library,
-        repair_with_patterns,
+        PatternLibrary as PatternLibrary,
+        DrumPattern as DrumPattern,
+        PatternCategory as PatternCategory,
+        PatternComplexity as PatternComplexity,
+        get_pattern_library as get_pattern_library,
+        repair_with_patterns as repair_with_patterns,
     )
 except ImportError:
     pass
 
 # Adaptive parameters (dynamic, learned configuration)
 from .adaptive_parameters import (
-    AdaptiveConfig,
-    AudioCharacteristics,
-    MusicStyle,
-    LearnedTransitionMatrix,
-    AdaptiveIOILimits,
-    AdaptivePreprocessingParams,
-    AdaptiveConfidenceThresholds,
-    AdaptiveFocalLossParams,
-    AdaptiveAugmentationParams,
-    get_adaptive_config,
-    set_adaptive_config,
-    adapt_to_audio,
+    AdaptiveConfig as AdaptiveConfig,
+    AudioCharacteristics as AudioCharacteristics,
+    MusicStyle as MusicStyle,
+    LearnedTransitionMatrix as LearnedTransitionMatrix,
+    AdaptiveIOILimits as AdaptiveIOILimits,
+    AdaptivePreprocessingParams as AdaptivePreprocessingParams,
+    AdaptiveConfidenceThresholds as AdaptiveConfidenceThresholds,
+    AdaptiveFocalLossParams as AdaptiveFocalLossParams,
+    AdaptiveAugmentationParams as AdaptiveAugmentationParams,
+    get_adaptive_config as get_adaptive_config,
+    set_adaptive_config as set_adaptive_config,
+    adapt_to_audio as adapt_to_audio,
 )
 
 # Advanced quantization
 from .advanced_quantization import (
-    smart_quantize,
-    analyze_subdivisions,
-    auto_quantize_with_subdivision_detection,
-    SubdivisionType,
-    SubdivisionGrid,
-    SUBDIVISION_GRIDS,
+    smart_quantize as smart_quantize,
+    analyze_subdivisions as analyze_subdivisions,
+    auto_quantize_with_subdivision_detection as auto_quantize_with_subdivision_detection,
+    SubdivisionType as SubdivisionType,
+    SubdivisionGrid as SubdivisionGrid,
+    SUBDIVISION_GRIDS as SUBDIVISION_GRIDS,
     # Dynamic detection
-    discover_tuplet_ratio,
-    detect_arbitrary_swing_ratio,
-    detect_polyrhythm,
-    detect_dynamic_time_signature,
-    detect_metric_modulations,
-    comprehensive_rhythm_analysis,
+    discover_tuplet_ratio as discover_tuplet_ratio,
+    detect_arbitrary_swing_ratio as detect_arbitrary_swing_ratio,
+    detect_polyrhythm as detect_polyrhythm,
+    detect_dynamic_time_signature as detect_dynamic_time_signature,
+    detect_metric_modulations as detect_metric_modulations,
+    comprehensive_rhythm_analysis as comprehensive_rhythm_analysis,
     # Dynamic grid management
-    DynamicGridRegistry,
-    GRID_REGISTRY,
-    create_adaptive_grid,
-    quantize_with_dynamic_grid,
+    DynamicGridRegistry as DynamicGridRegistry,
+    GRID_REGISTRY as GRID_REGISTRY,
+    create_adaptive_grid as create_adaptive_grid,
+    quantize_with_dynamic_grid as quantize_with_dynamic_grid,
     # Result types
-    QuantizationResult,
-    ComprehensiveRhythmAnalysis,
-    PolyrhythmAnalysis,
-    DynamicTimeSignature,
-    MetricModulation,
+    QuantizationResult as QuantizationResult,
+    ComprehensiveRhythmAnalysis as ComprehensiveRhythmAnalysis,
+    PolyrhythmAnalysis as PolyrhythmAnalysis,
+    DynamicTimeSignature as DynamicTimeSignature,
+    MetricModulation as MetricModulation,
 )
 
 # Chart readability
 from .chart_readability import (
-    ChartReadabilityFilter,
-    filter_chart_for_readability,
-    detect_sections,
-    apply_difficulty_curve,
+    ChartReadabilityFilter as ChartReadabilityFilter,
+    filter_chart_for_readability as filter_chart_for_readability,
+    detect_sections as detect_sections,
+    apply_difficulty_curve as apply_difficulty_curve,
     # Dynamic difficulty
-    DynamicDifficultyCurve,
-    apply_dynamic_difficulty,
+    DynamicDifficultyCurve as DynamicDifficultyCurve,
+    apply_dynamic_difficulty as apply_dynamic_difficulty,
     # Rules and types
-    PhysicalConstraints,
-    ReadabilityRules,
-    Limb,
+    PhysicalConstraints as PhysicalConstraints,
+    ReadabilityRules as ReadabilityRules,
+    Limb as Limb,
 )
 
 # Beatmap generation
 from .beatmap_generator import (
-    generate_beatmap,
-    assign_lanes,
-    assign_lanes_dynamic,
-    detect_lane_count,  # For manual mapping - detects recommended lane count
-    calculate_difficulty,
+    generate_beatmap as generate_beatmap,
+    assign_lanes as assign_lanes,
+    assign_lanes_dynamic as assign_lanes_dynamic,
+    assign_lanes_static as assign_lanes_static,
+    detect_lane_count as detect_lane_count,
+    calculate_difficulty as calculate_difficulty,
 )
 
 # Dynamic lane layout
 try:
     from .dynamic_lane_layout import (
-        DynamicLaneLayout,
-        DynamicLaneLayoutBuilder,
-        LaneDefinition,
-        ComponentCategory,
-        classify_component,
+        DynamicLaneLayout as DynamicLaneLayout,
+        DynamicLaneLayoutBuilder as DynamicLaneLayoutBuilder,
+        LaneDefinition as LaneDefinition,
+        ComponentCategory as ComponentCategory,
+        classify_component as classify_component,
     )
 except ImportError:
     pass  # Optional module
@@ -152,14 +153,14 @@ except ImportError:
 try:
     from .manual_mapping_helper import (
         # Main API
-        detect_lanes_for_manual_mapping,
-        create_user_specified_lanes,
-        adjust_lane_configuration,
-        get_lane_detection_prompt,
-        quick_lane_preview,
+        detect_lanes_for_manual_mapping as detect_lanes_for_manual_mapping,
+        create_user_specified_lanes as create_user_specified_lanes,
+        adjust_lane_configuration as adjust_lane_configuration,
+        get_lane_detection_prompt as get_lane_detection_prompt,
+        quick_lane_preview as quick_lane_preview,
         # Types
-        LaneConfiguration,
-        LaneDetectionChoice,
+        LaneConfiguration as LaneConfiguration,
+        LaneDetectionChoice as LaneDetectionChoice,
     )
 except ImportError:
     pass  # Optional module

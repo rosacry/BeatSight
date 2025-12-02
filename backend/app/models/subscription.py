@@ -19,7 +19,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 class SubscriptionPlan(str, enum.Enum):
     """Subscription tiers.
-    
+
     Pricing Strategy (December 2025):
     - FREE: 5 songs/month - Get users hooked
     - BASIC: $8/mo, 30 songs/month - Casual drummers

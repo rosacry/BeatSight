@@ -7,10 +7,10 @@ __all__ = ["DrumClassifierModel", "MLDrumClassifier"]
 
 
 class DrumClassifierModel(MLDrumClassifier):
-	"""Compatibility wrapper providing attribute expected by the legacy API."""
+    """Compatibility wrapper providing attribute expected by the legacy API."""
 
-	def classify_batch(self, audio, sr, onsets, **kwargs):
-		results = []
-		for onset in onsets:
-			results.append(self.classify_onset(audio, sr, onset, **kwargs))
-		return results
+    def classify_batch(self, audio, sr, onsets, **kwargs):
+        results = []
+        for onset in onsets:
+            results.append(self.classify_onset(audio, sr, onset, **kwargs))
+        return results

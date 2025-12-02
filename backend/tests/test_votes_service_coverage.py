@@ -12,8 +12,6 @@ from app.models.map_vote import VoteType
 from app.models.karma import KarmaReason
 from app.services.votes import (
     VoteService,
-    VoteError,
-    MapNotFoundError,
     SelfVoteError,
 )
 
@@ -28,29 +26,36 @@ class TestVoteChangingBehavior:
         user_id = uuid.uuid4()
         creator_id = uuid.uuid4()
         map_id = uuid.uuid4()
-        
+
         # Mock map and song
         mock_map = MagicMock()
         mock_map.song_id = uuid.uuid4()
         mock_song = MagicMock()
         mock_song.created_by_id = creator_id
-        
+
         # Mock existing upvote
         mock_vote = MagicMock()
         mock_vote.vote_type = VoteType.UPVOTE
-        
+
         service = VoteService(mock_session)
-        
-        with patch.object(service, 'get_map_with_song', return_value=(mock_map, mock_song)), \
-             patch.object(service, 'get_vote', return_value=mock_vote), \
-             patch.object(service, 'get_vote_counts', return_value={"upvotes": 0, "downvotes": 1}), \
-             patch.object(service._karma_service, 'award_karma', new_callable=AsyncMock) as mock_award:
-            
-            result = await service.cast_vote(user_id, map_id, VoteType.DOWNVOTE)
-        
+
+        with (
+            patch.object(
+                service, "get_map_with_song", return_value=(mock_map, mock_song)
+            ),
+            patch.object(service, "get_vote", return_value=mock_vote),
+            patch.object(
+                service, "get_vote_counts", return_value={"upvotes": 0, "downvotes": 1}
+            ),
+            patch.object(
+                service._karma_service, "award_karma", new_callable=AsyncMock
+            ) as mock_award,
+        ):
+            _result = await service.cast_vote(user_id, map_id, VoteType.DOWNVOTE)
+
         # Should have reversed upvote karma (-5) and applied downvote karma
         assert mock_award.call_count == 2
-        
+
         # First call should reverse upvote
         first_call = mock_award.call_args_list[0]
         assert first_call[1]["delta"] == -5  # Reverse upvote
@@ -63,25 +68,32 @@ class TestVoteChangingBehavior:
         user_id = uuid.uuid4()
         creator_id = uuid.uuid4()
         map_id = uuid.uuid4()
-        
+
         mock_map = MagicMock()
         mock_map.song_id = uuid.uuid4()
         mock_song = MagicMock()
         mock_song.created_by_id = creator_id
-        
+
         # Mock existing downvote
         mock_vote = MagicMock()
         mock_vote.vote_type = VoteType.DOWNVOTE
-        
+
         service = VoteService(mock_session)
-        
-        with patch.object(service, 'get_map_with_song', return_value=(mock_map, mock_song)), \
-             patch.object(service, 'get_vote', return_value=mock_vote), \
-             patch.object(service, 'get_vote_counts', return_value={"upvotes": 1, "downvotes": 0}), \
-             patch.object(service._karma_service, 'award_karma', new_callable=AsyncMock) as mock_award:
-            
-            result = await service.cast_vote(user_id, map_id, VoteType.UPVOTE)
-        
+
+        with (
+            patch.object(
+                service, "get_map_with_song", return_value=(mock_map, mock_song)
+            ),
+            patch.object(service, "get_vote", return_value=mock_vote),
+            patch.object(
+                service, "get_vote_counts", return_value={"upvotes": 1, "downvotes": 0}
+            ),
+            patch.object(
+                service._karma_service, "award_karma", new_callable=AsyncMock
+            ) as mock_award,
+        ):
+            _result = await service.cast_vote(user_id, map_id, VoteType.UPVOTE)
+
         # First call should reverse downvote (+3 to undo -3)
         first_call = mock_award.call_args_list[0]
         assert first_call[1]["delta"] == 3  # Reverse downvote
@@ -93,25 +105,30 @@ class TestVoteChangingBehavior:
         mock_session = AsyncMock()
         user_id = uuid.uuid4()
         map_id = uuid.uuid4()
-        
+
         mock_map = MagicMock()
         mock_map.song_id = uuid.uuid4()
         mock_song = MagicMock()
         mock_song.created_by_id = uuid.uuid4()
-        
+
         # Existing upvote
         mock_vote = MagicMock()
         mock_vote.vote_type = VoteType.UPVOTE
-        
+
         service = VoteService(mock_session)
-        
-        with patch.object(service, 'get_map_with_song', return_value=(mock_map, mock_song)), \
-             patch.object(service, 'get_vote', return_value=mock_vote), \
-             patch.object(service, 'get_vote_counts', return_value={"upvotes": 1, "downvotes": 0}) as mock_counts:
-            
+
+        with (
+            patch.object(
+                service, "get_map_with_song", return_value=(mock_map, mock_song)
+            ),
+            patch.object(service, "get_vote", return_value=mock_vote),
+            patch.object(
+                service, "get_vote_counts", return_value={"upvotes": 1, "downvotes": 0}
+            ) as mock_counts,
+        ):
             # Vote same type again
-            result = await service.cast_vote(user_id, map_id, VoteType.UPVOTE)
-        
+            _result = await service.cast_vote(user_id, map_id, VoteType.UPVOTE)
+
         # Should just return current counts without karma changes
         mock_counts.assert_called_once()
 
@@ -124,21 +141,28 @@ class TestVoteChangingBehavior:
         user_id = uuid.uuid4()
         creator_id = uuid.uuid4()
         map_id = uuid.uuid4()
-        
+
         mock_map = MagicMock()
         mock_map.song_id = uuid.uuid4()
         mock_song = MagicMock()
         mock_song.created_by_id = creator_id
-        
+
         service = VoteService(mock_session)
-        
-        with patch.object(service, 'get_map_with_song', return_value=(mock_map, mock_song)), \
-             patch.object(service, 'get_vote', return_value=None), \
-             patch.object(service, 'get_vote_counts', return_value={"upvotes": 1, "downvotes": 0}), \
-             patch.object(service, '_award_karma_for_vote', new_callable=AsyncMock) as mock_award:
-            
+
+        with (
+            patch.object(
+                service, "get_map_with_song", return_value=(mock_map, mock_song)
+            ),
+            patch.object(service, "get_vote", return_value=None),
+            patch.object(
+                service, "get_vote_counts", return_value={"upvotes": 1, "downvotes": 0}
+            ),
+            patch.object(
+                service, "_award_karma_for_vote", new_callable=AsyncMock
+            ) as mock_award,
+        ):
             await service.cast_vote(user_id, map_id, VoteType.UPVOTE)
-        
+
         mock_award.assert_called_once_with(creator_id, map_id, VoteType.UPVOTE)
 
     @pytest.mark.asyncio
@@ -147,14 +171,16 @@ class TestVoteChangingBehavior:
         mock_session = AsyncMock()
         user_id = uuid.uuid4()
         map_id = uuid.uuid4()
-        
+
         mock_map = MagicMock()
         mock_song = MagicMock()
         mock_song.created_by_id = user_id  # Same as voter
-        
+
         service = VoteService(mock_session)
-        
-        with patch.object(service, 'get_map_with_song', return_value=(mock_map, mock_song)):
+
+        with patch.object(
+            service, "get_map_with_song", return_value=(mock_map, mock_song)
+        ):
             with pytest.raises(SelfVoteError, match="Cannot vote on your own maps"):
                 await service.cast_vote(user_id, map_id, VoteType.UPVOTE)
 
@@ -169,23 +195,30 @@ class TestRemoveVote:
         user_id = uuid.uuid4()
         creator_id = uuid.uuid4()
         map_id = uuid.uuid4()
-        
+
         mock_map = MagicMock()
         mock_song = MagicMock()
         mock_song.created_by_id = creator_id
-        
+
         mock_vote = MagicMock()
         mock_vote.vote_type = VoteType.UPVOTE
-        
+
         service = VoteService(mock_session)
-        
-        with patch.object(service, 'get_map_with_song', return_value=(mock_map, mock_song)), \
-             patch.object(service, 'get_vote', return_value=mock_vote), \
-             patch.object(service, 'get_vote_counts', return_value={"upvotes": 0, "downvotes": 0}), \
-             patch.object(service._karma_service, 'award_karma', new_callable=AsyncMock) as mock_award:
-            
+
+        with (
+            patch.object(
+                service, "get_map_with_song", return_value=(mock_map, mock_song)
+            ),
+            patch.object(service, "get_vote", return_value=mock_vote),
+            patch.object(
+                service, "get_vote_counts", return_value={"upvotes": 0, "downvotes": 0}
+            ),
+            patch.object(
+                service._karma_service, "award_karma", new_callable=AsyncMock
+            ) as mock_award,
+        ):
             await service.remove_vote(user_id, map_id)
-        
+
         mock_session.delete.assert_called_once_with(mock_vote)
         mock_award.assert_called_once()
         call_kwargs = mock_award.call_args[1]
@@ -199,23 +232,30 @@ class TestRemoveVote:
         user_id = uuid.uuid4()
         creator_id = uuid.uuid4()
         map_id = uuid.uuid4()
-        
+
         mock_map = MagicMock()
         mock_song = MagicMock()
         mock_song.created_by_id = creator_id
-        
+
         mock_vote = MagicMock()
         mock_vote.vote_type = VoteType.DOWNVOTE
-        
+
         service = VoteService(mock_session)
-        
-        with patch.object(service, 'get_map_with_song', return_value=(mock_map, mock_song)), \
-             patch.object(service, 'get_vote', return_value=mock_vote), \
-             patch.object(service, 'get_vote_counts', return_value={"upvotes": 0, "downvotes": 0}), \
-             patch.object(service._karma_service, 'award_karma', new_callable=AsyncMock) as mock_award:
-            
+
+        with (
+            patch.object(
+                service, "get_map_with_song", return_value=(mock_map, mock_song)
+            ),
+            patch.object(service, "get_vote", return_value=mock_vote),
+            patch.object(
+                service, "get_vote_counts", return_value={"upvotes": 0, "downvotes": 0}
+            ),
+            patch.object(
+                service._karma_service, "award_karma", new_callable=AsyncMock
+            ) as mock_award,
+        ):
             await service.remove_vote(user_id, map_id)
-        
+
         call_kwargs = mock_award.call_args[1]
         assert call_kwargs["delta"] == 3  # Reverse downvote
         assert call_kwargs["reason"] == KarmaReason.MAP_DOWNVOTED
@@ -226,19 +266,24 @@ class TestRemoveVote:
         mock_session = AsyncMock()
         user_id = uuid.uuid4()
         map_id = uuid.uuid4()
-        
+
         mock_map = MagicMock()
         mock_song = MagicMock()
         mock_song.created_by_id = uuid.uuid4()
-        
+
         service = VoteService(mock_session)
-        
-        with patch.object(service, 'get_map_with_song', return_value=(mock_map, mock_song)), \
-             patch.object(service, 'get_vote', return_value=None), \
-             patch.object(service, 'get_vote_counts', return_value={"upvotes": 5, "downvotes": 2}):
-            
+
+        with (
+            patch.object(
+                service, "get_map_with_song", return_value=(mock_map, mock_song)
+            ),
+            patch.object(service, "get_vote", return_value=None),
+            patch.object(
+                service, "get_vote_counts", return_value={"upvotes": 5, "downvotes": 2}
+            ),
+        ):
             result = await service.remove_vote(user_id, map_id)
-        
+
         assert result == {"upvotes": 5, "downvotes": 2}
         mock_session.delete.assert_not_called()
 
@@ -252,12 +297,14 @@ class TestAwardKarmaForVote:
         mock_session = AsyncMock()
         creator_id = uuid.uuid4()
         map_id = uuid.uuid4()
-        
+
         service = VoteService(mock_session)
-        
-        with patch.object(service._karma_service, 'award_karma', new_callable=AsyncMock) as mock_award:
+
+        with patch.object(
+            service._karma_service, "award_karma", new_callable=AsyncMock
+        ) as mock_award:
             await service._award_karma_for_vote(creator_id, map_id, VoteType.UPVOTE)
-        
+
         mock_award.assert_called_once_with(
             user_id=creator_id,
             reason=KarmaReason.MAP_UPVOTED,
@@ -271,12 +318,14 @@ class TestAwardKarmaForVote:
         mock_session = AsyncMock()
         creator_id = uuid.uuid4()
         map_id = uuid.uuid4()
-        
+
         service = VoteService(mock_session)
-        
-        with patch.object(service._karma_service, 'award_karma', new_callable=AsyncMock) as mock_award:
+
+        with patch.object(
+            service._karma_service, "award_karma", new_callable=AsyncMock
+        ) as mock_award:
             await service._award_karma_for_vote(creator_id, map_id, VoteType.DOWNVOTE)
-        
+
         mock_award.assert_called_once_with(
             user_id=creator_id,
             reason=KarmaReason.MAP_DOWNVOTED,
@@ -296,20 +345,27 @@ class TestVoteWithNoCreator:
         mock_session.add = MagicMock()
         user_id = uuid.uuid4()
         map_id = uuid.uuid4()
-        
+
         mock_map = MagicMock()
         mock_song = MagicMock()
         mock_song.created_by_id = None  # No creator
-        
+
         service = VoteService(mock_session)
-        
-        with patch.object(service, 'get_map_with_song', return_value=(mock_map, mock_song)), \
-             patch.object(service, 'get_vote', return_value=None), \
-             patch.object(service, 'get_vote_counts', return_value={"upvotes": 1, "downvotes": 0}), \
-             patch.object(service, '_award_karma_for_vote', new_callable=AsyncMock) as mock_award:
-            
+
+        with (
+            patch.object(
+                service, "get_map_with_song", return_value=(mock_map, mock_song)
+            ),
+            patch.object(service, "get_vote", return_value=None),
+            patch.object(
+                service, "get_vote_counts", return_value={"upvotes": 1, "downvotes": 0}
+            ),
+            patch.object(
+                service, "_award_karma_for_vote", new_callable=AsyncMock
+            ) as mock_award,
+        ):
             await service.cast_vote(user_id, map_id, VoteType.UPVOTE)
-        
+
         # Karma should not be awarded when no creator
         mock_award.assert_not_called()
 
@@ -321,23 +377,30 @@ class TestVoteWithNoCreator:
         mock_session.delete = AsyncMock()
         user_id = uuid.uuid4()
         map_id = uuid.uuid4()
-        
+
         mock_map = MagicMock()
         mock_song = MagicMock()
         mock_song.created_by_id = None  # No creator
-        
+
         mock_vote = MagicMock()
         mock_vote.vote_type = VoteType.UPVOTE
-        
+
         service = VoteService(mock_session)
-        
-        with patch.object(service, 'get_map_with_song', return_value=(mock_map, mock_song)), \
-             patch.object(service, 'get_vote', return_value=mock_vote), \
-             patch.object(service, 'get_vote_counts', return_value={"upvotes": 0, "downvotes": 0}), \
-             patch.object(service._karma_service, 'award_karma', new_callable=AsyncMock) as mock_award:
-            
+
+        with (
+            patch.object(
+                service, "get_map_with_song", return_value=(mock_map, mock_song)
+            ),
+            patch.object(service, "get_vote", return_value=mock_vote),
+            patch.object(
+                service, "get_vote_counts", return_value={"upvotes": 0, "downvotes": 0}
+            ),
+            patch.object(
+                service._karma_service, "award_karma", new_callable=AsyncMock
+            ) as mock_award,
+        ):
             await service.remove_vote(user_id, map_id)
-        
+
         # Vote should be deleted, but karma not reversed
         mock_session.delete.assert_called_once()
         mock_award.assert_not_called()

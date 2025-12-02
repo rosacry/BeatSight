@@ -32,11 +32,10 @@ import hashlib
 import json
 import logging
 import os
-import pickle
 import threading
 import time
 from collections import OrderedDict
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Optional, Tuple, Dict, List, Union, Callable
 

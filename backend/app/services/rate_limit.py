@@ -51,10 +51,28 @@ ENDPOINT_LIMITS = {
         "admin": 500,
     },
     # Auth endpoints - prevent brute force
-    "/api/auth/login": {"anonymous": 5, "authenticated": 5, "basic": 5, "premium": 5, "admin": 20},
-    "/api/auth/register": {"anonymous": 3, "authenticated": 3, "basic": 3, "premium": 3, "admin": 10},
+    "/api/auth/login": {
+        "anonymous": 5,
+        "authenticated": 5,
+        "basic": 5,
+        "premium": 5,
+        "admin": 20,
+    },
+    "/api/auth/register": {
+        "anonymous": 3,
+        "authenticated": 3,
+        "basic": 3,
+        "premium": 3,
+        "admin": 10,
+    },
     # Billing - prevent abuse
-    "/api/billing": {"anonymous": 0, "authenticated": 10, "basic": 10, "premium": 20, "admin": 100},
+    "/api/billing": {
+        "anonymous": 0,
+        "authenticated": 10,
+        "basic": 10,
+        "premium": 20,
+        "admin": 100,
+    },
 }
 
 # Endpoints exempt from rate limiting

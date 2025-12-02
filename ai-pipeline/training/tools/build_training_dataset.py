@@ -78,10 +78,8 @@ from training.tools.console_utils import (  # type: ignore[import]
     ProgressAdapter,
 )
 from training.excluded_classes import (  # type: ignore[import]
-    EXCLUDED_CLASSES,
     should_exclude_class,
     remap_label,
-    process_label,
 )
 
 import librosa  # type: ignore[import]

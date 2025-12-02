@@ -17,14 +17,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import mmap
-import os
 import struct
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional
 
-import numpy as np
 
 # Add parent to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -198,9 +195,9 @@ def print_validation_report(results: Dict):
             print(f"     - {item['sample']}: {item['issue']}")
     
     if results["valid"]:
-        safe_print(f"\n  ✅ Cache is VALID")
+        safe_print("\n  ✅ Cache is VALID")
     else:
-        safe_print(f"\n  ❌ Cache has ISSUES - consider regenerating affected shards")
+        safe_print("\n  ❌ Cache has ISSUES - consider regenerating affected shards")
     
     print("=" * 60)
 

@@ -83,7 +83,7 @@ class TestListProposalsDeepCoverage:
     async def test_list_proposals_builds_response_correctly(self):
         """Test that proposal list builds ProposalRead correctly with all fields."""
         from app.api.routes.verifier import list_proposals
-        
+
         mock_user = create_mock_user()
         mock_session = create_mock_session()
         mock_proposal = create_mock_proposal()
@@ -121,7 +121,7 @@ class TestListProposalsDeepCoverage:
     async def test_list_proposals_with_decision_included(self):
         """Test that proposals with decisions include DecisionRead."""
         from app.api.routes.verifier import list_proposals
-        
+
         mock_user = create_mock_user()
         mock_session = create_mock_session()
         mock_proposal = create_mock_proposal(with_decision=True)
@@ -156,7 +156,7 @@ class TestListProposalsDeepCoverage:
     async def test_list_proposals_pagination(self):
         """Test pagination parameters are applied correctly."""
         from app.api.routes.verifier import list_proposals
-        
+
         mock_user = create_mock_user()
         mock_session = create_mock_session()
 
@@ -195,7 +195,7 @@ class TestGetProposalDeepCoverage:
     async def test_get_proposal_with_verifier_username(self):
         """Test getting proposal includes verifier username in decision."""
         from app.api.routes.verifier import get_proposal
-        
+
         mock_user = create_mock_user()
         mock_session = create_mock_session()
         mock_proposal = create_mock_proposal(with_decision=True)
@@ -218,7 +218,7 @@ class TestGetProposalDeepCoverage:
     async def test_get_proposal_without_decision(self):
         """Test getting proposal without a decision."""
         from app.api.routes.verifier import get_proposal
-        
+
         mock_user = create_mock_user()
         mock_session = create_mock_session()
         mock_proposal = create_mock_proposal(with_decision=False)
@@ -240,7 +240,7 @@ class TestGetProposalDeepCoverage:
     async def test_get_proposal_not_found(self):
         """Test 404 when proposal not found."""
         from app.api.routes.verifier import get_proposal
-        
+
         mock_user = create_mock_user()
         mock_session = create_mock_session()
 
@@ -265,7 +265,7 @@ class TestCreateDecisionDeepCoverage:
     async def test_create_decision_approve_updates_status(self):
         """Test that approve decision sets status to APPROVED."""
         from app.api.routes.verifier import create_decision, DecisionCreate
-        
+
         mock_user = create_mock_user()
         mock_session = create_mock_session()
         mock_proposal = create_mock_proposal()
@@ -273,11 +273,12 @@ class TestCreateDecisionDeepCoverage:
         mock_result = MagicMock()
         mock_result.scalar.return_value = mock_proposal
         mock_session.execute = AsyncMock(return_value=mock_result)
-        
+
         # Mock refresh to set id and decided_at
         async def mock_refresh(obj):
             obj.id = uuid4()
             obj.decided_at = datetime.now(timezone.utc)
+
         mock_session.refresh = mock_refresh
 
         request = DecisionCreate(
@@ -300,7 +301,7 @@ class TestCreateDecisionDeepCoverage:
     async def test_create_decision_reject_updates_status(self):
         """Test that reject decision sets status to REJECTED."""
         from app.api.routes.verifier import create_decision, DecisionCreate
-        
+
         mock_user = create_mock_user()
         mock_session = create_mock_session()
         mock_proposal = create_mock_proposal()
@@ -308,10 +309,11 @@ class TestCreateDecisionDeepCoverage:
         mock_result = MagicMock()
         mock_result.scalar.return_value = mock_proposal
         mock_session.execute = AsyncMock(return_value=mock_result)
-        
+
         async def mock_refresh(obj):
             obj.id = uuid4()
             obj.decided_at = datetime.now(timezone.utc)
+
         mock_session.refresh = mock_refresh
 
         request = DecisionCreate(
@@ -334,7 +336,7 @@ class TestCreateDecisionDeepCoverage:
     async def test_create_decision_needs_changes_keeps_pending(self):
         """Test that needs_changes decision keeps status as PENDING."""
         from app.api.routes.verifier import create_decision, DecisionCreate
-        
+
         mock_user = create_mock_user()
         mock_session = create_mock_session()
         mock_proposal = create_mock_proposal()
@@ -342,10 +344,11 @@ class TestCreateDecisionDeepCoverage:
         mock_result = MagicMock()
         mock_result.scalar.return_value = mock_proposal
         mock_session.execute = AsyncMock(return_value=mock_result)
-        
+
         async def mock_refresh(obj):
             obj.id = uuid4()
             obj.decided_at = datetime.now(timezone.utc)
+
         mock_session.refresh = mock_refresh
 
         request = DecisionCreate(
@@ -368,7 +371,7 @@ class TestCreateDecisionDeepCoverage:
     async def test_create_decision_not_found_error(self):
         """Test error when proposal not found."""
         from app.api.routes.verifier import create_decision, DecisionCreate
-        
+
         mock_user = create_mock_user()
         mock_session = create_mock_session()
 
@@ -396,7 +399,7 @@ class TestCreateDecisionDeepCoverage:
     async def test_create_decision_already_decided_error(self):
         """Test error when proposal already has decision."""
         from app.api.routes.verifier import create_decision, DecisionCreate
-        
+
         mock_user = create_mock_user()
         mock_session = create_mock_session()
         mock_proposal = create_mock_proposal()
@@ -428,7 +431,7 @@ class TestCreateDecisionDeepCoverage:
     async def test_create_decision_not_pending_error(self):
         """Test error when proposal is not pending."""
         from app.api.routes.verifier import create_decision, DecisionCreate
-        
+
         mock_user = create_mock_user()
         mock_session = create_mock_session()
         mock_proposal = create_mock_proposal()
@@ -463,15 +466,15 @@ class TestVerifierStatsDeepCoverage:
     async def test_stats_returns_all_fields(self):
         """Test that stats endpoint returns all required fields."""
         from app.api.routes.verifier import get_verifier_stats
-        
+
         mock_user = create_mock_user()
         mock_session = create_mock_session()
 
         # Create separate mock results for each query
         mock_results = [
-            MagicMock(scalar=MagicMock(return_value=25)),   # pending_count
-            MagicMock(scalar=MagicMock(return_value=12)),   # approved_today
-            MagicMock(scalar=MagicMock(return_value=3)),    # rejected_today
+            MagicMock(scalar=MagicMock(return_value=25)),  # pending_count
+            MagicMock(scalar=MagicMock(return_value=12)),  # approved_today
+            MagicMock(scalar=MagicMock(return_value=3)),  # rejected_today
             MagicMock(scalar=MagicMock(return_value=150)),  # total_reviewed_by_user
             MagicMock(scalar=MagicMock(return_value=2.5)),  # avg_review_time
         ]
@@ -493,7 +496,7 @@ class TestVerifierStatsDeepCoverage:
     async def test_stats_handles_null_avg_review_time(self):
         """Test that null avg_review_time is handled gracefully."""
         from app.api.routes.verifier import get_verifier_stats
-        
+
         mock_user = create_mock_user()
         mock_session = create_mock_session()
 
@@ -518,7 +521,7 @@ class TestVerifierStatsDeepCoverage:
     async def test_stats_handles_zero_counts(self):
         """Test stats with all zero values."""
         from app.api.routes.verifier import get_verifier_stats
-        
+
         mock_user = create_mock_user()
         mock_session = create_mock_session()
 
@@ -548,7 +551,7 @@ class TestMyDecisionsDeepCoverage:
     async def test_my_decisions_returns_paginated_results(self):
         """Test my-decisions returns properly paginated results."""
         from app.api.routes.verifier import list_my_decisions
-        
+
         mock_user = create_mock_user()
         mock_session = create_mock_session()
         mock_proposal = create_mock_proposal(with_decision=True)
@@ -584,7 +587,7 @@ class TestMyDecisionsDeepCoverage:
     async def test_my_decisions_with_custom_pagination(self):
         """Test my-decisions with custom page and page_size."""
         from app.api.routes.verifier import list_my_decisions
-        
+
         mock_user = create_mock_user()
         mock_session = create_mock_session()
 
@@ -617,7 +620,7 @@ class TestMyDecisionsDeepCoverage:
     async def test_my_decisions_empty_list(self):
         """Test my-decisions with no decisions made."""
         from app.api.routes.verifier import list_my_decisions
-        
+
         mock_user = create_mock_user()
         mock_session = create_mock_session()
 

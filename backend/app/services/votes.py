@@ -41,9 +41,7 @@ class VoteService:
 
     async def get_map_with_song(self, map_id: uuid.UUID) -> tuple[Map, Song]:
         """Fetch a map and its parent song."""
-        result = await self._session.execute(
-            select(Map).where(Map.id == map_id)
-        )
+        result = await self._session.execute(select(Map).where(Map.id == map_id))
         map_obj = result.scalar_one_or_none()
         if map_obj is None:
             raise MapNotFoundError(f"Map {map_id} not found")
@@ -69,8 +67,12 @@ class VoteService:
         """Get vote tallies for a map."""
         result = await self._session.execute(
             select(
-                func.count(MapVote.id).filter(MapVote.vote_type == VoteType.UPVOTE).label("upvotes"),
-                func.count(MapVote.id).filter(MapVote.vote_type == VoteType.DOWNVOTE).label("downvotes"),
+                func.count(MapVote.id)
+                .filter(MapVote.vote_type == VoteType.UPVOTE)
+                .label("upvotes"),
+                func.count(MapVote.id)
+                .filter(MapVote.vote_type == VoteType.DOWNVOTE)
+                .label("downvotes"),
             ).where(MapVote.map_id == map_id)
         )
         row = result.one()

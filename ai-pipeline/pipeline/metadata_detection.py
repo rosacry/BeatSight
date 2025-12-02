@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import os
-import shutil
 from dataclasses import dataclass
 from typing import Dict, Optional
 
@@ -17,6 +16,7 @@ try:
     import acoustid  # type: ignore
 except ImportError:  # pragma: no cover - optional runtime dependency
     acoustid = None  # type: ignore
+
 
 @dataclass
 class DetectedMetadata:
@@ -81,7 +81,9 @@ def detect_song_metadata(audio_path: str) -> Dict[str, object]:
                 title = _first_or_none(audio.get("title"))
                 artist = _first_or_none(audio.get("artist"))
                 album = _first_or_none(audio.get("album"))
-                date = _first_or_none(audio.get("date")) or _first_or_none(audio.get("originaldate"))
+                date = _first_or_none(audio.get("date")) or _first_or_none(
+                    audio.get("originaldate")
+                )
                 genre = _first_or_none(audio.get("genre"))
 
                 if title:
@@ -114,11 +116,15 @@ def detect_song_metadata(audio_path: str) -> Dict[str, object]:
             if resolved is not None:
                 resolved.merge_into(metadata)
 
-    metadata.setdefault("provider", metadata.get("provider", "embedded" if metadata else None))
+    metadata.setdefault(
+        "provider", metadata.get("provider", "embedded" if metadata else None)
+    )
     return metadata
 
 
-def _select_best_match(matches, want_title: bool, want_artist: bool) -> Optional[DetectedMetadata]:
+def _select_best_match(
+    matches, want_title: bool, want_artist: bool
+) -> Optional[DetectedMetadata]:
     if not matches:
         return None
 
@@ -152,7 +158,9 @@ def _select_best_match(matches, want_title: bool, want_artist: bool) -> Optional
             if score < 0.8:
                 continue
 
-        best = DetectedMetadata(title=title, artist=artist, confidence=score, provider="acoustid")
+        best = DetectedMetadata(
+            title=title, artist=artist, confidence=score, provider="acoustid"
+        )
         best_score = score
 
     return best

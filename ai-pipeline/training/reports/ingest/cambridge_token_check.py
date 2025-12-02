@@ -10,7 +10,6 @@ import sys
 from collections import Counter
 from datetime import datetime
 from typing import Dict, List, Optional, Sequence
-from typing import Dict, List, Optional, Sequence
 
 # Ensure the repository root is importable when the script runs directly.
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[4]

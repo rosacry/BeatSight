@@ -25,6 +25,7 @@ try:
         detect_time_signature,
         detect_swing_ratio,
     )
+
     HAS_STRUCTURED_DECODER = True
 except ImportError:
     HAS_STRUCTURED_DECODER = False
@@ -36,6 +37,7 @@ try:
         detect_sections,
         apply_difficulty_curve,
     )
+
     HAS_READABILITY_FILTER = True
 except ImportError:
     HAS_READABILITY_FILTER = False
@@ -45,10 +47,11 @@ except ImportError:
 try:
     from .advanced_structured_decoder import (
         apply_advanced_structured_decoding,
-        BeamSearchDecoder,
-        CRFDecoder,
-        EnsembleDecoder,
+        BeamSearchDecoder,  # noqa: F401
+        CRFDecoder,  # noqa: F401
+        EnsembleDecoder,  # noqa: F401
     )
+
     HAS_ADVANCED_DECODER = True
 except ImportError:
     HAS_ADVANCED_DECODER = False
@@ -59,8 +62,8 @@ try:
     from .advanced_quantization import (
         smart_quantize,
         analyze_subdivisions,
-        auto_quantize_with_subdivision_detection,
     )
+
     HAS_ADVANCED_QUANTIZATION = True
 except ImportError:
     HAS_ADVANCED_QUANTIZATION = False
@@ -71,9 +74,9 @@ try:
     from .genre_aware_decoder import (
         apply_genre_aware_decoding,
         detect_genre,
-        Genre,
         GENRE_PROFILES,
     )
+
     HAS_GENRE_DECODER = True
 except ImportError:
     HAS_GENRE_DECODER = False
@@ -83,10 +86,11 @@ except ImportError:
 # Pattern library for recognizing common drum patterns
 try:
     from .pattern_library import (
-        PatternLibrary,
-        get_pattern_library,
+        PatternLibrary,  # noqa: F401
+        get_pattern_library,  # noqa: F401
         repair_with_patterns,
     )
+
     HAS_PATTERN_LIBRARY = True
 except ImportError:
     HAS_PATTERN_LIBRARY = False
@@ -131,7 +135,7 @@ def process_audio_file(
 ) -> Dict[str, Any]:
     """
     Process an audio file and generate a beatmap.
-    
+
     Args:
         input_path: Path to input audio file
         output_path: Path for output .bsm file
@@ -151,7 +155,7 @@ def process_audio_file(
         ml_device: Torch device override for ML inference
         start_time: Start time in seconds for partial processing
         end_time: End time in seconds for partial processing
-        
+
     Returns:
         Dictionary with processing results and statistics
     """
@@ -167,8 +171,10 @@ def process_audio_file(
     duration = None
     if end_time is not None and end_time > 0:
         duration = end_time - start_time
-    
-    audio_data, sample_rate = preprocess_audio(str(input_path), offset=start_time, duration=duration)
+
+    audio_data, sample_rate = preprocess_audio(
+        str(input_path), offset=start_time, duration=duration
+    )
 
     detected_metadata = detect_song_metadata(str(input_path))
     if detected_metadata.get("title") or detected_metadata.get("artist"):
@@ -203,7 +209,11 @@ def process_audio_file(
 
     tempo_hint_count = 0
     if tempo_candidates_hint:
-        sanitized = [float(value) for value in tempo_candidates_hint if value and value > 0 and math.isfinite(value)]
+        sanitized = [
+            float(value)
+            for value in tempo_candidates_hint
+            if value and value > 0 and math.isfinite(value)
+        ]
         if sanitized:
             hint_values: List[float] = []
             for value in sanitized:
@@ -219,7 +229,10 @@ def process_audio_file(
                         combined.append(value)
 
                 tempo_candidates = combined
-                print("   ⏱️  Using injected tempo candidates " + ", ".join(f"{value:.3f}" for value in hint_values))
+                print(
+                    "   ⏱️  Using injected tempo candidates "
+                    + ", ".join(f"{value:.3f}" for value in hint_values)
+                )
 
     if not tempo_candidates:
         tempo_candidates = [120.0]
@@ -245,13 +258,19 @@ def process_audio_file(
     else:
         print("   Classifier: Heuristic rules")
 
-    print(f"   Classified {len(classified_hits)} hits with confidence >= {confidence_threshold}")
-    
+    print(
+        f"   Classified {len(classified_hits)} hits with confidence >= {confidence_threshold}"
+    )
+
     if len(classified_hits) == 0:
-        print(f"   ⚠️  WARNING: No hits passed confidence threshold {confidence_threshold}!")
-        print(f"   ⚠️  This will trigger fallback pattern generation.")
+        print(
+            f"   ⚠️  WARNING: No hits passed confidence threshold {confidence_threshold}!"
+        )
+        print("   ⚠️  This will trigger fallback pattern generation.")
         if len(refined_onsets) > 0:
-            print(f"   ℹ️  Try lowering --confidence threshold (detected {len(refined_onsets)} onsets)")
+            print(
+                f"   ℹ️  Try lowering --confidence threshold (detected {len(refined_onsets)} onsets)"
+            )
     else:
         # Show breakdown of classified components
         component_counts = {}
@@ -265,59 +284,82 @@ def process_audio_file(
     detected_swing = None
     detected_period_beats = None
     subdivision_analysis = None
-    
+
     if use_structured_decoding and classified_hits:
         estimated_bpm = tempo_candidates[0] if tempo_candidates else 120.0
-        hit_times = [h.get('time', 0) for h in classified_hits]
-        
+        hit_times = [h.get("time", 0) for h in classified_hits]
+
         # First: Detect time signature and swing (always available if base decoder exists)
         if HAS_STRUCTURED_DECODER:
             try:
                 detected_ts = detect_time_signature(hit_times, estimated_bpm)
-                detected_time_signature = f"{detected_ts.numerator}/{detected_ts.denominator}"
+                detected_time_signature = (
+                    f"{detected_ts.numerator}/{detected_ts.denominator}"
+                )
                 detected_period_beats = detected_ts.detected_period_beats
-                print(f"🔄 Step 4b: Analyzing musical structure...")
-                print(f"   Detected time signature: {detected_time_signature} "
-                      f"(period: {detected_period_beats:.2f} beats, confidence: {detected_ts.confidence:.2f})")
-                
+                print("🔄 Step 4b: Analyzing musical structure...")
+                print(
+                    f"   Detected time signature: {detected_time_signature} "
+                    f"(period: {detected_period_beats:.2f} beats, confidence: {detected_ts.confidence:.2f})"
+                )
+
                 swing_ratio, swing_conf = detect_swing_ratio(hit_times, estimated_bpm)
                 detected_swing = {"ratio": swing_ratio, "confidence": swing_conf}
                 if swing_conf > 0.3:
-                    swing_type = "straight" if abs(swing_ratio - 1.0) < 0.1 else \
-                                "light swing" if swing_ratio < 1.3 else "heavy swing"
+                    swing_type = (
+                        "straight"
+                        if abs(swing_ratio - 1.0) < 0.1
+                        else "light swing"
+                        if swing_ratio < 1.3
+                        else "heavy swing"
+                    )
                     print(f"   Detected feel: {swing_type} (ratio: {swing_ratio:.2f})")
             except Exception as e:
                 print(f"   ⚠️ Time signature detection failed: {e}")
-                detected_ts = type('obj', (object,), {'numerator': 4, 'denominator': 4})()
+                detected_ts = type(
+                    "obj", (object,), {"numerator": 4, "denominator": 4}
+                )()
         else:
-            detected_ts = type('obj', (object,), {'numerator': 4, 'denominator': 4})()
-        
+            detected_ts = type("obj", (object,), {"numerator": 4, "denominator": 4})()
+
         # Advanced subdivision analysis (tuplets, polyrhythms)
         if use_advanced_quantization and HAS_ADVANCED_QUANTIZATION:
             try:
-                import numpy as np
                 subdivision_analysis = analyze_subdivisions(hit_times, estimated_bpm)
                 best_grid = subdivision_analysis.best_grid
-                print(f"   Detected subdivision: {best_grid} (confidence: {subdivision_analysis.confidence:.2f})")
-                
+                print(
+                    f"   Detected subdivision: {best_grid} (confidence: {subdivision_analysis.confidence:.2f})"
+                )
+
                 if subdivision_analysis.is_polyrhythmic:
-                    print(f"   ⚡ Polyrhythm detected: {best_grid} + {subdivision_analysis.secondary_grid}")
-                
+                    print(
+                        f"   ⚡ Polyrhythm detected: {best_grid} + {subdivision_analysis.secondary_grid}"
+                    )
+
                 # Check for tuplets
-                if 'triplet' in best_grid:
-                    print(f"   🎵 Triplet feel detected")
-                elif 'quintuplet' in best_grid:
-                    print(f"   🎵 Quintuplet (5-tuplet) detected - prog/math rock style!")
-                elif 'septuplet' in best_grid:
-                    print(f"   🎵 Septuplet (7-tuplet) detected - jazz/experimental style!")
-                    
+                if "triplet" in best_grid:
+                    print("   🎵 Triplet feel detected")
+                elif "quintuplet" in best_grid:
+                    print(
+                        "   🎵 Quintuplet (5-tuplet) detected - prog/math rock style!"
+                    )
+                elif "septuplet" in best_grid:
+                    print(
+                        "   🎵 Septuplet (7-tuplet) detected - jazz/experimental style!"
+                    )
+
             except Exception as e:
                 print(f"   ⚠️ Advanced subdivision analysis failed: {e}")
-        
+
         # Apply structured decoding
         try:
             # Use advanced decoder if available and requested
-            if HAS_ADVANCED_DECODER and decoder_type in ['beam', 'transformer', 'crf', 'ensemble']:
+            if HAS_ADVANCED_DECODER and decoder_type in [
+                "beam",
+                "transformer",
+                "crf",
+                "ensemble",
+            ]:
                 print(f"   Applying {decoder_type} decoder...")
                 classified_hits = apply_advanced_structured_decoding(
                     classified_hits,
@@ -327,45 +369,56 @@ def process_audio_file(
                     decoder_type=decoder_type,
                 )
             elif HAS_STRUCTURED_DECODER:
-                print(f"   Applying Viterbi decoder...")
+                print("   Applying Viterbi decoder...")
                 classified_hits = apply_structured_decoding(
                     classified_hits,
                     bpm=estimated_bpm,
                     offset=0.0,
                     time_signature=(detected_ts.numerator, detected_ts.denominator),
                 )
-            
+
             # Count refined states
-            refined_count = sum(1 for h in classified_hits if h.get('state_refined', False))
+            refined_count = sum(
+                1 for h in classified_hits if h.get("state_refined", False)
+            )
             if refined_count > 0:
                 print(f"   Refined {refined_count} ambiguous classifications")
-                
+
         except Exception as e:
             print(f"   ⚠️ Structured decoding failed: {e} (continuing without)")
-    
+
     # Step 4b2: Genre-Aware Decoding (NEW)
     detected_genre_info = None
-    
+
     if use_genre_detection and HAS_GENRE_DECODER and classified_hits:
         try:
             estimated_bpm = tempo_candidates[0] if tempo_candidates else 120.0
-            swing_ratio = detected_swing.get('ratio', 1.0) if detected_swing else 1.0
-            
+            swing_ratio = detected_swing.get("ratio", 1.0) if detected_swing else 1.0
+
             # Detect or use forced genre
             if forced_genre:
                 from .genre_aware_decoder import Genre
+
                 try:
                     genre = Genre(forced_genre.lower())
                     genre_confidence = 1.0
                     print(f"🎸 Step 4b2: Using forced genre: {forced_genre}")
                 except ValueError:
-                    genre, genre_confidence = detect_genre(classified_hits, estimated_bpm, swing_ratio)
-                    print(f"🎸 Step 4b2: Invalid forced genre '{forced_genre}', detected: {genre.value}")
+                    genre, genre_confidence = detect_genre(
+                        classified_hits, estimated_bpm, swing_ratio
+                    )
+                    print(
+                        f"🎸 Step 4b2: Invalid forced genre '{forced_genre}', detected: {genre.value}"
+                    )
             else:
-                genre, genre_confidence = detect_genre(classified_hits, estimated_bpm, swing_ratio)
-                print(f"🎸 Step 4b2: Genre detection...")
-                print(f"   Detected genre: {genre.value} (confidence: {genre_confidence:.2f})")
-            
+                genre, genre_confidence = detect_genre(
+                    classified_hits, estimated_bpm, swing_ratio
+                )
+                print("🎸 Step 4b2: Genre detection...")
+                print(
+                    f"   Detected genre: {genre.value} (confidence: {genre_confidence:.2f})"
+                )
+
             # Apply genre-aware decoding
             classified_hits = apply_genre_aware_decoding(
                 classified_hits,
@@ -375,70 +428,78 @@ def process_audio_file(
                 swing_ratio=swing_ratio,
                 genre=genre if forced_genre else None,  # None = auto-detect
             )
-            
+
             detected_genre_info = {
                 "genre": genre.value,
                 "confidence": genre_confidence,
                 "profile": GENRE_PROFILES.get(genre).name if genre else "Unknown",
             }
-            
+
         except Exception as e:
             print(f"   ⚠️ Genre-aware decoding failed: {e} (continuing without)")
-    
+
     # Step 4b3: Pattern-Based Repair (NEW)
     pattern_repair_stats = None
-    
+
     if use_pattern_repair and HAS_PATTERN_LIBRARY and classified_hits:
         try:
             estimated_bpm = tempo_candidates[0] if tempo_candidates else 120.0
-            print(f"🎼 Step 4b3: Pattern library analysis...")
-            
-            original_hits = classified_hits.copy()
+            print("🎼 Step 4b3: Pattern library analysis...")
+
+            _original_hits = classified_hits.copy()
             classified_hits = repair_with_patterns(
                 classified_hits,
                 bpm=estimated_bpm,
                 confidence_threshold=0.6,  # Repair hits below this confidence
             )
-            
-            repaired_count = sum(1 for h in classified_hits if h.get('pattern_repaired', False))
+
+            repaired_count = sum(
+                1 for h in classified_hits if h.get("pattern_repaired", False)
+            )
             if repaired_count > 0:
-                print(f"   Repaired {repaired_count} ambiguous hits using pattern library")
-                
+                print(
+                    f"   Repaired {repaired_count} ambiguous hits using pattern library"
+                )
+
                 # Show which patterns were applied
-                patterns_used = set(h.get('pattern_id') for h in classified_hits if h.get('pattern_id'))
+                patterns_used = set(
+                    h.get("pattern_id") for h in classified_hits if h.get("pattern_id")
+                )
                 if patterns_used:
                     print(f"   Patterns applied: {', '.join(patterns_used)}")
-            
+
             pattern_repair_stats = {
                 "repaired_count": repaired_count,
                 "patterns_applied": list(patterns_used) if repaired_count > 0 else [],
             }
-            
+
         except Exception as e:
             print(f"   ⚠️ Pattern repair failed: {e} (continuing without)")
-    
+
     # Step 4c: Readability Filtering (playability rules)
     readability_stats = None
     sections_info = None
-    
+
     if use_readability_filter and HAS_READABILITY_FILTER and classified_hits:
-        print(f"🎯 Step 4c: Applying readability filter (target: {target_difficulty})...")
+        print(
+            f"🎯 Step 4c: Applying readability filter (target: {target_difficulty})..."
+        )
         try:
             estimated_bpm = tempo_candidates[0] if tempo_candidates else 120.0
-            
+
             if apply_difficulty_shaping:
                 # Detect musical sections
                 sections_info = detect_sections(classified_hits, estimated_bpm)
                 section_summary = {}
                 for s in sections_info:
-                    stype = s['section_type']
+                    stype = s["section_type"]
                     section_summary[stype] = section_summary.get(stype, 0) + 1
                 print(f"   Detected sections: {section_summary}")
-                
+
                 # Apply difficulty curve
                 original_count = len(classified_hits)
                 classified_hits = apply_difficulty_curve(
-                    classified_hits, 
+                    classified_hits,
                     sections_info,
                     target_difficulty=target_difficulty,
                 )
@@ -454,14 +515,18 @@ def process_audio_file(
                     difficulty=target_difficulty,
                     bpm=estimated_bpm,
                 )
-            
-            removed = readability_stats.get('original', len(classified_hits)) - len(classified_hits)
+
+            removed = readability_stats.get("original", len(classified_hits)) - len(
+                classified_hits
+            )
             if removed > 0:
                 print(f"   Filtered {removed} hits for playability")
-            
-            if readability_stats.get('impossible_patterns', 0) > 0:
-                print(f"   ⚠️ Fixed {readability_stats['impossible_patterns']} impossible patterns")
-                
+
+            if readability_stats.get("impossible_patterns", 0) > 0:
+                print(
+                    f"   ⚠️ Fixed {readability_stats['impossible_patterns']} impossible patterns"
+                )
+
         except Exception as e:
             print(f"   ⚠️ Readability filter failed: {e} (continuing without)")
 
@@ -502,7 +567,9 @@ def process_audio_file(
         provider = detected_metadata["provider"]
         confidence = detected_metadata.get("confidence")
         if confidence is not None:
-            description_parts.append(f"Metadata via {provider} (confidence {confidence:.2f})")
+            description_parts.append(
+                f"Metadata via {provider} (confidence {confidence:.2f})"
+            )
         else:
             description_parts.append(f"Metadata via {provider}")
     if detected_metadata.get("release_date"):
@@ -520,7 +587,9 @@ def process_audio_file(
         print(f"   📐 Forcing quantization step to {forced_step:.3f}s")
 
     if force_quantization:
-        print("   📌 Force quantization enabled; all notes will snap to the specified grid")
+        print(
+            "   📌 Force quantization enabled; all notes will snap to the specified grid"
+        )
 
     print(f"   🎯 Dynamic lane detection enabled (max {num_lanes} lanes)")
     if include_ghost_notes:
@@ -555,7 +624,7 @@ def process_audio_file(
     if output_path.parent:
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with output_path.open('w') as f:
+    with output_path.open("w") as f:
         json.dump(beatmap, f, indent=2)
 
     if debug_output_path:
@@ -627,12 +696,20 @@ def process_audio_file(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="BeatSight AI - Audio to Beatmap Processor")
+    parser = argparse.ArgumentParser(
+        description="BeatSight AI - Audio to Beatmap Processor"
+    )
     parser.add_argument("--input", "-i", required=True, help="Input audio file")
     parser.add_argument("--output", "-o", required=True, help="Output .bsm file")
-    parser.add_argument("--no-separation", action="store_true", help="Skip drum separation")
-    parser.add_argument("--confidence", type=float, default=0.7, help="Confidence threshold (0.0-1.0)")
-    parser.add_argument("--sensitivity", type=float, default=60.0, help="Detection sensitivity (0-100)")
+    parser.add_argument(
+        "--no-separation", action="store_true", help="Skip drum separation"
+    )
+    parser.add_argument(
+        "--confidence", type=float, default=0.7, help="Confidence threshold (0.0-1.0)"
+    )
+    parser.add_argument(
+        "--sensitivity", type=float, default=60.0, help="Detection sensitivity (0-100)"
+    )
     parser.add_argument(
         "--quantization",
         type=str,
@@ -640,59 +717,139 @@ def main():
         choices=["quarter", "eighth", "triplet", "sixteenth", "thirtysecond"],
         help="Target quantization grid",
     )
-    parser.add_argument("--max-snap-error", type=float, default=12.0, help="Maximum snap error in milliseconds")
-    parser.add_argument("--debug", type=str, help="Optional path for detailed debug JSON output")
-    parser.add_argument("--force-bpm", type=float, help="Override detected BPM with explicit value")
-    parser.add_argument("--force-offset", type=float, help="Override detected beat offset (seconds)")
-    parser.add_argument("--force-step", type=float, help="Override quantization step size (seconds)")
-    parser.add_argument("--force-quantization", action="store_true", help="Force all events onto the quantized grid even if outside tolerance")
-    parser.add_argument("--tempo-candidates", type=str, help="Comma-separated tempo candidates in BPM")
-    parser.add_argument("--ml-model", type=str, help="Path to trained drum classifier model (.pth)")
-    parser.add_argument("--ml-device", type=str, help="Torch device for ML classifier (e.g. cuda)")
-    parser.add_argument("--ml", action="store_true", help="Force ML classifier usage (overrides environment)")
-    parser.add_argument("--no-ml", action="store_true", help="Disable ML classifier and use heuristics")
-    parser.add_argument("--start-time", type=float, help="Start time in seconds for partial processing")
-    parser.add_argument("--end-time", type=float, help="End time in seconds for partial processing")
-    
+    parser.add_argument(
+        "--max-snap-error",
+        type=float,
+        default=12.0,
+        help="Maximum snap error in milliseconds",
+    )
+    parser.add_argument(
+        "--debug", type=str, help="Optional path for detailed debug JSON output"
+    )
+    parser.add_argument(
+        "--force-bpm", type=float, help="Override detected BPM with explicit value"
+    )
+    parser.add_argument(
+        "--force-offset", type=float, help="Override detected beat offset (seconds)"
+    )
+    parser.add_argument(
+        "--force-step", type=float, help="Override quantization step size (seconds)"
+    )
+    parser.add_argument(
+        "--force-quantization",
+        action="store_true",
+        help="Force all events onto the quantized grid even if outside tolerance",
+    )
+    parser.add_argument(
+        "--tempo-candidates", type=str, help="Comma-separated tempo candidates in BPM"
+    )
+    parser.add_argument(
+        "--ml-model", type=str, help="Path to trained drum classifier model (.pth)"
+    )
+    parser.add_argument(
+        "--ml-device", type=str, help="Torch device for ML classifier (e.g. cuda)"
+    )
+    parser.add_argument(
+        "--ml",
+        action="store_true",
+        help="Force ML classifier usage (overrides environment)",
+    )
+    parser.add_argument(
+        "--no-ml", action="store_true", help="Disable ML classifier and use heuristics"
+    )
+    parser.add_argument(
+        "--start-time", type=float, help="Start time in seconds for partial processing"
+    )
+    parser.add_argument(
+        "--end-time", type=float, help="End time in seconds for partial processing"
+    )
+
     # NEW: Structured decoding and readability filter options
-    parser.add_argument("--no-structured-decoding", action="store_true", 
-                       help="Disable HMM/Viterbi structured decoding")
-    parser.add_argument("--no-readability-filter", action="store_true",
-                       help="Disable chart readability/playability filtering")
-    parser.add_argument("--difficulty", type=str, default="expert",
-                       choices=["easy", "normal", "hard", "expert", "master"],
-                       help="Target difficulty level for readability filter")
-    parser.add_argument("--no-difficulty-shaping", action="store_true",
-                       help="Disable section-based difficulty curve shaping")
-    
+    parser.add_argument(
+        "--no-structured-decoding",
+        action="store_true",
+        help="Disable HMM/Viterbi structured decoding",
+    )
+    parser.add_argument(
+        "--no-readability-filter",
+        action="store_true",
+        help="Disable chart readability/playability filtering",
+    )
+    parser.add_argument(
+        "--difficulty",
+        type=str,
+        default="expert",
+        choices=["easy", "normal", "hard", "expert", "master"],
+        help="Target difficulty level for readability filter",
+    )
+    parser.add_argument(
+        "--no-difficulty-shaping",
+        action="store_true",
+        help="Disable section-based difficulty curve shaping",
+    )
+
     # NEW: Advanced decoder options
-    parser.add_argument("--decoder", type=str, default="ensemble",
-                       choices=["viterbi", "beam", "transformer", "crf", "ensemble"],
-                       help="Decoder type: viterbi (HMM), beam (multi-hypothesis), "
-                            "transformer (attention-based), crf (global), "
-                            "or ensemble (combines all)")
-    parser.add_argument("--no-advanced-quantization", action="store_true",
-                       help="Disable smart tuplet/swing detection (use simple grid)")
-    
+    parser.add_argument(
+        "--decoder",
+        type=str,
+        default="ensemble",
+        choices=["viterbi", "beam", "transformer", "crf", "ensemble"],
+        help="Decoder type: viterbi (HMM), beam (multi-hypothesis), "
+        "transformer (attention-based), crf (global), "
+        "or ensemble (combines all)",
+    )
+    parser.add_argument(
+        "--no-advanced-quantization",
+        action="store_true",
+        help="Disable smart tuplet/swing detection (use simple grid)",
+    )
+
     # NEW: Genre-aware decoding and pattern library
-    parser.add_argument("--no-genre-detection", action="store_true",
-                       help="Disable automatic genre detection and style-aware decoding")
-    parser.add_argument("--genre", type=str, default=None,
-                       choices=["rock", "metal", "jazz", "funk", "pop", "latin", 
-                               "electronic", "progressive", "blues", "country"],
-                       help="Force a specific genre instead of auto-detection")
-    parser.add_argument("--no-pattern-repair", action="store_true",
-                       help="Disable pattern library repair for ambiguous hits")
-    
+    parser.add_argument(
+        "--no-genre-detection",
+        action="store_true",
+        help="Disable automatic genre detection and style-aware decoding",
+    )
+    parser.add_argument(
+        "--genre",
+        type=str,
+        default=None,
+        choices=[
+            "rock",
+            "metal",
+            "jazz",
+            "funk",
+            "pop",
+            "latin",
+            "electronic",
+            "progressive",
+            "blues",
+            "country",
+        ],
+        help="Force a specific genre instead of auto-detection",
+    )
+    parser.add_argument(
+        "--no-pattern-repair",
+        action="store_true",
+        help="Disable pattern library repair for ambiguous hits",
+    )
+
     # Lane layout options (always dynamic for AI beatmaps)
-    parser.add_argument("--num-lanes", type=int, default=7,
-                       choices=[4, 5, 6, 7, 8],
-                       help="Maximum number of lanes for dynamic layout (default: 7)")
-    
+    parser.add_argument(
+        "--num-lanes",
+        type=int,
+        default=7,
+        choices=[4, 5, 6, 7, 8],
+        help="Maximum number of lanes for dynamic layout (default: 7)",
+    )
+
     # Ghost notes setting (experimental)
-    parser.add_argument("--no-ghost-notes", action="store_true",
-                       help="Disable ghost notes in beatmap (ghost note detection is experimental)")
-    
+    parser.add_argument(
+        "--no-ghost-notes",
+        action="store_true",
+        help="Disable ghost notes in beatmap (ghost note detection is experimental)",
+    )
+
     args = parser.parse_args()
 
     if args.ml and args.no_ml:
@@ -703,7 +860,7 @@ def main():
         ml_toggle = True
     elif args.no_ml:
         ml_toggle = False
-    
+
     # Validate input
     if not Path(args.input).exists():
         print(f"❌ Error: Input file not found: {args.input}")
@@ -711,7 +868,9 @@ def main():
 
     tempo_candidates_hint: List[float] | None = None
     if args.tempo_candidates:
-        raw_candidates = [segment.strip() for segment in args.tempo_candidates.split(",")]
+        raw_candidates = [
+            segment.strip() for segment in args.tempo_candidates.split(",")
+        ]
         parsed_candidates: List[float] = []
         for candidate in raw_candidates:
             if not candidate:
@@ -725,7 +884,7 @@ def main():
                 parsed_candidates.append(value)
         if parsed_candidates:
             tempo_candidates_hint = parsed_candidates
-    
+
     # Process
     try:
         result = process_audio_file(
@@ -768,6 +927,7 @@ def main():
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

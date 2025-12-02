@@ -14,7 +14,7 @@ import subprocess
 from collections import defaultdict, deque
 from dataclasses import dataclass, asdict
 from fractions import Fraction
-from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
+from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Set
 
 try:  # Optional dependency for progress bars.
     from rich.progress import (  # type: ignore[import]

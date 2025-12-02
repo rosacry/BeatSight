@@ -45,7 +45,9 @@ def client_authenticated(mock_user: User, mock_db_session: AsyncMock) -> TestCli
     app.dependency_overrides[get_current_user] = lambda: mock_user
     app.dependency_overrides[get_current_user_optional] = lambda: mock_user
     app.dependency_overrides[get_db_session] = lambda: mock_db_session
-    app.dependency_overrides[require_community] = lambda: None  # Enable community features
+    app.dependency_overrides[require_community] = (
+        lambda: None
+    )  # Enable community features
     client = TestClient(app)
     yield client
     app.dependency_overrides.clear()
@@ -56,7 +58,9 @@ def client_anonymous(mock_db_session: AsyncMock) -> TestClient:
     """Create a test client without authentication."""
     app.dependency_overrides[get_current_user_optional] = lambda: None
     app.dependency_overrides[get_db_session] = lambda: mock_db_session
-    app.dependency_overrides[require_community] = lambda: None  # Enable community features
+    app.dependency_overrides[require_community] = (
+        lambda: None
+    )  # Enable community features
     client = TestClient(app)
     yield client
     app.dependency_overrides.clear()

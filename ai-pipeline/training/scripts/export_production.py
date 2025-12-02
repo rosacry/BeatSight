@@ -35,7 +35,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import os
 import sys
 from pathlib import Path
 
@@ -266,7 +265,6 @@ def main():
                 apply_structured_sparsity,
                 export_sparse_model_onnx,
                 export_sparse_tensorrt,
-                finetune_sparse_model,
             )
             from training.models.cnn_v5 import cnn_v5_large, cnn_v5_medium, cnn_v5_small
             

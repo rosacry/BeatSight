@@ -27,9 +27,8 @@ import argparse
 import json
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
-import numpy as np
 
 try:
     import orjson
@@ -302,12 +301,12 @@ def print_statistics(stats: Dict[str, Any]) -> None:
     print(f"Single-label:  {stats['single_label']:,} ({100*stats['single_label']/stats['total_samples']:.1f}%)")
     print(f"Multi-label:   {stats['multi_label']:,} ({100*stats['multi_label']/stats['total_samples']:.1f}%)")
     
-    print(f"\nLabels per sample distribution:")
+    print("\nLabels per sample distribution:")
     for num_labels, count in sorted(stats['label_count_distribution'].items()):
         pct = 100 * count / stats['total_samples']
         print(f"  {num_labels} labels: {count:,} ({pct:.1f}%)")
     
-    print(f"\nPer-class counts:")
+    print("\nPer-class counts:")
     print(f"{'Class':<25} {'Count':>8} {'%':>8}")
     print(f"{'-'*45}")
     for label, count in sorted(stats['class_counts'].items(), key=lambda x: -x[1]):
@@ -315,7 +314,7 @@ def print_statistics(stats: Dict[str, Any]) -> None:
         print(f"{label:<25} {count:>8,} {pct:>7.1f}%")
     
     if stats['cooccurrence']:
-        print(f"\nTop 10 co-occurring pairs:")
+        print("\nTop 10 co-occurring pairs:")
         pairs = []
         for label1, label2_counts in stats['cooccurrence'].items():
             for label2, count in label2_counts.items():

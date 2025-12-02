@@ -7,11 +7,8 @@ These tests validate critical paths for the warmup probe and training runs.
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
-from typing import Dict, List
 
-import numpy as np
 import pytest
 import torch
 

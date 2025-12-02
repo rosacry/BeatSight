@@ -9,8 +9,7 @@ import json
 import os
 import uuid
 from pathlib import Path
-from typing import Dict, List, Optional
-import numpy as np
+from typing import Dict, Optional
 import soundfile as sf
 import librosa
 

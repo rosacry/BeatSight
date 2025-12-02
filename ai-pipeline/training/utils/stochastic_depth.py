@@ -45,7 +45,7 @@ from __future__ import annotations
 
 import torch
 import torch.nn as nn
-from typing import Optional, List, Callable
+from typing import List
 
 
 class DropPath(nn.Module):

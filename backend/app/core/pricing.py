@@ -25,7 +25,7 @@ from app.models.subscription import SubscriptionPlan
 @dataclass(frozen=True)
 class TierConfig:
     """Configuration for a subscription tier."""
-    
+
     plan: SubscriptionPlan
     name: str
     monthly_quota: int  # -1 = unlimited
@@ -34,22 +34,22 @@ class TierConfig:
     model_tier: str  # v5-tiny, v5-distilled, v5-full
     priority: int  # Processing queue priority (higher = faster)
     features: tuple[str, ...]
-    
+
     @property
     def price_monthly_dollars(self) -> float:
         return self.price_monthly_cents / 100
-    
+
     @property
     def price_yearly_dollars(self) -> float:
         return self.price_yearly_cents / 100
-    
+
     @property
     def yearly_savings_percent(self) -> int:
         if self.price_monthly_cents == 0:
             return 0
         yearly_if_monthly = self.price_monthly_cents * 12
         return int((1 - self.price_yearly_cents / yearly_if_monthly) * 100)
-    
+
     @property
     def is_unlimited(self) -> bool:
         return self.monthly_quota < 0
@@ -148,10 +148,11 @@ def get_processing_priority(plan: SubscriptionPlan) -> int:
 # PRICING TABLE (for frontend display)
 # =============================================================================
 
+
 def get_pricing_table() -> dict:
     """
     Get pricing table for frontend display.
-    
+
     Returns a dict that can be serialized to JSON for the pricing page.
     """
     return {
@@ -207,31 +208,32 @@ COST_PER_SONG_FREE = 0.008  # v5-distilled, lower priority
 COST_PER_SONG_BASIC = 0.008  # v5-distilled
 COST_PER_SONG_PRO = 0.015  # v5-full, highest quality
 
+
 def calculate_unit_economics(monthly_songs: int, plan: SubscriptionPlan) -> dict:
     """
     Calculate unit economics for a user.
-    
+
     Args:
         monthly_songs: Average songs processed per month
         plan: User's subscription plan
-    
+
     Returns:
         Dict with revenue, cost, and margin metrics
     """
     tier = get_tier_config(plan)
     revenue = tier.price_monthly_cents / 100
-    
+
     if plan == SubscriptionPlan.FREE:
         cost_per_song = COST_PER_SONG_FREE
     elif plan in (SubscriptionPlan.BASIC_MONTHLY, SubscriptionPlan.BASIC_YEARLY):
         cost_per_song = COST_PER_SONG_BASIC
     else:
         cost_per_song = COST_PER_SONG_PRO
-    
+
     total_cost = monthly_songs * cost_per_song
     gross_profit = revenue - total_cost
     margin = (gross_profit / revenue * 100) if revenue > 0 else 0
-    
+
     return {
         "revenue": revenue,
         "ai_cost": total_cost,

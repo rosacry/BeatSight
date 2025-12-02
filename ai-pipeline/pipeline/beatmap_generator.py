@@ -4,7 +4,6 @@ Beatmap generation from classified drum hits
 Supports both static 7-lane layout and dynamic lane detection based on kit usage.
 """
 
-import json
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Sequence, Tuple
 from datetime import datetime
@@ -25,6 +24,7 @@ try:
         DynamicLaneLayoutBuilder,
         LaneDefinition,
     )
+
     HAS_DYNAMIC_LANES = True
 except ImportError:
     HAS_DYNAMIC_LANES = False
@@ -79,10 +79,10 @@ COMPONENT_LANE_MAP: Dict[str, int] = {
     "ride_bell": 6,
     "ride_edge": 6,
     "crash": 6,
-    "crash1": 6,    # Legacy alias -> same as crash
-    "crash_1": 6,   # Legacy alias -> same as crash  
-    "crash2": 6,    # Legacy alias -> same as crash
-    "crash_2": 6,   # Legacy alias -> same as crash
+    "crash1": 6,  # Legacy alias -> same as crash
+    "crash_1": 6,  # Legacy alias -> same as crash
+    "crash2": 6,  # Legacy alias -> same as crash
+    "crash_2": 6,  # Legacy alias -> same as crash
     "china": 6,
     "splash": 6,
     "stack": 6,
@@ -96,7 +96,9 @@ COMPONENT_LANE_MAP: Dict[str, int] = {
 
 def _is_cymbal_component(component: str) -> bool:
     comp = (component or "").lower()
-    return any(token in comp for token in ("crash", "ride", "china", "splash", "stack", "cym"))
+    return any(
+        token in comp for token in ("crash", "ride", "china", "splash", "stack", "cym")
+    )
 
 
 def _is_tom_component(component: str) -> bool:
@@ -133,14 +135,32 @@ def _resolve_lane(component: str) -> int:
             return COMPONENT_LANE_MAP.get("tom_mid", 4)
         if any(token in comp for token in ("low", "floor", "floor_tom", "ft")):
             return COMPONENT_LANE_MAP.get("tom_low", 4)
-        return COMPONENT_LANE_MAP.get("tom", COMPONENT_LANE_MAP.get("tom_mid", LANE_DEFAULT))
+        return COMPONENT_LANE_MAP.get(
+            "tom", COMPONENT_LANE_MAP.get("tom_mid", LANE_DEFAULT)
+        )
 
-    if any(token in comp for token in ("ride", "crash", "china", "splash", "cym", "bell", "stack")):
+    if any(
+        token in comp
+        for token in ("ride", "crash", "china", "splash", "cym", "bell", "stack")
+    ):
         if "crash2" in comp or "left" in comp:
             return COMPONENT_LANE_MAP.get("crash2", 0)
         return COMPONENT_LANE_MAP.get("crash", 6)
 
-    if any(token in comp for token in ("cowbell", "clave", "block", "tamb", "shaker", "perc", "agogo", "wood", "fx")):
+    if any(
+        token in comp
+        for token in (
+            "cowbell",
+            "clave",
+            "block",
+            "tamb",
+            "shaker",
+            "perc",
+            "agogo",
+            "wood",
+            "fx",
+        )
+    ):
         return COMPONENT_LANE_MAP.get("cowbell", 0)
 
     return LANE_DEFAULT
@@ -153,85 +173,169 @@ def _detect_time_signature_from_hits(hits: List[Dict]) -> str:
     """
     if not hits:
         return "4/4"
-    
+
     # Check if any hit has time_signature from structured decoding
     for hit in hits:
-        ts = hit.get('time_signature')
-        if ts and isinstance(ts, str) and '/' in ts:
+        ts = hit.get("time_signature")
+        if ts and isinstance(ts, str) and "/" in ts:
             return ts
-    
+
     return "4/4"
 
 
 def calculate_difficulty(hits: List[Dict]) -> float:
     """
     Calculate difficulty rating based on hit patterns.
-    
+
     Factors considered:
     - Density (hits per second)
     - Complexity (variety of drum components)
     - Speed (timing between consecutive hits)
     - Patterns (rolls, polyrhythms)
-    
+
     Returns:
         Difficulty rating (0.0 - 10.0)
     """
     if not hits:
         return 0.0
-    
+
     # Density
     duration = hits[-1]["time"] - hits[0]["time"]
     if duration == 0:
         density = 0
     else:
         density = len(hits) / duration  # hits per second
-    
+
     # Complexity (unique components)
     unique_components = len(set(hit["component"] for hit in hits))
-    
+
     # Speed (average time between hits)
     if len(hits) > 1:
-        time_diffs = [hits[i+1]["time"] - hits[i]["time"] for i in range(len(hits)-1)]
+        time_diffs = [
+            hits[i + 1]["time"] - hits[i]["time"] for i in range(len(hits) - 1)
+        ]
         avg_time_diff = sum(time_diffs) / len(time_diffs)
         speed_factor = max(0, 1.0 - avg_time_diff)  # Faster = higher difficulty
     else:
         speed_factor = 0
-    
+
     # Combine factors
     difficulty = (
-        min(density * 2.0, 4.0) +  # Density contribution (max 4.0)
-        min(unique_components * 0.5, 3.0) +  # Complexity (max 3.0)
-        min(speed_factor * 5.0, 3.0)  # Speed (max 3.0)
+        min(density * 2.0, 4.0)  # Density contribution (max 4.0)
+        + min(unique_components * 0.5, 3.0)  # Complexity (max 3.0)
+        + min(speed_factor * 5.0, 3.0)  # Speed (max 3.0)
     )
-    
+
     return min(difficulty, 10.0)
+
+
+def assign_lanes_static(hits: List[Dict]) -> List[Dict]:
+    """
+    Assign lanes to hits using a static, fixed 7-lane layout mapping.
+
+    This is the fallback method when dynamic lane detection is not available.
+    Uses COMPONENT_LANE_MAP for consistent, deterministic lane assignment.
+
+    Lane layout (static 7-lane):
+    - Lane 0: Hi-hat pedal, percussion, crash2/left cymbal
+    - Lane 1: Snare (all varieties), ghost notes, rim
+    - Lane 2: High tom
+    - Lane 3: Kick
+    - Lane 4: Mid/floor toms
+    - Lane 5: Hi-hat (closed/open)
+    - Lane 6: Ride, crash, cymbals
+
+    Args:
+        hits: List of hit dictionaries with 'component' keys
+
+    Returns:
+        Hits with 'lane' key assigned using static mapping
+    """
+    # Alternation state for cymbals and toms
+    cymbal_last_time = None
+    cymbal_last_lane = None
+    cymbal_window = 0.45
+    tom_last_time = None
+    tom_last_lane = None
+    tom_window = 0.35
+    cymbal_switches = 0
+    tom_switches = 0
+
+    for hit in hits:
+        component = hit.get("component", "")
+        lane = _resolve_lane(component)
+
+        # Apply alternation logic for closely-timed cymbals
+        if _is_cymbal_component(component):
+            time = float(hit.get("time", 0) or 0.0)
+            if (
+                cymbal_last_time is not None
+                and abs(time - cymbal_last_time) <= cymbal_window
+            ):
+                # Alternate between lane 6 and lane 0
+                if cymbal_last_lane == 6:
+                    lane = 0
+                else:
+                    lane = 6
+
+            if cymbal_last_lane is not None and lane != cymbal_last_lane:
+                cymbal_switches += 1
+
+            cymbal_last_time = time
+            cymbal_last_lane = lane
+
+        # Apply alternation logic for closely-timed toms
+        elif _is_tom_component(component):
+            time = float(hit.get("time", 0) or 0.0)
+            if tom_last_time is not None and abs(time - tom_last_time) <= tom_window:
+                # Alternate between lane 2 and lane 4
+                if tom_last_lane == 4:
+                    lane = 2
+                elif tom_last_lane == 2:
+                    lane = 4
+
+            if tom_last_lane is not None and lane != tom_last_lane:
+                tom_switches += 1
+
+            tom_last_time = time
+            tom_last_lane = lane
+
+        hit["lane"] = lane
+
+    # Store stats for testing
+    assign_lanes_static._lane_stats = {
+        "cymbal_switches": cymbal_switches,
+        "tom_switches": tom_switches,
+    }
+
+    return hits
 
 
 def assign_lanes_dynamic(hits: List[Dict], num_lanes: int = 7) -> List[Dict]:
     """
     Assign lanes dynamically based on actual kit usage in the song.
-    
+
     This is the REVOLUTIONARY approach - instead of a fixed 7-lane layout,
     we analyze what components are actually used and create an optimal
     lane arrangement for that specific song.
-    
+
     Benefits:
     - Jazz with brushes might only need 4 lanes
     - Metal with double bass + china might use all 8
     - Pop with simple kick/snare/hat might use 3-4 lanes
     - Progressive with full kit uses optimal layout for that kit
-    
+
     Args:
         hits: List of hit dictionaries with 'component' keys
         num_lanes: Maximum lanes available (default 7)
-        
+
     Returns:
         Hits with 'lane' key assigned via dynamic layout
     """
     if not HAS_DYNAMIC_LANES or not hits:
         # Fall back to static assignment
         return assign_lanes_static(hits)
-    
+
     # Build dynamic layout from the hits
     builder = DynamicLaneLayoutBuilder(
         min_lanes=3,
@@ -241,7 +345,7 @@ def assign_lanes_dynamic(hits: List[Dict], num_lanes: int = 7) -> List[Dict]:
         merge_tom_varieties=False,
     )
     layout = builder.build_from_hits(hits)
-    
+
     # Apply dynamic assignments with alternation for collisions
     cymbal_last_time = None
     cymbal_last_lane = None
@@ -251,52 +355,57 @@ def assign_lanes_dynamic(hits: List[Dict], num_lanes: int = 7) -> List[Dict]:
     tom_window = 0.35
     cymbal_switches = 0
     tom_switches = 0
-    
+
     for hit in hits:
         component = hit.get("component", "")
-        
+
         # Get lane from dynamic layout
         lane = layout.get_lane(component)
-        
+
         # Apply alternation logic for closely-timed cymbals/toms
         if _is_cymbal_component(component):
             time = float(hit.get("time", 0) or 0.0)
-            if cymbal_last_time is not None and abs(time - cymbal_last_time) <= cymbal_window:
+            if (
+                cymbal_last_time is not None
+                and abs(time - cymbal_last_time) <= cymbal_window
+            ):
                 # Find alternate cymbal lane from layout
                 cymbal_lanes = [
-                    ln.index for ln in layout.lanes 
+                    ln.index
+                    for ln in layout.lanes
                     if ln.category.name == "CYMBAL" and ln.index != lane
                 ]
                 if cymbal_lanes:
                     lane = cymbal_lanes[0]
                 else:
                     lane = 0 if lane == layout.lane_count - 1 else layout.lane_count - 1
-                    
+
             if cymbal_last_lane is not None and lane != cymbal_last_lane:
                 cymbal_switches += 1
             cymbal_last_time = time
             cymbal_last_lane = lane
-            
+
         elif _is_tom_component(component):
             time = float(hit.get("time", 0) or 0.0)
             if tom_last_time is not None and abs(time - tom_last_time) <= tom_window:
                 # Find alternate tom lane from layout
                 tom_lanes = [
-                    ln.index for ln in layout.lanes
+                    ln.index
+                    for ln in layout.lanes
                     if ln.category.name == "TOM" and ln.index != lane
                 ]
                 if tom_lanes:
                     lane = tom_lanes[0]
                 else:
                     lane = (lane + 1) % layout.lane_count
-                    
+
             if tom_last_lane is not None and lane != tom_last_lane:
                 tom_switches += 1
             tom_last_time = time
             tom_last_lane = lane
-        
+
         hit["lane"] = lane
-    
+
     # Store stats for debugging
     assign_lanes_dynamic._lane_stats = {  # type: ignore[attr-defined]
         "cymbal_switches": cymbal_switches,
@@ -306,22 +415,22 @@ def assign_lanes_dynamic(hits: List[Dict], num_lanes: int = 7) -> List[Dict]:
         "components_mapped": len(layout.unique_components),
         "layout_info": layout.to_dict(),
     }
-    
+
     return hits
 
 
 def assign_lanes(hits: List[Dict], num_lanes: int = 7) -> List[Dict]:
     """
     Assign visual lanes to hits using dynamic lane detection.
-    
+
     AI-generated beatmaps ALWAYS use dynamic lane detection, which analyzes
     the actual drum components present in the song and creates an optimal
     lane layout for that specific song.
-    
+
     Args:
         hits: List of hit dictionaries
         num_lanes: Maximum number of lanes for dynamic layout (4-8)
-        
+
     Returns:
         Hits with 'lane' key assigned
     """
@@ -331,13 +440,13 @@ def assign_lanes(hits: List[Dict], num_lanes: int = 7) -> List[Dict]:
 def detect_lane_count(hits: List[Dict]) -> Dict[str, Any]:
     """
     Detect the optimal number of lanes for a song without assigning lanes.
-    
+
     This is used when a user wants to manually map a song but wants the AI
     to suggest how many lanes they should use based on the drum kit detected.
-    
+
     Args:
         hits: List of hit dictionaries with 'component' keys
-        
+
     Returns:
         Dictionary with:
         - suggested_lanes: Recommended lane count
@@ -353,7 +462,7 @@ def detect_lane_count(hits: List[Dict]) -> Dict[str, Any]:
             "layout_preview": None,
             "message": "Dynamic lane detection not available, defaulting to 7 lanes",
         }
-    
+
     # Build dynamic layout to analyze
     builder = DynamicLaneLayoutBuilder(
         min_lanes=3,
@@ -363,7 +472,7 @@ def detect_lane_count(hits: List[Dict]) -> Dict[str, Any]:
         merge_tom_varieties=False,
     )
     layout = builder.build_from_hits(hits)
-    
+
     # Extract component info
     component_categories = {}
     for lane in layout.lanes:
@@ -371,7 +480,7 @@ def detect_lane_count(hits: List[Dict]) -> Dict[str, Any]:
         if cat_name not in component_categories:
             component_categories[cat_name] = []
         component_categories[cat_name].extend(lane.components)
-    
+
     return {
         "suggested_lanes": layout.lane_count,
         "detected_components": list(layout.unique_components),
@@ -386,7 +495,7 @@ def detect_lane_count(hits: List[Dict]) -> Dict[str, Any]:
             for lane in layout.lanes
         ],
         "message": f"Detected {len(layout.unique_components)} unique drum sounds, "
-                   f"recommend {layout.lane_count} lanes for optimal playability",
+        f"recommend {layout.lane_count} lanes for optimal playability",
     }
 
 
@@ -426,7 +535,9 @@ def _quantization_step(bpm: float, grid: str) -> float:
     return beat_duration / divisor
 
 
-def _measure_error(times: np.ndarray, snapped: np.ndarray, tolerance: float) -> Tuple[float, float, float]:
+def _measure_error(
+    times: np.ndarray, snapped: np.ndarray, tolerance: float
+) -> Tuple[float, float, float]:
     errors = snapped - times
     abs_errors = np.abs(errors)
     within = abs_errors <= tolerance
@@ -454,7 +565,9 @@ def _optimal_offset(times: np.ndarray, step: float) -> float:
     return float(edges[best_bin])
 
 
-def _quantize_times(times: np.ndarray, bpm: float, grid: str, tolerance: float) -> Dict[str, Any]:
+def _quantize_times(
+    times: np.ndarray, bpm: float, grid: str, tolerance: float
+) -> Dict[str, Any]:
     step = _quantization_step(bpm, grid)
     if step <= 0:
         return {
@@ -540,7 +653,9 @@ def _select_best_quantization(
         coverage_gap = detection_best["coverage"] - best["coverage"]
         mean_gap = best["mean_error"] - detection_best["mean_error"]
 
-        fallback_needed = coverage_gap > 0.06 or (best["coverage"] < 0.45 and coverage_gap > 0)
+        fallback_needed = coverage_gap > 0.06 or (
+            best["coverage"] < 0.45 and coverage_gap > 0
+        )
         if not fallback_needed and coverage_gap > 0.03 and mean_gap > 0:
             fallback_needed = True
 
@@ -567,7 +682,9 @@ def _select_best_quantization(
     return best
 
 
-def _section_counts(times: Sequence[float], bpm: float, beats_per_section: int = 16) -> List[Dict[str, Any]]:
+def _section_counts(
+    times: Sequence[float], bpm: float, beats_per_section: int = 16
+) -> List[Dict[str, Any]]:
     if not times:
         return []
 
@@ -603,15 +720,17 @@ def compute_audio_hash(file_path: str) -> str:
     Compute SHA-256 hash of audio file.
     """
     sha256 = hashlib.sha256()
-    with open(file_path, 'rb') as f:
+    with open(file_path, "rb") as f:
         while chunk := f.read(8192):
             sha256.update(chunk)
     return f"sha256:{sha256.hexdigest()}"
 
 
-def _generate_fallback_hits(duration_seconds: float, bpm: float, start_time: float = 0.0) -> List[Dict[str, Any]]:
+def _generate_fallback_hits(
+    duration_seconds: float, bpm: float, start_time: float = 0.0
+) -> List[Dict[str, Any]]:
     """Create a simple metronomic groove when no classified hits are available.
-    
+
     Args:
         duration_seconds: Total duration of audio
         bpm: Tempo in beats per minute
@@ -623,7 +742,7 @@ def _generate_fallback_hits(duration_seconds: float, bpm: float, start_time: flo
 
     steps_per_beat = 2  # eighth notes by default
     interval = max(60.0 / (bpm * steps_per_beat), 0.12)
-    
+
     # Calculate how many steps to generate from start_time to end
     remaining_duration = duration_seconds - start_time
     total_steps = int(remaining_duration / interval) + 2
@@ -633,14 +752,16 @@ def _generate_fallback_hits(duration_seconds: float, bpm: float, start_time: flo
 
     # Add an opening crash to mark where drums start (not necessarily at 0)
     if start_time < duration_seconds:
-        hits.append({
-            "time": start_time,
-            "component": "crash",
-            "confidence": 0.3,
-            "onset_confidence": 0.3,
-            "class_confidence": 0.3,
-            "fallback": True,
-        })
+        hits.append(
+            {
+                "time": start_time,
+                "component": "crash",
+                "confidence": 0.3,
+                "onset_confidence": 0.3,
+                "class_confidence": 0.3,
+                "fallback": True,
+            }
+        )
 
     for step in range(max_hits):
         time = start_time + (step * interval)
@@ -659,14 +780,16 @@ def _generate_fallback_hits(duration_seconds: float, bpm: float, start_time: flo
         else:
             component = "hihat_closed"
 
-        hits.append({
-            "time": time,
-            "component": component,
-            "confidence": 0.4 if component != "hihat_closed" else 0.3,
-            "onset_confidence": 0.35,
-            "class_confidence": 0.35,
-            "fallback": True,
-        })
+        hits.append(
+            {
+                "time": time,
+                "component": component,
+                "confidence": 0.4 if component != "hihat_closed" else 0.3,
+                "onset_confidence": 0.35,
+                "class_confidence": 0.35,
+                "fallback": True,
+            }
+        )
 
     return hits
 
@@ -695,19 +818,19 @@ def generate_beatmap(
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """
     Generate complete .bsm beatmap file.
-    
+
     Args:
         classified_hits: List of classified drum hits
         audio_path: Path to original audio file
         drum_stem_path: Path to isolated drum stem (optional)
     metadata: Additional metadata (creator, title, etc.)
     tempo_hint_count: Number of leading tempo candidates originating from host hints
-        
+
     Returns:
         Tuple containing the beatmap dictionary and auxiliary debug data
     """
     metadata = metadata or {}
-    
+
     # Load audio for analysis
     if analysis_audio is None or analysis_sr is None:
         analysis_audio, analysis_sr = librosa.load(audio_path, sr=44100, mono=True)
@@ -729,55 +852,78 @@ def generate_beatmap(
     used_fallback = False
 
     if not classified_hits:
-        print("⚠️  WARNING: No confident drum hits detected; generating fallback pattern.")
+        print(
+            "⚠️  WARNING: No confident drum hits detected; generating fallback pattern."
+        )
         print("   This means the AI couldn't detect actual drums in the audio.")
         print("   The beatmap will contain a generic metronomic pattern.")
-        print("   Try: 1) Lowering confidence threshold, 2) Checking if audio has drums")
-        
+        print(
+            "   Try: 1) Lowering confidence threshold, 2) Checking if audio has drums"
+        )
+
         # Try to detect when drums might start by looking for energy increase
         # Calculate RMS energy over time
         frame_length = 2048
         hop_length = 512
-        rms = librosa.feature.rms(y=analysis_audio, frame_length=frame_length, hop_length=hop_length)[0]
+        rms = librosa.feature.rms(
+            y=analysis_audio, frame_length=frame_length, hop_length=hop_length
+        )[0]
 
         # Find first significant energy increase (drums starting)
         rms_threshold = np.percentile(rms, 25)  # 25th percentile of energy
         drum_start = 0.0
         for i, energy in enumerate(rms):
             if energy > rms_threshold * 2:  # Energy doubles from baseline
-                drum_start = librosa.frames_to_time(i, sr=analysis_sr, hop_length=hop_length)
+                drum_start = librosa.frames_to_time(
+                    i, sr=analysis_sr, hop_length=hop_length
+                )
                 print(f"   Detected potential drum start at {drum_start:.1f}s")
                 break
 
-        classified_hits = _generate_fallback_hits(duration_seconds, bpm_estimate, start_time=drum_start)
+        classified_hits = _generate_fallback_hits(
+            duration_seconds, bpm_estimate, start_time=drum_start
+        )
         used_fallback = True
 
     # Filter ghost notes if disabled globally
     if not include_ghost_notes:
         classified_hits = [
-            hit for hit in classified_hits 
-            if 'ghost' not in hit.get('component', '').lower()
+            hit
+            for hit in classified_hits
+            if "ghost" not in hit.get("component", "").lower()
         ]
         print("   👻 Ghost notes disabled (experimental feature)")
 
     # Assign lanes using dynamic lane detection (always dynamic for AI beatmaps)
     hits_with_lanes = assign_lanes(classified_hits, num_lanes=num_lanes)
-    
+
     # Get lane stats from dynamic layout
-    lane_stats = getattr(assign_lanes_dynamic, "_lane_stats", {
-        "cymbal_switches": 0, 
-        "tom_switches": 0,
-        "dynamic_layout": True,
-    })
+    lane_stats = getattr(
+        assign_lanes_dynamic,
+        "_lane_stats",
+        {
+            "cymbal_switches": 0,
+            "tom_switches": 0,
+            "dynamic_layout": True,
+        },
+    )
 
     times_seconds = np.array([hit["time"] for hit in hits_with_lanes], dtype=float)
     tolerance = max_snap_error_ms / 1000.0
-    tempo_candidates = tempo_candidates or [bpm_estimate, bpm_estimate * 2, bpm_estimate / 2]
+    tempo_candidates = tempo_candidates or [
+        bpm_estimate,
+        bpm_estimate * 2,
+        bpm_estimate / 2,
+    ]
     hint_count = max(0, min(tempo_hint_count, len(tempo_candidates)))
-    quantization_result = _select_best_quantization(times_seconds, tempo_candidates, quantization_grid, tolerance, hint_count)
+    quantization_result = _select_best_quantization(
+        times_seconds, tempo_candidates, quantization_grid, tolerance, hint_count
+    )
 
     applied_bpm = quantization_result["bpm"]
-    applied_step = quantization_result.get("step") or _quantization_step(applied_bpm, quantization_grid)
+    applied_step = quantization_result.get("step") or _quantization_step(
+        applied_bpm, quantization_grid
+    )
     applied_offset = quantization_result.get("offset", 0.0)
 
     overrides_applied = False
@@ -799,15 +945,25 @@ def generate_beatmap(
         overrides_applied = True
 
     if applied_step <= 0:
-        applied_step = max(60.0 / max(applied_bpm, 1e-6) / QUANTIZATION_DIVISORS[_resolve_grid(quantization_grid)], 1e-3)
+        applied_step = max(
+            60.0
+            / max(applied_bpm, 1e-6)
+            / QUANTIZATION_DIVISORS[_resolve_grid(quantization_grid)],
+            1e-3,
+        )
 
     if force_quantization:
         overrides_applied = True
 
     if overrides_applied:
-        snapped_times = applied_offset + np.round((times_seconds - applied_offset) / applied_step) * applied_step
+        snapped_times = (
+            applied_offset
+            + np.round((times_seconds - applied_offset) / applied_step) * applied_step
+        )
         errors = snapped_times - times_seconds
-        coverage, mean_error, median_error = _measure_error(times_seconds, snapped_times, tolerance)
+        coverage, mean_error, median_error = _measure_error(
+            times_seconds, snapped_times, tolerance
+        )
 
         quantization_result.update(
             {
@@ -828,33 +984,39 @@ def generate_beatmap(
 
     within = np.abs(errors) <= tolerance
 
-    for hit, snapped, err, is_within in zip(hits_with_lanes, snapped_times, errors, within):
+    for hit, snapped, err, is_within in zip(
+        hits_with_lanes, snapped_times, errors, within
+    ):
         if is_within:
             hit["time"] = float(snapped)
         hit["quantization_error"] = float(err)
-    
+
     # Convert to hitObjects format with UUIDs for each hit
     hit_objects = []
     for hit in hits_with_lanes:
-        hit_objects.append({
-            "id": str(uuid.uuid4()),
-            "time": int(round((hit["time"] + start_time) * 1000)),
-            "component": hit["component"],
-            "velocity": round(hit.get("velocity", 0.8), 3),
-            "lane": hit["lane"],
-        })
-    
+        hit_objects.append(
+            {
+                "id": str(uuid.uuid4()),
+                "time": int(round((hit["time"] + start_time) * 1000)),
+                "component": hit["component"],
+                "velocity": round(hit.get("velocity", 0.8), 3),
+                "lane": hit["lane"],
+            }
+        )
+
     # Sort by time
     hit_objects.sort(key=lambda x: x["time"])
 
-    print(f"Beatmap generation produced {len(hit_objects)} hit objects (fallback={used_fallback}).")
-    
+    print(
+        f"Beatmap generation produced {len(hit_objects)} hit objects (fallback={used_fallback})."
+    )
+
     # Calculate difficulty
     difficulty = calculate_difficulty(classified_hits)
-    
+
     # Get unique drum components
     drum_components = sorted(set(hit["component"] for hit in classified_hits))
-    
+
     # Build beatmap structure
     tags = metadata.get("tags") if metadata else None
     if not tags:
@@ -893,7 +1055,9 @@ def generate_beatmap(
         },
         "timing": {
             "bpm": round(quantization_result["bpm"], 2),
-            "offset": int(round((quantization_result.get("offset", 0.0) + start_time) * 1000.0)),
+            "offset": int(
+                round((quantization_result.get("offset", 0.0) + start_time) * 1000.0)
+            ),
             "timeSignature": _detect_time_signature_from_hits(classified_hits),
         },
         "drumKit": {
@@ -907,16 +1071,19 @@ def generate_beatmap(
             "aiGenerationMetadata": {
                 "modelVersion": metadata.get("ai_version", "1.0.0"),
                 "confidence": round(
-                    sum(h["confidence"] for h in classified_hits) / len(classified_hits),
-                    3
-                ) if classified_hits else 0.0,
+                    sum(h["confidence"] for h in classified_hits)
+                    / len(classified_hits),
+                    3,
+                )
+                if classified_hits
+                else 0.0,
                 "processedAt": datetime.utcnow().isoformat() + "Z",
                 "metadataProvider": metadata.get("metadata_provider"),
                 "metadataConfidence": metadata.get("metadata_confidence"),
-            }
-        }
+            },
+        },
     }
-    
+
     # Add drum stem info if available
     if drum_stem_path:
         beatmap["audio"]["drumStem"] = Path(drum_stem_path).name
@@ -938,8 +1105,8 @@ def generate_beatmap(
             "forced_offset": forced_offset,
             "forced_step": forced_step,
             "force_quantization": force_quantization,
-    },
-    "lane_stats": lane_stats,
+        },
+        "lane_stats": lane_stats,
         "sections": _section_counts(snapped_times.tolist(), quantization_result["bpm"]),
     }
 

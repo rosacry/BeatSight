@@ -17,7 +17,7 @@ Ensemble strategies:
 
 Usage:
     from transcription.ensemble import EnsembleClassifier
-    
+
     # Load multiple trained models
     ensemble = EnsembleClassifier(
         model_paths=[
@@ -27,17 +27,16 @@ Usage:
         ],
         weights=[0.4, 0.35, 0.25],  # Optional: weight by val accuracy
     )
-    
+
     # Single prediction
     component, confidence = ensemble.classify_onset(audio, sr, onset_time)
-    
+
     # Batch inference
     results = ensemble.classify_batch(audio, sr, onset_times)
 """
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -61,13 +60,13 @@ except ImportError:
 class EnsembleClassifier:
     """
     Ensemble classifier combining multiple drum classification models.
-    
+
     Supports:
     - Multiple model architectures (v1 CNN, v2 with SE)
     - Weighted and unweighted averaging
     - Logit-level or probability-level fusion
     - GPU and CPU inference
-    
+
     Args:
         model_paths: List of paths to trained model checkpoints
         weights: Optional weights for each model (should sum to 1.0)
@@ -76,7 +75,7 @@ class EnsembleClassifier:
         fusion_method: "logit" (average logits) or "prob" (average probabilities)
         temperature: Temperature for probability calibration (1.0 = no change)
     """
-    
+
     # Default class list (should match training)
     DRUM_COMPONENTS = [
         "aux_percussion",
@@ -101,7 +100,7 @@ class EnsembleClassifier:
         "tom_low",
         "tom_mid",
     ]
-    
+
     def __init__(
         self,
         model_paths: List[Union[str, Path]],
@@ -117,11 +116,11 @@ class EnsembleClassifier:
         self.fusion_method = fusion_method
         self.temperature = temperature
         self.num_classes = num_classes
-        
+
         # Validate inputs
         if len(model_paths) == 0:
             raise ValueError("At least one model path is required")
-        
+
         if weights is not None:
             if len(weights) != len(model_paths):
                 raise ValueError("Number of weights must match number of models")
@@ -132,25 +131,25 @@ class EnsembleClassifier:
         else:
             # Equal weights
             weights = [1.0 / len(model_paths)] * len(model_paths)
-        
+
         self.weights = weights
         self.model_paths = [Path(p) for p in model_paths]
-        
+
         # Default model classes to v1
         if model_classes is None:
             model_classes = ["v1"] * len(model_paths)
         self.model_classes = model_classes
-        
+
         # Load models
         self.models: List[nn.Module] = []
         self._load_models()
-    
+
     def _load_models(self):
         """Load all models from checkpoints."""
         for path, model_class in zip(self.model_paths, self.model_classes):
             if not path.exists():
                 raise FileNotFoundError(f"Model not found: {path}")
-            
+
             # Create model instance
             if model_class == "v2":
                 if DrumClassifierCNNv2 is None:
@@ -160,55 +159,52 @@ class EnsembleClassifier:
                 if DrumClassifierCNN is None:
                     raise ImportError("DrumClassifierCNN not available")
                 model = DrumClassifierCNN(num_classes=self.num_classes)
-            
+
             # Load weights
             state_dict = torch.load(path, map_location=self.torch_device)
-            
+
             # Handle torch.compile prefix
             if any(k.startswith("_orig_mod.") for k in state_dict.keys()):
                 state_dict = {
-                    k.replace("_orig_mod.", ""): v 
-                    for k, v in state_dict.items()
+                    k.replace("_orig_mod.", ""): v for k, v in state_dict.items()
                 }
-            
+
             model.load_state_dict(state_dict)
             model.to(self.torch_device)
             model.eval()
-            
+
             self.models.append(model)
             print(f"Loaded {model_class} model from {path}")
-        
+
         print(f"Ensemble initialized with {len(self.models)} models")
-    
+
     @torch.no_grad()
     def predict(self, features: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Get ensemble predictions for a batch of features.
-        
+
         Args:
             features: Input tensor of shape (batch, 1, height, width)
-            
+
         Returns:
             Tuple of (predicted_classes, confidences) both of shape (batch,)
         """
         features = features.to(self.torch_device)
-        
+
         # Collect predictions from all models
         all_logits = []
         for model in self.models:
             logits = model(features)
             all_logits.append(logits)
-        
+
         # Stack: (num_models, batch, num_classes)
         stacked = torch.stack(all_logits, dim=0)
-        
+
         # Apply weights: (num_models, 1, 1)
         weights_tensor = torch.tensor(
-            self.weights, 
-            device=self.torch_device, 
-            dtype=stacked.dtype
+            self.weights, device=self.torch_device, dtype=stacked.dtype
         ).view(-1, 1, 1)
-        
+
         # Fusion
         if self.fusion_method == "logit":
             # Weighted average of logits
@@ -219,23 +215,22 @@ class EnsembleClassifier:
             # Weighted average of probabilities
             all_probs = F.softmax(stacked / self.temperature, dim=-1)
             probs = (all_probs * weights_tensor).sum(dim=0)
-        
+
         confidences, predictions = probs.max(dim=-1)
         return predictions, confidences
-    
+
     @torch.no_grad()
     def predict_with_uncertainty(
-        self, 
-        features: torch.Tensor
+        self, features: torch.Tensor
     ) -> Dict[str, torch.Tensor]:
         """
         Get predictions with uncertainty estimates.
-        
+
         Uncertainty is estimated as the disagreement between ensemble members.
-        
+
         Args:
             features: Input tensor of shape (batch, 1, height, width)
-            
+
         Returns:
             Dictionary with:
                 - predictions: Predicted class indices
@@ -244,34 +239,34 @@ class EnsembleClassifier:
                 - individual_preds: Predictions from each model
         """
         features = features.to(self.torch_device)
-        
+
         # Collect predictions from all models
         all_probs = []
         all_preds = []
-        
+
         for model in self.models:
             logits = model(features)
             probs = F.softmax(logits / self.temperature, dim=-1)
             all_probs.append(probs)
             all_preds.append(probs.argmax(dim=-1))
-        
+
         # Stack: (num_models, batch, num_classes)
         stacked_probs = torch.stack(all_probs, dim=0)
         stacked_preds = torch.stack(all_preds, dim=0)
-        
+
         # Mean and std of probabilities
         mean_probs = stacked_probs.mean(dim=0)
         std_probs = stacked_probs.std(dim=0)
-        
+
         # Ensemble prediction
         confidences, predictions = mean_probs.max(dim=-1)
-        
+
         # Uncertainty: mean std across classes, higher = more disagreement
         uncertainty = std_probs.mean(dim=-1)
-        
+
         # Agreement: fraction of models agreeing with ensemble prediction
         agreement = (stacked_preds == predictions.unsqueeze(0)).float().mean(dim=0)
-        
+
         return {
             "predictions": predictions,
             "confidences": confidences,
@@ -279,23 +274,19 @@ class EnsembleClassifier:
             "agreement": agreement,
             "individual_preds": stacked_preds,
         }
-    
+
     def extract_features(
-        self,
-        audio: np.ndarray,
-        sr: int,
-        onset_time: float,
-        window_ms: float = 100.0
+        self, audio: np.ndarray, sr: int, onset_time: float, window_ms: float = 100.0
     ) -> torch.Tensor:
         """
         Extract mel-spectrogram features around an onset.
-        
+
         Args:
             audio: Audio data as numpy array
             sr: Sample rate
             onset_time: Time of onset in seconds
             window_ms: Window size in milliseconds
-            
+
         Returns:
             Mel-spectrogram tensor of shape (1, 1, 128, 128)
         """
@@ -303,66 +294,62 @@ class EnsembleClassifier:
             import librosa
         except ImportError:
             raise ImportError("librosa required for feature extraction")
-        
+
         # Extract window around onset
         window_samples = int(window_ms * sr / 1000)
         center = int(onset_time * sr)
         start = max(0, center - window_samples // 4)
         end = min(len(audio), center + window_samples)
-        
+
         if end - start < 10:
             return torch.zeros(1, 1, 128, 128, device=self.torch_device)
-        
+
         window = audio[start:end]
-        
+
         # Compute mel-spectrogram
         mel_spec = librosa.feature.melspectrogram(
-            y=window,
-            sr=sr,
-            n_mels=128,
-            fmax=8000,
-            hop_length=len(window) // 128 + 1
+            y=window, sr=sr, n_mels=128, fmax=8000, hop_length=len(window) // 128 + 1
         )
-        
+
         mel_spec_db = librosa.power_to_db(mel_spec, ref=np.max)
-        
+
         # Normalize
         mel_min, mel_max = mel_spec_db.min(), mel_spec_db.max()
         mel_spec_norm = (mel_spec_db - mel_min) / (mel_max - mel_min + 1e-8)
-        
+
         # Resize to 128x128
         if mel_spec_norm.shape[1] != 128:
             mel_spec_norm = np.resize(mel_spec_norm, (128, 128))
-        
+
         features = torch.from_numpy(mel_spec_norm).float()
         features = features.unsqueeze(0).unsqueeze(0)
-        
+
         return features.to(self.torch_device)
-    
+
     def classify_onset(
         self,
         audio: np.ndarray,
         sr: int,
         onset_time: float,
         window_ms: float = 100.0,
-        return_uncertainty: bool = False
+        return_uncertainty: bool = False,
     ) -> Union[Tuple[str, float], Dict]:
         """
         Classify a single drum hit using the ensemble.
-        
+
         Args:
             audio: Audio data
             sr: Sample rate
             onset_time: Time of onset in seconds
             window_ms: Window size in milliseconds
             return_uncertainty: If True, return full uncertainty info
-            
+
         Returns:
             If return_uncertainty=False: Tuple of (component_name, confidence)
             If return_uncertainty=True: Dict with component, confidence, uncertainty, agreement
         """
         features = self.extract_features(audio, sr, onset_time, window_ms)
-        
+
         if return_uncertainty:
             result = self.predict_with_uncertainty(features)
             pred_idx = result["predictions"].item()
@@ -376,58 +363,59 @@ class EnsembleClassifier:
             predictions, confidences = self.predict(features)
             pred_idx = predictions.item()
             return self.DRUM_COMPONENTS[pred_idx], confidences.item()
-    
+
     def classify_batch(
         self,
         audio: np.ndarray,
         sr: int,
         onset_times: List[float],
         window_ms: float = 100.0,
-        confidence_threshold: float = 0.0
+        confidence_threshold: float = 0.0,
     ) -> List[Dict]:
         """
         Classify multiple drum hits efficiently.
-        
+
         Args:
             audio: Audio data
             sr: Sample rate
             onset_times: List of onset times in seconds
             window_ms: Window size in milliseconds
             confidence_threshold: Minimum confidence to include in results
-            
+
         Returns:
             List of dicts with time, component, confidence, uncertainty, agreement
         """
         if len(onset_times) == 0:
             return []
-        
+
         # Extract all features
         features_list = [
-            self.extract_features(audio, sr, t, window_ms) 
-            for t in onset_times
+            self.extract_features(audio, sr, t, window_ms) for t in onset_times
         ]
         features_batch = torch.cat(features_list, dim=0)
-        
+
         # Get predictions with uncertainty
         results = self.predict_with_uncertainty(features_batch)
-        
+
         # Build output
         output = []
         for i, onset_time in enumerate(onset_times):
             confidence = results["confidences"][i].item()
-            
+
             if confidence >= confidence_threshold:
                 pred_idx = results["predictions"][i].item()
-                output.append({
-                    "time": onset_time,
-                    "component": self.DRUM_COMPONENTS[pred_idx],
-                    "confidence": confidence,
-                    "uncertainty": results["uncertainty"][i].item(),
-                    "agreement": results["agreement"][i].item(),
-                })
-        
+                output.append(
+                    {
+                        "time": onset_time,
+                        "component": self.DRUM_COMPONENTS[pred_idx],
+                        "confidence": confidence,
+                        "uncertainty": results["uncertainty"][i].item(),
+                        "agreement": results["agreement"][i].item(),
+                    }
+                )
+
         return output
-    
+
     def get_model_info(self) -> Dict:
         """Get information about ensemble configuration."""
         return {
@@ -450,28 +438,28 @@ def create_ensemble_from_directory(
 ) -> EnsembleClassifier:
     """
     Create an ensemble from a directory of training runs.
-    
+
     Expects directory structure like:
         run_dir/
             seed_1337/best_drum_classifier.pth
             seed_42/best_drum_classifier.pth
             seed_2024/best_drum_classifier.pth
-    
+
     Args:
         run_dir: Directory containing training runs
         pattern: Glob pattern for finding model files
         max_models: Maximum number of models to include
         device: Device for inference
-        
+
     Returns:
         Configured EnsembleClassifier
     """
     run_dir = Path(run_dir)
     model_paths = sorted(run_dir.glob(pattern))[:max_models]
-    
+
     if len(model_paths) == 0:
         raise ValueError(f"No models found matching {run_dir / pattern}")
-    
+
     print(f"Found {len(model_paths)} models for ensemble")
     return EnsembleClassifier(model_paths, device=device)
 
@@ -481,49 +469,49 @@ def train_ensemble(
     output_dir: Union[str, Path],
     num_models: int = 5,
     base_seed: int = 1337,
-    **train_kwargs
+    **train_kwargs,
 ) -> EnsembleClassifier:
     """
     Train multiple models with different seeds for ensembling.
-    
+
     This is a convenience function that trains multiple models
     sequentially with different random seeds.
-    
+
     Args:
         dataset_path: Path to training dataset
         output_dir: Directory to save trained models
         num_models: Number of models to train
         base_seed: Starting seed (will use base_seed, base_seed+1, ...)
         **train_kwargs: Additional arguments passed to train_classifier
-        
+
     Returns:
         EnsembleClassifier with all trained models
     """
     output_dir = Path(output_dir)
     model_paths = []
-    
+
     for i in range(num_models):
         seed = base_seed + i
         run_dir = output_dir / f"seed_{seed}"
         run_dir.mkdir(parents=True, exist_ok=True)
-        
-        print(f"\n{'='*60}")
-        print(f"Training model {i+1}/{num_models} with seed {seed}")
-        print(f"{'='*60}\n")
-        
+
+        print(f"\n{'=' * 60}")
+        print(f"Training model {i + 1}/{num_models} with seed {seed}")
+        print(f"{'=' * 60}\n")
+
         # Import train function
         # Note: This would need to be adapted to your actual training script
         # For now, we just note where models should be saved
         model_path = run_dir / "best_drum_classifier.pth"
-        
+
         if model_path.exists():
             print(f"Model already exists at {model_path}, skipping training")
         else:
             print(f"TODO: Train model with seed={seed}, save to {model_path}")
             print("  Run: python train_classifier.py --seed {seed} --output {run_dir}")
-        
+
         model_paths.append(model_path)
-    
+
     # Return ensemble of trained models
     existing_paths = [p for p in model_paths if p.exists()]
     if existing_paths:
@@ -535,7 +523,7 @@ def train_ensemble(
 if __name__ == "__main__":
     print("Ensemble Inference Module")
     print("=" * 50)
-    
+
     # Demo: Show how ensemble would be used
     print("\nUsage example:")
     print("""
@@ -562,18 +550,19 @@ if __name__ == "__main__":
     # Batch inference
     results = ensemble.classify_batch(audio, sr, onset_times=[0.5, 1.0, 1.5])
     """)
-    
+
     # Test with dummy data if models exist
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-dir", type=Path, help="Directory with trained models")
     args = parser.parse_args()
-    
+
     if args.model_dir and args.model_dir.exists():
         try:
             ensemble = create_ensemble_from_directory(args.model_dir)
             print(f"\nEnsemble info: {ensemble.get_model_info()}")
-            
+
             # Test with random input
             dummy_features = torch.randn(4, 1, 128, 128)
             preds, confs = ensemble.predict(dummy_features)

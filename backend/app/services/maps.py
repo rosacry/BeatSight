@@ -55,9 +55,7 @@ class MapService:
 
     async def get_map(self, map_id: uuid.UUID) -> Map:
         """Get a map by ID."""
-        result = await self._session.execute(
-            select(Map).where(Map.id == map_id)
-        )
+        result = await self._session.execute(select(Map).where(Map.id == map_id))
         map_obj = result.scalar_one_or_none()
         if map_obj is None:
             raise MapNotFoundError(f"Map {map_id} not found")
@@ -65,9 +63,7 @@ class MapService:
 
     async def get_song(self, song_id: uuid.UUID) -> Song:
         """Get a song by ID."""
-        result = await self._session.execute(
-            select(Song).where(Song.id == song_id)
-        )
+        result = await self._session.execute(select(Song).where(Song.id == song_id))
         song = result.scalar_one_or_none()
         if song is None:
             raise SongNotFoundError(f"Song {song_id} not found")

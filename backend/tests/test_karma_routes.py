@@ -6,7 +6,6 @@ import uuid
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -18,6 +17,7 @@ from app.services.karma import KarmaService, KarmaError
 # =============================================================================
 # Test Fixtures
 # =============================================================================
+
 
 def create_mock_user(user_id: uuid.UUID | None = None) -> MagicMock:
     """Create a mock user object."""
@@ -46,6 +46,7 @@ def override_require_karma():
 # Test Get My Karma
 # =============================================================================
 
+
 class TestGetMyKarma:
     """Tests for GET /karma/me endpoint."""
 
@@ -53,33 +54,35 @@ class TestGetMyKarma:
         """Test successfully getting user's karma."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         mock_stats = {
             "current_score": 150,
             "rank": 42,
             "daily_ai_quota": 10,
             "eligible_roles": ["fixer"],
             "current_roles": [],
-            "breakdown": {}
+            "breakdown": {},
         }
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
-            with patch.object(KarmaService, "get_karma_stats", new_callable=AsyncMock) as mock_get:
+            with patch.object(
+                KarmaService, "get_karma_stats", new_callable=AsyncMock
+            ) as mock_get:
                 mock_get.return_value = mock_stats
-                
+
                 client = TestClient(app)
                 response = client.get("/api/karma/me")
-                
+
                 assert response.status_code == 200
                 data = response.json()
                 assert data["user_id"] == str(mock_user.id)
@@ -95,11 +98,11 @@ class TestGetMyKarma:
         """Test getting karma without authentication."""
         app.dependency_overrides.clear()
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
             client = TestClient(app, raise_server_exceptions=False)
             response = client.get("/api/karma/me")
-            
+
             assert response.status_code in [401, 403]
         finally:
             app.dependency_overrides.clear()
@@ -108,11 +111,11 @@ class TestGetMyKarma:
         """Test getting karma when feature is disabled."""
         app.dependency_overrides.clear()
         # Don't override require_karma - let it check the feature flag
-        
+
         client = TestClient(app, raise_server_exceptions=False)
         # May return 404 if karma feature is disabled
         response = client.get("/api/karma/me")
-        
+
         # Either auth error or feature disabled
         assert response.status_code in [401, 403, 404]
 
@@ -121,6 +124,7 @@ class TestGetMyKarma:
 # Test Get My Karma Stats
 # =============================================================================
 
+
 class TestGetMyKarmaStats:
     """Tests for GET /karma/me/stats endpoint."""
 
@@ -128,7 +132,7 @@ class TestGetMyKarmaStats:
         """Test successfully getting detailed karma stats."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         mock_stats = {
             "current_score": 250,
             "rank": 15,
@@ -137,27 +141,29 @@ class TestGetMyKarmaStats:
             "current_roles": ["fixer"],
             "breakdown": {
                 "vote_given": {"total": 50, "count": 50},
-                "beatmap_verified": {"total": 200, "count": 20}
-            }
+                "beatmap_verified": {"total": 200, "count": 20},
+            },
         }
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
-            with patch.object(KarmaService, "get_karma_stats", new_callable=AsyncMock) as mock_get:
+            with patch.object(
+                KarmaService, "get_karma_stats", new_callable=AsyncMock
+            ) as mock_get:
                 mock_get.return_value = mock_stats
-                
+
                 client = TestClient(app)
                 response = client.get("/api/karma/me/stats")
-                
+
                 assert response.status_code == 200
                 data = response.json()
                 assert data["current_score"] == 250
@@ -171,6 +177,7 @@ class TestGetMyKarmaStats:
 # Test Get My Karma History
 # =============================================================================
 
+
 class TestGetMyKarmaHistory:
     """Tests for GET /karma/me/history endpoint."""
 
@@ -178,7 +185,7 @@ class TestGetMyKarmaHistory:
         """Test successfully getting karma history."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         mock_entry = MagicMock()
         mock_entry.id = uuid.uuid4()
         mock_entry.delta = 10
@@ -187,26 +194,32 @@ class TestGetMyKarmaHistory:
         mock_entry.related_entity_type = "vote"
         mock_entry.related_entity_id = uuid.uuid4()
         mock_entry.recorded_at = datetime.utcnow()
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
-            with patch.object(KarmaService, "get_karma_history", new_callable=AsyncMock) as mock_get, \
-                 patch.object(KarmaService, "get_karma_history_count", new_callable=AsyncMock) as mock_count:
+            with (
+                patch.object(
+                    KarmaService, "get_karma_history", new_callable=AsyncMock
+                ) as mock_get,
+                patch.object(
+                    KarmaService, "get_karma_history_count", new_callable=AsyncMock
+                ) as mock_count,
+            ):
                 mock_get.return_value = [mock_entry]
                 mock_count.return_value = 1
-                
+
                 client = TestClient(app)
                 response = client.get("/api/karma/me/history")
-                
+
                 assert response.status_code == 200
                 data = response.json()
                 assert len(data["items"]) == 1
@@ -220,26 +233,32 @@ class TestGetMyKarmaHistory:
         """Test karma history pagination."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
-            with patch.object(KarmaService, "get_karma_history", new_callable=AsyncMock) as mock_get, \
-                 patch.object(KarmaService, "get_karma_history_count", new_callable=AsyncMock) as mock_count:
+            with (
+                patch.object(
+                    KarmaService, "get_karma_history", new_callable=AsyncMock
+                ) as mock_get,
+                patch.object(
+                    KarmaService, "get_karma_history_count", new_callable=AsyncMock
+                ) as mock_count,
+            ):
                 mock_get.return_value = []
                 mock_count.return_value = 100
-                
+
                 client = TestClient(app)
                 response = client.get("/api/karma/me/history?limit=20&offset=40")
-                
+
                 assert response.status_code == 200
                 data = response.json()
                 assert data["limit"] == 20
@@ -251,28 +270,28 @@ class TestGetMyKarmaHistory:
         """Test karma history with invalid pagination params."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
             client = TestClient(app)
-            
+
             # Test invalid limit
             response = client.get("/api/karma/me/history?limit=0")
             assert response.status_code == 422
-            
+
             # Test limit too high
             response = client.get("/api/karma/me/history?limit=200")
             assert response.status_code == 422
-            
+
             # Test negative offset
             response = client.get("/api/karma/me/history?offset=-1")
             assert response.status_code == 422
@@ -284,6 +303,7 @@ class TestGetMyKarmaHistory:
 # Test Get My Quota
 # =============================================================================
 
+
 class TestGetMyQuota:
     """Tests for GET /karma/me/quota endpoint."""
 
@@ -291,26 +311,32 @@ class TestGetMyQuota:
         """Test successfully getting AI quota."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
-            with patch.object(KarmaService, "get_user_karma", new_callable=AsyncMock) as mock_karma, \
-                 patch.object(KarmaService, "get_daily_ai_quota", new_callable=AsyncMock) as mock_quota:
+            with (
+                patch.object(
+                    KarmaService, "get_user_karma", new_callable=AsyncMock
+                ) as mock_karma,
+                patch.object(
+                    KarmaService, "get_daily_ai_quota", new_callable=AsyncMock
+                ) as mock_quota,
+            ):
                 mock_karma.return_value = 50
                 mock_quota.return_value = 5
-                
+
                 client = TestClient(app)
                 response = client.get("/api/karma/me/quota")
-                
+
                 assert response.status_code == 200
                 data = response.json()
                 assert data["karma_score"] == 50
@@ -325,26 +351,32 @@ class TestGetMyQuota:
         """Test quota response when at max tier."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
-            with patch.object(KarmaService, "get_user_karma", new_callable=AsyncMock) as mock_karma, \
-                 patch.object(KarmaService, "get_daily_ai_quota", new_callable=AsyncMock) as mock_quota:
+            with (
+                patch.object(
+                    KarmaService, "get_user_karma", new_callable=AsyncMock
+                ) as mock_karma,
+                patch.object(
+                    KarmaService, "get_daily_ai_quota", new_callable=AsyncMock
+                ) as mock_quota,
+            ):
                 mock_karma.return_value = 100000  # Very high karma
                 mock_quota.return_value = 100
-                
+
                 client = TestClient(app)
                 response = client.get("/api/karma/me/quota")
-                
+
                 assert response.status_code == 200
                 data = response.json()
                 # At max tier, next tier info may be None
@@ -357,32 +389,35 @@ class TestGetMyQuota:
 # Test Get Leaderboard
 # =============================================================================
 
+
 class TestGetLeaderboard:
     """Tests for GET /karma/leaderboard endpoint."""
 
     def test_get_leaderboard_success(self):
         """Test successfully getting leaderboard."""
         mock_session = create_mock_session()
-        
+
         entries = [
             (uuid.uuid4(), "TopPlayer", 5000),
             (uuid.uuid4(), "SecondPlace", 4500),
             (uuid.uuid4(), "ThirdPlace", 4000),
         ]
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
-            with patch.object(KarmaService, "get_karma_leaderboard", new_callable=AsyncMock) as mock_get:
+            with patch.object(
+                KarmaService, "get_karma_leaderboard", new_callable=AsyncMock
+            ) as mock_get:
                 mock_get.return_value = entries
-                
+
                 client = TestClient(app)
                 response = client.get("/api/karma/leaderboard")
-                
+
                 assert response.status_code == 200
                 data = response.json()
                 assert len(data["entries"]) == 3
@@ -396,22 +431,24 @@ class TestGetLeaderboard:
     def test_get_leaderboard_pagination(self):
         """Test leaderboard pagination."""
         mock_session = create_mock_session()
-        
+
         entries = [(uuid.uuid4(), f"Player{i}", 5000 - i * 100) for i in range(10)]
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
-            with patch.object(KarmaService, "get_karma_leaderboard", new_callable=AsyncMock) as mock_get:
+            with patch.object(
+                KarmaService, "get_karma_leaderboard", new_callable=AsyncMock
+            ) as mock_get:
                 mock_get.return_value = entries
-                
+
                 client = TestClient(app)
                 response = client.get("/api/karma/leaderboard?limit=10&offset=50")
-                
+
                 assert response.status_code == 200
                 data = response.json()
                 assert data["limit"] == 10
@@ -424,20 +461,22 @@ class TestGetLeaderboard:
     def test_get_leaderboard_empty(self):
         """Test leaderboard when empty."""
         mock_session = create_mock_session()
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
-            with patch.object(KarmaService, "get_karma_leaderboard", new_callable=AsyncMock) as mock_get:
+            with patch.object(
+                KarmaService, "get_karma_leaderboard", new_callable=AsyncMock
+            ) as mock_get:
                 mock_get.return_value = []
-                
+
                 client = TestClient(app)
                 response = client.get("/api/karma/leaderboard")
-                
+
                 assert response.status_code == 200
                 data = response.json()
                 assert len(data["entries"]) == 0
@@ -449,22 +488,23 @@ class TestGetLeaderboard:
 # Test Get Roles Info
 # =============================================================================
 
+
 class TestGetRolesInfo:
     """Tests for GET /karma/roles endpoint."""
 
     def test_get_roles_info_success(self):
         """Test successfully getting roles information."""
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
             client = TestClient(app)
             response = client.get("/api/karma/roles")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert "roles" in data
             assert len(data["roles"]) > 0
-            
+
             # Each role should have required fields
             for role in data["roles"]:
                 assert "role" in role
@@ -476,11 +516,11 @@ class TestGetRolesInfo:
         """Test that roles info doesn't require authentication."""
         app.dependency_overrides.clear()
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
             client = TestClient(app)
             response = client.get("/api/karma/roles")
-            
+
             # Should succeed without auth
             assert response.status_code == 200
         finally:
@@ -491,6 +531,7 @@ class TestGetRolesInfo:
 # Test Claim Role
 # =============================================================================
 
+
 class TestClaimRole:
     """Tests for POST /karma/me/roles/{role_code} endpoint."""
 
@@ -498,11 +539,11 @@ class TestClaimRole:
         """Test claiming role requires authentication."""
         app.dependency_overrides.clear()
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
             client = TestClient(app, raise_server_exceptions=False)
             response = client.post("/api/karma/me/roles/fixer")
-            
+
             assert response.status_code in [401, 403]
         finally:
             app.dependency_overrides.clear()
@@ -511,21 +552,21 @@ class TestClaimRole:
         """Test claiming role with invalid role code."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
             client = TestClient(app)
             response = client.post("/api/karma/me/roles/invalid_role")
-            
+
             assert response.status_code == 400
             assert "Invalid role code" in response.json()["detail"]
         finally:
@@ -535,24 +576,26 @@ class TestClaimRole:
         """Test successfully claiming a role."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
-            with patch.object(KarmaService, "assign_role", new_callable=AsyncMock) as mock_assign:
+            with patch.object(
+                KarmaService, "assign_role", new_callable=AsyncMock
+            ) as mock_assign:
                 mock_assign.return_value = True
-                
+
                 client = TestClient(app)
                 response = client.post("/api/karma/me/roles/fixer")
-                
+
                 assert response.status_code == 201
                 data = response.json()
                 assert "successfully" in data["message"]
@@ -563,28 +606,36 @@ class TestClaimRole:
         """Test claiming role user already has."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
-            with patch.object(KarmaService, "assign_role", new_callable=AsyncMock) as mock_assign, \
-                 patch.object(KarmaService, "get_eligible_roles", new_callable=AsyncMock) as mock_eligible, \
-                 patch.object(KarmaService, "get_user_roles", new_callable=AsyncMock) as mock_roles:
+            with (
+                patch.object(
+                    KarmaService, "assign_role", new_callable=AsyncMock
+                ) as mock_assign,
+                patch.object(
+                    KarmaService, "get_eligible_roles", new_callable=AsyncMock
+                ) as mock_eligible,
+                patch.object(
+                    KarmaService, "get_user_roles", new_callable=AsyncMock
+                ) as mock_roles,
+            ):
                 mock_assign.return_value = False
                 mock_eligible.return_value = ["fixer"]
                 mock_roles.return_value = ["fixer"]  # Already has role
-                
+
                 client = TestClient(app)
                 response = client.post("/api/karma/me/roles/fixer")
-                
+
                 assert response.status_code == 409
                 assert "already have" in response.json()["detail"]
         finally:
@@ -594,30 +645,40 @@ class TestClaimRole:
         """Test claiming role with insufficient karma."""
         mock_user = create_mock_user()
         mock_session = create_mock_session()
-        
+
         def override_get_user():
             return mock_user
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_current_user] = override_get_user
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
-            with patch.object(KarmaService, "assign_role", new_callable=AsyncMock) as mock_assign, \
-                 patch.object(KarmaService, "get_eligible_roles", new_callable=AsyncMock) as mock_eligible, \
-                 patch.object(KarmaService, "get_user_roles", new_callable=AsyncMock) as mock_roles, \
-                 patch.object(KarmaService, "get_user_karma", new_callable=AsyncMock) as mock_karma:
+            with (
+                patch.object(
+                    KarmaService, "assign_role", new_callable=AsyncMock
+                ) as mock_assign,
+                patch.object(
+                    KarmaService, "get_eligible_roles", new_callable=AsyncMock
+                ) as mock_eligible,
+                patch.object(
+                    KarmaService, "get_user_roles", new_callable=AsyncMock
+                ) as mock_roles,
+                patch.object(
+                    KarmaService, "get_user_karma", new_callable=AsyncMock
+                ) as mock_karma,
+            ):
                 mock_assign.return_value = False
                 mock_eligible.return_value = []  # Not eligible
                 mock_roles.return_value = []
                 mock_karma.return_value = 10  # Low karma
-                
+
                 client = TestClient(app)
                 response = client.post("/api/karma/me/roles/fixer")
-                
+
                 assert response.status_code == 403
                 assert "Insufficient karma" in response.json()["detail"]
         finally:
@@ -628,6 +689,7 @@ class TestClaimRole:
 # Test Get User Karma (Public)
 # =============================================================================
 
+
 class TestGetUserKarma:
     """Tests for GET /karma/users/{user_id} endpoint."""
 
@@ -635,31 +697,37 @@ class TestGetUserKarma:
         """Test successfully getting another user's karma."""
         user_id = uuid.uuid4()
         mock_session = create_mock_session()
-        
+
         mock_stats = {
             "current_score": 300,
             "rank": 50,
             "daily_ai_quota": 15,
             "eligible_roles": ["fixer"],
             "current_roles": ["fixer"],
-            "breakdown": {}
+            "breakdown": {},
         }
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
-            with patch.object(KarmaService, "get_user_karma", new_callable=AsyncMock) as mock_karma, \
-                 patch.object(KarmaService, "get_karma_stats", new_callable=AsyncMock) as mock_stats_call:
+            with (
+                patch.object(
+                    KarmaService, "get_user_karma", new_callable=AsyncMock
+                ) as mock_karma,
+                patch.object(
+                    KarmaService, "get_karma_stats", new_callable=AsyncMock
+                ) as mock_stats_call,
+            ):
                 mock_karma.return_value = 300
                 mock_stats_call.return_value = mock_stats
-                
+
                 client = TestClient(app)
                 response = client.get(f"/api/karma/users/{user_id}")
-                
+
                 assert response.status_code == 200
                 data = response.json()
                 assert data["user_id"] == str(user_id)
@@ -671,20 +739,22 @@ class TestGetUserKarma:
         """Test getting karma for non-existent user."""
         user_id = uuid.uuid4()
         mock_session = create_mock_session()
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
-            with patch.object(KarmaService, "get_user_karma", new_callable=AsyncMock) as mock_karma:
+            with patch.object(
+                KarmaService, "get_user_karma", new_callable=AsyncMock
+            ) as mock_karma:
                 mock_karma.side_effect = KarmaError("User not found")
-                
+
                 client = TestClient(app)
                 response = client.get(f"/api/karma/users/{user_id}")
-                
+
                 assert response.status_code == 404
                 assert "not found" in response.json()["detail"].lower()
         finally:
@@ -693,11 +763,11 @@ class TestGetUserKarma:
     def test_get_user_karma_invalid_uuid(self):
         """Test getting karma with invalid user UUID."""
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
             client = TestClient(app)
             response = client.get("/api/karma/users/invalid-uuid")
-            
+
             assert response.status_code == 422
         finally:
             app.dependency_overrides.clear()
@@ -706,32 +776,38 @@ class TestGetUserKarma:
         """Test that public user karma doesn't require auth."""
         user_id = uuid.uuid4()
         mock_session = create_mock_session()
-        
+
         mock_stats = {
             "current_score": 100,
             "rank": 100,
             "daily_ai_quota": 5,
             "eligible_roles": [],
             "current_roles": [],
-            "breakdown": {}
+            "breakdown": {},
         }
-        
+
         def override_get_session():
             return mock_session
-        
+
         app.dependency_overrides.clear()
         app.dependency_overrides[get_db_session] = override_get_session
         app.dependency_overrides[require_karma] = override_require_karma
-        
+
         try:
-            with patch.object(KarmaService, "get_user_karma", new_callable=AsyncMock) as mock_karma, \
-                 patch.object(KarmaService, "get_karma_stats", new_callable=AsyncMock) as mock_stats_call:
+            with (
+                patch.object(
+                    KarmaService, "get_user_karma", new_callable=AsyncMock
+                ) as mock_karma,
+                patch.object(
+                    KarmaService, "get_karma_stats", new_callable=AsyncMock
+                ) as mock_stats_call,
+            ):
                 mock_karma.return_value = 100
                 mock_stats_call.return_value = mock_stats
-                
+
                 client = TestClient(app)
                 response = client.get(f"/api/karma/users/{user_id}")
-                
+
                 # Should succeed without auth
                 assert response.status_code == 200
         finally:

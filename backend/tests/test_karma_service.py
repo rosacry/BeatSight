@@ -27,7 +27,7 @@ class TestKarmaExceptions:
     def test_insufficient_karma_error_attributes(self):
         """Test InsufficientKarmaError stores required and current."""
         error = InsufficientKarmaError(required=100, current=50)
-        
+
         assert error.required == 100
         assert error.current == 50
         assert "100" in str(error)
@@ -78,13 +78,13 @@ class TestAIGenerationQuotas:
     def test_quotas_increase_with_karma(self):
         """Test that quotas increase with higher karma."""
         thresholds = sorted(AI_GENERATION_QUOTAS.keys())
-        
+
         # Get quotas in order (treating -1 as "infinite")
         quotas = [
-            AI_GENERATION_QUOTAS[t] if AI_GENERATION_QUOTAS[t] >= 0 else float('inf')
+            AI_GENERATION_QUOTAS[t] if AI_GENERATION_QUOTAS[t] >= 0 else float("inf")
             for t in thresholds
         ]
-        
+
         # Ensure quotas are non-decreasing
         for i in range(1, len(quotas)):
             assert quotas[i] >= quotas[i - 1]
@@ -117,9 +117,9 @@ class TestGetUserKarma:
         mock_session.execute.return_value = mock_result
 
         service = KarmaService(mock_session)
-        
+
         result = await service.get_user_karma(uuid.uuid4())
-        
+
         assert result == 500
 
     @pytest.mark.asyncio
@@ -131,9 +131,9 @@ class TestGetUserKarma:
         mock_session.execute.return_value = mock_result
 
         service = KarmaService(mock_session)
-        
+
         result = await service.get_user_karma(uuid.uuid4())
-        
+
         assert result == 0
 
 
@@ -145,10 +145,10 @@ class TestGetDailyAIQuota:
         """Test base quota for users with low karma."""
         mock_session = AsyncMock()
         service = KarmaService(mock_session)
-        
-        with patch.object(service, 'get_user_karma', return_value=50):
+
+        with patch.object(service, "get_user_karma", return_value=50):
             result = await service.get_daily_ai_quota(uuid.uuid4())
-        
+
         assert result == AI_GENERATION_QUOTAS[0]
 
     @pytest.mark.asyncio
@@ -156,10 +156,10 @@ class TestGetDailyAIQuota:
         """Test increased quota for high karma users."""
         mock_session = AsyncMock()
         service = KarmaService(mock_session)
-        
-        with patch.object(service, 'get_user_karma', return_value=2500):
+
+        with patch.object(service, "get_user_karma", return_value=2500):
             result = await service.get_daily_ai_quota(uuid.uuid4())
-        
+
         # Should get curator quota
         assert result == AI_GENERATION_QUOTAS[2000]
 
@@ -172,10 +172,10 @@ class TestCheckKarmaRequirement:
         """Test True when karma meets requirement."""
         mock_session = AsyncMock()
         service = KarmaService(mock_session)
-        
-        with patch.object(service, 'get_user_karma', return_value=500):
+
+        with patch.object(service, "get_user_karma", return_value=500):
             result = await service.check_karma_requirement(uuid.uuid4(), 100)
-        
+
         assert result is True
 
     @pytest.mark.asyncio
@@ -183,10 +183,10 @@ class TestCheckKarmaRequirement:
         """Test False when karma doesn't meet requirement."""
         mock_session = AsyncMock()
         service = KarmaService(mock_session)
-        
-        with patch.object(service, 'get_user_karma', return_value=50):
+
+        with patch.object(service, "get_user_karma", return_value=50):
             result = await service.check_karma_requirement(uuid.uuid4(), 100)
-        
+
         assert result is False
 
     @pytest.mark.asyncio
@@ -194,10 +194,10 @@ class TestCheckKarmaRequirement:
         """Test True when karma exactly equals requirement."""
         mock_session = AsyncMock()
         service = KarmaService(mock_session)
-        
-        with patch.object(service, 'get_user_karma', return_value=100):
+
+        with patch.object(service, "get_user_karma", return_value=100):
             result = await service.check_karma_requirement(uuid.uuid4(), 100)
-        
+
         assert result is True
 
 
@@ -209,8 +209,8 @@ class TestRequireKarma:
         """Test no exception when karma is sufficient."""
         mock_session = AsyncMock()
         service = KarmaService(mock_session)
-        
-        with patch.object(service, 'get_user_karma', return_value=500):
+
+        with patch.object(service, "get_user_karma", return_value=500):
             # Should not raise
             await service.require_karma(uuid.uuid4(), 100)
 
@@ -219,11 +219,11 @@ class TestRequireKarma:
         """Test InsufficientKarmaError when karma is insufficient."""
         mock_session = AsyncMock()
         service = KarmaService(mock_session)
-        
-        with patch.object(service, 'get_user_karma', return_value=50):
+
+        with patch.object(service, "get_user_karma", return_value=50):
             with pytest.raises(InsufficientKarmaError) as exc_info:
                 await service.require_karma(uuid.uuid4(), 100)
-            
+
             assert exc_info.value.required == 100
             assert exc_info.value.current == 50
 
@@ -236,10 +236,12 @@ class TestHasRole:
         """Test True when user has the role."""
         mock_session = AsyncMock()
         service = KarmaService(mock_session)
-        
-        with patch.object(service, 'get_user_roles', return_value=["fixer", "verifier"]):
+
+        with patch.object(
+            service, "get_user_roles", return_value=["fixer", "verifier"]
+        ):
             result = await service.has_role(uuid.uuid4(), "fixer")
-        
+
         assert result is True
 
     @pytest.mark.asyncio
@@ -247,10 +249,10 @@ class TestHasRole:
         """Test False when user doesn't have the role."""
         mock_session = AsyncMock()
         service = KarmaService(mock_session)
-        
-        with patch.object(service, 'get_user_roles', return_value=["fixer"]):
+
+        with patch.object(service, "get_user_roles", return_value=["fixer"]):
             result = await service.has_role(uuid.uuid4(), "admin")
-        
+
         assert result is False
 
 
@@ -261,18 +263,18 @@ class TestGetKarmaLeaderboard:
     async def test_returns_leaderboard_list(self):
         """Test that leaderboard returns list of tuples."""
         mock_session = AsyncMock()
-        
+
         user_id = uuid.uuid4()
         mock_data = [(user_id, "TopPlayer", 5000)]
-        
+
         mock_result = MagicMock()
         mock_result.all.return_value = mock_data
         mock_session.execute.return_value = mock_result
 
         service = KarmaService(mock_session)
-        
+
         result = await service.get_karma_leaderboard(limit=10)
-        
+
         assert len(result) == 1
         assert result[0][0] == user_id
         assert result[0][1] == "TopPlayer"
@@ -291,9 +293,9 @@ class TestGetKarmaHistoryCount:
         mock_session.execute.return_value = mock_result
 
         service = KarmaService(mock_session)
-        
+
         result = await service.get_karma_history_count(uuid.uuid4())
-        
+
         assert result == 42
 
 
@@ -304,15 +306,15 @@ class TestGetKarmaHistory:
     async def test_returns_history_list(self):
         """Test that history returns list of ledger entries."""
         mock_session = AsyncMock()
-        
+
         mock_entry = MagicMock()
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [mock_entry]
         mock_session.execute.return_value = mock_result
 
         service = KarmaService(mock_session)
-        
+
         result = await service.get_karma_history(uuid.uuid4())
-        
+
         assert len(result) == 1
         assert result[0] is mock_entry

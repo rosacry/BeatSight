@@ -55,7 +55,9 @@ def _resolve_model_path(explicit_path: Optional[str]) -> Tuple[Optional[str], bo
         resolved = Path(env_path).expanduser()
         return str(resolved), resolved.exists()
 
-    default_path = Path(__file__).resolve().parent.parent / "models" / DEFAULT_MODEL_FILENAME
+    default_path = (
+        Path(__file__).resolve().parent.parent / "models" / DEFAULT_MODEL_FILENAME
+    )
     if default_path.exists():
         return str(default_path), True
 
@@ -65,38 +67,38 @@ def _resolve_model_path(explicit_path: Optional[str]) -> Tuple[Optional[str], bo
 class SimpleDrumClassifier:
     """
     Heuristic-based drum classifier using spectral features.
-    
+
     This classifier uses hand-tuned frequency and energy thresholds
     to identify drum components. While not as accurate as the ML
     classifier (MLDrumClassifier), it serves critical roles:
-    
+
     1. **Fallback Mode**: When ML model is unavailable or fails to load,
        the system automatically falls back to this heuristic classifier
        to ensure the pipeline never crashes.
-    
+
     2. **Low-Confidence Regions**: Can be used to fill gaps in ML predictions
        where confidence is too low.
-    
+
     3. **Testing & Development**: Provides deterministic behavior for
        unit tests and rapid iteration without GPU dependencies.
-    
+
     4. **Baseline Comparison**: Establishes minimum performance floor
        to validate ML improvements against.
-    
+
     Classification is based on:
     - Spectral centroid (frequency content)
     - Zero crossing rate (noisiness/brightness)
     - RMS energy (loudness)
     - Spectral rolloff (frequency distribution)
-    
+
     Typical accuracy: ~60-70% on clean isolated drums
     ML accuracy target: ~85-95% with proper training data
-    
+
     See Also:
         MLDrumClassifier: The preferred ML-based classifier
         classify_drums(): Main entry point that auto-selects classifier
     """
-    
+
     DRUM_COMPONENTS = [
         "kick",
         "snare",
@@ -108,7 +110,7 @@ class SimpleDrumClassifier:
         "tom_mid",
         "tom_low",
     ]
-    
+
     def classify_onset(
         self,
         audio: np.ndarray,
@@ -118,13 +120,13 @@ class SimpleDrumClassifier:
     ) -> Tuple[str, float]:
         """
         Classify a single drum hit.
-        
+
         Args:
             audio: Audio data
             sr: Sample rate
             onset_time: Time of onset in seconds
             window_ms: Window size in milliseconds
-            
+
         Returns:
             Tuple of (component name, confidence)
         """
@@ -133,47 +135,47 @@ class SimpleDrumClassifier:
         center = int(onset_time * sr)
         start = max(0, center - window_samples // 4)
         end = min(len(audio), center + window_samples)
-        
+
         if end - start < 10:  # Too short
             return "unknown", 0.0
-        
+
         window = audio[start:end]
-        
+
         # Compute spectral features
         spectral_centroid = librosa.feature.spectral_centroid(y=window, sr=sr)[0]
         spectral_rolloff = librosa.feature.spectral_rolloff(y=window, sr=sr)[0]
         zero_crossing_rate = librosa.feature.zero_crossing_rate(window)[0]
         rms = librosa.feature.rms(y=window)[0]
-        
+
         # Simplified heuristic classification
         avg_centroid = np.mean(spectral_centroid)
         avg_zcr = np.mean(zero_crossing_rate)
         avg_rms = np.mean(rms)
         avg_rolloff = np.mean(spectral_rolloff)
-        
+
         # Kick drum: Low frequency, high energy
         if avg_centroid < 200 and avg_rms > 0.05:
             return "kick", 0.7
-        
+
         # Snare: Mid frequency, moderate energy, high ZCR
         elif 150 <= avg_centroid < 2000 and avg_zcr > 0.08 and avg_rms > 0.03:
             return "snare", 0.65
-        
+
         # Hi-hat: High frequency, lower energy
         elif avg_centroid >= 2500 and avg_rms < 0.2:
             if avg_rms < 0.08:
                 return "hihat_closed", 0.6
             else:
                 return "hihat_open", 0.6
-        
+
         # Crash: High frequency, high energy, wide spectrum
         elif avg_centroid >= 1800 and avg_rms > 0.1 and avg_rolloff > 4000:
             return "crash", 0.55
-        
+
         # Ride: High frequency, moderate energy
         elif avg_centroid >= 1500 and 0.05 < avg_rms < 0.15:
             return "ride", 0.5
-        
+
         # Toms: Mid-low frequency, moderate energy
         elif 200 <= avg_centroid < 1200 and avg_rms > 0.04:
             if avg_centroid < 500:
@@ -182,11 +184,11 @@ class SimpleDrumClassifier:
                 return "tom_mid", 0.5
             else:
                 return "tom_high", 0.5
-        
+
         # Generic drum hit - classify as snare for anything else with energy
         elif avg_rms > 0.02:
             return "snare", 0.4
-        
+
         # Very weak hit - might be noise
         return "unknown", 0.3
 
@@ -277,7 +279,9 @@ def _classify_drums_heuristic(
         else:
             onset_time, onset_confidence = onset
 
-        component, class_confidence = classifier.classify_onset(audio_data, sr, onset_time)
+        component, class_confidence = classifier.classify_onset(
+            audio_data, sr, onset_time
+        )
 
         combined_confidence = (onset_confidence + class_confidence) / 2.0
 

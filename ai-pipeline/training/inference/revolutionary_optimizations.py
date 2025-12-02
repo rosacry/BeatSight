@@ -229,12 +229,13 @@ def export_fp8_tensorrt(
     output_path: Union[str, Path],
     calibration_data: Optional[np.ndarray] = None,
     config: Optional[FP8Config] = None,
+    enable_sparsity: bool = False,
 ) -> Path:
     """
     Export ONNX model to TensorRT with FP8 precision.
     
     Requires:
-    - NVIDIA H100, H200, or RTX 4090
+    - NVIDIA H100, H200, L40S, or RTX 4090
     - TensorRT 8.6+ with FP8 support
     
     Args:
@@ -242,6 +243,8 @@ def export_fp8_tensorrt(
         output_path: Output TensorRT engine path
         calibration_data: Representative data for FP8 calibration
         config: FP8 configuration
+        enable_sparsity: Enable hardware sparsity acceleration (2:4 sparse models)
+                         Combines with FP8 for MAXIMUM speed (~1-1.5ms)
         
     Returns:
         Path to FP8 TensorRT engine
@@ -294,6 +297,15 @@ def export_fp8_tensorrt(
     else:
         logger.warning("TensorRT version doesn't have FP8 flag, falling back to INT8")
         builder_config.set_flag(trt.BuilderFlag.INT8)
+    
+    # Enable hardware sparsity acceleration (for 2:4 sparse models)
+    if enable_sparsity:
+        if hasattr(trt.BuilderFlag, "SPARSE_WEIGHTS"):
+            builder_config.set_flag(trt.BuilderFlag.SPARSE_WEIGHTS)
+            logger.info("Hardware sparsity acceleration enabled (2:4 Sparse Tensor Cores)")
+            logger.info("  → FP8 + Sparsity combined for MAXIMUM speed!")
+        else:
+            logger.warning("TensorRT version doesn't support SPARSE_WEIGHTS flag")
     
     # Add calibration data for FP8/INT8
     if calibration_data is not None:

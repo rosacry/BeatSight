@@ -156,9 +156,9 @@ If you want the model to be **exceptional and extraordinary**, the bottleneck is
 - **Good for:** Hyperparameter sweeps with many parallel jobs
 
 ### Lambda Labs
-- **Best for:** Reserved GPU instances
-- **Pricing:** A100 ~$1.29/hr (when available)
-- **Caveat:** Often sold out
+- **Best for:** Reserved GPU instances, large training runs
+- **Pricing:** H100 80GB ~$2.49/hr, 1 TiB storage
+- **Recommended:** For full V5 training pipeline (~35 hr, ~$91)
 
 ### AWS/GCP/Azure
 - **Best for:** Enterprise, compliance requirements

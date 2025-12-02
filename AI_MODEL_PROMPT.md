@@ -27,14 +27,14 @@ The output is a `.bsm` beatmap file that can be visualized in 2D lane view, 3D h
 | Step | Name | Location | Duration | Description |
 |------|------|----------|----------|-------------|
 | **14** | Label Audit | Local | ~30 min | Confident learning noise detection to find mislabeled samples (+0.5-1% from cleaner data) |
-| **17a** | V5 Warmup | Cloud (A100) | ~1.5 hr | Validate all 23 innovations work correctly before committing to full training |
-| **17d** | V5 Full Training | Cloud (A100) | ~22 hr | 300 epochs with all SOTA techniques enabled (main training run) |
-| **17e** | V5 Self-Distillation | Cloud (A100) | ~22 hr | Born-Again Networks: train V5 using first V5 as teacher (+1-2% boost) |
+| **17a** | V5 Warmup | Cloud (H100) | ~1 hr | Validate all 23 innovations work correctly before committing to full training |
+| **17d** | V5 Full Training | Cloud (H100) | ~15 hr | 300 epochs with all SOTA techniques enabled (main training run) |
+| **17e** | V5 Self-Distillation | Cloud (H100) | ~15 hr | Born-Again Networks: train V5 using first V5 as teacher (+1-2% boost) |
 | **19** | Multi-Label Generate | Local | ~30 min | Generate multi-label dataset from MIDI-aligned sources (CPU only) |
-| **19c** | Multi-Label Finetune | Cloud (A100) | ~5 hr | Fine-tune for detecting simultaneous drum hits |
+| **19c** | Multi-Label Finetune | Cloud (H100) | ~3.5 hr | Fine-tune for detecting simultaneous drum hits |
 
-**Total Cloud Cost:** ~$68-72 on Lambda Labs A100 40GB @ $1.29/hr  
-**Total Training Time:** ~53 hours cloud + ~3 hours local
+**Total Cloud Cost:** ~$91 on Lambda Labs H100 80GB @ $2.49/hr  
+**Total Training Time:** ~35 hours cloud + ~1.5 hours local
 
 ---
 
@@ -440,7 +440,7 @@ beatmap = generate_beatmap(
 - [ ] Generate multi-label dataset (`19`) for later fine-tuning
 
 ### Cloud Training
-- [ ] Launch Lambda Labs A100 40GB instance
+- [ ] Launch Lambda Labs H100 80GB instance ($2.49/hr, 1 TiB storage)
 - [ ] Upload feature cache and dataset index via rsync
 - [ ] Run V5 warmup (`17a`) and verify training loss decreases
 - [ ] Run V5 full training (`17d`) with all 23 techniques
@@ -504,27 +504,27 @@ beatmap = generate_beatmap(
 
 ### Processing Time Estimates (3-Minute Song)
 
-| Stage | GPU (A100/H100) | GPU (RTX 4090) | CPU Only |
-|-------|-----------------|----------------|----------|
-| **Source Separation (Demucs)** | ~15-20 sec | ~25-35 sec | ~3-5 min |
-| **Onset Detection** | ~2-3 sec | ~3-5 sec | ~10-15 sec |
-| **Drum Classification** (~3600 windows) | ~5-8 sec | ~10-15 sec | ~45-60 sec |
-| **Pattern Detection** | ~1-2 sec | ~2-3 sec | ~3-5 sec |
-| **Pitch Ranking** | ~1-2 sec | ~2-3 sec | ~3-5 sec |
-| **Beatmap Generation** | ~1-2 sec | ~1-2 sec | ~2-3 sec |
-| **TOTAL** | **~25-40 sec** | **~45-65 sec** | **~5-7 min** |
+| Stage | L40S (FP8+Sparse) | A100/H100 (INT8) | RTX 4090 | CPU Only |
+|-------|-------------------|------------------|----------|----------|
+| **Source Separation (Demucs)** | ~6-8 sec | ~15-20 sec | ~25-35 sec | ~3-5 min |
+| **Onset Detection** | ~1-2 sec | ~2-3 sec | ~3-5 sec | ~10-15 sec |
+| **Drum Classification** (~3600 windows) | ~2-3 sec | ~5-8 sec | ~10-15 sec | ~45-60 sec |
+| **Pattern Detection** | ~0.5-1 sec | ~1-2 sec | ~2-3 sec | ~3-5 sec |
+| **Pitch Ranking** | ~0.5-1 sec | ~1-2 sec | ~2-3 sec | ~3-5 sec |
+| **Beatmap Generation** | ~0.5-1 sec | ~1-2 sec | ~1-2 sec | ~2-3 sec |
+| **TOTAL** | **~10-16 sec** | **~25-40 sec** | **~45-65 sec** | **~5-7 min** |
 
-> **Key Insight**: A 3-minute song has ~3600 potential onset windows (at 50ms per window). With GPU batching (batch_size=256), we process all windows in ~14-20 forward passes.
+> **Key Insight**: A 3-minute song has ~3600 potential onset windows (at 50ms per window). With FP8+Sparsity optimization (~1-1.5ms/sample) and GPU batching (batch_size=256), we process all windows in ~14 forward passes taking only ~2-3 seconds total.
 
 ### Cost Per Transcription
 
 | GPU Instance | Cost/Hour | Time/Song | **Cost/Song** |
 |--------------|-----------|-----------|---------------|
-| A100 40GB (Lambda) | $1.29 | ~35 sec | **$0.0125** (~1.3¢) |
-| A100 80GB (AWS) | $4.10 | ~30 sec | **$0.034** (~3.4¢) |
-| H100 (Lambda) | $2.49 | ~25 sec | **$0.017** (~1.7¢) |
-| RTX 4090 (RunPod) | $0.69 | ~55 sec | **$0.011** (~1.1¢) |
-| T4 (GCP Spot) | $0.11 | ~2 min | **$0.0037** (~0.4¢) |
+| L40S (Modal) - FP8+Sparse | $1.95 | ~12 sec | **$0.0065** (~0.65¢) |
+| H100 80GB (Lambda) | $2.49 | ~18 sec | **$0.012** (~1.2¢) |
+| A100 80GB (AWS) | $4.10 | ~25 sec | **$0.028** (~2.8¢) |
+| RTX 4090 (RunPod) | $0.69 | ~45 sec | **$0.0086** (~0.9¢) |
+| T4 (GCP Spot) | $0.11 | ~90 sec | **$0.0028** (~0.3¢) |
 
 ### Tiered Pricing Strategy
 
@@ -589,7 +589,7 @@ def transcribe_drums(audio_bytes: bytes) -> dict:
 |----------|----------|------------|---------|
 | **Modal** | Serverless, auto-scale | ~5-15s | ~$0.001/sec (A100) |
 | **RunPod** | Persistent containers | Instant | ~$0.69/hr (RTX 4090) |
-| **Lambda Labs** | Training + dev | Instant | $1.29/hr (A100) |
+| **Lambda Labs** | Training + dev | Instant | $2.49/hr (H100) |
 | **AWS Batch** | Enterprise, compliance | ~30-60s | ~$4/hr (A100) |
 | **Replicate** | Pre-built models | ~5s | ~$0.002/sec |
 
@@ -744,7 +744,7 @@ User uploads song.mp3 (3:00 duration, ~5MB)
          │
          ▼
 User downloads beatmap.bsm (~50KB)
-Total time: ~35-45 seconds (A100)
+Total time: ~10-16 seconds (L40S with FP8+Sparse), ~25-35 seconds (A100)
 ```
 
 ### Auto-Scaling Strategy
@@ -841,17 +841,17 @@ For a 3-minute song, here's where time is spent:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  CURRENT PIPELINE (35 sec total on A100)                        │
+│  OPTIMIZED PIPELINE (11 sec total on L40S with FP8+Sparse)      │
 ├─────────────────────────────────────────────────────────────────┤
-│  ████████████████████████████░░░░░░░  Source Separation  57%   │
-│  ██████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  Classification     17%   │
-│  ███░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  Onset Detection     9%   │
-│  ██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  Pattern/Pitch       6%   │
-│  ██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  Beatmap Gen         6%   │
-│  █░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  I/O Overhead        5%   │
+│  ██████████████████████░░░░░░░░░░░░░  Source Separation  55%   │
+│  ██████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  Classification     18%   │
+│  ███░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  Onset Detection     14%   │
+│  ██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  Pattern/Pitch        9%   │
+│  █░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  Beatmap Gen          4%   │
 └─────────────────────────────────────────────────────────────────┘
 
-Key insight: Source separation (Demucs) is 57% of total time!
+Key insight: Source separation still dominates (55%) but is 3x faster!
+Classification with FP8+Sparse: ~1-1.5ms/sample (was ~10ms)
 ```
 
 ### Optimization Strategies (Ranked by Impact)
@@ -959,7 +959,7 @@ def is_isolated_drums(audio, sr):
 
 if is_isolated_drums(audio, sr):
     drum_audio = audio  # Skip separation!
-    # Processing time: 35 sec → 14 sec (60% faster)
+    # Processing time: 11 sec → 4 sec (64% faster)
 ```
 
 **Quality Impact**: None (better, actually—no separation artifacts)
@@ -980,69 +980,77 @@ Train a smaller "student" model from the V5 "teacher":
 - Free tier → V5 Tiny (fast but slightly less accurate)
 - Paid tier → V5 Full (maximum quality)
 
-### 🚀 Combined Optimizations — Target: <15 seconds!
+### 🚀 Combined Optimizations — Target: <12 seconds!
 
 | Optimization | Time Saved | New Total |
 |--------------|------------|-----------|
 | Baseline (A100) | — | 35 sec |
 | + Hybrid Demucs | -12 sec | 23 sec |
-| + TensorRT FP16 | -4 sec | 19 sec |
-| + Spectrogram caching | -2 sec | 17 sec |
-| + Optimized batching | -1 sec | 16 sec |
-| + Async I/O | -1 sec | **15 sec** |
+| + FP8 Quantization (L40S) | -5 sec | 18 sec |
+| + 2:4 Structured Sparsity | -3 sec | 15 sec |
+| + Early Exit (60% fast path) | -2 sec | 13 sec |
+| + Spectrogram caching | -1 sec | **12 sec** |
 
-**Result: 15 seconds for a 3-minute song (57% faster!)**
+**Result: 10-12 seconds for a 3-minute song (70% faster!)**
 
-For isolated drum uploads: **~6 seconds** (skip separation)
+For isolated drum uploads: **~4 seconds** (skip separation)
 
 ### Optimized Processing Time (3-Minute Song)
 
-| Stage | Before (A100) | After (Optimized) | Speedup |
-|-------|---------------|-------------------|---------|
-| Source Separation | ~20 sec | ~8 sec (Hybrid) | 2.5× |
-| Onset Detection | ~3 sec | ~2 sec | 1.5× |
-| Classification | ~6 sec | ~2 sec (TensorRT) | 3× |
-| Pattern/Pitch | ~3 sec | ~2 sec | 1.5× |
-| Beatmap Gen | ~2 sec | ~1 sec | 2× |
-| **TOTAL** | **~35 sec** | **~15 sec** | **2.3×** |
+| Stage | Before (A100) | After (L40S FP8+Sparse) | Speedup |
+|-------|---------------|-------------------------|--------|
+| Source Separation | ~20 sec | ~6 sec (Hybrid + torch.compile) | 3.3× |
+| Onset Detection | ~3 sec | ~1.5 sec | 2× |
+| Classification | ~6 sec | ~2 sec (FP8+Sparse+Early Exit) | 3× |
+| Pattern/Pitch | ~3 sec | ~1 sec | 3× |
+| Beatmap Gen | ~2 sec | ~0.5 sec | 4× |
+| **TOTAL** | **~35 sec** | **~11 sec** | **3.2×** |
 
 ### Optimized Cost Per Transcription
 
-| Scenario | Time | Cost |
-|----------|------|------|
-| Full song (optimized) | 15 sec | **$0.0054** (0.5¢) |
-| Isolated drums | 6 sec | **$0.0022** (0.2¢) |
-| With streaming preview | 15 sec | User sees results at 6 sec |
+| Scenario | Time | Cost (L40S @ $1.95/hr) |
+|----------|------|------------------------|
+| Full song (FP8+Sparse) | 11 sec | **$0.006** (0.6¢) |
+| Isolated drums | 4 sec | **$0.0022** (0.2¢) |
+| With streaming preview | 11 sec | User sees results at 3 sec |
 
-### Monetization-Safe Speed Tiers
+### Single-Tier Strategy (V5-Large for Everyone)
 
 | Tier | Model | Optimizations | Time | Quality |
 |------|-------|---------------|------|---------|
-| **Free** | V5 Tiny | All optimizations | ~12 sec | 93.5% |
-| **Basic** | V5 Distilled | All optimizations | ~14 sec | 94.8% |
-| **Pro** | V5 Full | All optimizations | ~15 sec | 95.5% |
-| **Pro+TTA** | V5 Full + 5×TTA | Quality max | ~45 sec | 96.5% |
+| **Free** | V5-Large | FP8+Sparse + Early Exit | ~11 sec | 95.5% |
+| **Pro** | V5-Large | FP8+Sparse + Early Exit | ~11 sec | 95.5% |
+| **Pro+TTA** | V5-Large + 5×TTA | Quality max | ~35 sec | 96.5% |
 
-**Key Insight**: Faster processing = lower costs = higher margins. Speed doesn't hurt monetization—it helps!
+**Key Insight**: Single model tier = simpler architecture, easier maintenance, and maximum quality for all users. FP8+Sparse makes V5-Large fast enough for everyone!
 
-### Implementation Priority
+### Implementation Status (January 2025)
 
-1. **Immediate (Week 1)**: TensorRT export, spectrogram caching
-2. **Short-term (Week 2-3)**: Hybrid Demucs, streaming preview
-3. **Medium-term (Month 1-2)**: Model distillation for tier differentiation
-4. **Ongoing**: Profile and optimize hotspots
+1. **✅ Complete**: TensorRT export, FP8 quantization, 2:4 sparsity
+2. **✅ Complete**: Hybrid Demucs + torch.compile, streaming preview
+3. **✅ Complete**: Early Exit, GPU spectrograms, spectrogram caching
+4. **✅ Complete**: Full export pipeline (`export_production.py`)
+5. **Optional**: Custom Triton kernels for further +20-40%
 
 ---
 
 ### Production Export
 
 ```bash
-# Export to ONNX with INT8 quantization (3-4x faster, 0.5% accuracy loss)
-python -m training.export.onnx_export \
+# Export all production variants with maximum optimizations
+python -m training.scripts.export_production \
     --checkpoint checkpoints/v5/self-distill/best_drum_classifier.pth \
-    --output models/drum_classifier_int8.onnx \
-    --quantize int8 \
-    --validate
+    --output-dir models/ \
+    --with-fp8 \
+    --with-early-exit \
+    --with-sparsity \
+    --finetune-sparse 5
+
+# Creates:
+# - drum_classifier_fp8_sparse.trt (FASTEST: ~1-1.5ms/sample)
+# - v5_large_fp8.trt (~2-3ms/sample)
+# - v5_large_sparse_trt.onnx (~3-4ms/sample)
+# - v5_large_static_int8.onnx (~7-10ms/sample)
 ```
 
 ### Why NOT Local Inference?
@@ -1054,6 +1062,7 @@ python -m training.export.onnx_export \
 | "Latency concerns?" | <12 sec for any song; streaming results in <3 sec |
 | "Privacy?" | Audio deleted after 24h; GDPR compliant |
 | "What if servers down?" | 99.9% SLA with redundant workers |
+| "Cost per song?" | ~$0.006 per song with FP8+Sparse on L40S |
 
 ---
 

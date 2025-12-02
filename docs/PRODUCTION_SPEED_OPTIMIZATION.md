@@ -80,15 +80,18 @@ python -m training.scripts.export_production \
     --cache-dir /workspace/feature_cache \
     --with-fp8 \
     --with-early-exit \
-    --with-sparsity  # Optional: 2:4 sparse for extra speed
+    --with-sparsity \
+    --finetune-sparse 5  # Optional: 5 epochs to recover accuracy (~30 min)
 ```
 
 This creates:
 1. `drum_classifier_static_int8.onnx` — Base production (7-10ms)
 2. `drum_classifier_epcontext.onnx` — Instant cold starts
-3. `drum_classifier_fp8.trt` — FP8 for L40S (2-3ms) 🚀
-4. `drum_classifier_early_exit.onnx` — Early exit (4-6ms avg)
-5. `drum_classifier_sparse.onnx` — 2:4 sparse (4-6ms)
+3. `drum_classifier_sparse.onnx` — 2:4 sparse (4-6ms)
+4. `drum_classifier_sparse_trt.onnx` — Sparse TensorRT with hardware acceleration
+5. `drum_classifier_fp8.trt` — FP8 for L40S (2-3ms) 🚀
+6. `drum_classifier_fp8_sparse.trt` — **FP8 + Sparsity MAXIMUM SPEED (~1-1.5ms)** 🚀🚀
+7. `drum_classifier_early_exit.onnx` — Early exit (4-6ms avg)
 
 ## Speed Comparison
 
@@ -97,7 +100,9 @@ This creates:
 | Baseline PyTorch | ~50ms | 30-60s | - |
 | Your current plan (INT8 on A10G) | ~7-10ms | 30-60s | $1.10 |
 | + EPContext | ~7-10ms | <2s | $1.10 |
-| **+ FP8 on L40S** | **~2-3ms** | <2s | $1.95 |
+| + 2:4 Sparsity | ~4-6ms | <2s | $1.10 |
+| + FP8 on L40S | ~2-3ms | <2s | $1.95 |
+| **+ FP8 + Sparsity on L40S** | **~1-1.5ms** | <2s | $1.95 |
 | + Early Exit | ~4-6ms avg | <2s | - |
 | Combined (FP8 + Early Exit) | **~1.5-2.5ms** | <2s | $1.95 |
 

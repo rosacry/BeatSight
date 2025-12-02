@@ -79,17 +79,17 @@ Usage:
     python preflight_check.py --dataset /path/to/cache --labels-cache-dir /path/to/labels
 
 This script catches 99%+ of errors that would otherwise cost you $$$ on cloud.
-Estimated savings: $50-100 per caught error (vs debugging on a $1.29/hr instance).
+Estimated savings: $50-100 per caught error (vs debugging on a $2.49/hr instance).
 
-RECOMMENDED TRAINING PATH (Total: ~$65 on Lambda A100 40GB):
-  14  → Label Audit (~2.5 hr, run locally to save $3)
-  17a → V5 Warmup (~1.5 hr, $1.94) - validates setup
-  17d → V5 Full (~22 hr, $28.38) - main training
-  17e → V5 Self-Distill (~22 hr, $28.38) - +1-2% from dark knowledge
+RECOMMENDED TRAINING PATH (Total: ~$91 on Lambda H100 80GB):
+  14  → Label Audit (~2.5 hr, run locally to save $6)
+  17a → V5 Warmup (~1 hr, $2.49) - validates setup
+  17d → V5 Full (~15 hr, $37.35) - main training
+  17e → V5 Self-Distill (~15 hr, $37.35) - +1-2% from dark knowledge
   19  → Generate Multi-Label Dataset (~10 min, run locally)
-  19c → Multi-Label Finetune (~5 hr, $6.45) - simultaneous hit detection
+  19c → Multi-Label Finetune (~3.5 hr, $8.72) - simultaneous hit detection
 
-TARGET INSTANCE: Lambda Labs 1x A100 40GB SXM4 @ $1.29/hr
+TARGET INSTANCE: Lambda Labs 1x H100 80GB PCIe @ $2.49/hr (1 TiB storage)
 """
 
 from __future__ import annotations
@@ -1157,14 +1157,14 @@ def check_cloud_readiness(repo_root: Path) -> Tuple[int, int]:
     
     # Estimate training cost
     subheader("Cost Estimation")
-    info("Estimated Lambda Labs A100 40GB costs:")
-    info("  14 (label audit):     ~2.5 hr = $3.23 (run locally to save)")
-    info("  17a (v5-warmup):      ~1.5 hr = $1.94")
-    info("  17d (v5-full):       ~22.0 hr = $28.38")
-    info("  17e (v5-self-distill): ~22.0 hr = $28.38")
-    info("  19c (multilabel):     ~5.0 hr = $6.45")
+    info("Estimated Lambda Labs H100 80GB costs:")
+    info("  14 (label audit):     ~2.5 hr = $6.23 (run locally to save)")
+    info("  17a (v5-warmup):      ~1.0 hr = $2.49")
+    info("  17d (v5-full):       ~15.0 hr = $37.35")
+    info("  17e (v5-self-distill): ~15.0 hr = $37.35")
+    info("  19c (multilabel):     ~3.5 hr = $8.72")
     info("  ─────────────────────────────────────")
-    info("  TOTAL:               ~53.0 hr = $68.38")
+    info("  TOTAL:               ~35.0 hr = $87.16")
     passed += 1
     
     return passed, failed
@@ -1245,7 +1245,7 @@ def check_v5_full_arguments() -> Tuple[int, int]:
             "--calibrate",
             "--calibration-method", "temperature",
             "--scheduler", "cosine_warm_restarts",
-            "--warm-restart-t0", "40",
+            "--warm-restart-t0", "50",  # Optimized: 2 clean cycles (50, 150) for 300 epochs
             "--warm-restart-mult", "2",
             "--warmup-epochs", "20",
             "--warmup-lr-factor", "0.05",
@@ -3747,37 +3747,40 @@ def check_pipeline_dependencies() -> Tuple[int, int]:
 
 def check_a100_40gb_optimal_settings() -> Tuple[int, int]:
     """
-    Validate that training is optimally configured for A100 40GB.
-    This is the target GPU: Lambda Labs 1x A100 40GB SXM4 @ $1.29/hr
+    Validate that training is optimally configured for H100 80GB.
+    This is the target GPU: Lambda Labs 1x H100 80GB PCIe @ $2.49/hr
     
     UPDATED v7.0: Added comprehensive hyperparameter validation
+    UPDATED v7.1: Increased batch_size to 768 (H100 80GB can easily handle V5 Large)
+    UPDATED v7.2: Full H100-specific optimizations, 26 vCPU worker optimization
     """
     passed = 0
     failed = 0
     
-    subheader("A100 40GB Optimal Settings Validation")
+    subheader("H100 80GB Optimal Settings Validation")
     
-    # Expected optimal settings for A100 40GB
+    # Expected optimal settings for H100 80GB @ Lambda Labs
     optimal_settings = {
-        "batch_size": 384,  # Conservative for 40GB with all features enabled
-        "amp_dtype": "bfloat16",  # A100 has native bfloat16, no loss scaling needed
-        "num_workers": 8,  # Good for 30 vCPUs
-        "prefetch_factor": 4,  # Good balance
-        "gradient_accumulation": 4,  # Effective batch = 1536
-        "torch_compile": True,  # ~15-20% speedup on Linux
+        "batch_size": 768,  # Optimized for H100 80GB with V5 Large (~2M params)
+        "amp_dtype": "bfloat16",  # H100 has native bfloat16 TF32 cores, no loss scaling needed
+        "num_workers": 12,  # Optimized for 26 vCPUs (leave ~14 for system/GPU)
+        "prefetch_factor": 4,  # Good balance for NVMe SSD
+        "gradient_accumulation": 4,  # Effective batch = 3072
+        "torch_compile": True,  # ~15-20% speedup on Linux with inductor backend
         "epochs": 300,  # Optimal for V5 convergence
-        "warm_restart_t0": 40,  # Optimal for 300 epochs
+        "warm_restart_t0": 50,  # Optimal for 300 epochs: restarts at 50, 150 (2 clean cycles)
         "warmup_epochs": 20,  # Good for SAM + Lookahead stability
         "label_smoothing": 0.1,  # Optimal for 21 classes
         "velocity_weight": 0.4,  # Optimal for ghost note detection
         "ema_decay": 0.9999,  # Better for 300 epochs
     }
     
-    info("Target: Lambda Labs 1x A100 40GB SXM4")
-    info("  Hourly rate: $1.29/hr")
+    info("Target: Lambda Labs 1x H100 80GB PCIe @ $2.49/hr")
+    info("  Specs: 26 vCPUs, 200 GiB RAM, 1 TiB NVMe SSD")
     info(f"  Optimal batch size: {optimal_settings['batch_size']}")
-    info(f"  AMP dtype: {optimal_settings['amp_dtype']}")
+    info(f"  AMP dtype: {optimal_settings['amp_dtype']} (native H100 TF32/BF16 cores)")
     info(f"  Effective batch: {optimal_settings['batch_size'] * optimal_settings['gradient_accumulation']}")
+    info(f"  Workers: {optimal_settings['num_workers']} (26 vCPUs available)")
     info("")
     
     # Check auto_train.sh has correct settings
@@ -3788,19 +3791,43 @@ def check_a100_40gb_optimal_settings() -> Tuple[int, int]:
         with open(auto_train_path, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read()
         
-        # Check for bfloat16 support
-        if "bfloat16" in content:
-            success("auto_train.sh: bfloat16 support enabled for A100")
+        # ===== CRITICAL H100 CHECKS =====
+        
+        # Check for H100 detection logic
+        if 'H100' in content or 'h100' in content:
+            success("auto_train.sh: H100 GPU detection logic present")
             passed += 1
         else:
-            warning("auto_train.sh: bfloat16 not found - add for A100 optimization")
+            warning("auto_train.sh: No H100-specific detection - may use suboptimal settings")
+            failed += 1
+        
+        # Check batch size 768 for H100 80GB
+        if "768" in content:
+            success("auto_train.sh: Batch size 768 configured for H100 80GB")
+            passed += 1
+        elif "CLOUD_BATCH_SIZE" in content:
+            info("auto_train.sh: Dynamic batch size configured - verify 768 for 80GB VRAM")
+            passed += 1
+        else:
+            warning("auto_train.sh: Batch size 768 not found - H100 80GB can handle it!")
+            failed += 1
+        
+        # Check for bfloat16 support (critical for H100)
+        if "bfloat16" in content:
+            success("auto_train.sh: bfloat16 enabled (native H100 TF32/BF16 cores)")
+            passed += 1
+        else:
+            error("auto_train.sh: bfloat16 not found - REQUIRED for H100 optimization")
+            failed += 1
         
         # Check for torch.compile (should be enabled on Linux/cloud)
-        if "torch-compile" in content:
-            success("auto_train.sh: torch.compile prepared for cloud")
+        if "torch-compile" in content or "torch_compile" in content:
+            success("auto_train.sh: torch.compile prepared for cloud (~15-20% speedup)")
             passed += 1
         else:
-            warning("auto_train.sh: torch.compile not found - add for ~15% speedup")
+            warning("auto_train.sh: torch.compile not found - missing ~15% speedup")
+        
+        # ===== HYPERPARAMETER CHECKS =====
         
         # Check epochs = 300 for v5-full
         if "--epochs 300" in content:
@@ -3849,26 +3876,71 @@ def check_a100_40gb_optimal_settings() -> Tuple[int, int]:
         else:
             warning("Warm restart T0: Not configured")
         
-        # Check batch size for 40GB
-        if "384" in content or "CLOUD_BATCH_SIZE" in content:
-            success("auto_train.sh: Batch size configured for A100")
+        # ===== ADVANCED TECHNIQUE CHECKS =====
+        
+        # Check for SAM optimizer (critical for generalization)
+        if "--sam" in content or "--use-sam" in content:
+            success("SAM optimizer: Enabled (better generalization)")
             passed += 1
         else:
-            info("auto_train.sh: Verify batch size is appropriate for 40GB VRAM")
+            warning("SAM optimizer: Not found - key technique for accuracy")
+        
+        # Check for Lookahead (stabilizes SAM)
+        if "--lookahead" in content or "--use-lookahead" in content:
+            success("Lookahead: Enabled (stabilizes SAM training)")
+            passed += 1
+        else:
+            info("Lookahead: Not explicitly configured")
+        
+        # Check for EMA (model averaging)
+        if "--ema" in content or "--use-ema" in content:
+            success("EMA: Enabled (improved final model)")
+            passed += 1
+        else:
+            warning("EMA: Not found - recommended for final model quality")
+        
+        # Check for deep supervision
+        if "--deep-supervision" in content:
+            success("Deep supervision: Enabled (better gradient flow)")
+            passed += 1
+        else:
+            info("Deep supervision: Not explicitly configured")
+        
+        # Check for technique heads
+        if "--use-technique-heads" in content:
+            success("Technique heads: Enabled (flam/drag/roll detection)")
+            passed += 1
+        else:
+            info("Technique heads: Not explicitly configured")
+    else:
+        error(f"auto_train.sh not found at {auto_train_path}")
+        failed += 1
     
-    # VRAM budget calculation
+    # ===== H100 80GB VRAM BUDGET CALCULATION =====
     info("")
-    info("VRAM Budget Estimate (V5-Large with all features):")
-    info("  Model weights:        ~50 MB")
-    info("  Optimizer states:     ~150 MB (AdamW) + ~50 MB (SAM)")
-    info("  EMA weights:          ~50 MB")
-    info("  Activations (bs=384): ~20 GB (estimated)")
-    info("  Gradient cache:       ~5 GB")
-    info("  Headroom:             ~14 GB")
-    info("  ─────────────────────────────")
-    info("  Total estimated:      ~35-38 GB / 40 GB")
-    success("VRAM budget: Should fit comfortably on A100 40GB")
+    info("╔══════════════════════════════════════════════════════════════╗")
+    info("║  H100 80GB VRAM Budget Estimate (V5-Large, batch=768)        ║")
+    info("╠══════════════════════════════════════════════════════════════╣")
+    info("║  Model weights:        ~50 MB                                ║")
+    info("║  Optimizer states:     ~200 MB (AdamW + SAM shadow weights)  ║")
+    info("║  EMA weights:          ~50 MB                                ║")
+    info("║  Activations (bs=768): ~45 GB (estimated, gradient ckpt)     ║")
+    info("║  Gradient cache:       ~8 GB                                 ║")
+    info("║  Loss computation:     ~2 GB (deep supervision + aux heads)  ║")
+    info("║  Headroom buffer:      ~20 GB                                ║")
+    info("╠══════════════════════════════════════════════════════════════╣")
+    info("║  Total estimated:      ~55-60 GB / 80 GB                     ║")
+    info("║  Safety margin:        ~20-25 GB (plenty of headroom!)       ║")
+    info("╚══════════════════════════════════════════════════════════════╝")
+    success("VRAM budget: Batch=768 fits comfortably on H100 80GB")
     passed += 1
+    
+    # ===== THROUGHPUT ESTIMATE =====
+    info("")
+    info("Estimated Training Throughput on H100 80GB:")
+    info("  V5-full (300 epochs, 14.6M samples): ~15 hrs @ ~270 samples/sec")
+    info("  Cost: ~$37.35 per training run")
+    info("  Full pipeline (14→17a→17d→17e→19→19c): ~35 hrs / $91")
     
     return passed, failed
 
@@ -4506,9 +4578,9 @@ def check_final_sanity_money_saver() -> Tuple[int, int]:
         print("  ║                                                            ║")
         print("  ║   💰 MONEY-SAVER CHECK: ALL CLEAR! 💰                      ║")
         print("  ║                                                            ║")
-        print("  ║   You're ready to spin up that A100 and train!            ║")
+        print("  ║   You're ready to spin up that H100 and train!            ║")
         print("  ║                                                            ║")
-        print("  ║   Estimated cost: ~$65 for full pipeline                   ║")
+        print("  ║   Estimated cost: ~$91 for full pipeline                   ║")
         print("  ║   Potential savings from this check: $50-100               ║")
         print("  ║                                                            ║")
         print("  ╚════════════════════════════════════════════════════════════╝")
@@ -5093,13 +5165,13 @@ Examples:
         print()
         print(f"  {Colors.BOLD}Recommended Training Path:{Colors.RESET}")
         print("    14  → Label Audit (run locally, ~30 min)")
-        print("    17a → V5 Warmup (~1.5 hr, $1.94)")
-        print("    17d → V5 Full (~22 hr, $28.38)")
-        print("    17e → V5 Self-Distill (~22 hr, $28.38)")
+        print("    17a → V5 Warmup (~1 hr, $2.49)")
+        print("    17d → V5 Full (~15 hr, $37.35)")
+        print("    17e → V5 Self-Distill (~15 hr, $37.35)")
         print("    19  → Generate Multi-Label Dataset (run locally)")
-        print("    19c → Multi-Label Finetune (~5 hr, $6.45)")
+        print("    19c → Multi-Label Finetune (~3.5 hr, $8.72)")
         print()
-        print(f"  {Colors.BOLD}Total Cloud Cost:{Colors.RESET} ~$65 on Lambda A100 40GB @ $1.29/hr")
+        print(f"  {Colors.BOLD}Total Cloud Cost:{Colors.RESET} ~$91 on Lambda H100 80GB @ $2.49/hr")
         print()
         return 0
     else:

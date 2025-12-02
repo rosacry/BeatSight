@@ -9,7 +9,7 @@ test.describe('Navigation', () => {
 
         // Check logo/brand - only on desktop (hidden on mobile via hidden sm:block)
         const isMobile = browserName === 'Mobile Chrome' || browserName === 'Mobile Safari' ||
-                         page.viewportSize()?.width !== undefined && page.viewportSize()!.width < 640;
+            page.viewportSize()?.width !== undefined && page.viewportSize()!.width < 640;
         if (!isMobile) {
             await expect(page.locator('text=BeatSight').first()).toBeVisible();
         }

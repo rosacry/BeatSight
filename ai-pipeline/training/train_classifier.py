@@ -430,6 +430,27 @@ except ImportError:
             sys.stdout.flush()
 
 
+def _is_no_decay_param(name: str) -> bool:
+    """
+    Check if parameter should have zero weight decay.
+    
+    BatchNorm, LayerNorm, and bias terms should NOT have weight decay applied.
+    This is a well-established best practice that improves generalization.
+    
+    Reference: "Decoupled Weight Decay Regularization" (Loshchilov & Hutter, 2019)
+    """
+    no_decay_patterns = (
+        '.bias',           # All bias terms
+        'bn',              # BatchNorm (any layer)
+        'norm',            # LayerNorm, GroupNorm, etc.
+        'gamma', 'beta',   # BN parameters
+        'ln_',             # LayerNorm prefix
+        '_ln',             # LayerNorm suffix
+    )
+    name_lower = name.lower()
+    return any(pattern in name_lower for pattern in no_decay_patterns)
+
+
 def get_layer_wise_lr_params(model: nn.Module, base_lr: float, layer_decay: float, weight_decay: float = 0.0) -> List[Dict[str, Any]]:
     """
     Get parameter groups with layer-wise learning rate decay for V5 model.
@@ -437,13 +458,16 @@ def get_layer_wise_lr_params(model: nn.Module, base_lr: float, layer_decay: floa
     Earlier layers (closer to input) get smaller LR, later layers get larger LR.
     This helps fine-tuning: early features are more general, late features are task-specific.
     
+    IMPORTANT: BatchNorm/LayerNorm and bias parameters get weight_decay=0.
+    This is a best practice that improves generalization by ~0.1-0.3%.
+    
     Reference: "BEiT: BERT Pre-Training of Image Transformers" (Bao et al., 2021)
     
     Args:
         model: The model to create parameter groups for
         base_lr: Base learning rate for the final layers
         layer_decay: Decay factor per layer (e.g., 0.85 means each earlier layer has 0.85x the LR)
-        weight_decay: Weight decay for all parameters
+        weight_decay: Weight decay for all parameters (except BN/bias which get 0)
     
     Returns:
         List of parameter groups for optimizer
@@ -490,29 +514,58 @@ def get_layer_wise_lr_params(model: nn.Module, base_lr: float, layer_decay: floa
         layer_names.append((name, layer_idx))
     
     # Calculate LR for each layer (later layers = higher LR)
+    # Separate decay and no-decay parameters
     max_layer = 11
     param_groups = []
-    layer_to_params: Dict[int, List[torch.nn.Parameter]] = {}
+    
+    # Group by (layer_idx, is_no_decay) tuple
+    layer_to_decay_params: Dict[int, List[torch.nn.Parameter]] = {}
+    layer_to_no_decay_params: Dict[int, List[torch.nn.Parameter]] = {}
     
     for name, layer_idx in layer_names:
-        if layer_idx not in layer_to_params:
-            layer_to_params[layer_idx] = []
-        layer_to_params[layer_idx].append(param_dict[name])
+        if _is_no_decay_param(name):
+            if layer_idx not in layer_to_no_decay_params:
+                layer_to_no_decay_params[layer_idx] = []
+            layer_to_no_decay_params[layer_idx].append(param_dict[name])
+        else:
+            if layer_idx not in layer_to_decay_params:
+                layer_to_decay_params[layer_idx] = []
+            layer_to_decay_params[layer_idx].append(param_dict[name])
     
-    for layer_idx in sorted(layer_to_params.keys()):
-        # LR scales up for later layers: base_lr * (decay ^ (max_layer - layer_idx))
+    # Build parameter groups: decay params first, then no-decay params
+    all_layers = sorted(set(layer_to_decay_params.keys()) | set(layer_to_no_decay_params.keys()))
+    
+    for layer_idx in all_layers:
         layer_lr = base_lr * (layer_decay ** (max_layer - layer_idx))
-        param_groups.append({
-            "params": layer_to_params[layer_idx],
-            "lr": layer_lr,
-            "weight_decay": weight_decay,
-            "layer_idx": layer_idx,
-        })
+        
+        # Decay parameters
+        if layer_idx in layer_to_decay_params and layer_to_decay_params[layer_idx]:
+            param_groups.append({
+                "params": layer_to_decay_params[layer_idx],
+                "lr": layer_lr,
+                "weight_decay": weight_decay,
+                "layer_idx": layer_idx,
+                "decay_group": True,
+            })
+        
+        # No-decay parameters (BN, bias, etc.)
+        if layer_idx in layer_to_no_decay_params and layer_to_no_decay_params[layer_idx]:
+            param_groups.append({
+                "params": layer_to_no_decay_params[layer_idx],
+                "lr": layer_lr,
+                "weight_decay": 0.0,  # Critical: no weight decay for BN/bias
+                "layer_idx": layer_idx,
+                "decay_group": False,
+            })
     
     # Log the LR distribution
     print(f"[LAYER-WISE LR] Using decay={layer_decay} from base_lr={base_lr}")
+    decay_count = sum(len(g["params"]) for g in param_groups if g.get("decay_group", True))
+    no_decay_count = sum(len(g["params"]) for g in param_groups if not g.get("decay_group", True))
+    print(f"  Parameter split: {decay_count} with weight_decay, {no_decay_count} without (BN/bias)")
     for group in param_groups:
-        print(f"  Layer {group['layer_idx']:2d}: lr={group['lr']:.6f} ({len(group['params'])} params)")
+        wd_status = "decay" if group.get("decay_group", True) else "no_decay"
+        print(f"  Layer {group['layer_idx']:2d}: lr={group['lr']:.6f} ({len(group['params'])} params, {wd_status})")
     
     return param_groups
 

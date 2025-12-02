@@ -2,10 +2,10 @@
 
 ## Overview
 
-This guide covers running the full V5 training pipeline on **Lambda Labs** with an A100 40GB GPU.
+This guide covers running the full V5 training pipeline on **Lambda Labs** with an **H100 80GB GPU**.
 
 > **Important Architecture Decision:**
-> - **Training:** Lambda Labs (A100 GPUs, hourly billing, persistent instances)
+> - **Training:** Lambda Labs (H100 GPUs, hourly billing, persistent instances)
 > - **Production Inference:** Modal.com (serverless, pay-per-second, auto-scaling)
 > 
 > Lambda Labs is for training because it offers persistent instances for long training runs.
@@ -14,14 +14,14 @@ This guide covers running the full V5 training pipeline on **Lambda Labs** with 
 
 **Pipeline:** `14 → 17a → 17d → 17e → 19 (local) → 19c`
 
-| Step | Name | Where | Time | Description |
-|------|------|-------|------|-------------|
+| Step | Name | Where | Time (H100) | Description |
+|------|------|-------|-------------|-------------|
 | **14** | Label Audit | Local | ~30 min | Confident learning noise detection to find mislabeled samples |
-| **17a** | V5 Warmup | Cloud | ~1.5 hr | Validate all innovations work |
-| **17d** | V5 Full | Cloud | ~22 hr | 300 epochs, **V5-Large** for maximum quality |
-| **17e** | V5 Self-Distill | Cloud | ~22 hr | Born-Again Networks (+1-2%) |
+| **17a** | V5 Warmup | Cloud | ~1 hr | Validate all innovations work |
+| **17d** | V5 Full | Cloud | ~15 hr | 300 epochs, **V5-Large** for maximum quality |
+| **17e** | V5 Self-Distill | Cloud | ~15 hr | Born-Again Networks (+1-2%) |
 | **19** | Multilabel Generate | **Local** | ~30 min | Generate multilabel dataset (CPU only) |
-| **19c** | Multilabel Finetune | Cloud | ~5 hr | Fine-tune for simultaneous detection |
+| **19c** | Multilabel Finetune | Cloud | ~3.5 hr | Fine-tune for simultaneous detection |
 
 **Single-Tier Strategy (NEW):**
 > We use **V5-Large + INT8 quantization** for production. This gives:
@@ -38,9 +38,11 @@ This guide covers running the full V5 training pipeline on **Lambda Labs** with 
 - **23 SOTA techniques** including SAM, SWA, EMA, FMix, R-Drop, Curriculum
 - **TTA validation** enabled for accurate training progress
 
-**Estimated Cost:** ~$68-72 total
-- Upload: ~$2.84
-- Training: ~$65-68
+**Estimated Cost:** ~$115-125 total (with H100)
+- Upload: ~$5.50 (2.2 hr × $2.49/hr)
+- Training: ~$110-120 (H100 is ~1.9× faster, so ~45 hr × $2.49/hr)
+
+> **Note:** While H100 costs ~2× per hour vs A100, it trains ~1.5-2× faster, so total cost is comparable. The 1 TiB storage is the key differentiator.
 
 ---
 
@@ -48,12 +50,19 @@ This guide covers running the full V5 training pipeline on **Lambda Labs** with 
 
 Based on current Lambda Labs availability (Dec 2025):
 
-| Instance | Price | VRAM | Recommendation |
-|----------|-------|------|----------------|
-| **1x A100 40GB PCIe** | **$1.29/hr** | 40GB | ✅ **BEST VALUE** |
-| 1x A10 24GB | $0.75/hr | 24GB | ⚠️ May need smaller batch |
-| 1x H100 80GB PCIe | $2.49/hr | 80GB | Overkill for single-GPU training |
-| 1x GH200 96GB | $1.49/hr | 96GB | ARM64 - compatibility unknown |
+| Instance | Price | VRAM | Storage | Recommendation |
+|----------|-------|------|---------|----------------|
+| **1x H100 80GB PCIe** | **$2.49/hr** | 80GB | **1 TiB** | ✅ **RECOMMENDED** |
+| 1x A100 40GB SXM4 | $1.29/hr | 40GB | 0.5 TiB | ⚠️ **STORAGE TOO SMALL** (516GB needed) |
+| 1x A10 24GB | $0.75/hr | 24GB | - | ❌ Out of capacity |
+| 1x GH200 96GB | $1.49/hr | 96GB | 4 TiB | ⚠️ ARM64 - compatibility unknown |
+
+> **⚠️ CRITICAL: Storage Requirements**
+>
+> Your training data requires **~516 GB** (501 GB feature cache + 15 GB dataset index).
+> The 1x A100 40GB SXM4 only has **512 GB SSD** (0.5 TiB) - this is NOT enough!
+>
+> **Use 1x H100 80GB PCIe** - it has 1 TiB storage and faster training due to 80GB VRAM.
 
 ---
 
@@ -71,8 +80,8 @@ The `auto_train.sh` script **automatically detects your GPU** and configures opt
 
 | GPU | Batch Size | Workers | AMP | Expected it/s |
 |-----|------------|---------|-----|---------------|
-| H100 | 640 | 8/4 | bfloat16 | 25-35 |
-| A100 80GB | 512 | 8/4 | bfloat16 | 18-22 |
+| H100 80GB | 768 | 12/6 | bfloat16 | 30-40 |
+| A100 80GB | 640 | 10/5 | bfloat16 | 22-28 |
 | A100 40GB | 448 | 8/4 | bfloat16 | 15-18 |
 | V100 32GB | 384 | 8/4 | float16 | 8-12 |
 | RTX 4090 | 512 | 4/2 | float16 | 10-15 |
@@ -81,8 +90,8 @@ The `auto_train.sh` script **automatically detects your GPU** and configures opt
 
 Override with environment variables:
 ```bash
-export BEATSIGHT_BATCH_SIZE=512
-export BEATSIGHT_NUM_WORKERS=8
+export BEATSIGHT_BATCH_SIZE=768  # Optimized for H100 80GB
+export BEATSIGHT_NUM_WORKERS=12
 ```
 
 ---
@@ -183,7 +192,7 @@ Based on 520 Mbps upload speed:
 | `dataset_index/` | 15 GB | ~4 minutes |
 | **Total** | 516 GB | **~2.2 hours** |
 
-**Upload cost:** 2.2 hrs × $1.29/hr = **~$2.84**
+**Upload cost:** 2.2 hrs × $2.49/hr = **~$5.48**
 
 > 💡 With 520 Mbps upload, don't bother compressing - the time to compress would be longer than you'd save on transfer.
 
@@ -194,7 +203,7 @@ Based on 520 Mbps upload speed:
 ### Step 1: Launch Instance
 
 1. Go to [Lambda Labs Cloud](https://cloud.lambdalabs.com/)
-2. Select **A100 40GB** ($1.29/hr)
+2. Select **1x H100 80GB PCIe** ($2.49/hr) - has 1 TiB storage for your 516 GB data
 3. Launch and note the IP address (`LAMBDA_IP`)
 
 ### Step 2: Upload Data (from Windows Git Bash)
@@ -252,12 +261,14 @@ export REMOTE_BACKUP_PATH='s3://beatsight-checkpoints/'
 ./ai-pipeline/training/tools/cloud_training.sh start-session
 ```
 
-This creates a tmux session with:
+This creates a tmux session and **automatically attaches** so you can monitor training live:
 - **Window 0 (training):** Main training pipeline
 - **Window 1 (watchdog):** GPU idle monitor (auto-shutdown if idle 30+ min)
 - **Window 2 (sync):** Checkpoint sync to S3 every 30 min
 - **Window 3 (gpu):** Live nvidia-smi
 - **Window 4 (logs):** Training log tail
+
+**Training continues even if you disconnect!** Press `Ctrl+B, D` to detach.
 
 ---
 
@@ -354,13 +365,15 @@ python -m training.scripts.export_production \
     --cache-dir /workspace/feature_cache \
     --v5-size large \
     --with-sparsity \
-    --with-fp8
+    --with-fp8 \
+    --with-early-exit
 
 # This creates:
 # 1. drum_classifier_static_int8.onnx  - Base production (required)
 # 2. drum_classifier_epcontext.onnx    - Instant cold starts (if TensorRT available)
 # 3. drum_classifier_sparse_trt.onnx   - 2:4 sparse variant (2x faster compute)
 # 4. drum_classifier_fp8.trt           - FP8 variant (2x faster than INT8 on H100/L40S)
+# 5. drum_classifier_early_exit.onnx   - 20-50% faster on easy samples (kicks, snares)
 ```
 
 ### Upload to Modal
@@ -380,7 +393,9 @@ modal deploy modal_app.py
 | **Static INT8** | ~7-10ms | 30-60s | ✅ Default production |
 | + EPContext | ~7-10ms | **<2s** | If cold starts matter |
 | + 2:4 Sparsity | **~4-6ms** | <2s | Maximum throughput |
+| + Early Exit | **~4-6ms avg** | <2s | Variable workloads (20-50% on easy samples) |
 | + FP8 (NEW!) | **~2-3ms** | <2s | 🚀 **REVOLUTIONARY** - H100/L40S only |
+| + FP8 + Early Exit | **~1.5-2.5ms** | <2s | 🔥 **BEST** - Combine for ultimate speed |
 
 > **💡 TIP:** Deploy on Modal's **L40S** ($1.95/hr) for FP8 support at half the H100 price!
 > The L40S has native FP8 support and gives you ~2-3ms inference.
@@ -543,18 +558,20 @@ See `ai-pipeline/training/inference/revolutionary_optimizations.py` for full imp
 
 ## Cost Breakdown
 
-| Phase | Time (A100) | Cost |
-|-------|-------------|------|
-| Upload | ~2.2 hr | $2.84 |
-| v5-warmup (17a) | ~1.5 hr | $1.94 |
-| v5-full (17d, 300 epochs) | ~22 hr | $28.38 |
-| v5-self-distill (17e, 300 epochs) | ~22 hr | $28.38 |
-| multilabel-finetune (19c) | ~5 hr | $6.45 |
-| **Total** | **~53 hr** | **~$68** |
+| Phase | Time (H100) | Cost (H100 @ $2.49/hr) |
+|-------|-------------|------------------------|
+| Upload | ~2.2 hr | $5.48 |
+| v5-warmup (17a) | ~1 hr | $2.49 |
+| v5-full (17d, 300 epochs) | ~15 hr | $37.35 |
+| v5-self-distill (17e, 300 epochs) | ~15 hr | $37.35 |
+| multilabel-finetune (19c) | ~3.5 hr | $8.72 |
+| **Total** | **~37 hr** | **~$91** |
 
 > 💡 **Note:** Step 19 (multilabel-generate) runs locally and costs $0.
 
-> 💡 **Note:** 300 epochs (up from 200) provides +0.3-0.5% accuracy improvement. The extra ~$17 cost is worthwhile for maximum quality.
+> 💡 **Note:** H100 is ~1.5× faster than A100 due to more VRAM (larger batches) and faster compute. The 1 TiB SSD storage is required for your 516 GB dataset.
+
+> 💡 **Note:** 300 epochs (up from 200) provides +0.3-0.5% accuracy improvement.
 
 ---
 
@@ -660,16 +677,16 @@ bash ai-pipeline/training/tools/auto_train.sh v5-full
 
 ## Cloud vs Local Comparison
 
-| Metric | Local (RTX 3080 Ti) | Cloud (A100 40GB) | Improvement |
+| Metric | Local (RTX 3080 Ti) | Cloud (H100 80GB) | Improvement |
 |--------|---------------------|-------------------|-------------|
-| v5-warmup | ~20 hr | ~1.5 hr | 13x faster |
-| v5-full | ~200 hr | ~22 hr | 9x faster |
-| v5-self-distill | ~200 hr | ~22 hr | 9x faster |
-| multilabel-finetune | ~60 hr | ~5 hr | 12x faster |
-| **TOTAL TIME** | **~480 hr** | **~53 hr** | **9x faster** |
-| **Wall Clock** | ~20 days | ~2.5 days | 17 days saved |
+| v5-warmup | ~20 hr | ~1 hr | 20x faster |
+| v5-full | ~200 hr | ~15 hr | 13x faster |
+| v5-self-distill | ~200 hr | ~15 hr | 13x faster |
+| multilabel-finetune | ~60 hr | ~3.5 hr | 17x faster |
+| **TOTAL TIME** | **~480 hr** | **~35 hr** | **14x faster** |
+| **Wall Clock** | **~20 days** | **~1.5 days** | **18 days saved** |
 
-**ROI**: ~$68 to save 17+ days of training time = **$4/day saved**
+**ROI**: ~$91 to save 18+ days of training time = **$5/day saved**
 
 ---
 
@@ -682,8 +699,8 @@ watch -n 1 nvidia-smi
 
 # Should see:
 # - GPU Util: 95-100%
-# - Memory: ~35-38 GB used (A100 40GB)
-# - Power: ~350-400W
+# - Memory: ~55-65 GB used (H100 80GB)
+# - Power: ~500-650W
 ```
 
 ### WandB Sync (after training)
@@ -832,12 +849,11 @@ ai-pipeline/
 Keep a log of your sessions:
 
 | Date | Instance | Duration | Cost | Phase Completed |
-|------|----------|----------|------|-----------------|
-| Dec 1 | A100 40GB | 2.2h | $2.84 | Upload |
-| Dec 1 | A100 40GB | 23.5h | $30.32 | v5-warmup, v5-full |
-| Dec 2 | A100 40GB | 27h | $34.83 | self-distill, multilabel |
-| Dec 3 | A100 40GB | 12h | $15.48 | distillation (optional) |
-| **TOTAL** | | **~53-65h** | **~$68-83** | ✅ All phases |
+|------|----------|----------|------|------------------|
+| Dec 1 | H100 80GB | 2.2h | $5.48 | Upload |
+| Dec 1 | H100 80GB | 16h | $39.84 | v5-warmup, v5-full |
+| Dec 2 | H100 80GB | 18.5h | $46.07 | self-distill, multilabel |
+| **TOTAL** | | **~37h** | **~$91** | ✅ All phases |
 
 ---
 

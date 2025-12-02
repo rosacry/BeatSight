@@ -2,26 +2,29 @@
 Optimized Pipeline for BeatSight Production Deployment
 
 Combines all speed optimizations for maximum throughput:
-1. Hybrid Demucs (htdemucs_ft) - 2.5x faster separation
-2. TensorRT/ONNX Runtime - 2-4x faster classification
-3. Spectrogram caching - 30% faster on repeated requests
-4. Streaming/chunked processing - better perceived latency (NEW)
-5. Adaptive batch sizing - optimal GPU utilization
-6. Skip separation for isolated drums - 60% faster when applicable
-7. Sparse inference for quiet sections - 10-20% faster (NEW)
-8. CUDA graphs for repeated inference - 10-15% GPU speedup
-9. GPU memory pooling / persistent models - eliminates cold start (NEW)
+1. Hybrid Demucs (htdemucs_ft + torch.compile) - 3.3x faster separation
+2. FP8 Quantization - 2x over INT8 on L40S/H100
+3. 2:4 Structured Sparsity - 2x compute speedup on Ampere+ GPUs
+4. Early Exit - 60% of samples exit early for +1.5x average speedup
+5. TensorRT/ONNX Runtime - 2-4x faster classification
+6. Spectrogram caching - 30% faster on repeated requests
+7. Streaming/chunked processing - better perceived latency
+8. Skip separation for isolated drums - 64% faster when applicable
+9. Sparse inference for quiet sections - 10-20% faster
+10. CUDA graphs for repeated inference - 10-15% GPU speedup
+11. GPU memory pooling / persistent models - eliminates cold start
 
-Performance Targets:
-- Baseline (unoptimized): ~35 seconds for 3-min song
+Performance Targets (L40S with FP8+Sparse):
+- Baseline (unoptimized A100): ~35 seconds for 3-min song
 - Optimized (all features): ~10-12 seconds for 3-min song
-- Optimized + cached: ~6 seconds for 3-min song (repeated)
+- Optimized + cached: ~5 seconds for 3-min song (repeated)
 - Isolated drums only: ~4 seconds for 3-min song
 - First chunk visible: ~3 seconds (streaming mode)
+- Classification only: ~1-1.5ms per sample (~2 sec for 3600 windows)
 
-Single-Tier Strategy (V5-Large + INT8):
-- Maximum quality from V5-Large model
-- Fast inference from INT8 quantization
+Single-Tier Strategy (V5-Large + FP8+Sparse):
+- Maximum quality from V5-Large model (~2-3M parameters)
+- Maximum speed from FP8 + 2:4 Sparsity (~1-1.5ms/sample)
 - No quality/speed tradeoff - get both!
 
 Usage:

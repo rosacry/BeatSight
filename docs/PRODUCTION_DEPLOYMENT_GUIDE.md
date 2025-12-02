@@ -10,20 +10,25 @@
 
 **Where You Are:** Step 14 (Label Audit) running locally  
 **Where You're Going:** Production deployment on Modal with revolutionary speed  
-**Estimated Time:** ~55 hours total (~3 hours local + ~52 hours cloud)  
-**Estimated Cost:** ~$68-72 Lambda Labs + ~$5-10/month Modal
+**Estimated Time:** ~40 hours total (~3 hours local + ~37 hours cloud)  
+**Estimated Cost:** ~$91-100 Lambda Labs + ~$5-10/month Modal
+
+> **⚠️ CRITICAL: Use 1x H100 80GB PCIe ($2.49/hr) - NOT A100 40GB!**
+> 
+> Your training data is ~516 GB. The A100 40GB only has 512 GB SSD - not enough!
+> The H100 has 1 TiB storage and trains ~1.5× faster.
 
 | Phase | Location | Time | Cost |
 |-------|----------|------|------|
-| Step 14: Label Audit | ✅ Local (running) | ~2.5 hr | Free |
+| Step 14: Label Audit | ✅ Local (complete) | ~2.5 hr | Free |
 | Preflight Check | Local | ~2 min | Free |
-| Data Upload | Local → Cloud | ~2.2 hr | ~$2.84 |
-| Step 17a: V5 Warmup | Lambda A100 | ~1.5 hr | ~$1.94 |
-| Step 17d: V5 Full Training | Lambda A100 | ~22 hr | ~$28.38 |
-| Step 17e: Self-Distillation | Lambda A100 | ~22 hr | ~$28.38 |
+| Data Upload | Local → Cloud | ~2.2 hr | ~$5.48 |
+| Step 17a: V5 Warmup | Lambda H100 | ~1 hr | ~$2.49 |
+| Step 17d: V5 Full Training | Lambda H100 | ~15 hr | ~$37.35 |
+| Step 17e: Self-Distillation | Lambda H100 | ~15 hr | ~$37.35 |
 | Step 19: Multilabel Generate | Local | ~30 min | Free |
-| Step 19c: Multilabel Finetune | Lambda A100 | ~5 hr | ~$6.45 |
-| Export & Optimization | Lambda A100 | ~30 min | ~$0.65 |
+| Step 19c: Multilabel Finetune | Lambda H100 | ~3.5 hr | ~$8.72 |
+| Export & Optimization | Lambda H100 | ~20 min | ~$0.83 |
 | Modal Deployment | Modal | ~15 min | ~$0 |
 
 **Final Result:**
@@ -50,18 +55,18 @@
 │  └──────────────────┘     └──────────────────┘     └──────────────────┘        │
 │                                                            │                    │
 │                                                            ▼                    │
-│  LAMBDA LABS (A100 40GB GPU - $1.29/hr)                                        │
-│  ══════════════════════════════════════                                        │
+│  LAMBDA LABS (H100 80GB GPU - $2.49/hr, 1 TiB storage)                         │
+│  ═════════════════════════════════════════════════════                         │
 │                                                                                  │
 │  ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐        │
 │  │ Upload Data      │────▶│ 17a. V5 Warmup   │────▶│ 17d. V5 Full     │        │
-│  │   (~2.2 hrs)     │     │   (1.5 hrs)      │     │   (22 hrs)       │        │
+│  │   (~2.2 hrs)     │     │   (1 hr)         │     │   (15 hrs)       │        │
 │  └──────────────────┘     └──────────────────┘     └──────────────────┘        │
 │                                                            │                    │
 │                                                            ▼                    │
 │  ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐        │
 │  │ 17e. Self-Distil │────▶│ Export Models    │────▶│ Encrypt & Upload │        │
-│  │   (22 hrs)       │     │ INT8/FP8/EPCtx   │     │ to Modal         │        │
+│  │   (15 hrs)       │     │ INT8/FP8/EPCtx   │     │ to Modal         │        │
 │  └──────────────────┘     └──────────────────┘     └──────────────────┘        │
 │                                                                                  │
 │  LOCAL (After Cloud Training)                                                   │
@@ -77,7 +82,7 @@
 │                                                                                  │
 │  ┌──────────────────┐     ┌──────────────────┐                                 │
 │  │ 19c. Multilabel  │────▶│ Final Export     │                                 │
-│  │ Finetune (5 hrs) │     │ + Upload to Modal│                                 │
+│  │ Finetune (3.5h)  │     │ + Upload to Modal│                                 │
 │  └──────────────────┘     └──────────────────┘                                 │
 │                                                                                  │
 │  MODAL (Production - L40S GPU @ $1.95/hr)                                      │
@@ -138,7 +143,7 @@ The preflight check validates:
 - ✅ Model instantiation (V5 small/medium/large)
 - ✅ Dataset loading works
 - ✅ Full training argument parsing
-- ✅ A100 40GB VRAM budget validation
+- ✅ H100 80GB VRAM budget validation
 - ✅ And 55+ other checks
 
 ---
@@ -201,7 +206,9 @@ Only if you're comfortable with open source. Your ML model weights are NOT in th
 ### Step 2.1: Launch Lambda Labs Instance
 
 1. Go to [Lambda Labs Cloud](https://cloud.lambdalabs.com/)
-2. Select **1x A100 40GB PCIe** ($1.29/hr) 
+2. Select **1x H100 80GB PCIe** ($2.49/hr) - **NOT A100 40GB!**
+   - ⚠️ A100 40GB only has 512 GB SSD (your data is ~516 GB)
+   - ✅ H100 80GB has **1 TiB SSD** - plenty of room
 3. Launch and note the IP address
 
 ```bash
@@ -272,7 +279,7 @@ export REMOTE_BACKUP_PATH='s3://beatsight-checkpoints/'
 **One command does everything:**
 
 ```bash
-./ai-pipeline/training/tools/cloud_training.sh auto
+./ai-pipeline/training/tools/cloud_training.sh start-session
 ```
 
 This command:
@@ -284,15 +291,20 @@ This command:
 6. ✅ Syncs checkpoints to S3 every 30 min
 7. ✅ Auto-shuts down when complete
 8. ✅ Protects against runaway costs ($100 max)
+9. ✅ **Auto-attaches to tmux for live monitoring**
 
-**You can now close your SSH connection!** Training continues in tmux.
+The script will automatically attach you to the tmux session to monitor training.
+Press `Ctrl+B, D` to detach - **training continues even if you disconnect!**
 
 ---
 
-### Step 2.6: Monitor Training (Optional)
+### Step 2.6: Monitor Training (Automatic!)
+
+The `start-session` command automatically attaches you to tmux for monitoring.
+**No extra steps required!** Training will continue even if you close your SSH session.
 
 ```bash
-# Reattach to tmux session
+# If you disconnected and want to reattach later:
 ssh ubuntu@$LAMBDA_IP
 tmux attach -t beatsight
 
@@ -311,14 +323,14 @@ tmux attach -t beatsight
 
 ---
 
-### Step 2.7: Training Timeline
+### Step 2.7: Training Timeline (H100 80GB)
 
 | Phase | Duration | Total Elapsed | Expected Output |
 |-------|----------|---------------|-----------------|
-| 17a: V5 Warmup | ~1.5 hr | 1.5 hr | Validates all 23 SOTA techniques work |
-| 17d: V5 Full Training | ~22 hr | 23.5 hr | `best_drum_classifier.pth` (~96% val acc) |
-| 17e: Self-Distillation | ~22 hr | 45.5 hr | `best_drum_classifier_ema.pth` (+1-2% boost) |
-| 19c: Multilabel Finetune | ~5 hr | 50.5 hr | Simultaneous hit detection enabled |
+| 17a: V5 Warmup | ~1 hr | 1 hr | Validates all 23 SOTA techniques work |
+| 17d: V5 Full Training | ~15 hr | 16 hr | `best_drum_classifier.pth` (~96% val acc) |
+| 17e: Self-Distillation | ~15 hr | 31 hr | `best_drum_classifier_ema.pth` (+1-2% boost) |
+| 19c: Multilabel Finetune | ~3.5 hr | 34.5 hr | Simultaneous hit detection enabled |
 
 **Note:** Step 19 (Generate Multilabel Dataset) runs locally between 17e and 19c.
 

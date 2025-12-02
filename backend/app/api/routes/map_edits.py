@@ -12,10 +12,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.api.deps import get_current_user, get_db_session
+from app.api.deps import get_current_user, get_db_session, get_rbac_service
 from app.models.map_edit import EditStatus, MapEditProposal
 from app.models.map_version import MapVersion
 from app.models.user import User
+from app.services.rbac import RBACService
 
 router = APIRouter(prefix="/map-edit-proposals", tags=["map-edits"])
 
@@ -226,6 +227,7 @@ async def get_proposal(
     proposal_id: uuid.UUID,
     db: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[User, Depends(get_current_user)],
+    rbac: Annotated[RBACService, Depends(get_rbac_service)],
 ) -> ProposalResponse:
     """Get a specific proposal by ID.
 
@@ -241,13 +243,14 @@ async def get_proposal(
         )
 
     # Check access - must be proposer or verifier
-    # For now, allow proposer to view their own
     if proposal.proposer_id != current_user.id:
-        # TODO: Check if user has verifier role
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only view your own proposals",
-        )
+        # Check if user has verifier role
+        is_verifier = await rbac.user_is_verifier(current_user.id)
+        if not is_verifier:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only view your own proposals",
+            )
 
     return ProposalResponse(
         id=proposal.id,

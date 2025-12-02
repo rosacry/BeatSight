@@ -16,6 +16,8 @@ from app.services.auth import AuthService
 if TYPE_CHECKING:
     from redis.asyncio import Redis
 
+    from app.services.rbac import RBACService
+
 
 # =============================================================================
 # Feature Flag Dependencies
@@ -179,3 +181,14 @@ async def get_redis() -> "Redis":
     from app.services.cache import get_redis_client
 
     return await get_redis_client()
+
+
+async def get_rbac_service(
+    session: AsyncSession = Depends(get_db_session),
+) -> "RBACService":
+    """
+    Get RBAC service instance for permission checks.
+    """
+    from app.services.rbac import RBACService
+
+    return RBACService(session)

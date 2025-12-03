@@ -3706,21 +3706,24 @@ def main():
     if args.torch_compile:
         if hasattr(torch, "compile"):
             try:
-                # Note: In PyTorch 2.x, some versions don't allow both 'mode' and 'options' together.
-                # We use 'mode' only and set CUDA graph disabling via environment variable when needed.
-                compile_kwargs: Dict[str, object] = {"mode": args.torch_compile_mode}
-                
-                # Disable CUDA graphs when using SAM optimizer (multiple forward passes cause conflicts)
+                # Disable CUDA graphs BEFORE compilation when using SAM optimizer
                 # SAM does two forward passes per step, which overwrites CUDA graph outputs
-                # Use environment variable instead of compile options for compatibility
+                # This must be set before torch.compile() is called
                 if args.use_sam:
-                    os.environ["TORCH_COMPILE_DISABLE_CUDAGRAPHS"] = "1"
-                    # Also set via torch config if available
+                    # Set inductor config to disable CUDA graphs
                     try:
-                        torch._inductor.config.triton.cudagraphs = False
+                        import torch._inductor.config as inductor_config
+                        inductor_config.triton.cudagraphs = False
+                        inductor_config.cudagraph_trees = False
                     except (AttributeError, ImportError):
                         pass
+                    # Also set environment variable as backup
+                    os.environ["TORCHINDUCTOR_CUDAGRAPH_TREES"] = "0"
                     print("[torch.compile] Disabling CUDA graphs (incompatible with SAM optimizer)")
+                
+                # Note: In PyTorch 2.x, some versions don't allow both 'mode' and 'options' together.
+                # We use 'mode' only since we've already configured cudagraphs via inductor config.
+                compile_kwargs: Dict[str, object] = {"mode": args.torch_compile_mode}
                 
                 # Check for triton availability (required for torch.compile on most backends)
                 triton_available = False

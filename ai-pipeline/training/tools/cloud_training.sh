@@ -351,6 +351,12 @@ LOG_DIR="${REPO_ROOT}/logs/cloud_training"
 COST_LOG="${LOG_DIR}/cost_tracking.log"
 INSTANCE_START_FILE="${LOG_DIR}/.instance_start_time"
 
+# Crash recovery files
+LAST_PHASE_FILE="${LOG_DIR}/.last_training_phase"
+RETRY_COUNT_FILE="${LOG_DIR}/.retry_count"
+HEARTBEAT_FILE="${LOG_DIR}/.heartbeat"
+CRASH_RECOVERY_ENABLED=${CRASH_RECOVERY_ENABLED:-true}
+
 mkdir -p "$LOG_DIR"
 
 # =============================================================================

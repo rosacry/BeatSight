@@ -1,6 +1,13 @@
 """SQLAlchemy models for the BeatSight backend."""
 
 from .ai_job import AIJob
+from .credits import (
+    CreditBalance,
+    CreditPackType,
+    CreditPurchase,
+    CreditTransaction,
+    CreditTransactionType,
+)
 from .karma import KarmaLedger
 from .map_asset import MapAsset
 from .map_edit import MapEditProposal, MapVerificationDecision
@@ -26,6 +33,11 @@ __all__ = [
     "AIJob",
     "BillingTransaction",
     "ConflictResolution",
+    "CreditBalance",
+    "CreditPackType",
+    "CreditPurchase",
+    "CreditTransaction",
+    "CreditTransactionType",
     "KarmaLedger",
     "Map",
     "MapAsset",

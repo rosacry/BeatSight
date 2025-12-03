@@ -16,3 +16,6 @@ export type { DiffPayload, Edit } from './ProposalDiffViewer'
 export { VoteButtons } from './VoteButtons'
 export { DifficultyHeatmap } from './DifficultyHeatmap'
 export { LiveRecorder } from './LiveRecorder'
+export { CreditPurchaseModal } from './CreditPurchaseModal'
+export { CreditBalance, CreditBadge } from './CreditBalance'
+

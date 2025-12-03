@@ -21,6 +21,8 @@ import { AdminDashboardPage } from './pages/AdminDashboardPage'
 import { VerifierDashboardPage } from './pages/VerifierDashboardPage'
 import { MapEditPage } from './pages/MapEditPage'
 import { RecordPage } from './pages/RecordPage'
+import { CreditSuccessPage } from './pages/CreditSuccessPage'
+import { CreditCancelPage } from './pages/CreditCancelPage'
 import { useAuthStore } from './stores/authStore'
 import { useServiceWorkerUpdate } from './hooks/usePWA'
 import { KeyboardShortcutsProvider } from './hooks/useKeyboardShortcuts'
@@ -55,6 +57,8 @@ function App() {
                                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                                 <Route path="/reset-password" element={<ResetPasswordPage />} />
                                 <Route path="/pricing" element={<PricingPage />} />
+                                <Route path="/credits/success" element={<CreditSuccessPage />} />
+                                <Route path="/credits/cancel" element={<CreditCancelPage />} />
 
                                 {/* Protected routes */}
                                 <Route

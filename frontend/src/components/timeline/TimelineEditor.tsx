@@ -1,6 +1,7 @@
 import { useCallback, useState, useEffect, useRef, useMemo } from 'react'
 import { TimelineCanvas } from './TimelineCanvas'
 import { TimelineAudioPlayer } from './AudioPlayer'
+import { useWaveform } from '../../hooks/useWaveform'
 import { createLogger } from '@/lib/logger'
 import type {
     HitObject,
@@ -129,6 +130,12 @@ export function TimelineEditor({
     const [waveformScale, setWaveformScale] = useState(DEFAULT_WAVEFORM_SCALE)
     const [beatGridVisible, setBeatGridVisible] = useState(true)
     const [onsetLayerVisible, setOnsetLayerVisible] = useState(false)
+
+    // Waveform data for timeline visualization
+    const { waveformData, isLoading: _isWaveformLoading } = useWaveform({
+        audioUrl,
+        enabled: true,
+    })
 
     // Edit history for undo/redo
     const [undoStack, setUndoStack] = useState<NoteEdit[][]>([])
@@ -679,6 +686,7 @@ export function TimelineEditor({
                 beatGridVisible={beatGridVisible}
                 onsetLayerVisible={onsetLayerVisible}
                 waveformScale={waveformScale}
+                waveformData={waveformData}
                 onViewportChange={setViewport}
                 onSelectionChange={setSelection}
                 onNoteDrag={handleNoteDrag}

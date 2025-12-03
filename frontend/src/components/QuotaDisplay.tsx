@@ -1,11 +1,15 @@
 import type { QuotaStatus } from '@/types/api'
+import { useCreditCount } from '@/hooks/useCredits'
 
 interface QuotaDisplayProps {
     quota: QuotaStatus
     className?: string
+    onBuyCredits?: () => void
 }
 
-export function QuotaDisplay({ quota, className }: QuotaDisplayProps) {
+export function QuotaDisplay({ quota, className, onBuyCredits }: QuotaDisplayProps) {
+    const { credits, isLoading: loadingCredits } = useCreditCount()
+
     const monthPercent = quota.limit_month > 0
         ? Math.round((quota.used_this_month / quota.limit_month) * 100)
         : 0
@@ -13,7 +17,9 @@ export function QuotaDisplay({ quota, className }: QuotaDisplayProps) {
         ? Math.round((quota.used_today / quota.limit_day) * 100)
         : 0
 
+    const quotaExhausted = quota.remaining_month <= 0 || quota.remaining_today <= 0
     const isLow = quota.remaining_month <= 2 || quota.remaining_today <= 1
+    const hasCreditsAsBackup = credits > 0
 
     return (
         <div className={`card ${className}`}>
@@ -60,6 +66,25 @@ export function QuotaDisplay({ quota, className }: QuotaDisplayProps) {
                     </p>
                 </div>
 
+                {/* Credits balance */}
+                <div className="pt-2 border-t border-gray-700">
+                    <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-400">Credits</span>
+                        {loadingCredits ? (
+                            <span className="text-sm text-gray-500">...</span>
+                        ) : (
+                            <span className={`text-sm font-medium ${credits > 0 ? 'text-primary-400' : 'text-gray-500'}`}>
+                                {credits} {credits === 1 ? 'credit' : 'credits'}
+                            </span>
+                        )}
+                    </div>
+                    {credits > 0 && quotaExhausted && (
+                        <p className="text-xs text-primary-400 mt-1">
+                            ✓ Credits will be used when quota runs out
+                        </p>
+                    )}
+                </div>
+
                 {/* Plan info */}
                 <div className="pt-2 border-t border-gray-700">
                     <div className="flex justify-between items-center">
@@ -75,11 +100,28 @@ export function QuotaDisplay({ quota, className }: QuotaDisplayProps) {
                     )}
                 </div>
 
-                {/* Warning */}
-                {isLow && (
+                {/* Warning - adapted for credit system */}
+                {isLow && !hasCreditsAsBackup && (
                     <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                        <p className="text-sm text-yellow-400">
-                            ⚠️ You're running low on quota. Consider upgrading for more generations.
+                        <p className="text-sm text-yellow-400 mb-2">
+                            ⚠️ You're running low on quota.
+                        </p>
+                        {onBuyCredits && (
+                            <button
+                                onClick={onBuyCredits}
+                                className="text-sm text-primary-400 hover:text-primary-300 underline"
+                            >
+                                Buy credits to continue →
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {/* Quota exhausted but has credits */}
+                {quotaExhausted && hasCreditsAsBackup && (
+                    <div className="p-3 bg-primary-500/10 border border-primary-500/20 rounded-lg">
+                        <p className="text-sm text-primary-400">
+                            💳 Using credits for extra songs ({credits} available)
                         </p>
                     </div>
                 )}

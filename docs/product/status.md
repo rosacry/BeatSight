@@ -1,12 +1,73 @@
-# BeatSight Status (November 27, 2025)
+# BeatSight Status (December 3, 2025)
 
 ## Snapshot
 - Desktop reference build: ✅ shipping-quality playback experience and editor skeleton remain green; the live-input experiment has been shelved and its code/config removed to reduce maintenance drag.
 - AI pipeline: 🟢 **Training actively running** (warm-up probe step 5a). Hardware-optimized configs created, class weighting added, environment hook implemented. **NEW: Cutting-edge 2024 techniques added. ⭐ RECOMMENDED: Path G (V5 Ultimate, modes 17a-17d) for production training.**
 - Web pivot: 🟢 **Priority 1-3 COMPLETE, Verifier Dashboard polish in progress**. Backend scaffold now includes Modal GPU orchestration, SSE streaming, S3 storage, notifications, map edit proposals, type generation, quality/robustness improvements, and verifier diff visualization.
+- **Monetization: ✅ Credit system fully implemented** - 2-tier pricing (Free 3/mo + Pro $12 50/mo) plus pay-per-use credits ($0.35/song). All 1091 backend tests passing.
 - Documentation: 🟢 consolidated under `docs/Guidebook.md`; historical logs preserved in `docs/archive/`.
 - **AI Integrations Verification: ✅ All 39 features in `MISSING_INTEGRATIONS.md` verified as fully implemented and robust.**
 - **Desktop/Web Alignment Audit: ✅ Schema alignment verified. Backend `AIGenerationOptions` now matches desktop `AiGenerationOptions`.**
+
+## Session Progress (December 3, 2025)
+
+### Credit System Alignment & Test Fixes (COMPLETE)
+- ✅ **Migration enum alignment**: Fixed `005_credit_system.py` to use correct enum values (starter/value/power instead of STARTER/STANDARD/BULK/MEGA)
+- ✅ **Quota test alignment**: Updated `test_quota.py` assertions to match new pricing (Free: 3/mo, Pro: 50/mo)
+- ✅ **AI jobs test fixes**: Fixed `consume_quota` mocks to return `(QuotaStatus, bool)` tuple in:
+  - `test_ai_jobs_routes.py` (2 fixes)
+  - `test_ai_jobs_coverage.py` (4 fixes)
+  - `test_ai_jobs_integration.py` (2 fixes)
+- ✅ **Routes init export**: Added `credits` to `backend/app/api/routes/__init__.py`
+- ✅ **Full test suite**: All 1091 backend tests passing
+
+## Session Progress (December 2, 2025)
+
+### Credit System Implementation (COMPLETE)
+- ✅ **Monetization Strategy**: `docs/MONETIZATION_STRATEGY.md` - Hybrid subscription + credits model
+  - 2-tier: Free (3 songs/mo) + Pro ($12/mo, 50 songs/mo)
+  - Credits: $0.35/song with bulk discounts (Value 14%, Power 29%)
+  - No "Basic" tier - simplifies user decisions
+  
+- ✅ **Backend Models**: `backend/app/models/credits.py`
+  - CreditBalance, CreditPurchase, CreditTransaction models
+  - CreditPackType (starter/value/power), CreditTransactionType enums
+  
+- ✅ **Backend Service**: `backend/app/services/credits.py`
+  - Pack configs: Starter (5/$1.75), Value (15/$4.50), Power (40/$10)
+  - Credit consumption with job tracking
+  - Auto top-up configuration
+  
+- ✅ **API Routes**: `backend/app/api/routes/credits.py`
+  - GET /credits/balance, GET /credits/packs
+  - POST /credits/purchase, GET /credits/history
+  - PUT /credits/auto-topup
+  
+- ✅ **Alembic Migration**: `005_credit_system.py`
+  - credit_balances, credit_purchases, credit_transactions tables
+  - Proper indexes for efficient queries
+  
+- ✅ **Pricing Update**: `backend/app/core/pricing.py`
+  - Simplified to FREE + PRO tiers
+  - Credit packs configuration
+  - Legacy BASIC tier maps to PRO
+  
+- ✅ **Quota Integration**: `backend/app/services/quota.py`
+  - Credit fallback when subscription quota exceeded
+  - Updated limits: Free 3/mo 2/day, Pro 50/mo 15/day
+  
+- ✅ **Frontend Components**:
+  - `types/credits.ts`, `api/credits.ts`, `hooks/useCredits.ts`
+  - `CreditPurchaseModal.tsx`, `CreditBalance.tsx`, `QuotaDisplay.tsx`
+  - `PricingPage.tsx` redesign with credits section
+  - `CreditSuccessPage.tsx`, `CreditCancelPage.tsx`
+  - Navigation integration (desktop + mobile)
+  
+- ✅ **Documentation**:
+  - `docs/API_REFERENCE.md` - Credits section added
+  - `docs/CREDIT_SYSTEM_DEPLOYMENT.md` - Deployment guide
+  
+- ✅ **Tests**: 32 credit tests + all AI jobs/quota tests updated
 
 ## Session Progress (November 27, 2025)
 

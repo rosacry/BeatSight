@@ -600,6 +600,220 @@ eventSource.addEventListener('error', (e) => {
 
 ---
 
+## Credits (`/credits`)
+
+Manage user credit balance for pay-per-use AI generations beyond subscription limits.
+
+### Get Balance
+
+Get current user's credit balance.
+
+```http
+GET /credits/balance
+```
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+{
+  "purchased_credits": 25,
+  "bonus_credits": 5,
+  "total_credits": 30,
+  "auto_topup_enabled": false,
+  "auto_topup_pack": null,
+  "auto_topup_threshold": 0
+}
+```
+
+---
+
+### Get Credit Packs
+
+List available credit packs for purchase.
+
+```http
+GET /credits/packs
+```
+
+**Authentication:** Not required
+
+**Response (200 OK):**
+
+```json
+[
+  {
+    "id": "starter",
+    "name": "Starter Pack",
+    "description": "5 credits for casual use",
+    "credits": 5,
+    "price_cents": 175,
+    "price_dollars": 1.75,
+    "per_credit_cents": 35.0,
+    "savings_percent": 0
+  },
+  {
+    "id": "value",
+    "name": "Value Pack",
+    "description": "15 credits - Save 14%",
+    "credits": 15,
+    "price_cents": 450,
+    "price_dollars": 4.50,
+    "per_credit_cents": 30.0,
+    "savings_percent": 14
+  },
+  {
+    "id": "power",
+    "name": "Power Pack",
+    "description": "40 credits - Save 29%",
+    "credits": 40,
+    "price_cents": 1000,
+    "price_dollars": 10.00,
+    "per_credit_cents": 25.0,
+    "savings_percent": 29
+  }
+]
+```
+
+---
+
+### Purchase Credits
+
+Create a Stripe checkout session to purchase a credit pack.
+
+```http
+POST /credits/purchase
+```
+
+**Authentication:** Required
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `pack_type` | string | Yes | Pack ID: `starter`, `value`, or `power` |
+
+**Example Request:**
+
+```json
+{
+  "pack_type": "value"
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "checkout_url": "https://checkout.stripe.com/c/pay/cs_test_...",
+  "session_id": "cs_test_abc123..."
+}
+```
+
+Redirect the user to `checkout_url` to complete the purchase. After successful payment, user is redirected to `/credits/success?session_id={session_id}`.
+
+---
+
+### Get Purchase History
+
+Get user's credit purchase history.
+
+```http
+GET /credits/history?limit=20&offset=0
+```
+
+**Authentication:** Required
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | integer | 20 | Max items to return (1-100) |
+| `offset` | integer | 0 | Items to skip |
+
+**Response (200 OK):**
+
+```json
+{
+  "items": [
+    {
+      "id": "uuid",
+      "pack_type": "value",
+      "credits_amount": 15,
+      "price_cents": 450,
+      "is_fulfilled": true,
+      "fulfilled_at": "2025-12-02T10:30:00Z",
+      "created_at": "2025-12-02T10:29:45Z"
+    }
+  ],
+  "total": 5,
+  "limit": 20,
+  "offset": 0
+}
+```
+
+---
+
+### Configure Auto Top-up
+
+Enable or disable automatic credit purchases when balance is low.
+
+```http
+PUT /credits/auto-topup
+```
+
+**Authentication:** Required
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `enabled` | boolean | Yes | Enable/disable auto top-up |
+| `threshold` | integer | No | Trigger when balance <= this value |
+| `pack_type` | string | No | Pack to auto-purchase |
+
+**Example Request (Enable):**
+
+```json
+{
+  "enabled": true,
+  "threshold": 3,
+  "pack_type": "value"
+}
+```
+
+**Example Request (Disable):**
+
+```json
+{
+  "enabled": false
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "auto_topup_enabled": true,
+  "auto_topup_threshold": 3,
+  "auto_topup_pack": "value"
+}
+```
+
+---
+
+### Credit Consumption Flow
+
+Credits are automatically consumed when:
+1. User exceeds their subscription quota (Free: 3/month, Pro: 50/month)
+2. User has available credits in their balance
+3. Bonus credits are consumed before purchased credits
+
+The consumption happens during AI job creation. If the user has no subscription quota remaining and no credits, the job creation will fail with a 402 Payment Required error.
+
+---
+
 ## Worker Endpoints (`/ai-jobs` - Internal)
 
 These endpoints are used by AI worker processes and should not be called by clients.

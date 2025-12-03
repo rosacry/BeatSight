@@ -14,6 +14,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:  # pragma: no cover - type-checking only
     from .ai_job import AIJob
+    from .credits import CreditBalance, CreditPurchase, CreditTransaction
     from .karma import KarmaLedger
     from .map_edit import MapEditProposal, MapVerificationDecision
     from .map_vote import MapVote
@@ -72,4 +73,15 @@ class User(Base):
     )
     map_votes: Mapped[list["MapVote"]] = relationship(
         "MapVote", back_populates="user", cascade="all, delete-orphan"
+    )
+
+    # Credit system relationships
+    credit_balance: Mapped["CreditBalance | None"] = relationship(
+        "CreditBalance", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+    credit_purchases: Mapped[list["CreditPurchase"]] = relationship(
+        "CreditPurchase", back_populates="user", cascade="all, delete-orphan"
+    )
+    credit_transactions: Mapped[list["CreditTransaction"]] = relationship(
+        "CreditTransaction", back_populates="user", cascade="all, delete-orphan"
     )

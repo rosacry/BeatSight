@@ -27,13 +27,21 @@ namespace BeatSight.Game.Services
         private string? refreshToken;
         private DateTime tokenExpiry = DateTime.MinValue;
         private string? clientId;
+        private DateTime? lastSyncTimestamp;
 
         private const string CLIENT_TYPE = "desktop";
         private const string TOKEN_STORAGE_KEY = "cloud_sync_tokens";
 
+        /// <summary>
+        /// Event raised when preferences are synced from the cloud.
+        /// Consumers can handle this to apply preferences to local config.
+        /// </summary>
+        public event Action<SyncedPreferences>? PreferencesSynced;
+
         public string ApiBaseUrl { get; set; } = "https://api.beatsight.app";
         public bool IsAuthenticated => !string.IsNullOrEmpty(accessToken) && DateTime.UtcNow < tokenExpiry;
         public SyncStatus Status { get; private set; } = SyncStatus.Offline;
+        public DateTime? LastSyncTimestamp => lastSyncTimestamp;
 
         public CloudSyncService()
         {
@@ -248,8 +256,24 @@ namespace BeatSight.Game.Services
                     var prefs = await response.Content.ReadFromJsonAsync<PreferencesResponse>(jsonOptions, cancellationToken);
                     if (prefs != null)
                     {
-                        // TODO: Apply preferences to local config
-                        // This would integrate with BeatSightConfigManager
+                        // Raise event for preference consumers to apply to local config
+                        var syncedPrefs = new SyncedPreferences
+                        {
+                            Version = prefs.Version,
+                            ScrollSpeed = prefs.ScrollSpeed,
+                            NoteSkin = prefs.NoteSkin,
+                            AudioOffsetMs = prefs.AudioOffsetMs,
+                            VisualOffsetMs = prefs.VisualOffsetMs,
+                            BackgroundDim = prefs.BackgroundDim,
+                            MasterVolume = prefs.MasterVolume,
+                            MusicVolume = prefs.MusicVolume,
+                            EffectsVolume = prefs.EffectsVolume,
+                            HitsoundVolume = prefs.HitsoundVolume,
+                            Theme = prefs.Theme,
+                            Language = prefs.Language,
+                            CustomSettings = prefs.CustomSettings
+                        };
+                        PreferencesSynced?.Invoke(syncedPrefs);
                         Logger.Log($"Synced preferences (version {prefs.Version})", LoggingTarget.Network);
                     }
                 }
@@ -459,7 +483,7 @@ namespace BeatSight.Game.Services
                 var request = new ManifestCompareRequest
                 {
                     ClientId = clientId,
-                    LastSyncTimestamp = null, // TODO: Store and use last sync time
+                    LastSyncTimestamp = lastSyncTimestamp,
                     Beatmaps = localEntries
                 };
 
@@ -476,6 +500,14 @@ namespace BeatSight.Game.Services
                 }
 
                 var result = await response.Content.ReadFromJsonAsync<ManifestCompareResponse>(jsonOptions, cancellationToken);
+
+                // Update last sync timestamp from server response and persist
+                if (result != null)
+                {
+                    lastSyncTimestamp = result.ServerTimestamp;
+                    SaveTokens();
+                }
+
                 return result?.Actions ?? new List<SyncActionItem>();
             }
             catch (Exception ex)
@@ -538,6 +570,7 @@ namespace BeatSight.Game.Services
                     refreshToken = stored.RefreshToken;
                     tokenExpiry = stored.Expiry;
                     clientId = stored.ClientId;
+                    lastSyncTimestamp = stored.LastSyncTimestamp;
 
                     if (IsAuthenticated)
                     {
@@ -563,7 +596,8 @@ namespace BeatSight.Game.Services
                     AccessToken = accessToken,
                     RefreshToken = refreshToken,
                     Expiry = tokenExpiry,
-                    ClientId = clientId
+                    ClientId = clientId,
+                    LastSyncTimestamp = lastSyncTimestamp
                 };
 
                 var json = JsonSerializer.Serialize(stored, jsonOptions);
@@ -687,6 +721,7 @@ namespace BeatSight.Game.Services
             public string? RefreshToken { get; set; }
             public DateTime Expiry { get; set; }
             public string? ClientId { get; set; }
+            public DateTime? LastSyncTimestamp { get; set; }
         }
 
         #endregion
@@ -761,6 +796,78 @@ namespace BeatSight.Game.Services
 
         [JsonPropertyName("local_version")]
         public int? LocalVersion { get; set; }
+    }
+
+    /// <summary>
+    /// Preferences synced from the cloud.
+    /// Published via PreferencesSynced event for consumers to apply.
+    /// </summary>
+    public class SyncedPreferences
+    {
+        /// <summary>
+        /// Preference version for conflict resolution.
+        /// </summary>
+        public int Version { get; set; }
+
+        /// <summary>
+        /// Note scroll speed multiplier.
+        /// </summary>
+        public double? ScrollSpeed { get; set; }
+
+        /// <summary>
+        /// Selected note skin/theme.
+        /// </summary>
+        public string? NoteSkin { get; set; }
+
+        /// <summary>
+        /// Audio latency offset in milliseconds.
+        /// </summary>
+        public int? AudioOffsetMs { get; set; }
+
+        /// <summary>
+        /// Visual latency offset in milliseconds.
+        /// </summary>
+        public int? VisualOffsetMs { get; set; }
+
+        /// <summary>
+        /// Background dim level (0.0 - 1.0).
+        /// </summary>
+        public double? BackgroundDim { get; set; }
+
+        /// <summary>
+        /// Master volume (0.0 - 1.0).
+        /// </summary>
+        public double? MasterVolume { get; set; }
+
+        /// <summary>
+        /// Music/backing track volume (0.0 - 1.0).
+        /// </summary>
+        public double? MusicVolume { get; set; }
+
+        /// <summary>
+        /// Sound effects volume (0.0 - 1.0).
+        /// </summary>
+        public double? EffectsVolume { get; set; }
+
+        /// <summary>
+        /// Hitsound volume (0.0 - 1.0).
+        /// </summary>
+        public double? HitsoundVolume { get; set; }
+
+        /// <summary>
+        /// User's preferred theme (light, dark, system).
+        /// </summary>
+        public string? Theme { get; set; }
+
+        /// <summary>
+        /// User's preferred language code.
+        /// </summary>
+        public string? Language { get; set; }
+
+        /// <summary>
+        /// Additional custom settings as key-value pairs.
+        /// </summary>
+        public Dictionary<string, object>? CustomSettings { get; set; }
     }
 
     #endregion

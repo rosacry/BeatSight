@@ -22,10 +22,8 @@ This guidebook is the navigation hub for every Markdown reference inside the rep
 
 ## Engineering Systems
 - Environment & tooling:
-  - `SETUP_WINDOWS.md`
-  - `SETUP_LINUX.md`
-  - `docs/SETUP.md`
-  - `SETTINGS_REFERENCE.md`
+  - `docs/SETUP.md` – consolidated setup guide for all platforms (Windows, Linux, macOS)
+  - `SETTINGS_REFERENCE.md` – application settings and keyboard shortcuts
 - Desktop (osu-framework) specifics: `docs/ARCHITECTURE.md`; Phase 1.2 feature inventory and editor fix logs are archived in `docs/archive/2025-11-02-phase12/`.
 - AI pipeline:
   - `ai-pipeline/README.md`

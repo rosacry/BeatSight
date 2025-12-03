@@ -189,6 +189,8 @@ See [`docs/BEATMAP_FORMAT.md`](docs/BEATMAP_FORMAT.md) for the full specificatio
 | [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | Contribution guidelines |
 | [`docs/BEATMAP_FORMAT.md`](docs/BEATMAP_FORMAT.md) | `.bsm` file format specification |
 | [`docs/ml_training_runbook.md`](docs/ml_training_runbook.md) | ML training procedures |
+| [`docs/product/status.md`](docs/product/status.md) | Current project status and progress |
+| [`docs/product/roadmap.md`](docs/product/roadmap.md) | Development roadmap and milestones |
 
 ## Contributing
 

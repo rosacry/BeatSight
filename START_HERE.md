@@ -9,7 +9,7 @@ These are the minimum steps to get productive in the BeatSight workspace. Skim t
 	- **Linux/macOS:** `cd ~/github/BeatSight/desktop/BeatSight.Desktop && dotnet run`
 - Review the live backlog in `docs/product/status.md` (updates happen here, not in this file)
 - Use `docs/Guidebook.md` as the table of contents for orientation, onboarding, and archives
-- Need a fresh environment? Follow `docs/SETUP.md` and the platform guides it links (`SETUP_WINDOWS.md`, `SETUP_LINUX.md`)
+- Need a fresh environment? Follow `docs/SETUP.md` (covers Windows, Linux, and macOS)
 
 ## 2. Run the Core Apps
 
@@ -45,12 +45,12 @@ See `backend/README.md` for routes and health checks if you need the service.
 
 - **Guidebook** → `docs/Guidebook.md` is the master index (orientation, engineering playbooks, archive pointers)
 - **Current status / next steps** → `docs/product/status.md`
-- **Implementation status** → `IMPLEMENTATION_STATUS.md` (comprehensive codebase analysis with all gaps and priorities)
+- **Engineering roadmap** → `ENGINEERING_ROADMAP.md` (implementation progress and priorities)
 - **Roadmap** → `docs/product/roadmap.md`
 - **Training SOP** → `docs/ml_training_runbook.md`
 - **Recent archives** → `docs/archive/2025-11-02-phase12/` and `docs/archive/2025-11-orientation/`
 
-If you update any of the above, keep cross-links consistent. The root `NEXT_STEPS.md` and `CURRENT_STATUS.md` files simply redirect to the live status doc.
+If you update any of the above, keep cross-links consistent.
 
 ## 4. Environment & Data Checklist
 

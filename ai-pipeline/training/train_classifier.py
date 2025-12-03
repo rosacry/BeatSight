@@ -3715,24 +3715,27 @@ def main():
                 # that expect static memory addresses for model parameters
                 compile_mode = args.torch_compile_mode
                 if args.use_sam:
-                    # Set inductor config to disable CUDA graphs
+                    # Set inductor config to disable CUDA graphs completely
                     try:
                         import torch._inductor.config as inductor_config
                         inductor_config.triton.cudagraphs = False
                         inductor_config.cudagraph_trees = False
                         inductor_config.triton.cudagraph_trees = False
+                        # Also disable cudagraph_trees_history which can cause issues
+                        if hasattr(inductor_config, 'cudagraph_trees_history'):
+                            inductor_config.cudagraph_trees_history = False
                     except (AttributeError, ImportError):
                         pass
                     # Also set environment variables as backup
                     os.environ["TORCHINDUCTOR_CUDAGRAPH_TREES"] = "0"
                     os.environ["TORCHINDUCTOR_TRITON_CUDAGRAPHS"] = "0"
                     
-                    # Force reduce-overhead mode instead of max-autotune when using SAM
-                    # max-autotune uses CUDA graphs aggressively which breaks with SAM's weight perturbation
-                    if compile_mode == "max-autotune":
-                        compile_mode = "reduce-overhead"
-                        print("[torch.compile] SAM detected: Using 'reduce-overhead' instead of 'max-autotune'")
-                        print("               (max-autotune uses CUDA graphs which break with SAM's weight perturbation)")
+                    # Force 'default' mode when using SAM - it's the only mode that truly avoids CUDA graphs
+                    # Both max-autotune and reduce-overhead use CUDA graphs which break with SAM's weight perturbation
+                    if compile_mode in ("max-autotune", "reduce-overhead"):
+                        compile_mode = "default"
+                        print("[torch.compile] SAM detected: Using 'default' mode (CUDA graph-free)")
+                        print("               (max-autotune/reduce-overhead use CUDA graphs which break with SAM)")
                     else:
                         print("[torch.compile] Disabling CUDA graphs (incompatible with SAM optimizer)")
                 

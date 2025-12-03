@@ -2094,8 +2094,8 @@ ENSEMBLE_PY
             ;;
         
         v5-full-cached)
-            log "🚀 Starting V5 ULTIMATE training (CACHED - TURBO Speed Optimized)..."
-            log "   200 epochs with AGGRESSIVE speed optimizations for ~50-70hr training"
+            log "🚀 Starting V5 ULTIMATE training (CACHED - Speed Optimized)..."
+            log "   200 epochs with speed optimizations for ~20-25hr training"
             log "   All innovations + Large model + Extended training + Velocity..."
             log "   + Technique Heads: flam, roll, choke, ghost, accent detection"
             log "   + Lookahead + Cosine Warm Restarts (T0=40) + Mixup Cutoff"
@@ -2105,12 +2105,11 @@ ENSEMBLE_PY
             log "   ⚠️  No ghost/waveform/accent-tap augmentation (trades ~2-4% ghost accuracy for speed)"
             log "   Using velocity-enriched labels: train_labels_with_velocity.json"
             log ""
-            log "   🚀 TURBO OPTIMIZATIONS:"
+            log "   🚀 SPEED OPTIMIZATIONS:"
             log "      → Batch size 2048 (optimal for throughput)"
-            log "      → NO torch.compile (removes 12+ min warmup + JIT overhead)"
+            log "      → torch.compile max-autotune (~15% speedup after warmup)"
             log "      → AWP frequency 8 (half overhead, ~0.05% quality trade-off)"
             log "      → 200 epochs (early stopping catches optimal anyway)"
-            log "      → LR 0.0012 (standard)"
             log "      → No SAM, No R-Drop (saves forward passes)"
             log "   🔥 Estimated time: ~20-25hr on H100 80GB (200 epochs)"
             log ""
@@ -2120,6 +2119,7 @@ ENSEMBLE_PY
             IS_CLOUD_GPU=false
             CLOUD_AMP_DTYPE="float16"
             CLOUD_BATCH_SIZE="1024"
+            CLOUD_COMPILE_FLAGS=""
             
             if command -v nvidia-smi &> /dev/null; then
                 GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)
@@ -2128,7 +2128,12 @@ ENSEMBLE_PY
                     CLOUD_AMP_DTYPE="bfloat16"
                     log "   ✨ Detected cloud GPU ($GPU_NAME)"
                     log "      → Using bfloat16 (more stable, no gradient scaling)"
-                    log "      → NO torch.compile (overhead > benefit for 8.7M param model)"
+                    
+                    # torch.compile on Linux cloud GPUs
+                    if [[ "$(uname)" != *"MINGW"* ]] && [[ "$(uname)" != *"MSYS"* ]]; then
+                        CLOUD_COMPILE_FLAGS="--torch-compile --torch-compile-mode max-autotune"
+                        log "      → Enabling torch.compile (max-autotune mode, ~15% speedup after warmup)"
+                    fi
                     
                     GPU_MEM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -d ' ')
                     if [[ "$GPU_MEM" -gt 70000 ]]; then
@@ -2156,6 +2161,7 @@ ENSEMBLE_PY
               --num-workers ${CLOUD_NUM_WORKERS} --val-num-workers $((CLOUD_NUM_WORKERS/2)) --prefetch-factor 8 \
               --persistent-workers \
               --pin-memory --amp-dtype ${CLOUD_AMP_DTYPE} \
+              ${CLOUD_COMPILE_FLAGS} \
               --epochs 200 \
               --batch-size ${CLOUD_BATCH_SIZE} \
               --lr 0.0012 \

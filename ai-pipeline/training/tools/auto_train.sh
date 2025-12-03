@@ -2207,7 +2207,6 @@ ENSEMBLE_PY
               --grad-clip-norm 1.0 \
               --weight-decay 0.01 \
               --channels-last \
-              --val-tta --val-tta-augmentations 3 \
               --output "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached" \
               --seed 1337 \
               --checkpoint-every 10 \

@@ -698,6 +698,20 @@ async def _process_audio_impl(
             
             process_options = options or {}
             
+            # Create a thread-safe progress callback
+            # Since process_audio_file runs in a thread pool, we need to schedule
+            # the async update_progress back on the main event loop
+            loop = asyncio.get_event_loop()
+            
+            def sync_progress_callback(percent: float, message: str):
+                """Thread-safe callback that schedules async progress updates."""
+                # Scale percent to fit within our 15-90% window for pipeline processing
+                scaled_percent = 15 + int(percent * 0.75)
+                # Use call_soon_threadsafe to schedule from worker thread
+                loop.call_soon_threadsafe(
+                    lambda: asyncio.ensure_future(update_progress(scaled_percent, message))
+                )
+            
             # Run synchronously in thread pool (pipeline isn't async)
             result = await asyncio.to_thread(
                 process_audio_file,
@@ -706,9 +720,9 @@ async def _process_audio_impl(
                 detection_sensitivity=process_options.get("detection_sensitivity", 50),
                 quantization_grid=process_options.get("quantization_grid", "1/16"),
                 use_ml_classifier=process_options.get("use_ml_classifier", True),
-                tempo_hint=process_options.get("tempo_hint"),
-                progress_callback=lambda p, m: asyncio.run(update_progress(15 + int(p * 0.75), m)),
-                debug_output=str(debug_path),
+                tempo_candidates_hint=process_options.get("tempo_hint"),
+                progress_callback=sync_progress_callback,
+                debug_output_path=str(debug_path),
             )
             
             await update_progress(90, "Packaging results...")

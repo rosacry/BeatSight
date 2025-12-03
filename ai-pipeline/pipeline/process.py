@@ -132,6 +132,8 @@ def process_audio_file(
     num_lanes: int = 7,  # Maximum lanes available (can be 4-8 depending on game mode)
     # Ghost notes setting (experimental)
     include_ghost_notes: bool = True,  # Include ghost notes in beatmap (experimental)
+    # Progress callback for external progress reporting (e.g., Modal deployment)
+    progress_callback: Optional[callable] = None,  # Callback(percent: float, message: str)
 ) -> Dict[str, Any]:
     """
     Process an audio file and generate a beatmap.
@@ -155,10 +157,22 @@ def process_audio_file(
         ml_device: Torch device override for ML inference
         start_time: Start time in seconds for partial processing
         end_time: End time in seconds for partial processing
+        progress_callback: Optional callback function(percent: float, message: str) for 
+            external progress reporting (e.g., Modal deployment). Percent is 0-100.
 
     Returns:
         Dictionary with processing results and statistics
     """
+    
+    # Helper function to report progress
+    def _report_progress(percent: float, message: str):
+        """Report progress if callback is provided."""
+        if progress_callback is not None:
+            try:
+                progress_callback(percent, message)
+            except Exception:
+                pass  # Don't let callback errors break the pipeline
+    
     input_path = Path(input_path)
     output_path = Path(output_path)
     debug_output_path = Path(debug_output_path) if debug_output_path else None
@@ -168,6 +182,7 @@ def process_audio_file(
 
     # Step 1: Preprocessing
     print("📊 Step 1/5: Preprocessing audio...")
+    _report_progress(5, "Preprocessing audio...")
     duration = None
     if end_time is not None and end_time > 0:
         duration = end_time - start_time
@@ -188,12 +203,16 @@ def process_audio_file(
     drum_audio = (audio_data, sample_rate)
     if isolate_drums:
         print("🎛️  Step 2/5: Separating drum track (this may take a minute)...")
+        _report_progress(10, "Separating drum track with Demucs...")
         drum_audio = separate_drums((audio_data, sample_rate))
+        _report_progress(35, "Drum separation complete")
     else:
         print("⏭️  Step 2/5: Skipping source separation")
+        _report_progress(35, "Source separation skipped")
 
     # Step 3: Onset Detection
     print("🔍 Step 3/5: Detecting drum hits...")
+    _report_progress(40, "Detecting drum onsets...")
     detection_result = detect_onsets(
         drum_audio,
         sensitivity=detection_sensitivity,
@@ -239,6 +258,7 @@ def process_audio_file(
 
     # Step 4: Drum Classification
     print("🥁 Step 4/5: Classifying drum components...")
+    _report_progress(50, "Classifying drum components...")
     classified_hits = drum_classifier.classify_drums(
         drum_audio,
         refined_onsets,
@@ -247,6 +267,7 @@ def process_audio_file(
         model_path=ml_model_path,
         device=ml_device,
     )
+    _report_progress(65, "Drum classification complete")
 
     classifier_mode = drum_classifier.last_classifier_mode or "heuristic"
     if classifier_mode == "ml":
@@ -532,6 +553,7 @@ def process_audio_file(
 
     # Step 5: Beatmap Generation
     print("📝 Step 5/5: Generating beatmap...")
+    _report_progress(85, "Generating beatmap file...")
 
     metadata_payload = {
         "creator": "BeatSight AI",
@@ -682,6 +704,7 @@ def process_audio_file(
 
     print(f"✅ Complete! Saved to: {output_path}")
     print(f"⏱️  Processing time: {elapsed:.2f}s")
+    _report_progress(100, "Processing complete!")
 
     return {
         "success": True,

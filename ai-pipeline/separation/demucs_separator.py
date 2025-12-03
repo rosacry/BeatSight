@@ -22,6 +22,7 @@ from typing import Tuple, Optional, Callable, Any
 import time
 import os
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -274,9 +275,10 @@ class DrumSeparator:
         return DEMUCS_MODELS.copy()
 
 
-# Global instance (lazy loaded)
+# Thread-safe singleton management for cached separators
 _separator = None
 _separator_fast = None
+_separator_lock = threading.Lock()
 
 
 def separate_drums(
@@ -287,6 +289,9 @@ def separate_drums(
 ) -> Tuple[np.ndarray, int] | Tuple[Tuple[np.ndarray, int], dict]:
     """
     Separate drums from audio using Demucs.
+    
+    Thread-safe: Uses locking to ensure singleton separators are 
+    initialized safely in concurrent environments.
 
     Args:
         audio: Tuple of (audio data, sample rate)

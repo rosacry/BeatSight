@@ -88,7 +88,7 @@ class RDropLoss(nn.Module):
                 from training.losses.focal_loss import FocalLoss
                 self.base_loss = FocalLoss(
                     gamma=focal_gamma,
-                    weight=class_weights,
+                    alpha=class_weights,  # FocalLoss uses 'alpha' not 'weight'
                     label_smoothing=label_smoothing,
                     reduction=reduction
                 )

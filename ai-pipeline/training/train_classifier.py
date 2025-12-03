@@ -746,8 +746,14 @@ class DrumSampleDataset(Dataset):
             
             # OPTIMIZATION: Skip loading files array if using 100% valid cache mapping
             # This saves ~1GB of memory on large datasets
+            # BUT: Cannot skip if waveform/ghost/accent augmentation is enabled (they need file paths)
             skip_files_array = False
-            if getattr(self, '_use_cache_mapping', False) and self._cache_mapping_valid is not None:
+            needs_file_paths = (
+                self.waveform_transform is not None or 
+                self.ghost_augmenter is not None or 
+                self.accent_tap_augmenter is not None
+            )
+            if not needs_file_paths and getattr(self, '_use_cache_mapping', False) and self._cache_mapping_valid is not None:
                 valid_count = np.sum(self._cache_mapping_valid[:len(labels)])
                 if valid_count == len(labels):
                     skip_files_array = True

@@ -3711,23 +3711,34 @@ def main():
         if hasattr(torch, "compile"):
             try:
                 # Disable CUDA graphs BEFORE compilation when using SAM optimizer
-                # SAM does two forward passes per step, which overwrites CUDA graph outputs
-                # This must be set before torch.compile() is called
+                # SAM modifies weights in-place during first_step(), which breaks CUDA graphs
+                # that expect static memory addresses for model parameters
+                compile_mode = args.torch_compile_mode
                 if args.use_sam:
                     # Set inductor config to disable CUDA graphs
                     try:
                         import torch._inductor.config as inductor_config
                         inductor_config.triton.cudagraphs = False
                         inductor_config.cudagraph_trees = False
+                        inductor_config.triton.cudagraph_trees = False
                     except (AttributeError, ImportError):
                         pass
-                    # Also set environment variable as backup
+                    # Also set environment variables as backup
                     os.environ["TORCHINDUCTOR_CUDAGRAPH_TREES"] = "0"
-                    print("[torch.compile] Disabling CUDA graphs (incompatible with SAM optimizer)")
+                    os.environ["TORCHINDUCTOR_TRITON_CUDAGRAPHS"] = "0"
+                    
+                    # Force reduce-overhead mode instead of max-autotune when using SAM
+                    # max-autotune uses CUDA graphs aggressively which breaks with SAM's weight perturbation
+                    if compile_mode == "max-autotune":
+                        compile_mode = "reduce-overhead"
+                        print("[torch.compile] SAM detected: Using 'reduce-overhead' instead of 'max-autotune'")
+                        print("               (max-autotune uses CUDA graphs which break with SAM's weight perturbation)")
+                    else:
+                        print("[torch.compile] Disabling CUDA graphs (incompatible with SAM optimizer)")
                 
                 # Note: In PyTorch 2.x, some versions don't allow both 'mode' and 'options' together.
                 # We use 'mode' only since we've already configured cudagraphs via inductor config.
-                compile_kwargs: Dict[str, object] = {"mode": args.torch_compile_mode}
+                compile_kwargs: Dict[str, object] = {"mode": compile_mode}
                 
                 # Check for triton availability (required for torch.compile on most backends)
                 triton_available = False
@@ -3754,14 +3765,14 @@ def main():
                 
                 if is_windows:
                     if triton_available:
-                        print(f"torch.compile enabled (Windows + triton-windows, mode={args.torch_compile_mode})")
+                        print(f"torch.compile enabled (Windows + triton-windows, mode={compile_mode})")
                     else:
-                        print(f"torch.compile enabled (Windows, mode={args.torch_compile_mode})")
+                        print(f"torch.compile enabled (Windows, mode={compile_mode})")
                         print("  Note: May use eager fallback for some ops without triton")
                 elif is_linux:
-                    print(f"torch.compile enabled (Linux, mode={args.torch_compile_mode})")
+                    print(f"torch.compile enabled (Linux, mode={compile_mode})")
                 else:
-                    print(f"torch.compile enabled (mode={args.torch_compile_mode})")
+                    print(f"torch.compile enabled (mode={compile_mode})")
                     
             except Exception as compile_exc:  # pragma: no cover - optional path
                 compile_error = str(compile_exc)

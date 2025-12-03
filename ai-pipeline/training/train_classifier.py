@@ -3714,7 +3714,6 @@ def main():
                 # SAM does two forward passes per step, which overwrites CUDA graph outputs
                 # Use environment variable instead of compile options for compatibility
                 if args.use_sam:
-                    import os
                     os.environ["TORCH_COMPILE_DISABLE_CUDAGRAPHS"] = "1"
                     # Also set via torch config if available
                     try:

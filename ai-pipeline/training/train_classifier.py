@@ -2018,7 +2018,9 @@ def validate_with_tta(
     non_blocking = device.type == "cuda"
 
     with torch.no_grad():
-        for features, labels in tqdm(dataloader, desc="Validation (TTA)"):
+        for batch_data in tqdm(dataloader, desc="Validation (TTA)"):
+            # Handle both (features, labels) and (features, labels, velocities) formats
+            features, labels = batch_data[0], batch_data[1]
             features = features.to(device, non_blocking=non_blocking)
             labels = labels.to(device, non_blocking=non_blocking)
             if channels_last:

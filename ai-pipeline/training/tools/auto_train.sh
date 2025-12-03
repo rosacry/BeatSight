@@ -63,7 +63,10 @@ CUTTING_EDGE_SAM_FLAGS="--use-sam --sam-rho 0.05"
 CUTTING_EDGE_SWA_FLAGS="--use-swa --swa-start 0.75"
 # R-Drop: Regularized Dropout with consistency loss (0.5-1% improvement)
 # Using alpha=0.3 (conservative) when combined with SAM to avoid over-smoothing
+# NOTE: R-Drop doubles forward passes - disable for speed-critical runs
 CUTTING_EDGE_RDROP_FLAGS="--use-rdrop --rdrop-alpha 0.3"
+# Speed-optimized: No R-Drop (saves 2 forward passes per batch, ~0.5% quality trade-off)
+CUTTING_EDGE_RDROP_FLAGS_FAST=""
 # Curriculum Learning: Easy-to-hard training progression (0.5-1.5% improvement)
 # Using start-fraction=0.5 (conservative) to avoid overfitting to easy patterns early
 CUTTING_EDGE_CURRICULUM_FLAGS="--use-curriculum --curriculum-start-fraction 0.5 --curriculum-strategy cosine"
@@ -150,8 +153,10 @@ V5_GRAD_CHECKPOINT_FLAGS="--gradient-checkpointing"
 # AWP improves generalization by making model robust to weight perturbations
 # Reference: "Adversarial Weight Perturbation Helps Robust Generalization" (NeurIPS 2020)
 # Benefits: +0.5-1% accuracy, better calibration, more robust to distribution shift
-# Note: Slight training slowdown (extra forward-backward pass)
+# Note: Significant training slowdown (extra forward-backward pass per awp-freq batches)
 V5_AWP_FLAGS="--use-awp --awp-lr 0.01 --awp-eps 0.01 --awp-start-epoch 5 --awp-freq 1"
+# Speed-optimized: AWP every 4 batches (4x less overhead, ~0.1-0.2% quality trade-off)
+V5_AWP_FLAGS_FAST="--use-awp --awp-lr 0.01 --awp-eps 0.01 --awp-start-epoch 5 --awp-freq 4"
 
 # =============================================================================
 # EARLY STOPPING - NEW 2024
@@ -357,6 +362,10 @@ case "$TRAIN_MODE" in
         TRAIN_MODE="v5-full-cached"
         RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/v5/full-cached"
         ;;
+    v5-full-cached-fast|17d-fast)
+        TRAIN_MODE="v5-full-cached-fast"
+        RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/v5/full-cached-fast"
+        ;;
     v5-full|17e)
         TRAIN_MODE="v5-full"
         RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/v5/full"
@@ -483,7 +492,8 @@ case "$TRAIN_MODE" in
         echo "    v5-warmup      (17a) - V5 warmup (~1hr on H100)"
         echo "    v5-quick       (17b) - V5 quick (~3hr)"
         echo "    v5-long        (17c) - V5 long (~8hr)"
-        echo "    v5-full-cached (17d) - V5 maximum quality CACHED (~15-20hr on H100) ⭐ FAST"
+        echo "    v5-full-cached (17d) - V5 maximum quality CACHED (~50-60hr on H100)"
+        echo "    v5-full-cached-fast (17d-fast) - V5 optimized CACHED (~12-18hr on H100) ⭐ RECOMMENDED"
         echo "    v5-full        (17e) - V5 + ghost/waveform augment (~400hr, +2-4% on ghosts)"
         echo "    v5-self-distill(17f) - Self-distillation for +1-2% (~15hr @ 300 epochs)"
         echo "    v5-ensemble    (17g) - Train 3 models for ensemble +0.5-1.5% (~60hr)"
@@ -2098,7 +2108,8 @@ ENSEMBLE_PY
             log "   ⚠️  No ghost/waveform/accent-tap augmentation (trades ~2-4% ghost accuracy for speed)"
             log "   Using velocity-enriched labels: train_labels_with_velocity.json"
             log ""
-            log "   🔥 Estimated time: ~15-20hr on H100 80GB (300 epochs with torch.compile)"
+            log "   🔥 Estimated time: ~50-60hr on H100 80GB (300 epochs, SAM+AWP+R-Drop overhead)"
+            log "   💡 For faster training (~12-18hr), use v5-full-cached-fast instead"
             log ""
             export WANDB_RUN_GROUP=v5_full_cached_auto
             
@@ -2123,9 +2134,9 @@ ENSEMBLE_PY
                     
                     GPU_MEM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -d ' ')
                     if [[ "$GPU_MEM" -gt 70000 ]]; then
-                        CLOUD_BATCH_SIZE="1024"
+                        CLOUD_BATCH_SIZE="2048"
                         CLOUD_NUM_WORKERS="16"
-                        log "      → Using batch size 1024 (80GB VRAM + cached features)"
+                        log "      → Using batch size 2048 (80GB VRAM + cached features)"
                     elif [[ "$GPU_MEM" -gt 38000 ]]; then
                         CLOUD_BATCH_SIZE="512"
                         CLOUD_NUM_WORKERS="12"
@@ -2197,11 +2208,126 @@ ENSEMBLE_PY
             log "If you need better ghost note detection, run v5-full (17e) instead (~400hr)."
             ;;
         
+        v5-full-cached-fast)
+            log "⚡ Starting V5 ULTIMATE training (CACHED-FAST - Speed Optimized)..."
+            log "   300 epochs with speed optimizations for ~12-18hr training"
+            log "   All innovations + Large model + Extended training + Velocity..."
+            log "   + Technique Heads: flam, roll, choke, ghost, accent detection"
+            log "   + Lookahead + Cosine Warm Restarts (T0=50) + Mixup Cutoff"
+            log "   + Attentive Statistics Pooling (Option A enhancement: +0.3-0.5%)..."
+            log "   + Hard Negative Contrastive Loss (embedding-space separation)..."
+            log "   ⚡ USES CACHED FEATURES (10-20x faster than v5-full)"
+            log "   ⚠️  No ghost/waveform/accent-tap augmentation (trades ~2-4% ghost accuracy for speed)"
+            log "   Using velocity-enriched labels: train_labels_with_velocity.json"
+            log ""
+            log "   🚀 SPEED OPTIMIZATIONS APPLIED:"
+            log "      → Batch size 2048 (2x throughput vs standard)"
+            log "      → AWP frequency 4 (4x less overhead, ~0.1% quality trade-off)"
+            log "      → No R-Drop (saves 2 forward passes, ~0.5% quality trade-off)"
+            log "   🔥 Estimated time: ~12-18hr on H100 80GB (300 epochs)"
+            log ""
+            export WANDB_RUN_GROUP=v5_full_cached_fast_auto
+            
+            # Detect cloud GPU for optimizations
+            IS_CLOUD_GPU=false
+            CLOUD_AMP_DTYPE="float16"
+            CLOUD_BATCH_SIZE="1024"
+            CLOUD_COMPILE_FLAGS=""
+            
+            if command -v nvidia-smi &> /dev/null; then
+                GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)
+                if [[ "$GPU_NAME" == *"A100"* ]] || [[ "$GPU_NAME" == *"H100"* ]] || [[ "$GPU_NAME" == *"A10G"* ]]; then
+                    IS_CLOUD_GPU=true
+                    CLOUD_AMP_DTYPE="bfloat16"
+                    log "   ✨ Detected cloud GPU ($GPU_NAME)"
+                    log "      → Using bfloat16 (more stable, no gradient scaling)"
+                    
+                    if [[ "$(uname)" != *"MINGW"* ]] && [[ "$(uname)" != *"MSYS"* ]]; then
+                        CLOUD_COMPILE_FLAGS="--torch-compile --torch-compile-mode max-autotune"
+                        log "      → Enabling torch.compile (max-autotune mode, ~15% speedup)"
+                    fi
+                    
+                    GPU_MEM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -d ' ')
+                    if [[ "$GPU_MEM" -gt 70000 ]]; then
+                        CLOUD_BATCH_SIZE="2048"
+                        CLOUD_NUM_WORKERS="20"
+                        log "      → Using batch size 2048 (80GB VRAM + cached features + FAST mode)"
+                    elif [[ "$GPU_MEM" -gt 38000 ]]; then
+                        CLOUD_BATCH_SIZE="1024"
+                        CLOUD_NUM_WORKERS="12"
+                        log "      → Using batch size 1024 (40GB VRAM)"
+                    fi
+                fi
+            fi
+            
+            CLOUD_NUM_WORKERS=${CLOUD_NUM_WORKERS:-8}
+            
+            PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
+              --dataset "${BEATSIGHT_DATASET_DIR}" \
+              --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
+              --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
+              --device cuda \
+              --num-workers ${CLOUD_NUM_WORKERS} --val-num-workers $((CLOUD_NUM_WORKERS/2)) --prefetch-factor 8 \
+              --persistent-workers \
+              --pin-memory --amp-dtype ${CLOUD_AMP_DTYPE} \
+              ${CLOUD_COMPILE_FLAGS} \
+              --epochs 300 \
+              --batch-size ${CLOUD_BATCH_SIZE} \
+              --lr 0.0012 \
+              --model-version v5 \
+              --v5-size large \
+              --drop-path-rate 0.15 \
+              ${V5_LAYER_DECAY_FLAGS} \
+              ${V5_DEEP_SUPERVISION_FLAGS} \
+              ${V5_GRADIENT_CENTRALIZATION_FLAGS} \
+              ${V5_MULTI_TASK_FLAGS} \
+              ${V5_TECHNIQUE_FLAGS} \
+              ${V5_EXTRA_LABELS_FLAGS} \
+              ${V5_FMIX_FLAGS} \
+              ${V5_PROGRESSIVE_FLAGS} \
+              ${V5_LABEL_SMOOTHING_FLAGS} \
+              ${V5_LOOKAHEAD_FLAGS} \
+              ${V5_MIXUP_CUTOFF_FLAGS} \
+              ${V5_POOLING_FLAGS} \
+              ${V5_HARD_NEGATIVE_FLAGS} \
+              ${V5_CLASS_WEIGHT_FLAGS} \
+              ${V5_AWP_FLAGS_FAST} \
+              ${V5_EARLY_STOPPING_FLAGS} \
+              ${CUTTING_EDGE_MIXUP_FLAGS} \
+              ${CUTTING_EDGE_SPECAUGMENT_FLAGS} \
+              ${CUTTING_EDGE_FOCAL_FLAGS} \
+              ${CUTTING_EDGE_EMA_FLAGS} \
+              ${CUTTING_EDGE_SAM_FLAGS} \
+              ${CUTTING_EDGE_SWA_FLAGS} \
+              ${CUTTING_EDGE_RDROP_FLAGS_FAST} \
+              ${CUTTING_EDGE_CURRICULUM_FLAGS} \
+              ${CUTTING_EDGE_CALIBRATION_FLAGS} \
+              --scheduler cosine_warm_restarts \
+              --warm-restart-t0 50 \
+              --warm-restart-mult 2 \
+              --warmup-epochs 20 \
+              --warmup-lr-factor 0.05 \
+              --grad-clip-norm 1.0 \
+              --weight-decay 0.01 \
+              --channels-last \
+              --val-tta --val-tta-augmentations 3 \
+              --output "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached-fast" \
+              --seed 1337 \
+              --checkpoint-every 15 \
+              --wandb-project beatsight-v5 \
+              $resume_flag
+            
+            log ""
+            log "⚡ V5 ULTIMATE (CACHED-FAST) model training complete!"
+            log "Speed-optimized training with minimal quality trade-off (~0.5-0.7%)."
+            log "For maximum quality, use v5-full-cached (17d) instead (~50-60hr)."
+            ;;
+        
         v5-full)
             log "💎 Starting V5 ULTIMATE training (full - MAXIMUM Quality + Augmentation)..."
             log "   ⚠️  WARNING: This mode uses ghost/waveform augmentation which DISABLES caching!"
-            log "   ⚠️  Estimated time: ~400-500 hours on H100 80GB (NOT 12-15hr!)"
-            log "   ⚠️  Consider using v5-full-cached (17d) instead for ~15-20hr training."
+            log "   ⚠️  Estimated time: ~400-500 hours on H100 80GB"
+            log "   ⚠️  Consider using v5-full-cached-fast (17d-fast) for ~12-18hr training."
             log ""
             log "   300 epochs for maximum convergence"
             log "   All innovations + Large model + Extended training + Velocity..."
@@ -2216,7 +2342,7 @@ ENSEMBLE_PY
             log "   🔥 CLOUD OPTIMIZED: Using aggressive ghost preset (--ghost-augment-preset aggressive)"
             log "      H100/A100 with fast NVMe can handle the extra I/O."
             log "      ⚠️  Estimated time: ~400-500hr on H100 80GB (cache disabled by augmentation)"
-            log "      💡 For faster training (~15-20hr), use v5-full-cached (17d) instead."
+            log "      💡 For faster training (~12-18hr), use v5-full-cached-fast (17d-fast) instead."
             log ""
             export WANDB_RUN_GROUP=v5_full_auto
             

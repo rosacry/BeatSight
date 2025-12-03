@@ -3706,12 +3706,21 @@ def main():
     if args.torch_compile:
         if hasattr(torch, "compile"):
             try:
+                # Note: In PyTorch 2.x, some versions don't allow both 'mode' and 'options' together.
+                # We use 'mode' only and set CUDA graph disabling via environment variable when needed.
                 compile_kwargs: Dict[str, object] = {"mode": args.torch_compile_mode}
                 
                 # Disable CUDA graphs when using SAM optimizer (multiple forward passes cause conflicts)
                 # SAM does two forward passes per step, which overwrites CUDA graph outputs
+                # Use environment variable instead of compile options for compatibility
                 if args.use_sam:
-                    compile_kwargs["options"] = {"triton.cudagraphs": False}
+                    import os
+                    os.environ["TORCH_COMPILE_DISABLE_CUDAGRAPHS"] = "1"
+                    # Also set via torch config if available
+                    try:
+                        torch._inductor.config.triton.cudagraphs = False
+                    except (AttributeError, ImportError):
+                        pass
                     print("[torch.compile] Disabling CUDA graphs (incompatible with SAM optimizer)")
                 
                 # Check for triton availability (required for torch.compile on most backends)

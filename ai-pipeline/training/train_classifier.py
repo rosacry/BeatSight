@@ -2072,14 +2072,12 @@ def validate_with_tta(
             with autocast(device_type=device.type, dtype=autocast_dtype, enabled=amp_enabled):
                 # Original view
                 # Clone outputs to prevent CUDA graph tensor overwrite issues
-                torch.compiler.cudagraph_mark_step_begin()
                 outputs = model(features)
                 main_outputs = extract_main_output(outputs)
                 all_logits.append(main_outputs.clone())
                 
                 # Augmented views
                 for aug_idx in range(num_augmentations):
-                    torch.compiler.cudagraph_mark_step_begin()
                     aug_features = apply_tta_augmentation(features, aug_idx)
                     if channels_last:
                         aug_features = aug_features.to(memory_format=torch.channels_last)

@@ -403,12 +403,22 @@ def compute_frequency_adjusted_difficulty(
     """
     from collections import Counter
     
+    # Handle empty labels
+    if len(labels) == 0:
+        print("[CURRICULUM] Warning: Empty labels, returning empty difficulty scores")
+        return np.array([])
+    
     # Get domain knowledge difficulty
     domain_difficulty = get_drum_class_difficulty()
     
     # Compute class frequencies
     class_counts = Counter(labels)
     total_samples = len(labels)
+    
+    if not class_counts:
+        print("[CURRICULUM] Warning: No class counts, using uniform difficulty")
+        return np.full(len(labels), 0.5)
+    
     max_count = max(class_counts.values())
     
     # Compute per-sample difficulty

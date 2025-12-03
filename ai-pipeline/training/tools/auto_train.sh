@@ -353,15 +353,19 @@ case "$TRAIN_MODE" in
         TRAIN_MODE="v5-long"
         RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/v5/long"
         ;;
-    v5-full|17d)
+    v5-full-cached|17d)
+        TRAIN_MODE="v5-full-cached"
+        RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/v5/full-cached"
+        ;;
+    v5-full|17e)
         TRAIN_MODE="v5-full"
         RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/v5/full"
         ;;
-    v5-self-distill|17e)
+    v5-self-distill|17f)
         TRAIN_MODE="v5-self-distill"
         RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/v5/self-distill"
         ;;
-    v5-ensemble|17f)
+    v5-ensemble|17g)
         TRAIN_MODE="v5-ensemble"
         RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/v5/ensemble"
         ;;
@@ -479,11 +483,12 @@ case "$TRAIN_MODE" in
         echo "    v5-warmup      (17a) - V5 warmup (~1hr on H100)"
         echo "    v5-quick       (17b) - V5 quick (~3hr)"
         echo "    v5-long        (17c) - V5 long (~8hr)"
-        echo "    v5-full        (17d) - V5 maximum quality (~15hr @ 300 epochs on H100)"
-        echo "    v5-self-distill(17e) - Self-distillation for +1-2% (~15hr @ 300 epochs)"
-        echo "    v5-ensemble    (17f) - Train 3 models for ensemble +0.5-1.5% (~60hr)"
+        echo "    v5-full-cached (17d) - V5 maximum quality CACHED (~15-20hr on H100) ⭐ FAST"
+        echo "    v5-full        (17e) - V5 + ghost/waveform augment (~400hr, +2-4% on ghosts)"
+        echo "    v5-self-distill(17f) - Self-distillation for +1-2% (~15hr @ 300 epochs)"
+        echo "    v5-ensemble    (17g) - Train 3 models for ensemble +0.5-1.5% (~60hr)"
         echo ""
-        echo "  ⭐ RECOMMENDED PATH: 14 → 17a → 17d → 17e → 19c (label audit → warmup → full → self-distill → multilabel)"
+        echo "  ⭐ RECOMMENDED PATH: 14 → 17a → 17d → 17f → 19c (label audit → warmup → full-cached → self-distill → multilabel)"
         echo "  🏆 CLOUD COST: ~35 hours = ~\$91 on Lambda H100"
         echo ""
         echo "  🎵 BEATs AUDIO FOUNDATION (Microsoft's state-of-the-art):"
@@ -2081,8 +2086,123 @@ ENSEMBLE_PY
               $resume_flag
             ;;
         
+        v5-full-cached)
+            log "💎 Starting V5 ULTIMATE training (CACHED - Fast + High Quality)..."
+            log "   300 epochs for maximum convergence"
+            log "   All innovations + Large model + Extended training + Velocity..."
+            log "   + Technique Heads: flam, roll, choke, ghost, accent detection"
+            log "   + Lookahead + Cosine Warm Restarts (T0=50) + Mixup Cutoff"
+            log "   + Attentive Statistics Pooling (Option A enhancement: +0.3-0.5%)..."
+            log "   + Hard Negative Contrastive Loss (embedding-space separation)..."
+            log "   ⚡ USES CACHED FEATURES (10-20x faster than v5-full)"
+            log "   ⚠️  No ghost/waveform/accent-tap augmentation (trades ~2-4% ghost accuracy for speed)"
+            log "   Using velocity-enriched labels: train_labels_with_velocity.json"
+            log ""
+            log "   🔥 Estimated time: ~15-20hr on H100 80GB (300 epochs with torch.compile)"
+            log ""
+            export WANDB_RUN_GROUP=v5_full_cached_auto
+            
+            # Detect cloud GPU for optimizations
+            IS_CLOUD_GPU=false
+            CLOUD_AMP_DTYPE="float16"
+            CLOUD_BATCH_SIZE="512"
+            CLOUD_COMPILE_FLAGS=""
+            
+            if command -v nvidia-smi &> /dev/null; then
+                GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)
+                if [[ "$GPU_NAME" == *"A100"* ]] || [[ "$GPU_NAME" == *"H100"* ]] || [[ "$GPU_NAME" == *"A10G"* ]]; then
+                    IS_CLOUD_GPU=true
+                    CLOUD_AMP_DTYPE="bfloat16"
+                    log "   ✨ Detected cloud GPU ($GPU_NAME)"
+                    log "      → Using bfloat16 (more stable, no gradient scaling)"
+                    
+                    if [[ "$(uname)" != *"MINGW"* ]] && [[ "$(uname)" != *"MSYS"* ]]; then
+                        CLOUD_COMPILE_FLAGS="--torch-compile --torch-compile-mode max-autotune"
+                        log "      → Enabling torch.compile (max-autotune mode, ~15% speedup)"
+                    fi
+                    
+                    GPU_MEM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -d ' ')
+                    if [[ "$GPU_MEM" -gt 70000 ]]; then
+                        CLOUD_BATCH_SIZE="1024"
+                        CLOUD_NUM_WORKERS="16"
+                        log "      → Using batch size 1024 (80GB VRAM + cached features)"
+                    elif [[ "$GPU_MEM" -gt 38000 ]]; then
+                        CLOUD_BATCH_SIZE="512"
+                        CLOUD_NUM_WORKERS="12"
+                        log "      → Using batch size 512 (40GB VRAM)"
+                    fi
+                fi
+            fi
+            
+            CLOUD_NUM_WORKERS=${CLOUD_NUM_WORKERS:-8}
+            
+            PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
+              --dataset "${BEATSIGHT_DATASET_DIR}" \
+              --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
+              --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
+              --device cuda \
+              --num-workers ${CLOUD_NUM_WORKERS} --val-num-workers $((CLOUD_NUM_WORKERS/2)) --prefetch-factor 6 \
+              --persistent-workers \
+              --pin-memory --amp-dtype ${CLOUD_AMP_DTYPE} \
+              ${CLOUD_COMPILE_FLAGS} \
+              --epochs 300 \
+              --batch-size ${CLOUD_BATCH_SIZE} \
+              --lr 0.0012 \
+              --model-version v5 \
+              --v5-size large \
+              --drop-path-rate 0.15 \
+              ${V5_LAYER_DECAY_FLAGS} \
+              ${V5_DEEP_SUPERVISION_FLAGS} \
+              ${V5_GRADIENT_CENTRALIZATION_FLAGS} \
+              ${V5_MULTI_TASK_FLAGS} \
+              ${V5_TECHNIQUE_FLAGS} \
+              ${V5_EXTRA_LABELS_FLAGS} \
+              ${V5_FMIX_FLAGS} \
+              ${V5_PROGRESSIVE_FLAGS} \
+              ${V5_LABEL_SMOOTHING_FLAGS} \
+              ${V5_LOOKAHEAD_FLAGS} \
+              ${V5_MIXUP_CUTOFF_FLAGS} \
+              ${V5_POOLING_FLAGS} \
+              ${V5_HARD_NEGATIVE_FLAGS} \
+              ${V5_CLASS_WEIGHT_FLAGS} \
+              ${V5_AWP_FLAGS} \
+              ${V5_EARLY_STOPPING_FLAGS} \
+              ${CUTTING_EDGE_MIXUP_FLAGS} \
+              ${CUTTING_EDGE_SPECAUGMENT_FLAGS} \
+              ${CUTTING_EDGE_FOCAL_FLAGS} \
+              ${CUTTING_EDGE_EMA_FLAGS} \
+              ${CUTTING_EDGE_SAM_FLAGS} \
+              ${CUTTING_EDGE_SWA_FLAGS} \
+              ${CUTTING_EDGE_RDROP_FLAGS} \
+              ${CUTTING_EDGE_CURRICULUM_FLAGS} \
+              ${CUTTING_EDGE_CALIBRATION_FLAGS} \
+              --scheduler cosine_warm_restarts \
+              --warm-restart-t0 50 \
+              --warm-restart-mult 2 \
+              --warmup-epochs 20 \
+              --warmup-lr-factor 0.05 \
+              --grad-clip-norm 1.0 \
+              --weight-decay 0.01 \
+              --channels-last \
+              --val-tta --val-tta-augmentations 3 \
+              --output "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached" \
+              --seed 1337 \
+              --checkpoint-every 15 \
+              --wandb-project beatsight-v5 \
+              $resume_flag
+            
+            log ""
+            log "💎 V5 ULTIMATE (CACHED) model training complete!"
+            log "Fast training with all optimizations except slow augmentations."
+            log "If you need better ghost note detection, run v5-full (17e) instead (~400hr)."
+            ;;
+        
         v5-full)
-            log "💎 Starting V5 ULTIMATE training (full - MAXIMUM Quality)..."
+            log "💎 Starting V5 ULTIMATE training (full - MAXIMUM Quality + Augmentation)..."
+            log "   ⚠️  WARNING: This mode uses ghost/waveform augmentation which DISABLES caching!"
+            log "   ⚠️  Estimated time: ~400-500 hours on H100 80GB (NOT 12-15hr!)"
+            log "   ⚠️  Consider using v5-full-cached (17d) instead for ~15-20hr training."
+            log ""
             log "   300 epochs for maximum convergence"
             log "   All innovations + Large model + Extended training + Velocity..."
             log "   + Technique Heads: flam, roll, choke, ghost, accent detection"
@@ -2095,7 +2215,8 @@ ENSEMBLE_PY
             log ""
             log "   🔥 CLOUD OPTIMIZED: Using aggressive ghost preset (--ghost-augment-preset aggressive)"
             log "      H100/A100 with fast NVMe can handle the extra I/O."
-            log "      Estimated time: ~12-15hr on H100 80GB (300 epochs with torch.compile)"
+            log "      ⚠️  Estimated time: ~400-500hr on H100 80GB (cache disabled by augmentation)"
+            log "      💡 For faster training (~15-20hr), use v5-full-cached (17d) instead."
             log ""
             export WANDB_RUN_GROUP=v5_full_auto
             

@@ -2464,7 +2464,7 @@ ENSEMBLE_PY
               --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
               --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
               --device cuda \
-              --num-workers ${CLOUD_NUM_WORKERS} --val-num-workers $((CLOUD_NUM_WORKERS/2)) --prefetch-factor 8 \
+              --num-workers ${CLOUD_NUM_WORKERS} --val-num-workers $((CLOUD_NUM_WORKERS/2)) --prefetch-factor 8 --val-prefetch-factor 4 \
               --persistent-workers \
               --pin-memory --amp-dtype ${CLOUD_AMP_DTYPE} \
               ${CLOUD_COMPILE_FLAGS} \
@@ -2973,7 +2973,20 @@ ENSEMBLE_PY
             export WANDB_RUN_GROUP=v5_pseudo_label_auto
             
             # Check for V5 trained model
-            PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/self-distill/best_drum_classifier.pth"
+            # Priority: self-distill-cached > full-cached > self-distill > full (EMA preferred)
+            PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/self-distill-cached/best_drum_classifier_ema.pth"
+            if [ ! -f "$PRETRAINED_MODEL" ]; then
+                PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/self-distill-cached/best_drum_classifier.pth"
+            fi
+            if [ ! -f "$PRETRAINED_MODEL" ]; then
+                PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached/best_drum_classifier_ema.pth"
+            fi
+            if [ ! -f "$PRETRAINED_MODEL" ]; then
+                PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached/best_drum_classifier.pth"
+            fi
+            if [ ! -f "$PRETRAINED_MODEL" ]; then
+                PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/self-distill/best_drum_classifier.pth"
+            fi
             if [ ! -f "$PRETRAINED_MODEL" ]; then
                 PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full/best_drum_classifier.pth"
             fi
@@ -2983,8 +2996,8 @@ ENSEMBLE_PY
             
             if [ ! -f "$PRETRAINED_MODEL" ]; then
                 log "ERROR: V5 pretrained model not found."
-                log "Please run v5-full (17d) or v5-self-distill (17e) first."
-                log "Expected: ${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full/best_drum_classifier.pth"
+                log "Please run v5-full-cached (17d) or v5-self-distill-cached (17f) first."
+                log "Expected: ${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached/best_drum_classifier.pth"
                 return 1
             fi
             
@@ -3083,10 +3096,26 @@ ENSEMBLE_PY
             fi
             log "   Found multi-label dataset: $MULTILABEL_EVENTS"
             
-            # Check for V5-full pretrained model
-            PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full/best_drum_classifier.pth"
+            # Check for V5 pretrained model
+            # Priority: self-distill-cached > full-cached > self-distill > full (EMA preferred)
+            PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/self-distill-cached/best_drum_classifier_ema.pth"
+            if [ ! -f "$PRETRAINED_MODEL" ]; then
+                PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/self-distill-cached/best_drum_classifier.pth"
+            fi
+            if [ ! -f "$PRETRAINED_MODEL" ]; then
+                PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached/best_drum_classifier_ema.pth"
+            fi
+            if [ ! -f "$PRETRAINED_MODEL" ]; then
+                PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached/best_drum_classifier.pth"
+            fi
+            if [ ! -f "$PRETRAINED_MODEL" ]; then
+                PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/self-distill/best_drum_classifier_ema.pth"
+            fi
             if [ ! -f "$PRETRAINED_MODEL" ]; then
                 PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full/best_drum_classifier_ema.pth"
+            fi
+            if [ ! -f "$PRETRAINED_MODEL" ]; then
+                PRETRAINED_MODEL="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full/best_drum_classifier.pth"
             fi
             
             PRETRAINED_FLAG=""
@@ -3095,7 +3124,7 @@ ENSEMBLE_PY
                 PRETRAINED_FLAG="--pretrained-checkpoint ${PRETRAINED_MODEL}"
             else
                 log "   WARNING: No V5 pretrained model found. Training from scratch."
-                log "   For best results, run v5-full (17d) first, then multilabel-finetune (19c)."
+                log "   For best results, run v5-full-cached (17d) or v5-self-distill-cached (17f) first."
             fi
             
             PYTHONPATH=ai-pipeline python ai-pipeline/training/multilabel/train_multilabel.py \
@@ -3137,8 +3166,20 @@ ENSEMBLE_PY
             # Find best model to evaluate
             MODEL_PATH=""
             
-            # Priority: self-distill > full > ema
-            if [ -f "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/self-distill/best_drum_classifier.pth" ]; then
+            # Priority: self-distill-cached > full-cached > self-distill > full (EMA preferred)
+            if [ -f "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/self-distill-cached/best_drum_classifier_ema.pth" ]; then
+                MODEL_PATH="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/self-distill-cached/best_drum_classifier_ema.pth"
+                log "   Using self-distilled (cached) EMA model: $MODEL_PATH"
+            elif [ -f "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/self-distill-cached/best_drum_classifier.pth" ]; then
+                MODEL_PATH="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/self-distill-cached/best_drum_classifier.pth"
+                log "   Using self-distilled (cached) model: $MODEL_PATH"
+            elif [ -f "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached/best_drum_classifier_ema.pth" ]; then
+                MODEL_PATH="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached/best_drum_classifier_ema.pth"
+                log "   Using full (cached) EMA model: $MODEL_PATH"
+            elif [ -f "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached/best_drum_classifier.pth" ]; then
+                MODEL_PATH="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached/best_drum_classifier.pth"
+                log "   Using full (cached) model: $MODEL_PATH"
+            elif [ -f "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/self-distill/best_drum_classifier.pth" ]; then
                 MODEL_PATH="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/self-distill/best_drum_classifier.pth"
                 log "   Using self-distilled model: $MODEL_PATH"
             elif [ -f "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full/best_drum_classifier_ema.pth" ]; then
@@ -3151,7 +3192,7 @@ ENSEMBLE_PY
             
             if [ -z "$MODEL_PATH" ]; then
                 log "ERROR: No trained model found."
-                log "Please run v5-full (17d) or v5-self-distill (17e) first."
+                log "Please run v5-full-cached (17d), v5-self-distill-cached (17f), or equivalent first."
                 return 1
             fi
             

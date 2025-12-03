@@ -1088,7 +1088,7 @@ run_train_cutting_edge_long() {
 # --- Auto-Training Functions (run until complete, auto-resume on crash) ---
 
 generate_multilabel_dataset() {
-    local script="${BEATSIGHT_REPO_ROOT}/ai-pipeline/training/generate_multilabel_dataset.py"
+    local script="${BEATSIGHT_REPO_ROOT}/ai-pipeline/training/tools/generate_multilabel_dataset.py"
     local output_dir="${BEATSIGHT_OUTPUT_ROOT:-E:/data}/multilabel_dataset"
     
     if [ ! -f "$script" ]; then

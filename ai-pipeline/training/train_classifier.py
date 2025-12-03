@@ -3753,11 +3753,13 @@ def main():
     if args.torch_compile:
         if hasattr(torch, "compile"):
             try:
-                # Disable CUDA graphs BEFORE compilation when using SAM optimizer
+                # Disable CUDA graphs BEFORE compilation when using SAM or AWP
                 # SAM modifies weights in-place during first_step(), which breaks CUDA graphs
-                # that expect static memory addresses for model parameters
+                # AWP also modifies weights in-place during attack_step(), same issue
+                # CUDA graphs expect static memory addresses for model parameters
                 compile_mode = args.torch_compile_mode
-                if args.use_sam:
+                needs_cudagraph_disable = args.use_sam or getattr(args, 'use_awp', False)
+                if needs_cudagraph_disable:
                     # Set inductor config to disable CUDA graphs completely
                     try:
                         import torch._inductor.config as inductor_config
@@ -3773,14 +3775,20 @@ def main():
                     os.environ["TORCHINDUCTOR_CUDAGRAPH_TREES"] = "0"
                     os.environ["TORCHINDUCTOR_TRITON_CUDAGRAPHS"] = "0"
                     
-                    # Force 'default' mode when using SAM - it's the only mode that truly avoids CUDA graphs
-                    # Both max-autotune and reduce-overhead use CUDA graphs which break with SAM's weight perturbation
+                    # Force 'default' mode when using SAM/AWP - it's the only mode that truly avoids CUDA graphs
+                    # Both max-autotune and reduce-overhead use CUDA graphs which break with in-place weight perturbation
                     if compile_mode in ("max-autotune", "reduce-overhead"):
                         compile_mode = "default"
-                        print("[torch.compile] SAM detected: Using 'default' mode (CUDA graph-free)")
-                        print("               (max-autotune/reduce-overhead use CUDA graphs which break with SAM)")
+                        reason = "SAM" if args.use_sam else "AWP"
+                        if args.use_sam and getattr(args, 'use_awp', False):
+                            reason = "SAM+AWP"
+                        print(f"[torch.compile] {reason} detected: Using 'default' mode (CUDA graph-free)")
+                        print("               (max-autotune/reduce-overhead use CUDA graphs which break with weight perturbation)")
                     else:
-                        print("[torch.compile] Disabling CUDA graphs (incompatible with SAM optimizer)")
+                        reason = "SAM" if args.use_sam else "AWP"
+                        if args.use_sam and getattr(args, 'use_awp', False):
+                            reason = "SAM+AWP"
+                        print(f"[torch.compile] Disabling CUDA graphs (incompatible with {reason} optimizer)")
                 
                 # Note: In PyTorch 2.x, some versions don't allow both 'mode' and 'options' together.
                 # We use 'mode' only since we've already configured cudagraphs via inductor config.

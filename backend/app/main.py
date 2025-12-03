@@ -12,6 +12,7 @@ from app.api.routes import (
     ai_jobs,
     auth,
     billing,
+    contributions,
     credits,
     health,
     karma,
@@ -34,6 +35,25 @@ configure_logging()
 logger = get_logger(__name__)
 
 settings = get_settings()
+
+# Initialize Sentry for error tracking
+if settings.sentry_dsn:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.environment,
+        release=f"beatsight-backend@{settings.app_version if hasattr(settings, 'app_version') else '0.1.0'}",
+        traces_sample_rate=0.1 if settings.environment == "production" else 1.0,
+        profiles_sample_rate=0.1 if settings.environment == "production" else 1.0,
+        integrations=[
+            FastApiIntegration(transaction_style="endpoint"),
+            SqlalchemyIntegration(),
+        ],
+    )
+    logger.info("sentry_initialized", dsn_configured=True, environment=settings.environment)
 
 
 @asynccontextmanager
@@ -176,6 +196,7 @@ app.include_router(verifier.router, prefix=settings.api_prefix)
 app.include_router(map_edits.router, prefix=settings.api_prefix)
 app.include_router(maps.router, prefix=settings.api_prefix)
 app.include_router(votes.router, prefix=settings.api_prefix)
+app.include_router(contributions.router, prefix=settings.api_prefix)
 app.include_router(websocket.router)  # No prefix - /ws/jobs
 
 

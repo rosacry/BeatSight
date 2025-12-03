@@ -27,6 +27,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from .map_asset import MapAsset
     from .map_edit import MapEditProposal
     from .song import Map
+    from .training_contribution import TrainingContribution
 
 
 class MapSource(str, enum.Enum):
@@ -79,4 +80,7 @@ class MapVersion(Base):
     )
     edit_proposals: Mapped[list["MapEditProposal"]] = relationship(
         "MapEditProposal", back_populates="map_version", cascade="all, delete-orphan"
+    )
+    training_contributions: Mapped[list["TrainingContribution"]] = relationship(
+        "TrainingContribution", back_populates="map_version", cascade="all, delete-orphan"
     )

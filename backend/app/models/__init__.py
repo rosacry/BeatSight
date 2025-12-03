@@ -27,6 +27,12 @@ from .sync import (
     SyncState,
     UserPreferences,
 )
+from .training_contribution import (
+    ContributionConsent,
+    ContributionStatus,
+    CorrectionType,
+    TrainingContribution,
+)
 from .user import User
 
 __all__ = [
@@ -55,6 +61,10 @@ __all__ = [
     "SyncLog",
     "SyncManifestEntry",
     "SyncState",
+    "TrainingContribution",
+    "ContributionConsent",
+    "ContributionStatus",
+    "CorrectionType",
     "User",
     "UserPreferences",
     "UserRole",

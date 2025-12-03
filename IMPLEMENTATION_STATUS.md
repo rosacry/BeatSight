@@ -237,7 +237,6 @@ See `AI_MODEL_PROMPT.md` → "🏗️ Hosting Infrastructure" for full architect
 | Production ML model | Training ready | Awaiting data migration + warm-up probe |
 | Multi-technique detection | Partially implemented | Ghost notes, flams, rolls in model definition |
 | Velocity estimation | Implemented | In `DrumClassifierCNN` |
-| VR mode | Not started | Queued for Phase 4 |
 
 ---
 
@@ -626,7 +625,6 @@ No explicit `TODO` or `FIXME` comments found in core source files.
 13. 🚀 **Launch web MVP** with queue infrastructure
 14. ~~📊 **Implement progress tracking** system~~ ✅ **DONE** - `UserProgressManager`, practice history, persistence
 15. 🎤 **Revisit live input/scoring** once measurement confidence is high
-16. 🥽 **Explore VR mode** prototype
 
 ---
 

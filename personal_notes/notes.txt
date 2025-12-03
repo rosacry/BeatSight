@@ -76,8 +76,6 @@ Future Features:
 ✅ Distributed AI model training (architecture ready)
 ✅ Approach rate customization (in beatmap format)
 ✅ BPM adjustment and metronome (in beatmap format)
-⏳ Multi-instrument support (bass, guitar, etc.)
-⏳ VR mode for immersive learning
 
 Community Ideas:
 ----------------
@@ -116,7 +114,7 @@ Deployment Strategy:
 Phase 1 (MVP): Desktop-only, local processing ← YOU ARE HERE
 Phase 2: Add backend API, community features  
 Phase 3: Mobile apps (iOS/Android)
-Phase 4: Advanced features (real-time, VR, etc.)
+Phase 4: Advanced features (real-time, etc.)
 
 Success Metrics:
 ----------------

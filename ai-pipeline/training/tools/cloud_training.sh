@@ -232,19 +232,25 @@ validate_dataset() {
             log "   This may indicate incomplete upload"
         fi
         
-        # Check if shards exist
+        # Check if shards exist - reads actual paths from manifest
+        log "   Checking shard files from manifest..."
         local missing_shards=0
-        for i in $(seq 0 $((num_shards - 1))); do
-            local shard_file="${dataset_dir}/shard_$(printf '%05d' $i).bin"
-            if [ ! -f "$shard_file" ]; then
-                missing_shards=$((missing_shards + 1))
-                if [ $missing_shards -le 3 ]; then
-                    log "❌ Missing shard: $shard_file"
-                fi
-            fi
-        done
+        missing_shards=$(python3 -c "
+import json
+import os
+dataset_dir = '${dataset_dir}'
+manifest = json.load(open(os.path.join(dataset_dir, 'manifest.json')))
+missing = 0
+for shard in manifest.get('shards', []):
+    shard_path = os.path.join(dataset_dir, shard.get('filename', ''))
+    if not os.path.exists(shard_path):
+        missing += 1
+        if missing <= 3:
+            print(f'Missing: {shard_path}', flush=True)
+print(missing)
+" 2>/dev/null | tail -1 || echo "0")
         
-        if [ $missing_shards -gt 0 ]; then
+        if [ "$missing_shards" -gt 0 ]; then
             log "❌ ${missing_shards} shard files missing!"
             log "   Upload may be incomplete. Re-run rsync."
             errors=$((errors + 1))
@@ -252,16 +258,26 @@ validate_dataset() {
             log "✓ All ${num_shards} shards present"
         fi
         
-        # Quick read test - verify first shard is readable
+        # Quick read test - verify first shard is readable (use actual path from manifest)
         log "   Testing shard readability..."
         if python3 -c "
-import numpy as np
+import json
 import os
-shard_path = os.path.join('${dataset_dir}', 'shard_00000.bin')
-if os.path.exists(shard_path):
-    data = np.memmap(shard_path, dtype='float16', mode='r')
-    print(f'   First shard: {len(data):,} elements, readable OK')
-    del data
+import struct
+
+dataset_dir = '${dataset_dir}'
+manifest = json.load(open(os.path.join(dataset_dir, 'manifest.json')))
+if manifest.get('shards'):
+    first_shard = manifest['shards'][0]
+    shard_path = os.path.join(dataset_dir, first_shard.get('filename', ''))
+    if os.path.exists(shard_path):
+        with open(shard_path, 'rb') as f:
+            header = f.read(32)
+            magic, version, num_samples, c, h, w, dtype_code, _ = struct.unpack('<4sIIIIIII', header)
+            print(f'   First shard: {num_samples:,} samples, shape=[{c},{h},{w}], readable OK')
+    else:
+        print(f'   First shard not found: {shard_path}')
+        exit(1)
 " 2>/dev/null; then
             log "✓ Shard files are readable"
         else

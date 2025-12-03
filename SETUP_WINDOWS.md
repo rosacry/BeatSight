@@ -6,7 +6,7 @@ Complete setup instructions for developing and running BeatSight on Windows.
 
 ```powershell
 # 1. Clone the repository
-git clone https://github.com/yourusername/BeatSight.git
+git clone https://github.com/rosacry/BeatSight.git
 cd BeatSight
 
 # 2. Run the bootstrap script (installs all dependencies)
@@ -92,7 +92,7 @@ docker compose version
 
 ```powershell
 # Clone repository
-git clone https://github.com/yourusername/BeatSight.git
+git clone https://github.com/rosacry/BeatSight.git
 cd BeatSight
 
 # Configure Git for Windows line endings

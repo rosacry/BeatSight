@@ -1,6 +1,7 @@
 # BeatSight Inference Optimization Report
 
-**Generated:** January 2025  
+**Generated:** December 2025  
+**Last Updated:** December 3, 2025  
 **Target Model:** V5-Large CNN (~2-3M parameters)  
 **Target Hardware:** NVIDIA GPUs (A10G, L40S, H100)
 

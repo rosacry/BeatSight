@@ -1,6 +1,6 @@
 # BeatSight Drum Classifier Training Runbook
 
-_Last updated: 2025-11-24_
+_Last updated: 2025-12-03_
 
 This runbook captures the end-to-end workflow for refreshing the drum classifier after a new manifest export. It builds on the tooling in `ai-pipeline/training/tools/` and the post-export checklist.
 

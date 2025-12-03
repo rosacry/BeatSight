@@ -26,7 +26,7 @@
 - ✅ **Local CI Scripts** - Created 7 scripts in `scripts/` matching GitHub Actions 1:1
 - ✅ **AI Pipeline Test Imports** - Fixed `test_utils` import errors in conftest.py and test files
 - ✅ **Documentation Updates** - Added CI script requirement to CONTRIBUTING.md and START_HERE.md
-- ✅ **Validated All Checks** - Backend lint (0 errors), .NET (90 tests), AI (99 tests)
+- ✅ **Validated All Checks** - Backend lint (0 errors), .NET (75 tests), AI (158 tests)
 
 ### Session Progress (Nov 27 - Cutting-Edge Training Enhancements)
 - ✅ **Gradient Centralization** - Created `training/optimizers/gradient_centralization.py` (+0.5-1% improvement)
@@ -101,7 +101,7 @@
 - ✅ **E2-007: Admin Dashboard API** - Job list, stats, retry/cancel/priority endpoints, 23 tests
 - ✅ **Frontend Build Fixed** - Resolved TypeScript type mismatches in job pages
 
-**Current test count: 386 backend tests (385 pass), 43 frontend tests (all pass), 90 desktop tests**
+**Current test count: 1147 backend tests (all pass), 223 frontend test cases, 75 desktop tests**
 
 ### Session Progress (Nov 24)
 - ✅ Added backend service tests (`test_songs.py`, `test_ai_jobs.py`)
@@ -359,7 +359,7 @@ Per `MISSING_INTEGRATIONS.md` verification (Nov 24, 2025): **✅ All 39 features
 | `EditorScreenSnapshotTests.cs` | Exists | Reflection-based testing |
 | `UserProgressManagerTests.cs` | ✅ **New Nov 25** | 20 tests for progress tracking |
 
-**Current test count: 90 tests** (all passing)
+**Current test count: 75 tests** (all passing)
 
 **Remaining test coverage gaps:**
 - Stage progress mapper (noted in `personal_notes/notes.txt`)

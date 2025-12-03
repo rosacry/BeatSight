@@ -5,7 +5,7 @@ These are the minimum steps to get productive in the BeatSight workspace. Skim t
 ## 1. TL;DR
 
 - Launch the desktop client from your shell of choice:
-	- **Windows (Git Bash):** `cd ~/OneDrive/Documents/github/BeatSight/desktop/BeatSight.Desktop && dotnet run`
+	- **Windows (Git Bash):** `cd /path/to/BeatSight/desktop/BeatSight.Desktop && dotnet run`
 	- **Linux/macOS:** `cd ~/github/BeatSight/desktop/BeatSight.Desktop && dotnet run`
 - Review the live backlog in `docs/product/status.md` (updates happen here, not in this file)
 - Use `docs/Guidebook.md` as the table of contents for orientation, onboarding, and archives
@@ -19,7 +19,7 @@ Use the command pair that matches your platform:
 
 - **Windows (Git Bash):**
 	```bash
-	cd ~/OneDrive/Documents/github/BeatSight/desktop/BeatSight.Desktop
+	cd /path/to/BeatSight/desktop/BeatSight.Desktop
 	dotnet run
 	```
 - **Linux/macOS:**
@@ -34,7 +34,7 @@ Use the command pair that matches your platform:
 ### Backend API (optional while prototyping)
 
 ```bash
-cd ~/OneDrive/Documents/github/BeatSight/backend
+cd /path/to/BeatSight/backend
 poetry install
 poetry run uvicorn app.main:app --reload
 ```
@@ -57,7 +57,7 @@ If you update any of the above, keep cross-links consistent. The root `NEXT_STEP
 - Configure dataset paths before running training or export tools. The quickest route is to source the helper hook from your shell:
 
 ```bash
-cd ~/OneDrive/Documents/github/BeatSight
+cd /path/to/BeatSight
 source ai-pipeline/training/tools/beatsight_env.sh
 ```
 
@@ -80,7 +80,7 @@ Always record progress in `docs/product/status.md`; we archive completed milesto
 
 ```bash
 # Solution-wide build (desktop + tests)
-cd ~/OneDrive/Documents/github/BeatSight   # adjust the root for your clone path
+cd /path/to/BeatSight   # adjust to your clone location
 dotnet build BeatSight.sln
 
 # Run C# tests

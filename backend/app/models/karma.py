@@ -28,6 +28,8 @@ class KarmaReason(str, enum.Enum):
     ADMIN_ADJUSTMENT = "admin_adjustment"
     MAP_UPVOTED = "map_upvoted"  # Map creator receives upvote
     MAP_DOWNVOTED = "map_downvoted"  # Map creator receives downvote
+    CONTRIBUTION_APPROVED = "contribution_approved"  # Training contribution approved
+    CONTRIBUTION_REJECTED = "contribution_rejected"  # Training contribution rejected
 
 
 class KarmaLedger(Base):

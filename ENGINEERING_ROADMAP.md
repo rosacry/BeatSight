@@ -401,7 +401,7 @@ Enabled = { Value = false }
 
 ## ⭐ REVOLUTIONARY FEATURE: Collaborative Beatmap Refinement
 
-**Status:** 🟡 Phase 1 In Progress  
+**Status:** ✅ Phase 3 Complete (Training Integration)  
 **Priority:** High (differentiating feature)
 
 ### Vision
@@ -436,17 +436,46 @@ The karma/verifier system enables collaborative improvement where user correctio
 - `backend/alembic/versions/006_training_contributions.py` - DB migration
 - `backend/tests/test_contributions_routes.py` - Unit tests (17 tests)
 
-**Phase 2: Quality Gates** (Next)
-- [ ] Verifier review UI in frontend
-- [ ] Statistical validation (reject outliers)
-- [ ] Rate limiting per user per day
-- [ ] Karma rewards for approved contributions
+**Phase 2: Quality Gates** ✅ COMPLETE
+- [x] Frontend consent toggle in Settings (Privacy & Data tab)
+- [x] Statistical validation (reject outliers)
+  - Component name validation against known drum parts
+  - Timing adjustment magnitude limits (max 500ms)
+  - Conflicting corrections flagged for review
+- [x] Rate limiting per user per day (MAX_DAILY_CONTRIBUTIONS = 50)
+- [x] Karma rewards for approved contributions (+15 karma)
+- [x] Karma penalties for rejected contributions (-5 karma)
+- [ ] Verifier review UI in frontend (deferred to Phase 3)
 
-**Phase 3: Training Integration** (Future)
-- [ ] Export approved contributions to training manifest
-- [ ] Add contribution source to dataset metadata
-- [ ] Weight contributions by verifier karma/accuracy
-- [ ] Track contribution impact on model accuracy
+**Phase 3: Training Integration** ✅ COMPLETE
+- [x] Export approved contributions to training manifest
+  - Created `TrainingExportService` with weighted sample generation
+  - `GET /manifest` endpoint generates training-ready JSON
+  - `GET /export-stats` endpoint shows export statistics
+  - Sample weights based on confidence and correction type
+- [x] Add contribution source to dataset metadata
+  - Created `ai-pipeline/training/import_contributions.py`
+  - `ContributionImporter` class converts manifest to training samples
+  - Maps contribution components to training labels
+  - Includes batch tracking and import statistics
+- [x] Weight contributions by verifier karma/accuracy
+  - Verifier karma tiers: expert (1000+), trusted (500+), regular (100+), new
+  - Weight multipliers: expert=1.3, trusted=1.15, regular=1.0, new=0.9
+  - Pre-fetches verifier karma for batch processing efficiency
+  - Manifest v1.1 includes verifier tier per sample and tier statistics
+- [x] Track contribution impact on model accuracy
+  - Created `ai-pipeline/training/contribution_impact.py` with:
+    - `ContributionImpactTracker` for recording baseline/post-training metrics
+    - `EvaluationSnapshot` for model state capture
+    - Per-class F1 improvement tracking
+    - Impact report generation and JSON export
+  - Added `ContributionBatchImpact` database model
+  - Migration `007_contribution_batch_impact.py`
+  - API endpoints:
+    - `POST /impact` - Record impact after training
+    - `GET /impact/{batch_id}` - Get specific batch impact
+    - `GET /impact/summary` - Get overall impact statistics
+  - 42 backend tests, 15 AI pipeline tests (all passing)
 
 ### API Endpoints Implemented
 
@@ -461,6 +490,11 @@ The karma/verifier system enables collaborative improvement where user correctio
 | `/contributions/{id}/approve` | POST | Verifier: approve |
 | `/contributions/{id}/reject` | POST | Verifier: reject |
 | `/contributions/export` | GET | Admin: export for training |
+| `/contributions/manifest` | GET | Admin: generate training manifest |
+| `/contributions/export-stats` | GET | Admin: export statistics |
+| `/contributions/impact` | POST | Admin: record batch impact |
+| `/contributions/impact/{batch_id}` | GET | Admin: get batch impact |
+| `/contributions/impact/summary` | GET | Admin: impact summary |
 
 ---
 
@@ -478,16 +512,16 @@ The karma/verifier system enables collaborative improvement where user correctio
 - [ ] Set up coverage reporting for desktop (coverlet) - deferred
 
 ### Current: Quality of Life & Infrastructure
-- [ ] Enable Sentry for production error monitoring (frontend + backend)
-- [ ] Improve exception handling in `pipeline/worker.py`
+- [x] Enable Sentry for production error monitoring (frontend + backend) ✅
+- [x] Improve exception handling in `ai-pipeline/pipeline/exceptions.py` ✅
 - [ ] Set up Grafana dashboard for Modal GPU worker metrics
 - [ ] Create community Discord/discussion space
 
-### Month 2: Revolutionary Feature
-- [ ] Design training contributions schema
-- [ ] Implement backend contribution service
-- [ ] Add frontend contribution consent toggle
-- [ ] Create contribution export pipeline
+### Month 2: Revolutionary Feature ✅ COMPLETE
+- [x] Design training contributions schema ✅
+- [x] Implement backend contribution service ✅
+- [x] Add frontend contribution consent toggle ✅
+- [ ] Create contribution export pipeline (Phase 3)
 
 ### Month 3: Mobile Preparation
 - [ ] Begin Flutter mobile prototype
@@ -520,7 +554,7 @@ The karma/verifier system enables collaborative improvement where user correctio
 |------|---------|----------|--------|
 | **[Stryker Mutator](https://stryker-mutator.io/)** | Mutation testing | Low | ☐ Not Started |
 | **[Codecov](https://codecov.io/)** | Coverage tracking | Medium | Has config, verify CI |
-| **[Sentry](https://sentry.io/)** | Error monitoring | Medium | ☐ Not Started |
+| **[Sentry](https://sentry.io/)** | Error monitoring | Medium | ✅ Implemented |
 
 ### Performance & Monitoring
 

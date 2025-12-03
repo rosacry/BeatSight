@@ -14,22 +14,27 @@ Endpoints:
 - POST /contributions/consent - Update contribution consent settings
 - GET /contributions/consent - Get current consent settings
 - GET /contributions/export - Export approved contributions for training (admin)
+- GET /contributions/manifest - Generate training manifest JSON (admin)
+- GET /contributions/export-stats - Get export statistics (admin)
 """
 
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
-from typing import Annotated, Optional
+from datetime import datetime, timedelta
+from typing import Annotated, Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.api.deps import get_current_user, get_db_session
+from app.models.karma import KarmaReason
 from app.models.training_contribution import (
+    ContributionBatchImpact,
     ContributionConsent,
     ContributionStatus,
     CorrectionType,
@@ -37,7 +42,9 @@ from app.models.training_contribution import (
 )
 from app.models.map_version import MapVersion
 from app.models.user import User
+from app.services.karma import KarmaService
 from app.services.rbac import RequireAdmin, RequireVerifier
+from app.services.training_export import TrainingExportService
 
 router = APIRouter(prefix="/contributions", tags=["contributions"])
 
@@ -48,8 +55,22 @@ router = APIRouter(prefix="/contributions", tags=["contributions"])
 # Minimum karma required to submit contributions
 MIN_KARMA_FOR_CONTRIBUTIONS = 100
 
+# Maximum contributions per user per day
+MAX_DAILY_CONTRIBUTIONS = 50
+
 # Component changes require verifier approval
 HIGH_IMPACT_CORRECTION_TYPES = {CorrectionType.COMPONENT_CHANGE, CorrectionType.NOTE_ADDITION}
+
+# Statistical validation thresholds
+MAX_TIMING_ADJUSTMENT_MS = 500  # Reject timing corrections > 500ms
+MAX_CONFLICTING_CORRECTIONS = 3  # Flag onsets with too many conflicting corrections
+
+# Valid drum components for validation
+VALID_DRUM_COMPONENTS = {
+    "kick", "snare", "hi-hat", "closed-hat", "open-hat",
+    "crash", "ride", "tom", "high-tom", "mid-tom", "low-tom", "floor-tom",
+    "china", "splash", "bell", "rim", "ghost", "flam",
+}
 
 
 # =============================================================================
@@ -164,6 +185,77 @@ class ExportResponse(BaseModel):
     contributions: list[dict]
 
 
+class ExportStatisticsResponse(BaseModel):
+    """Response for export statistics."""
+
+    total_contributions: int
+    pending_review: int
+    approved: int
+    rejected: int
+    exported: int
+    pending_export: int
+    correction_types_approved: dict[str, int]
+
+
+class ManifestResponse(BaseModel):
+    """Response for training manifest generation."""
+
+    version: str
+    batch_id: str
+    generated_at: str
+    sample_count: int
+    source: str
+    statistics: dict[str, Any]
+    samples: list[dict[str, Any]]
+    metadata: Optional[dict[str, Any]] = None
+
+
+class ImpactCreateRequest(BaseModel):
+    """Request to record contribution batch impact after training."""
+
+    batch_id: str = Field(..., description="Training batch ID from manifest")
+    model_checkpoint: str = Field(..., description="Model checkpoint path/identifier")
+    baseline_accuracy: float = Field(..., ge=0, le=1, description="Accuracy before training")
+    post_training_accuracy: float = Field(..., ge=0, le=1, description="Accuracy after training")
+    baseline_f1_macro: Optional[float] = Field(None, ge=0, le=1)
+    post_training_f1_macro: Optional[float] = Field(None, ge=0, le=1)
+    baseline_f1_per_class: Optional[dict[str, float]] = Field(default=None)
+    post_training_f1_per_class: Optional[dict[str, float]] = Field(default=None)
+    per_class_improvement: Optional[dict[str, float]] = Field(default=None)
+    contribution_count: int = Field(..., ge=0)
+    top_contributors: Optional[list[dict[str, Any]]] = Field(default=None)
+
+
+class ImpactResponse(BaseModel):
+    """Response for a single batch impact record."""
+
+    id: int
+    batch_id: str
+    model_checkpoint: str
+    baseline_accuracy: float
+    post_training_accuracy: float
+    accuracy_improvement: float
+    baseline_f1_macro: Optional[float]
+    post_training_f1_macro: Optional[float]
+    f1_improvement: Optional[float]
+    per_class_improvement: Optional[dict[str, float]]
+    contribution_count: int
+    top_contributors: Optional[list[dict[str, Any]]]
+    evaluated_at: datetime
+
+
+class ImpactSummaryResponse(BaseModel):
+    """Summary of all contribution impacts on model accuracy."""
+
+    total_batches: int
+    total_contributions_trained: int
+    total_accuracy_improvement: float
+    average_accuracy_improvement: float
+    best_batch: Optional[dict[str, Any]]
+    class_improvements: dict[str, float]
+    recent_impacts: list[dict[str, Any]]
+
+
 # =============================================================================
 # Consent Endpoints
 # =============================================================================
@@ -252,6 +344,7 @@ async def submit_contribution(
     Requirements:
     - User must have given consent to contribute
     - User must meet minimum karma threshold
+    - User must not exceed daily contribution limit
     - No duplicate contribution for same onset from same user
     """
     # Check consent
@@ -276,6 +369,25 @@ async def submit_contribution(
                    f"Your current karma: {current_user.karma_score}",
         )
 
+    # Check daily rate limit
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    daily_count_result = await db.execute(
+        select(func.count()).where(
+            and_(
+                TrainingContribution.user_id == current_user.id,
+                TrainingContribution.created_at >= today_start,
+            )
+        )
+    )
+    daily_count = daily_count_result.scalar() or 0
+
+    if daily_count >= MAX_DAILY_CONTRIBUTIONS:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Daily contribution limit reached ({MAX_DAILY_CONTRIBUTIONS}). "
+                   "Try again tomorrow.",
+        )
+
     # Verify map version exists
     version_result = await db.execute(
         select(MapVersion).where(MapVersion.id == request.map_version_id)
@@ -287,6 +399,43 @@ async def submit_contribution(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Map version not found",
         )
+
+    # Statistical validation
+    # 1. Validate component names
+    if request.corrected_component.lower() not in VALID_DRUM_COMPONENTS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid drum component: {request.corrected_component}. "
+                   f"Valid components: {', '.join(sorted(VALID_DRUM_COMPONENTS))}",
+        )
+
+    # 2. Validate timing adjustment magnitude
+    if request.correction_type == CorrectionType.TIMING_ADJUSTMENT:
+        if request.corrected_time_ms is not None:
+            time_delta = abs(request.corrected_time_ms - request.onset_time_ms)
+            if time_delta > MAX_TIMING_ADJUSTMENT_MS:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Timing adjustment too large ({time_delta}ms). "
+                           f"Maximum allowed: {MAX_TIMING_ADJUSTMENT_MS}ms. "
+                           "For larger changes, consider adding a new note instead.",
+                )
+
+    # 3. Check for conflicting corrections from other users
+    conflict_result = await db.execute(
+        select(func.count()).where(
+            and_(
+                TrainingContribution.map_version_id == request.map_version_id,
+                TrainingContribution.onset_time_ms == request.onset_time_ms,
+                TrainingContribution.user_id != current_user.id,
+                TrainingContribution.status.in_([
+                    ContributionStatus.PENDING,
+                    ContributionStatus.APPROVED,
+                ]),
+            )
+        )
+    )
+    conflict_count = conflict_result.scalar() or 0
 
     # Check for duplicate
     existing_result = await db.execute(
@@ -307,8 +456,13 @@ async def submit_contribution(
         )
 
     # Determine initial status
-    # High-impact corrections require verifier review
-    if request.correction_type in HIGH_IMPACT_CORRECTION_TYPES:
+    # High-impact corrections or conflicting corrections require verifier review
+    requires_review = (
+        request.correction_type in HIGH_IMPACT_CORRECTION_TYPES
+        or conflict_count >= MAX_CONFLICTING_CORRECTIONS
+    )
+    
+    if requires_review:
         initial_status = ContributionStatus.PENDING
     else:
         # Low-impact corrections (timing, velocity) auto-approve
@@ -518,7 +672,7 @@ async def approve_contribution(
 ) -> ContributionResponse:
     """Approve a pending contribution.
     
-    Requires verifier role.
+    Requires verifier role. Awards karma to the contributor.
     """
     result = await db.execute(
         select(TrainingContribution)
@@ -543,6 +697,15 @@ async def approve_contribution(
     contribution.verifier_id = current_user.id
     contribution.verifier_notes = request.notes
     contribution.reviewed_at = datetime.utcnow()
+
+    # Award karma to the contributor
+    karma_service = KarmaService(db)
+    await karma_service.award_karma(
+        user_id=contribution.user_id,
+        reason=KarmaReason.CONTRIBUTION_APPROVED,
+        related_entity_type="training_contribution",
+        related_entity_id=contribution.id,
+    )
 
     await db.commit()
     await db.refresh(contribution)
@@ -576,6 +739,7 @@ async def reject_contribution(
     """Reject a pending contribution.
     
     Requires verifier role. Notes are required to explain rejection.
+    Applies karma penalty to the contributor.
     """
     if not request.notes:
         raise HTTPException(
@@ -606,6 +770,15 @@ async def reject_contribution(
     contribution.verifier_id = current_user.id
     contribution.verifier_notes = request.notes
     contribution.reviewed_at = datetime.utcnow()
+
+    # Apply karma penalty to the contributor
+    karma_service = KarmaService(db)
+    await karma_service.award_karma(
+        user_id=contribution.user_id,
+        reason=KarmaReason.CONTRIBUTION_REJECTED,
+        related_entity_type="training_contribution",
+        related_entity_id=contribution.id,
+    )
 
     await db.commit()
     await db.refresh(contribution)
@@ -694,4 +867,250 @@ async def export_contributions(
         batch_id=batch_id,
         count=len(export_data),
         contributions=export_data,
+    )
+
+
+@router.get("/manifest", response_model=ManifestResponse)
+async def generate_training_manifest(
+    current_user: Annotated[User, Depends(get_current_user)],
+    _admin: Annotated[None, RequireAdmin],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    limit: int = Query(10000, ge=1, le=50000),
+    include_metadata: bool = Query(True),
+    weighted: bool = Query(True, description="Include karma-based weights"),
+) -> ManifestResponse:
+    """Generate a training manifest from approved contributions.
+    
+    This endpoint generates a comprehensive training manifest in a format
+    compatible with the AI pipeline. Unlike /export, this does NOT mark
+    contributions as exported - it's a preview/dry-run.
+    
+    Use /export to actually mark contributions as exported after successfully
+    integrating them into training.
+    
+    Requires admin role.
+    """
+    service = TrainingExportService(db)
+    manifest = await service.generate_manifest(
+        limit=limit,
+        include_metadata=include_metadata,
+        weighted_by_karma=weighted,
+    )
+    return ManifestResponse(**manifest)
+
+
+@router.get("/export-stats", response_model=ExportStatisticsResponse)
+async def get_export_statistics(
+    current_user: Annotated[User, Depends(get_current_user)],
+    _admin: Annotated[None, RequireAdmin],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ExportStatisticsResponse:
+    """Get statistics about export-ready contributions.
+    
+    Provides an overview of contribution status and what's ready for export.
+    
+    Requires admin role.
+    """
+    service = TrainingExportService(db)
+    stats = await service.get_export_statistics()
+    return ExportStatisticsResponse(**stats)
+
+
+# =============================================================================
+# Impact Tracking Endpoints
+# =============================================================================
+
+
+@router.post("/impact", response_model=ImpactResponse, status_code=status.HTTP_201_CREATED)
+async def record_batch_impact(
+    request: ImpactCreateRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    _admin: Annotated[None, RequireAdmin],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ImpactResponse:
+    """Record model accuracy impact after training on a contribution batch.
+    
+    This endpoint stores the results of evaluating model performance before
+    and after training on user-contributed corrections. Call this from the
+    AI pipeline after completing a training run.
+    
+    Requires admin role.
+    """
+    # Check if batch already has impact recorded
+    existing = await db.execute(
+        select(ContributionBatchImpact).where(
+            ContributionBatchImpact.batch_id == request.batch_id
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Impact already recorded for batch {request.batch_id}"
+        )
+    
+    impact = ContributionBatchImpact(
+        batch_id=request.batch_id,
+        model_checkpoint=request.model_checkpoint,
+        baseline_accuracy=request.baseline_accuracy,
+        post_training_accuracy=request.post_training_accuracy,
+        baseline_f1_macro=request.baseline_f1_macro,
+        post_training_f1_macro=request.post_training_f1_macro,
+        baseline_f1_per_class=request.baseline_f1_per_class,
+        post_training_f1_per_class=request.post_training_f1_per_class,
+        per_class_improvement=request.per_class_improvement,
+        contribution_count=request.contribution_count,
+        top_contributors=request.top_contributors,
+    )
+    db.add(impact)
+    await db.commit()
+    await db.refresh(impact)
+    
+    return ImpactResponse(
+        id=impact.id,
+        batch_id=impact.batch_id,
+        model_checkpoint=impact.model_checkpoint,
+        baseline_accuracy=impact.baseline_accuracy,
+        post_training_accuracy=impact.post_training_accuracy,
+        accuracy_improvement=impact.post_training_accuracy - impact.baseline_accuracy,
+        baseline_f1_macro=impact.baseline_f1_macro,
+        post_training_f1_macro=impact.post_training_f1_macro,
+        f1_improvement=(
+            impact.post_training_f1_macro - impact.baseline_f1_macro
+            if impact.post_training_f1_macro and impact.baseline_f1_macro
+            else None
+        ),
+        per_class_improvement=impact.per_class_improvement,
+        contribution_count=impact.contribution_count,
+        top_contributors=impact.top_contributors,
+        evaluated_at=impact.evaluated_at,
+    )
+
+
+@router.get("/impact/{batch_id}", response_model=ImpactResponse)
+async def get_batch_impact(
+    batch_id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    _admin: Annotated[None, RequireAdmin],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ImpactResponse:
+    """Get impact metrics for a specific training batch.
+    
+    Requires admin role.
+    """
+    result = await db.execute(
+        select(ContributionBatchImpact).where(
+            ContributionBatchImpact.batch_id == batch_id
+        )
+    )
+    impact = result.scalar_one_or_none()
+    
+    if not impact:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No impact record found for batch {batch_id}"
+        )
+    
+    return ImpactResponse(
+        id=impact.id,
+        batch_id=impact.batch_id,
+        model_checkpoint=impact.model_checkpoint,
+        baseline_accuracy=impact.baseline_accuracy,
+        post_training_accuracy=impact.post_training_accuracy,
+        accuracy_improvement=impact.post_training_accuracy - impact.baseline_accuracy,
+        baseline_f1_macro=impact.baseline_f1_macro,
+        post_training_f1_macro=impact.post_training_f1_macro,
+        f1_improvement=(
+            impact.post_training_f1_macro - impact.baseline_f1_macro
+            if impact.post_training_f1_macro and impact.baseline_f1_macro
+            else None
+        ),
+        per_class_improvement=impact.per_class_improvement,
+        contribution_count=impact.contribution_count,
+        top_contributors=impact.top_contributors,
+        evaluated_at=impact.evaluated_at,
+    )
+
+
+@router.get("/impact/summary", response_model=ImpactSummaryResponse)
+async def get_impact_summary(
+    current_user: Annotated[User, Depends(get_current_user)],
+    _admin: Annotated[None, RequireAdmin],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ImpactSummaryResponse:
+    """Get overall summary of contribution impact on model accuracy.
+    
+    This provides aggregate statistics across all training batches to
+    show the cumulative effect of user contributions on model quality.
+    
+    Requires admin role.
+    """
+    # Get all impact records
+    result = await db.execute(
+        select(ContributionBatchImpact).order_by(
+            ContributionBatchImpact.evaluated_at.desc()
+        )
+    )
+    impacts = result.scalars().all()
+    
+    if not impacts:
+        return ImpactSummaryResponse(
+            total_batches=0,
+            total_contributions_trained=0,
+            total_accuracy_improvement=0.0,
+            average_accuracy_improvement=0.0,
+            best_batch=None,
+            class_improvements={},
+            recent_impacts=[],
+        )
+    
+    # Calculate aggregates
+    total_contributions = sum(i.contribution_count for i in impacts)
+    improvements = [
+        i.post_training_accuracy - i.baseline_accuracy for i in impacts
+    ]
+    total_improvement = sum(improvements)
+    avg_improvement = total_improvement / len(impacts)
+    
+    # Find best batch
+    best_idx = improvements.index(max(improvements))
+    best = impacts[best_idx]
+    best_batch = {
+        "batch_id": best.batch_id,
+        "accuracy_improvement": improvements[best_idx],
+        "contribution_count": best.contribution_count,
+        "evaluated_at": best.evaluated_at.isoformat(),
+    }
+    
+    # Aggregate class improvements
+    class_improvements: dict[str, list[float]] = {}
+    for impact in impacts:
+        if impact.per_class_improvement:
+            for cls, improvement in impact.per_class_improvement.items():
+                if cls not in class_improvements:
+                    class_improvements[cls] = []
+                class_improvements[cls].append(improvement)
+    
+    avg_class_improvements = {
+        cls: sum(vals) / len(vals) for cls, vals in class_improvements.items()
+    }
+    
+    # Recent impacts
+    recent = [
+        {
+            "batch_id": i.batch_id,
+            "accuracy_improvement": i.post_training_accuracy - i.baseline_accuracy,
+            "contribution_count": i.contribution_count,
+            "evaluated_at": i.evaluated_at.isoformat(),
+        }
+        for i in impacts[:10]
+    ]
+    
+    return ImpactSummaryResponse(
+        total_batches=len(impacts),
+        total_contributions_trained=total_contributions,
+        total_accuracy_improvement=total_improvement,
+        average_accuracy_improvement=avg_improvement,
+        best_batch=best_batch,
+        class_improvements=avg_class_improvements,
+        recent_impacts=recent,
     )

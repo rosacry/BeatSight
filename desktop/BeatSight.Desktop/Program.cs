@@ -228,6 +228,18 @@ namespace BeatSight.Desktop
 
         private static void disableFrameworkConsoleEcho()
         {
+            // HACK: Suppress verbose osu-framework debug output in release builds.
+            // The framework echoes internal state to console unless is_debug_build is true.
+            // Since this field is private, we use reflection to override it.
+            //
+            // RISK: May break on osu-framework updates if the field is renamed/removed.
+            // MITIGATION: Wrapped in try-catch; falls back gracefully to default behavior.
+            // MONITOR: Check on framework version updates.
+            //
+            // Alternative approaches considered:
+            // - Redirect stdout/stderr globally (too aggressive, loses useful errors)
+            // - Fork the framework (maintenance burden)
+            // - Request upstream change (low priority for them)
             try
             {
                 var field = typeof(osu.Framework.Development.DebugUtils).GetField("is_debug_build", BindingFlags.NonPublic | BindingFlags.Static);

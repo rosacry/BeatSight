@@ -27,6 +27,7 @@ prometheus-client = "^0.21.0"
 stripe = "^8.0.0"
 sendgrid = "^6.11.0"
 pywebpush = "^2.0.0"
+sentry-sdk = { version = "^2.0.0", extras = ["fastapi"] }
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.1.1"

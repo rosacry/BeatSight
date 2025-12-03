@@ -2031,7 +2031,16 @@ def validate(
                 if use_velocity and velocities is not None:
                     # Multi-task inference
                     outputs = model(features, return_all=True)
-                    logits, aux_outputs, velocity_pred, openness_pred = outputs
+                    # V5 model returns 5 values: (logits, aux_outputs, velocity, openness, techniques)
+                    if isinstance(outputs, tuple) and len(outputs) == 5:
+                        logits, aux_outputs, velocity_pred, openness_pred, techniques_pred = outputs
+                    elif isinstance(outputs, tuple) and len(outputs) == 4:
+                        # Legacy v4 model returns 4 values
+                        logits, aux_outputs, velocity_pred, openness_pred = outputs
+                    else:
+                        # Fallback for unexpected output
+                        logits = outputs if not isinstance(outputs, tuple) else outputs[0]
+                        aux_outputs, velocity_pred, openness_pred = [], None, None
                     ce_loss = criterion(logits, labels)
                     if velocity_pred is not None and velocity_criterion is not None:
                         vel_loss = velocity_criterion(velocity_pred, velocities)

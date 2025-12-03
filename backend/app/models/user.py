@@ -22,6 +22,7 @@ if TYPE_CHECKING:  # pragma: no cover - type-checking only
     from .role import UserRole
     from .song import Song
     from .subscription import Subscription
+    from .training_contribution import ContributionConsent, TrainingContribution
 
 
 class User(Base):
@@ -84,4 +85,18 @@ class User(Base):
     )
     credit_transactions: Mapped[list["CreditTransaction"]] = relationship(
         "CreditTransaction", back_populates="user", cascade="all, delete-orphan"
+    )
+
+    # Training contribution relationships
+    training_contributions: Mapped[list["TrainingContribution"]] = relationship(
+        "TrainingContribution",
+        back_populates="user",
+        foreign_keys="TrainingContribution.user_id",
+        cascade="all, delete-orphan"
+    )
+    contribution_consent: Mapped["ContributionConsent | None"] = relationship(
+        "ContributionConsent",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan"
     )

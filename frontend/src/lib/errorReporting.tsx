@@ -1,17 +1,15 @@
 /**
  * Error reporting and monitoring integration.
  * 
- * This module provides a simple abstraction over error tracking.
- * In production, this would integrate with Sentry or similar service.
+ * This module provides error tracking via Sentry.
  * 
- * To enable Sentry:
- * 1. Install @sentry/react: npm install @sentry/react
- * 2. Set VITE_SENTRY_DSN in your environment
- * 3. Uncomment the Sentry imports and initialization below
+ * To enable Sentry in production:
+ * 1. Set VITE_SENTRY_DSN in your environment
+ * 2. Optionally set VITE_APP_VERSION for release tracking
  */
 
 import React from 'react';
-// import * as Sentry from '@sentry/react';
+import * as Sentry from '@sentry/react';
 
 interface ErrorContext {
     [key: string]: unknown;
@@ -41,29 +39,28 @@ export function initErrorReporting(): void {
         return;
     }
 
-    // Uncomment when Sentry is installed:
-    // Sentry.init({
-    //     dsn,
-    //     environment: import.meta.env.MODE,
-    //     release: `beatsight-web@${import.meta.env.VITE_APP_VERSION || '0.0.0'}`,
-    //     tracesSampleRate: import.meta.env.PROD ? 0.1 : 1.0,
-    //     replaysSessionSampleRate: 0.1,
-    //     replaysOnErrorSampleRate: 1.0,
-    //     integrations: [
-    //         Sentry.browserTracingIntegration(),
-    //         Sentry.replayIntegration(),
-    //     ],
-    //     beforeSend(event) {
-    //         // Filter out development errors
-    //         if (import.meta.env.DEV) {
-    //             console.log('[Sentry] Would send event:', event);
-    //             return null;
-    //         }
-    //         return event;
-    //     },
-    // });
+    Sentry.init({
+        dsn,
+        environment: import.meta.env.MODE,
+        release: `beatsight-web@${import.meta.env.VITE_APP_VERSION || '0.0.0'}`,
+        tracesSampleRate: import.meta.env.PROD ? 0.1 : 1.0,
+        replaysSessionSampleRate: 0.1,
+        replaysOnErrorSampleRate: 1.0,
+        integrations: [
+            Sentry.browserTracingIntegration(),
+            Sentry.replayIntegration(),
+        ],
+        beforeSend(event) {
+            // Filter out development errors
+            if (import.meta.env.DEV) {
+                console.log('[Sentry] Would send event:', event);
+                return null;
+            }
+            return event;
+        },
+    });
 
-    console.info('[ErrorReporting] Initialized');
+    console.info('[ErrorReporting] Initialized with Sentry');
     isInitialized = true;
 }
 
@@ -73,16 +70,15 @@ export function initErrorReporting(): void {
 export function setUser(user: UserContext | null): void {
     currentUser = user;
 
-    // Uncomment when Sentry is installed:
-    // if (user) {
-    //     Sentry.setUser({
-    //         id: user.id,
-    //         email: user.email,
-    //         username: user.username,
-    //     });
-    // } else {
-    //     Sentry.setUser(null);
-    // }
+    if (user) {
+        Sentry.setUser({
+            id: user.id,
+            email: user.email,
+            username: user.username,
+        });
+    } else {
+        Sentry.setUser(null);
+    }
 }
 
 /**
@@ -97,13 +93,12 @@ export function captureError(error: Error, context?: ErrorContext): void {
     };
 
     // Always log errors (they're important for debugging)
-     
+
     console.error('[ErrorReporting] Captured error:', error, enrichedContext);
 
-    // Uncomment when Sentry is installed:
-    // Sentry.captureException(error, {
-    //     extra: enrichedContext,
-    // });
+    Sentry.captureException(error, {
+        extra: enrichedContext,
+    });
 }
 
 /**
@@ -120,34 +115,32 @@ export function captureMessage(message: string, level: 'info' | 'warning' | 'err
     const isDev = import.meta.env.DEV;
 
     if (level === 'error') {
-         
+
         console.error('[ErrorReporting]', message, enrichedContext);
     } else if (level === 'warning' && isDev) {
-         
+
         console.warn('[ErrorReporting]', message, enrichedContext);
     } else if (isDev) {
-         
+
         console.info('[ErrorReporting]', message, enrichedContext);
     }
 
-    // Uncomment when Sentry is installed:
-    // Sentry.captureMessage(message, {
-    //     level: level as Sentry.SeverityLevel,
-    //     extra: enrichedContext,
-    // });
+    Sentry.captureMessage(message, {
+        level: level as Sentry.SeverityLevel,
+        extra: enrichedContext,
+    });
 }
 
 /**
  * Add a breadcrumb for debugging.
  */
-export function addBreadcrumb(_message: string, _category: string, _data?: Record<string, unknown>): void {
-    // Uncomment when Sentry is installed:
-    // Sentry.addBreadcrumb({
-    //     message: _message,
-    //     category: _category,
-    //     data: _data,
-    //     level: 'info',
-    // });
+export function addBreadcrumb(message: string, category: string, data?: Record<string, unknown>): void {
+    Sentry.addBreadcrumb({
+        message: message,
+        category: category,
+        data: data,
+        level: 'info',
+    });
 }
 
 /**
@@ -155,16 +148,13 @@ export function addBreadcrumb(_message: string, _category: string, _data?: Recor
  */
 export function startTransaction(name: string, op: string): { finish: () => void } {
     const startTime = performance.now();
-
-    // Uncomment when Sentry is installed:
-    // const transaction = Sentry.startTransaction({ name, op });
-    // Sentry.getCurrentHub().getScope()?.setSpan(transaction);
+    const transaction = Sentry.startInactiveSpan({ name, op });
 
     return {
         finish: () => {
             const duration = performance.now() - startTime;
             console.debug(`[Performance] ${name} (${op}): ${duration.toFixed(2)}ms`);
-            // transaction.finish();
+            transaction?.end();
         }
     };
 }

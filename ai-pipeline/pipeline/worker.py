@@ -19,6 +19,12 @@ import httpx
 import structlog
 
 from .process import process_audio_file
+from .exceptions import (
+    PipelineError,
+    AudioDownloadError,
+    AudioProcessingError,
+    ResultUploadError,
+)
 
 
 # =============================================================================
@@ -205,6 +211,8 @@ class JobProcessor:
         log = self.log.bind(job_id=str(job_id), song_id=str(song_id))
         log.info("Starting job processing")
 
+        audio_path: Path | None = None
+
         try:
             self._start_heartbeat(job_id)
 
@@ -227,20 +235,12 @@ class JobProcessor:
             output_path = Path(self.config.temp_dir) / f"{job_id}.bsm"
 
             # Run the pipeline with progress callbacks
-            try:
-                result = await self._run_pipeline(
-                    job_id=job_id,
-                    audio_path=audio_path,
-                    output_path=output_path,
-                    log=log,
-                )
-            except Exception as e:
-                log.exception("Pipeline failed", error=str(e))
-                return False
-            finally:
-                # Cleanup downloaded audio
-                if audio_path.exists():
-                    audio_path.unlink()
+            result = await self._run_pipeline(
+                job_id=job_id,
+                audio_path=audio_path,
+                output_path=output_path,
+                log=log,
+            )
 
             # Step 4: Upload results
             await self.api.update_progress(job_id, 95, "Uploading results...")
@@ -254,22 +254,48 @@ class JobProcessor:
 
             return success
 
+        except AudioDownloadError as e:
+            log.error("Audio download failed", error=str(e), url=e.url)
+            return False
+        except AudioProcessingError as e:
+            log.error("Audio processing failed", error=str(e), stage=e.stage)
+            return False
+        except ResultUploadError as e:
+            log.error("Result upload failed", error=str(e), uri=e.uri)
+            return False
+        except PipelineError as e:
+            log.error("Pipeline error", error=str(e), recoverable=e.recoverable)
+            return False
+        except asyncio.CancelledError:
+            log.warning("Job cancelled")
+            raise  # Re-raise to allow proper cancellation handling
         except Exception as e:
-            log.exception("Job failed", error=str(e))
+            # Unexpected error - log full stack trace for debugging
+            log.exception("Unexpected job failure", error=str(e), error_type=type(e).__name__)
             return False
         finally:
             self._stop_heartbeat()
+            # Cleanup downloaded audio
+            if audio_path and audio_path.exists():
+                try:
+                    audio_path.unlink()
+                except OSError:
+                    pass  # Best effort cleanup
 
     async def _download_audio(
         self, song: dict[str, Any], log: structlog.BoundLogger
     ) -> Path | None:
-        """Download audio file from storage."""
+        """Download audio file from storage.
+        
+        Raises:
+            AudioDownloadError: If download fails after all retries.
+        """
         from .storage_utils import get_storage_client, StorageError
 
         audio_url = song.get("audio_url") or song.get("storage_uri")
         if not audio_url:
             log.error("No audio URL in song metadata")
-            return None
+            raise AudioDownloadError("No audio URL in song metadata", url=None)
 
         try:
             output_path = Path(self.config.temp_dir) / f"{song['id']}_input.wav"
@@ -287,10 +313,10 @@ class JobProcessor:
 
         except StorageError as e:
             log.error("Storage download failed", error=str(e), url=audio_url)
-            return None
-        except Exception as e:
-            log.exception("Audio download failed", error=str(e))
-            return None
+            raise AudioDownloadError(str(e), url=audio_url) from e
+        except OSError as e:
+            log.error("File system error during download", error=str(e))
+            raise AudioDownloadError(f"File system error: {e}", url=audio_url) from e
 
     async def _run_pipeline(
         self,
@@ -299,7 +325,11 @@ class JobProcessor:
         output_path: Path,
         log: structlog.BoundLogger,
     ) -> dict[str, Any]:
-        """Run the beatmap generation pipeline."""
+        """Run the beatmap generation pipeline.
+        
+        Raises:
+            AudioProcessingError: If pipeline processing fails.
+        """
 
         # Progress callback that updates the API
         async def progress_callback(stage: str, percent: int):
@@ -313,17 +343,21 @@ class JobProcessor:
         # Update progress for different stages
         await progress_callback("Separating drums...", 0)
 
-        result = await loop.run_in_executor(
-            None,
-            lambda: process_audio_file(
-                input_path=str(audio_path),
-                output_path=str(output_path),
-                isolate_drums=True,
-                confidence_threshold=0.7,
-                detection_sensitivity=60.0,
-                quantization_grid="sixteenth",
-            ),
-        )
+        try:
+            result = await loop.run_in_executor(
+                None,
+                lambda: process_audio_file(
+                    input_path=str(audio_path),
+                    output_path=str(output_path),
+                    isolate_drums=True,
+                    confidence_threshold=0.7,
+                    detection_sensitivity=60.0,
+                    quantization_grid="sixteenth",
+                ),
+            )
+        except Exception as e:
+            log.error("Pipeline processing failed", error=str(e))
+            raise AudioProcessingError(str(e), stage="pipeline") from e
 
         await progress_callback("Processing complete", 100)
         return result
@@ -336,13 +370,19 @@ class JobProcessor:
         result: dict[str, Any],
         log: structlog.BoundLogger,
     ) -> bool:
-        """Upload generated beatmap to storage."""
+        """Upload generated beatmap to storage.
+        
+        Raises:
+            ResultUploadError: If upload fails.
+        """
         from .storage_utils import get_storage_client, StorageError
 
         if not beatmap_path.exists():
             log.error("Beatmap file not found", path=str(beatmap_path))
-            return False
+            raise ResultUploadError("Beatmap file not found", uri=str(beatmap_path))
 
+        uri: str | None = None
+        
         try:
             storage = get_storage_client()
 
@@ -378,10 +418,11 @@ class JobProcessor:
             return True
 
         except StorageError as e:
-            log.error("Storage upload failed", error=str(e))
-            return False
-        except Exception as e:
-            log.exception("Unexpected upload error", error=str(e))
+            log.error("Storage upload failed", error=str(e), uri=uri)
+            raise ResultUploadError(str(e), uri=uri) from e
+        except OSError as e:
+            log.error("File system error during upload", error=str(e))
+            raise ResultUploadError(f"File system error: {e}", uri=uri) from e
             return False
 
 

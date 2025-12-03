@@ -691,7 +691,19 @@ class DrumSampleDataset(Dataset):
                 self._cache_mapping_valid = mapping_data['valid']
                 self._use_cache_mapping = True
                 valid_count = np.sum(self._cache_mapping_valid)
-                print(f"[CACHE] Using DIRECT index mapping: O(1) lookup for {valid_count:,}/{len(self._cache_mapping_valid):,} samples")
+                total_count = len(self._cache_mapping_valid)
+                print(f"[CACHE] Using DIRECT index mapping: O(1) lookup for {valid_count:,}/{total_count:,} samples")
+                
+                # Warn if cache coverage is incomplete and audio fallback may not work
+                if valid_count < total_count:
+                    invalid_count = total_count - valid_count
+                    # Check if audio directory actually has audio files
+                    sample_audio = self.data_dir / "audio"
+                    has_audio_fallback = sample_audio.exists() and any(sample_audio.glob("**/*.wav"))
+                    if not has_audio_fallback:
+                        print(f"[CACHE] ⚠️  WARNING: {invalid_count:,} samples have invalid cache mappings and no audio fallback available!")
+                        print(f"[CACHE]    These samples will cause errors during training.")
+                        print(f"[CACHE]    Fix: Regenerate cache mapping or ensure 100% cache coverage.")
             except Exception as e:
                 print(f"[CACHE] Failed to load cache mapping from {cache_mapping}: {e}")
         elif cache_mapping is not None:
@@ -1005,6 +1017,20 @@ class DrumSampleDataset(Dataset):
                 print(f"[CACHE MISS] cache file missing: {cache_path}", flush=True)
 
         if features is None:
+            # Check if audio file exists before trying to load it
+            if audio_path is None or not audio_path.exists():
+                # Provide detailed error for debugging cache issues
+                cache_mapping_status = "valid" if (self._use_cache_mapping and self._cache_mapping_valid[idx]) else "invalid/missing"
+                raise RuntimeError(
+                    f"Cache lookup failed for sample {idx} and audio file not available.\n"
+                    f"  Audio path: {audio_path}\n"
+                    f"  Cache mapping: {cache_mapping_status}\n"
+                    f"  This typically means:\n"
+                    f"    1. The cache index is out of sync with labels (regenerate with generate_cache_index_mapping.py)\n"
+                    f"    2. Some samples are missing from the consolidated cache\n"
+                    f"    3. Using --dataset pointing to feature_cache but original audio is not available\n"
+                    f"  If using cached-only training, ensure 100% cache coverage or provide --audio-data-dir."
+                )
             waveform = self._load_audio(audio_path)
             features = self._extract_features(waveform)
             if cache_path is not None:

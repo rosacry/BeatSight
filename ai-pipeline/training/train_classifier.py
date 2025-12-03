@@ -20,7 +20,7 @@ import random
 import warnings
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
@@ -1388,7 +1388,7 @@ def _worker_init_fn(worker_id: int) -> None:
 
 
 def compute_class_weights(
-    labels: List[Dict[str, Any]],
+    labels: Union[List[Dict[str, Any]], np.ndarray],
     num_classes: int,
     strategy: str = "balanced",
     max_weight: float = 10.0,
@@ -1396,7 +1396,7 @@ def compute_class_weights(
     """Compute class weights for handling imbalanced datasets.
     
     Args:
-        labels: List of label dictionaries with 'component_idx' key
+        labels: List of label dictionaries with 'component_idx' key, OR numpy array of class indices
         num_classes: Total number of classes
         strategy: Weight computation strategy:
             - 'balanced': Inverse frequency (can be extreme for rare classes)
@@ -1410,8 +1410,14 @@ def compute_class_weights(
     """
     from collections import Counter
     
-    class_counts = Counter(int(item.get("component_idx", 0)) for item in labels)
-    total_samples = len(labels)
+    # Handle numpy array of labels (from cached numpy labels)
+    if isinstance(labels, np.ndarray):
+        class_counts = Counter(int(l) for l in labels)
+        total_samples = len(labels)
+    else:
+        # Handle list of dicts (from JSON labels)
+        class_counts = Counter(int(item.get("component_idx", 0)) for item in labels)
+        total_samples = len(labels)
     
     weights = torch.ones(num_classes, dtype=torch.float32)
     
@@ -3842,8 +3848,14 @@ def main():
     # Loss and optimizer with optional class weighting
     class_weights_tensor: Optional[torch.Tensor] = None
     if args.class_weights != "none":
+        # Get labels for class weight computation - prefer numpy for efficiency
+        if hasattr(train_dataset_full, '_use_numpy') and train_dataset_full._use_numpy:
+            labels_for_weights = train_dataset_full._numpy_labels
+        else:
+            labels_for_weights = train_dataset_full.labels
+        
         class_weights_tensor = compute_class_weights(
-            train_dataset_full.labels,
+            labels_for_weights,
             num_classes,
             strategy=args.class_weights,
             max_weight=args.max_class_weight,
@@ -4230,9 +4242,9 @@ def main():
         train_labels = []
         try:
             # Try different ways to get labels from the dataset
-            if hasattr(train_dataset_full, 'labels_array') and train_dataset_full.labels_array is not None:
-                # Numpy array of labels
-                labels_arr = train_dataset_full.labels_array
+            if hasattr(train_dataset_full, '_use_numpy') and train_dataset_full._use_numpy and train_dataset_full._numpy_labels is not None:
+                # Numpy array of labels (memory-efficient cached format)
+                labels_arr = train_dataset_full._numpy_labels
                 if train_subset_indices is not None:
                     train_labels = labels_arr[train_subset_indices].tolist()
                 else:

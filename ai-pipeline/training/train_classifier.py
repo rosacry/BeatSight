@@ -898,12 +898,25 @@ class DrumSampleDataset(Dataset):
 
         # If waveform, ghost, or accent-tap augmentation is enabled, we must recompute spectrograms each time
         # (can't use cached spectrograms since augmentation is stochastic)
-        if self.waveform_transform is not None or self.ghost_augmenter is not None or self.accent_tap_augmenter is not None:
-            if audio_path is None:
-                raise RuntimeError(
-                    "Waveform/ghost/accent augmentation requires file paths, but files array was skipped. "
-                    "Disable these augmentations or regenerate labels without --skip-files."
-                )
+        # However, if the audio file doesn't exist (e.g., using consolidated cache without original audio),
+        # we fall back to using cached spectrograms for that sample
+        augmentation_enabled = (
+            self.waveform_transform is not None or 
+            self.ghost_augmenter is not None or 
+            self.accent_tap_augmenter is not None
+        )
+        audio_file_available = audio_path is not None and audio_path.exists()
+        
+        # Warn once if augmentation is enabled but audio files are missing
+        if augmentation_enabled and audio_path is not None and not audio_file_available:
+            if not getattr(self, '_augment_fallback_warned', False):
+                print(f"[AUGMENT] Warning: Audio file not found, falling back to cached spectrograms")
+                print(f"[AUGMENT]   Missing: {audio_path}")
+                print(f"[AUGMENT]   Augmentation will be skipped for samples without audio files.")
+                print(f"[AUGMENT]   To enable full augmentation, provide --audio-data-dir with original audio.")
+                self._augment_fallback_warned = True
+        
+        if augmentation_enabled and audio_file_available:
             waveform = self._load_audio(audio_path)
             
             # Apply waveform augmentation first
@@ -2217,6 +2230,16 @@ def main():
         ),
     )
     parser.add_argument(
+        "--audio-data-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Directory containing original audio files for waveform augmentation. "
+            "Required when --ghost-augment or --accent-tap-augment is used with a consolidated cache dataset. "
+            "Should point to the root containing train/audio and val/audio subdirectories."
+        ),
+    )
+    parser.add_argument(
         "--cache-mapping",
         type=Path,
         default=None,
@@ -3250,8 +3273,20 @@ def main():
             val_cache_mapping = val_mapping
             print(f"[CACHE] Auto-detected val cache mapping: {val_mapping}")
 
+    # Determine audio data directory for waveform augmentation
+    # When using consolidated cache, the audio files are not in the cache directory
+    # so we need to specify the original audio location separately
+    needs_audio_files = waveform_transform is not None or ghost_augmenter is not None or accent_tap_augmenter is not None
+    if needs_audio_files and args.audio_data_dir:
+        train_audio_dir = args.audio_data_dir / "train"
+        print(f"[AUGMENT] Using audio files from: {train_audio_dir}")
+    else:
+        train_audio_dir = dataset_path / "train"
+        if needs_audio_files:
+            print(f"[AUGMENT] Using audio files from dataset path: {train_audio_dir}")
+
     train_dataset_full = DrumSampleDataset(
-        dataset_path / "train",
+        train_audio_dir,
         resolve_labels("train", train_labels_file),
         sr=args.sample_rate,
         cache_dir=feature_cache_root / "train" if feature_cache_root else None,
@@ -3270,8 +3305,11 @@ def main():
         extra_labels=extra_labels,  # Merge additional label sources (e.g., synthetic chokes)
         cache_mapping=train_cache_mapping,  # O(1) cache lookup (if available)
     )
+    # Validation doesn't use augmentation but we keep consistent audio path handling
+    val_audio_dir = args.audio_data_dir / "val" if args.audio_data_dir else dataset_path / "val"
+    
     val_dataset_full = DrumSampleDataset(
-        dataset_path / "val",
+        val_audio_dir,
         resolve_labels("val", val_labels_file),
         sr=args.sample_rate,
         cache_dir=feature_cache_root / "val" if feature_cache_root else None,

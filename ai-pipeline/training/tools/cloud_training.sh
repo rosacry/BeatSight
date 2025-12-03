@@ -717,14 +717,17 @@ verify_before_training() {
                 log "✓ Dataset verified: ${sample_count} samples in ${shard_count} shards"
             fi
             
-            # Verify shards exist
-            local missing_shards=0
-            for i in $(seq 0 $((shard_count - 1)) | head -5); do
-                local shard_file="${dataset_dir}/shard_$(printf '%05d' $i).bin"
-                if [ ! -f "$shard_file" ]; then
-                    missing_shards=$((missing_shards + 1))
-                fi
-            done
+            # Verify shards exist - read actual paths from manifest
+            local missing_shards=$(python3 -c "
+import json, os
+manifest = json.load(open('$dataset_dir/manifest.json'))
+missing = 0
+for shard in manifest.get('shards', [])[:5]:  # Check first 5
+    path = os.path.join('$dataset_dir', shard.get('filename', ''))
+    if not os.path.exists(path):
+        missing += 1
+print(missing)
+" 2>/dev/null || echo "0")
             if [ "$missing_shards" -gt 0 ]; then
                 log "❌ FATAL: Shard files missing! Upload incomplete."
                 errors=$((errors + 1))

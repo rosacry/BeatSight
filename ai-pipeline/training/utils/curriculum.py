@@ -277,9 +277,11 @@ class CurriculumScheduler:
         """
         fraction = self.get_current_fraction()
         
-        # Handle empty difficulty scores
+        # Handle empty difficulty scores - return uniform weights
         if len(self.difficulty_scores) == 0:
-            return np.ones(len(labels) if labels is not None else 1)
+            n_samples = len(labels) if labels is not None else 1
+            print(f"[CURRICULUM] Empty difficulty scores, using uniform weights for {n_samples} samples")
+            return np.ones(n_samples, dtype=np.float64)
         
         # Sort samples by difficulty and compute threshold
         sorted_difficulties = np.sort(self.difficulty_scores)
@@ -294,7 +296,12 @@ class CurriculumScheduler:
             0.1  # Reduced but not zero to allow some hard samples
         )
         
-        return weights
+        # Ensure weights sum to > 0 (safety check)
+        if weights.sum() <= 0:
+            print("[CURRICULUM] Warning: All weights were zero, using uniform weights")
+            weights = np.ones_like(weights, dtype=np.float64)
+        
+        return weights.astype(np.float64)
     
     def get_sampler(self, epoch: int) -> CurriculumSampler:
         """Get the sampler for a given epoch."""

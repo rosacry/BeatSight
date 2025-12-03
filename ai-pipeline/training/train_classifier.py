@@ -4092,26 +4092,43 @@ def main():
         class_names = components_info.get('class_names', DrumClassifierCNN.DRUM_COMPONENTS[:num_classes])
         
         # Get labels for training set - handle different label formats
+        train_labels = []
         try:
-            if train_subset_indices is not None:
-                # Check if labels is a numpy array or list of dicts
-                if hasattr(train_dataset_full, 'labels') and isinstance(train_dataset_full.labels, np.ndarray):
-                    train_labels = train_dataset_full.labels[train_subset_indices].tolist()
-                elif hasattr(train_dataset_full, 'labels_array'):
-                    train_labels = train_dataset_full.labels_array[train_subset_indices].tolist()
+            # Try different ways to get labels from the dataset
+            if hasattr(train_dataset_full, 'labels_array') and train_dataset_full.labels_array is not None:
+                # Numpy array of labels
+                labels_arr = train_dataset_full.labels_array
+                if train_subset_indices is not None:
+                    train_labels = labels_arr[train_subset_indices].tolist()
                 else:
-                    train_labels = [train_dataset_full.labels[i]['component_idx'] for i in train_subset_indices]
-            else:
-                # Check if labels is a numpy array or list of dicts
-                if hasattr(train_dataset_full, 'labels') and isinstance(train_dataset_full.labels, np.ndarray):
-                    train_labels = train_dataset_full.labels.tolist()
-                elif hasattr(train_dataset_full, 'labels_array'):
-                    train_labels = train_dataset_full.labels_array.tolist()
-                else:
-                    train_labels = [item['component_idx'] for item in train_dataset_full.labels]
+                    train_labels = labels_arr.tolist()
+            elif hasattr(train_dataset_full, 'labels') and train_dataset_full.labels is not None:
+                labels_data = train_dataset_full.labels
+                if isinstance(labels_data, np.ndarray):
+                    if train_subset_indices is not None:
+                        train_labels = labels_data[train_subset_indices].tolist()
+                    else:
+                        train_labels = labels_data.tolist()
+                elif isinstance(labels_data, (list, tuple)) and len(labels_data) > 0:
+                    if isinstance(labels_data[0], dict):
+                        if train_subset_indices is not None:
+                            train_labels = [labels_data[i]['component_idx'] for i in train_subset_indices]
+                        else:
+                            train_labels = [item['component_idx'] for item in labels_data]
+                    else:
+                        if train_subset_indices is not None:
+                            train_labels = [labels_data[i] for i in train_subset_indices]
+                        else:
+                            train_labels = list(labels_data)
+            
+            # If still empty, try to generate random labels as fallback
+            if len(train_labels) == 0:
+                print(f"[CURRICULUM] Warning: Could not extract labels, using random difficulty")
+                # Use uniform random labels for difficulty scoring
+                train_labels = np.random.randint(0, num_classes, size=len(train_dataset_full)).tolist()
         except Exception as e:
-            print(f"[CURRICULUM] Warning: Could not extract labels ({e}), using uniform difficulty")
-            train_labels = list(range(len(train_dataset_full)))  # Fallback
+            print(f"[CURRICULUM] Warning: Could not extract labels ({e}), using random difficulty")
+            train_labels = np.random.randint(0, num_classes, size=len(train_dataset_full)).tolist()
         
         # Compute per-sample difficulty blending domain knowledge with class frequency
         # This mitigates the risk of hardcoded difficulty scores being wrong

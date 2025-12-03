@@ -4091,11 +4091,27 @@ def main():
         class_difficulty = get_drum_class_difficulty()
         class_names = components_info.get('class_names', DrumClassifierCNN.DRUM_COMPONENTS[:num_classes])
         
-        # Get labels for training set
-        if train_subset_indices is not None:
-            train_labels = [train_dataset_full.labels[i]['component_idx'] for i in train_subset_indices]
-        else:
-            train_labels = [item['component_idx'] for item in train_dataset_full.labels]
+        # Get labels for training set - handle different label formats
+        try:
+            if train_subset_indices is not None:
+                # Check if labels is a numpy array or list of dicts
+                if hasattr(train_dataset_full, 'labels') and isinstance(train_dataset_full.labels, np.ndarray):
+                    train_labels = train_dataset_full.labels[train_subset_indices].tolist()
+                elif hasattr(train_dataset_full, 'labels_array'):
+                    train_labels = train_dataset_full.labels_array[train_subset_indices].tolist()
+                else:
+                    train_labels = [train_dataset_full.labels[i]['component_idx'] for i in train_subset_indices]
+            else:
+                # Check if labels is a numpy array or list of dicts
+                if hasattr(train_dataset_full, 'labels') and isinstance(train_dataset_full.labels, np.ndarray):
+                    train_labels = train_dataset_full.labels.tolist()
+                elif hasattr(train_dataset_full, 'labels_array'):
+                    train_labels = train_dataset_full.labels_array.tolist()
+                else:
+                    train_labels = [item['component_idx'] for item in train_dataset_full.labels]
+        except Exception as e:
+            print(f"[CURRICULUM] Warning: Could not extract labels ({e}), using uniform difficulty")
+            train_labels = list(range(len(train_dataset_full)))  # Fallback
         
         # Compute per-sample difficulty blending domain knowledge with class frequency
         # This mitigates the risk of hardcoded difficulty scores being wrong

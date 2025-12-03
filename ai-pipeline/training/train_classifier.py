@@ -4026,7 +4026,10 @@ def main():
     if torch_device.type != "cuda":
         autocast_dtype = torch.bfloat16
     scaler: Optional[GradScaler]
-    if amp_enabled:
+    # GradScaler is only needed for float16 - bfloat16 has enough dynamic range
+    # Also, GradScaler causes issues with SAM optimizer (double unscale_ calls)
+    use_grad_scaler = amp_enabled and autocast_dtype == torch.float16
+    if use_grad_scaler:
         scaler_kwargs: Dict[str, Any] = {}
         try:
             if "device_type" in inspect.signature(GradScaler.__init__).parameters:
@@ -4037,6 +4040,8 @@ def main():
         scaler = GradScaler(**scaler_kwargs)
     else:
         scaler = None
+        if amp_enabled and autocast_dtype == torch.bfloat16:
+            print("[AMP] Using bfloat16 without GradScaler (not needed, avoids SAM compatibility issues)")
     
     # Initialize Mixup/CutMix augmentation if requested
     mixup_fn = None

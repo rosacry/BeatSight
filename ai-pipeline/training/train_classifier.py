@@ -1769,6 +1769,10 @@ def train_epoch(
                 # Extract main output for accuracy (handles deep supervision tuple)
                 outputs = extract_main_output(outputs)
             loss_for_backward = loss / accum_steps
+        
+        # Clone outputs for accuracy calculation BEFORE SAM's second forward pass
+        # This prevents CUDA graph buffer overwrite issues with torch.compile + SAM
+        outputs_for_accuracy = outputs.detach().clone()
 
         if amp_enabled and scaler is not None:
             scaler.scale(loss_for_backward).backward()
@@ -1887,7 +1891,7 @@ def train_epoch(
                     ema.update(model)
 
         total_loss += loss.item()
-        _, predicted = torch.max(outputs.data, 1)
+        _, predicted = torch.max(outputs_for_accuracy, 1)
         # For accuracy calculation, use original labels (not mixed) for fair comparison
         if use_mixup:
             total += labels_a.size(0)

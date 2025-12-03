@@ -33,8 +33,9 @@ fi
 # Defaults (can be overridden by environment)
 BEATSIGHT_REPO_ROOT=${BEATSIGHT_REPO_ROOT:-$REPO_ROOT}
 BEATSIGHT_DATA_ROOT=${BEATSIGHT_DATA_ROOT:-${BEATSIGHT_REPO_ROOT}/data}
-BEATSIGHT_DATASET_DIR=${BEATSIGHT_DATASET_DIR:-/e/data/prod_combined_profile_run}
 BEATSIGHT_CACHE_DIR=${BEATSIGHT_CACHE_DIR:-${BEATSIGHT_DATA_ROOT}/feature_cache/prod_combined_warmup}
+# DATASET_DIR defaults to CACHE_DIR since cached training reads components.json from there
+BEATSIGHT_DATASET_DIR=${BEATSIGHT_DATASET_DIR:-${BEATSIGHT_CACHE_DIR}}
 BEATSIGHT_METRICS_DIR=${BEATSIGHT_METRICS_DIR:-${BEATSIGHT_REPO_ROOT}/ai-pipeline/training/reports/metrics}
 BEATSIGHT_RUN_WARMUP=${BEATSIGHT_RUN_WARMUP:-${BEATSIGHT_REPO_ROOT}/ai-pipeline/training/runs/prod_combined_warmup}
 BEATSIGHT_RUN_QUICK=${BEATSIGHT_RUN_QUICK:-${BEATSIGHT_REPO_ROOT}/ai-pipeline/training/runs/prod_combined_quick}
@@ -2212,6 +2213,12 @@ ENSEMBLE_PY
               --checkpoint-every 10 \
               --wandb-project beatsight-v5 \
               $resume_flag
+            
+            PYTHON_EXIT_CODE=$?
+            if [[ $PYTHON_EXIT_CODE -ne 0 ]]; then
+                log "❌ Training crashed with exit code $PYTHON_EXIT_CODE"
+                return $PYTHON_EXIT_CODE
+            fi
             
             log ""
             log "⚡ V5 ULTIMATE (CACHED) model training complete!"

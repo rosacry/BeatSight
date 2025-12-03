@@ -60,6 +60,8 @@ CUTTING_EDGE_PROGRESSIVE_FLAGS="--progressive-augmentation"
 # Quick Win: 0.1 is optimal for 21 classes (was 0.05) - +0.2-0.3% improvement
 CUTTING_EDGE_REGULARIZATION_FLAGS="--label-smoothing 0.1"
 CUTTING_EDGE_SAM_FLAGS="--use-sam --sam-rho 0.05"
+# Speed-optimized: No SAM (saves 2 forward+backward passes per batch, ~0.5-1% quality trade-off)
+CUTTING_EDGE_SAM_FLAGS_FAST=""
 CUTTING_EDGE_SWA_FLAGS="--use-swa --swa-start 0.75"
 # R-Drop: Regularized Dropout with consistency loss (0.5-1% improvement)
 # Using alpha=0.3 (conservative) when combined with SAM to avoid over-smoothing
@@ -2105,6 +2107,7 @@ ENSEMBLE_PY
             log ""
             log "   🚀 SPEED OPTIMIZATIONS:"
             log "      → Batch size 2048 (2x throughput)"
+            log "      → No SAM (saves 2 forward+backward per batch)"
             log "      → AWP frequency 4 (4x less overhead)"
             log "      → No R-Drop (saves 2 forward passes per batch)"
             log "   🔥 Estimated time: ~12-18hr on H100 80GB (300 epochs)"
@@ -2180,7 +2183,7 @@ ENSEMBLE_PY
               ${CUTTING_EDGE_SPECAUGMENT_FLAGS} \
               ${CUTTING_EDGE_FOCAL_FLAGS} \
               ${CUTTING_EDGE_EMA_FLAGS} \
-              ${CUTTING_EDGE_SAM_FLAGS} \
+              ${CUTTING_EDGE_SAM_FLAGS_FAST} \
               ${CUTTING_EDGE_SWA_FLAGS} \
               ${CUTTING_EDGE_RDROP_FLAGS_FAST} \
               ${CUTTING_EDGE_CURRICULUM_FLAGS} \

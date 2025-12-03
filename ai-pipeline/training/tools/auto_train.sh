@@ -2164,7 +2164,7 @@ ENSEMBLE_PY
               --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
               --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
               --device cuda \
-              --num-workers ${CLOUD_NUM_WORKERS} --val-num-workers $((CLOUD_NUM_WORKERS/2)) --prefetch-factor 8 \
+              --num-workers ${CLOUD_NUM_WORKERS} --val-num-workers $((CLOUD_NUM_WORKERS/2)) --prefetch-factor 8 --val-prefetch-factor 4 \
               --persistent-workers \
               --pin-memory --amp-dtype ${CLOUD_AMP_DTYPE} \
               ${CLOUD_COMPILE_FLAGS} \

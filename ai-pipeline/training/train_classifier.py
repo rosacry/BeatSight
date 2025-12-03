@@ -1325,6 +1325,39 @@ def _normalize_state_dict_keys(state_dict: Dict[str, torch.Tensor]) -> OrderedDi
     )
 
 
+def _atomic_torch_save(obj: Any, path: Path) -> None:
+    """Save a PyTorch object atomically to prevent corruption from Ctrl+C.
+    
+    Writes to a temporary file first, then atomically renames to the target.
+    On POSIX systems, rename() is atomic. On Windows, we use os.replace()
+    which is also atomic on NTFS.
+    
+    This prevents checkpoint corruption when training is interrupted during save.
+    """
+    import tempfile
+    
+    # Create temp file in same directory (ensures same filesystem for atomic rename)
+    parent_dir = path.parent
+    parent_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Use a deterministic temp name based on target to avoid accumulating temp files
+    temp_path = parent_dir / f".{path.name}.tmp"
+    
+    try:
+        # Save to temp file
+        torch.save(obj, temp_path)
+        # Atomic rename (os.replace is atomic on both POSIX and Windows NTFS)
+        os.replace(temp_path, path)
+    except Exception:
+        # Clean up temp file on failure
+        if temp_path.exists():
+            try:
+                temp_path.unlink()
+            except OSError:
+                pass
+        raise
+
+
 def _worker_init_fn(worker_id: int) -> None:
     """Initialize DataLoader worker with pre-warmed mmap cache.
     
@@ -4399,12 +4432,13 @@ def main():
             mid_epoch_path = checkpoint_dir / f"checkpoint_epoch_{epoch_index:04d}_mid.pth"
             if mid_epoch_path.exists():
                 mid_epoch_path.unlink()
-                
-        torch.save(checkpoint_payload, checkpoint_path)
         
-        # Always update latest_checkpoint.pth for easy resumption
+        # Use atomic save to prevent corruption from Ctrl+C during save
+        _atomic_torch_save(checkpoint_payload, checkpoint_path)
+        
+        # Always update latest_checkpoint.pth for easy resumption (also atomic)
         latest_path = checkpoint_dir / "latest_checkpoint.pth"
-        torch.save(checkpoint_payload, latest_path)
+        _atomic_torch_save(checkpoint_payload, latest_path)
 
         if is_mid_epoch:
             pct = 100 * batch_index / total_batches if total_batches else 0
@@ -4881,14 +4915,14 @@ def main():
                 best_val_acc = val_acc
                 best_epoch = epoch + 1
                 model_path = output_dir / "best_drum_classifier.pth"
-                torch.save(model.state_dict(), model_path)
+                _atomic_torch_save(_normalize_state_dict_keys(model.state_dict()), model_path)
                 best_model_path = model_path
                 _safe_print(f"✓ Saved best model (acc: {val_acc:.2f}%)")
                 
                 # Also save EMA model if enabled (often performs even better)
                 if ema is not None:
                     ema_model_path = output_dir / "best_drum_classifier_ema.pth"
-                    torch.save(ema.ema_model.state_dict(), ema_model_path)
+                    _atomic_torch_save(_normalize_state_dict_keys(ema.ema_model.state_dict()), ema_model_path)
                     _safe_print(f"✓ Saved best EMA model (acc: {val_acc:.2f}%)")
                 
                 if wandb_run is not None:
@@ -4941,14 +4975,14 @@ def main():
 
     save_checkpoint(last_completed_epoch, reason="complete")
     
-    # Save final model
+    # Save final model (atomic to prevent corruption)
     final_model_path = output_dir / "final_drum_classifier.pth"
-    torch.save(model.state_dict(), final_model_path)
+    _atomic_torch_save(_normalize_state_dict_keys(model.state_dict()), final_model_path)
     
     # Save final EMA model if enabled
     if ema is not None:
         final_ema_path = output_dir / "final_drum_classifier_ema.pth"
-        torch.save(ema.ema_model.state_dict(), final_ema_path)
+        _atomic_torch_save(_normalize_state_dict_keys(ema.ema_model.state_dict()), final_ema_path)
         print(f"Final EMA model saved to: {final_ema_path}")
     
     # Save SWA model if enabled (requires updating BN statistics)
@@ -4956,7 +4990,7 @@ def main():
         print("Updating BatchNorm statistics for SWA model...")
         swa_manager.update_batch_norm(train_loader)
         final_swa_path = output_dir / "final_drum_classifier_swa.pth"
-        torch.save(swa_manager.get_averaged_model().state_dict(), final_swa_path)
+        _atomic_torch_save(_normalize_state_dict_keys(swa_manager.get_averaged_model().state_dict()), final_swa_path)
         print(f"Final SWA model saved to: {final_swa_path}")
     
     # Post-training calibration if enabled

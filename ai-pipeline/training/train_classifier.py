@@ -3168,8 +3168,9 @@ def main():
         )
         # Override probability if specified
         if args.accent_tap_prob != 0.12:
-            accent_tap_augmenter.config.augment_prob = args.accent_tap_prob
-        print(f"[ACCENT-TAP AUGMENT] Enabled with preset='{args.accent_tap_preset}', prob={accent_tap_augmenter.config.augment_prob:.2f}")
+            accent_tap_augmenter.config.accent_prob = args.accent_tap_prob
+            accent_tap_augmenter.config.tap_prob = args.accent_tap_prob
+        print(f"[ACCENT-TAP AUGMENT] Enabled with preset='{args.accent_tap_preset}', prob={accent_tap_augmenter.config.accent_prob:.2f}")
         print("[ACCENT-TAP AUGMENT] This synthesizes accents/taps from normal hits for improved dynamics")
     elif args.accent_tap_augment and not HAS_ACCENT_TAP_AUGMENT:
         print("[WARNING] Accent-tap augmentation requested but module not available. Skipping.")

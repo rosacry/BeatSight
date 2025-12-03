@@ -490,13 +490,13 @@ case "$TRAIN_MODE" in
         echo "    v5-warmup           (17a) - V5 warmup (~1hr on H100)"
         echo "    v5-quick            (17b) - V5 quick (~3hr)"
         echo "    v5-long             (17c) - V5 long (~8hr)"
-        echo "    v5-full-cached      (17d) - V5 TURBO: 4096 batch, 200 epochs (~50-70hr) ⭐ RECOMMENDED"
+        echo "    v5-full-cached      (17d) - V5 TURBO: no compile, 200 epochs (~20-25hr) ⭐ RECOMMENDED"
         echo "    v5-full             (17e) - V5 + ghost/waveform augment (~400hr, +2-4% on ghosts)"
         echo "    v5-self-distill     (17f) - Self-distillation for +1-2% (~15hr @ 300 epochs)"
         echo "    v5-ensemble         (17g) - Train 3 models for ensemble +0.5-1.5% (~60hr)"
         echo ""
         echo "  ⭐ RECOMMENDED PATH: 14 → 17a → 17d → 17f → 19c"
-        echo "  🏆 CLOUD COST: ~70 hours = ~\$180 on Lambda H100"
+        echo "  🏆 CLOUD COST: ~40 hours = ~\$105 on Lambda H100"
         echo ""
         echo "  🎵 BEATs AUDIO FOUNDATION (Microsoft's state-of-the-art):"
         echo ""
@@ -2106,21 +2106,20 @@ ENSEMBLE_PY
             log "   Using velocity-enriched labels: train_labels_with_velocity.json"
             log ""
             log "   🚀 TURBO OPTIMIZATIONS:"
-            log "      → Batch size 4096 (uses VRAM headroom for 2x throughput)"
-            log "      → NO torch.compile (removes JIT overhead for small model)"
+            log "      → Batch size 2048 (optimal for throughput)"
+            log "      → NO torch.compile (removes 12+ min warmup + JIT overhead)"
             log "      → AWP frequency 8 (half overhead, ~0.05% quality trade-off)"
             log "      → 200 epochs (early stopping catches optimal anyway)"
-            log "      → Grad accum 2 = 8192 effective batch"
-            log "      → LR 0.0024 (linear scaling for larger batch)"
+            log "      → LR 0.0012 (standard)"
             log "      → No SAM, No R-Drop (saves forward passes)"
-            log "   🔥 Estimated time: ~50-70hr on H100 80GB (200 epochs)"
+            log "   🔥 Estimated time: ~20-25hr on H100 80GB (200 epochs)"
             log ""
             export WANDB_RUN_GROUP=v5_full_cached_auto
             
             # Detect cloud GPU for optimizations
             IS_CLOUD_GPU=false
             CLOUD_AMP_DTYPE="float16"
-            CLOUD_BATCH_SIZE="2048"
+            CLOUD_BATCH_SIZE="1024"
             
             if command -v nvidia-smi &> /dev/null; then
                 GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)
@@ -2133,14 +2132,13 @@ ENSEMBLE_PY
                     
                     GPU_MEM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -d ' ')
                     if [[ "$GPU_MEM" -gt 70000 ]]; then
-                        CLOUD_BATCH_SIZE="4096"
-                        CLOUD_NUM_WORKERS="20"
-                        log "      → Using batch size 4096 (80GB VRAM + cached features)"
-                        log "      → Effective batch: 8192 with grad_accum=2"
-                    elif [[ "$GPU_MEM" -gt 38000 ]]; then
                         CLOUD_BATCH_SIZE="2048"
+                        CLOUD_NUM_WORKERS="20"
+                        log "      → Using batch size 2048 (optimal throughput on H100)"
+                    elif [[ "$GPU_MEM" -gt 38000 ]]; then
+                        CLOUD_BATCH_SIZE="1024"
                         CLOUD_NUM_WORKERS="12"
-                        log "      → Using batch size 2048 (40GB VRAM)"
+                        log "      → Using batch size 1024 (40GB VRAM)"
                     fi
                 fi
             fi
@@ -2160,8 +2158,7 @@ ENSEMBLE_PY
               --pin-memory --amp-dtype ${CLOUD_AMP_DTYPE} \
               --epochs 200 \
               --batch-size ${CLOUD_BATCH_SIZE} \
-              --grad-accum-steps 2 \
-              --lr 0.0024 \
+              --lr 0.0012 \
               --model-version v5 \
               --v5-size large \
               --drop-path-rate 0.15 \

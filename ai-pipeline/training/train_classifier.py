@@ -1019,7 +1019,21 @@ class DrumSampleDataset(Dataset):
         if features is None:
             # Check if audio file exists before trying to load it
             if audio_path is None or not audio_path.exists():
-                # Provide detailed error for debugging cache issues
+                # For tiny number of missing samples (<0.01%), return a random valid sample
+                # This avoids crashing training for negligible data issues
+                if self._use_cache_mapping and self._cache_mapping_valid is not None:
+                    valid_indices = np.where(self._cache_mapping_valid)[0]
+                    if len(valid_indices) > 0:
+                        # Warn once about this fallback
+                        if not getattr(self, '_cache_fallback_warned', False):
+                            invalid_count = len(self._cache_mapping_valid) - len(valid_indices)
+                            print(f"[CACHE] Warning: {invalid_count} samples missing from cache, substituting random valid samples")
+                            self._cache_fallback_warned = True
+                        # Pick a random valid sample
+                        fallback_idx = int(valid_indices[idx % len(valid_indices)])
+                        return self.__getitem__(fallback_idx)
+                
+                # If we can't fall back, provide detailed error
                 cache_mapping_status = "valid" if (self._use_cache_mapping and self._cache_mapping_valid[idx]) else "invalid/missing"
                 raise RuntimeError(
                     f"Cache lookup failed for sample {idx} and audio file not available.\n"

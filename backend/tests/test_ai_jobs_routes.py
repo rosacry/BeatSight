@@ -129,7 +129,8 @@ class TestEnqueueJob:
         # Setup mocks
         mock_quota = AsyncMock()
         mock_quota.check_quota = AsyncMock(return_value=mock_quota_status)
-        mock_quota.consume_quota = AsyncMock(return_value=mock_quota_status)
+        # consume_quota returns (QuotaStatus, bool) tuple
+        mock_quota.consume_quota = AsyncMock(return_value=(mock_quota_status, False))
         mock_quota_cls.return_value = mock_quota
 
         mock_service = AsyncMock()
@@ -193,7 +194,8 @@ class TestEnqueueJob:
         """Test enqueue when Modal is disabled - job is queued for local workers."""
         mock_quota = AsyncMock()
         mock_quota.check_quota = AsyncMock(return_value=mock_quota_status)
-        mock_quota.consume_quota = AsyncMock(return_value=mock_quota_status)
+        # consume_quota returns (QuotaStatus, bool) tuple
+        mock_quota.consume_quota = AsyncMock(return_value=(mock_quota_status, False))
         mock_quota_cls.return_value = mock_quota
 
         mock_service = AsyncMock()

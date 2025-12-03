@@ -4,15 +4,20 @@ BeatSight Pricing Configuration
 Centralized pricing and quota configuration for all subscription tiers.
 This file is the source of truth for pricing across the platform.
 
-Pricing Strategy (December 2025):
-- FREE: 5 songs/month - Hook users, demonstrate value
-- BASIC ($8/mo): 30 songs/month - Casual drummers learning songs
-- PRO ($15/mo): Unlimited - Serious musicians, teachers, content creators
+Pricing Strategy (December 2025) - Simplified 2-Tier + Credits:
+- FREE: 3 songs/month - Just enough to experience value
+- PRO ($12/mo): 50 songs/month - Covers 99% of drummers
+- CREDITS: $0.35/song - Universal fallback for everyone
+
+Why no Basic tier:
+- Simplifies pricing page (2 choices vs 3)
+- Eliminates "stuck in the middle" frustration
+- Credits fill the gap for casual users who don't want Pro
 
 Revenue Model:
-- Target: 5% conversion from free to paid
-- Expected ARPU: ~$11/mo (mix of Basic and Pro)
-- Gross margin: 85%+ (AI costs ~$0.05/song)
+- Target: 12% conversion from free to paid
+- Expected ARPU: ~$12.50/mo (Pro + credit upsells)
+- Gross margin: 95%+ (AI costs ~$0.008/song on Modal L40S)
 """
 
 from __future__ import annotations
@@ -28,10 +33,10 @@ class TierConfig:
 
     plan: SubscriptionPlan
     name: str
-    monthly_quota: int  # -1 = unlimited
+    monthly_quota: int  # -1 = unlimited, positive = capped
     price_monthly_cents: int
     price_yearly_cents: int
-    model_tier: str  # v5-tiny, v5-distilled, v5-full
+    model_tier: str  # v5-distilled or v5-full
     priority: int  # Processing queue priority (higher = faster)
     features: tuple[str, ...]
 
@@ -56,69 +61,55 @@ class TierConfig:
 
 
 # =============================================================================
-# TIER DEFINITIONS
+# TIER DEFINITIONS (Simplified: Free + Pro only)
 # =============================================================================
 
 FREE_TIER = TierConfig(
     plan=SubscriptionPlan.FREE,
     name="Free",
-    monthly_quota=5,
+    monthly_quota=3,  # Reduced from 5 to encourage upgrades
     price_monthly_cents=0,
     price_yearly_cents=0,
     model_tier="v5-distilled",  # Good quality, cost-effective
     priority=1,
     features=(
-        "5 songs per month",
-        "AI drum transcription",
+        "3 AI transcriptions per month",
+        "V5 Distilled model quality",
         "Basic playback modes",
         "Community beatmaps",
+        "Buy credits anytime",
     ),
 )
 
-BASIC_TIER = TierConfig(
-    plan=SubscriptionPlan.BASIC_MONTHLY,
-    name="Basic",
-    monthly_quota=30,
-    price_monthly_cents=800,  # $8/month
-    price_yearly_cents=6400,  # $64/year (2 months free)
-    model_tier="v5-distilled",
-    priority=5,
-    features=(
-        "30 songs per month",
-        "AI drum transcription",
-        "All playback modes",
-        "Technique detection",
-        "Priority processing",
-        "Offline access",
-    ),
-)
+# Note: Basic tier removed - credits fill this gap for casual users
+# Legacy BASIC_MONTHLY/YEARLY plans will map to PRO for existing subscribers
 
 PRO_TIER = TierConfig(
     plan=SubscriptionPlan.PRO_MONTHLY,
     name="Pro",
-    monthly_quota=-1,  # Unlimited
-    price_monthly_cents=1500,  # $15/month
-    price_yearly_cents=12000,  # $120/year (2 months free)
+    monthly_quota=50,  # Changed from unlimited - 50 covers 99% of users
+    price_monthly_cents=1200,  # $12/month (was $15)
+    price_yearly_cents=9600,  # $96/year = $8/mo (2 months free)
     model_tier="v5-full",  # Best quality
     priority=10,
     features=(
-        "Unlimited songs",
-        "AI drum transcription",
+        "50 AI transcriptions per month",
+        "V5 Full model (highest accuracy)",
+        "Priority processing queue",
         "All playback modes",
         "Full technique detection",
-        "Highest priority processing",
-        "Offline access",
         "Advanced practice tools",
         "Export to MIDI/MusicXML",
-        "Commercial use license",
+        "Buy credits if you need more",
     ),
 )
 
 # Map plans to their configurations
+# Legacy BASIC plans map to PRO for backwards compatibility
 TIER_CONFIGS: dict[SubscriptionPlan, TierConfig] = {
     SubscriptionPlan.FREE: FREE_TIER,
-    SubscriptionPlan.BASIC_MONTHLY: BASIC_TIER,
-    SubscriptionPlan.BASIC_YEARLY: BASIC_TIER,  # Same features, different billing
+    SubscriptionPlan.BASIC_MONTHLY: PRO_TIER,  # Legacy: map to Pro
+    SubscriptionPlan.BASIC_YEARLY: PRO_TIER,   # Legacy: map to Pro
     SubscriptionPlan.PRO_MONTHLY: PRO_TIER,
     SubscriptionPlan.PRO_YEARLY: PRO_TIER,
 }
@@ -130,7 +121,7 @@ def get_tier_config(plan: SubscriptionPlan) -> TierConfig:
 
 
 def get_monthly_quota(plan: SubscriptionPlan) -> int:
-    """Get monthly AI job quota for a plan. Returns -1 for unlimited."""
+    """Get monthly AI job quota for a plan."""
     return get_tier_config(plan).monthly_quota
 
 
@@ -145,6 +136,39 @@ def get_processing_priority(plan: SubscriptionPlan) -> int:
 
 
 # =============================================================================
+# CREDIT PACKS (for pay-per-use)
+# =============================================================================
+
+CREDIT_PACK_STARTER = {
+    "id": "starter",
+    "name": "Starter Pack",
+    "credits": 5,
+    "price_cents": 175,
+    "per_credit_cents": 35,
+}
+
+CREDIT_PACK_VALUE = {
+    "id": "value",
+    "name": "Value Pack",
+    "credits": 15,
+    "price_cents": 450,
+    "per_credit_cents": 30,
+    "savings_percent": 14,
+}
+
+CREDIT_PACK_POWER = {
+    "id": "power",
+    "name": "Power Pack",
+    "credits": 40,
+    "price_cents": 1000,
+    "per_credit_cents": 25,
+    "savings_percent": 29,
+}
+
+CREDIT_PACKS = [CREDIT_PACK_STARTER, CREDIT_PACK_VALUE, CREDIT_PACK_POWER]
+
+
+# =============================================================================
 # PRICING TABLE (for frontend display)
 # =============================================================================
 
@@ -154,13 +178,14 @@ def get_pricing_table() -> dict:
     Get pricing table for frontend display.
 
     Returns a dict that can be serialized to JSON for the pricing page.
+    Simplified to 2 tiers: Free and Pro (no Basic tier).
     """
     return {
         "tiers": [
             {
                 "id": "free",
                 "name": "Free",
-                "description": "Get started with AI drum transcription",
+                "description": "Try BeatSight with 3 songs per month",
                 "price_monthly": 0,
                 "price_yearly": 0,
                 "quota": FREE_TIER.monthly_quota,
@@ -169,30 +194,19 @@ def get_pricing_table() -> dict:
                 "popular": False,
             },
             {
-                "id": "basic",
-                "name": "Basic",
-                "description": "For casual drummers learning songs",
-                "price_monthly": BASIC_TIER.price_monthly_dollars,
-                "price_yearly": BASIC_TIER.price_yearly_dollars,
-                "quota": BASIC_TIER.monthly_quota,
-                "features": list(BASIC_TIER.features),
-                "cta": "Start Free Trial",
-                "popular": True,
-                "savings_percent": BASIC_TIER.yearly_savings_percent,
-            },
-            {
                 "id": "pro",
                 "name": "Pro",
-                "description": "For serious musicians and teachers",
+                "description": "For drummers who practice regularly",
                 "price_monthly": PRO_TIER.price_monthly_dollars,
                 "price_yearly": PRO_TIER.price_yearly_dollars,
-                "quota": "Unlimited",
+                "quota": PRO_TIER.monthly_quota,
                 "features": list(PRO_TIER.features),
-                "cta": "Start Free Trial",
-                "popular": False,
+                "cta": "Go Pro",
+                "popular": True,
                 "savings_percent": PRO_TIER.yearly_savings_percent,
             },
         ],
+        "credit_packs": CREDIT_PACKS,
         "currency": "USD",
         "trial_days": 7,
         "annual_discount_months": 2,  # "2 months free" messaging
@@ -203,10 +217,10 @@ def get_pricing_table() -> dict:
 # COST ANALYSIS (internal metrics)
 # =============================================================================
 
-# Per-song processing cost on Modal L40S (~$0.005-0.05 depending on model)
-COST_PER_SONG_FREE = 0.008  # v5-distilled, lower priority
-COST_PER_SONG_BASIC = 0.008  # v5-distilled
-COST_PER_SONG_PRO = 0.015  # v5-full, highest quality
+# Per-song processing cost on Modal L40S with FP8+Sparse
+COST_PER_SONG_FREE = 0.008  # v5-distilled
+COST_PER_SONG_PRO = 0.008   # v5-full (same cost, optimized)
+COST_PER_CREDIT = 0.008     # Credits use v5-full
 
 
 def calculate_unit_economics(monthly_songs: int, plan: SubscriptionPlan) -> dict:
@@ -223,12 +237,7 @@ def calculate_unit_economics(monthly_songs: int, plan: SubscriptionPlan) -> dict
     tier = get_tier_config(plan)
     revenue = tier.price_monthly_cents / 100
 
-    if plan == SubscriptionPlan.FREE:
-        cost_per_song = COST_PER_SONG_FREE
-    elif plan in (SubscriptionPlan.BASIC_MONTHLY, SubscriptionPlan.BASIC_YEARLY):
-        cost_per_song = COST_PER_SONG_BASIC
-    else:
-        cost_per_song = COST_PER_SONG_PRO
+    cost_per_song = COST_PER_SONG_PRO if plan != SubscriptionPlan.FREE else COST_PER_SONG_FREE
 
     total_cost = monthly_songs * cost_per_song
     gross_profit = revenue - total_cost

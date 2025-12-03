@@ -4,6 +4,7 @@ Handles:
 - Subscription plan quota definitions
 - Usage tracking per billing period
 - Quota enforcement and remaining checks
+- Credit fallback when subscription quota exceeded
 """
 
 from __future__ import annotations
@@ -21,13 +22,20 @@ from app.models.subscription import Subscription, SubscriptionPlan, Subscription
 
 
 class QuotaExceededError(Exception):
-    """Raised when user has exceeded their AI generation quota."""
+    """Raised when user has exceeded their AI generation quota and has no credits."""
 
-    def __init__(self, limit: int, used: int, resets_at: datetime | None = None):
+    def __init__(
+        self,
+        limit: int,
+        used: int,
+        resets_at: datetime | None = None,
+        credit_balance: int = 0,
+    ):
         self.limit = limit
         self.used = used
         self.resets_at = resets_at
-        super().__init__(f"Quota exceeded: {used}/{limit} jobs used")
+        self.credit_balance = credit_balance
+        super().__init__(f"Quota exceeded: {used}/{limit} jobs used, {credit_balance} credits available")
 
 
 class JobPriority(IntEnum):
@@ -49,27 +57,33 @@ class QuotaLimits:
 
     @classmethod
     def for_plan(cls, plan: SubscriptionPlan) -> "QuotaLimits":
-        """Get quota limits for a subscription plan."""
+        """Get quota limits for a subscription plan.
+
+        Tier Structure (see docs/MONETIZATION_STRATEGY.md):
+        - Free: 3 songs/month (down from 5 to encourage upgrades)
+        - Pro: 50 songs/month at $12/mo (not unlimited to prevent abuse)
+        - Credits available as fallback for all users
+        """
         match plan:
             case SubscriptionPlan.FREE:
                 return cls(
-                    jobs_per_month=10,
-                    jobs_per_day=3,
+                    jobs_per_month=3,
+                    jobs_per_day=2,
                     max_concurrent=1,
                     priority=JobPriority.STANDARD,
                 )
             case SubscriptionPlan.PRO_MONTHLY | SubscriptionPlan.PRO_YEARLY:
                 return cls(
-                    jobs_per_month=100,
-                    jobs_per_day=20,
+                    jobs_per_month=50,
+                    jobs_per_day=15,
                     max_concurrent=3,
                     priority=JobPriority.HIGH,
                 )
             case _:
                 # Default to free tier limits
                 return cls(
-                    jobs_per_month=10,
-                    jobs_per_day=3,
+                    jobs_per_month=3,
+                    jobs_per_day=2,
                     max_concurrent=1,
                     priority=JobPriority.STANDARD,
                 )
@@ -96,11 +110,17 @@ class QuotaStatus:
     remaining_month: int
     remaining_today: int
     resets_at: datetime | None
+    credit_balance: int = 0  # Available credits for pay-per-use
 
     @property
     def can_enqueue(self) -> bool:
-        """Check if user can enqueue a new job."""
-        return self.remaining_month > 0 and self.remaining_today > 0
+        """Check if user can enqueue a new job (via quota or credits)."""
+        return self.remaining_month > 0 or self.remaining_today > 0 or self.credit_balance > 0
+
+    @property
+    def will_use_credit(self) -> bool:
+        """Check if the next job will consume a credit."""
+        return (self.remaining_month <= 0 or self.remaining_today <= 0) and self.credit_balance > 0
 
 
 class QuotaService:
@@ -108,6 +128,15 @@ class QuotaService:
 
     def __init__(self, session: AsyncSession):
         self._session = session
+        self._credit_service: "CreditService | None" = None
+
+    @property
+    def credit_service(self) -> "CreditService":
+        """Lazy-load credit service to avoid circular imports."""
+        if self._credit_service is None:
+            from app.services.credits import CreditService
+            self._credit_service = CreditService(self._session)
+        return self._credit_service
 
     async def get_user_subscription(self, user_id: uuid.UUID) -> Subscription | None:
         """Get active subscription for a user."""
@@ -118,6 +147,14 @@ class QuotaService:
             .order_by(Subscription.current_period_end.desc())
         )
         return result.scalar_one_or_none()
+
+    async def _get_credit_balance(self, user_id: uuid.UUID) -> int:
+        """Get user's current credit balance."""
+        try:
+            balance = await self.credit_service.get_or_create_balance(user_id)
+            return balance.balance
+        except Exception:
+            return 0
 
     async def get_quota_status(self, user_id: uuid.UUID | None) -> QuotaStatus:
         """Get current quota status for a user."""
@@ -158,6 +195,9 @@ class QuotaService:
             else:
                 resets_at = datetime(now.year, now.month + 1, 1, tzinfo=timezone.utc)
 
+        # Get credit balance for fallback
+        credit_balance = await self._get_credit_balance(user_id)
+
         return QuotaStatus(
             plan=plan,
             limits=limits,
@@ -166,10 +206,14 @@ class QuotaService:
             remaining_month=max(0, limits.jobs_per_month - used_month),
             remaining_today=max(0, limits.jobs_per_day - used_day),
             resets_at=resets_at,
+            credit_balance=credit_balance,
         )
 
     async def check_quota(self, user_id: uuid.UUID | None) -> QuotaStatus:
-        """Check if user can enqueue a job. Raises QuotaExceededError if not."""
+        """Check if user can enqueue a job. Raises QuotaExceededError if not.
+
+        Users can enqueue if they have remaining subscription quota OR credits.
+        """
         status = await self.get_quota_status(user_id)
 
         if not status.can_enqueue:
@@ -177,12 +221,49 @@ class QuotaService:
                 limit=status.limits.jobs_per_month,
                 used=status.used_this_month,
                 resets_at=status.resets_at,
+                credit_balance=status.credit_balance,
             )
 
         return status
 
-    async def consume_quota(self, user_id: uuid.UUID) -> QuotaStatus:
-        """Consume one quota unit for a user. Call after successfully enqueuing a job."""
+    async def consume_quota(
+        self, user_id: uuid.UUID, job_id: uuid.UUID | None = None
+    ) -> tuple[QuotaStatus, bool]:
+        """Consume one quota unit for a user. Call after successfully enqueuing a job.
+
+        Returns:
+            Tuple of (QuotaStatus, used_credit: bool)
+            - used_credit is True if a credit was consumed instead of subscription quota
+        """
+        status = await self.get_quota_status(user_id)
+
+        # Determine if we need to use credits
+        use_credit = status.remaining_month <= 0 or status.remaining_today <= 0
+
+        if use_credit and status.credit_balance > 0:
+            # Consume from credits
+            description = f"AI beatmap generation"
+            if job_id:
+                description += f" (job {job_id})"
+
+            success = await self.credit_service.consume_credit(
+                user_id=user_id,
+                description=description,
+                job_id=job_id,
+            )
+            if success:
+                # Refresh status to show updated credit balance
+                return await self.get_quota_status(user_id), True
+            else:
+                # Credit consumption failed, can't proceed
+                raise QuotaExceededError(
+                    limit=status.limits.jobs_per_month,
+                    used=status.used_this_month,
+                    resets_at=status.resets_at,
+                    credit_balance=0,
+                )
+
+        # Consume from subscription quota
         now = datetime.now(timezone.utc)
         month_key = now.strftime("%Y-%m")
         day_key = now.strftime("%Y-%m-%d")
@@ -197,7 +278,7 @@ class QuotaService:
             redis, user_id, day_key, ttl_seconds=86400
         )  # 24 hours
 
-        return await self.get_quota_status(user_id)
+        return await self.get_quota_status(user_id), False
 
     async def get_priority(self, user_id: uuid.UUID | None) -> JobPriority:
         """Get job priority based on user's subscription."""

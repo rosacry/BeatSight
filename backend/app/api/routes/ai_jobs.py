@@ -100,8 +100,9 @@ async def enqueue_job(
     job = await ai_service.enqueue(payload, requested_by=user_id)
 
     # Consume quota (only for authenticated users)
+    used_credit = False
     if user_id:
-        quota_status = await quota_service.consume_quota(user_id)
+        quota_status, used_credit = await quota_service.consume_quota(user_id, job.id)
 
     # Try to dispatch to Modal if enabled
     modal_service = get_modal_service()

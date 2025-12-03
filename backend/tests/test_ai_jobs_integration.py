@@ -75,14 +75,15 @@ class TestAIJobQueueIntegration:
         mock_session.execute.return_value = mock_result
 
         mock_get_redis.return_value = AsyncMock()
-        mock_get_quota_usage.side_effect = [5, 1]  # 5/10 month, 1/3 day
+        # Free tier: 3/mo, 2/day - user has used 1/3 month, 1/2 day
+        mock_get_quota_usage.side_effect = [1, 1]
 
         quota_service = QuotaService(mock_session)
         status = await quota_service.check_quota(test_user.id)
 
         assert status.can_enqueue is True
-        assert status.remaining_month == 5
-        assert status.remaining_today == 2
+        assert status.remaining_month == 2  # 3 - 1 = 2
+        assert status.remaining_today == 1  # 2 - 1 = 1
 
     @pytest.mark.asyncio
     @patch("app.services.quota.get_redis")
@@ -102,15 +103,16 @@ class TestAIJobQueueIntegration:
         mock_session.execute.return_value = mock_result
 
         mock_get_redis.return_value = AsyncMock()
-        mock_get_quota_usage.side_effect = [10, 3]  # All limits hit
+        # Free tier: 3/mo, 2/day - user exceeded (3/3 month, 2/2 day)
+        mock_get_quota_usage.side_effect = [3, 2]
 
         quota_service = QuotaService(mock_session)
 
         with pytest.raises(QuotaExceededError) as exc_info:
             await quota_service.check_quota(test_user.id)
 
-        assert exc_info.value.limit == 10
-        assert exc_info.value.used == 10
+        assert exc_info.value.limit == 3
+        assert exc_info.value.used == 3
 
     @pytest.mark.asyncio
     async def test_job_enqueue_creates_queued_job(

@@ -3,7 +3,9 @@
  * Must match backend app/models/subscription.py
  */
 
-export type SubscriptionPlan = 'free' | 'basic_monthly' | 'basic_yearly' | 'pro_monthly' | 'pro_yearly'
+// Updated to 2-tier model (Free + Pro)
+// Basic tier removed - see docs/MONETIZATION_STRATEGY.md
+export type SubscriptionPlan = 'free' | 'pro_monthly' | 'pro_yearly'
 export type SubscriptionStatus = 'active' | 'past_due' | 'cancelled'
 
 export interface StripeConfig {
@@ -34,55 +36,49 @@ export interface PricingPlan {
     description: string
     priceMonthly: number
     priceYearly?: number
+    monthlyQuota: number | null  // null = check credits
     features: string[]
     highlighted?: boolean
     cta: string
 }
 
+// 2-tier pricing: Free (3 songs) + Pro (50 songs @ $12/mo)
+// Credits available as universal fallback for all users
 export const PRICING_PLANS: PricingPlan[] = [
     {
         id: 'free',
         name: 'Free',
         description: 'Perfect for trying out BeatSight',
         priceMonthly: 0,
+        monthlyQuota: 3,
         features: [
-            '5 AI beatmap generations/month',
-            'Basic drum detection',
+            '3 AI beatmap generations/month',
+            'V5-Distilled model',
             'Export to .osu format',
             'Community support',
+            'Buy credits for extra songs',
         ],
         cta: 'Get Started',
-    },
-    {
-        id: 'basic_monthly',
-        name: 'Basic',
-        description: 'For casual drummers',
-        priceMonthly: 8,
-        priceYearly: 6,
-        features: [
-            '30 AI beatmap generations/month',
-            'Advanced drum detection',
-            'All export formats',
-            'Email support',
-        ],
-        cta: 'Upgrade to Basic',
     },
     {
         id: 'pro_monthly',
         name: 'Pro',
         description: 'For serious drummers and creators',
-        priceMonthly: 15,
-        priceYearly: 12,
+        priceMonthly: 12,
+        priceYearly: 8,  // $96/year = $8/month
+        monthlyQuota: 50,
         features: [
-            'Unlimited AI beatmap generations',
-            'Advanced 19-class drum detection',
+            '50 AI beatmap generations/month',
+            'V5-Full premium model',
             'Priority processing queue',
             'All export formats',
             'Cloud sync across devices',
             'Priority email support',
             'Early access to new features',
+            'Buy credits for extra songs',
         ],
         highlighted: true,
         cta: 'Upgrade to Pro',
     },
 ]
+

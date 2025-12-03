@@ -99,7 +99,8 @@ class TestEnqueueJobModalIntegration:
         # Setup quota
         mock_quota = AsyncMock()
         mock_quota.check_quota = AsyncMock(return_value=mock_quota_status)
-        mock_quota.consume_quota = AsyncMock(return_value=mock_quota_status)
+        # consume_quota returns (QuotaStatus, bool) tuple
+        mock_quota.consume_quota = AsyncMock(return_value=(mock_quota_status, False))
         mock_quota.get_priority = AsyncMock(return_value=AIJobPriority.STANDARD)
         mock_quota_cls.return_value = mock_quota
 
@@ -947,7 +948,8 @@ class TestEnqueueJobModalDispatch:
         # Setup quota
         mock_quota = AsyncMock()
         mock_quota.check_quota = AsyncMock(return_value=mock_quota_status)
-        mock_quota.consume_quota = AsyncMock(return_value=mock_quota_status)
+        # consume_quota returns (QuotaStatus, bool) tuple
+        mock_quota.consume_quota = AsyncMock(return_value=(mock_quota_status, False))
         mock_quota.get_priority = AsyncMock(return_value=mock_job.state)
         mock_quota_cls.return_value = mock_quota
 
@@ -1013,7 +1015,8 @@ class TestEnqueueJobModalDispatch:
         # Setup quota
         mock_quota = AsyncMock()
         mock_quota.check_quota = AsyncMock(return_value=mock_quota_status)
-        mock_quota.consume_quota = AsyncMock(return_value=mock_quota_status)
+        # consume_quota returns (QuotaStatus, bool) tuple
+        mock_quota.consume_quota = AsyncMock(return_value=(mock_quota_status, False))
         mock_quota.get_priority = AsyncMock(return_value=mock_job.state)
         mock_quota_cls.return_value = mock_quota
 
@@ -1078,7 +1081,8 @@ class TestEnqueueJobModalDispatch:
         # Setup quota
         mock_quota = AsyncMock()
         mock_quota.check_quota = AsyncMock(return_value=mock_quota_status)
-        mock_quota.consume_quota = AsyncMock(return_value=mock_quota_status)
+        # consume_quota returns (QuotaStatus, bool) tuple
+        mock_quota.consume_quota = AsyncMock(return_value=(mock_quota_status, False))
         mock_quota.get_priority = AsyncMock(return_value=mock_job.state)
         mock_quota_cls.return_value = mock_quota
 

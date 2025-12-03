@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { Link, useLocation, NavLink } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { UserMenu } from './UserMenu'
+import { CreditBalance } from './CreditBalance'
 
 interface LayoutProps {
     children: React.ReactNode
@@ -139,6 +140,7 @@ export function Layout({ children }: LayoutProps) {
                                             <UploadIcon />
                                             <span className="hidden lg:inline">Upload Song</span>
                                         </Link>
+                                        <CreditBalance />
                                         <UserMenu />
                                     </>
                                 ) : (
@@ -204,6 +206,9 @@ export function Layout({ children }: LayoutProps) {
                                         <UploadIcon />
                                         Upload Song
                                     </Link>
+                                    <div className="px-3 py-2">
+                                        <CreditBalance showWhenZero />
+                                    </div>
                                     <Link
                                         to="/profile"
                                         onClick={() => setIsMobileMenuOpen(false)}

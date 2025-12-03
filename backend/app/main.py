@@ -12,6 +12,7 @@ from app.api.routes import (
     ai_jobs,
     auth,
     billing,
+    credits,
     health,
     karma,
     map_edits,
@@ -170,6 +171,7 @@ app.include_router(roles.router, prefix=settings.api_prefix)
 app.include_router(metadata.router, prefix=settings.api_prefix)
 app.include_router(sync.router, prefix=settings.api_prefix)
 app.include_router(billing.router, prefix=settings.api_prefix)
+app.include_router(credits.router, prefix=settings.api_prefix)
 app.include_router(verifier.router, prefix=settings.api_prefix)
 app.include_router(map_edits.router, prefix=settings.api_prefix)
 app.include_router(maps.router, prefix=settings.api_prefix)

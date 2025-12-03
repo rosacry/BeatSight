@@ -161,6 +161,86 @@ class StripeService:
             "checkout_url": session.url,
         }
 
+    async def create_credit_checkout_session(
+        self,
+        db: AsyncSession,
+        user: User,
+        purchase_id: "UUID",
+        pack_config: Any,
+        success_url: str | None = None,
+        cancel_url: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a Stripe checkout session for one-time credit purchase.
+
+        Uses Payment mode (not subscription) for single purchases.
+
+        Args:
+            db: Database session
+            user: User making the purchase
+            purchase_id: Credit purchase record ID
+            pack_config: CreditPackConfig with price and credits info
+            success_url: Custom success redirect
+            cancel_url: Custom cancel redirect
+
+        Returns:
+            Dict with session_id and checkout_url
+        """
+        if not self.is_configured():
+            raise ValueError("Stripe is not configured")
+
+        customer_id = await self.get_or_create_customer(db, user)
+
+        # Default URLs
+        success_url = (
+            success_url or f"{self.frontend_url}/settings/credits?success=true"
+        )
+        cancel_url = cancel_url or f"{self.frontend_url}/pricing?cancelled=true"
+
+        session = stripe.checkout.Session.create(
+            customer=customer_id,
+            payment_method_types=["card"],
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": "usd",
+                        "product_data": {
+                            "name": pack_config.name,
+                            "description": f"{pack_config.credits} AI generation credits",
+                        },
+                        "unit_amount": pack_config.price_cents,
+                    },
+                    "quantity": 1,
+                }
+            ],
+            mode="payment",  # One-time payment, not subscription
+            success_url=success_url,
+            cancel_url=cancel_url,
+            metadata={
+                "user_id": str(user.id),
+                "purchase_id": str(purchase_id),
+                "purchase_type": "credits",
+                "credits_amount": str(pack_config.credits),
+                "pack_type": pack_config.pack_type.value,
+            },
+            payment_intent_data={
+                "metadata": {
+                    "user_id": str(user.id),
+                    "purchase_id": str(purchase_id),
+                    "purchase_type": "credits",
+                },
+            },
+        )
+
+        logger.info(
+            f"Created credit checkout session {session.id} for user {user.id}, "
+            f"{pack_config.credits} credits at ${pack_config.price_dollars}"
+        )
+
+        return {
+            "session_id": session.id,
+            "checkout_url": session.url,
+        }
+
     async def create_portal_session(
         self,
         db: AsyncSession,
@@ -233,12 +313,22 @@ class StripeService:
         db: AsyncSession,
         session: dict[str, Any],
     ) -> dict[str, Any]:
-        """Handle successful checkout session completion."""
+        """Handle successful checkout session completion.
+        
+        Handles both subscription checkouts and credit purchases.
+        """
         user_id = session.get("metadata", {}).get("user_id")
         if not user_id:
             logger.warning("Checkout session missing user_id metadata")
             return {"error": "missing_user_id"}
 
+        purchase_type = session.get("metadata", {}).get("purchase_type")
+        
+        # Handle credit purchase
+        if purchase_type == "credits":
+            return await self._handle_credit_checkout_completed(db, session)
+
+        # Handle subscription checkout (existing logic)
         subscription_id = session.get("subscription")
         customer_id = session.get("customer")
         plan = session.get("metadata", {}).get("plan", "pro_monthly")
@@ -253,6 +343,55 @@ class StripeService:
             "customer_id": customer_id,
             "plan": plan,
         }
+
+    async def _handle_credit_checkout_completed(
+        self,
+        db: AsyncSession,
+        session: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Handle credit purchase checkout completion.
+        
+        Fulfills the credit purchase by adding credits to user's balance.
+        """
+        from app.services.credits import CreditService
+        
+        user_id = session.get("metadata", {}).get("user_id")
+        purchase_id = session.get("metadata", {}).get("purchase_id")
+        credits_amount = session.get("metadata", {}).get("credits_amount")
+        pack_type = session.get("metadata", {}).get("pack_type")
+        payment_intent = session.get("payment_intent")
+        
+        if not purchase_id:
+            logger.error("Credit checkout missing purchase_id")
+            return {"error": "missing_purchase_id"}
+        
+        logger.info(
+            f"Credit checkout completed for user {user_id}, "
+            f"purchase {purchase_id}, {credits_amount} credits"
+        )
+        
+        # Fulfill the purchase
+        credit_service = CreditService(db)
+        try:
+            from uuid import UUID
+            balance = await credit_service.fulfill_purchase(UUID(purchase_id))
+            await db.commit()
+            
+            logger.info(
+                f"Fulfilled credit purchase {purchase_id}: "
+                f"user now has {balance.total_credits} credits"
+            )
+            
+            return {
+                "user_id": user_id,
+                "purchase_id": purchase_id,
+                "credits_added": int(credits_amount) if credits_amount else 0,
+                "new_balance": balance.total_credits,
+                "pack_type": pack_type,
+            }
+        except Exception as e:
+            logger.error(f"Failed to fulfill credit purchase {purchase_id}: {e}")
+            return {"error": str(e), "purchase_id": purchase_id}
 
     async def _handle_subscription_created(
         self,

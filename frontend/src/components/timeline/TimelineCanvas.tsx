@@ -8,6 +8,7 @@ import type {
     NoteDiff,
 } from '../../types/beatmap'
 import { LANE_COLORS, LANE_LABELS } from '../../types/beatmap'
+import type { WaveformData } from '../../hooks/useWaveform'
 
 interface TimelineCanvasProps {
     /** All hit objects to display */
@@ -36,6 +37,8 @@ interface TimelineCanvasProps {
     onsetLayerVisible?: boolean
     /** Waveform scale (0.5-2.5) - matches desktop EditorTimeline */
     waveformScale?: number
+    /** Waveform data for rendering - matches desktop WaveformGraph */
+    waveformData?: WaveformData | null
     /** Callback when viewport changes */
     onViewportChange: (viewport: TimelineViewport) => void
     /** Callback when selection changes */
@@ -77,6 +80,7 @@ export function TimelineCanvas({
     beatGridVisible = true,
     onsetLayerVisible = false,
     waveformScale = 1.0,
+    waveformData,
     onViewportChange,
     onSelectionChange,
     onNoteClick,
@@ -244,10 +248,62 @@ export function TimelineCanvas({
             }
         }
 
-        // TODO: Draw waveform layer (scaled by waveformScale)
-        // This will require fetching/computing waveform data from the audio
-        // Desktop uses WaveformGraph with configurable WaveformScale (0.5 to 2.5)
-        void waveformScale // Reserved for future waveform rendering
+        // Draw waveform layer (scaled by waveformScale) - matches desktop WaveformGraph
+        if (waveformData) {
+            const waveformHeight = RULER_HEIGHT * waveformScale
+            const waveformCenterY = HEADER_HEIGHT + RULER_HEIGHT / 2
+            const startSeconds = viewport.startTime / 1000
+            const endSeconds = viewport.endTime / 1000
+
+            // Calculate bucket range for visible viewport
+            const startBucket = Math.max(0, Math.floor(startSeconds / waveformData.bucketDurationSeconds))
+            const endBucket = Math.min(
+                waveformData.bucketCount,
+                Math.ceil(endSeconds / waveformData.bucketDurationSeconds)
+            )
+
+            // Set waveform style - semi-transparent cyan/teal
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.4)' // sky-400 with alpha
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)'
+            ctx.lineWidth = 1
+
+            // Draw waveform as filled path
+            ctx.beginPath()
+
+            let firstPoint = true
+            for (let bucket = startBucket; bucket < endBucket; bucket++) {
+                const bucketStartTime = bucket * waveformData.bucketDurationSeconds * 1000
+                const x = 60 + timeToX(bucketStartTime)
+
+                if (x < 60 || x > width) continue
+
+                const maxAmp = waveformData.maxima[bucket]
+                const yMax = waveformCenterY - maxAmp * waveformHeight
+
+                if (firstPoint) {
+                    ctx.moveTo(x, yMax)
+                    firstPoint = false
+                } else {
+                    ctx.lineTo(x, yMax)
+                }
+            }
+
+            // Draw lower half (minima) in reverse
+            for (let bucket = endBucket - 1; bucket >= startBucket; bucket--) {
+                const bucketStartTime = bucket * waveformData.bucketDurationSeconds * 1000
+                const x = 60 + timeToX(bucketStartTime)
+
+                if (x < 60 || x > width) continue
+
+                const minAmp = waveformData.minima[bucket]
+                const yMin = waveformCenterY - minAmp * waveformHeight
+                ctx.lineTo(x, yMin)
+            }
+
+            ctx.closePath()
+            ctx.fill()
+            ctx.stroke()
+        }
 
         // TODO: Draw onset detection layer (when onsetLayerVisible)
         // Desktop has OnsetDetectionLayer that shows detected transients
@@ -398,6 +454,7 @@ export function TimelineCanvas({
         showDiff,
         beatGridVisible,
         waveformScale,
+        waveformData,
         onsetLayerVisible,
         noteDiffs,
         timeToX,

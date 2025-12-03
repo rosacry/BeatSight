@@ -1,6 +1,6 @@
 # BeatSight Web Backend Schema (Draft)
 
-_Last updated: 2025-11-12_
+_Last updated: 2025-12-03_
 
 ## 1. Entity Diagram (Logical)
 ```mermaid
@@ -10,12 +10,15 @@ erDiagram
     USERS ||--o{ SUBSCRIPTIONS : holds
     USERS ||--o{ MAP_EDIT_PROPOSALS : creates
     USERS ||--o{ MAP_VERIFICATION_DECISIONS : records
+    USERS ||--o{ CREDIT_BALANCES : has
+    USERS ||--o{ TRAINING_CONTRIBUTIONS : submits
 
     ROLES ||--o{ USER_ROLES : grants
 
     SONGS ||--o{ MAPS : contains
     MAPS ||--o{ MAP_VERSIONS : tracks
     MAP_VERSIONS ||--o{ MAP_EDIT_PROPOSALS : targets
+    MAP_VERSIONS ||--o{ MAP_VOTES : receives
 
     MAP_VERSIONS ||--o{ MAP_ASSETS : references
 
@@ -25,6 +28,9 @@ erDiagram
     MAP_VERIFICATION_DECISIONS ||--|| MAP_EDIT_PROPOSALS : resolves
 
     SUBSCRIPTIONS ||--|| BILLING_TRANSACTIONS : covers
+    
+    CREDIT_BALANCES ||--o{ CREDIT_PURCHASES : funds
+    CREDIT_BALANCES ||--o{ CREDIT_TRANSACTIONS : records
 ```
 
 ## 2. Tables & Key Fields
@@ -147,7 +153,110 @@ erDiagram
 - `status` (enum: `succeeded`, `pending`, `failed`, `refunded`)
 - `processed_at`
 
-## 3. Indexing & Queries
+## 3. Additional Tables (Added Dec 2025)
+
+### 3.1 Credit System Tables
+
+#### `credit_balances`
+- `id` (UUID, PK)
+- `user_id` (FK → users.id, unique)
+- `balance` (int, default 0)
+- `auto_topup_enabled` (bool, default false)
+- `auto_topup_pack` (enum: `starter`, `value`, `power`, nullable)
+- `auto_topup_threshold` (int, default 0)
+- `created_at`, `updated_at`
+
+#### `credit_purchases`
+- `id` (UUID, PK)
+- `user_id` (FK → users.id)
+- `pack_type` (enum: `starter`, `value`, `power`)
+- `credits_amount` (int)
+- `price_cents` (int)
+- `stripe_payment_intent_id` (text, nullable)
+- `status` (enum: `pending`, `completed`, `failed`, `refunded`)
+- `created_at`
+
+#### `credit_transactions`
+- `id` (UUID, PK)
+- `user_id` (FK → users.id)
+- `amount` (int, +/−)
+- `transaction_type` (enum: `purchase`, `consumption`, `refund`, `bonus`, `manual_adjustment`)
+- `ai_job_id` (FK → ai_jobs.id, nullable)
+- `description` (text)
+- `created_at`
+
+### 3.2 Training Contribution Tables
+
+#### `training_contributions`
+- `id` (UUID, PK)
+- `user_id` (FK → users.id)
+- `song_id` (FK → songs.id)
+- `contribution_type` (enum: `onset_correction`, `component_relabel`, `timing_adjustment`)
+- `component_name` (text)
+- `original_time_ms` (float)
+- `corrected_time_ms` (float, nullable)
+- `confidence` (float)
+- `status` (enum: `pending`, `approved`, `rejected`)
+- `reviewer_id` (FK → users.id, nullable)
+- `review_notes` (text, nullable)
+- `created_at`, `reviewed_at`
+
+#### `contribution_consents`
+- `id` (UUID, PK)
+- `user_id` (FK → users.id, unique)
+- `allows_training_data` (bool, default false)
+- `allows_public_credit` (bool, default false)
+- `consented_at`, `updated_at`
+
+#### `contribution_batch_impacts`
+- `id` (UUID, PK)
+- `batch_id` (text, unique)
+- `contributions_count` (int)
+- `baseline_f1` (float)
+- `post_training_f1` (float)
+- `improvement_percent` (float)
+- `per_class_improvements` (JSONB)
+- `created_at`
+
+### 3.3 Sync Tables
+
+#### `sync_clients`
+- `id` (UUID, PK)
+- `user_id` (FK → users.id)
+- `device_name` (text)
+- `device_type` (enum: `desktop`, `web`, `mobile`)
+- `last_sync_at`
+- `created_at`
+
+#### `sync_logs`
+- `id` (UUID, PK)
+- `client_id` (FK → sync_clients.id)
+- `sync_type` (enum: `full`, `delta`)
+- `items_uploaded` (int)
+- `items_downloaded` (int)
+- `started_at`, `completed_at`
+
+### 3.4 Voting Table
+
+#### `map_votes`
+- `id` (UUID, PK)
+- `map_version_id` (FK → map_versions.id)
+- `user_id` (FK → users.id)
+- `vote_type` (enum: `upvote`, `downvote`)
+- `created_at`
+- Unique constraint: (`map_version_id`, `user_id`)
+
+### 3.5 Push Subscriptions
+
+#### `push_subscriptions`
+- `id` (UUID, PK)
+- `user_id` (FK → users.id)
+- `endpoint` (text)
+- `p256dh_key` (text)
+- `auth_key` (text)
+- `created_at`, `updated_at`
+
+## 4. Indexing & Queries
 - `songs(fingerprint_hash)` unique index for quick lookup.
 - `maps(song_id, difficulty_label)` partial index where `state = 'verified'`.
 - `map_versions(map_id, version_number)` unique composite index.

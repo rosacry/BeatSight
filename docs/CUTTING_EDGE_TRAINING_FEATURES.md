@@ -378,4 +378,4 @@ For legacy training paths (ensemble, temporal Mamba, BEATs, etc.), see `docs/arc
 
 ---
 
-*Last Updated: November 26, 2025*
+*Last Updated: December 3, 2025*

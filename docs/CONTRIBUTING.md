@@ -12,7 +12,7 @@ Thank you for your interest in contributing to BeatSight! This document provides
 
 ### Reporting Bugs
 
-1. Check if the bug has already been reported in [Issues](https://github.com/yourusername/beatsight/issues)
+1. Check if the bug has already been reported in [Issues](https://github.com/rosacry/BeatSight/issues)
 2. If not, create a new issue with:
    - Clear, descriptive title
    - Steps to reproduce
@@ -22,7 +22,7 @@ Thank you for your interest in contributing to BeatSight! This document provides
 
 ### Suggesting Features
 
-1. Check [Discussions](https://github.com/yourusername/beatsight/discussions) for similar ideas
+1. Check [Discussions](https://github.com/rosacry/BeatSight/discussions) for similar ideas
 2. Create a new discussion or issue explaining:
    - The problem it solves
    - Proposed solution
@@ -34,7 +34,7 @@ Thank you for your interest in contributing to BeatSight! This document provides
 #### Getting Started
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/yourusername/beatsight.git`
+2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/BeatSight.git`
 3. Create a feature branch: `git checkout -b feature/amazing-feature`
 4. Set up development environment (see README.md)
 
@@ -103,7 +103,7 @@ Example: `feat(editor): add waveform zoom controls`
 **Dataset Contributions**
 - Label drum hits in audio files
 - Contribute to the training dataset
-- Follow labeling guidelines in `docs/LABELING_GUIDE.md`
+- Follow labeling guidelines in `ai-pipeline/training/README.md`
 
 **Model Improvements**
 - Experiment with new architectures
@@ -142,8 +142,8 @@ pytest tests/  # Run tests
 
 ```bash
 cd backend
-npm install
-npm run dev
+poetry install
+poetry run uvicorn app.main:app --reload
 ```
 
 ## Testing
@@ -162,9 +162,8 @@ npm run dev
 
 ## Community
 
-- **Discord**: [Join our server](https://discord.gg/beatsight)
-- **Discussions**: Use GitHub Discussions for questions
-- **Issues**: Use GitHub Issues for bugs and features
+- **Discussions**: Use [GitHub Discussions](https://github.com/rosacry/BeatSight/discussions) for questions
+- **Issues**: Use [GitHub Issues](https://github.com/rosacry/BeatSight/issues) for bugs and features
 
 ## Recognition
 

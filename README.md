@@ -1,170 +1,210 @@
-dotnet restore
-dotnet run
-pip install -r requirements.txt
-# BeatSight
+<!-- prettier-ignore -->
+<div align="center">
 
-[![CI](https://github.com/rosacry/BeatSight/actions/workflows/ci.yml/badge.svg)](https://github.com/rosacry/BeatSight/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/rosacry/BeatSight/branch/main/graph/badge.svg)](https://codecov.io/gh/rosacry/BeatSight)
+# 🥁 BeatSight
 
-BeatSight is an AI-assisted drum learning environment. It turns any song into a visual, moving score that drummers can follow in real time, edit to taste, and rehearse across 2D, 3D, or manuscript-style views. There is no scoring, tapping, or input latency to chase—just accurate playback surfaces tuned for practice.
+**AI-powered drum transcription and practice environment**
 
-## Vision
+[![CI](https://img.shields.io/github/actions/workflow/status/rosacry/BeatSight/ci.yml?style=flat-square&label=CI)](https://github.com/rosacry/BeatSight/actions)
+[![codecov](https://img.shields.io/codecov/c/gh/rosacry/BeatSight?style=flat-square)](https://codecov.io/gh/rosacry/BeatSight)
+![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
-The project fuses an osu!-framework desktop client, a Python-based processing pipeline, and lightweight FastAPI services. Together they deliver:
+[Features](#features) • [Getting Started](#getting-started) • [Usage](#usage) • [Architecture](#architecture) • [Contributing](#contributing)
 
-- Automatic transcription of drum performances into structured “maps”.
-- Fast iteration on those maps through an editor that mirrors DAW workflows.
-- Rich playback controls (stems, metronome accents, offsets, slow practice) that help drummers internalise parts.
-- Multiple presentation modes: vertical lane view (osu!mania/StepMania style), 3D highway (Guitar Hero-inspired), and a manuscript-following surface that is in progress.
+</div>
 
-## Subsystems
+---
 
-- **Desktop client (`desktop/`)** – osu-framework UI hosting PlaybackScreen sessions, editor workflows, and configuration surfaces.
-- **AI pipeline (`ai-pipeline/`)** – Python orchestration around Demucs separation, onset analysis, heuristic/ML drum classification, beatmap drafting, and dataset QA tooling.
-- **Backend services (`backend/`)** – FastAPI scaffolding for metadata lookup, AI job orchestration, and future sharing hubs.
-- **Data and training ops (`data/`, `ai-pipeline/training/`)** – Manifests, readiness gates, export scripts, and training presets governed by the ML runbook.
-- **Documentation (`docs/` + root *.md)** – Living knowledge base covering setup, architecture, product planning, training SOPs, and archives.
+BeatSight transforms any song into a visual, scrolling drum score that drummers can follow in real time. The AI pipeline automatically transcribes drum performances, detects techniques (flams, ghost notes, rolls), and generates practice-ready beatmaps. No scoring or input latency to chase—just accurate playback surfaces tuned for deliberate practice.
 
-## Current Capabilities
+## Features
 
-### Desktop application
-- Drag-and-drop audio import pipeline that hands jobs to the AI generator and surfaces advanced options (sensitivity, quantisation grid, overrides).
-- Generation UI with weighted progress, debug overlay hooks, detection confidence banners, and lane statistics.
-- PlaybackScreen for practice sessions: metadata review, drum/full-mix stem toggles, timeline scrubbing, configurable lane presets, offset + speed controls, and the BackButton-driven navigation shell.
-- Practice overlays (looping, metronome, playback speed) and `BeatSightConfigManager` settings surfaces that persist per-user preferences.
-- Progress tracking with persistent practice history: favorites, tags, notes, and difficult section marking for focused rehearsal.
-- Editor entry point scaffolding that opens generated drafts, embeds PlaybackPreview, and will host deeper authoring workflows.
-
-### AI processing & tooling
-- Command line entry-point (`python -m pipeline.process`) orchestrating preprocessing, Demucs-based separation, onset detection/refinement, drum classification (ML or heuristic), and `.bsm` generation with debug payloads.
-- Metadata detection and injection to populate beatmap headers when tags or fingerprint services succeed.
-- Training toolchain (`ai-pipeline/training/`) covering dataset exporters, health checks, readiness automation, hard-negative mining, and classifier training scripts with W&B integration.
-- Dataset readiness gates (health reports, QC scripts, post-export checklist) tracked in `docs/ml_training_runbook.md` and supporting environment variables (`BEATSIGHT_DATA_ROOT`, etc.).
-
-### Backend & services
-- FastAPI project bootstrapped with Poetry, structured logging, and environment-driven configuration (`backend/app/config.py`).
-- Domain models for songs, maps, AI jobs, and supporting tables aligned with `docs/web_backend_schema.md`.
-- REST endpoints for health, song CRUD, and AI job enqueue/list flows; service layer abstractions isolate SQLAlchemy operations.
-- Ready for asynchronous workers/queue integration to orchestrate pipeline jobs once infrastructure is wired up.
-
-### Data management & QA
-- `data/` hierarchy captures archival datasets, raw source mirrors, and production exports with gitignore rules that keep huge assets out of version control.
-- Readiness and roadmap documents (`docs/product/status.md`, `docs/product/roadmap.md`) track operational blockers, dataset migration, and GPU training milestones.
-- `source ai-pipeline/training/tools/beatsight_env.sh` hydrates the training environment variables so exporters, cache warmers, and training presets resolve correct storage layouts.
-- `ai-pipeline/training/reports/` retains health baselines; tooling scripts enforce replacement of synthetic baselines with production metrics.
-
-### Documentation & governance
-- `START_HERE.md` and `docs/Guidebook.md` orient contributors and link to detailed archives.
-- Domain specifications (`docs/BEATMAP_FORMAT.md`, `docs/BS_FILE_FORMAT.md`, `shared/formats/`) define the BeatSight map schema.
-- Product strategy, backend architecture, UX flows, and compute cost analyses live under `docs/` for quick reference and cross-team alignment.
-
-## Repository Layout
-
-```
-BeatSight/
-├── desktop/
-│   ├── BeatSight.Desktop/        # osu-framework host shell
-│   ├── BeatSight.Game/           # playback, mapping, and editor surfaces
-│   └── BeatSight.Tests/          # detection stats + timebase tests
-├── ai-pipeline/
-│   ├── pipeline/                 # CLI/server orchestration modules
-│   ├── training/                 # dataset, readiness, training scripts
-│   └── models/                   # drop-in classifier weights
-├── backend/
-│   └── app/                      # FastAPI app, routers, services, models
-├── frontend/
-│   └── src/                      # React + TypeScript web application
-├── data/                         # local dataset mirrors (ignored in git)
-├── docs/                         # architecture, roadmap, archives
-├── shared/                       # format specs, shared assets
-├── personal_notes/               # context dumps retained for planning
-└── README.md, START_HERE.md, etc.
-```
+- **AI-Powered Transcription** — Automatic drum detection using a trained ML classifier with ~96% accuracy, technique recognition (flams, rolls, ghost notes, accents), and velocity/dynamics analysis
+- **Multiple View Modes** — 2D lane view (StepMania-style), 3D highway (Guitar Hero-inspired), and manuscript notation for traditional drummers
+- **Practice-Focused** — Stem isolation (drums vs. full mix), tempo adjustment without pitch shift, section looping, and metronome overlay
+- **Cross-Platform Desktop** — Built on the osu!-framework with OpenGL rendering, runs on Windows, macOS, and Linux
+- **Web Interface** — React + TypeScript SPA for library management, upload, and AI job tracking
+- **Extensible Format** — Human-readable `.bsm` (BeatSight Map) JSON format, version-control friendly
 
 ## Getting Started
 
 ### Prerequisites
-- **.NET 8 SDK** for the desktop solution (`BeatSight.sln`).
-- **Python 3.10+** with virtualenv support for the AI pipeline and training tools.
-- **Poetry 1.7+** (or `pipx install poetry`) for the backend service.
-- **Node.js 18+** and npm for the web frontend.
-- **FFmpeg + Demucs model cache** for source separation (see the platform guides referenced by `docs/SETUP.md`).
-- Optional: CUDA-enabled GPU for accelerated separation and training.
-- Detailed platform setup: start with `docs/SETUP.md` and follow `SETUP_WINDOWS.md` or `SETUP_LINUX.md` as appropriate.
 
-### Desktop client
-Run the commands from Git Bash on Windows (path below reflects a OneDrive clone); adjust the root for Linux/macOS if you keep the repo elsewhere.
+| Tool | Version | Purpose |
+|------|---------|---------|
+| .NET SDK | 8.0+ | Desktop client |
+| Python | 3.10+ | AI pipeline |
+| Poetry | 1.7+ | Backend dependencies |
+| Node.js | 18+ | Web frontend |
+| FFmpeg | Latest | Audio processing |
+
+> [!TIP]
+> See [`docs/SETUP.md`](docs/SETUP.md) for detailed platform-specific installation guides.
+
+### Quick Start
+
+<details open>
+<summary><strong>Desktop Client</strong></summary>
+
 ```bash
-cd ~/OneDrive/Documents/github/BeatSight/desktop/BeatSight.Desktop
+cd desktop/BeatSight.Desktop
 dotnet restore
 dotnet run
 ```
-Use `dotnet watch run` for rapid UI iteration. The client stores configuration under the host storage path; see `SETTINGS_REFERENCE.md` for defaults.
 
-#### Logging controls
+Use `dotnet watch run` for hot-reload during development.
 
-Runtime logging now defaults to a filtered `LogLevel.Debug` output (tablet/input spam and renderer bursts are hidden). Override it per run:
+</details>
 
-- `--log-level <debug|verbose|important|error>` – choose the framework log level (aliases: trace/info→verbose, warn→important, fatal/critical→error).
-- `--raw-framework-logs` – forward every framework entry (enables renderer/texture spam throttling bypass; implied by `--log-level verbose`).
-- `--include-tablet-logs` / `--no-tablet-logs` – force tablet handler logs on or off regardless of other filtering.
-- `--quiet` – convenience alias for `--log-level important --no-tablet-logs`.
+<details>
+<summary><strong>AI Pipeline</strong></summary>
 
-When verbose output is enabled, repetitive framework spam (like the "Texture upload queue is large" flood) is throttled and summarized once per burst to keep the console readable.
-
-### AI pipeline
 ```bash
 cd ai-pipeline
 python -m venv .venv
-source .venv/Scripts/activate  # Git Bash on Windows (Linux/macOS bash: source venv/bin/activate; fish: source venv/bin/activate.fish)
+source .venv/bin/activate  # Windows Git Bash: source .venv/Scripts/activate
+pip install -r requirements.txt
 
-python -m pipeline.process --input path/to/song.mp3 --output draft.bsm
+# Process a song
+python -m pipeline.process --input song.mp3 --output beatmap.bsm
 ```
-Set `BEATSIGHT_USE_ML_CLASSIFIER=1` and drop model weights into `ai-pipeline/models/` to enable ML inference. Run `python -m pipeline.server` for the FastAPI wrapper.
 
-### Backend service
+</details>
+
+<details>
+<summary><strong>Backend API</strong></summary>
+
 ```bash
 cd backend
 poetry install
 poetry run uvicorn app.main:app --reload
 ```
-Environment variables live in `backend/.env.example`. The service exposes health checks at `/health/live` and API routes under `/api`.
 
-### Web frontend
+API available at `http://localhost:8000`. Health check: `GET /health/live`
+
+</details>
+
+<details>
+<summary><strong>Web Frontend</strong></summary>
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-The web frontend is a React + TypeScript SPA built with Vite. It provides:
-- **User authentication** with JWT tokens and persistent sessions
-- **Song library management** with upload, search, and filtering
-- **AI beatmap generation** with real-time progress tracking via SSE
-- **PWA support** for offline access and mobile installation
-- **Responsive design** with TailwindCSS
 
-For production builds: `npm run build` outputs to `frontend/dist/`. See `docs/WEB_API_REFERENCE.md` for API documentation.
+Opens at `http://localhost:5173` with hot module replacement.
 
-## Workflow & Documentation
-- Start with `START_HERE.md` for active tasks and launch commands.
-- Use `docs/Guidebook.md` as the index for subsystem docs, archives, and SOPs.
-- Operational status and immediate next actions are captured in `docs/product/status.md`; roadmap targets reside in `docs/product/roadmap.md`.
-- Training guardrails and exporter instructions are maintained in `docs/ml_training_runbook.md` and `ai-pipeline/training/README.md`.
+</details>
 
-## Future Work
-- Performance and scoring modes are in design as an optional layer on top of the existing playback flow; they will surface once we have reliable accuracy metrics and ergonomic input hardware paths.
+## Usage
+
+### Generate a Beatmap
+
+```bash
+cd ai-pipeline
+python -m pipeline.process --input path/to/song.mp3 --output output.bsm
+```
+
+Enable the ML classifier for better accuracy:
+
+```bash
+python -m pipeline.process --input song.mp3 --output output.bsm \
+    --ml-model models/best_drum_classifier.pth
+```
+
+### Desktop Application
+
+1. Launch the desktop client
+2. Drag and drop an audio file to start generation
+3. Configure sensitivity, quantization, and lane presets in the generation UI
+4. Practice with the playback screen: scrub the timeline, toggle stems, adjust speed
+
+### Logging Controls
+
+```bash
+dotnet run -- --log-level debug    # debug|verbose|important|error
+dotnet run -- --quiet              # minimal output
+dotnet run -- --raw-framework-logs # show all framework messages
+```
+
+## Architecture
+
+```
+BeatSight/
+├── desktop/              # osu-framework desktop client (C#/.NET 8)
+│   ├── BeatSight.Desktop/    # Platform host
+│   ├── BeatSight.Game/       # UI, playback, editor
+│   └── BeatSight.Tests/      # Unit tests
+├── ai-pipeline/          # ML transcription pipeline (Python)
+│   ├── pipeline/             # CLI and server orchestration
+│   ├── training/             # Dataset tools, training scripts
+│   ├── transcription/        # Onset detection, drum classification
+│   └── separation/           # Demucs integration
+├── backend/              # FastAPI web services (Python)
+│   └── app/                  # Routers, models, services
+├── frontend/             # React + TypeScript SPA
+│   └── src/                  # Components, hooks, state
+├── data/                 # Dataset storage (gitignored)
+├── docs/                 # Architecture, guides, specifications
+└── shared/               # Format specs, shared assets
+```
+
+### Key Components
+
+| Component | Technology | Description |
+|-----------|------------|-------------|
+| Desktop Client | osu-framework, .NET 8 | Visual playback with 2D/3D/manuscript views |
+| AI Pipeline | Python, PyTorch, Demucs | Source separation and drum transcription |
+| Backend | FastAPI, SQLAlchemy, PostgreSQL | REST API, job orchestration, user management |
+| Frontend | React, TypeScript, TailwindCSS | Web UI for library and job management |
+
+### Beatmap Format
+
+BeatSight uses `.bsm` (BeatSight Map), a JSON-based format:
+
+```json
+{
+  "version": "1.0.0",
+  "metadata": { "title": "Song Name", "artist": "Artist", "difficulty": 7.5 },
+  "timing": { "bpm": 120.0, "offset": 0, "timeSignature": "4/4" },
+  "hitObjects": [
+    { "time": 1000, "component": "kick", "velocity": 0.85 },
+    { "time": 1500, "component": "snare", "velocity": 0.92 }
+  ]
+}
+```
+
+See [`docs/BEATMAP_FORMAT.md`](docs/BEATMAP_FORMAT.md) for the full specification.
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [`START_HERE.md`](START_HERE.md) | Quick orientation and launch commands |
+| [`docs/SETUP.md`](docs/SETUP.md) | Platform-specific installation guides |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System design and component details |
+| [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | Contribution guidelines |
+| [`docs/BEATMAP_FORMAT.md`](docs/BEATMAP_FORMAT.md) | `.bsm` file format specification |
+| [`docs/ml_training_runbook.md`](docs/ml_training_runbook.md) | ML training procedures |
 
 ## Contributing
-- Review `docs/CONTRIBUTING.md` for coding standards, PR expectations, and documentation etiquette.
-- Prefer adding context to the Guidebook when introducing new Markdown references.
-- Keep dataset artifacts out of git (see `.gitignore`); commit manifests, configs, and reports instead.
+
+Contributions are welcome! Please read [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) before submitting a PR.
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make your changes and add tests
+4. Run CI locally: `dotnet test BeatSight.sln` and `cd backend && poetry run pytest`
+5. Submit a pull request
 
 ## License
 
-Released under the [MIT License](LICENSE). Please attribute and respect third-party assets referenced in the documentation.
+This project is licensed under the [MIT License](LICENSE).
 
-## Support & Contact
+## Support
 
-- Issues & feature requests: open tickets in this repository.
-- Long-form discussion and planning: use `docs/product/status.md` or linked discussion threads.
-- For roadmap alignment or architectural decisions, start with the docs under `docs/` and capture outcomes there for future contributors.
+- **Issues**: [GitHub Issues](https://github.com/rosacry/BeatSight/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/rosacry/BeatSight/discussions)

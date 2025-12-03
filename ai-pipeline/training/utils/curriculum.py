@@ -261,6 +261,41 @@ class CurriculumScheduler:
         
         return max(self.min_fraction, min(1.0, fraction))
     
+    def step(self, epoch: int) -> None:
+        """Update the current epoch (for compatibility with scheduler interface)."""
+        self.current_epoch = epoch
+    
+    def get_current_fraction(self) -> float:
+        """Get the data fraction for the current epoch."""
+        return self.get_fraction(getattr(self, 'current_epoch', 0))
+    
+    def get_sample_weights(self, labels: np.ndarray = None) -> np.ndarray:
+        """
+        Get sample weights for WeightedRandomSampler based on current curriculum fraction.
+        
+        Samples below the difficulty threshold get higher weights.
+        """
+        fraction = self.get_current_fraction()
+        
+        # Handle empty difficulty scores
+        if len(self.difficulty_scores) == 0:
+            return np.ones(len(labels) if labels is not None else 1)
+        
+        # Sort samples by difficulty and compute threshold
+        sorted_difficulties = np.sort(self.difficulty_scores)
+        threshold_idx = int(len(sorted_difficulties) * fraction)
+        threshold_idx = min(threshold_idx, len(sorted_difficulties) - 1)
+        difficulty_threshold = sorted_difficulties[threshold_idx]
+        
+        # Samples below threshold get weight 1.0, above get reduced weight
+        weights = np.where(
+            self.difficulty_scores <= difficulty_threshold,
+            1.0,
+            0.1  # Reduced but not zero to allow some hard samples
+        )
+        
+        return weights
+    
     def get_sampler(self, epoch: int) -> CurriculumSampler:
         """Get the sampler for a given epoch."""
         fraction = self.get_fraction(epoch)
@@ -272,6 +307,7 @@ class CurriculumScheduler:
     def get_schedule_info(self) -> Dict[int, float]:
         """Get the full schedule as a dict mapping epoch -> fraction."""
         return {epoch: self.get_fraction(epoch) for epoch in range(self.total_epochs)}
+
 
 
 class AntiCurriculumSampler(CurriculumSampler):

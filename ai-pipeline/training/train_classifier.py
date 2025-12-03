@@ -4578,10 +4578,10 @@ def main():
                     train_dataset,
                     batch_size=args.batch_size,
                     sampler=curriculum_sampler,
-                    num_workers=args.workers,
+                    num_workers=args.num_workers,
                     pin_memory=True,
-                    prefetch_factor=args.prefetch_factor,
-                    persistent_workers=args.workers > 0,
+                    prefetch_factor=args.prefetch_factor if args.num_workers > 0 else None,
+                    persistent_workers=args.num_workers > 0,
                     drop_last=True,
                 )
 

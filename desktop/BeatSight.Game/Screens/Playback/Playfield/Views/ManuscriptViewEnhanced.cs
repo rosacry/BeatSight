@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.UI.Theming;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
@@ -21,6 +23,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
     /// - Better component-to-position mapping
     /// - Support for dynamics and articulation visualization
     /// - Cleaner playhead and measure markers
+    /// - **Playback position highlighter** - A sweeping highlight overlay that moves
+    ///   left-to-right across the staff, with its right edge indicating the current
+    ///   playback position for timing reference.
     /// 
     /// Notes are placed on a staff following standard percussion notation,
     /// designed for musicians familiar with reading sheet music.
@@ -40,12 +45,59 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
 
         private ManuscriptBackgroundEnhanced? backgroundDrawable;
 
+        /// <summary>
+        /// Bindable to control whether the playback position highlighter is enabled.
+        /// When true, a semi-transparent overlay sweeps across the staff indicating timing.
+        /// </summary>
+        public readonly BindableBool ShowPlaybackHighlighter = new BindableBool(true);
+
         #region Background Creation
 
         public override Drawable CreateBackground(float width, float height, int laneCount, bool useGlobalKick)
         {
             backgroundDrawable = new ManuscriptBackgroundEnhanced();
+
+            // Bind the highlighter visibility to our setting
+            backgroundDrawable.PlaybackHighlighter.Enabled.BindTo(ShowPlaybackHighlighter);
+
             return backgroundDrawable;
+        }
+
+        /// <summary>
+        /// Update the playback position highlighter.
+        /// Should be called each frame with the current playback time.
+        /// </summary>
+        public override void UpdateBackground(double currentTimeMs)
+        {
+            base.UpdateBackground(currentTimeMs);
+            backgroundDrawable?.UpdatePlaybackPosition(currentTimeMs, CurrentBpm);
+        }
+
+        /// <summary>
+        /// Load hit objects into the highlighter for per-note glow effects.
+        /// </summary>
+        public override void LoadBeatmap(Beatmap beatmap)
+        {
+            base.LoadBeatmap(beatmap);
+
+            // Convert beatmap hit objects to highlighter format
+            if (beatmap?.HitObjects != null && backgroundDrawable != null)
+            {
+                var hitObjectInfos = new List<HitObjectInfo>();
+                for (int i = 0; i < beatmap.HitObjects.Count; i++)
+                {
+                    var ho = beatmap.HitObjects[i];
+                    hitObjectInfos.Add(new HitObjectInfo
+                    {
+                        Index = i,
+                        TimeMs = ho.StartTimeMs,
+                        ComponentName = ho.ComponentName ?? "snare",
+                        XPosition = ManuscriptBackgroundEnhanced.GetStaffPositionForComponent(ho.ComponentName ?? "snare"),
+                        YPosition = 0 // Will be calculated dynamically based on scroll position
+                    });
+                }
+                backgroundDrawable.PlaybackHighlighter.LoadHitObjects(hitObjectInfos);
+            }
         }
 
         #endregion
@@ -95,6 +147,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
     /// <summary>
     /// Enhanced manuscript-style background with traditional staff lines.
     /// Designed to look like professional sheet music paper.
+    /// Includes a playback position highlighter for timing guidance.
     /// </summary>
     internal partial class ManuscriptBackgroundEnhanced : CompositeDrawable
     {
@@ -113,6 +166,11 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
 
         private Container? staffContainer;
         private ClefIndicatorEnhanced? clefIndicator;
+
+        /// <summary>
+        /// The playback position highlighter that sweeps across the staff.
+        /// </summary>
+        public ManuscriptPlaybackHighlighter PlaybackHighlighter { get; private set; } = null!;
 
         public ManuscriptBackgroundEnhanced()
         {
@@ -212,6 +270,16 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
 
             AddInternal(staffContainer);
 
+            // Playback position highlighter - sweeps across the staff to indicate timing
+            PlaybackHighlighter = new ManuscriptPlaybackHighlighter
+            {
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                RelativeSizeAxes = Axes.Both,
+                Depth = -1 // Render above staff lines but below notes
+            };
+            AddInternal(PlaybackHighlighter);
+
             // Percussion clef indicator
             clefIndicator = new ClefIndicatorEnhanced
             {
@@ -233,7 +301,20 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             if (staffContainer != null)
             {
                 staffContainer.Width = DrawWidth * DesignSystem.StaffWidthRatio;
+
+                // Update highlighter staff dimensions
+                float staffWidth = DrawWidth * DesignSystem.StaffWidthRatio;
+                float staffCenterX = DrawWidth / 2f;
+                PlaybackHighlighter?.SetStaffDimensions(staffCenterX, staffWidth);
             }
+        }
+
+        /// <summary>
+        /// Update the playback position for the highlighter.
+        /// </summary>
+        public void UpdatePlaybackPosition(double timeMs, double bpm)
+        {
+            PlaybackHighlighter?.UpdatePlaybackPosition(timeMs, bpm);
         }
 
         private Drawable CreateComponentLegend()

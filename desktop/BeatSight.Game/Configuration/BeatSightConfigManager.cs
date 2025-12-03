@@ -75,6 +75,7 @@ namespace BeatSight.Game.Configuration
             setDefault(BeatSightSetting.NoteSkin, NoteSkinOption.Classic);
             setDefault(BeatSightSetting.ShowGlobalBackground, true);
             setDefault(BeatSightSetting.GlobalBackgroundOpacity, 0.5);
+            setDefault(BeatSightSetting.ShowManuscriptPlaybackHighlighter, true);
 
             // Audio Settings
             setDefault(BeatSightSetting.MasterVolume, 1.0);
@@ -240,6 +241,7 @@ namespace BeatSight.Game.Configuration
         ShowGlobalBackground,
         GlobalBackgroundOpacity,
         UseEnhancedViews,
+        ShowManuscriptPlaybackHighlighter,
 
         // Audio
         MasterVolume,

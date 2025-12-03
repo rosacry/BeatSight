@@ -261,7 +261,7 @@ class AWP:
         
         # Forward pass at perturbed weights
         if amp_enabled:
-            with torch.cuda.amp.autocast():
+            with torch.amp.autocast('cuda'):
                 outputs = self.model(inputs)
                 loss = criterion(outputs, targets)
         else:
@@ -408,7 +408,7 @@ class AWPWithSAM:
         """
         # === SAM First Pass ===
         if amp_enabled:
-            with torch.cuda.amp.autocast():
+            with torch.amp.autocast('cuda'):
                 outputs = self.model(inputs)
                 loss = criterion(outputs, targets)
             if scaler:
@@ -423,7 +423,7 @@ class AWPWithSAM:
         
         # === SAM Second Pass ===
         if amp_enabled:
-            with torch.cuda.amp.autocast():
+            with torch.amp.autocast('cuda'):
                 outputs = self.model(inputs)
                 loss2 = criterion(outputs, targets)
             if scaler:

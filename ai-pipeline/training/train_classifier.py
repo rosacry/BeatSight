@@ -2017,7 +2017,11 @@ def validate(
             # Handle both (features, labels) and (features, labels, velocities) formats
             if use_velocity and len(batch_data) == 3:
                 features, labels, velocities = batch_data
-                velocities = torch.tensor(velocities, dtype=torch.float32).to(device, non_blocking=non_blocking)
+                # Use clone().detach() if already a tensor, else create new tensor
+                if isinstance(velocities, torch.Tensor):
+                    velocities = velocities.clone().detach().to(device, dtype=torch.float32, non_blocking=non_blocking)
+                else:
+                    velocities = torch.tensor(velocities, dtype=torch.float32).to(device, non_blocking=non_blocking)
             else:
                 features, labels = batch_data[:2]
                 velocities = None

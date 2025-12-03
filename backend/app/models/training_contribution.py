@@ -187,6 +187,62 @@ class TrainingContribution(Base):
         )
 
 
+class ContributionBatchImpact(Base):
+    """Tracks the measured impact of a contribution batch on model accuracy.
+    
+    When contributions are exported and used for training, this table records
+    the before/after accuracy metrics to measure their impact.
+    """
+
+    __tablename__ = "contribution_batch_impacts"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    
+    # Batch identification
+    batch_id: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    
+    # Sample counts
+    sample_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    
+    # Accuracy metrics (before and after training)
+    baseline_accuracy: Mapped[float] = mapped_column(Float, nullable=False)
+    post_training_accuracy: Mapped[float] = mapped_column(Float, nullable=False)
+    accuracy_delta: Mapped[float] = mapped_column(Float, nullable=False)
+    
+    baseline_top3_accuracy: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    post_training_top3_accuracy: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    top3_accuracy_delta: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    
+    # Calibration error (lower is better)
+    baseline_calibration_error: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    post_training_calibration_error: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    
+    # Per-class impact (JSON serialized)
+    per_class_deltas: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    most_improved_classes: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+    most_degraded_classes: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+    
+    # Efficiency metric (accuracy gain per 1000 samples)
+    contribution_efficiency: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    
+    # Model versions
+    baseline_model_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    post_training_model_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    
+    # Timestamps
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    
+    def __repr__(self) -> str:
+        return (
+            f"<ContributionBatchImpact batch={self.batch_id} "
+            f"delta={self.accuracy_delta:+.4f} samples={self.sample_count}>"
+        )
+
+
 class ContributionConsent(Base):
     """User consent settings for training contributions.
     

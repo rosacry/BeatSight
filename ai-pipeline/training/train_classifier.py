@@ -3710,7 +3710,7 @@ def main():
                 
                 # Disable CUDA graphs when using SAM optimizer (multiple forward passes cause conflicts)
                 # SAM does two forward passes per step, which overwrites CUDA graph outputs
-                if args.sam:
+                if args.use_sam:
                     compile_kwargs["options"] = {"triton.cudagraphs": False}
                     print("[torch.compile] Disabling CUDA graphs (incompatible with SAM optimizer)")
                 

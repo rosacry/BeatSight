@@ -13,12 +13,16 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import IntEnum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.redis import get_redis, get_quota_usage, increment_quota_usage
 from app.models.subscription import Subscription, SubscriptionPlan, SubscriptionStatus
+
+if TYPE_CHECKING:
+    from app.services.credits import CreditService
 
 
 class QuotaExceededError(Exception):
@@ -35,7 +39,9 @@ class QuotaExceededError(Exception):
         self.used = used
         self.resets_at = resets_at
         self.credit_balance = credit_balance
-        super().__init__(f"Quota exceeded: {used}/{limit} jobs used, {credit_balance} credits available")
+        super().__init__(
+            f"Quota exceeded: {used}/{limit} jobs used, {credit_balance} credits available"
+        )
 
 
 class JobPriority(IntEnum):
@@ -115,12 +121,18 @@ class QuotaStatus:
     @property
     def can_enqueue(self) -> bool:
         """Check if user can enqueue a new job (via quota or credits)."""
-        return self.remaining_month > 0 or self.remaining_today > 0 or self.credit_balance > 0
+        return (
+            self.remaining_month > 0
+            or self.remaining_today > 0
+            or self.credit_balance > 0
+        )
 
     @property
     def will_use_credit(self) -> bool:
         """Check if the next job will consume a credit."""
-        return (self.remaining_month <= 0 or self.remaining_today <= 0) and self.credit_balance > 0
+        return (
+            self.remaining_month <= 0 or self.remaining_today <= 0
+        ) and self.credit_balance > 0
 
 
 class QuotaService:
@@ -135,6 +147,7 @@ class QuotaService:
         """Lazy-load credit service to avoid circular imports."""
         if self._credit_service is None:
             from app.services.credits import CreditService
+
             self._credit_service = CreditService(self._session)
         return self._credit_service
 
@@ -150,7 +163,7 @@ class QuotaService:
 
     async def _get_credit_balance(self, user_id: uuid.UUID) -> int:
         """Get user's current credit balance.
-        
+
         Returns 0 on error to fail-open (user can still use subscription quota).
         Errors are logged for monitoring.
         """
@@ -160,6 +173,7 @@ class QuotaService:
         except Exception as e:
             # Log the error for monitoring - credit service failure is significant
             import logging
+
             logging.getLogger(__name__).error(
                 f"Failed to get credit balance for user {user_id}: {e}. "
                 "Returning 0 - user may be unable to use credits."
@@ -193,6 +207,7 @@ class QuotaService:
         # Get usage from Redis and credit balance in PARALLEL
         # This saves ~2 network round trips by running concurrently
         import asyncio
+
         redis = await get_redis()
         used_month, used_day, credit_balance = await asyncio.gather(
             get_quota_usage(redis, user_id, month_key),
@@ -254,7 +269,7 @@ class QuotaService:
 
         if use_credit and status.credit_balance > 0:
             # Consume from credits
-            description = f"AI beatmap generation"
+            description = "AI beatmap generation"
             if job_id:
                 description += f" (job {job_id})"
 

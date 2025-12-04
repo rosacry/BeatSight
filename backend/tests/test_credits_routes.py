@@ -18,7 +18,6 @@ from app.main import app
 from app.models.credits import (
     CreditBalance,
     CreditPackType,
-    CreditPurchase,
     CreditTransaction,
     CreditTransactionType,
 )
@@ -71,7 +70,7 @@ class TestCreditsRoutes:
                 async with AsyncClient(
                     transport=ASGITransport(app=app), base_url="http://test"
                 ) as client:
-                    response = await client.get(
+                    await client.get(
                         "/api/credits/balance",
                         headers={"Authorization": "Bearer test_token"},
                     )

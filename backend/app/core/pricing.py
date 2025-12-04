@@ -109,7 +109,7 @@ PRO_TIER = TierConfig(
 TIER_CONFIGS: dict[SubscriptionPlan, TierConfig] = {
     SubscriptionPlan.FREE: FREE_TIER,
     SubscriptionPlan.BASIC_MONTHLY: PRO_TIER,  # Legacy: map to Pro
-    SubscriptionPlan.BASIC_YEARLY: PRO_TIER,   # Legacy: map to Pro
+    SubscriptionPlan.BASIC_YEARLY: PRO_TIER,  # Legacy: map to Pro
     SubscriptionPlan.PRO_MONTHLY: PRO_TIER,
     SubscriptionPlan.PRO_YEARLY: PRO_TIER,
 }
@@ -219,8 +219,8 @@ def get_pricing_table() -> dict:
 
 # Per-song processing cost on Modal L40S with FP8+Sparse
 COST_PER_SONG_FREE = 0.008  # v5-distilled
-COST_PER_SONG_PRO = 0.008   # v5-full (same cost, optimized)
-COST_PER_CREDIT = 0.008     # Credits use v5-full
+COST_PER_SONG_PRO = 0.008  # v5-full (same cost, optimized)
+COST_PER_CREDIT = 0.008  # Credits use v5-full
 
 
 def calculate_unit_economics(monthly_songs: int, plan: SubscriptionPlan) -> dict:
@@ -237,7 +237,9 @@ def calculate_unit_economics(monthly_songs: int, plan: SubscriptionPlan) -> dict
     tier = get_tier_config(plan)
     revenue = tier.price_monthly_cents / 100
 
-    cost_per_song = COST_PER_SONG_PRO if plan != SubscriptionPlan.FREE else COST_PER_SONG_FREE
+    cost_per_song = (
+        COST_PER_SONG_PRO if plan != SubscriptionPlan.FREE else COST_PER_SONG_FREE
+    )
 
     total_cost = monthly_songs * cost_per_song
     gross_profit = revenue - total_cost

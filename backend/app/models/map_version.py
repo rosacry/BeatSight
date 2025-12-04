@@ -82,5 +82,7 @@ class MapVersion(Base):
         "MapEditProposal", back_populates="map_version", cascade="all, delete-orphan"
     )
     training_contributions: Mapped[list["TrainingContribution"]] = relationship(
-        "TrainingContribution", back_populates="map_version", cascade="all, delete-orphan"
+        "TrainingContribution",
+        back_populates="map_version",
+        cascade="all, delete-orphan",
     )

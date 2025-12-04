@@ -340,20 +340,15 @@ class TestS3StorageBackend:
         """Test S3 exists returns False when object does not exist."""
         # Create a proper ClientError exception for 404
         from botocore.exceptions import ClientError
-        
-        error_response = {
-            'Error': {
-                'Code': '404',
-                'Message': 'Not Found'
-            }
-        }
+
+        error_response = {"Error": {"Code": "404", "Message": "Not Found"}}
         mock_client = AsyncMock()
-        
+
         # Mock the exceptions attribute that boto3 clients have
         mock_client.exceptions = MagicMock()
         mock_client.exceptions.NoSuchKey = ClientError
         mock_client.exceptions.ClientError = ClientError
-        mock_client.head_object.side_effect = ClientError(error_response, 'HeadObject')
+        mock_client.head_object.side_effect = ClientError(error_response, "HeadObject")
 
         with patch.object(backend, "_get_client", return_value=mock_client):
             result = await backend.exists("missing.txt")

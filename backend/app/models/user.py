@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Index, Integer, String, func
+from sqlalchemy import Boolean, DateTime, Index, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -30,12 +30,10 @@ class User(Base):
     """Represents an account that can interact with the BeatSight platform."""
 
     __tablename__ = "users"
-    
+
     # Index for karma leaderboard queries (ORDER BY karma_score DESC)
     # and rank calculation (COUNT WHERE karma_score > x)
-    __table_args__ = (
-        Index("ix_users_karma_score", "karma_score"),
-    )
+    __table_args__ = (Index("ix_users_karma_score", "karma_score"),)
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -86,7 +84,10 @@ class User(Base):
 
     # Credit system relationships
     credit_balance: Mapped["CreditBalance | None"] = relationship(
-        "CreditBalance", back_populates="user", uselist=False, cascade="all, delete-orphan"
+        "CreditBalance",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
     )
     credit_purchases: Mapped[list["CreditPurchase"]] = relationship(
         "CreditPurchase", back_populates="user", cascade="all, delete-orphan"
@@ -100,13 +101,13 @@ class User(Base):
         "TrainingContribution",
         back_populates="user",
         foreign_keys="TrainingContribution.user_id",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
     contribution_consent: Mapped["ContributionConsent | None"] = relationship(
         "ContributionConsent",
         back_populates="user",
         uselist=False,
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
 
     # Achievement relationships

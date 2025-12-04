@@ -188,7 +188,7 @@ async def get_bulk_votes(
     current_user: Optional[User] = Depends(get_current_user),
 ) -> BulkVoteResponse:
     """Get vote counts for multiple maps at once.
-    
+
     PERFORMANCE: Uses a single database query for all maps instead of N queries.
     This is 10-50x faster for bulk operations.
     """

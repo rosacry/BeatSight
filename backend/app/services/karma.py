@@ -139,6 +139,7 @@ class KarmaService:
 
         # Check for karma-related achievements
         from app.services.achievements import check_karma_achievements
+
         await check_karma_achievements(self.session, user_id, new_karma)
 
         return new_karma
@@ -343,7 +344,7 @@ class KarmaService:
     async def get_karma_stats(self, user_id: uuid.UUID) -> dict:
         """
         Get detailed karma statistics for a user.
-        
+
         OPTIMIZED: Fetches all data in minimal queries instead of 9+ separate calls.
 
         Returns:
@@ -356,7 +357,7 @@ class KarmaService:
         user_row = user_result.one_or_none()
         karma = user_row.karma_score if user_row else 0
         phone_verified = user_row.phone_verified if user_row else False
-        
+
         # Query 2: Get breakdown by reason AND rank in a single round-trip using subquery
         # (Breakdown)
         breakdown_result = await self.session.execute(
@@ -372,17 +373,17 @@ class KarmaService:
             row.reason_code.value: {"total": row.total, "count": row.count}
             for row in breakdown_result.all()
         }
-        
+
         # Query 3: Get rank
         rank_result = await self.session.execute(
             select(func.count()).select_from(User).where(User.karma_score > karma)
         )
         rank = (rank_result.scalar() or 0) + 1
-        
-        # Query 4: Get all roles (for eligibility check) 
+
+        # Query 4: Get all roles (for eligibility check)
         roles_result = await self.session.execute(select(Role))
         all_roles = roles_result.scalars().all()
-        
+
         # Query 5: Get user's current roles
         user_roles_result = await self.session.execute(
             select(Role.code)
@@ -390,7 +391,7 @@ class KarmaService:
             .where(UserRole.user_id == user_id)
         )
         current_roles = list(user_roles_result.scalars().all())
-        
+
         # Compute eligible roles in-memory (no extra query!)
         eligible = []
         for role in all_roles:
@@ -398,7 +399,7 @@ class KarmaService:
                 if role.requires_phone_verification and not phone_verified:
                     continue
                 eligible.append(role.code)
-        
+
         # Compute daily AI quota in-memory (no extra query!)
         quota = AI_GENERATION_QUOTAS[0]  # Default
         for threshold, allowed in sorted(AI_GENERATION_QUOTAS.items()):

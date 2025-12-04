@@ -84,7 +84,9 @@ class TestIdentifyAudioEdgeCases:
 
         # File with .mp3 extension but application/octet-stream content type
         audio_data = b"fake audio content"
-        files = {"file": ("test.mp3", io.BytesIO(audio_data), "application/octet-stream")}
+        files = {
+            "file": ("test.mp3", io.BytesIO(audio_data), "application/octet-stream")
+        }
 
         response = client_authenticated.post("/api/metadata/identify", files=files)
 
@@ -273,7 +275,9 @@ class TestIdentifyFingerprintEdgeCases:
 
         mock_service = MagicMock()
         mock_service.api_key = "test-key"
-        mock_service.lookup_fingerprint = AsyncMock(return_value=[mock_result1, mock_result2])
+        mock_service.lookup_fingerprint = AsyncMock(
+            return_value=[mock_result1, mock_result2]
+        )
         mock_get_service.return_value = mock_service
 
         response = client_authenticated.post(

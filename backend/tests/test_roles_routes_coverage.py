@@ -62,7 +62,9 @@ class TestListRolesEdgeCases:
     """Edge case tests for GET /roles endpoint."""
 
     @patch("app.api.routes.roles.RBACService")
-    @patch("app.api.routes.roles.EFFECTIVE_PERMISSIONS", {"user": {Permission.SONG_READ}})
+    @patch(
+        "app.api.routes.roles.EFFECTIVE_PERMISSIONS", {"user": {Permission.SONG_READ}}
+    )
     def test_list_roles_with_permissions(
         self,
         mock_rbac_class: MagicMock,

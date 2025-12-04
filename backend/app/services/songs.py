@@ -45,7 +45,7 @@ class SongService:
         offset: int = 0,
     ) -> list[Song]:
         """List songs with pagination.
-        
+
         Args:
             user_id: If provided, filter to user's songs. If None, return public songs.
             limit: Maximum number of songs to return.
@@ -58,25 +58,25 @@ class SongService:
             .limit(limit)
             .offset(offset)
         )
-        
+
         # Filter by user if specified
         if user_id is not None:
             query = query.where(Song.created_by_id == user_id)
-        
+
         result = await self._session.execute(query)
         return list(result.scalars().unique())
-    
+
     async def count_songs(self, user_id: uuid.UUID | None = None) -> int:
         """Count total songs for pagination metadata.
-        
+
         Args:
             user_id: If provided, count user's songs. If None, count public songs.
         """
         query = select(func.count()).select_from(Song)
-        
+
         if user_id is not None:
             query = query.where(Song.created_by_id == user_id)
-        
+
         result = await self._session.execute(query)
         return result.scalar() or 0
 
@@ -94,26 +94,26 @@ class SongService:
     ) -> Song:
         """Update a song. If user_id is provided, verifies ownership."""
         song = await self.get_song(song_id)
-        
+
         # Security: verify ownership if user_id provided
         if user_id is not None and song.created_by_id != user_id:
             raise SongNotFoundError  # Don't reveal the song exists
-        
+
         for field, value in payload.model_dump(exclude_unset=True).items():
             setattr(song, field, value)
         await self._session.commit()
         await self._session.refresh(song)
         return song
-    
+
     async def delete_song(
         self, song_id: uuid.UUID, user_id: uuid.UUID | None = None
     ) -> None:
         """Delete a song. If user_id is provided, verifies ownership."""
         song = await self.get_song(song_id)
-        
+
         # Security: verify ownership if user_id provided
         if user_id is not None and song.created_by_id != user_id:
             raise SongNotFoundError  # Don't reveal the song exists
-        
+
         await self._session.delete(song)
         await self._session.commit()

@@ -433,9 +433,7 @@ class TestBulkVotes:
         mock_service = MagicMock()
         mock_service.get_user_votes = AsyncMock(return_value={})
         mock_service.get_bulk_vote_counts = AsyncMock(
-            return_value={
-                map_id: {"upvotes": 10, "downvotes": 2, "score": 8}
-            }
+            return_value={map_id: {"upvotes": 10, "downvotes": 2, "score": 8}}
         )
         mock_service_class.return_value = mock_service
 

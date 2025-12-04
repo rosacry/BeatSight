@@ -4,6 +4,7 @@ Revision ID: 006_training_contributions
 Revises: 005_credit_system
 Create Date: 2025-12-03
 """
+
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
@@ -179,7 +180,7 @@ def upgrade() -> None:
         ["status"],
         unique=False,
     )
-    
+
     # Partial index for pending review queue
     op.create_index(
         "idx_contributions_pending_review",
@@ -188,7 +189,7 @@ def upgrade() -> None:
         unique=False,
         postgresql_where=sa.text("status = 'pending'"),
     )
-    
+
     # Partial index for export queue
     op.create_index(
         "idx_contributions_export_ready",
@@ -204,14 +205,24 @@ def upgrade() -> None:
 def downgrade() -> None:
     # Drop training_contributions table and indexes
     op.drop_index("idx_contributions_export_ready", table_name="training_contributions")
-    op.drop_index("idx_contributions_pending_review", table_name="training_contributions")
-    op.drop_index("ix_training_contributions_status", table_name="training_contributions")
-    op.drop_index("ix_training_contributions_map_version_id", table_name="training_contributions")
-    op.drop_index("ix_training_contributions_user_id", table_name="training_contributions")
+    op.drop_index(
+        "idx_contributions_pending_review", table_name="training_contributions"
+    )
+    op.drop_index(
+        "ix_training_contributions_status", table_name="training_contributions"
+    )
+    op.drop_index(
+        "ix_training_contributions_map_version_id", table_name="training_contributions"
+    )
+    op.drop_index(
+        "ix_training_contributions_user_id", table_name="training_contributions"
+    )
     op.drop_table("training_contributions")
 
     # Drop contribution_consents table
-    op.drop_index("ix_contribution_consents_user_id", table_name="contribution_consents")
+    op.drop_index(
+        "ix_contribution_consents_user_id", table_name="contribution_consents"
+    )
     op.drop_table("contribution_consents")
 
     # Drop enums

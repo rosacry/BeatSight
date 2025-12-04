@@ -41,7 +41,7 @@ class AIJobService:
         offset: int = 0,
     ) -> list[AIJob]:
         """List AI jobs with pagination.
-        
+
         Args:
             song_id: Filter by song ID.
             user_id: Filter by requesting user ID.
@@ -49,10 +49,7 @@ class AIJobService:
             offset: Number of jobs to skip.
         """
         stmt = (
-            select(AIJob)
-            .order_by(AIJob.created_at.desc())
-            .limit(limit)
-            .offset(offset)
+            select(AIJob).order_by(AIJob.created_at.desc()).limit(limit).offset(offset)
         )
         if song_id:
             stmt = stmt.where(AIJob.song_id == song_id)
@@ -60,7 +57,7 @@ class AIJobService:
             stmt = stmt.where(AIJob.requested_by_id == user_id)
         result = await self._session.execute(stmt)
         return list(result.scalars().unique())
-    
+
     async def count_jobs(
         self,
         song_id: uuid.UUID | None = None,
@@ -203,14 +200,13 @@ class AIJobService:
 
     async def claim_job(self, worker_id: uuid.UUID) -> AIJob | None:
         """Claim the next available queued job for processing (atomic).
-        
+
         Uses FOR UPDATE SKIP LOCKED to prevent race conditions where multiple
         workers could claim the same job simultaneously.
         """
-        from sqlalchemy import update
-        
+
         now = datetime.now(timezone.utc)
-        
+
         # First, atomically select and lock a job
         # FOR UPDATE SKIP LOCKED ensures only one worker gets each job
         stmt = (
@@ -223,10 +219,10 @@ class AIJobService:
         )
         result = await self._session.execute(stmt)
         job = result.scalar_one_or_none()
-        
+
         if job is None:
             return None
-        
+
         # Now update the locked job
         job.state = AIJobState.PROCESSING
         job.started_at = now

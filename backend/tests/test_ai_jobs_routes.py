@@ -114,7 +114,7 @@ def client_anonymous(mock_db_session: AsyncMock) -> TestClient:
 @pytest.fixture
 def client_worker(mock_db_session: AsyncMock) -> TestClient:
     """Create a test client with worker secret authentication.
-    
+
     This overrides the verify_worker_secret dependency for testing
     worker-only endpoints (claim, heartbeat, progress, release, stale).
     """
@@ -335,7 +335,7 @@ class TestListJobs:
         response = client_authenticated.get("/api/ai-jobs?state=QUEUED")
 
         assert response.status_code == 200
-    
+
     @patch("app.api.routes.ai_jobs.AIJobService")
     def test_list_jobs_pagination(
         self,

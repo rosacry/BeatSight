@@ -280,7 +280,10 @@ class TestQuotaService:
         mock_session.execute.return_value = mock_result
 
         mock_get_redis.return_value = AsyncMock()
-        mock_get_quota_usage.side_effect = [3, 2]  # Both limits hit (3/3 month, 2/2 day)
+        mock_get_quota_usage.side_effect = [
+            3,
+            2,
+        ]  # Both limits hit (3/3 month, 2/2 day)
 
         with pytest.raises(QuotaExceededError) as exc_info:
             await service.check_quota(user_id)

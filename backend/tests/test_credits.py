@@ -7,8 +7,7 @@ and auto-topup functionality.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,11 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.credits import (
     CreditBalance,
     CreditPackType,
-    CreditPurchase,
-    CreditTransaction,
     CreditTransactionType,
 )
-from app.services.credits import CreditService, CREDIT_PACKS, CreditPackConfig
+from app.services.credits import CreditService, CREDIT_PACKS
 
 
 class TestCreditPackConfig:
@@ -65,20 +62,20 @@ class TestCreditPackConfig:
     def test_pack_config_properties(self) -> None:
         """Test CreditPackConfig computed properties."""
         pack = CREDIT_PACKS[CreditPackType.STARTER]
-        
+
         # Test price_dollars
         assert pack.price_dollars == 1.75
-        
+
         # Test per_credit_cents
         assert pack.per_credit_cents == 35.0
-        
+
         # Test savings_percent (starter should be 0)
         assert pack.savings_percent == 0
 
     def test_value_pack_has_savings(self) -> None:
         """Test that Value pack shows savings."""
         pack = CREDIT_PACKS[CreditPackType.VALUE]
-        
+
         # Value pack is $0.30/credit, base is $0.35
         # Savings = (1 - 30/35) * 100 = ~14%
         assert 10 < pack.savings_percent < 20
@@ -87,7 +84,7 @@ class TestCreditPackConfig:
         """Test that Power pack shows more savings than Value."""
         value = CREDIT_PACKS[CreditPackType.VALUE]
         power = CREDIT_PACKS[CreditPackType.POWER]
-        
+
         assert power.savings_percent > value.savings_percent
 
 
@@ -125,7 +122,7 @@ class TestCreditService:
         existing_balance.purchased_credits = 50
         existing_balance.bonus_credits = 10
         existing_balance.total_credits = 60
-        
+
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = existing_balance
         mock_session.execute.return_value = mock_result
@@ -143,7 +140,7 @@ class TestCreditService:
         mock_result.scalar_one_or_none.return_value = None
         mock_session.execute.return_value = mock_result
 
-        balance = await credit_service.get_or_create_balance(user_id)
+        await credit_service.get_or_create_balance(user_id)
 
         # Should have called session.add with a new balance
         mock_session.add.assert_called_once()
@@ -160,7 +157,7 @@ class TestCreditService:
         existing_balance.auto_topup_enabled = False
         existing_balance.auto_topup_threshold = 0
         existing_balance.auto_topup_pack = None
-        
+
         credit_service.get_or_create_balance = AsyncMock(return_value=existing_balance)
 
         balance = await credit_service.configure_auto_topup(
@@ -183,7 +180,7 @@ class TestCreditService:
         existing_balance.auto_topup_enabled = True
         existing_balance.auto_topup_threshold = 5
         existing_balance.auto_topup_pack = CreditPackType.POWER
-        
+
         credit_service.get_or_create_balance = AsyncMock(return_value=existing_balance)
 
         balance = await credit_service.configure_auto_topup(

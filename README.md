@@ -22,7 +22,7 @@
 
 ## Why BeatSight?
 
-Learning drums is fundamentally different from learning guitar or piano in rhythm games. In Guitar Hero, Dance Dance Revolution, or osu!, players see notes approaching *before* they need to hit them—this visual lookahead is what enables rapid skill acquisition. But drummers? They've been stuck memorizing songs by ear, rewinding the same 4-bar section dozens of times, or squinting at static sheet music that offers no timing guidance.
+Rhythm games like Guitar Hero, Rock Band, Dance Dance Revolution, and osu! all share one key mechanic: notes scroll toward a timing line *before* you need to hit them. This visual lookahead is what enables rapid skill acquisition—you see what's coming and your brain pre-plans the movement. But when drummers want to learn *real songs on real drums*, they're stuck memorizing by ear, rewinding the same 4-bar section dozens of times, or squinting at static sheet music that offers no timing guidance.
 
 **This matters more than you might think.** Research on rhythm and motor learning ([Rhythm and Music-Based Interventions in Motor Rehabilitation](https://www.frontiersin.org/articles/10.3389/fnhum.2021.789467/full)) demonstrates that visual anticipation dramatically accelerates motor skill acquisition. When you can *see* what's coming, your brain pre-plans the movement instead of reacting after the fact. Drummers have never had this advantage—until now.
 
@@ -33,7 +33,7 @@ BeatSight brings the rhythm game paradigm to drum practice:
 - **Tempo control** — Slow sections down to 50% without pitch shift, then gradually speed up as you learn
 - **Stem isolation** — Practice with just the drum track, or hear how your part fits the full mix
 
-The goal isn't gamification for its own sake—it's giving drummers the same perceptual advantage that made millions of people surprisingly good at fake plastic guitars.
+The goal isn't gamification for its own sake—it's giving drummers the same visual-motor advantage that rhythm games have proven works, but applied to learning *actual songs* on *real drums*.
 
 ## Features
 

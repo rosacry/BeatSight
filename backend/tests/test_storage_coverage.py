@@ -339,7 +339,10 @@ class TestS3StorageBackend:
     async def test_exists_false(self, backend: S3StorageBackend) -> None:
         """Test S3 exists returns False when object does not exist."""
         # Create a proper ClientError exception for 404
-        from botocore.exceptions import ClientError
+        try:
+            from botocore.exceptions import ClientError
+        except ImportError:
+            pytest.skip("botocore not installed")
 
         error_response = {"Error": {"Code": "404", "Message": "Not Found"}}
         mock_client = AsyncMock()

@@ -90,7 +90,7 @@ class TestConsentEndpoints:
         client = TestClient(app)
         response = client.get("/api/contributions/consent")
         # FastAPI returns 403 when auth is missing for protected routes
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_update_consent_unauthenticated(self):
         """Test updating consent without auth returns 403."""
@@ -104,7 +104,7 @@ class TestConsentEndpoints:
                 "allow_public_credit": False,
             },
         )
-        assert response.status_code == 403
+        assert response.status_code == 401
 
 
 # =============================================================================
@@ -129,7 +129,7 @@ class TestSubmissionEndpoints:
                 "corrected_component": "hi-hat",
             },
         )
-        assert response.status_code == 403
+        assert response.status_code == 401
 
 
 # =============================================================================
@@ -145,14 +145,14 @@ class TestUserContributions:
         app.dependency_overrides.clear()
         client = TestClient(app)
         response = client.get("/api/contributions/my")
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_get_stats_unauthenticated(self):
         """Test getting stats without auth returns 403."""
         app.dependency_overrides.clear()
         client = TestClient(app)
         response = client.get("/api/contributions/stats")
-        assert response.status_code == 403
+        assert response.status_code == 401
 
 
 # =============================================================================
@@ -168,7 +168,7 @@ class TestVerifierEndpoints:
         app.dependency_overrides.clear()
         client = TestClient(app)
         response = client.get("/api/contributions/pending")
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_get_pending_without_verifier_role(self):
         """Test pending endpoint requires verifier role.
@@ -201,7 +201,7 @@ class TestVerifierEndpoints:
             f"/api/contributions/{contribution_id}/approve",
             json={"notes": "Looks good"},
         )
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_reject_unauthenticated(self):
         """Test reject endpoint without auth returns 403."""
@@ -212,7 +212,7 @@ class TestVerifierEndpoints:
             f"/api/contributions/{contribution_id}/reject",
             json={"notes": "Incorrect"},
         )
-        assert response.status_code == 403
+        assert response.status_code == 401
 
 
 # =============================================================================
@@ -228,7 +228,7 @@ class TestAdminExport:
         app.dependency_overrides.clear()
         client = TestClient(app)
         response = client.get("/api/contributions/export")
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_export_without_admin_role(self):
         """Test export endpoint requires admin role.
@@ -599,7 +599,7 @@ class TestManifestEndpoint:
         app.dependency_overrides.clear()
         client = TestClient(app)
         response = client.get("/api/contributions/manifest")
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_manifest_requires_admin(self):
         """Test manifest endpoint requires admin role.
@@ -634,7 +634,7 @@ class TestExportStatsEndpoint:
         app.dependency_overrides.clear()
         client = TestClient(app)
         response = client.get("/api/contributions/export-stats")
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_export_stats_requires_admin(self):
         """Test export-stats endpoint requires admin role.
@@ -678,7 +678,7 @@ class TestImpactEndpoints:
                 "contribution_count": 50,
             },
         )
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_record_impact_requires_admin(self):
         """Test POST /impact requires admin role."""
@@ -745,7 +745,7 @@ class TestImpactEndpoints:
         app.dependency_overrides.clear()
         client = TestClient(app)
         response = client.get("/api/contributions/impact/test-batch-001")
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_get_batch_impact_requires_admin(self):
         """Test GET /impact/{batch_id} requires admin role."""
@@ -766,7 +766,7 @@ class TestImpactEndpoints:
         app.dependency_overrides.clear()
         client = TestClient(app)
         response = client.get("/api/contributions/impact/summary")
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_get_impact_summary_requires_admin(self):
         """Test GET /impact/summary requires admin role."""

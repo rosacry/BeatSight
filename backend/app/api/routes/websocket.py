@@ -16,11 +16,10 @@ from fastapi.websockets import WebSocketState
 
 from app.api.deps import get_current_user_ws, get_redis
 from app.logging import get_logger
+from app.models.user import User
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
-
-    from app.models.user import User
 
 logger = get_logger(__name__)
 

@@ -3,30 +3,68 @@
 
 # 🥁 BeatSight
 
-**AI-powered drum transcription and practice environment**
+**See the music before you play it.**
 
 [![CI](https://img.shields.io/github/actions/workflow/status/rosacry/BeatSight/ci.yml?style=flat-square&label=CI)](https://github.com/rosacry/BeatSight/actions)
-[![codecov](https://img.shields.io/codecov/c/gh/rosacry/BeatSight?style=flat-square)](https://codecov.io/gh/rosacry/BeatSight)
+[![Backend Coverage](https://img.shields.io/badge/backend-84%25-brightgreen?style=flat-square)](https://codecov.io/gh/rosacry/BeatSight)
+[![AI Pipeline Coverage](https://img.shields.io/badge/ai--pipeline-21%25-yellow?style=flat-square)](https://codecov.io/gh/rosacry/BeatSight)
 ![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
-[Features](#features) • [Getting Started](#getting-started) • [Usage](#usage) • [Architecture](#architecture) • [Contributing](#contributing)
+[Why BeatSight](#why-beatsight) • [Features](#features) • [Getting Started](#getting-started) • [Architecture](#architecture) • [Contributing](#contributing)
+
+**🌐 [beatsight.io](https://beatsight.io)** *(coming soon)*
 
 </div>
 
 ---
 
-BeatSight transforms any song into a visual, scrolling drum score that drummers can follow in real time. The AI pipeline automatically transcribes drum performances, detects techniques (flams, ghost notes, rolls), and generates practice-ready beatmaps. No scoring or input latency to chase—just accurate playback surfaces tuned for deliberate practice.
+## Why BeatSight?
+
+Learning drums is fundamentally different from learning guitar or piano in rhythm games. In Guitar Hero, Dance Dance Revolution, or osu!, players see notes approaching *before* they need to hit them—this visual lookahead is what enables rapid skill acquisition. But drummers? They've been stuck memorizing songs by ear, rewinding the same 4-bar section dozens of times, or squinting at static sheet music that offers no timing guidance.
+
+**This matters more than you might think.** Research on rhythm game learning ([Rhythm Games and Timing](https://www.frontiersin.org/articles/10.3389/fnhum.2021.674034/full)) demonstrates that visual anticipation dramatically accelerates motor skill acquisition. When you can *see* what's coming, your brain pre-plans the movement instead of reacting after the fact. Drummers have never had this advantage—until now.
+
+BeatSight brings the rhythm game paradigm to drum practice:
+
+- **Visual lookahead** — Notes scroll toward a timing line, giving you time to prepare each hit
+- **AI transcription** — Drop in any song and get a playable beatmap in minutes, not hours of manual transcription  
+- **Tempo control** — Slow sections down to 50% without pitch shift, then gradually speed up as you learn
+- **Stem isolation** — Practice with just the drum track, or hear how your part fits the full mix
+
+The goal isn't gamification for its own sake—it's giving drummers the same perceptual advantage that made millions of people surprisingly good at fake plastic guitars.
 
 ## Features
 
-- **AI-Powered Transcription** — Automatic drum detection using a trained ML classifier with ~96% accuracy, technique recognition (flams, rolls, ghost notes, accents), and velocity/dynamics analysis
-- **Multiple View Modes** — 2D lane view (StepMania-style), 3D highway (Guitar Hero-inspired), and manuscript notation for traditional drummers
-- **Practice-Focused** — Stem isolation (drums vs. full mix), tempo adjustment without pitch shift, section looping, and metronome overlay
-- **Cross-Platform Desktop** — Built on the osu!-framework with OpenGL rendering, runs on Windows, macOS, and Linux
-- **Web Interface** — React + TypeScript SPA for library management, upload, and AI job tracking
-- **Extensible Format** — Human-readable `.bsm` (BeatSight Map) JSON format, version-control friendly
+### AI-Powered Transcription
+- **~96% validation accuracy** on drum classification using a production-trained ML model
+- Technique detection: flams, ghost notes, rolls, accents, rimshots
+- Velocity and dynamics analysis for expressive playback
+- Automatic tempo and time signature detection
+
+### Multiple Practice Views
+- **2D Lane View** — DDR/StepMania-style vertical scrolling with color-coded drum components
+- **3D Highway** — Guitar Hero-inspired perspective with depth and scanline effects
+- **Manuscript View** — Traditional drum notation with a **sweeping playhead highlighter** that glides left-to-right across the staff, its leading edge marking exactly when each note should be played
+
+### Practice Tools
+- Stem isolation (drums vs. full mix) via Demucs source separation
+- Pitch-independent tempo adjustment (50%–200%)
+- Section looping with visual loop markers
+- Metronome overlay with configurable accents
+- Progress tracking: favorites, tags, notes, and difficult section marking
+
+### Platforms
+
+| Platform | Description | Status |
+|----------|-------------|--------|
+| **Desktop** | Full-featured practice environment built on osu!-framework | ✅ Available |
+| **Web** | Library management, uploads, AI job tracking at [beatsight.io](https://beatsight.io) | 🚧 In development |
+| **Mobile** | Flutter-based iOS/Android clients | 📋 Planned |
+
+> [!NOTE]
+> The AI transcription model runs on secure cloud infrastructure (Modal). Users access it through the desktop app or web interface with their account credits—the model is not distributed for local execution.
 
 ## Getting Started
 
@@ -35,18 +73,15 @@ BeatSight transforms any song into a visual, scrolling drum score that drummers 
 | Tool | Version | Purpose |
 |------|---------|---------|
 | .NET SDK | 8.0+ | Desktop client |
-| Python | 3.10+ | AI pipeline |
+| Python | 3.10+ | Backend services |
 | Poetry | 1.7+ | Backend dependencies |
 | Node.js | 18+ | Web frontend |
 | FFmpeg | Latest | Audio processing |
 
 > [!TIP]
-> See [`docs/SETUP.md`](docs/SETUP.md) for detailed platform-specific installation guides.
+> See [`docs/SETUP.md`](docs/SETUP.md) for detailed platform-specific installation guides (Windows, macOS, Linux).
 
-### Quick Start
-
-<details open>
-<summary><strong>Desktop Client</strong></summary>
+### Desktop Client
 
 ```bash
 cd desktop/BeatSight.Desktop
@@ -54,27 +89,10 @@ dotnet restore
 dotnet run
 ```
 
-Use `dotnet watch run` for hot-reload during development.
-
-</details>
+The desktop app connects to beatsight.io for AI transcription. Sign in with your account to use your credits or free tier quota.
 
 <details>
-<summary><strong>AI Pipeline</strong></summary>
-
-```bash
-cd ai-pipeline
-python -m venv .venv
-source .venv/bin/activate  # Windows Git Bash: source .venv/Scripts/activate
-pip install -r requirements.txt
-
-# Process a song
-python -m pipeline.process --input song.mp3 --output beatmap.bsm
-```
-
-</details>
-
-<details>
-<summary><strong>Backend API</strong></summary>
+<summary><strong>Backend API (for developers)</strong></summary>
 
 ```bash
 cd backend
@@ -87,7 +105,7 @@ API available at `http://localhost:8000`. Health check: `GET /health/live`
 </details>
 
 <details>
-<summary><strong>Web Frontend</strong></summary>
+<summary><strong>Web Frontend (for developers)</strong></summary>
 
 ```bash
 cd frontend
@@ -99,71 +117,55 @@ Opens at `http://localhost:5173` with hot module replacement.
 
 </details>
 
-## Usage
+## Pricing
 
-### Generate a Beatmap
+BeatSight uses a simple 2-tier model with optional credit packs:
 
-```bash
-cd ai-pipeline
-python -m pipeline.process --input path/to/song.mp3 --output output.bsm
-```
+| Tier | Price | Monthly Quota | Best For |
+|------|-------|---------------|----------|
+| **Free** | $0 | 3 songs | Trying it out |
+| **Pro** | $12/mo | 50 songs | Regular practice |
+| **Credits** | $0.35/song | Pay-as-you-go | Occasional use |
 
-Enable the ML classifier for better accuracy:
-
-```bash
-python -m pipeline.process --input song.mp3 --output output.bsm \
-    --ml-model models/best_drum_classifier.pth
-```
-
-### Desktop Application
-
-1. Launch the desktop client
-2. Drag and drop an audio file to start generation
-3. Configure sensitivity, quantization, and lane presets in the generation UI
-4. Practice with the playback screen: scrub the timeline, toggle stems, adjust speed
-
-### Logging Controls
-
-```bash
-dotnet run -- --log-level debug    # debug|verbose|important|error
-dotnet run -- --quiet              # minimal output
-dotnet run -- --raw-framework-logs # show all framework messages
-```
+Credits work for everyone—buy a pack if you just need a few extra transcriptions without committing to Pro.
 
 ## Architecture
 
 ```
 BeatSight/
 ├── desktop/              # osu-framework desktop client (C#/.NET 8)
-│   ├── BeatSight.Desktop/    # Platform host
-│   ├── BeatSight.Game/       # UI, playback, editor
-│   └── BeatSight.Tests/      # Unit tests
-├── ai-pipeline/          # ML transcription pipeline (Python)
-│   ├── pipeline/             # CLI and server orchestration
-│   ├── training/             # Dataset tools, training scripts
+│   ├── BeatSight.Desktop/    # Platform host & window management
+│   ├── BeatSight.Game/       # Playback screens, editor, UI components
+│   └── BeatSight.Tests/      # Unit tests (75 tests)
+├── ai-pipeline/          # ML training & inference pipeline (Python)
+│   ├── pipeline/             # Audio processing orchestration
+│   ├── training/             # Model training scripts & configs
 │   ├── transcription/        # Onset detection, drum classification
-│   └── separation/           # Demucs integration
+│   └── separation/           # Demucs source separation
 ├── backend/              # FastAPI web services (Python)
-│   └── app/                  # Routers, models, services
-├── frontend/             # React + TypeScript SPA
-│   └── src/                  # Components, hooks, state
+│   └── app/                  # API routes, services, models (1147 tests, 84% coverage)
+├── frontend/             # React + TypeScript SPA (223 tests)
+│   └── src/                  # Components, hooks, state management
 ├── data/                 # Dataset storage (gitignored)
 ├── docs/                 # Architecture, guides, specifications
 └── shared/               # Format specs, shared assets
 ```
 
-### Key Components
+### Key Technologies
 
-| Component | Technology | Description |
-|-----------|------------|-------------|
-| Desktop Client | osu-framework, .NET 8 | Visual playback with 2D/3D/manuscript views |
-| AI Pipeline | Python, PyTorch, Demucs | Source separation and drum transcription |
-| Backend | FastAPI, SQLAlchemy, PostgreSQL | REST API, job orchestration, user management |
-| Frontend | React, TypeScript, TailwindCSS | Web UI for library and job management |
+| Component | Stack | Coverage |
+|-----------|-------|----------|
+| Desktop | osu-framework, .NET 8, OpenGL | 75 tests |
+| Backend | FastAPI, SQLAlchemy, PostgreSQL, Redis | 84% |
+| Frontend | React 18, TypeScript, TailwindCSS, Vite | 223 tests |
+| AI Pipeline | PyTorch, Demucs, librosa | 21%* |
+| Infrastructure | Modal (GPU), S3, Stripe | — |
+
+*AI pipeline coverage is lower because full model integration tests require the trained production model, which is still in active training.
 
 ### Beatmap Format
 
-BeatSight uses `.bsm` (BeatSight Map), a JSON-based format:
+BeatSight uses `.bsm` (BeatSight Map), a JSON-based format designed for version control and human readability:
 
 ```json
 {
@@ -172,7 +174,7 @@ BeatSight uses `.bsm` (BeatSight Map), a JSON-based format:
   "timing": { "bpm": 120.0, "offset": 0, "timeSignature": "4/4" },
   "hitObjects": [
     { "time": 1000, "component": "kick", "velocity": 0.85 },
-    { "time": 1500, "component": "snare", "velocity": 0.92 }
+    { "time": 1500, "component": "snare", "velocity": 0.92, "articulation": "ghost" }
   ]
 }
 ```
@@ -184,13 +186,10 @@ See [`docs/BEATMAP_FORMAT.md`](docs/BEATMAP_FORMAT.md) for the full specificatio
 | Document | Description |
 |----------|-------------|
 | [`START_HERE.md`](START_HERE.md) | Quick orientation and launch commands |
-| [`docs/SETUP.md`](docs/SETUP.md) | Platform-specific installation guides |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System design and component details |
+| [`docs/SETUP.md`](docs/SETUP.md) | Platform-specific installation |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System design deep-dive |
 | [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | Contribution guidelines |
-| [`docs/BEATMAP_FORMAT.md`](docs/BEATMAP_FORMAT.md) | `.bsm` file format specification |
-| [`docs/ml_training_runbook.md`](docs/ml_training_runbook.md) | ML training procedures |
-| [`docs/product/status.md`](docs/product/status.md) | Current project status and progress |
-| [`docs/product/roadmap.md`](docs/product/roadmap.md) | Development roadmap and milestones |
+| [`docs/BEATMAP_FORMAT.md`](docs/BEATMAP_FORMAT.md) | `.bsm` file format spec |
 
 ## Contributing
 
@@ -201,6 +200,9 @@ Contributions are welcome! Please read [`docs/CONTRIBUTING.md`](docs/CONTRIBUTIN
 3. Make your changes and add tests
 4. Run CI locally: `dotnet test BeatSight.sln` and `cd backend && poetry run pytest`
 5. Submit a pull request
+
+> [!IMPORTANT]
+> The AI model and training code in `ai-pipeline/training/` is provided for transparency but the trained weights are proprietary. Contributions to the training pipeline are welcome; model weights are not redistributed.
 
 ## License
 

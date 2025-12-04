@@ -38,6 +38,25 @@ interface QueueStats {
     jobs_this_hour: number
 }
 
+interface ContributionStats {
+    total_contributions: number
+    pending_review: number
+    approved: number
+    rejected: number
+    exported: number
+    pending_export: number
+    correction_types_approved: Record<string, number>
+}
+
+interface VerifierLeaderboard {
+    verifier_id: string
+    username: string
+    total_reviews: number
+    approved: number
+    rejected: number
+    avg_review_time_hours: number | null
+}
+
 interface AdminUser {
     id: string
     email: string
@@ -54,10 +73,12 @@ interface AdminUser {
 
 export function AdminDashboardPage() {
     const { accessToken } = useAuthStore()
-    const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'jobs'>('overview')
+    const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'jobs' | 'contributions'>('overview')
     const [overview, setOverview] = useState<SystemOverview | null>(null)
     const [userStats, setUserStats] = useState<UserStats | null>(null)
     const [queueStats, setQueueStats] = useState<QueueStats | null>(null)
+    const [contributionStats, setContributionStats] = useState<ContributionStats | null>(null)
+    const [verifierLeaderboard, setVerifierLeaderboard] = useState<VerifierLeaderboard[]>([])
     const [users, setUsers] = useState<AdminUser[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -125,6 +146,27 @@ export function AdminDashboardPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab, accessToken, searchQuery])
 
+    const loadContributions = async () => {
+        try {
+            const [statsData, leaderboardData] = await Promise.all([
+                fetchWithAuth('/contributions/export-stats'),
+                fetchWithAuth('/verifier/leaderboard').catch(() => ({ verifiers: [] })),
+            ])
+            setContributionStats(statsData)
+            setVerifierLeaderboard(leaderboardData.verifiers || [])
+        } catch (err) {
+            // Don't set error, just leave stats empty
+            console.warn('Failed to load contribution stats:', err)
+        }
+    }
+
+    useEffect(() => {
+        if (activeTab === 'contributions' && accessToken) {
+            loadContributions()
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab, accessToken])
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -170,7 +212,7 @@ export function AdminDashboardPage() {
 
             {/* Tabs */}
             <div className="flex gap-1 p-1 bg-gray-800 rounded-lg w-fit mb-8">
-                {(['overview', 'users', 'jobs'] as const).map((tab) => (
+                {(['overview', 'users', 'jobs', 'contributions'] as const).map((tab) => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
@@ -365,6 +407,122 @@ export function AdminDashboardPage() {
                     <p className="text-gray-400">
                         Detailed job management available in the queue page. Use this dashboard for overview statistics.
                     </p>
+                </div>
+            )}
+
+            {/* Contributions Tab */}
+            {activeTab === 'contributions' && (
+                <div className="space-y-6">
+                    {/* Contribution Stats Cards */}
+                    {contributionStats && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <StatCard
+                                title="Total Contributions"
+                                value={contributionStats.total_contributions}
+                                icon="📝"
+                            />
+                            <StatCard
+                                title="Pending Review"
+                                value={contributionStats.pending_review}
+                                icon="⏳"
+                            />
+                            <StatCard
+                                title="Approved"
+                                value={contributionStats.approved}
+                                icon="✅"
+                            />
+                            <StatCard
+                                title="Exported for Training"
+                                value={contributionStats.exported}
+                                icon="🚀"
+                            />
+                        </div>
+                    )}
+
+                    {/* Approval Metrics */}
+                    {contributionStats && (
+                        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                            <h3 className="text-lg font-semibold text-white mb-4">Approval Metrics</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/30">
+                                    <p className="text-2xl font-bold text-green-400">
+                                        {contributionStats.total_contributions > 0
+                                            ? ((contributionStats.approved + contributionStats.exported) / contributionStats.total_contributions * 100).toFixed(1)
+                                            : 0}%
+                                    </p>
+                                    <p className="text-sm text-green-300/80">Approval Rate</p>
+                                </div>
+                                <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/30">
+                                    <p className="text-2xl font-bold text-yellow-400">{contributionStats.pending_export}</p>
+                                    <p className="text-sm text-yellow-300/80">Ready for Export</p>
+                                </div>
+                                <div className="bg-red-500/10 rounded-lg p-4 border border-red-500/30">
+                                    <p className="text-2xl font-bold text-red-400">{contributionStats.rejected}</p>
+                                    <p className="text-sm text-red-300/80">Rejected</p>
+                                </div>
+                                <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/30">
+                                    <p className="text-2xl font-bold text-blue-400">
+                                        {(contributionStats.approved + contributionStats.exported) * 15}
+                                    </p>
+                                    <p className="text-sm text-blue-300/80">Karma Distributed</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Correction Types Breakdown */}
+                    {contributionStats && Object.keys(contributionStats.correction_types_approved).length > 0 && (
+                        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                            <h3 className="text-lg font-semibold text-white mb-4">Correction Types (Approved)</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                {Object.entries(contributionStats.correction_types_approved).map(([type, count]) => (
+                                    <div key={type} className="bg-gray-700/50 rounded-lg p-3">
+                                        <p className="text-lg font-bold text-white">{count}</p>
+                                        <p className="text-sm text-gray-400 capitalize">{type.replace(/_/g, ' ')}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Verifier Leaderboard */}
+                    {verifierLeaderboard.length > 0 && (
+                        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                            <h3 className="text-lg font-semibold text-white mb-4">Top Verifiers</h3>
+                            <div className="space-y-3">
+                                {verifierLeaderboard.slice(0, 10).map((verifier, index) => (
+                                    <div key={verifier.verifier_id} className="flex items-center justify-between bg-gray-700/50 rounded-lg p-3">
+                                        <div className="flex items-center gap-3">
+                                            <span className={`w-6 h-6 flex items-center justify-center rounded-full text-sm font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
+                                                index === 1 ? 'bg-gray-400 text-black' :
+                                                    index === 2 ? 'bg-amber-600 text-white' :
+                                                        'bg-gray-600 text-white'
+                                                }`}>
+                                                {index + 1}
+                                            </span>
+                                            <span className="text-white font-medium">@{verifier.username}</span>
+                                        </div>
+                                        <div className="flex items-center gap-4 text-sm">
+                                            <span className="text-gray-400">{verifier.total_reviews} reviews</span>
+                                            <span className="text-green-400">+{verifier.approved}</span>
+                                            <span className="text-red-400">-{verifier.rejected}</span>
+                                            {verifier.avg_review_time_hours && (
+                                                <span className="text-gray-500">
+                                                    ~{verifier.avg_review_time_hours.toFixed(1)}h avg
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {!contributionStats && (
+                        <div className="bg-gray-800 rounded-xl p-8 border border-gray-700 text-center">
+                            <p className="text-gray-400">Loading contribution statistics...</p>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

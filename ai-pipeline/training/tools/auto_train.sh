@@ -2349,9 +2349,10 @@ ENSEMBLE_PY
             SIMPLE_FOCAL_FLAGS="--focal-loss --focal-gamma 2.0"
             SIMPLE_EMA_FLAGS="--use-ema --ema-decay 0.999"
             SIMPLE_LABEL_SMOOTHING="--label-smoothing 0.05"
-            # CRITICAL: Increased max-class-weight from 10 to 50 for 630x imbalance!
-            # With 630x imbalance, we need stronger weights for rare classes
-            SIMPLE_CLASS_WEIGHTS="--class-weights effective --max-class-weight 50.0"
+            # CRITICAL FIX: "effective" strategy only gives 1.9x weight for rare classes!
+            # With 630x imbalance, we need sqrt strategy which gives ~25x weights
+            # sqrt is more aggressive than effective but won't destabilize like balanced
+            SIMPLE_CLASS_WEIGHTS="--class-weights sqrt --max-class-weight 30.0"
             SIMPLE_SWA_FLAGS="--use-swa --swa-start 0.75"
             SIMPLE_FMIX_FLAGS="--use-fmix --fmix-alpha 0.5"
             SIMPLE_EARLY_STOPPING="--early-stopping --early-stopping-patience 15 --early-stopping-min-delta 0.001 --early-stopping-warmup 5"
@@ -2368,7 +2369,7 @@ ENSEMBLE_PY
             if [[ -f "$SIMPLE_CHECKPOINT" ]]; then
                 log "   📂 Found simple checkpoint: $SIMPLE_CHECKPOINT"
                 log "      Will resume from this checkpoint"
-                resume_from_flag="--resume"
+                resume_from_flag="--resume-from $SIMPLE_CHECKPOINT"
             elif [[ -f "$ORIGINAL_BEST_CHECKPOINT" ]]; then
                 log "   📂 Found BEST v5-full-cached checkpoint: $ORIGINAL_BEST_CHECKPOINT"
                 log "      Using best checkpoint (best generalization) over latest"

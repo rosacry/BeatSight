@@ -103,6 +103,23 @@ class VerifierStatsResponse(BaseModel):
     avg_review_time_hours: Optional[float] = None
 
 
+class VerifierLeaderboardEntry(BaseModel):
+    """Entry in the verifier leaderboard."""
+
+    verifier_id: uuid.UUID
+    username: str
+    total_reviews: int
+    approved: int
+    rejected: int
+    avg_review_time_hours: Optional[float] = None
+
+
+class VerifierLeaderboardResponse(BaseModel):
+    """Verifier leaderboard for admin dashboard."""
+
+    verifiers: list[VerifierLeaderboardEntry]
+
+
 class DecisionCreate(BaseModel):
     """Request to create a verification decision."""
 
@@ -476,6 +493,88 @@ async def get_verifier_stats(
         total_reviewed_by_user=total_reviewed_by_user,
         avg_review_time_hours=avg_review_time_hours,
     )
+
+
+@router.get(
+    "/leaderboard",
+    response_model=VerifierLeaderboardResponse,
+)
+async def get_verifier_leaderboard(
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+    limit: Annotated[int, Query(ge=1, le=50, description="Max verifiers to return")] = 10,
+) -> VerifierLeaderboardResponse:
+    """
+    Get top verifiers ranked by total reviews.
+
+    Returns verifier stats including approval/rejection counts and average review time.
+    Available to any authenticated user.
+    """
+    from sqlalchemy import case, extract, literal_column
+    from sqlalchemy.orm import aliased
+
+    # Subquery for verifier stats
+    stats_query = (
+        select(
+            MapVerificationDecision.verifier_id,
+            func.count().label("total_reviews"),
+            func.sum(
+                case(
+                    (MapVerificationDecision.decision == VerificationDecision.APPROVE, 1),
+                    else_=0,
+                )
+            ).label("approved"),
+            func.sum(
+                case(
+                    (MapVerificationDecision.decision == VerificationDecision.REJECT, 1),
+                    else_=0,
+                )
+            ).label("rejected"),
+            func.avg(
+                extract("epoch", MapVerificationDecision.decided_at)
+                - extract("epoch", MapEditProposal.submitted_at)
+            ).label("avg_review_seconds"),
+        )
+        .join(MapEditProposal, MapVerificationDecision.proposal_id == MapEditProposal.id)
+        .group_by(MapVerificationDecision.verifier_id)
+        .order_by(literal_column("total_reviews").desc())
+        .limit(limit)
+        .subquery()
+    )
+
+    # Join with users to get usernames
+    query = (
+        select(
+            stats_query.c.verifier_id,
+            User.display_name,
+            stats_query.c.total_reviews,
+            stats_query.c.approved,
+            stats_query.c.rejected,
+            stats_query.c.avg_review_seconds,
+        )
+        .join(User, stats_query.c.verifier_id == User.id)
+    )
+
+    result = await session.execute(query)
+    rows = result.all()
+
+    verifiers = [
+        VerifierLeaderboardEntry(
+            verifier_id=row.verifier_id,
+            username=row.display_name,
+            total_reviews=row.total_reviews or 0,
+            approved=row.approved or 0,
+            rejected=row.rejected or 0,
+            avg_review_time_hours=(
+                round(row.avg_review_seconds / 3600.0, 2)
+                if row.avg_review_seconds
+                else None
+            ),
+        )
+        for row in rows
+    ]
+
+    return VerifierLeaderboardResponse(verifiers=verifiers)
 
 
 @router.get(

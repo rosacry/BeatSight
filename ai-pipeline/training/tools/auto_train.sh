@@ -2358,7 +2358,9 @@ ENSEMBLE_PY
             
             # Check for existing checkpoint to resume from
             SIMPLE_OUTPUT_DIR="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached-simple"
-            ORIGINAL_CHECKPOINT="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached/checkpoints/latest_checkpoint.pth"
+            # Prefer best checkpoint (best generalization) over latest (more epochs but potentially overfit)
+            ORIGINAL_BEST_CHECKPOINT="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached/checkpoints/best_full_checkpoint.pth"
+            ORIGINAL_LATEST_CHECKPOINT="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached/checkpoints/latest_checkpoint.pth"
             SIMPLE_CHECKPOINT="${SIMPLE_OUTPUT_DIR}/checkpoints/latest_checkpoint.pth"
             
             # If no simple checkpoint exists but original exists, we can transfer weights
@@ -2367,13 +2369,18 @@ ENSEMBLE_PY
                 log "   📂 Found simple checkpoint: $SIMPLE_CHECKPOINT"
                 log "      Will resume from this checkpoint"
                 resume_from_flag="--resume"
-            elif [[ -f "$ORIGINAL_CHECKPOINT" ]]; then
-                log "   📂 Found original v5-full-cached checkpoint: $ORIGINAL_CHECKPOINT"
+            elif [[ -f "$ORIGINAL_BEST_CHECKPOINT" ]]; then
+                log "   📂 Found BEST v5-full-cached checkpoint: $ORIGINAL_BEST_CHECKPOINT"
+                log "      Using best checkpoint (best generalization) over latest"
+                log "      (Optimizer will be reset, model weights preserved)"
+                log ""
+                resume_from_flag="--resume-from $ORIGINAL_BEST_CHECKPOINT"
+            elif [[ -f "$ORIGINAL_LATEST_CHECKPOINT" ]]; then
+                log "   📂 Found latest v5-full-cached checkpoint: $ORIGINAL_LATEST_CHECKPOINT"
                 log "      Will transfer weights to new simple training run"
                 log "      (Optimizer will be reset, but model weights preserved)"
                 log ""
-                # Use --resume-from which will load weights and reset optimizer due to config mismatch
-                resume_from_flag="--resume-from $ORIGINAL_CHECKPOINT"
+                resume_from_flag="--resume-from $ORIGINAL_LATEST_CHECKPOINT"
             else
                 log "   📂 No checkpoint found - starting fresh"
             fi

@@ -149,11 +149,21 @@ class QuotaService:
         return result.scalar_one_or_none()
 
     async def _get_credit_balance(self, user_id: uuid.UUID) -> int:
-        """Get user's current credit balance."""
+        """Get user's current credit balance.
+        
+        Returns 0 on error to fail-open (user can still use subscription quota).
+        Errors are logged for monitoring.
+        """
         try:
             balance = await self.credit_service.get_or_create_balance(user_id)
             return balance.balance
-        except Exception:
+        except Exception as e:
+            # Log the error for monitoring - credit service failure is significant
+            import logging
+            logging.getLogger(__name__).error(
+                f"Failed to get credit balance for user {user_id}: {e}. "
+                "Returning 0 - user may be unable to use credits."
+            )
             return 0
 
     async def get_quota_status(self, user_id: uuid.UUID | None) -> QuotaStatus:

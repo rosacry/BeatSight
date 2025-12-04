@@ -59,27 +59,49 @@ class EmailService:
         return jwt.encode(payload, self.jwt_secret, algorithm=self.jwt_algorithm)
 
     def verify_password_reset_token(self, token: str) -> dict[str, Any] | None:
-        """Verify a password reset token and return payload."""
+        """Verify a password reset token and return payload.
+        
+        Security: Logs invalid/expired tokens for monitoring potential attacks.
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        
         try:
             payload = jwt.decode(
                 token, self.jwt_secret, algorithms=[self.jwt_algorithm]
             )
             if payload.get("type") != "password_reset":
+                logger.warning("Password reset token type mismatch - possible tampering")
                 return None
             return payload
-        except Exception:
+        except jwt.ExpiredSignatureError:
+            logger.info("Expired password reset token used")
+            return None
+        except jwt.InvalidTokenError as e:
+            logger.warning(f"Invalid password reset token: {type(e).__name__}")
             return None
 
     def verify_email_verification_token(self, token: str) -> dict[str, Any] | None:
-        """Verify an email verification token and return payload."""
+        """Verify an email verification token and return payload.
+        
+        Security: Logs invalid/expired tokens for monitoring.
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        
         try:
             payload = jwt.decode(
                 token, self.jwt_secret, algorithms=[self.jwt_algorithm]
             )
             if payload.get("type") != "email_verification":
+                logger.warning("Email verification token type mismatch - possible tampering")
                 return None
             return payload
-        except Exception:
+        except jwt.ExpiredSignatureError:
+            logger.info("Expired email verification token used")
+            return None
+        except jwt.InvalidTokenError as e:
+            logger.warning(f"Invalid email verification token: {type(e).__name__}")
             return None
 
     async def _send_email(

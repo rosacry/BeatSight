@@ -465,12 +465,25 @@ class S3StorageBackend(StorageBackend):
         await client.delete_object(Bucket=self._bucket, Key=key)
 
     async def exists(self, key: str) -> bool:
+        """Check if an object exists in S3.
+        
+        Returns True if object exists, False if not found.
+        Raises StorageError for other failures (network, permissions, etc.)
+        """
         client = await self._get_client()
         try:
             await client.head_object(Bucket=self._bucket, Key=key)
             return True
-        except Exception:
+        except client.exceptions.NoSuchKey:
             return False
+        except client.exceptions.ClientError as e:
+            error_code = e.response.get('Error', {}).get('Code', '')
+            if error_code == '404':
+                return False
+            # Other errors (permissions, network) should not silently return False
+            import logging
+            logging.getLogger(__name__).error(f"S3 exists check failed for {key}: {e}")
+            raise StorageError(f"Failed to check existence of {key}: {e}")
 
     async def get_metadata(self, key: str) -> StorageObject:
         client = await self._get_client()

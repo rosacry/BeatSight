@@ -2217,6 +2217,7 @@ ENSEMBLE_PY
               --output "${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached" \
               --seed 1337 \
               --checkpoint-every 10 \
+              --checkpoint-every-batches 2000 \
               --wandb-project beatsight-v5 \
               $resume_flag
             

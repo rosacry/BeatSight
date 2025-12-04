@@ -363,6 +363,22 @@ export function VerifierDashboardPage() {
                                 </div>
                             </div>
 
+                            {/* Karma Impact Preview */}
+                            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <h4 className="font-medium text-blue-800 mb-2">⚡ Karma Impact</h4>
+                                <p className="text-sm text-blue-700">
+                                    Your decision will affect @{selectedProposal.proposer.username}'s karma:
+                                </p>
+                                <div className="flex gap-4 mt-2">
+                                    <span className="text-green-600 font-medium">
+                                        ✓ Approve: <span className="font-bold">+25</span> karma
+                                    </span>
+                                    <span className="text-red-600 font-medium">
+                                        ✗ Reject: <span className="font-bold">-10</span> karma
+                                    </span>
+                                </div>
+                            </div>
+
                             <div className="mb-4">
                                 <label className="block text-sm font-medium mb-2">
                                     Decision Notes (optional)

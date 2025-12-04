@@ -63,41 +63,55 @@ function EditRow({ edit, index }: { edit: Edit; index: number }) {
     const style = getActionStyle(edit.action)
 
     return (
-        <div className={`flex items-center gap-3 p-2 rounded ${style.bgColor} text-sm`}>
-            <span className={`font-mono font-bold ${style.textColor} w-6 text-center`}>
+        <div className={`flex items-start gap-3 p-2 rounded ${style.bgColor} text-sm`}>
+            <span className={`font-mono font-bold ${style.textColor} w-6 text-center flex-shrink-0`}>
                 {style.icon}
             </span>
-            <span className="text-gray-600 w-8">#{index + 1}</span>
+            <span className="text-gray-600 w-8 flex-shrink-0">#{index + 1}</span>
 
-            {edit.time !== undefined && (
-                <span className="font-mono bg-white px-2 py-0.5 rounded text-gray-700">
-                    {formatTime(edit.time)}
-                </span>
-            )}
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                    {edit.time !== undefined && (
+                        <span className="font-mono bg-white px-2 py-0.5 rounded text-gray-700">
+                            {formatTime(edit.time)}
+                        </span>
+                    )}
 
-            {edit.lane !== undefined && (
-                <span className="text-gray-600">
-                    Lane {edit.lane}
-                </span>
-            )}
+                    {edit.lane !== undefined && (
+                        <span className="text-gray-600">
+                            Lane {edit.lane}
+                        </span>
+                    )}
 
-            {edit.type && (
-                <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">
-                    {edit.type}
-                </span>
-            )}
+                    {edit.type && (
+                        <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">
+                            {edit.type}
+                        </span>
+                    )}
+                </div>
 
-            {edit.old_value !== undefined && edit.new_value !== undefined && (
-                <span className="text-gray-500">
-                    <code className="bg-red-50 px-1 rounded line-through">
-                        {JSON.stringify(edit.old_value)}
-                    </code>
-                    {' → '}
-                    <code className="bg-green-50 px-1 rounded">
-                        {JSON.stringify(edit.new_value)}
-                    </code>
-                </span>
-            )}
+                {/* Enhanced Before/After comparison */}
+                {edit.old_value !== undefined && edit.new_value !== undefined && (
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-red-50 border border-red-200 rounded p-2">
+                            <span className="text-red-600 font-medium block mb-1">Before:</span>
+                            <code className="text-red-800 break-all">
+                                {typeof edit.old_value === 'object'
+                                    ? JSON.stringify(edit.old_value, null, 2)
+                                    : String(edit.old_value)}
+                            </code>
+                        </div>
+                        <div className="bg-green-50 border border-green-200 rounded p-2">
+                            <span className="text-green-600 font-medium block mb-1">After:</span>
+                            <code className="text-green-800 break-all">
+                                {typeof edit.new_value === 'object'
+                                    ? JSON.stringify(edit.new_value, null, 2)
+                                    : String(edit.new_value)}
+                            </code>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     )
 }

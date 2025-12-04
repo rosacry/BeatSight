@@ -266,17 +266,24 @@ class Lookahead(Optimizer):
             self.pullback_momentum = state_dict.get('pullback_momentum', self.pullback_momentum)
             
             # Rebuild slow_state mapping using current param objects
-            # Note: This assumes params are in the same order as when saved
-            slow_by_id = state_dict.get('slow_state', {})
-            idx = 0
+            # The slow_state values are stored by their original id(), but we need to
+            # map them to the current param objects by position (same order assumption)
+            slow_values = list(state_dict.get('slow_state', {}).values())
+            self.slow_state = {}
+            value_idx = 0
             for group in self.optimizer.param_groups:
                 for p in group['params']:
                     if p.requires_grad:
-                        if idx < len(slow_by_id):
-                            # Find matching slow weight by position
-                            # This is a simplification; in practice you'd need proper mapping
-                            pass
-                        idx += 1
+                        if value_idx < len(slow_values):
+                            # Restore slow weight from checkpoint
+                            self.slow_state[p] = slow_values[value_idx].clone().to(p.device)
+                            value_idx += 1
+                        else:
+                            # No saved slow weight, initialize from current
+                            self.slow_state[p] = p.data.clone()
+            
+            if value_idx > 0:
+                print(f"[Lookahead] Restored {value_idx} slow weights from checkpoint")
             return
         
         # Format 2: Standard optimizer format (state + param_groups)

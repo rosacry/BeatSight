@@ -223,12 +223,8 @@ describe('useCreditHistory', () => {
     })
 
     it('should pass pagination parameters', async () => {
-        let requestedParams: URLSearchParams | null = null
-
         server.use(
-            http.get('/api/credits/history', ({ request }) => {
-                const url = new URL(request.url)
-                requestedParams = url.searchParams
+            http.get('/api/credits/history', () => {
                 return HttpResponse.json(mockCreditHistory)
             })
         )

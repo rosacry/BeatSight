@@ -35,8 +35,19 @@ jobs:
       - name: Build
         run: dotnet build BeatSight.sln --no-restore --configuration Release
       
-      - name: Run tests
-        run: dotnet test desktop/BeatSight.Tests/BeatSight.Tests.csproj --no-build --configuration Release --verbosity normal
+      - name: Run tests with coverage
+        run: dotnet test desktop/BeatSight.Tests/BeatSight.Tests.csproj --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
+
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/**/coverage.cobertura.xml
+          flags: desktop
+          name: desktop-coverage
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   publish:
     name: Publish ${{ matrix.rid }}

@@ -814,6 +814,234 @@ The consumption happens during AI job creation. If the user has no subscription 
 
 ---
 
+## Users (`/users`)
+
+### Get Current User Profile
+
+Get the authenticated user's profile with statistics.
+
+```http
+GET /users/me
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "drummer@example.com",
+  "display_name": "DrumMaster",
+  "avatar_url": "/api/storage/avatars/550e8400-e29b-41d4-a716-446655440000",
+  "karma_score": 150,
+  "role": "user",
+  "verified": false,
+  "created_at": "2025-01-15T10:30:00Z"
+}
+```
+
+---
+
+### Update Profile
+
+Update the current user's profile information.
+
+```http
+PATCH /users/me
+```
+
+**Request Body:**
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| `display_name` | string | No | 2-120 characters |
+
+**Example Request:**
+
+```json
+{
+  "display_name": "NewDisplayName"
+}
+```
+
+**Response (200 OK):** Updated user object (same schema as GET /users/me)
+
+---
+
+### Upload Avatar
+
+Upload a new avatar image.
+
+```http
+POST /users/me/avatar
+Content-Type: multipart/form-data
+```
+
+**Request Body:**
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| `file` | file | Yes | JPEG, PNG, WebP, GIF; Max 5MB |
+
+The image will be automatically:
+- Converted to JPEG
+- Resized to 256x256 pixels
+- Center-cropped if not square
+
+**Response (200 OK):** Updated user object with new `avatar_url`
+
+**Error Responses:**
+
+| Code | Detail |
+|------|--------|
+| 413 | "Avatar file too large. Maximum size: 5MB" |
+| 415 | "Unsupported image type. Allowed: JPEG, PNG, WebP, GIF" |
+
+---
+
+### Change Password
+
+Change the current user's password.
+
+```http
+POST /users/me/password
+```
+
+**Request Body:**
+
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| `current_password` | string | Yes | Current password |
+| `new_password` | string | Yes | 8-128 characters |
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Password changed successfully"
+}
+```
+
+**Error Responses:**
+
+| Code | Detail |
+|------|--------|
+| 401 | "Current password is incorrect" |
+| 400 | "New password must be different from current password" |
+
+---
+
+## Achievements (`/achievements`)
+
+### List Achievements
+
+Get all achievements with the current user's earned status.
+
+```http
+GET /achievements
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "achievements": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "slug": "first_beatmap",
+      "name": "First Beat",
+      "description": "Generate your first beatmap",
+      "icon": "🥁",
+      "category": "generation",
+      "points": "10",
+      "is_hidden": false,
+      "earned": true,
+      "earned_at": "2025-01-20T14:30:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
+      "slug": "beatmap_master",
+      "name": "Beatmap Master",
+      "description": "Generate 100 beatmaps",
+      "icon": "👑",
+      "category": "generation",
+      "points": "100",
+      "is_hidden": false,
+      "earned": false,
+      "earned_at": null
+    }
+  ],
+  "total_earned": 1,
+  "total_points": 10
+}
+```
+
+**Notes:**
+- Hidden achievements are only shown if earned
+- Achievements are sorted: earned first, then by category, then by points
+- Categories: `generation`, `learning`, `contribution`, `social`, `special`
+
+---
+
+### Get Achievement Progress
+
+Get the user's progress towards achievements.
+
+```http
+GET /achievements/progress
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "beatmaps_generated": 15,
+  "total_practice_time_minutes": 0,
+  "karma_score": 150,
+  "edits_made": 3
+}
+```
+
+**Fields:**
+- `beatmaps_generated`: Number of completed AI beatmap generations
+- `total_practice_time_minutes`: Reserved for future use
+- `karma_score`: User's current karma score
+- `edits_made`: Number of map edit proposals submitted
+
+---
+
+### Get Achievement Details
+
+Get details of a specific achievement.
+
+```http
+GET /achievements/{achievement_id}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440001",
+  "slug": "first_beatmap",
+  "name": "First Beat",
+  "description": "Generate your first beatmap",
+  "icon": "🥁",
+  "category": "generation",
+  "points": "10",
+  "is_hidden": false,
+  "earned": true,
+  "earned_at": "2025-01-20T14:30:00Z"
+}
+```
+
+**Error Responses:**
+
+| Code | Detail |
+|------|--------|
+| 404 | "Achievement not found" (also returned for hidden unearned achievements) |
+
+---
+
 ## Worker Endpoints (`/ai-jobs` - Internal)
 
 These endpoints are used by AI worker processes and should not be called by clients.
@@ -1049,6 +1277,12 @@ Official SDKs will be available for:
 ---
 
 ## Changelog
+
+### v1.2.0 (December 2025)
+- Added User Profile endpoints (`GET /users/me`, `PATCH /users/me`, `POST /users/me/password`)
+- Added Avatar upload endpoint (`POST /users/me/avatar`)
+- Added Achievement endpoints (`GET /achievements`, `GET /achievements/progress`, `GET /achievements/{id}`)
+- Added achievement unlock triggers for beatmap generation, edits, and karma milestones
 
 ### v1.1.0 (November 2025)
 - Added quota management endpoints (`GET /ai-jobs/quota`)

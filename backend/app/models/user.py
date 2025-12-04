@@ -13,6 +13,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:  # pragma: no cover - type-checking only
+    from .achievement import UserAchievement
     from .ai_job import AIJob
     from .credits import CreditBalance, CreditPurchase, CreditTransaction
     from .karma import KarmaLedger
@@ -40,6 +41,7 @@ class User(Base):
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     phone_number: Mapped[str | None] = mapped_column(String(32))
     phone_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    avatar_url: Mapped[str | None] = mapped_column(String(512))  # URL to avatar image
     auth_provider_id: Mapped[str] = mapped_column(
         String(128), unique=True, nullable=False
     )
@@ -99,4 +101,9 @@ class User(Base):
         back_populates="user",
         uselist=False,
         cascade="all, delete-orphan"
+    )
+
+    # Achievement relationships
+    achievements: Mapped[list["UserAchievement"]] = relationship(
+        "UserAchievement", back_populates="user", cascade="all, delete-orphan"
     )

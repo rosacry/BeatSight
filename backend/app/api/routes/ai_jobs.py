@@ -660,6 +660,17 @@ async def modal_webhook(
                 f"Job {job_id} completed successfully, beatmap stored at {storage_key}"
             )
 
+            # Check and award achievements (best effort)
+            try:
+                from app.services.achievements import check_beatmap_generation_achievements
+                
+                awarded = await check_beatmap_generation_achievements(session, job.requester_id)
+                if awarded:
+                    await session.commit()
+                    logger.info(f"Awarded achievements to user {job.requester_id}: {awarded}")
+            except Exception as e:
+                logger.warning(f"Failed to check achievements for job {job_id}: {e}")
+
             # Trigger notification (best effort)
             try:
                 from app.services.notifications import get_notification_service

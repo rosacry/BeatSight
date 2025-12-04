@@ -144,6 +144,16 @@ async def create_proposal(
     await db.commit()
     await db.refresh(proposal)
 
+    # Check and award edit achievements (best effort)
+    try:
+        from app.services.achievements import check_edit_achievements
+        
+        awarded = await check_edit_achievements(db, current_user.id, edit_approved=False)
+        if awarded:
+            await db.commit()
+    except Exception:
+        pass  # Silent failure for achievements
+
     return ProposalResponse(
         id=proposal.id,
         map_version_id=proposal.map_version_id,

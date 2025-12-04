@@ -155,7 +155,7 @@ describe('Authentication Integration Tests', () => {
         it('clears tokens on logout', async () => {
             // Set up authenticated state
             useAuthStore.setState({
-                user: { id: '1', email: 'test@example.com', display_name: 'Test', email_verified: true, karma_score: 0, created_at: '2024-01-01' },
+                user: { id: '1', email: 'test@example.com', display_name: 'Test', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01' },
                 accessToken: 'mock-access-token',
                 refreshToken: 'mock-refresh-token',
                 isLoading: false,
@@ -178,7 +178,7 @@ describe('Authentication Integration Tests', () => {
 
             // Set authenticated state
             useAuthStore.setState({
-                user: { id: '1', email: 'test@example.com', display_name: 'Test', email_verified: true, karma_score: 0, created_at: '2024-01-01' },
+                user: { id: '1', email: 'test@example.com', display_name: 'Test', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01' },
                 accessToken: 'mock-access-token',
                 refreshToken: 'mock-refresh-token',
                 isLoading: false,

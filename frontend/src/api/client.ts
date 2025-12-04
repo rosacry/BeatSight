@@ -341,4 +341,40 @@ export function subscribeToJobProgress(
     }
 }
 
+// --- Achievements API ---
+
+export interface Achievement {
+    id: string
+    slug: string
+    name: string
+    description: string
+    icon: string
+    category: 'generation' | 'learning' | 'contribution' | 'social' | 'special'
+    points: string
+    is_hidden: boolean
+    earned: boolean
+    earned_at: string | null
+}
+
+export interface AchievementListResponse {
+    achievements: Achievement[]
+    total_earned: number
+    total_points: number
+}
+
+export interface AchievementProgress {
+    beatmaps_generated: number
+    total_practice_time_minutes: number
+    karma_score: number
+    edits_made: number
+}
+
+export async function listAchievements(): Promise<AchievementListResponse> {
+    return request<AchievementListResponse>('/achievements', {}, true)
+}
+
+export async function getAchievementProgress(): Promise<AchievementProgress> {
+    return request<AchievementProgress>('/achievements/progress', {}, true)
+}
+
 export { APIError }

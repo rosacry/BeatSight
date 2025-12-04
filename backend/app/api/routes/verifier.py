@@ -352,6 +352,19 @@ async def create_decision(
     # Update proposal status
     if request.decision == VerificationDecision.APPROVE:
         proposal.status = EditStatus.APPROVED
+        
+        # Award "helpful editor" achievement to the proposer (best effort)
+        try:
+            from app.services.achievements import check_edit_achievements
+            
+            awarded = await check_edit_achievements(
+                session, proposal.proposer_id, edit_approved=True
+            )
+            if awarded:
+                pass  # Logged in service
+        except Exception:
+            pass  # Silent failure for achievements
+            
     elif request.decision == VerificationDecision.REJECT:
         proposal.status = EditStatus.REJECTED
     # NEEDS_CHANGES keeps it PENDING but adds feedback

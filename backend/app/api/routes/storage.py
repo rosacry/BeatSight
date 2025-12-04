@@ -389,3 +389,38 @@ async def get_beatmap_download_url(
         expires_at=result.expires_at.isoformat(),
         method=result.method,
     )
+
+
+# --- Avatar Endpoints ---
+
+
+@router.get(
+    "/avatars/{user_id}",
+    response_class=Response,
+    summary="Get user avatar",
+)
+async def get_avatar(
+    user_id: uuid.UUID,
+) -> Response:
+    """Get a user's avatar image.
+
+    Returns a 256x256 JPEG image.
+    If no avatar exists, returns 404.
+    """
+    storage = await get_storage()
+    avatar_key = f"avatars/{user_id}.jpg"
+
+    try:
+        content = await storage.retrieve(avatar_key)
+        return Response(
+            content=content,
+            media_type="image/jpeg",
+            headers={
+                "Cache-Control": "public, max-age=3600",  # Cache for 1 hour
+            },
+        )
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Avatar not found",
+        )

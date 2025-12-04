@@ -1,5 +1,6 @@
 """SQLAlchemy models for the BeatSight backend."""
 
+from .achievement import Achievement, AchievementCategory, UserAchievement
 from .ai_job import AIJob
 from .credits import (
     CreditBalance,
@@ -36,6 +37,8 @@ from .training_contribution import (
 from .user import User
 
 __all__ = [
+    "Achievement",
+    "AchievementCategory",
     "AIJob",
     "BillingTransaction",
     "ConflictResolution",
@@ -66,6 +69,7 @@ __all__ = [
     "ContributionStatus",
     "CorrectionType",
     "User",
+    "UserAchievement",
     "UserPreferences",
     "UserRole",
     "VoteType",

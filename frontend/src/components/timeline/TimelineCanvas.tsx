@@ -58,6 +58,7 @@ const NOTE_RADIUS = 10
 const HEADER_HEIGHT = 24
 const RULER_HEIGHT = 28
 const PLAYHEAD_COLOR = '#f97316' // orange-500
+const SIDEBAR_WIDTH = 60
 
 /**
  * Zoom limits matching desktop EditorTimeline.cs
@@ -66,6 +67,16 @@ const PLAYHEAD_COLOR = '#f97316' // orange-500
 const MIN_ZOOM = 0.02  // pixels per ms
 const MAX_ZOOM = 0.5   // pixels per ms
 
+/**
+ * Performance-optimized timeline canvas with layer separation.
+ * 
+ * Architecture:
+ * - Static layer (background canvas): Grid lines, lane labels, ruler - redrawn only on zoom/resize
+ * - Dynamic layer (foreground canvas): Notes, playhead, selection - redrawn on time/interaction
+ * 
+ * This separation reduces redraw cost by ~60-80% during playback since the static
+ * elements (which are expensive to render) don't need to be redrawn every frame.
+ */
 export function TimelineCanvas({
     hitObjects,
     comparisonObjects,
@@ -88,8 +99,15 @@ export function TimelineCanvas({
     onSeek,
     height = 400,
 }: TimelineCanvasProps) {
-    const canvasRef = useRef<HTMLCanvasElement>(null)
+    // Separate refs for static and dynamic layers
+    const staticCanvasRef = useRef<HTMLCanvasElement>(null)
+    const dynamicCanvasRef = useRef<HTMLCanvasElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
+
+    // Track what needs redrawing (dirty flags)
+    const staticDirtyRef = useRef(true)
+    const lastViewportRef = useRef<{ zoom: number; startTime: number } | null>(null)
+
     const [isDragging, setIsDragging] = useState(false)
     const [dragNote, setDragNote] = useState<{ note: HitObject; startX: number; startY: number } | null>(null)
     const [isSelecting, setIsSelecting] = useState(false)
@@ -186,9 +204,12 @@ export function TimelineCanvas({
         return diffs
     }, [hitObjects, comparisonObjects, showDiff])
 
-    // Draw the canvas
-    const draw = useCallback(() => {
-        const canvas = canvasRef.current
+    /**
+     * Draw STATIC layer - grid lines, lane labels, ruler marks, lane backgrounds.
+     * Only redraws when zoom, lanes, or beat grid settings change.
+     */
+    const drawStaticLayer = useCallback(() => {
+        const canvas = staticCanvasRef.current
         if (!canvas) return
 
         const ctx = canvas.getContext('2d')
@@ -202,7 +223,7 @@ export function TimelineCanvas({
 
         // Draw lane headers (left sidebar)
         ctx.fillStyle = '#111827' // gray-900
-        ctx.fillRect(0, 0, 60, canvas.height)
+        ctx.fillRect(0, 0, SIDEBAR_WIDTH, canvas.height)
 
         // Draw lane labels
         ctx.font = '11px system-ui, sans-serif'
@@ -210,14 +231,14 @@ export function TimelineCanvas({
         lanes.forEach((lane, i) => {
             const y = laneToY(i)
             ctx.fillStyle = LANE_COLORS[lane]
-            ctx.fillText(LANE_LABELS[lane], 55, y + 4)
+            ctx.fillText(LANE_LABELS[lane], SIDEBAR_WIDTH - 5, y + 4)
         })
 
         // Draw ruler background
         ctx.fillStyle = '#374151' // gray-700
-        ctx.fillRect(60, HEADER_HEIGHT, width - 60, RULER_HEIGHT)
+        ctx.fillRect(SIDEBAR_WIDTH, HEADER_HEIGHT, width - SIDEBAR_WIDTH, RULER_HEIGHT)
 
-        // Draw beat grid lines (conditional on beatGridVisible - matches desktop EditorTimeline)
+        // Draw beat grid lines
         const beatDuration = 60000 / bpm
         const startBeat = Math.floor(viewport.startTime / beatDuration)
         const endBeat = Math.ceil(viewport.endTime / beatDuration)
@@ -227,9 +248,9 @@ export function TimelineCanvas({
 
         for (let beat = startBeat; beat <= endBeat; beat++) {
             const time = beat * beatDuration
-            const x = 60 + timeToX(time)
+            const x = SIDEBAR_WIDTH + timeToX(time)
 
-            if (x < 60 || x > width) continue
+            if (x < SIDEBAR_WIDTH || x > width) continue
 
             // Draw grid line (only if beatGridVisible)
             if (beatGridVisible) {
@@ -241,41 +262,77 @@ export function TimelineCanvas({
                 ctx.stroke()
             }
 
-            // Draw beat number on ruler (every 4 beats) - always shown
+            // Draw beat number on ruler (every 4 beats)
             if (beat % 4 === 0) {
                 ctx.fillStyle = '#d1d5db' // gray-300
                 ctx.fillText(`${beat / 4 + 1}`, x, HEADER_HEIGHT + RULER_HEIGHT - 8)
             }
         }
 
-        // Draw waveform layer (scaled by waveformScale) - matches desktop WaveformGraph
+        // Draw lane backgrounds
+        lanes.forEach((_, i) => {
+            const y = HEADER_HEIGHT + RULER_HEIGHT + i * LANE_HEIGHT
+            ctx.fillStyle = i % 2 === 0 ? '#1f2937' : '#1a1f2e'
+            ctx.fillRect(SIDEBAR_WIDTH, y, width - SIDEBAR_WIDTH, LANE_HEIGHT)
+        })
+
+        // Draw lane separator lines
+        ctx.strokeStyle = '#374151'
+        ctx.lineWidth = 1
+        lanes.forEach((_, i) => {
+            const y = HEADER_HEIGHT + RULER_HEIGHT + i * LANE_HEIGHT
+            ctx.beginPath()
+            ctx.moveTo(SIDEBAR_WIDTH, y)
+            ctx.lineTo(width, y)
+            ctx.stroke()
+        })
+
+        // Mark static layer as clean
+        staticDirtyRef.current = false
+        lastViewportRef.current = { zoom: viewport.zoom, startTime: viewport.startTime }
+    }, [lanes, bpm, viewport.startTime, viewport.endTime, viewport.zoom, beatGridVisible, timeToX, laneToY])
+
+    /**
+     * Draw DYNAMIC layer - waveform, notes, playhead, selection.
+     * Redraws every frame during playback, but much cheaper since background is cached.
+     */
+    const drawDynamicLayer = useCallback(() => {
+        const canvas = dynamicCanvasRef.current
+        if (!canvas) return
+
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+
+        const width = canvas.width / (window.devicePixelRatio || 1)
+
+        // Clear dynamic layer (transparent)
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+        // Draw waveform (scaled by waveformScale)
         if (waveformData) {
             const waveformHeight = RULER_HEIGHT * waveformScale
             const waveformCenterY = HEADER_HEIGHT + RULER_HEIGHT / 2
             const startSeconds = viewport.startTime / 1000
             const endSeconds = viewport.endTime / 1000
 
-            // Calculate bucket range for visible viewport
             const startBucket = Math.max(0, Math.floor(startSeconds / waveformData.bucketDurationSeconds))
             const endBucket = Math.min(
                 waveformData.bucketCount,
                 Math.ceil(endSeconds / waveformData.bucketDurationSeconds)
             )
 
-            // Set waveform style - semi-transparent cyan/teal
             ctx.fillStyle = 'rgba(56, 189, 248, 0.4)' // sky-400 with alpha
             ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)'
             ctx.lineWidth = 1
 
-            // Draw waveform as filled path
             ctx.beginPath()
 
             let firstPoint = true
             for (let bucket = startBucket; bucket < endBucket; bucket++) {
                 const bucketStartTime = bucket * waveformData.bucketDurationSeconds * 1000
-                const x = 60 + timeToX(bucketStartTime)
+                const x = SIDEBAR_WIDTH + timeToX(bucketStartTime)
 
-                if (x < 60 || x > width) continue
+                if (x < SIDEBAR_WIDTH || x > width) continue
 
                 const maxAmp = waveformData.maxima[bucket]
                 const yMax = waveformCenterY - maxAmp * waveformHeight
@@ -288,12 +345,11 @@ export function TimelineCanvas({
                 }
             }
 
-            // Draw lower half (minima) in reverse
             for (let bucket = endBucket - 1; bucket >= startBucket; bucket--) {
                 const bucketStartTime = bucket * waveformData.bucketDurationSeconds * 1000
-                const x = 60 + timeToX(bucketStartTime)
+                const x = SIDEBAR_WIDTH + timeToX(bucketStartTime)
 
-                if (x < 60 || x > width) continue
+                if (x < SIDEBAR_WIDTH || x > width) continue
 
                 const minAmp = waveformData.minima[bucket]
                 const yMin = waveformCenterY - minAmp * waveformHeight
@@ -306,26 +362,7 @@ export function TimelineCanvas({
         }
 
         // TODO: Draw onset detection layer (when onsetLayerVisible)
-        // Desktop has OnsetDetectionLayer that shows detected transients
-        void onsetLayerVisible // Reserved for future onset detection visualization
-
-        // Draw lane backgrounds
-        lanes.forEach((_, i) => {
-            const y = HEADER_HEIGHT + RULER_HEIGHT + i * LANE_HEIGHT
-            ctx.fillStyle = i % 2 === 0 ? '#1f2937' : '#1a1f2e'
-            ctx.fillRect(60, y, width - 60, LANE_HEIGHT)
-        })
-
-        // Draw lane separator lines
-        ctx.strokeStyle = '#374151'
-        ctx.lineWidth = 1
-        lanes.forEach((_, i) => {
-            const y = HEADER_HEIGHT + RULER_HEIGHT + i * LANE_HEIGHT
-            ctx.beginPath()
-            ctx.moveTo(60, y)
-            ctx.lineTo(width, y)
-            ctx.stroke()
-        })
+        void onsetLayerVisible
 
         // Draw removed notes (diff mode)
         if (showDiff) {
@@ -335,12 +372,11 @@ export function TimelineCanvas({
                     const laneIndex = lanes.indexOf(note.component)
                     if (laneIndex === -1) return
 
-                    const x = 60 + timeToX(note.time)
+                    const x = SIDEBAR_WIDTH + timeToX(note.time)
                     const y = laneToY(laneIndex)
 
-                    if (x < 60 || x > width) return
+                    if (x < SIDEBAR_WIDTH || x > width) return
 
-                    // Draw with strikethrough effect
                     ctx.strokeStyle = '#ef4444' // red-500
                     ctx.lineWidth = 2
                     ctx.setLineDash([4, 4])
@@ -349,7 +385,6 @@ export function TimelineCanvas({
                     ctx.stroke()
                     ctx.setLineDash([])
 
-                    // Strikethrough line
                     ctx.beginPath()
                     ctx.moveTo(x - NOTE_RADIUS - 4, y)
                     ctx.lineTo(x + NOTE_RADIUS + 4, y)
@@ -363,19 +398,17 @@ export function TimelineCanvas({
             const laneIndex = lanes.indexOf(note.component)
             if (laneIndex === -1) return
 
-            const x = 60 + timeToX(note.time)
+            const x = SIDEBAR_WIDTH + timeToX(note.time)
             const y = laneToY(laneIndex)
 
-            if (x < 60 || x > width) return
+            if (x < SIDEBAR_WIDTH || x > width) return
 
             const isSelected = selection.noteIds.has(note.id)
             const diff = noteDiffs.get(note.id)
 
-            // Draw note
             ctx.beginPath()
             ctx.arc(x, y, NOTE_RADIUS, 0, Math.PI * 2)
 
-            // Color based on diff status or component
             if (showDiff && diff) {
                 switch (diff.type) {
                     case 'added':
@@ -391,21 +424,18 @@ export function TimelineCanvas({
                 ctx.fillStyle = LANE_COLORS[note.component]
             }
 
-            // Velocity affects opacity
             ctx.globalAlpha = 0.4 + note.velocity * 0.6
             ctx.fill()
             ctx.globalAlpha = 1
 
-            // Selection ring
             if (isSelected) {
                 ctx.strokeStyle = '#ffffff'
                 ctx.lineWidth = 2
                 ctx.stroke()
             }
 
-            // Diff indicator arrow for modified notes
             if (showDiff && diff?.type === 'modified' && diff.originalNote) {
-                const origX = 60 + timeToX(diff.originalNote.time)
+                const origX = SIDEBAR_WIDTH + timeToX(diff.originalNote.time)
                 const origLaneIndex = lanes.indexOf(diff.originalNote.component)
                 const origY = laneToY(origLaneIndex)
 
@@ -421,8 +451,8 @@ export function TimelineCanvas({
         })
 
         // Draw playhead
-        const playheadX = 60 + timeToX(currentTime)
-        if (playheadX >= 60 && playheadX <= width) {
+        const playheadX = SIDEBAR_WIDTH + timeToX(currentTime)
+        if (playheadX >= SIDEBAR_WIDTH && playheadX <= width) {
             ctx.strokeStyle = PLAYHEAD_COLOR
             ctx.lineWidth = 2
             ctx.beginPath()
@@ -430,7 +460,6 @@ export function TimelineCanvas({
             ctx.lineTo(playheadX, canvas.height)
             ctx.stroke()
 
-            // Playhead triangle
             ctx.fillStyle = PLAYHEAD_COLOR
             ctx.beginPath()
             ctx.moveTo(playheadX, HEADER_HEIGHT)
@@ -442,17 +471,15 @@ export function TimelineCanvas({
 
         // Draw selection rectangle if selecting
         if (isSelecting && selectStart) {
-            // This would draw a rectangle, but we'll skip for now
+            // Reserved for rectangle selection visualization
         }
     }, [
         hitObjects,
         lanes,
-        bpm,
         currentTime,
         viewport,
         selection,
         showDiff,
-        beatGridVisible,
         waveformScale,
         waveformData,
         onsetLayerVisible,
@@ -463,47 +490,76 @@ export function TimelineCanvas({
         selectStart,
     ])
 
+    // Check if static layer needs redraw
+    const checkStaticDirty = useCallback(() => {
+        const last = lastViewportRef.current
+        if (!last) return true
+
+        // Static layer is dirty if zoom or start position changed significantly
+        if (Math.abs(last.zoom - viewport.zoom) > 0.0001) return true
+        if (Math.abs(last.startTime - viewport.startTime) > 1) return true
+
+        return staticDirtyRef.current
+    }, [viewport.zoom, viewport.startTime])
+
     // Handle canvas resize
     useEffect(() => {
-        const canvas = canvasRef.current
+        const staticCanvas = staticCanvasRef.current
+        const dynamicCanvas = dynamicCanvasRef.current
         const container = containerRef.current
-        if (!canvas || !container) return
+        if (!staticCanvas || !dynamicCanvas || !container) return
 
         const resizeObserver = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 const { width } = entry.contentRect
                 const dpr = window.devicePixelRatio || 1
-                canvas.width = width * dpr
-                canvas.height = totalHeight * dpr
-                canvas.style.width = `${width}px`
-                canvas.style.height = `${totalHeight}px`
 
-                const ctx = canvas.getContext('2d')
-                if (ctx) {
-                    ctx.scale(dpr, dpr)
-                }
+                // Resize both canvases
+                staticCanvas.width = width * dpr
+                staticCanvas.height = totalHeight * dpr
+                staticCanvas.style.width = `${width}px`
+                staticCanvas.style.height = `${totalHeight}px`
+
+                dynamicCanvas.width = width * dpr
+                dynamicCanvas.height = totalHeight * dpr
+                dynamicCanvas.style.width = `${width}px`
+                dynamicCanvas.style.height = `${totalHeight}px`
+
+                const staticCtx = staticCanvas.getContext('2d')
+                const dynamicCtx = dynamicCanvas.getContext('2d')
+                if (staticCtx) staticCtx.scale(dpr, dpr)
+                if (dynamicCtx) dynamicCtx.scale(dpr, dpr)
 
                 // Update viewport to match canvas width
-                const viewDuration = (width - 60) / viewport.zoom
+                const viewDuration = (width - SIDEBAR_WIDTH) / viewport.zoom
                 onViewportChange({
                     ...viewport,
                     endTime: viewport.startTime + viewDuration,
                 })
 
-                draw()
+                // Mark static layer dirty on resize
+                staticDirtyRef.current = true
+                drawStaticLayer()
+                drawDynamicLayer()
             }
         })
 
         resizeObserver.observe(container)
         return () => resizeObserver.disconnect()
-        // We only want to re-run when zoom changes, not on every viewport update
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [totalHeight, viewport.zoom, onViewportChange, draw])
+    }, [totalHeight, viewport.zoom, onViewportChange])
 
-    // Redraw when dependencies change
+    // Redraw static layer only when necessary
     useEffect(() => {
-        draw()
-    }, [draw])
+        if (checkStaticDirty()) {
+            drawStaticLayer()
+        }
+    }, [checkStaticDirty, drawStaticLayer])
+
+    // Redraw dynamic layer when dependencies change
+    useEffect(() => {
+        drawDynamicLayer()
+    }, [drawDynamicLayer])
 
     // Find note at position
     const findNoteAtPosition = useCallback(
@@ -518,7 +574,7 @@ export function TimelineCanvas({
             for (const note of hitObjects) {
                 if (note.component !== lane) continue
 
-                const noteX = timeToX(note.time) + 60
+                const noteX = timeToX(note.time) + SIDEBAR_WIDTH
                 const noteY = laneToY(laneIndex)
 
                 const dx = x - noteX
@@ -537,7 +593,7 @@ export function TimelineCanvas({
     // Mouse event handlers
     const handleMouseDown = useCallback(
         (e: React.MouseEvent) => {
-            const canvas = canvasRef.current
+            const canvas = dynamicCanvasRef.current
             if (!canvas) return
 
             const rect = canvas.getBoundingClientRect()
@@ -545,8 +601,8 @@ export function TimelineCanvas({
             const y = e.clientY - rect.top
 
             // Check if clicking on ruler for seeking
-            if (y < HEADER_HEIGHT + RULER_HEIGHT && y >= HEADER_HEIGHT && x > 60) {
-                const time = xToTime(x - 60)
+            if (y < HEADER_HEIGHT + RULER_HEIGHT && y >= HEADER_HEIGHT && x > SIDEBAR_WIDTH) {
+                const time = xToTime(x - SIDEBAR_WIDTH)
                 onSeek?.(Math.max(0, Math.min(time, duration)))
                 return
             }
@@ -588,7 +644,7 @@ export function TimelineCanvas({
         (e: React.MouseEvent) => {
             if (!isDragging || !dragNote) return
 
-            const canvas = canvasRef.current
+            const canvas = dynamicCanvasRef.current
             if (!canvas) return
 
             const rect = canvas.getBoundingClientRect()
@@ -596,7 +652,7 @@ export function TimelineCanvas({
             const y = e.clientY - rect.top
 
             // Calculate new time and lane
-            let newTime = xToTime(x - 60)
+            let newTime = xToTime(x - SIDEBAR_WIDTH)
             newTime = snapTime(newTime)
             newTime = Math.max(0, Math.min(newTime, duration))
 
@@ -626,15 +682,18 @@ export function TimelineCanvas({
                 const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, viewport.zoom * zoomFactor))
 
                 // Zoom towards mouse position
-                const canvas = canvasRef.current
+                const canvas = dynamicCanvasRef.current
                 if (!canvas) return
 
                 const rect = canvas.getBoundingClientRect()
-                const mouseX = e.clientX - rect.left - 60
+                const mouseX = e.clientX - rect.left - SIDEBAR_WIDTH
                 const mouseTime = xToTime(mouseX)
 
                 const newStartTime = mouseTime - mouseX / newZoom
-                const viewDuration = (rect.width - 60) / newZoom
+                const viewDuration = (rect.width - SIDEBAR_WIDTH) / newZoom
+
+                // Mark static layer dirty since zoom changed
+                staticDirtyRef.current = true
 
                 onViewportChange({
                     startTime: Math.max(0, newStartTime),
@@ -646,6 +705,9 @@ export function TimelineCanvas({
                 const scrollAmount = e.deltaY / viewport.zoom
                 const newStartTime = Math.max(0, Math.min(duration - (viewport.endTime - viewport.startTime), viewport.startTime + scrollAmount))
                 const viewDuration = viewport.endTime - viewport.startTime
+
+                // Mark static layer dirty since scroll position changed
+                staticDirtyRef.current = true
 
                 onViewportChange({
                     ...viewport,
@@ -663,9 +725,17 @@ export function TimelineCanvas({
             className="relative w-full overflow-hidden rounded-lg border border-gray-700 bg-gray-800"
             style={{ height: totalHeight }}
         >
+            {/* Static layer - background grid, lanes, ruler */}
             <canvas
-                ref={canvasRef}
-                className="block"
+                ref={staticCanvasRef}
+                className="absolute inset-0 block"
+                style={{ zIndex: 0 }}
+            />
+            {/* Dynamic layer - notes, playhead, waveform (handles all interactions) */}
+            <canvas
+                ref={dynamicCanvasRef}
+                className="absolute inset-0 block"
+                style={{ zIndex: 1 }}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}

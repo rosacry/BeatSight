@@ -2345,34 +2345,38 @@ ENSEMBLE_PY
             SIMPLE_MODEL_FLAGS="--model-version v5 --v5-size large --drop-path-rate 0.15"
             SIMPLE_MIXUP_FLAGS="--mixup-alpha 0.2 --cutmix-alpha 0.5 --mixup-prob 0.5"
             SIMPLE_SPECAUGMENT_FLAGS="--specaugment drum"
-            # Focal loss with gamma=2.0 helps with class imbalance
-            SIMPLE_FOCAL_FLAGS="--focal-loss --focal-gamma 2.0"
+            # Focal loss with gamma=3.0 for 630x class imbalance (higher gamma = more focus on hard examples)
+            # gamma=2.0 is standard, gamma=3.0 is more aggressive for extreme imbalance
+            SIMPLE_FOCAL_FLAGS="--focal-loss --focal-gamma 3.0"
             SIMPLE_EMA_FLAGS="--use-ema --ema-decay 0.999"
             SIMPLE_LABEL_SMOOTHING="--label-smoothing 0.05"
-            # CRITICAL FIX: "effective" strategy only gives 1.9x weight for rare classes!
-            # With 630x imbalance, we need sqrt strategy which gives ~25x weights
-            # sqrt is more aggressive than effective but won't destabilize like balanced
-            SIMPLE_CLASS_WEIGHTS="--class-weights sqrt --max-class-weight 30.0"
+            # REVERTED: sqrt weights (25x ratio) caused accuracy to DROP from 31% to 27%
+            # effective weights work better - let focal loss handle the imbalance instead
+            SIMPLE_CLASS_WEIGHTS="--class-weights effective --max-class-weight 10.0"
             SIMPLE_SWA_FLAGS="--use-swa --swa-start 0.75"
             SIMPLE_FMIX_FLAGS="--use-fmix --fmix-alpha 0.5"
             SIMPLE_EARLY_STOPPING="--early-stopping --early-stopping-patience 15 --early-stopping-min-delta 0.001 --early-stopping-warmup 5"
             
             # Check for existing checkpoint to resume from
             SIMPLE_OUTPUT_DIR="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached-simple"
-            # Prefer best checkpoint (best generalization) over latest (more epochs but potentially overfit)
-            ORIGINAL_BEST_CHECKPOINT="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached/checkpoints/best_full_checkpoint.pth"
+            # Original checkpoints from v5-full-cached (31.42% val acc)
+            ORIGINAL_BEST_CHECKPOINT="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached/checkpoints/best_checkpoint.pth"
             ORIGINAL_LATEST_CHECKPOINT="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached/checkpoints/latest_checkpoint.pth"
             SIMPLE_CHECKPOINT="${SIMPLE_OUTPUT_DIR}/checkpoints/latest_checkpoint.pth"
             
-            # If no simple checkpoint exists but original exists, we can transfer weights
+            # IMPORTANT: If simple checkpoint exists but you want to restart from original,
+            # delete or rename the simple checkpoints folder first:
+            #   rm -rf ${SIMPLE_OUTPUT_DIR}/checkpoints/
             resume_from_flag=""
             if [[ -f "$SIMPLE_CHECKPOINT" ]]; then
                 log "   📂 Found simple checkpoint: $SIMPLE_CHECKPOINT"
                 log "      Will resume from this checkpoint"
+                log "      ⚠️  To restart from original v5-full-cached, run:"
+                log "         rm -rf ${SIMPLE_OUTPUT_DIR}/checkpoints/"
                 resume_from_flag="--resume-from $SIMPLE_CHECKPOINT"
             elif [[ -f "$ORIGINAL_BEST_CHECKPOINT" ]]; then
                 log "   📂 Found BEST v5-full-cached checkpoint: $ORIGINAL_BEST_CHECKPOINT"
-                log "      Using best checkpoint (best generalization) over latest"
+                log "      Using best checkpoint (31.42% val acc) as starting point"
                 log "      (Optimizer will be reset, model weights preserved)"
                 log ""
                 resume_from_flag="--resume-from $ORIGINAL_BEST_CHECKPOINT"

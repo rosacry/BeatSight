@@ -1,0 +1,149 @@
+groups:
+  - name: beatsight-modal-workers
+    interval: 30s
+    rules:
+      # ==========================================================================
+      # Queue Backup Alert
+      # ==========================================================================
+      - alert: AIJobQueueBackup
+        expr: beatsight_ai_jobs_queued > 20
+        for: 10m
+        labels:
+          severity: warning
+          service: beatsight
+          component: ai-pipeline
+        annotations:
+          summary: "AI Job queue backup detected"
+          description: "{{ $value }} jobs in queue for more than 10 minutes. Consider scaling workers."
+          runbook_url: "https://docs.beatsight.io/ops/runbooks/queue-backup"
+
+      - alert: AIJobQueueCritical
+        expr: beatsight_ai_jobs_queued > 50
+        for: 5m
+        labels:
+          severity: critical
+          service: beatsight
+          component: ai-pipeline
+        annotations:
+          summary: "AI Job queue critically high"
+          description: "{{ $value }} jobs in queue. Immediate attention required."
+          runbook_url: "https://docs.beatsight.io/ops/runbooks/queue-backup"
+
+      # ==========================================================================
+      # Processing Time Alerts
+      # ==========================================================================
+      - alert: AIJobSlowProcessing
+        expr: histogram_quantile(0.95, rate(beatsight_ai_job_duration_seconds_bucket[15m])) > 300
+        for: 15m
+        labels:
+          severity: warning
+          service: beatsight
+          component: ai-pipeline
+        annotations:
+          summary: "AI Job processing time elevated"
+          description: "p95 processing time is {{ $value | humanizeDuration }}. Normal is <5 minutes."
+          runbook_url: "https://docs.beatsight.io/ops/runbooks/slow-processing"
+
+      # ==========================================================================
+      # Error Rate Alerts
+      # ==========================================================================
+      - alert: AIJobHighErrorRate
+        expr: |
+          (
+            rate(beatsight_ai_jobs_failed_total[15m]) / 
+            (rate(beatsight_ai_jobs_completed_total[15m]) + rate(beatsight_ai_jobs_failed_total[15m]))
+          ) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          service: beatsight
+          component: ai-pipeline
+        annotations:
+          summary: "AI Job error rate elevated"
+          description: "Error rate is {{ $value | humanizePercentage }}. Threshold is 10%."
+          runbook_url: "https://docs.beatsight.io/ops/runbooks/high-error-rate"
+
+      - alert: AIJobCriticalErrorRate
+        expr: |
+          (
+            rate(beatsight_ai_jobs_failed_total[5m]) / 
+            (rate(beatsight_ai_jobs_completed_total[5m]) + rate(beatsight_ai_jobs_failed_total[5m]))
+          ) > 0.3
+        for: 5m
+        labels:
+          severity: critical
+          service: beatsight
+          component: ai-pipeline
+        annotations:
+          summary: "AI Job error rate critical"
+          description: "Error rate is {{ $value | humanizePercentage }}. Investigate immediately."
+          runbook_url: "https://docs.beatsight.io/ops/runbooks/high-error-rate"
+
+      # ==========================================================================
+      # Worker Health Alerts
+      # ==========================================================================
+      - alert: NoActiveWorkers
+        expr: count(beatsight_modal_worker_active) == 0 or absent(beatsight_modal_worker_active)
+        for: 2m
+        labels:
+          severity: critical
+          service: beatsight
+          component: ai-pipeline
+        annotations:
+          summary: "No active Modal GPU workers"
+          description: "No workers are processing jobs. Check Modal deployment."
+          runbook_url: "https://docs.beatsight.io/ops/runbooks/no-workers"
+
+      - alert: WorkerStale
+        expr: time() - beatsight_modal_worker_last_heartbeat_seconds > 120
+        for: 2m
+        labels:
+          severity: warning
+          service: beatsight
+          component: ai-pipeline
+        annotations:
+          summary: "Worker heartbeat stale"
+          description: "Worker {{ $labels.worker }} hasn't sent heartbeat in >2 minutes."
+          runbook_url: "https://docs.beatsight.io/ops/runbooks/stale-worker"
+
+      # ==========================================================================
+      # GPU Utilization Alerts
+      # ==========================================================================
+      - alert: LowGPUUtilization
+        expr: avg(beatsight_modal_gpu_utilization_percent) < 20 and beatsight_ai_jobs_queued > 0
+        for: 15m
+        labels:
+          severity: info
+          service: beatsight
+          component: ai-pipeline
+        annotations:
+          summary: "Low GPU utilization with queued jobs"
+          description: "GPU utilization is {{ $value | humanizePercentage }} but jobs are queued. Check for bottlenecks."
+          runbook_url: "https://docs.beatsight.io/ops/runbooks/low-gpu-util"
+
+      - alert: GPUMemoryHigh
+        expr: beatsight_modal_gpu_memory_bytes / beatsight_modal_gpu_memory_total_bytes > 0.95
+        for: 5m
+        labels:
+          severity: warning
+          service: beatsight
+          component: ai-pipeline
+        annotations:
+          summary: "GPU memory utilization high"
+          description: "Worker {{ $labels.worker }} GPU memory at {{ $value | humanizePercentage }}."
+          runbook_url: "https://docs.beatsight.io/ops/runbooks/gpu-memory"
+
+      # ==========================================================================
+      # Job Throughput Alerts
+      # ==========================================================================
+      - alert: NoJobsCompleted
+        expr: increase(beatsight_ai_jobs_completed_total[1h]) == 0 and beatsight_ai_jobs_queued > 0
+        for: 30m
+        labels:
+          severity: warning
+          service: beatsight
+          component: ai-pipeline
+        annotations:
+          summary: "No jobs completed in 1 hour"
+          description: "Jobs are queued but none completed. Check worker health."
+          runbook_url: "https://docs.beatsight.io/ops/runbooks/no-completions"

@@ -77,7 +77,7 @@ class EmailService:
         except jwt.ExpiredSignatureError:
             logger.info("Expired password reset token used")
             return None
-        except jwt.InvalidTokenError as e:
+        except jwt.JWTError as e:
             logger.warning(f"Invalid password reset token: {type(e).__name__}")
             return None
 
@@ -100,7 +100,7 @@ class EmailService:
         except jwt.ExpiredSignatureError:
             logger.info("Expired email verification token used")
             return None
-        except jwt.InvalidTokenError as e:
+        except jwt.JWTError as e:
             logger.warning(f"Invalid email verification token: {type(e).__name__}")
             return None
 

@@ -14,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api.deps import get_current_user, get_current_user_optional, get_db_session
+from app.api.routes.ai_jobs import verify_worker_secret
 from app.main import app
 from app.models.ai_job import AIJob, AIJobPriority, AIJobState
 from app.models.user import User
@@ -105,6 +106,20 @@ def client_anonymous(mock_db_session: AsyncMock) -> TestClient:
     """Create a test client without authentication."""
     app.dependency_overrides[get_current_user_optional] = lambda: None
     app.dependency_overrides[get_db_session] = lambda: mock_db_session
+    client = TestClient(app)
+    yield client
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def client_worker(mock_db_session: AsyncMock) -> TestClient:
+    """Create a test client with worker secret authentication.
+    
+    This overrides the verify_worker_secret dependency for testing
+    worker-only endpoints (claim, heartbeat, progress, release, stale).
+    """
+    app.dependency_overrides[get_db_session] = lambda: mock_db_session
+    app.dependency_overrides[verify_worker_secret] = lambda: True
     client = TestClient(app)
     yield client
     app.dependency_overrides.clear()
@@ -389,7 +404,7 @@ class TestWorkerHeartbeat:
     def test_heartbeat_success(
         self,
         mock_service_cls: MagicMock,
-        client_authenticated: TestClient,
+        client_worker: TestClient,
         mock_job: AIJob,
     ) -> None:
         """Test successful heartbeat."""
@@ -400,7 +415,7 @@ class TestWorkerHeartbeat:
         mock_service_cls.return_value = mock_service
 
         worker_id = uuid.uuid4()
-        response = client_authenticated.post(
+        response = client_worker.post(
             f"/api/ai-jobs/{mock_job.id}/heartbeat?worker_id={worker_id}",
         )
 
@@ -410,7 +425,7 @@ class TestWorkerHeartbeat:
     def test_heartbeat_missing_worker_id(
         self,
         mock_service_cls: MagicMock,
-        client_authenticated: TestClient,
+        client_worker: TestClient,
         mock_job: AIJob,
     ) -> None:
         """Test heartbeat without worker ID query param."""
@@ -418,7 +433,7 @@ class TestWorkerHeartbeat:
         mock_service.get_by_id = AsyncMock(return_value=mock_job)
         mock_service_cls.return_value = mock_service
 
-        response = client_authenticated.post(
+        response = client_worker.post(
             f"/api/ai-jobs/{mock_job.id}/heartbeat",
         )
 
@@ -428,7 +443,7 @@ class TestWorkerHeartbeat:
     def test_heartbeat_job_not_found(
         self,
         mock_service_cls: MagicMock,
-        client_authenticated: TestClient,
+        client_worker: TestClient,
     ) -> None:
         """Test heartbeat for non-existent job."""
         mock_service = AsyncMock()
@@ -437,7 +452,7 @@ class TestWorkerHeartbeat:
 
         job_id = uuid.uuid4()
         worker_id = uuid.uuid4()
-        response = client_authenticated.post(
+        response = client_worker.post(
             f"/api/ai-jobs/{job_id}/heartbeat?worker_id={worker_id}",
         )
 
@@ -453,7 +468,7 @@ class TestUpdateProgress:
         self,
         mock_service_cls: MagicMock,
         mock_get_redis: MagicMock,
-        client_authenticated: TestClient,
+        client_worker: TestClient,
         mock_job: AIJob,
     ) -> None:
         """Test successful progress update."""
@@ -468,7 +483,7 @@ class TestUpdateProgress:
         mock_get_redis.return_value = mock_redis
 
         worker_id = uuid.uuid4()
-        response = client_authenticated.patch(
+        response = client_worker.patch(
             f"/api/ai-jobs/{mock_job.id}/progress",
             json={
                 "worker_id": str(worker_id),
@@ -483,7 +498,7 @@ class TestUpdateProgress:
     def test_update_progress_job_not_found(
         self,
         mock_service_cls: MagicMock,
-        client_authenticated: TestClient,
+        client_worker: TestClient,
     ) -> None:
         """Test progress update for non-existent job."""
         mock_service = AsyncMock()
@@ -492,7 +507,7 @@ class TestUpdateProgress:
 
         job_id = uuid.uuid4()
         worker_id = uuid.uuid4()
-        response = client_authenticated.patch(
+        response = client_worker.patch(
             f"/api/ai-jobs/{job_id}/progress",
             json={
                 "worker_id": str(worker_id),
@@ -510,7 +525,7 @@ class TestClaimJob:
     def test_claim_job_success(
         self,
         mock_service_cls: MagicMock,
-        client_authenticated: TestClient,
+        client_worker: TestClient,
         mock_job: AIJob,
     ) -> None:
         """Test successfully claiming a job."""
@@ -519,7 +534,7 @@ class TestClaimJob:
         mock_service_cls.return_value = mock_service
 
         worker_id = uuid.uuid4()
-        response = client_authenticated.post(
+        response = client_worker.post(
             f"/api/ai-jobs/claim?worker_id={worker_id}",
         )
 
@@ -529,7 +544,7 @@ class TestClaimJob:
     def test_claim_job_none_available(
         self,
         mock_service_cls: MagicMock,
-        client_authenticated: TestClient,
+        client_worker: TestClient,
     ) -> None:
         """Test claiming when no jobs available returns 200 with null."""
         mock_service = AsyncMock()
@@ -537,7 +552,7 @@ class TestClaimJob:
         mock_service_cls.return_value = mock_service
 
         worker_id = uuid.uuid4()
-        response = client_authenticated.post(
+        response = client_worker.post(
             f"/api/ai-jobs/claim?worker_id={worker_id}",
         )
 
@@ -549,13 +564,13 @@ class TestClaimJob:
     def test_claim_job_missing_worker_id(
         self,
         mock_service_cls: MagicMock,
-        client_authenticated: TestClient,
+        client_worker: TestClient,
     ) -> None:
         """Test claiming without worker ID query param."""
         mock_service = AsyncMock()
         mock_service_cls.return_value = mock_service
 
-        response = client_authenticated.post("/api/ai-jobs/claim")
+        response = client_worker.post("/api/ai-jobs/claim")
 
         assert response.status_code == 422
 
@@ -567,7 +582,7 @@ class TestReleaseJob:
     def test_release_job_success(
         self,
         mock_service_cls: MagicMock,
-        client_authenticated: TestClient,
+        client_worker: TestClient,
         mock_job: AIJob,
     ) -> None:
         """Test successfully releasing a job."""
@@ -577,7 +592,7 @@ class TestReleaseJob:
         mock_service.release_job = AsyncMock()
         mock_service_cls.return_value = mock_service
 
-        response = client_authenticated.post(
+        response = client_worker.post(
             f"/api/ai-jobs/{mock_job.id}/release",
         )
 
@@ -587,7 +602,7 @@ class TestReleaseJob:
     def test_release_job_not_found(
         self,
         mock_service_cls: MagicMock,
-        client_authenticated: TestClient,
+        client_worker: TestClient,
     ) -> None:
         """Test releasing non-existent job."""
         mock_service = AsyncMock()
@@ -595,7 +610,7 @@ class TestReleaseJob:
         mock_service_cls.return_value = mock_service
 
         job_id = uuid.uuid4()
-        response = client_authenticated.post(
+        response = client_worker.post(
             f"/api/ai-jobs/{job_id}/release",
         )
 
@@ -609,7 +624,7 @@ class TestListStaleJobs:
     def test_list_stale_jobs_success(
         self,
         mock_service_cls: MagicMock,
-        client_authenticated: TestClient,
+        client_worker: TestClient,
         mock_job: AIJob,
     ) -> None:
         """Test listing stale jobs."""
@@ -618,7 +633,7 @@ class TestListStaleJobs:
         mock_service.list_stale_jobs = AsyncMock(return_value=[mock_job])
         mock_service_cls.return_value = mock_service
 
-        response = client_authenticated.get("/api/ai-jobs/stale/list")
+        response = client_worker.get("/api/ai-jobs/stale/list")
 
         assert response.status_code == 200
         data = response.json()
@@ -628,14 +643,14 @@ class TestListStaleJobs:
     def test_list_stale_jobs_empty(
         self,
         mock_service_cls: MagicMock,
-        client_authenticated: TestClient,
+        client_worker: TestClient,
     ) -> None:
         """Test listing stale jobs when none are stale."""
         mock_service = AsyncMock()
         mock_service.list_stale_jobs = AsyncMock(return_value=[])
         mock_service_cls.return_value = mock_service
 
-        response = client_authenticated.get("/api/ai-jobs/stale/list")
+        response = client_worker.get("/api/ai-jobs/stale/list")
 
         assert response.status_code == 200
         assert response.json() == []

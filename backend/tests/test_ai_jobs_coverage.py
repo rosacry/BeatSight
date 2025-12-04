@@ -17,6 +17,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.api.deps import get_current_user_optional, get_db_session
+from app.api.routes.ai_jobs import verify_worker_secret
 from app.models.ai_job import AIJob, AIJobPriority, AIJobState
 from app.models.user import User
 from app.services.modal_gpu import ModalConnectionError
@@ -419,6 +420,7 @@ class TestWorkerHeartbeatConflict:
         mock_service_cls.return_value = mock_service
 
         app.dependency_overrides[get_db_session] = lambda: mock_session
+        app.dependency_overrides[verify_worker_secret] = lambda: True
 
         client = TestClient(app)
 
@@ -457,6 +459,7 @@ class TestReleaseJobPath:
         mock_service_cls.return_value = mock_service
 
         app.dependency_overrides[get_db_session] = lambda: mock_session
+        app.dependency_overrides[verify_worker_secret] = lambda: True
 
         client = TestClient(app)
 

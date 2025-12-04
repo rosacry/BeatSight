@@ -292,20 +292,20 @@ async def get_queue_stats(
     Get statistics about the AI job queue.
 
     Returns counts by state, average processing time, and recent activity.
+    Optimized: single query for state counts + parallel execution.
     """
+    import asyncio
     from datetime import timedelta
 
     now = datetime.utcnow()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     hour_ago = now - timedelta(hours=1)
 
-    # Count by state
-    state_counts = {}
-    for state in AIJobState:
-        count_query = select(func.count(AIJob.id)).where(AIJob.state == state)
-        state_counts[state.value] = (await db.execute(count_query)).scalar() or 0
-
-    total = sum(state_counts.values())
+    # Single query for all state counts (much faster than 5 separate queries)
+    state_count_query = (
+        select(AIJob.state, func.count(AIJob.id))
+        .group_by(AIJob.state)
+    )
 
     # Average processing time for completed jobs
     avg_query = select(
@@ -320,15 +320,27 @@ async def get_queue_stats(
             AIJob.finished_at.isnot(None),
         )
     )
-    avg_time = (await db.execute(avg_query)).scalar()
 
     # Jobs today
     today_query = select(func.count(AIJob.id)).where(AIJob.created_at >= today_start)
-    jobs_today = (await db.execute(today_query)).scalar() or 0
 
     # Jobs this hour
     hour_query = select(func.count(AIJob.id)).where(AIJob.created_at >= hour_ago)
-    jobs_this_hour = (await db.execute(hour_query)).scalar() or 0
+
+    # Execute all queries in parallel
+    state_result, avg_result, today_result, hour_result = await asyncio.gather(
+        db.execute(state_count_query),
+        db.execute(avg_query),
+        db.execute(today_query),
+        db.execute(hour_query),
+    )
+
+    # Process state counts
+    state_counts = {state.value: 0 for state in AIJobState}
+    for state, count in state_result.all():
+        state_counts[state.value] = count
+
+    total = sum(state_counts.values())
 
     return QueueStats(
         total_jobs=total,
@@ -337,9 +349,9 @@ async def get_queue_stats(
         complete=state_counts.get("complete", 0),
         failed=state_counts.get("failed", 0),
         cancelled=state_counts.get("cancelled", 0),
-        avg_processing_time_seconds=avg_time,
-        jobs_today=jobs_today,
-        jobs_this_hour=jobs_this_hour,
+        avg_processing_time_seconds=avg_result.scalar(),
+        jobs_today=today_result.scalar() or 0,
+        jobs_this_hour=hour_result.scalar() or 0,
     )
 
 
@@ -838,7 +850,8 @@ async def get_user_stats(
     db: Annotated[AsyncSession, Depends(get_session)],
     admin: Annotated[User, Depends(RequireAdminDashboard)],
 ) -> UserStats:
-    """Get aggregate user statistics."""
+    """Get aggregate user statistics. Optimized with parallel query execution."""
+    import asyncio
     from datetime import timedelta
 
     now = datetime.utcnow()
@@ -846,49 +859,36 @@ async def get_user_stats(
     week_ago = now - timedelta(days=7)
     month_ago = now - timedelta(days=30)
 
-    # Total users
-    total = (await db.execute(select(func.count(User.id)))).scalar() or 0
-
-    # Verified users
-    verified = (
-        await db.execute(
-            select(func.count(User.id)).where(User.email_verified.is_(True))
-        )
-    ).scalar() or 0
-
-    # Pro users (active subscription)
+    # Define all queries
+    total_query = select(func.count(User.id))
+    verified_query = select(func.count(User.id)).where(User.email_verified.is_(True))
     pro_query = select(func.count(func.distinct(Subscription.user_id))).where(
         and_(
             Subscription.plan_code == SubscriptionPlan.PRO,
             Subscription.status == SubscriptionStatus.ACTIVE,
         )
     )
-    pro = (await db.execute(pro_query)).scalar() or 0
+    today_query = select(func.count(User.id)).where(User.created_at >= today)
+    week_query = select(func.count(User.id)).where(User.created_at >= week_ago)
+    month_query = select(func.count(User.id)).where(User.created_at >= month_ago)
 
-    # Users created today
-    users_today = (
-        await db.execute(select(func.count(User.id)).where(User.created_at >= today))
-    ).scalar() or 0
-
-    # Users this week
-    users_week = (
-        await db.execute(select(func.count(User.id)).where(User.created_at >= week_ago))
-    ).scalar() or 0
-
-    # Users this month
-    users_month = (
-        await db.execute(
-            select(func.count(User.id)).where(User.created_at >= month_ago)
-        )
-    ).scalar() or 0
+    # Execute all queries in parallel
+    total_r, verified_r, pro_r, today_r, week_r, month_r = await asyncio.gather(
+        db.execute(total_query),
+        db.execute(verified_query),
+        db.execute(pro_query),
+        db.execute(today_query),
+        db.execute(week_query),
+        db.execute(month_query),
+    )
 
     return UserStats(
-        total_users=total,
-        verified_users=verified,
-        pro_users=pro,
-        users_today=users_today,
-        users_this_week=users_week,
-        users_this_month=users_month,
+        total_users=total_r.scalar() or 0,
+        verified_users=verified_r.scalar() or 0,
+        pro_users=pro_r.scalar() or 0,
+        users_today=today_r.scalar() or 0,
+        users_this_week=week_r.scalar() or 0,
+        users_this_month=month_r.scalar() or 0,
     )
 
 

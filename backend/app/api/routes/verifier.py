@@ -394,24 +394,23 @@ async def get_verifier_stats(
     Get verification statistics for the dashboard.
 
     Includes pending count, today's activity, and user's review history.
+    Optimized: runs all queries in parallel for faster response.
     """
+    import asyncio
     from datetime import timezone
     from sqlalchemy import extract
-
-    # Get pending count
-    pending_query = (
-        select(func.count())
-        .select_from(MapEditProposal)
-        .where(MapEditProposal.status == EditStatus.PENDING)
-    )
-    pending_result = await session.execute(pending_query)
-    pending_count = pending_result.scalar() or 0
 
     # Get today's start in UTC
     now = datetime.now(timezone.utc)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    # Approved today
+    # Define all queries
+    pending_query = (
+        select(func.count())
+        .select_from(MapEditProposal)
+        .where(MapEditProposal.status == EditStatus.PENDING)
+    )
+
     approved_query = (
         select(func.count())
         .select_from(MapVerificationDecision)
@@ -422,10 +421,7 @@ async def get_verifier_stats(
             )
         )
     )
-    approved_result = await session.execute(approved_query)
-    approved_today = approved_result.scalar() or 0
 
-    # Rejected today
     rejected_query = (
         select(func.count())
         .select_from(MapVerificationDecision)
@@ -436,20 +432,13 @@ async def get_verifier_stats(
             )
         )
     )
-    rejected_result = await session.execute(rejected_query)
-    rejected_today = rejected_result.scalar() or 0
 
-    # Total reviewed by current user
     user_reviewed_query = (
         select(func.count())
         .select_from(MapVerificationDecision)
         .where(MapVerificationDecision.verifier_id == current_user.id)
     )
-    user_reviewed_result = await session.execute(user_reviewed_query)
-    total_reviewed_by_user = user_reviewed_result.scalar() or 0
 
-    # Average review time in hours (proposal submitted -> decision made)
-    # Use EPOCH extraction for PostgreSQL-compatible timestamp difference
     avg_review_query = (
         select(
             func.avg(
@@ -463,7 +452,20 @@ async def get_verifier_stats(
             MapEditProposal, MapVerificationDecision.proposal_id == MapEditProposal.id
         )
     )
-    avg_review_result = await session.execute(avg_review_query)
+
+    # Execute all queries in parallel
+    pending_result, approved_result, rejected_result, user_reviewed_result, avg_review_result = await asyncio.gather(
+        session.execute(pending_query),
+        session.execute(approved_query),
+        session.execute(rejected_query),
+        session.execute(user_reviewed_query),
+        session.execute(avg_review_query),
+    )
+
+    pending_count = pending_result.scalar() or 0
+    approved_today = approved_result.scalar() or 0
+    rejected_today = rejected_result.scalar() or 0
+    total_reviewed_by_user = user_reviewed_result.scalar() or 0
     avg_review_seconds = avg_review_result.scalar()
     avg_review_time_hours = round(avg_review_seconds, 2) if avg_review_seconds else None
 

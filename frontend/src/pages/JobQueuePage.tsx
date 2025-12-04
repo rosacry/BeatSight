@@ -31,7 +31,7 @@ export function JobQueuePage() {
         if (!jobs) {
             return { all: 0, queued: 0, processing: 0, complete: 0, failed: 0, cancelled: 0 }
         }
-        
+
         const counts = { all: jobs.length, queued: 0, processing: 0, complete: 0, failed: 0, cancelled: 0 }
         for (const job of jobs) {
             const state = job.state as keyof typeof counts

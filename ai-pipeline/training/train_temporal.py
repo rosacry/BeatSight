@@ -58,10 +58,13 @@ Total training time:
 """
 
 import argparse
+import os
 import random
+import signal
+import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Any, Optional, Dict
 
 import numpy as np
 import torch
@@ -172,6 +175,12 @@ def parse_args():
     parser.add_argument("--wandb-project", type=str, default="beatsight-temporal",
                         help="Wandb project name")
     parser.add_argument("--mixed-precision", action="store_true", help="Use mixed precision")
+    
+    # Resume training
+    parser.add_argument("--resume", type=str, default=None,
+                        help="Path to checkpoint to resume from (e.g., checkpoints/temporal/latest.pt)")
+    parser.add_argument("--checkpoint-every-batches", type=int, default=500,
+                        help="Save mid-epoch checkpoint every N batches (0 to disable)")
     
     return parser.parse_args()
 
@@ -324,15 +333,23 @@ def train_epoch(
     device: torch.device,
     args,
     epoch: int,
-    use_audio: bool = False
+    use_audio: bool = False,
+    checkpoint_callback: Optional[callable] = None,
+    checkpoint_every_batches: int = 0,
 ) -> Dict[str, float]:
-    """Train for one epoch."""
+    """Train for one epoch with optional mid-epoch checkpointing.
+    
+    Args:
+        checkpoint_callback: Optional callback(batch_idx, total_batches) for mid-epoch saves
+        checkpoint_every_batches: Save checkpoint every N batches (0 to disable)
+    """
     model.train()
     
     total_loss = 0.0
     total_correct = 0
     total_samples = 0
     loss_components = {"classification": 0.0, "temporal": 0.0, "coherence": 0.0}
+    total_batches = len(dataloader)
     
     pbar = tqdm(dataloader, desc=f"Epoch {epoch}")
     
@@ -425,6 +442,11 @@ def train_epoch(
             "loss": f"{loss.item():.4f}",
             "acc": f"{100 * correct / (batch_size * seq_len):.1f}%"
         })
+        
+        # Mid-epoch checkpoint (protects against crashes during long epochs)
+        if checkpoint_callback and checkpoint_every_batches > 0:
+            if (batch_idx + 1) % checkpoint_every_batches == 0 and (batch_idx + 1) < total_batches:
+                checkpoint_callback(batch_idx + 1, total_batches)
     
     num_batches = len(dataloader)
     metrics = {
@@ -528,6 +550,33 @@ def validate(
     return metrics
 
 
+def _atomic_torch_save(obj: Any, path: Path) -> None:
+    """Save a PyTorch object atomically to prevent corruption from Ctrl+C.
+    
+    Writes to a temporary file first, then atomically renames to the target.
+    This prevents checkpoint corruption when training is interrupted during save.
+    """
+    parent_dir = path.parent
+    parent_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Use a deterministic temp name based on target to avoid accumulating temp files
+    temp_path = parent_dir / f".{path.name}.tmp"
+    
+    try:
+        # Save to temp file
+        torch.save(obj, temp_path)
+        # Atomic rename (os.replace is atomic on both POSIX and Windows NTFS)
+        os.replace(temp_path, path)
+    except Exception:
+        # Clean up temp file on failure
+        if temp_path.exists():
+            try:
+                temp_path.unlink()
+            except OSError:
+                pass
+        raise
+
+
 def save_checkpoint(
     model: nn.Module,
     optimizer: optim.Optimizer,
@@ -535,9 +584,27 @@ def save_checkpoint(
     epoch: int,
     metrics: Dict[str, float],
     args,
-    is_best: bool = False
+    is_best: bool = False,
+    best_val_acc: float = 0.0,
+    reason: Optional[str] = None,
+    batch_index: Optional[int] = None,
+    total_batches: Optional[int] = None,
 ):
-    """Save model checkpoint."""
+    """Save model checkpoint with atomic writes to prevent corruption.
+    
+    Args:
+        model: The model to save
+        optimizer: The optimizer state to save
+        scheduler: The LR scheduler state to save
+        epoch: Current epoch number
+        metrics: Training/validation metrics
+        args: Training arguments
+        is_best: Whether this is the best model so far
+        best_val_acc: Best validation accuracy so far
+        reason: Optional reason for checkpoint (e.g., "interrupt", "mid_epoch")
+        batch_index: Current batch (for mid-epoch checkpoints)
+        total_batches: Total batches in epoch (for mid-epoch checkpoints)
+    """
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     
@@ -547,20 +614,72 @@ def save_checkpoint(
         "optimizer_state_dict": optimizer.state_dict(),
         "scheduler_state_dict": scheduler.state_dict() if scheduler else None,
         "metrics": metrics,
-        "args": vars(args)
+        "args": vars(args),
+        "best_val_acc": best_val_acc,
+        "batch_index": batch_index,
+        "total_batches": total_batches,
+        "reason": reason,
     }
     
-    # Save latest
-    torch.save(checkpoint, output_dir / "latest.pt")
+    # Save latest (atomic)
+    _atomic_torch_save(checkpoint, output_dir / "latest.pt")
     
-    # Save periodic
-    if epoch % args.save_every == 0:
-        torch.save(checkpoint, output_dir / f"epoch_{epoch}.pt")
+    is_mid_epoch = batch_index is not None
+    if is_mid_epoch:
+        # Mid-epoch checkpoint
+        _atomic_torch_save(checkpoint, output_dir / f"epoch_{epoch}_mid.pt")
+        pct = 100 * batch_index / total_batches if total_batches else 0
+        print(f"\n💾 Mid-epoch checkpoint saved (epoch {epoch}, batch {batch_index}/{total_batches}, {pct:.0f}%)")
+    else:
+        # End-of-epoch: clean up mid-epoch checkpoint
+        mid_epoch_path = output_dir / f"epoch_{epoch}_mid.pt"
+        if mid_epoch_path.exists():
+            mid_epoch_path.unlink()
+        
+        # Save periodic
+        if epoch % args.save_every == 0:
+            _atomic_torch_save(checkpoint, output_dir / f"epoch_{epoch}.pt")
+        
+        if reason:
+            print(f"✓ Checkpoint saved ({reason}) at epoch {epoch}")
     
     # Save best
     if is_best:
-        torch.save(checkpoint, output_dir / "best.pt")
-        print(f"  New best model saved! Val accuracy: {metrics['val/accuracy']:.2f}%")
+        _atomic_torch_save(checkpoint, output_dir / "best.pt")
+        print(f"  🏆 New best model saved! Val accuracy: {metrics.get('val/accuracy', 0):.2f}%")
+
+
+def load_checkpoint(checkpoint_path: str, model: nn.Module, optimizer: optim.Optimizer, 
+                   scheduler, device: torch.device) -> Dict[str, Any]:
+    """Load checkpoint and restore training state.
+    
+    Returns dict with: epoch, metrics, best_val_acc, batch_index (if mid-epoch)
+    """
+    print(f"Loading checkpoint from {checkpoint_path}...")
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    
+    model.load_state_dict(checkpoint["model_state_dict"])
+    optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+    if scheduler and checkpoint.get("scheduler_state_dict"):
+        scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+    
+    epoch = checkpoint.get("epoch", 0)
+    best_val_acc = checkpoint.get("best_val_acc", 0.0)
+    batch_index = checkpoint.get("batch_index")
+    
+    if batch_index is not None:
+        print(f"  Resuming from epoch {epoch}, batch {batch_index} (mid-epoch checkpoint)")
+    else:
+        print(f"  Resuming from epoch {epoch}")
+    print(f"  Best validation accuracy so far: {best_val_acc:.2f}%")
+    
+    return {
+        "epoch": epoch,
+        "metrics": checkpoint.get("metrics", {}),
+        "best_val_acc": best_val_acc,
+        "batch_index": batch_index,
+        "total_batches": checkpoint.get("total_batches"),
+    }
 
 
 def main():
@@ -655,55 +774,145 @@ def main():
         if args.use_multi_res:
             print("  Multi-resolution spectrograms enabled")
     
-    # Training loop
+    # Resume from checkpoint if specified
+    start_epoch = 1
     best_val_acc = 0.0
-    print(f"\nStarting training for {args.epochs} epochs...")
+    last_completed_epoch = 0
     
-    for epoch in range(1, args.epochs + 1):
-        # Unfreeze CNN after specified epochs
-        if args.freeze_cnn_epochs > 0 and epoch == args.freeze_cnn_epochs + 1:
-            print(f"Unfreezing CNN encoder at epoch {epoch}")
-            for param in model.cnn_encoder.parameters():
-                param.requires_grad = True
+    if args.resume:
+        resume_path = Path(args.resume)
+        if not resume_path.exists():
+            # Try common locations
+            if (Path(args.output_dir) / "latest.pt").exists():
+                resume_path = Path(args.output_dir) / "latest.pt"
+                print(f"Specified checkpoint not found, using: {resume_path}")
+            else:
+                raise FileNotFoundError(f"Checkpoint not found: {args.resume}")
         
-        # Train
-        train_metrics = train_epoch(
-            model, train_loader, criterion, optimizer, scheduler,
-            scaler, device, args, epoch, use_audio=use_audio
-        )
+        resume_state = load_checkpoint(str(resume_path), model, optimizer, scheduler, device)
+        start_epoch = resume_state["epoch"] + 1  # Start from next epoch
+        best_val_acc = resume_state["best_val_acc"]
+        last_completed_epoch = resume_state["epoch"]
         
-        # Validate
-        val_metrics = validate(model, val_loader, criterion, device, args, use_audio=use_audio)
-        
-        # Combine metrics
-        metrics = {**train_metrics, **val_metrics}
-        
-        # Log to wandb
-        if args.wandb and HAS_WANDB:
-            wandb.log(metrics, step=epoch)
-        
-        # Print summary
-        print(f"\nEpoch {epoch}/{args.epochs}:")
-        print(f"  Train Loss: {metrics['train/loss']:.4f}, Acc: {metrics['train/accuracy']:.2f}%")
-        print(f"  Val Loss: {metrics['val/loss']:.4f}, Acc: {metrics['val/accuracy']:.2f}%")
-        
-        # Save checkpoint
-        is_best = val_metrics["val/accuracy"] > best_val_acc
-        if is_best:
-            best_val_acc = val_metrics["val/accuracy"]
-        
-        save_checkpoint(model, optimizer, scheduler, epoch, metrics, args, is_best)
+        # Handle mid-epoch resume (just restart the epoch)
+        if resume_state.get("batch_index") is not None:
+            print(f"  Note: Mid-epoch checkpoint detected. Will restart epoch {start_epoch - 1} from beginning.")
+            start_epoch = resume_state["epoch"]  # Restart the interrupted epoch
     
-    print(f"\nTraining complete! Best validation accuracy: {best_val_acc:.2f}%")
+    # Signal handler for graceful shutdown
+    _shutdown_requested = False
     
-    # Final save
-    final_path = Path(args.output_dir) / "final.pt"
-    torch.save({
-        "model_state_dict": model.state_dict(),
-        "args": vars(args),
-        "best_val_accuracy": best_val_acc
-    }, final_path)
-    print(f"Final model saved to {final_path}")
+    def _signal_handler(signum, frame):
+        nonlocal _shutdown_requested
+        sig_name = signal.Signals(signum).name if hasattr(signal, 'Signals') else str(signum)
+        print(f"\n⚠️  Received {sig_name} - will save checkpoint and exit after current batch...")
+        _shutdown_requested = True
+    
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, _signal_handler)  # Ctrl+C (Windows + Unix)
+    if hasattr(signal, 'SIGTERM'):
+        signal.signal(signal.SIGTERM, _signal_handler)  # kill command (Unix)
+    if hasattr(signal, 'SIGHUP'):
+        signal.signal(signal.SIGHUP, _signal_handler)  # terminal close (Unix)
+    
+    # Training loop with interrupt protection
+    print(f"\nStarting training from epoch {start_epoch} to {args.epochs}...")
+    output_dir = Path(args.output_dir)
+    
+    try:
+        for epoch in range(start_epoch, args.epochs + 1):
+            # Check for shutdown before starting epoch
+            if _shutdown_requested:
+                print(f"\n🛑 Shutdown requested before epoch {epoch}")
+                save_checkpoint(model, optimizer, scheduler, last_completed_epoch, 
+                              {"note": "shutdown_before_epoch"}, args, 
+                              best_val_acc=best_val_acc, reason="shutdown_signal")
+                break
+            
+            # Unfreeze CNN after specified epochs
+            if args.freeze_cnn_epochs > 0 and epoch == args.freeze_cnn_epochs + 1:
+                print(f"Unfreezing CNN encoder at epoch {epoch}")
+                for param in model.cnn_encoder.parameters():
+                    param.requires_grad = True
+            
+            # Create mid-epoch checkpoint callback
+            def mid_epoch_checkpoint(batch_idx: int, total_batches: int) -> None:
+                save_checkpoint(
+                    model, optimizer, scheduler, epoch,
+                    {"note": "mid_epoch"}, args,
+                    best_val_acc=best_val_acc,
+                    reason="mid_epoch",
+                    batch_index=batch_idx,
+                    total_batches=total_batches,
+                )
+            
+            # Train with mid-epoch checkpointing
+            train_metrics = train_epoch(
+                model, train_loader, criterion, optimizer, scheduler,
+                scaler, device, args, epoch, use_audio=use_audio,
+                checkpoint_callback=mid_epoch_checkpoint if args.checkpoint_every_batches > 0 else None,
+                checkpoint_every_batches=args.checkpoint_every_batches,
+            )
+            
+            # Check for shutdown after training (before validation)
+            if _shutdown_requested:
+                print(f"\n🛑 Shutdown requested after training epoch {epoch}")
+                # Save with current training metrics
+                save_checkpoint(model, optimizer, scheduler, epoch, train_metrics, args,
+                              best_val_acc=best_val_acc, reason="shutdown_after_train")
+                print(f"✓ Checkpoint saved. Resume with: --resume {output_dir / 'latest.pt'}")
+                break
+            
+            # Validate
+            val_metrics = validate(model, val_loader, criterion, device, args, use_audio=use_audio)
+            
+            # Combine metrics
+            metrics = {**train_metrics, **val_metrics}
+            
+            # Log to wandb
+            if args.wandb and HAS_WANDB:
+                wandb.log(metrics, step=epoch)
+            
+            # Print summary
+            print(f"\nEpoch {epoch}/{args.epochs}:")
+            print(f"  Train Loss: {metrics['train/loss']:.4f}, Acc: {metrics['train/accuracy']:.2f}%")
+            print(f"  Val Loss: {metrics['val/loss']:.4f}, Acc: {metrics['val/accuracy']:.2f}%")
+            
+            # Save checkpoint
+            is_best = val_metrics["val/accuracy"] > best_val_acc
+            if is_best:
+                best_val_acc = val_metrics["val/accuracy"]
+            
+            save_checkpoint(model, optimizer, scheduler, epoch, metrics, args, is_best,
+                          best_val_acc=best_val_acc)
+            last_completed_epoch = epoch
+            
+            # Check for shutdown after checkpoint
+            if _shutdown_requested:
+                print(f"\n🛑 Clean shutdown after epoch {epoch}")
+                print(f"✓ Checkpoint saved. Resume with: --resume {output_dir / 'latest.pt'}")
+                break
+        
+        if not _shutdown_requested:
+            print(f"\n✓ Training complete! Best validation accuracy: {best_val_acc:.2f}%")
+            
+            # Final save
+            final_path = output_dir / "final.pt"
+            _atomic_torch_save({
+                "model_state_dict": model.state_dict(),
+                "args": vars(args),
+                "best_val_accuracy": best_val_acc
+            }, final_path)
+            print(f"Final model saved to {final_path}")
+    
+    except KeyboardInterrupt:
+        print(f"\n🛑 Training interrupted by user (Ctrl+C). Saving checkpoint...")
+        save_checkpoint(model, optimizer, scheduler, last_completed_epoch,
+                       {"note": "keyboard_interrupt"}, args,
+                       best_val_acc=best_val_acc, reason="keyboard_interrupt")
+        print(f"✓ Checkpoint saved. Resume with: --resume {output_dir / 'latest.pt'}")
+        print("Exiting gracefully (checkpoint is safe).")
+        return
     
     if args.wandb and HAS_WANDB:
         wandb.finish()

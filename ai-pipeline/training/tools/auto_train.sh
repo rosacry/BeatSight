@@ -372,6 +372,16 @@ case "$TRAIN_MODE" in
         TRAIN_MODE="v5-full-cached"
         RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/v5/full-cached"
         ;;
+    # =====================================================================
+    # V5 SIMPLE (17d-simple) - Simplified training with proven techniques only
+    # Can RESUME from v5-full-cached checkpoint to rescue existing progress!
+    # Removes: multi-task, deep-supervision, hard-negatives, AWP, curriculum
+    # Keeps: V5 arch, mixup, specaugment, EMA, focal, cosine LR, class weights
+    # =====================================================================
+    v5-full-cached-simple|v5-simple|17d-simple)
+        TRAIN_MODE="v5-full-cached-simple"
+        RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/v5/full-cached-simple"
+        ;;
     v5-full|17e)
         TRAIN_MODE="v5-full"
         RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/v5/full"
@@ -502,13 +512,16 @@ case "$TRAIN_MODE" in
         echo "    v5-warmup           (17a) - V5 warmup (~1hr on H100)"
         echo "    v5-quick            (17b) - V5 quick (~3hr)"
         echo "    v5-long             (17c) - V5 long (~8hr)"
-        echo "    v5-full-cached      (17d) - V5 TURBO: 200 epochs (~20-25hr) ⭐ RECOMMENDED"
+        echo "    v5-full-cached      (17d) - V5 TURBO: 200 epochs (~20-25hr)"
+        echo "    v5-full-cached-simple (17d-simple) - 🧹 SIMPLIFIED: fewer techniques (~15hr) ⭐ NEW"
+        echo "                           Can resume from 17d checkpoint to rescue stuck training!"
         echo "    v5-full             (17e) - V5 + ghost/waveform augment (~400hr, +2-4% on ghosts)"
         echo "    v5-self-distill-cached (17f) - Self-distill CACHED (~20-25hr, +1-2%)"
         echo "    v5-self-distill     (17g) - Self-distill + augment (~400hr, +1-2% + ghost boost)"
         echo "    v5-ensemble         (17h) - Train 3 models for ensemble +0.5-1.5% (~60hr)"
         echo ""
         echo "  ⭐ RECOMMENDED PATH: 14 → 17a → 17d → 17f"
+        echo "  🧹 RESCUE PATH:      17d (stuck) → 17d-simple (can resume!)"
         echo "  🏆 CLOUD COST: ~45 hours = ~\$115 on Lambda H100"
         echo ""
         echo "  🎵 BEATs AUDIO FOUNDATION (Microsoft's state-of-the-art):"
@@ -2231,6 +2244,183 @@ ENSEMBLE_PY
             log "⚡ V5 ULTIMATE (CACHED) model training complete!"
             log "Speed-optimized training (~0.1-0.3% quality trade-off for 2-3x speedup)."
             log "If you need better ghost note detection, run v5-full (17e) instead (~400hr)."
+            ;;
+        
+        v5-full-cached-simple)
+            # =====================================================================
+            # V5 SIMPLE - Rescue mode for stuck training
+            # =====================================================================
+            # This mode removes problematic techniques that can interfere:
+            # ❌ REMOVED: multi-task velocity (competes with classification)
+            # ❌ REMOVED: technique heads (too complex early on)  
+            # ❌ REMOVED: deep supervision (adds complexity)
+            # ❌ REMOVED: hard negative mining (can distort learning)
+            # ❌ REMOVED: AWP (extra overhead, for final tuning only)
+            # ❌ REMOVED: curriculum at 50% (train on ALL data)
+            # ❌ REMOVED: layer decay (simplify optimization)
+            # ❌ REMOVED: lookahead (simplify optimizer)
+            # ❌ REMOVED: progressive augmentation (fixed augmentation)
+            # 
+            # ✅ KEPT: V5-large architecture (proven good)
+            # ✅ KEPT: Mixup/CutMix (proven 1-2% boost)
+            # ✅ KEPT: SpecAugment (proven regularization)
+            # ✅ KEPT: EMA (free accuracy boost)
+            # ✅ KEPT: Focal loss (handles imbalance)
+            # ✅ KEPT: Label smoothing 0.05 (calibration)
+            # ✅ KEPT: Class weights (handles imbalance)
+            # ✅ KEPT: Cosine LR with warm restarts
+            # ✅ KEPT: SWA (proven late-training boost)
+            # ✅ KEPT: FMix (Fourier mixup, works with cache)
+            # =====================================================================
+            
+            log "🧹 Starting V5 SIMPLE training (Simplified - Rescue Mode)..."
+            log "   ⚡ SIMPLIFIED CONFIG - Fewer techniques, more stable training"
+            log ""
+            log "   ❌ REMOVED (problematic when combined):"
+            log "      → Multi-task velocity (competes with classification)"
+            log "      → Technique heads (too complex)"
+            log "      → Deep supervision (adds complexity)"
+            log "      → Hard negative mining (can distort learning)"
+            log "      → AWP (for final tuning only)"
+            log "      → Curriculum 50% (now trains on ALL data)"
+            log "      → Layer-wise LR decay"
+            log "      → Lookahead optimizer"
+            log "      → Progressive augmentation"
+            log ""
+            log "   ✅ KEPT (proven techniques):"
+            log "      → V5-large architecture"
+            log "      → Mixup/CutMix (0.2/0.5 alpha)"
+            log "      → SpecAugment"
+            log "      → EMA 0.999"
+            log "      → Focal loss"
+            log "      → Label smoothing 0.05"
+            log "      → Class weights"
+            log "      → Cosine warm restarts"
+            log "      → SWA at 75%"
+            log "      → FMix"
+            log ""
+            log "   💡 CAN RESUME from v5-full-cached checkpoint!"
+            log "      The model weights are compatible - only training config changes."
+            log ""
+            log "   🔥 Expected: 70-85% val accuracy, ~15-20hr on H100"
+            log ""
+            export WANDB_RUN_GROUP=v5_simple_auto
+            
+            # Detect cloud GPU for optimizations
+            IS_CLOUD_GPU=false
+            CLOUD_AMP_DTYPE="float16"
+            CLOUD_BATCH_SIZE="1024"
+            CLOUD_COMPILE_FLAGS=""
+            
+            if command -v nvidia-smi &> /dev/null; then
+                GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)
+                if [[ "$GPU_NAME" == *"A100"* ]] || [[ "$GPU_NAME" == *"H100"* ]] || [[ "$GPU_NAME" == *"A10G"* ]]; then
+                    IS_CLOUD_GPU=true
+                    CLOUD_AMP_DTYPE="bfloat16"
+                    log "   ✨ Detected cloud GPU ($GPU_NAME)"
+                    log "      → Using bfloat16 (more stable)"
+                    
+                    # torch.compile on Linux cloud GPUs
+                    if [[ "$(uname)" != *"MINGW"* ]] && [[ "$(uname)" != *"MSYS"* ]]; then
+                        CLOUD_COMPILE_FLAGS="--torch-compile --torch-compile-mode default"
+                        log "      → Enabling torch.compile (default mode for stability)"
+                    fi
+                    
+                    GPU_MEM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -d ' ')
+                    if [[ "$GPU_MEM" -gt 70000 ]]; then
+                        CLOUD_BATCH_SIZE="2048"
+                        CLOUD_NUM_WORKERS="20"
+                        log "      → Using batch size 2048"
+                    elif [[ "$GPU_MEM" -gt 38000 ]]; then
+                        CLOUD_BATCH_SIZE="1024"
+                        CLOUD_NUM_WORKERS="12"
+                        log "      → Using batch size 1024"
+                    fi
+                fi
+            fi
+            
+            CLOUD_NUM_WORKERS=${CLOUD_NUM_WORKERS:-8}
+            
+            # SIMPLE FLAGS - Only proven techniques
+            SIMPLE_MODEL_FLAGS="--model-version v5 --v5-size large --drop-path-rate 0.15"
+            SIMPLE_MIXUP_FLAGS="--mixup-alpha 0.2 --cutmix-alpha 0.5 --mixup-prob 0.5"
+            SIMPLE_SPECAUGMENT_FLAGS="--specaugment drum"
+            SIMPLE_FOCAL_FLAGS="--focal-loss --focal-gamma 2.0"
+            SIMPLE_EMA_FLAGS="--use-ema --ema-decay 0.999"
+            SIMPLE_LABEL_SMOOTHING="--label-smoothing 0.05"
+            SIMPLE_CLASS_WEIGHTS="--class-weights effective --max-class-weight 10.0"
+            SIMPLE_SWA_FLAGS="--use-swa --swa-start 0.75"
+            SIMPLE_FMIX_FLAGS="--use-fmix --fmix-alpha 0.5"
+            SIMPLE_EARLY_STOPPING="--early-stopping --early-stopping-patience 15 --early-stopping-min-delta 0.001 --early-stopping-warmup 5"
+            
+            # Check for existing checkpoint to resume from
+            SIMPLE_OUTPUT_DIR="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached-simple"
+            ORIGINAL_CHECKPOINT="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached/checkpoints/latest_checkpoint.pth"
+            SIMPLE_CHECKPOINT="${SIMPLE_OUTPUT_DIR}/checkpoints/latest_checkpoint.pth"
+            
+            # If no simple checkpoint exists but original exists, we can transfer weights
+            resume_from_flag=""
+            if [[ -f "$SIMPLE_CHECKPOINT" ]]; then
+                log "   📂 Found simple checkpoint: $SIMPLE_CHECKPOINT"
+                log "      Will resume from this checkpoint"
+                resume_from_flag="--resume"
+            elif [[ -f "$ORIGINAL_CHECKPOINT" ]]; then
+                log "   📂 Found original v5-full-cached checkpoint: $ORIGINAL_CHECKPOINT"
+                log "      Will transfer weights to new simple training run"
+                log "      (Optimizer will be reset, but model weights preserved)"
+                log ""
+                # Use --resume-from which will load weights and reset optimizer due to config mismatch
+                resume_from_flag="--resume-from $ORIGINAL_CHECKPOINT"
+            else
+                log "   📂 No checkpoint found - starting fresh"
+            fi
+            
+            PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
+              --dataset "${BEATSIGHT_DATASET_DIR}" \
+              --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
+              --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
+              --device cuda \
+              --num-workers ${CLOUD_NUM_WORKERS} --val-num-workers $((CLOUD_NUM_WORKERS/2)) --prefetch-factor 8 --val-prefetch-factor 4 \
+              --persistent-workers \
+              --pin-memory --amp-dtype ${CLOUD_AMP_DTYPE} \
+              ${CLOUD_COMPILE_FLAGS} \
+              --epochs 100 \
+              --batch-size ${CLOUD_BATCH_SIZE} \
+              --lr 0.001 \
+              ${SIMPLE_MODEL_FLAGS} \
+              ${SIMPLE_MIXUP_FLAGS} \
+              ${SIMPLE_SPECAUGMENT_FLAGS} \
+              ${SIMPLE_FOCAL_FLAGS} \
+              ${SIMPLE_EMA_FLAGS} \
+              ${SIMPLE_LABEL_SMOOTHING} \
+              ${SIMPLE_CLASS_WEIGHTS} \
+              ${SIMPLE_SWA_FLAGS} \
+              ${SIMPLE_FMIX_FLAGS} \
+              ${SIMPLE_EARLY_STOPPING} \
+              --scheduler cosine_warm_restarts \
+              --warm-restart-t0 20 \
+              --warm-restart-mult 2 \
+              --warmup-epochs 5 \
+              --warmup-lr-factor 0.1 \
+              --grad-clip-norm 1.0 \
+              --weight-decay 0.01 \
+              --channels-last \
+              --output "${SIMPLE_OUTPUT_DIR}" \
+              --seed 1337 \
+              --checkpoint-every 5 \
+              --checkpoint-every-batches 2000 \
+              --wandb-project beatsight-v5 \
+              ${resume_from_flag}
+            
+            PYTHON_EXIT_CODE=$?
+            if [[ $PYTHON_EXIT_CODE -ne 0 ]]; then
+                log "❌ Training crashed with exit code $PYTHON_EXIT_CODE"
+                return $PYTHON_EXIT_CODE
+            fi
+            
+            log ""
+            log "🧹 V5 SIMPLE training complete!"
+            log "If results are good, you can optionally fine-tune with more techniques."
             ;;
         
         v5-full)

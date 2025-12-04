@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Integer, String, func
+from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Index, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -85,4 +85,14 @@ class AIJob(Base):
     requester: Mapped["User | None"] = relationship("User", back_populates="ai_jobs")
     output_versions: Mapped[list["MapVersion"]] = relationship(
         "MapVersion", back_populates="generation_job"
+    )
+
+    # Database indexes for common query patterns
+    __table_args__ = (
+        # Index for get_next_queued_job: state, priority DESC, created_at ASC
+        Index("ix_ai_job_queue_priority", "state", "priority", "created_at"),
+        # Index for retry scheduling: state + next_retry_at
+        Index("ix_ai_job_retry", "state", "next_retry_at"),
+        # Index for finding stale jobs by worker heartbeat
+        Index("ix_ai_job_heartbeat", "state", "last_heartbeat"),
     )

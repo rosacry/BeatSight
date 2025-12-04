@@ -7,6 +7,7 @@ throughout the request lifecycle for logging and error tracking.
 
 from __future__ import annotations
 
+import re
 import uuid
 from contextvars import ContextVar
 from typing import Callable
@@ -20,6 +21,12 @@ request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
 
 # Header names
 REQUEST_ID_HEADER = "X-Request-ID"
+
+# UUID pattern for validation (prevents log injection attacks)
+UUID_PATTERN = re.compile(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+    re.IGNORECASE
+)
 
 
 def get_request_id() -> str | None:
@@ -37,9 +44,13 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
     
     Features:
     - Generates a new UUID for each request if not provided
-    - Accepts client-provided request ID via X-Request-ID header
+    - Accepts client-provided request ID via X-Request-ID header (UUID format only)
     - Makes request ID available via context variable for logging
     - Returns request ID in response header for client correlation
+    
+    Security:
+    - Only accepts UUID-formatted request IDs to prevent log injection attacks
+    - Invalid or malformed request IDs are ignored and replaced with new UUIDs
     
     Usage in logging:
         from app.middleware.request_id import get_request_id
@@ -47,11 +58,11 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         logger.info("processing_request", request_id=get_request_id())
     
     Client usage:
-        # Client can provide their own request ID
-        curl -H "X-Request-ID: my-trace-id-123" /api/...
+        # Client can provide their own request ID (must be UUID format)
+        curl -H "X-Request-ID: 550e8400-e29b-41d4-a716-446655440000" /api/...
         
         # Response will include the same ID
-        # X-Request-ID: my-trace-id-123
+        # X-Request-ID: 550e8400-e29b-41d4-a716-446655440000
     """
     
     async def dispatch(
@@ -60,8 +71,9 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         """Process request with request ID tracking."""
         
         # Use client-provided request ID or generate new one
+        # SECURITY: Only accept UUID format to prevent log injection attacks
         request_id = request.headers.get(REQUEST_ID_HEADER)
-        if not request_id:
+        if not request_id or not UUID_PATTERN.match(request_id):
             request_id = str(uuid.uuid4())
         
         # Store in context for access throughout request lifecycle

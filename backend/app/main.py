@@ -173,6 +173,19 @@ Authorization: Bearer <access_token>
     ],
 )
 
+# Add CORS middleware for cross-origin requests
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+    expose_headers=["X-Request-ID", "X-RateLimit-Limit", "X-RateLimit-Remaining"],
+)
+logger.info("cors_middleware_enabled", origins=settings.cors_origins)
+
 # Add request ID middleware for request tracing
 app.add_middleware(RequestIdMiddleware)
 logger.info("request_id_middleware_enabled")

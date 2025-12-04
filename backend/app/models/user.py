@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, String, func
+from sqlalchemy import Boolean, DateTime, Index, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -30,6 +30,12 @@ class User(Base):
     """Represents an account that can interact with the BeatSight platform."""
 
     __tablename__ = "users"
+    
+    # Index for karma leaderboard queries (ORDER BY karma_score DESC)
+    # and rank calculation (COUNT WHERE karma_score > x)
+    __table_args__ = (
+        Index("ix_users_karma_score", "karma_score"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4

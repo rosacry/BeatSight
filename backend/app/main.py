@@ -63,6 +63,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan handler for startup and shutdown events."""
     # Startup
     logger.info("startup", environment=settings.environment)
+    
+    # SECURITY: Validate production secrets
+    validation_errors = settings.validate_production_secrets()
+    for error in validation_errors:
+        if error.startswith("CRITICAL"):
+            logger.critical("security_validation_failed", error=error)
+            if settings.is_production:
+                raise RuntimeError(error)
+        else:
+            logger.warning("security_validation_warning", warning=error)
+    
     yield
     # Shutdown (nothing to do currently)
 

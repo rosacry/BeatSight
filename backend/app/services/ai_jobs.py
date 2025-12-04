@@ -167,14 +167,36 @@ class AIJobService:
         await self._session.commit()
 
     async def claim_job(self, worker_id: uuid.UUID) -> AIJob | None:
-        """Claim the next available queued job for processing."""
-        job = await self.get_next_queued_job()
+        """Claim the next available queued job for processing (atomic).
+        
+        Uses FOR UPDATE SKIP LOCKED to prevent race conditions where multiple
+        workers could claim the same job simultaneously.
+        """
+        from sqlalchemy import update
+        
+        now = datetime.now(timezone.utc)
+        
+        # First, atomically select and lock a job
+        # FOR UPDATE SKIP LOCKED ensures only one worker gets each job
+        stmt = (
+            select(AIJob)
+            .where(AIJob.state == AIJobState.QUEUED)
+            .where(or_(AIJob.next_retry_at.is_(None), AIJob.next_retry_at <= now))
+            .order_by(AIJob.priority.desc(), AIJob.created_at.asc())
+            .limit(1)
+            .with_for_update(skip_locked=True)
+        )
+        result = await self._session.execute(stmt)
+        job = result.scalar_one_or_none()
+        
         if job is None:
             return None
+        
+        # Now update the locked job
         job.state = AIJobState.PROCESSING
-        job.started_at = datetime.now(timezone.utc)
+        job.started_at = now
         job.worker_id = worker_id
-        job.last_heartbeat = datetime.now(timezone.utc)
+        job.last_heartbeat = now
         job.progress_percent = 0
         job.progress_message = "Starting..."
         await self._session.commit()

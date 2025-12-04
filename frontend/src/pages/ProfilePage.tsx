@@ -43,7 +43,7 @@ export function ProfilePage() {
             .join('')
             .toUpperCase()
             .slice(0, 2) || ''
-        
+
         return {
             totalSongs: total,
             completedJobs: completed,

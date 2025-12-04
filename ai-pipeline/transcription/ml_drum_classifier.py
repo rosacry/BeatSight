@@ -116,7 +116,34 @@ class DrumClassifierCNN(nn.Module):
 class MLDrumClassifier:
     """
     ML-based drum classifier with inference capabilities.
+    
+    Features:
+    - Automatic device detection (CUDA/CPU)
+    - Model warm-up for optimal first-inference latency
+    - Batch processing for efficient GPU utilization
+    - Thread-safe inference (eval mode with torch.inference_mode)
     """
+    
+    # Class-level model cache for reuse across instances
+    _model_cache: Dict[str, "MLDrumClassifier"] = {}
+    _cache_lock = None  # Will be initialized lazily
+    
+    @classmethod
+    def get_cached(cls, model_path: str, device: Optional[str] = None) -> "MLDrumClassifier":
+        """Get a cached classifier instance, creating one if needed.
+        
+        This avoids reloading the model for every inference call.
+        """
+        import threading
+        if cls._cache_lock is None:
+            cls._cache_lock = threading.Lock()
+        
+        cache_key = f"{model_path}:{device or 'auto'}"
+        
+        with cls._cache_lock:
+            if cache_key not in cls._model_cache:
+                cls._model_cache[cache_key] = cls(model_path, device)
+            return cls._model_cache[cache_key]
 
     def __init__(self, model_path: Optional[str] = None, device: Optional[str] = None):
         """
@@ -134,6 +161,18 @@ class MLDrumClassifier:
 
         self.model.to(self.device)
         self.model.eval()
+        
+        # Warm up the model with a dummy inference
+        self._warm_up()
+    
+    def _warm_up(self):
+        """Warm up the model with a dummy inference to compile CUDA kernels."""
+        dummy_input = torch.zeros(1, 1, 128, 128, device=self.device)
+        with torch.inference_mode():
+            _ = self.model(dummy_input)
+        # Synchronize to ensure warm-up is complete
+        if self.device == "cuda":
+            torch.cuda.synchronize()
 
     def load_model(self, model_path: str):
         """Load trained model weights."""
@@ -283,7 +322,8 @@ class MLDrumClassifier:
             return results
         
         # Batch inference - single forward pass for all onsets!
-        with torch.no_grad():
+        # Using inference_mode for ~10% faster inference than no_grad
+        with torch.inference_mode():
             logits = self.model(features_batch)  # (N, num_classes)
             probs = F.softmax(logits, dim=1)
             confidences, pred_indices = torch.max(probs, dim=1)
@@ -315,7 +355,7 @@ class MLDrumClassifier:
         """
         features = self.extract_features(audio, sr, onset_time, window_ms)
 
-        with torch.no_grad():
+        with torch.inference_mode():
             logits = self.model(features)
             probs = F.softmax(logits, dim=1)
             confidence, pred_idx = torch.max(probs, dim=1)
@@ -377,7 +417,8 @@ def classify_drums_ml(
         return classified_hits
 
     # Use ML classifier with batch processing
-    classifier = MLDrumClassifier(model_path, device)
+    # Use cached classifier to avoid reloading model for each call
+    classifier = MLDrumClassifier.get_cached(model_path, device)
     use_ml = True
     classified_hits = []
 

@@ -33,8 +33,6 @@ coverage:
     - "**/alembic/**"
     - "**/.venv/**"
     - "**/venv/**"
-    - "desktop/**"  # C# code not covered by Python coverage
-    - "frontend/**"  # JS/TS needs separate coverage
     - "docs/**"
     - "scripts/**"
     - "tools/**"
@@ -47,6 +45,19 @@ flags:
     carryforward: true
     after_n_builds: 1
   
+  desktop:
+    paths:
+      - desktop/BeatSight.Game/
+      - desktop/BeatSight.Desktop/
+    carryforward: true
+    after_n_builds: 1
+
+  frontend:
+    paths:
+      - frontend/src/
+    carryforward: true
+    after_n_builds: 1
+
   ai-pipeline:
     paths:
       - ai-pipeline/

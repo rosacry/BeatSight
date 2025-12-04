@@ -23,6 +23,7 @@ def create_mock_user(
     email: str = "test@example.com",
     display_name: str = "Test User",
     email_verified: bool = True,
+    avatar_url: str | None = None,
     karma_score: int = 100,
     hashed_password: str | None = "hashed_password_123",
 ) -> MagicMock:
@@ -32,6 +33,7 @@ def create_mock_user(
     user.email = email
     user.display_name = display_name
     user.email_verified = email_verified
+    user.avatar_url = avatar_url
     user.karma_score = karma_score
     user.hashed_password = hashed_password
     user.created_at = datetime.utcnow()

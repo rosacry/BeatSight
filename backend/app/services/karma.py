@@ -137,6 +137,10 @@ class KarmaService:
         # Check for role eligibility changes
         await self._update_role_eligibility(user_id, new_karma)
 
+        # Check for karma-related achievements
+        from app.services.achievements import check_karma_achievements
+        await check_karma_achievements(self.session, user_id, new_karma)
+
         return new_karma
 
     async def get_karma_history(

@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { createLogger, getDeveloperModeEnabled, enableDeveloperMode, disableDeveloperMode } from '@/lib/logger'
+import { AvatarUpload } from '@/components/AvatarUpload'
 import type { UserPreferences } from '@/types/sync'
 import { DEFAULT_CUSTOM_SETTINGS } from '@/types/sync'
 
@@ -426,6 +427,19 @@ export function SettingsPage() {
                                     <div className="card">
                                         <h2 className="text-lg font-semibold text-white mb-4">Profile</h2>
                                         <div className="space-y-4">
+                                            {/* Avatar Upload */}
+                                            <div className="flex justify-center py-2">
+                                                <AvatarUpload
+                                                    currentAvatarUrl={user?.avatar_url}
+                                                    size="lg"
+                                                    onUploadSuccess={() => {
+                                                        setSuccessMessage('Avatar updated successfully!')
+                                                    }}
+                                                    onUploadError={(err) => {
+                                                        setError(err)
+                                                    }}
+                                                />
+                                            </div>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-300 mb-2">
                                                     Display Name

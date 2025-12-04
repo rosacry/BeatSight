@@ -8,6 +8,7 @@ from typing import AsyncIterator
 from fastapi import FastAPI
 
 from app.api.routes import (
+    achievements,
     admin,
     ai_jobs,
     auth,
@@ -185,6 +186,7 @@ if settings.environment != "test":
         logger.warning("rate_limiting_disabled", reason="dependencies not installed")
 
 app.include_router(health.router)
+app.include_router(achievements.router, prefix=settings.api_prefix)
 app.include_router(auth.router, prefix=settings.api_prefix)
 app.include_router(users.router, prefix=settings.api_prefix)
 app.include_router(songs.router, prefix=settings.api_prefix)

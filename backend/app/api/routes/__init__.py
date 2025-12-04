@@ -3,6 +3,7 @@ Route package exports.
 """
 
 from . import (
+    achievements,
     admin,
     ai_jobs,
     auth,
@@ -25,6 +26,7 @@ from . import (
 )
 
 __all__ = [
+    "achievements",
     "admin",
     "ai_jobs",
     "auth",

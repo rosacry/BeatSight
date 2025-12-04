@@ -296,13 +296,6 @@ namespace BeatSight.Game.Screens.Settings
                         Height = 36,
                         Text = "Apply Skin",
                         Action = applySkin
-                    },
-                    new BeatSightButton
-                    {
-                        Width = 180,
-                        Height = 36,
-                        Text = "Color Editor (Coming Soon)",
-                        Enabled = { Value = false }
                     }
                 }
             };

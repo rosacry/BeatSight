@@ -369,11 +369,11 @@ async def create_decision(
     # Update proposal status
     if request.decision == VerificationDecision.APPROVE:
         proposal.status = EditStatus.APPROVED
-        
+
         # Award "helpful editor" achievement to the proposer (best effort)
         try:
             from app.services.achievements import check_edit_achievements
-            
+
             awarded = await check_edit_achievements(
                 session, proposal.proposer_id, edit_approved=True
             )
@@ -381,7 +381,7 @@ async def create_decision(
                 pass  # Logged in service
         except Exception:
             pass  # Silent failure for achievements
-            
+
     elif request.decision == VerificationDecision.REJECT:
         proposal.status = EditStatus.REJECTED
     # NEEDS_CHANGES keeps it PENDING but adds feedback
@@ -471,7 +471,13 @@ async def get_verifier_stats(
     )
 
     # Execute all queries in parallel
-    pending_result, approved_result, rejected_result, user_reviewed_result, avg_review_result = await asyncio.gather(
+    (
+        pending_result,
+        approved_result,
+        rejected_result,
+        user_reviewed_result,
+        avg_review_result,
+    ) = await asyncio.gather(
         session.execute(pending_query),
         session.execute(approved_query),
         session.execute(rejected_query),
@@ -502,7 +508,9 @@ async def get_verifier_stats(
 async def get_verifier_leaderboard(
     session: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
-    limit: Annotated[int, Query(ge=1, le=50, description="Max verifiers to return")] = 10,
+    limit: Annotated[
+        int, Query(ge=1, le=50, description="Max verifiers to return")
+    ] = 10,
 ) -> VerifierLeaderboardResponse:
     """
     Get top verifiers ranked by total reviews.
@@ -511,7 +519,6 @@ async def get_verifier_leaderboard(
     Available to any authenticated user.
     """
     from sqlalchemy import case, extract, literal_column
-    from sqlalchemy.orm import aliased
 
     # Subquery for verifier stats
     stats_query = (
@@ -520,13 +527,20 @@ async def get_verifier_leaderboard(
             func.count().label("total_reviews"),
             func.sum(
                 case(
-                    (MapVerificationDecision.decision == VerificationDecision.APPROVE, 1),
+                    (
+                        MapVerificationDecision.decision
+                        == VerificationDecision.APPROVE,
+                        1,
+                    ),
                     else_=0,
                 )
             ).label("approved"),
             func.sum(
                 case(
-                    (MapVerificationDecision.decision == VerificationDecision.REJECT, 1),
+                    (
+                        MapVerificationDecision.decision == VerificationDecision.REJECT,
+                        1,
+                    ),
                     else_=0,
                 )
             ).label("rejected"),
@@ -535,7 +549,9 @@ async def get_verifier_leaderboard(
                 - extract("epoch", MapEditProposal.submitted_at)
             ).label("avg_review_seconds"),
         )
-        .join(MapEditProposal, MapVerificationDecision.proposal_id == MapEditProposal.id)
+        .join(
+            MapEditProposal, MapVerificationDecision.proposal_id == MapEditProposal.id
+        )
         .group_by(MapVerificationDecision.verifier_id)
         .order_by(literal_column("total_reviews").desc())
         .limit(limit)
@@ -543,17 +559,14 @@ async def get_verifier_leaderboard(
     )
 
     # Join with users to get usernames
-    query = (
-        select(
-            stats_query.c.verifier_id,
-            User.display_name,
-            stats_query.c.total_reviews,
-            stats_query.c.approved,
-            stats_query.c.rejected,
-            stats_query.c.avg_review_seconds,
-        )
-        .join(User, stats_query.c.verifier_id == User.id)
-    )
+    query = select(
+        stats_query.c.verifier_id,
+        User.display_name,
+        stats_query.c.total_reviews,
+        stats_query.c.approved,
+        stats_query.c.rejected,
+        stats_query.c.avg_review_seconds,
+    ).join(User, stats_query.c.verifier_id == User.id)
 
     result = await session.execute(query)
     rows = result.all()

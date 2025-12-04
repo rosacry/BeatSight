@@ -222,8 +222,8 @@ class IntakeAnalytics:
     def track_fingerprint_retried(
         self,
         session_id: str,
-        song_id: uuid.UUID,
         retry_count: int,
+        song_id: uuid.UUID | None = None,
         user_id: uuid.UUID | None = None,
     ) -> None:
         """Track fingerprint retry."""
@@ -238,9 +238,9 @@ class IntakeAnalytics:
     def track_metadata_found(
         self,
         session_id: str,
-        song_id: uuid.UUID,
         source: str,
         confidence: float,
+        song_id: uuid.UUID | None = None,
         user_id: uuid.UUID | None = None,
     ) -> None:
         """Track successful metadata lookup."""
@@ -272,7 +272,7 @@ class IntakeAnalytics:
     def track_metadata_manual(
         self,
         session_id: str,
-        song_id: uuid.UUID,
+        song_id: uuid.UUID | None = None,
         user_id: uuid.UUID | None = None,
     ) -> None:
         """Track manual metadata entry."""

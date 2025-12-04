@@ -314,7 +314,7 @@ class StripeService:
         session: dict[str, Any],
     ) -> dict[str, Any]:
         """Handle successful checkout session completion.
-        
+
         Handles both subscription checkouts and credit purchases.
         """
         user_id = session.get("metadata", {}).get("user_id")
@@ -323,7 +323,7 @@ class StripeService:
             return {"error": "missing_user_id"}
 
         purchase_type = session.get("metadata", {}).get("purchase_type")
-        
+
         # Handle credit purchase
         if purchase_type == "credits":
             return await self._handle_credit_checkout_completed(db, session)
@@ -350,38 +350,38 @@ class StripeService:
         session: dict[str, Any],
     ) -> dict[str, Any]:
         """Handle credit purchase checkout completion.
-        
+
         Fulfills the credit purchase by adding credits to user's balance.
         """
         from app.services.credits import CreditService
-        
+
         user_id = session.get("metadata", {}).get("user_id")
         purchase_id = session.get("metadata", {}).get("purchase_id")
         credits_amount = session.get("metadata", {}).get("credits_amount")
         pack_type = session.get("metadata", {}).get("pack_type")
-        payment_intent = session.get("payment_intent")
-        
+
         if not purchase_id:
             logger.error("Credit checkout missing purchase_id")
             return {"error": "missing_purchase_id"}
-        
+
         logger.info(
             f"Credit checkout completed for user {user_id}, "
             f"purchase {purchase_id}, {credits_amount} credits"
         )
-        
+
         # Fulfill the purchase
         credit_service = CreditService(db)
         try:
             from uuid import UUID
+
             balance = await credit_service.fulfill_purchase(UUID(purchase_id))
             await db.commit()
-            
+
             logger.info(
                 f"Fulfilled credit purchase {purchase_id}: "
                 f"user now has {balance.total_credits} credits"
             )
-            
+
             return {
                 "user_id": user_id,
                 "purchase_id": purchase_id,

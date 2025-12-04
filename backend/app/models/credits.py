@@ -102,7 +102,9 @@ class CreditBalance(Base):
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="credit_balance")
     transactions: Mapped[list["CreditTransaction"]] = relationship(
-        "CreditTransaction", back_populates="balance", order_by="CreditTransaction.created_at.desc()"
+        "CreditTransaction",
+        back_populates="balance",
+        order_by="CreditTransaction.created_at.desc()",
     )
 
     @property

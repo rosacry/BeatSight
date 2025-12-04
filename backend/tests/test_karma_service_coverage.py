@@ -460,7 +460,7 @@ class TestGetKarmaStats:
         mock_user_row = MagicMock()
         mock_user_row.karma_score = 500
         mock_user_row.phone_verified = True
-        
+
         # Mock breakdown query result
         mock_breakdown_row = MagicMock()
         mock_breakdown_row.reason_code = KarmaReason.FIX_ACCEPTED
@@ -472,21 +472,21 @@ class TestGetKarmaStats:
         mock_role.code = "fixer"
         mock_role.min_karma = 100
         mock_role.requires_phone_verification = False
-        
+
         query_count = [0]
-        
+
         def execute_side_effect(query):
             query_count[0] += 1
             query_str = str(query)
             result = MagicMock()
-            
+
             # Query 1: User info (karma_score, phone_verified)
             if "karma_score" in query_str and "phone_verified" in query_str:
                 result.one_or_none.return_value = mock_user_row
             # Query 2: Breakdown by reason
             elif "group_by" in query_str.lower() or "GROUP BY" in query_str:
                 result.all.return_value = [mock_breakdown_row]
-            # Query 3: Rank count  
+            # Query 3: Rank count
             elif "count" in query_str.lower() and "karma_score" in query_str:
                 result.scalar.return_value = 5
             # Query 4: All roles
@@ -524,7 +524,7 @@ class TestGetKarmaStats:
         mock_user_row = MagicMock()
         mock_user_row.karma_score = 10000
         mock_user_row.phone_verified = True
-        
+
         # Mock admin role
         mock_role = MagicMock()
         mock_role.code = "admin"
@@ -534,7 +534,7 @@ class TestGetKarmaStats:
         def execute_side_effect(query):
             query_str = str(query)
             result = MagicMock()
-            
+
             if "karma_score" in query_str and "phone_verified" in query_str:
                 result.one_or_none.return_value = mock_user_row
             elif "group_by" in query_str.lower() or "GROUP BY" in query_str:

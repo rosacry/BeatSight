@@ -17,7 +17,6 @@ from uuid import UUID
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.models.training_contribution import (
     ContributionStatus,
@@ -29,10 +28,10 @@ from app.models.user import User
 
 # Weight multipliers for verifier karma tiers
 VERIFIER_KARMA_WEIGHTS = {
-    "expert": 1.3,    # 1000+ karma
+    "expert": 1.3,  # 1000+ karma
     "trusted": 1.15,  # 500-999 karma
-    "regular": 1.0,   # 100-499 karma
-    "new": 0.9,       # <100 karma
+    "regular": 1.0,  # 100-499 karma
+    "new": 0.9,  # <100 karma
 }
 
 
@@ -52,12 +51,12 @@ class TrainingExportService:
         weighted_by_karma: bool = True,
     ) -> dict[str, Any]:
         """Generate a training manifest from approved contributions.
-        
+
         Args:
             limit: Maximum contributions to include
             include_metadata: Include contributor metadata (anonymized)
             weighted_by_karma: Include karma-based weights for each sample
-            
+
         Returns:
             Training manifest dictionary ready for JSON export
         """
@@ -67,7 +66,7 @@ class TrainingExportService:
             .where(
                 and_(
                     TrainingContribution.status == ContributionStatus.APPROVED,
-                    TrainingContribution.exported_to_training == False,
+                    TrainingContribution.exported_to_training.is_(False),
                 )
             )
             .limit(limit)
@@ -86,7 +85,12 @@ class TrainingExportService:
         component_counts: dict[str, int] = {}
         correction_type_counts: dict[str, int] = {}
         user_contributions: dict[UUID, int] = {}
-        verifier_stats: dict[str, int] = {"expert": 0, "trusted": 0, "regular": 0, "new": 0}
+        verifier_stats: dict[str, int] = {
+            "expert": 0,
+            "trusted": 0,
+            "regular": 0,
+            "new": 0,
+        }
 
         for c in contributions:
             sample = await self._contribution_to_sample(c, weighted_by_karma)
@@ -101,7 +105,7 @@ class TrainingExportService:
                 correction_type_counts.get(c.correction_type.value, 0) + 1
             )
             user_contributions[c.user_id] = user_contributions.get(c.user_id, 0) + 1
-            
+
             # Track verifier tier
             if c.verifier_id:
                 tier = self._get_verifier_tier(c.verifier_id)
@@ -146,10 +150,9 @@ class TrainingExportService:
         """Pre-fetch verifier karma scores for batch processing."""
         if not verifier_ids:
             return
-        
+
         result = await self.db.execute(
-            select(User.id, User.karma_score)
-            .where(User.id.in_(verifier_ids))
+            select(User.id, User.karma_score).where(User.id.in_(verifier_ids))
         )
         for user_id, karma in result.all():
             self._verifier_cache[user_id] = karma or 0
@@ -158,9 +161,9 @@ class TrainingExportService:
         """Get the verifier's karma tier."""
         if not verifier_id:
             return "regular"
-        
+
         karma = self._verifier_cache.get(verifier_id, 0)
-        
+
         if karma >= 1000:
             return "expert"
         elif karma >= 500:
@@ -181,7 +184,7 @@ class TrainingExportService:
         include_weight: bool = True,
     ) -> dict[str, Any]:
         """Convert a contribution to a training sample.
-        
+
         Training sample format:
         {
             "id": "uuid",
@@ -233,12 +236,12 @@ class TrainingExportService:
 
     def _calculate_sample_weight(self, contribution: TrainingContribution) -> float:
         """Calculate training weight for a contribution.
-        
+
         Higher weights for:
         - Corrections to high-confidence misses (model was wrong but confident)
         - Component changes (more valuable than velocity tweaks)
         - Verified by high-karma verifiers (expert verification = more trust)
-        
+
         Returns:
             Weight multiplier (1.0 = normal, >1.0 = more valuable, <1.0 = less)
         """
@@ -290,11 +293,11 @@ class TrainingExportService:
         batch_id: str,
     ) -> int:
         """Mark contributions as exported after successful training integration.
-        
+
         Args:
             contribution_ids: IDs to mark as exported
             batch_id: The export batch identifier
-            
+
         Returns:
             Number of contributions marked
         """
@@ -323,7 +326,7 @@ class TrainingExportService:
 
     async def get_export_statistics(self) -> dict[str, Any]:
         """Get statistics about export-ready contributions.
-        
+
         Returns:
             Dictionary with export statistics
         """
@@ -332,8 +335,7 @@ class TrainingExportService:
             select(
                 TrainingContribution.status,
                 func.count(TrainingContribution.id),
-            )
-            .group_by(TrainingContribution.status)
+            ).group_by(TrainingContribution.status)
         )
         status_counts = dict(result.all())
 
@@ -346,16 +348,14 @@ class TrainingExportService:
             .where(TrainingContribution.status == ContributionStatus.APPROVED)
             .group_by(TrainingContribution.correction_type)
         )
-        correction_type_counts = {
-            ct.value: count for ct, count in result.all()
-        }
+        correction_type_counts = {ct.value: count for ct, count in result.all()}
 
         # Pending export count
         result = await self.db.execute(
             select(func.count(TrainingContribution.id)).where(
                 and_(
                     TrainingContribution.status == ContributionStatus.APPROVED,
-                    TrainingContribution.exported_to_training == False,
+                    TrainingContribution.exported_to_training.is_(False),
                 )
             )
         )

@@ -42,11 +42,12 @@ router = APIRouter(prefix="/ai-jobs", tags=["ai-jobs"])
 # Worker Authentication Dependency
 # =============================================================================
 
+
 async def verify_worker_secret(
     x_worker_secret: str = Header(..., alias="X-Worker-Secret"),
 ) -> bool:
     """Verify worker secret for internal AI worker endpoints.
-    
+
     This protects worker-only endpoints (claim, heartbeat, progress, release)
     from unauthorized access. Without this, anyone could:
     - Claim jobs meant for legitimate workers
@@ -225,22 +226,26 @@ async def list_jobs(
     current_user: User | None = Depends(get_current_user_optional),
 ) -> PaginatedResponse[AIJobRead]:
     """List AI jobs with pagination, optionally filtered by song.
-    
+
     Authenticated users see their own jobs, anonymous users see public jobs.
     """
     service = AIJobService(session)
     user_id = current_user.id if current_user else None
-    
+
     # Calculate offset
     offset = (page - 1) * page_size
-    
+
     # Fetch jobs and total count in parallel
-    jobs_task = service.list_jobs(song_id=song_id, user_id=user_id, limit=page_size, offset=offset)
+    jobs_task = service.list_jobs(
+        song_id=song_id, user_id=user_id, limit=page_size, offset=offset
+    )
     count_task = service.count_jobs(song_id=song_id, user_id=user_id)
     jobs, total = await asyncio.gather(jobs_task, count_task)
-    
+
     items = [AIJobRead.model_validate(job) for job in jobs]
-    return PaginatedResponse.create(items=items, total=total, page=page, page_size=page_size)
+    return PaginatedResponse.create(
+        items=items, total=total, page=page, page_size=page_size
+    )
 
 
 @router.get("/{job_id}", response_model=AIJobRead)
@@ -276,7 +281,7 @@ async def worker_heartbeat(
     Workers should call this every 30-60 seconds while processing a job.
     Jobs without a heartbeat for 5 minutes are considered stale and can
     be reclaimed by other workers.
-    
+
     **Requires X-Worker-Secret header for authentication.**
     """
     service = AIJobService(session)
@@ -310,7 +315,7 @@ async def update_progress(
 
     Workers should call this to report progress during long-running jobs.
     Progress is visible to users in the queue UI.
-    
+
     **Requires X-Worker-Secret header for authentication.**
     """
     service = AIJobService(session)
@@ -362,7 +367,7 @@ async def release_job(
 
     Use this when a worker encounters a recoverable error and wants to
     allow another worker to retry the job.
-    
+
     **Requires X-Worker-Secret header for authentication.**
     """
     service = AIJobService(session)
@@ -389,7 +394,7 @@ async def list_stale_jobs(
 
     Used by orchestration to identify and reclaim jobs from failed workers.
     Default threshold is 5 minutes (300 seconds).
-    
+
     **Requires X-Worker-Secret header for authentication.**
     """
     service = AIJobService(session)
@@ -728,12 +733,18 @@ async def modal_webhook(
 
             # Check and award achievements (best effort)
             try:
-                from app.services.achievements import check_beatmap_generation_achievements
-                
-                awarded = await check_beatmap_generation_achievements(session, job.requester_id)
+                from app.services.achievements import (
+                    check_beatmap_generation_achievements,
+                )
+
+                awarded = await check_beatmap_generation_achievements(
+                    session, job.requester_id
+                )
                 if awarded:
                     await session.commit()
-                    logger.info(f"Awarded achievements to user {job.requester_id}: {awarded}")
+                    logger.info(
+                        f"Awarded achievements to user {job.requester_id}: {awarded}"
+                    )
             except Exception as e:
                 logger.warning(f"Failed to check achievements for job {job_id}: {e}")
 

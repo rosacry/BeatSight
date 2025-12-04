@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import (
     achievements,
@@ -55,7 +56,9 @@ if settings.sentry_dsn:
             SqlalchemyIntegration(),
         ],
     )
-    logger.info("sentry_initialized", dsn_configured=True, environment=settings.environment)
+    logger.info(
+        "sentry_initialized", dsn_configured=True, environment=settings.environment
+    )
 
 
 @asynccontextmanager
@@ -63,7 +66,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan handler for startup and shutdown events."""
     # Startup
     logger.info("startup", environment=settings.environment)
-    
+
     # SECURITY: Validate production secrets
     validation_errors = settings.validate_production_secrets()
     for error in validation_errors:
@@ -73,7 +76,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 raise RuntimeError(error)
         else:
             logger.warning("security_validation_warning", warning=error)
-    
+
     yield
     # Shutdown (nothing to do currently)
 
@@ -174,8 +177,6 @@ Authorization: Bearer <access_token>
 )
 
 # Add CORS middleware for cross-origin requests
-from fastapi.middleware.cors import CORSMiddleware
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,

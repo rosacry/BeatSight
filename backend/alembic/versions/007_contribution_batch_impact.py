@@ -4,6 +4,7 @@ Revision ID: 007_contribution_batch_impact
 Revises: 006_training_contributions
 Create Date: 2025-12-15
 """
+
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
@@ -98,7 +99,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name="pk_contribution_batch_impacts"),
     )
-    
+
     # Create index for looking up recent impacts
     op.create_index(
         "ix_contribution_batch_impacts_evaluated_at",

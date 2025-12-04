@@ -15,12 +15,11 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timezone
 from typing import AsyncGenerator, Generator
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import StaticPool
@@ -248,7 +247,9 @@ def mock_redis() -> AsyncMock:
 def mock_storage_service() -> AsyncMock:
     """Create a mock storage service."""
     storage = AsyncMock()
-    storage.upload_file = AsyncMock(return_value="https://storage.example.com/test-file")
+    storage.upload_file = AsyncMock(
+        return_value="https://storage.example.com/test-file"
+    )
     storage.generate_presigned_url = AsyncMock(
         return_value="https://storage.example.com/presigned-url"
     )
@@ -271,7 +272,9 @@ def mock_stripe_service() -> AsyncMock:
     """Create a mock Stripe service."""
     stripe = AsyncMock()
     stripe.create_checkout_session = AsyncMock(return_value={"id": "cs_test_123"})
-    stripe.create_portal_session = AsyncMock(return_value={"url": "https://portal.stripe.com"})
+    stripe.create_portal_session = AsyncMock(
+        return_value={"url": "https://portal.stripe.com"}
+    )
     stripe.cancel_subscription = AsyncMock()
     return stripe
 

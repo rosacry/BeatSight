@@ -42,23 +42,26 @@ async def list_songs(
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
 ) -> PaginatedResponse[SongRead]:
     """List songs with pagination.
-    
+
     Authenticated users see their own songs, anonymous users see public songs.
     """
     service = SongService(session)
     user_id = current_user.id if current_user else None
-    
+
     # Calculate offset
     offset = (page - 1) * page_size
-    
+
     # Fetch songs and total count in parallel
     import asyncio
+
     songs_task = service.list_songs(user_id=user_id, limit=page_size, offset=offset)
     count_task = service.count_songs(user_id=user_id)
     songs, total = await asyncio.gather(songs_task, count_task)
-    
+
     items = [SongRead.model_validate(song) for song in songs]
-    return PaginatedResponse.create(items=items, total=total, page=page, page_size=page_size)
+    return PaginatedResponse.create(
+        items=items, total=total, page=page, page_size=page_size
+    )
 
 
 @router.get("/{song_id}", response_model=SongRead)

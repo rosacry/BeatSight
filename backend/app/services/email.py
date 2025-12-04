@@ -60,18 +60,21 @@ class EmailService:
 
     def verify_password_reset_token(self, token: str) -> dict[str, Any] | None:
         """Verify a password reset token and return payload.
-        
+
         Security: Logs invalid/expired tokens for monitoring potential attacks.
         """
         import logging
+
         logger = logging.getLogger(__name__)
-        
+
         try:
             payload = jwt.decode(
                 token, self.jwt_secret, algorithms=[self.jwt_algorithm]
             )
             if payload.get("type") != "password_reset":
-                logger.warning("Password reset token type mismatch - possible tampering")
+                logger.warning(
+                    "Password reset token type mismatch - possible tampering"
+                )
                 return None
             return payload
         except jwt.ExpiredSignatureError:
@@ -83,18 +86,21 @@ class EmailService:
 
     def verify_email_verification_token(self, token: str) -> dict[str, Any] | None:
         """Verify an email verification token and return payload.
-        
+
         Security: Logs invalid/expired tokens for monitoring.
         """
         import logging
+
         logger = logging.getLogger(__name__)
-        
+
         try:
             payload = jwt.decode(
                 token, self.jwt_secret, algorithms=[self.jwt_algorithm]
             )
             if payload.get("type") != "email_verification":
-                logger.warning("Email verification token type mismatch - possible tampering")
+                logger.warning(
+                    "Email verification token type mismatch - possible tampering"
+                )
                 return None
             return payload
         except jwt.ExpiredSignatureError:

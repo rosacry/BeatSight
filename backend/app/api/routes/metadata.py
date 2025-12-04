@@ -11,7 +11,6 @@ Ticket E1-007: AcoustID Integration
 from __future__ import annotations
 
 import asyncio
-import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
@@ -366,7 +365,6 @@ async def identify_audio_with_retry(
                 if session_id:
                     analytics.track_metadata_found(
                         session_id=session_id,
-                        song_id=uuid.uuid4(),  # Placeholder - would use actual song ID
                         source=result.source,
                         confidence=result.confidence,
                         user_id=user_id,
@@ -395,7 +393,6 @@ async def identify_audio_with_retry(
             if session_id and attempt < max_retries:
                 analytics.track_fingerprint_retried(
                     session_id=session_id,
-                    song_id=uuid.uuid4(),  # Placeholder
                     retry_count=attempt,
                     user_id=user_id,
                 )
@@ -480,7 +477,6 @@ async def submit_manual_metadata(
     if session_id:
         analytics.track_metadata_manual(
             session_id=session_id,
-            song_id=uuid.uuid4(),  # Placeholder - would be actual song ID
             user_id=user_id,
         )
 

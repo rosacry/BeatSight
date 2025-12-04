@@ -14,24 +14,26 @@ from sqlalchemy.orm import relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
-    from app.models.user import User
+    pass
 
 
 class AchievementCategory(str, Enum):
     """Categories for grouping achievements."""
+
     GENERATION = "generation"  # Beatmap generation milestones
-    LEARNING = "learning"      # Practice and learning milestones
+    LEARNING = "learning"  # Practice and learning milestones
     CONTRIBUTION = "contribution"  # Community contribution
-    SOCIAL = "social"          # Social features (karma, etc.)
-    SPECIAL = "special"        # Limited/seasonal achievements
+    SOCIAL = "social"  # Social features (karma, etc.)
+    SPECIAL = "special"  # Limited/seasonal achievements
 
 
 class Achievement(Base):
     """
     Represents an achievement type that users can earn.
-    
+
     Achievements are system-defined milestones that track user progress.
     """
+
     __tablename__ = "achievements"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -39,13 +41,17 @@ class Achievement(Base):
     name = Column(String(128), nullable=False)
     description = Column(String(512), nullable=False)
     icon = Column(String(64), nullable=False, default="trophy")  # Icon identifier
-    category = Column(SQLEnum(AchievementCategory), nullable=False, default=AchievementCategory.GENERATION)
+    category = Column(
+        SQLEnum(AchievementCategory),
+        nullable=False,
+        default=AchievementCategory.GENERATION,
+    )
     points = Column(String(8), nullable=False, default="10")  # XP/points value
     is_hidden = Column(Boolean, nullable=False, default=False)  # Hidden until earned
     is_active = Column(Boolean, nullable=False, default=True)  # Can be earned
-    
+
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    
+
     # Relationship to user achievements
     user_achievements = relationship("UserAchievement", back_populates="achievement")
 
@@ -54,13 +60,24 @@ class UserAchievement(Base):
     """
     Junction table tracking which achievements users have earned.
     """
+
     __tablename__ = "user_achievements"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    achievement_id = Column(UUID(as_uuid=True), ForeignKey("achievements.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    achievement_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("achievements.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     earned_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    
+
     # Relationships
     user = relationship("User", back_populates="achievements")
     achievement = relationship("Achievement", back_populates="user_achievements")

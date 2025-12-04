@@ -257,7 +257,9 @@ class CreditService:
         self._session.add(transaction)
 
         await self._session.flush()
-        logger.info(f"Consumed 1 credit from user {user_id}, remaining: {balance.total_credits}")
+        logger.info(
+            f"Consumed 1 credit from user {user_id}, remaining: {balance.total_credits}"
+        )
 
         return balance
 
@@ -326,7 +328,9 @@ class CreditService:
             description=f"Purchased {purchase.credits_amount} credits ({purchase.pack_type.value} pack)",
         )
 
-        logger.info(f"Fulfilled purchase {purchase_id}: {purchase.credits_amount} credits")
+        logger.info(
+            f"Fulfilled purchase {purchase_id}: {purchase.credits_amount} credits"
+        )
 
         return balance
 
@@ -420,7 +424,9 @@ class CreditService:
 
         return balance
 
-    async def check_auto_topup_needed(self, user_id: uuid.UUID) -> CreditPackType | None:
+    async def check_auto_topup_needed(
+        self, user_id: uuid.UUID
+    ) -> CreditPackType | None:
         """Check if auto top-up should be triggered.
 
         Returns the pack type to purchase if auto top-up is needed, None otherwise.

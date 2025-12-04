@@ -251,7 +251,7 @@ class VoteService:
     ) -> dict[uuid.UUID, dict]:
         """
         Get vote counts for multiple maps in a SINGLE query.
-        
+
         This is an O(1) database call instead of O(n) when fetching
         counts for n maps individually. Use this for bulk operations.
 

@@ -302,10 +302,7 @@ async def get_queue_stats(
     hour_ago = now - timedelta(hours=1)
 
     # Single query for all state counts (much faster than 5 separate queries)
-    state_count_query = (
-        select(AIJob.state, func.count(AIJob.id))
-        .group_by(AIJob.state)
-    )
+    state_count_query = select(AIJob.state, func.count(AIJob.id)).group_by(AIJob.state)
 
     # Average processing time for completed jobs
     avg_query = select(

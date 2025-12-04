@@ -11,13 +11,13 @@ Endpoints:
 from __future__ import annotations
 
 import logging
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_current_user_optional, get_db_session
+from app.api.deps import get_current_user, get_db_session
 from app.models.credits import CreditPackType
 from app.models.user import User
 from app.services.credits import (
@@ -80,7 +80,9 @@ class AutoTopupRequest(BaseModel):
     """Request to configure auto top-up."""
 
     enabled: bool = Field(..., description="Whether to enable auto top-up")
-    pack_id: str | None = Field(None, description="Pack to buy on top-up (default: value)")
+    pack_id: str | None = Field(
+        None, description="Pack to buy on top-up (default: value)"
+    )
     threshold: int = Field(0, ge=0, le=10, description="Trigger when balance <= this")
 
 
@@ -126,7 +128,9 @@ async def get_credit_balance(
         bonus_credits=status.bonus_credits,
         total_credits=status.total_credits,
         auto_topup_enabled=status.auto_topup_enabled,
-        auto_topup_pack=status.auto_topup_pack.value if status.auto_topup_pack else None,
+        auto_topup_pack=status.auto_topup_pack.value
+        if status.auto_topup_pack
+        else None,
     )
 
 
@@ -260,7 +264,9 @@ async def configure_auto_topup(
         bonus_credits=balance.bonus_credits,
         total_credits=balance.total_credits,
         auto_topup_enabled=balance.auto_topup_enabled,
-        auto_topup_pack=balance.auto_topup_pack.value if balance.auto_topup_pack else None,
+        auto_topup_pack=balance.auto_topup_pack.value
+        if balance.auto_topup_pack
+        else None,
     )
 
 

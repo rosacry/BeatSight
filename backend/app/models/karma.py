@@ -7,7 +7,15 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Index, Integer, String, func
+from sqlalchemy import (
+    DateTime,
+    Enum as SAEnum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -36,7 +44,7 @@ class KarmaLedger(Base):
     """Stores immutable karma events for auditing."""
 
     __tablename__ = "karma_ledger"
-    
+
     # Indexes for common query patterns:
     # - user_id: get_karma_history, get_karma_stats breakdown query
     # - user_id + recorded_at: get_karma_history with ORDER BY recorded_at DESC

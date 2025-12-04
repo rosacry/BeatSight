@@ -197,7 +197,7 @@ class TestListSongs:
         data = response.json()
         assert data["items"] == []
         assert data["total"] == 0
-    
+
     def test_list_songs_pagination(
         self, client_anonymous: TestClient, mock_song: Song
     ) -> None:

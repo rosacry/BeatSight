@@ -158,7 +158,9 @@ async def change_password(
 
 @router.post("/me/avatar", response_model=UserResponse)
 async def upload_avatar(
-    file: Annotated[UploadFile, File(description="Avatar image (JPEG, PNG, WebP, GIF)")],
+    file: Annotated[
+        UploadFile, File(description="Avatar image (JPEG, PNG, WebP, GIF)")
+    ],
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
 ) -> UserResponse:
@@ -174,7 +176,7 @@ async def upload_avatar(
     if content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail=f"Unsupported image type. Allowed: JPEG, PNG, WebP, GIF",
+            detail="Unsupported image type. Allowed: JPEG, PNG, WebP, GIF",
         )
 
     # Read and validate file size
@@ -182,17 +184,17 @@ async def upload_avatar(
     if len(content) > MAX_AVATAR_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"Avatar file too large. Maximum size: 5MB",
+            detail="Avatar file too large. Maximum size: 5MB",
         )
 
     try:
         # SECURITY: Limit max pixels to prevent decompression bomb attacks
         # Malicious images can have small file sizes but enormous dimensions
         Image.MAX_IMAGE_PIXELS = 10_000_000  # 10 megapixels max
-        
+
         # Process image with Pillow
         img = Image.open(BytesIO(content))
-        
+
         # Validate dimensions BEFORE any processing
         if img.width > 4096 or img.height > 4096:
             raise HTTPException(
@@ -205,7 +207,9 @@ async def upload_avatar(
             img = img.convert("RGB")
 
         # Resize with aspect ratio preservation and center crop
-        img.thumbnail((AVATAR_SIZE[0] * 2, AVATAR_SIZE[1] * 2), Image.Resampling.LANCZOS)
+        img.thumbnail(
+            (AVATAR_SIZE[0] * 2, AVATAR_SIZE[1] * 2), Image.Resampling.LANCZOS
+        )
 
         # Center crop to square
         width, height = img.size
@@ -234,10 +238,6 @@ async def upload_avatar(
     try:
         storage = get_storage()
         avatar_key = f"avatars/{current_user.id}.jpg"
-
-        # Use audio storage's underlying storage for avatars
-        from app.services.storage import AudioStorage
-        audio_storage = AudioStorage(storage)
 
         # Store directly
         await storage.store(avatar_key, buffer.read(), "image/jpeg")

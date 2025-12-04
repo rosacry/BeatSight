@@ -85,7 +85,7 @@ class TestAIJobFlow:
             song_id=mock_song.id,
             priority="standard",
         )
-        job = await job_service.enqueue(job_payload, requested_by=mock_user.id)
+        await job_service.enqueue(job_payload, requested_by=mock_user.id)
 
         # Verify: Job was added to session
         mock_session.add.assert_called()
@@ -344,7 +344,6 @@ class TestSSEProgress:
     @pytest.mark.asyncio
     async def test_progress_broadcast(self) -> None:
         """Test that progress updates are broadcast via Redis pub/sub."""
-        from datetime import datetime, timezone
 
         from app.db.redis import ProgressUpdate, publish_progress
 
@@ -424,8 +423,10 @@ class TestFullUserJourney:
         mock_result.scalar_one_or_none.return_value = None
         mock_session.execute = AsyncMock(return_value=mock_result)
 
-        with patch("app.services.quota.get_redis") as mock_redis, \
-             patch("app.services.quota.get_quota_usage") as mock_usage:
+        with (
+            patch("app.services.quota.get_redis") as mock_redis,
+            patch("app.services.quota.get_quota_usage") as mock_usage,
+        ):
             mock_redis.return_value = AsyncMock()
             mock_usage.side_effect = [0, 0]  # No usage this month or today
 
@@ -458,8 +459,10 @@ class TestFullUserJourney:
         mock_result.scalar_one_or_none.return_value = None
         mock_session.execute = AsyncMock(return_value=mock_result)
 
-        with patch("app.services.quota.get_redis") as mock_redis, \
-             patch("app.services.quota.get_quota_usage") as mock_usage:
+        with (
+            patch("app.services.quota.get_redis") as mock_redis,
+            patch("app.services.quota.get_quota_usage") as mock_usage,
+        ):
             mock_redis.return_value = AsyncMock()
             mock_usage.side_effect = [3, 2]  # Used all monthly and daily quota
 
@@ -492,8 +495,10 @@ class TestFullUserJourney:
         mock_result.scalar_one_or_none.return_value = None
         mock_session.execute = AsyncMock(return_value=mock_result)
 
-        with patch("app.services.quota.get_redis") as mock_redis, \
-             patch("app.services.quota.get_quota_usage") as mock_usage:
+        with (
+            patch("app.services.quota.get_redis") as mock_redis,
+            patch("app.services.quota.get_quota_usage") as mock_usage,
+        ):
             mock_redis.return_value = AsyncMock()
             mock_usage.side_effect = [3, 2]  # Used all quota
 

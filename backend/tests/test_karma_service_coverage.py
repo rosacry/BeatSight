@@ -448,7 +448,7 @@ class TestUpdateRoleEligibility:
 
 
 class TestGetKarmaStats:
-    """Tests for get_karma_stats covering lines 345-367."""
+    """Tests for get_karma_stats - optimized version uses fewer queries."""
 
     @pytest.mark.asyncio
     async def test_returns_full_stats(self):
@@ -456,42 +456,62 @@ class TestGetKarmaStats:
         mock_session = AsyncMock()
         user_id = uuid.uuid4()
 
+        # Mock user query result (karma_score, phone_verified)
+        mock_user_row = MagicMock()
+        mock_user_row.karma_score = 500
+        mock_user_row.phone_verified = True
+        
         # Mock breakdown query result
         mock_breakdown_row = MagicMock()
         mock_breakdown_row.reason_code = KarmaReason.FIX_ACCEPTED
         mock_breakdown_row.total = 250
         mock_breakdown_row.count = 10
 
-        # Mock rank query result
-        mock_rank_result = MagicMock()
-        mock_rank_result.scalar.return_value = 5
-
+        # Mock role for eligibility check
+        mock_role = MagicMock()
+        mock_role.code = "fixer"
+        mock_role.min_karma = 100
+        mock_role.requires_phone_verification = False
+        
+        query_count = [0]
+        
         def execute_side_effect(query):
+            query_count[0] += 1
             query_str = str(query)
             result = MagicMock()
-            if "group_by" in query_str.lower() or "GROUP BY" in query_str:
+            
+            # Query 1: User info (karma_score, phone_verified)
+            if "karma_score" in query_str and "phone_verified" in query_str:
+                result.one_or_none.return_value = mock_user_row
+            # Query 2: Breakdown by reason
+            elif "group_by" in query_str.lower() or "GROUP BY" in query_str:
                 result.all.return_value = [mock_breakdown_row]
-            elif "count" in query_str.lower():
+            # Query 3: Rank count  
+            elif "count" in query_str.lower() and "karma_score" in query_str:
                 result.scalar.return_value = 5
+            # Query 4: All roles
+            elif "Role" in query_str or "role" in query_str.lower():
+                if "user_role" in query_str.lower() or "UserRole" in query_str:
+                    # Query 5: User's current roles
+                    result.scalars.return_value.all.return_value = ["fixer"]
+                else:
+                    # All roles for eligibility
+                    result.scalars.return_value.all.return_value = [mock_role]
+            else:
+                result.all.return_value = []
+                result.scalar.return_value = 0
             return result
 
         mock_session.execute = AsyncMock(side_effect=execute_side_effect)
 
         service = KarmaService(mock_session)
-
-        with (
-            patch.object(service, "get_user_karma", return_value=500),
-            patch.object(service, "get_eligible_roles", return_value=["fixer"]),
-            patch.object(service, "get_user_roles", return_value=["fixer"]),
-            patch.object(service, "get_daily_ai_quota", return_value=10),
-        ):
-            stats = await service.get_karma_stats(user_id)
+        stats = await service.get_karma_stats(user_id)
 
         assert stats["current_score"] == 500
         assert stats["rank"] == 6  # 5 users above + 1
         assert stats["eligible_roles"] == ["fixer"]
         assert stats["current_roles"] == ["fixer"]
-        assert stats["daily_ai_quota"] == 10
+        assert stats["daily_ai_quota"] == 10  # Karma 500 = verifier tier
         assert "breakdown" in stats
 
     @pytest.mark.asyncio
@@ -500,25 +520,40 @@ class TestGetKarmaStats:
         mock_session = AsyncMock()
         user_id = uuid.uuid4()
 
+        # Mock user with admin-level karma
+        mock_user_row = MagicMock()
+        mock_user_row.karma_score = 10000
+        mock_user_row.phone_verified = True
+        
+        # Mock admin role
+        mock_role = MagicMock()
+        mock_role.code = "admin"
+        mock_role.min_karma = 10000
+        mock_role.requires_phone_verification = False
+
         def execute_side_effect(query):
+            query_str = str(query)
             result = MagicMock()
-            result.all.return_value = []
-            result.scalar.return_value = 0
+            
+            if "karma_score" in query_str and "phone_verified" in query_str:
+                result.one_or_none.return_value = mock_user_row
+            elif "group_by" in query_str.lower() or "GROUP BY" in query_str:
+                result.all.return_value = []
+            elif "count" in query_str.lower() and "karma_score" in query_str:
+                result.scalar.return_value = 0  # No users above
+            elif "user_role" in query_str.lower() or "UserRole" in query_str:
+                result.scalars.return_value.all.return_value = ["admin"]
+            else:
+                result.scalars.return_value.all.return_value = [mock_role]
             return result
 
         mock_session.execute = AsyncMock(side_effect=execute_side_effect)
 
         service = KarmaService(mock_session)
-
-        with (
-            patch.object(service, "get_user_karma", return_value=10000),
-            patch.object(service, "get_eligible_roles", return_value=["admin"]),
-            patch.object(service, "get_user_roles", return_value=["admin"]),
-            patch.object(service, "get_daily_ai_quota", return_value=-1),
-        ):
-            stats = await service.get_karma_stats(user_id)
+        stats = await service.get_karma_stats(user_id)
 
         assert stats["rank"] == 1
+        assert stats["daily_ai_quota"] == -1  # Unlimited for admin
 
 
 class TestDailyAIQuotaEdgeCases:

@@ -17,6 +17,7 @@ import logging
 import math
 import os
 import random
+import signal
 import warnings
 from collections import OrderedDict
 from pathlib import Path
@@ -4463,6 +4464,49 @@ def main():
 
         return checkpoint_path
 
+    def save_best_checkpoint(epoch_index: int, val_acc: float) -> Path:
+        """Save a FULL resumable checkpoint when we achieve best validation accuracy.
+        
+        This is separate from best_drum_classifier.pth (weights only) - this saves
+        the complete training state so we can resume from the best point if needed.
+        """
+        checkpoint_payload = {
+            "epoch": int(epoch_index),
+            "total_epochs": int(args.epochs),
+            "model_state": _normalize_state_dict_keys(model.state_dict()),
+            "optimizer_state": optimizer.state_dict(),
+            "scheduler_state": scheduler.state_dict(),
+            "scaler_state": scaler.state_dict() if scaler is not None and amp_enabled else None,
+            "history": list(history),
+            "best_val_acc": float(val_acc),
+            "best_epoch": int(epoch_index),
+            "best_model_path": str(best_model_path) if best_model_path else None,
+            "args": vars(args),
+            "batch_index": None,
+            "total_batches": None,
+        }
+        
+        checkpoint_dir.mkdir(parents=True, exist_ok=True)
+        best_checkpoint_path = checkpoint_dir / "best_checkpoint.pth"
+        _atomic_torch_save(checkpoint_payload, best_checkpoint_path)
+        print(f"✓ Saved best FULL checkpoint (acc: {val_acc:.2f}%) - can resume from here")
+        return best_checkpoint_path
+
+    # Signal handler for graceful shutdown (SIGTERM from kill, SIGHUP from terminal close)
+    _shutdown_requested = False
+    
+    def _signal_handler(signum, frame):
+        nonlocal _shutdown_requested
+        sig_name = signal.Signals(signum).name if hasattr(signal, 'Signals') else str(signum)
+        print(f"\n⚠️  Received {sig_name} - saving checkpoint and shutting down gracefully...")
+        _shutdown_requested = True
+    
+    # Register signal handlers (Unix only - Windows doesn't support SIGTERM/SIGHUP the same way)
+    if hasattr(signal, 'SIGTERM'):
+        signal.signal(signal.SIGTERM, _signal_handler)
+    if hasattr(signal, 'SIGHUP'):
+        signal.signal(signal.SIGHUP, _signal_handler)
+
     if args.resume_from:
         if not args.resume_from.exists():
             raise FileNotFoundError(f"Checkpoint not found: {args.resume_from}")
@@ -4932,6 +4976,9 @@ def main():
                 best_model_path = model_path
                 _safe_print(f"✓ Saved best model (acc: {val_acc:.2f}%)")
                 
+                # Save FULL resumable checkpoint at best point
+                save_best_checkpoint(epoch + 1, val_acc)
+                
                 # Also save EMA model if enabled (often performs even better)
                 if ema is not None:
                     ema_model_path = output_dir / "best_drum_classifier_ema.pth"
@@ -4941,6 +4988,12 @@ def main():
                 if wandb_run is not None:
                     wandb_run.summary["best_val_accuracy"] = best_val_acc  # type: ignore[index]
                     wandb_run.summary["best_epoch"] = best_epoch  # type: ignore[index]
+
+            # Check for shutdown signal (SIGTERM/SIGHUP)
+            if _shutdown_requested:
+                print(f"\n🛑 Shutdown requested - saving checkpoint at epoch {epoch + 1}")
+                save_checkpoint(epoch + 1, reason="shutdown_signal")
+                break
 
             # Check early stopping
             if early_stopper is not None:

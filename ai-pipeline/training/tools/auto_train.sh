@@ -2345,10 +2345,13 @@ ENSEMBLE_PY
             SIMPLE_MODEL_FLAGS="--model-version v5 --v5-size large --drop-path-rate 0.15"
             SIMPLE_MIXUP_FLAGS="--mixup-alpha 0.2 --cutmix-alpha 0.5 --mixup-prob 0.5"
             SIMPLE_SPECAUGMENT_FLAGS="--specaugment drum"
+            # Focal loss with gamma=2.0 helps with class imbalance
             SIMPLE_FOCAL_FLAGS="--focal-loss --focal-gamma 2.0"
             SIMPLE_EMA_FLAGS="--use-ema --ema-decay 0.999"
             SIMPLE_LABEL_SMOOTHING="--label-smoothing 0.05"
-            SIMPLE_CLASS_WEIGHTS="--class-weights effective --max-class-weight 10.0"
+            # CRITICAL: Increased max-class-weight from 10 to 50 for 630x imbalance!
+            # With 630x imbalance, we need stronger weights for rare classes
+            SIMPLE_CLASS_WEIGHTS="--class-weights effective --max-class-weight 50.0"
             SIMPLE_SWA_FLAGS="--use-swa --swa-start 0.75"
             SIMPLE_FMIX_FLAGS="--use-fmix --fmix-alpha 0.5"
             SIMPLE_EARLY_STOPPING="--early-stopping --early-stopping-patience 15 --early-stopping-min-delta 0.001 --early-stopping-warmup 5"

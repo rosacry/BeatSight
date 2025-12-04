@@ -16,12 +16,12 @@ export function ProfilePage() {
 
     const { data: jobs, isLoading: jobsLoading } = useQuery({
         queryKey: ['jobs'],
-        queryFn: () => listJobs(),
+        queryFn: () => listJobs({ pageSize: 100 }),
     })
 
     const { data: songs, isLoading: songsLoading } = useQuery({
         queryKey: ['songs'],
-        queryFn: listSongs,
+        queryFn: () => listSongs({ pageSize: 100 }),
     })
 
     const { data: achievementsData, isLoading: achievementsLoading } = useQuery({

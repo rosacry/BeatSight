@@ -154,14 +154,18 @@ class TestListSongs:
         with patch("app.api.routes.songs.SongService") as MockService:
             mock_service = AsyncMock()
             mock_service.list_songs.return_value = [mock_song]
+            mock_service.count_songs.return_value = 1
             MockService.return_value = mock_service
 
             response = client_authenticated.get("/api/songs")
 
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 1
-        assert data[0]["title"] == "Test Song"
+        assert data["total"] == 1
+        assert len(data["items"]) == 1
+        assert data["items"][0]["title"] == "Test Song"
+        assert data["page"] == 1
+        assert data["has_next"] is False
 
     def test_list_songs_anonymous(
         self, client_anonymous: TestClient, mock_song: Song
@@ -170,25 +174,50 @@ class TestListSongs:
         with patch("app.api.routes.songs.SongService") as MockService:
             mock_service = AsyncMock()
             mock_service.list_songs.return_value = [mock_song]
+            mock_service.count_songs.return_value = 1
             MockService.return_value = mock_service
 
             response = client_anonymous.get("/api/songs")
 
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 1
+        assert len(data["items"]) == 1
 
     def test_list_songs_empty(self, client_anonymous: TestClient) -> None:
         """Test listing songs when none exist."""
         with patch("app.api.routes.songs.SongService") as MockService:
             mock_service = AsyncMock()
             mock_service.list_songs.return_value = []
+            mock_service.count_songs.return_value = 0
             MockService.return_value = mock_service
 
             response = client_anonymous.get("/api/songs")
 
         assert response.status_code == 200
-        assert response.json() == []
+        data = response.json()
+        assert data["items"] == []
+        assert data["total"] == 0
+    
+    def test_list_songs_pagination(
+        self, client_anonymous: TestClient, mock_song: Song
+    ) -> None:
+        """Test listing songs with pagination parameters."""
+        with patch("app.api.routes.songs.SongService") as MockService:
+            mock_service = AsyncMock()
+            mock_service.list_songs.return_value = [mock_song]
+            mock_service.count_songs.return_value = 50  # Total items
+            MockService.return_value = mock_service
+
+            response = client_anonymous.get("/api/songs?page=2&page_size=10")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["page"] == 2
+        assert data["page_size"] == 10
+        assert data["total"] == 50
+        assert data["total_pages"] == 5
+        assert data["has_prev"] is True
+        assert data["has_next"] is True
 
 
 class TestGetSong:

@@ -20,12 +20,12 @@ export function LibraryPage() {
 
     const { data: songs, isLoading: songsLoading } = useQuery({
         queryKey: ['songs'],
-        queryFn: listSongs,
+        queryFn: () => listSongs({ pageSize: 100 }),
     })
 
     const { data: jobs } = useQuery({
         queryKey: ['jobs'],
-        queryFn: () => listJobs(),
+        queryFn: () => listJobs({ pageSize: 100 }),
     })
 
     // Create a map of song ID to latest job

@@ -270,16 +270,20 @@ class TestListJobs:
         client_authenticated: TestClient,
         mock_job: AIJob,
     ) -> None:
-        """Test listing all jobs."""
+        """Test listing all jobs with pagination."""
         mock_service = AsyncMock()
         mock_service.list_jobs = AsyncMock(return_value=[mock_job])
+        mock_service.count_jobs = AsyncMock(return_value=1)
         mock_service_cls.return_value = mock_service
 
         response = client_authenticated.get("/api/ai-jobs")
 
         assert response.status_code == 200
         data = response.json()
-        assert isinstance(data, list)
+        assert "items" in data
+        assert "total" in data
+        assert data["total"] == 1
+        assert data["page"] == 1
 
     @patch("app.api.routes.ai_jobs.AIJobService")
     def test_list_jobs_with_song_filter(
@@ -291,6 +295,7 @@ class TestListJobs:
         """Test listing jobs filtered by song_id."""
         mock_service = AsyncMock()
         mock_service.list_jobs = AsyncMock(return_value=[mock_job])
+        mock_service.count_jobs = AsyncMock(return_value=1)
         mock_service_cls.return_value = mock_service
 
         song_id = str(mock_job.song_id)
@@ -309,11 +314,36 @@ class TestListJobs:
         """Test listing jobs filtered by state."""
         mock_service = AsyncMock()
         mock_service.list_jobs = AsyncMock(return_value=[mock_job])
+        mock_service.count_jobs = AsyncMock(return_value=1)
         mock_service_cls.return_value = mock_service
 
         response = client_authenticated.get("/api/ai-jobs?state=QUEUED")
 
         assert response.status_code == 200
+    
+    @patch("app.api.routes.ai_jobs.AIJobService")
+    def test_list_jobs_pagination(
+        self,
+        mock_service_cls: MagicMock,
+        client_authenticated: TestClient,
+        mock_job: AIJob,
+    ) -> None:
+        """Test listing jobs with pagination parameters."""
+        mock_service = AsyncMock()
+        mock_service.list_jobs = AsyncMock(return_value=[mock_job])
+        mock_service.count_jobs = AsyncMock(return_value=50)
+        mock_service_cls.return_value = mock_service
+
+        response = client_authenticated.get("/api/ai-jobs?page=2&page_size=10")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["page"] == 2
+        assert data["page_size"] == 10
+        assert data["total"] == 50
+        assert data["total_pages"] == 5
+        assert data["has_prev"] is True
+        assert data["has_next"] is True
 
 
 class TestGetJob:

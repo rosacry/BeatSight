@@ -7,6 +7,17 @@ import { getAccessToken } from '@/stores/authStore'
 
 const API_BASE = '/api'
 
+/** Generic paginated response wrapper */
+export interface PaginatedResponse<T> {
+    items: T[]
+    total: number
+    page: number
+    page_size: number
+    total_pages: number
+    has_next: boolean
+    has_prev: boolean
+}
+
 class APIError extends Error {
     constructor(public status: number, message: string) {
         super(message)
@@ -51,9 +62,31 @@ async function request<T>(
 
 // --- AI Jobs API ---
 
-export async function listJobs(songId?: string): Promise<AIJob[]> {
-    const params = songId ? `?song_id=${songId}` : ''
-    return request<AIJob[]>(`/ai-jobs${params}`)
+export interface ListJobsParams {
+    songId?: string
+    page?: number
+    pageSize?: number
+}
+
+export async function listJobs(params: ListJobsParams = {}): Promise<AIJob[]> {
+    const searchParams = new URLSearchParams()
+    if (params.songId) searchParams.set('song_id', params.songId)
+    if (params.page) searchParams.set('page', params.page.toString())
+    if (params.pageSize) searchParams.set('page_size', params.pageSize.toString())
+    
+    const query = searchParams.toString()
+    const response = await request<PaginatedResponse<AIJob>>(`/ai-jobs${query ? `?${query}` : ''}`)
+    return response.items
+}
+
+export async function listJobsPaginated(params: ListJobsParams = {}): Promise<PaginatedResponse<AIJob>> {
+    const searchParams = new URLSearchParams()
+    if (params.songId) searchParams.set('song_id', params.songId)
+    if (params.page) searchParams.set('page', params.page.toString())
+    if (params.pageSize) searchParams.set('page_size', params.pageSize.toString())
+    
+    const query = searchParams.toString()
+    return request<PaginatedResponse<AIJob>>(`/ai-jobs${query ? `?${query}` : ''}`)
 }
 
 export async function getJob(jobId: string): Promise<AIJob> {
@@ -212,8 +245,28 @@ export async function getPresignedDownloadUrl(key: string): Promise<{ url: strin
 
 // --- Songs API ---
 
-export async function listSongs(): Promise<Song[]> {
-    return request<Song[]>('/songs')
+export interface ListSongsParams {
+    page?: number
+    pageSize?: number
+}
+
+export async function listSongs(params: ListSongsParams = {}): Promise<Song[]> {
+    const searchParams = new URLSearchParams()
+    if (params.page) searchParams.set('page', params.page.toString())
+    if (params.pageSize) searchParams.set('page_size', params.pageSize.toString())
+    
+    const query = searchParams.toString()
+    const response = await request<PaginatedResponse<Song>>(`/songs${query ? `?${query}` : ''}`)
+    return response.items
+}
+
+export async function listSongsPaginated(params: ListSongsParams = {}): Promise<PaginatedResponse<Song>> {
+    const searchParams = new URLSearchParams()
+    if (params.page) searchParams.set('page', params.page.toString())
+    if (params.pageSize) searchParams.set('page_size', params.pageSize.toString())
+    
+    const query = searchParams.toString()
+    return request<PaginatedResponse<Song>>(`/songs${query ? `?${query}` : ''}`)
 }
 
 export async function getSong(songId: string): Promise<Song> {

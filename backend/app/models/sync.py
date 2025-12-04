@@ -162,6 +162,10 @@ class SyncConflict(Base):
     """Records sync conflicts for manual resolution."""
 
     __tablename__ = "sync_conflicts"
+    __table_args__ = (
+        Index("ix_sync_conflicts_user_id", "user_id"),
+        Index("ix_sync_conflicts_user_resolved", "user_id", "resolved_at"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4

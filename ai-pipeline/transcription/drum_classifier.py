@@ -7,6 +7,7 @@ is unavailable.
 """
 
 import os
+import threading
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
@@ -21,6 +22,9 @@ DEFAULT_MODEL_FILENAME = "best_drum_classifier.pth"
 # Updated after each call to ``classify_drums`` to expose telemetry for callers.
 last_classifier_mode: Optional[str] = None
 last_classifier_model_path: Optional[str] = None
+
+# Lock for thread-safe updates to the classifier mode globals
+_classifier_mode_lock = threading.Lock()
 
 
 def _interpret_bool(value: str) -> Optional[bool]:
@@ -229,10 +233,12 @@ def classify_drums(
     if ml_enabled and model_exists:
         from . import ml_drum_classifier
 
-        last_classifier_mode = "ml"
-        last_classifier_model_path = resolved_model_path
-        classify_drums.last_classifier_mode = last_classifier_mode
-        classify_drums.last_classifier_model_path = last_classifier_model_path
+        # Thread-safe update of telemetry globals
+        with _classifier_mode_lock:
+            last_classifier_mode = "ml"
+            last_classifier_model_path = resolved_model_path
+            classify_drums.last_classifier_mode = last_classifier_mode
+            classify_drums.last_classifier_model_path = last_classifier_model_path
 
         return ml_drum_classifier.classify_drums_ml(
             audio,
@@ -253,10 +259,12 @@ def classify_drums(
                 "Warning: ML classifier disabled (no model path configured). Falling back to heuristic classifier."
             )
 
-    last_classifier_mode = "heuristic"
-    last_classifier_model_path = None
-    classify_drums.last_classifier_mode = last_classifier_mode
-    classify_drums.last_classifier_model_path = last_classifier_model_path
+    # Thread-safe update of telemetry globals
+    with _classifier_mode_lock:
+        last_classifier_mode = "heuristic"
+        last_classifier_model_path = None
+        classify_drums.last_classifier_mode = last_classifier_mode
+        classify_drums.last_classifier_model_path = last_classifier_model_path
 
     return _classify_drums_heuristic(audio, onsets, confidence_threshold)
 

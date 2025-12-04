@@ -8,6 +8,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!--
+      ⚠️ CAUTION: osu.Framework version is intentionally pinned.
+      
+      BeatSightGame.cs uses reflection to access internal SDL2 window handles
+      (see NativeWindowHelpers class). This code may break on framework updates.
+      
+      Before upgrading:
+      1. Run WindowManagementTests to verify window management still works
+      2. Test fullscreen toggle, resolution changes, and borderless mode
+      3. If reflection fails, update NativeWindowHelpers.handle_*_candidates arrays
+      
+      See BeatSightGame.cs NativeWindowHelpers class for details.
+    -->
     <PackageReference Include="ppy.osu.Framework" Version="2025.1028.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="NAudio" Version="2.2.1" />

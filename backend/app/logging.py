@@ -9,6 +9,29 @@ import structlog
 from .config import get_settings
 
 
+def add_request_id(
+    logger: structlog.types.WrappedLogger,
+    method_name: str,
+    event_dict: structlog.types.EventDict,
+) -> structlog.types.EventDict:
+    """Add request ID to log entries if available.
+    
+    This processor automatically includes the current request ID in all log
+    entries when called within a request context.
+    """
+    try:
+        from app.middleware.request_id import get_request_id
+        
+        request_id = get_request_id()
+        if request_id:
+            event_dict["request_id"] = request_id
+    except ImportError:
+        # Middleware not available (e.g., during tests)
+        pass
+    
+    return event_dict
+
+
 def configure_logging() -> None:
     """Configure structlog and standard logging."""
 
@@ -17,6 +40,7 @@ def configure_logging() -> None:
     timestamper = structlog.processors.TimeStamper(fmt="iso", utc=True)
     shared_processors: list[structlog.types.Processor] = [
         structlog.stdlib.add_log_level,
+        add_request_id,  # Automatically add request ID to all logs
         timestamper,
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,

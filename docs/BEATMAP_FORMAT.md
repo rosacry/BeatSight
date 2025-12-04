@@ -303,7 +303,7 @@ Breaking changes require a major version bump (e.g., 1.x.x → 2.0.0).
 ## Parsing Guidelines
 
 ### JSON Schema Validation
-A JSON schema file (`beatsight-map-schema.json`) is provided for validation.
+A JSON schema file (`shared/schemas/beatmap_schema.json`) is provided for validation.
 
 ### Error Handling
 - **Missing required fields**: Reject the file
@@ -359,8 +359,12 @@ A JSON schema file (`beatsight-map-schema.json`) is provided for validation.
 
 ### Validation
 ```bash
-# Using JSON schema validator
-ajv validate -s beatsight-map-schema.json -d beatmap.bsm
+# Using Python jsonschema
+pip install jsonschema
+python -c "import json; from jsonschema import validate; validate(json.load(open('your_beatmap.bsm')), json.load(open('shared/schemas/beatmap_schema.json')))"
+
+# Using ajv-cli (Node.js)
+npx ajv validate -s shared/schemas/beatmap_schema.json -d beatmap.bsm --spec=draft7 --strict=false
 ```
 
 ### Conversion

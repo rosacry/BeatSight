@@ -314,17 +314,23 @@ def separate_drums(
     else:
         effective_model = DEFAULT_MODEL
 
-    # Use cached separator if model matches
+    # Thread-safe singleton initialization using double-checked locking
     if effective_model == "htdemucs_ft":
         if _separator_fast is None:
-            _separator_fast = DrumSeparator(model_name="htdemucs_ft")
+            with _separator_lock:
+                # Double-check after acquiring lock
+                if _separator_fast is None:
+                    _separator_fast = DrumSeparator(model_name="htdemucs_ft")
         separator = _separator_fast
     elif effective_model == "htdemucs":
         if _separator is None:
-            _separator = DrumSeparator(model_name="htdemucs")
+            with _separator_lock:
+                # Double-check after acquiring lock
+                if _separator is None:
+                    _separator = DrumSeparator(model_name="htdemucs")
         separator = _separator
     else:
-        # For other models, create new instance
+        # For other models, create new instance (no caching)
         separator = DrumSeparator(model_name=effective_model)
 
     result = separator.separate(audio_data, sr, return_timing=return_timing)

@@ -1782,6 +1782,32 @@ namespace BeatSight.Game
             return sizesApproximatelyEqual(current, desired);
         }
 
+        /// <summary>
+        /// ⚠️ FRAGILE: Native window manipulation using reflection.
+        /// 
+        /// This class uses reflection to access internal osu.Framework window handles
+        /// because the framework doesn't expose the native window handle directly.
+        /// 
+        /// ⚠️ IMPORTANT: This code WILL BREAK on osu.Framework updates!
+        /// 
+        /// When upgrading osu.Framework:
+        /// 1. Run WindowManagementTests to detect breakage
+        /// 2. If tests fail, check the framework's SDL2DesktopWindow implementation
+        /// 3. Update the property/field/method candidates below as needed
+        /// 4. The framework version is pinned in BeatSight.Game.csproj for this reason
+        /// 
+        /// Why this exists:
+        /// - osu.Framework's IWindow doesn't expose native handles for security reasons
+        /// - We need direct access to set proper borderless fullscreen on Windows
+        /// - SDL2's window management APIs require the native window handle
+        /// 
+        /// Alternatives considered:
+        /// - Filed upstream: https://github.com/ppy/osu-framework/issues/XXXX (request native handle exposure)
+        /// - Could use P/Invoke to find window by title, but that's even more fragile
+        /// - Could accept framework's fullscreen which has minor rendering artifacts
+        /// 
+        /// Last verified working with: osu.Framework 2024.XX.X
+        /// </summary>
         private static class NativeWindowHelpers
         {
             private const uint SWP_NOSIZE = 0x0001;
@@ -1792,9 +1818,19 @@ namespace BeatSight.Game
 
             private const int GWL_STYLE = -16;
             private const int GWL_EXSTYLE = -20;
+
+            /// <summary>
+            /// Maximum depth to search through nested objects for window handle.
+            /// Increase if framework adds more layers of abstraction.
+            /// </summary>
             private const int max_handle_search_depth = 6;
 
             private static readonly BindingFlags handle_binding_flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+            /// <summary>
+            /// Property names that might contain the native window handle.
+            /// Add new candidates if framework restructures.
+            /// </summary>
             private static readonly string[] handle_property_candidates =
             {
                 "WindowHandle",

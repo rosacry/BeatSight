@@ -21,6 +21,13 @@
 
 set -o pipefail
 
+# =============================================================================
+# System Resource Limits
+# =============================================================================
+# Increase file descriptor limit to prevent "Too many open files" errors
+# This is needed for DataLoader with many workers + persistent_workers + mmap cache
+ulimit -n 65536 2>/dev/null || echo "Warning: Could not increase file descriptor limit (may need root)"
+
 # Load environment
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"

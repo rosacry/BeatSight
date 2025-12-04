@@ -37,30 +37,6 @@ using osuTK.Graphics;
 
 namespace BeatSight.Game.Screens.Editor
 {
-    internal static class EditorColours
-    {
-        public static readonly Color4 ScreenBackground = UITheme.Background;
-        public static readonly Color4 HeaderBackground = UITheme.Surface;
-        public static readonly Color4 ControlsBackground = UITheme.SurfaceAlt;
-        public static readonly Color4 TimelineBackground = UITheme.Surface;
-        public static readonly Color4 TimelineToolbarBackground = UITheme.SurfaceAlt;
-        public static readonly Color4 PreviewBackground = UITheme.BackgroundLayer;
-        public static readonly Color4 HistoryBackground = UITheme.SurfaceAlt.Opacity(0.8f);
-        public static readonly Color4 Divider = UITheme.Divider;
-
-        public static Color4 AccentPlay => UITheme.AccentSecondary;
-        public static Color4 AccentSave => UITheme.AccentPrimary;
-        public static Color4 AccentUndo => UITheme.SurfaceAlt;
-        public static Color4 AccentRedo => UITheme.SurfaceAlt;
-        public static Color4 Warning => UITheme.AccentWarning;
-        public static Color4 TextPrimary => UITheme.TextPrimary;
-        public static Color4 TextSecondary => UITheme.TextSecondary;
-        public static Color4 TextMuted => UITheme.TextMuted;
-
-        public static Color4 Lighten(Color4 colour, float factor) => UITheme.Emphasise(colour, factor);
-        public static Color4 WithAlpha(Color4 colour, float alpha) => new Color4(colour.R, colour.G, colour.B, colour.A * alpha);
-    }
-
     public partial class EditorScreen : BeatSightScreen
     {
         private Beatmap? beatmap;
@@ -2709,16 +2685,7 @@ namespace BeatSight.Game.Screens.Editor
             return builder.ToString();
         }
 
-        private class EditorSnapshot
-        {
-            public required string BeatmapJson { get; init; }
-            public double CurrentTime { get; init; }
-            public double Zoom { get; init; }
-            public int SnapDivisor { get; init; }
-            public double WaveformScale { get; init; }
-            public bool BeatGridVisible { get; init; }
-            public string Description { get; init; } = string.Empty;
-        }
+        // EditorSnapshot class extracted to EditorCommandManager.cs
 
         private void reloadTimeline()
         {

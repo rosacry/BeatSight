@@ -37,7 +37,8 @@ jobs:
       packages: write
 
     outputs:
-      image_tag: ${{ steps.meta.outputs.tags }}
+      # Use the first tag (SHA-based) to avoid multi-line output issues in shell commands
+      image_tag: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
       image_digest: ${{ steps.build.outputs.digest }}
 
     steps:

@@ -344,11 +344,12 @@ class TestBulkVotes:
         mock_service.get_user_votes = AsyncMock(
             return_value={map_id_1: VoteType.UPVOTE}
         )
-        mock_service.get_vote_counts = AsyncMock(
-            side_effect=[
-                {"upvotes": 10, "downvotes": 2, "score": 8},
-                {"upvotes": 5, "downvotes": 1, "score": 4},
-            ]
+        # get_bulk_vote_counts returns a dict mapping map_id to counts
+        mock_service.get_bulk_vote_counts = AsyncMock(
+            return_value={
+                map_id_1: {"upvotes": 10, "downvotes": 2, "score": 8},
+                map_id_2: {"upvotes": 5, "downvotes": 1, "score": 4},
+            }
         )
         mock_service_class.return_value = mock_service
 
@@ -374,6 +375,7 @@ class TestBulkVotes:
         """Test bulk votes with empty list."""
         mock_service = MagicMock()
         mock_service.get_user_votes = AsyncMock(return_value={})
+        mock_service.get_bulk_vote_counts = AsyncMock(return_value={})
         mock_service_class.return_value = mock_service
 
         response = client_authenticated.post(
@@ -391,20 +393,18 @@ class TestBulkVotes:
         mock_service_class: MagicMock,
         client_authenticated: TestClient,
     ) -> None:
-        """Test bulk votes skips maps that don't exist."""
-        from app.services.votes import MapNotFoundError
-
+        """Test bulk votes skips maps that don't exist (returns empty for missing)."""
         map_id_1 = uuid.uuid4()
         map_id_2 = uuid.uuid4()
 
         mock_service = MagicMock()
         mock_service.get_user_votes = AsyncMock(return_value={})
-        # First map exists, second doesn't
-        mock_service.get_vote_counts = AsyncMock(
-            side_effect=[
-                {"upvotes": 10, "downvotes": 2, "score": 8},
-                MapNotFoundError(),
-            ]
+        # Only map_id_1 exists in the response - map_id_2 not found
+        mock_service.get_bulk_vote_counts = AsyncMock(
+            return_value={
+                map_id_1: {"upvotes": 10, "downvotes": 2, "score": 8},
+                # map_id_2 not in the result means it wasn't found
+            }
         )
         mock_service_class.return_value = mock_service
 
@@ -415,9 +415,11 @@ class TestBulkVotes:
 
         assert response.status_code == 200
         data = response.json()
-        # Only first map should be in response
+        # Both maps in response, but missing ones get zeros
         assert str(map_id_1) in data["votes"]
-        assert str(map_id_2) not in data["votes"]
+        assert str(map_id_2) in data["votes"]
+        assert data["votes"][str(map_id_1)]["upvotes"] == 10
+        assert data["votes"][str(map_id_2)]["upvotes"] == 0
 
     @patch("app.api.routes.votes.VoteService")
     def test_bulk_votes_no_user_votes(
@@ -430,8 +432,10 @@ class TestBulkVotes:
 
         mock_service = MagicMock()
         mock_service.get_user_votes = AsyncMock(return_value={})
-        mock_service.get_vote_counts = AsyncMock(
-            return_value={"upvotes": 10, "downvotes": 2, "score": 8}
+        mock_service.get_bulk_vote_counts = AsyncMock(
+            return_value={
+                map_id: {"upvotes": 10, "downvotes": 2, "score": 8}
+            }
         )
         mock_service_class.return_value = mock_service
 

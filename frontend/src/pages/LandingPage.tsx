@@ -6,6 +6,7 @@
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { PRICING_PLANS } from '@/types/billing'
+import { LandingDemo } from '@/components/LandingDemo'
 
 export function LandingPage() {
     const { isAuthenticated } = useAuthStore()
@@ -154,19 +155,7 @@ export function LandingPage() {
                             </ul>
                         </div>
                         <div className="relative">
-                            <div className="aspect-video bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden">
-                                {/* Placeholder for demo video/animation */}
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="text-center">
-                                        <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-purple-600/20 flex items-center justify-center">
-                                            <svg className="w-10 h-10 text-purple-400" fill="currentColor" viewBox="0 0 24 24">
-                                                <path d="M8 5v14l11-7z" />
-                                            </svg>
-                                        </div>
-                                        <p className="text-gray-400">Watch Demo</p>
-                                    </div>
-                                </div>
-                            </div>
+                            <LandingDemo />
                         </div>
                     </div>
                 </div>
@@ -189,8 +178,8 @@ export function LandingPage() {
                             <div
                                 key={plan.id}
                                 className={`rounded-2xl p-8 ${plan.highlighted
-                                        ? 'bg-gradient-to-b from-purple-900/50 to-gray-800 border-2 border-purple-500'
-                                        : 'bg-gray-800 border border-gray-700'
+                                    ? 'bg-gradient-to-b from-purple-900/50 to-gray-800 border-2 border-purple-500'
+                                    : 'bg-gray-800 border border-gray-700'
                                     }`}
                             >
                                 <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>

@@ -5,6 +5,7 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { InstallPrompt, OfflineIndicator, UpdateNotification } from './components/PWAPrompts'
 import { ToastProvider } from './components/Toast'
+import { AchievementNotificationProvider } from './components/AchievementToast'
 import { HomePage } from './pages/HomePage'
 import { JobQueuePage } from './pages/JobQueuePage'
 import { JobDetailPage } from './pages/JobDetailPage'
@@ -39,96 +40,98 @@ function App() {
     return (
         <ErrorBoundary>
             <ToastProvider>
-                <KeyboardShortcutsProvider>
-                    {/* PWA Components */}
-                    <OfflineIndicator />
-                    <InstallPrompt />
-                    {updateAvailable && <UpdateNotification onUpdate={applyUpdate} />}
+                <AchievementNotificationProvider>
+                    <KeyboardShortcutsProvider>
+                        {/* PWA Components */}
+                        <OfflineIndicator />
+                        <InstallPrompt />
+                        {updateAvailable && <UpdateNotification onUpdate={applyUpdate} />}
 
-                    <Layout>
-                        <ErrorBoundary>
-                            <Routes>
-                                {/* Public routes */}
-                                <Route path="/" element={<HomePage />} />
-                                <Route path="/queue" element={<JobQueuePage />} />
-                                <Route path="/jobs/:jobId" element={<JobDetailPage />} />
-                                <Route path="/login" element={<LoginPage />} />
-                                <Route path="/register" element={<RegisterPage />} />
-                                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                                <Route path="/reset-password" element={<ResetPasswordPage />} />
-                                <Route path="/pricing" element={<PricingPage />} />
-                                <Route path="/credits/success" element={<CreditSuccessPage />} />
-                                <Route path="/credits/cancel" element={<CreditCancelPage />} />
+                        <Layout>
+                            <ErrorBoundary>
+                                <Routes>
+                                    {/* Public routes */}
+                                    <Route path="/" element={<HomePage />} />
+                                    <Route path="/queue" element={<JobQueuePage />} />
+                                    <Route path="/jobs/:jobId" element={<JobDetailPage />} />
+                                    <Route path="/login" element={<LoginPage />} />
+                                    <Route path="/register" element={<RegisterPage />} />
+                                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                                    <Route path="/reset-password" element={<ResetPasswordPage />} />
+                                    <Route path="/pricing" element={<PricingPage />} />
+                                    <Route path="/credits/success" element={<CreditSuccessPage />} />
+                                    <Route path="/credits/cancel" element={<CreditCancelPage />} />
 
-                                {/* Protected routes */}
-                                <Route
-                                    path="/upload"
-                                    element={
-                                        <ProtectedRoute>
-                                            <UploadPage />
-                                        </ProtectedRoute>
-                                    }
-                                />
-                                <Route
-                                    path="/library"
-                                    element={
-                                        <ProtectedRoute>
-                                            <LibraryPage />
-                                        </ProtectedRoute>
-                                    }
-                                />
-                                <Route
-                                    path="/profile"
-                                    element={
-                                        <ProtectedRoute>
-                                            <ProfilePage />
-                                        </ProtectedRoute>
-                                    }
-                                />
-                                <Route
-                                    path="/settings"
-                                    element={
-                                        <ProtectedRoute>
-                                            <SettingsPage />
-                                        </ProtectedRoute>
-                                    }
-                                />
-                                <Route
-                                    path="/admin"
-                                    element={
-                                        <ProtectedRoute>
-                                            <AdminDashboardPage />
-                                        </ProtectedRoute>
-                                    }
-                                />
-                                <Route
-                                    path="/verifier"
-                                    element={
-                                        <ProtectedRoute>
-                                            <VerifierDashboardPage />
-                                        </ProtectedRoute>
-                                    }
-                                />
-                                <Route
-                                    path="/maps/:mapId/edit"
-                                    element={
-                                        <ProtectedRoute>
-                                            <MapEditPage />
-                                        </ProtectedRoute>
-                                    }
-                                />
-                                <Route
-                                    path="/record"
-                                    element={
-                                        <ProtectedRoute>
-                                            <RecordPage />
-                                        </ProtectedRoute>
-                                    }
-                                />
-                            </Routes>
-                        </ErrorBoundary>
-                    </Layout>
-                </KeyboardShortcutsProvider>
+                                    {/* Protected routes */}
+                                    <Route
+                                        path="/upload"
+                                        element={
+                                            <ProtectedRoute>
+                                                <UploadPage />
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path="/library"
+                                        element={
+                                            <ProtectedRoute>
+                                                <LibraryPage />
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path="/profile"
+                                        element={
+                                            <ProtectedRoute>
+                                                <ProfilePage />
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path="/settings"
+                                        element={
+                                            <ProtectedRoute>
+                                                <SettingsPage />
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path="/admin"
+                                        element={
+                                            <ProtectedRoute>
+                                                <AdminDashboardPage />
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path="/verifier"
+                                        element={
+                                            <ProtectedRoute>
+                                                <VerifierDashboardPage />
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path="/maps/:mapId/edit"
+                                        element={
+                                            <ProtectedRoute>
+                                                <MapEditPage />
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                    <Route
+                                        path="/record"
+                                        element={
+                                            <ProtectedRoute>
+                                                <RecordPage />
+                                            </ProtectedRoute>
+                                        }
+                                    />
+                                </Routes>
+                            </ErrorBoundary>
+                        </Layout>
+                    </KeyboardShortcutsProvider>
+                </AchievementNotificationProvider>
             </ToastProvider>
         </ErrorBoundary>
     )

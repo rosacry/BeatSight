@@ -671,6 +671,74 @@ export function TimelineCanvas({
         setSelectStart(null)
     }, [])
 
+    // Touch event handlers for mobile support
+    const handleTouchStart = useCallback(
+        (e: React.TouchEvent) => {
+            if (e.touches.length !== 1) return // Only handle single touch
+
+            const touch = e.touches[0]
+            const canvas = dynamicCanvasRef.current
+            if (!canvas) return
+
+            const rect = canvas.getBoundingClientRect()
+            const x = touch.clientX - rect.left
+            const y = touch.clientY - rect.top
+
+            // Check if touching ruler for seeking
+            if (y < HEADER_HEIGHT + RULER_HEIGHT && y >= HEADER_HEIGHT && x > SIDEBAR_WIDTH) {
+                const time = xToTime(x - SIDEBAR_WIDTH)
+                onSeek?.(Math.max(0, Math.min(time, duration)))
+                return
+            }
+
+            // Check if touching a note
+            const note = findNoteAtPosition(x, y)
+            if (note) {
+                // Select the touched note
+                onSelectionChange({ noteIds: new Set([note.id]) })
+                // Start dragging
+                setIsDragging(true)
+                setDragNote({ note, startX: x, startY: y })
+            } else {
+                // Clear selection
+                onSelectionChange({ noteIds: new Set() })
+            }
+        },
+        [xToTime, duration, onSeek, findNoteAtPosition, onSelectionChange]
+    )
+
+    const handleTouchMove = useCallback(
+        (e: React.TouchEvent) => {
+            if (!isDragging || !dragNote || e.touches.length !== 1) return
+
+            const touch = e.touches[0]
+            const canvas = dynamicCanvasRef.current
+            if (!canvas) return
+
+            const rect = canvas.getBoundingClientRect()
+            const x = touch.clientX - rect.left
+            const y = touch.clientY - rect.top
+
+            // Calculate new time and lane
+            let newTime = xToTime(x - SIDEBAR_WIDTH)
+            newTime = snapTime(newTime)
+            newTime = Math.max(0, Math.min(newTime, duration))
+
+            const newLaneIndex = yToLane(y)
+            const clampedLaneIndex = Math.max(0, Math.min(newLaneIndex, lanes.length - 1))
+
+            onNoteDrag?.(dragNote.note.id, newTime, clampedLaneIndex)
+        },
+        [isDragging, dragNote, xToTime, snapTime, duration, yToLane, lanes.length, onNoteDrag]
+    )
+
+    const handleTouchEnd = useCallback(() => {
+        setIsDragging(false)
+        setDragNote(null)
+        setIsSelecting(false)
+        setSelectStart(null)
+    }, [])
+
     // Wheel handler for zooming/scrolling
     const handleWheel = useCallback(
         (e: React.WheelEvent) => {
@@ -734,13 +802,16 @@ export function TimelineCanvas({
             {/* Dynamic layer - notes, playhead, waveform (handles all interactions) */}
             <canvas
                 ref={dynamicCanvasRef}
-                className="absolute inset-0 block"
+                className="absolute inset-0 block touch-none"
                 style={{ zIndex: 1 }}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
                 onWheel={handleWheel}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
             />
         </div>
     )

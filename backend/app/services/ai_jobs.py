@@ -33,12 +33,47 @@ class AIJobService:
         await self._session.refresh(job)
         return job
 
-    async def list_jobs(self, song_id: uuid.UUID | None = None) -> list[AIJob]:
-        stmt = select(AIJob).order_by(AIJob.created_at.desc())
+    async def list_jobs(
+        self,
+        song_id: uuid.UUID | None = None,
+        user_id: uuid.UUID | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[AIJob]:
+        """List AI jobs with pagination.
+        
+        Args:
+            song_id: Filter by song ID.
+            user_id: Filter by requesting user ID.
+            limit: Maximum number of jobs to return.
+            offset: Number of jobs to skip.
+        """
+        stmt = (
+            select(AIJob)
+            .order_by(AIJob.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
         if song_id:
             stmt = stmt.where(AIJob.song_id == song_id)
+        if user_id:
+            stmt = stmt.where(AIJob.requested_by_id == user_id)
         result = await self._session.execute(stmt)
         return list(result.scalars().unique())
+    
+    async def count_jobs(
+        self,
+        song_id: uuid.UUID | None = None,
+        user_id: uuid.UUID | None = None,
+    ) -> int:
+        """Count total AI jobs for pagination metadata."""
+        stmt = select(func.count()).select_from(AIJob)
+        if song_id:
+            stmt = stmt.where(AIJob.song_id == song_id)
+        if user_id:
+            stmt = stmt.where(AIJob.requested_by_id == user_id)
+        result = await self._session.execute(stmt)
+        return result.scalar() or 0
 
     async def get_job(self, job_id: uuid.UUID) -> AIJob | None:
         """Get a job by ID."""

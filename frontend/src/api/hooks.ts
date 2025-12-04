@@ -27,7 +27,7 @@ export const queryKeys = {
 export function useJobs(songId?: string) {
     return useQuery({
         queryKey: songId ? [...queryKeys.jobs, { songId }] : queryKeys.jobs,
-        queryFn: () => listJobs(songId),
+        queryFn: () => listJobs({ songId }),
         refetchInterval: 10000, // Poll every 10s
         staleTime: 5000,
     })
@@ -89,7 +89,7 @@ export function useQuota() {
 export function useSongs() {
     return useQuery({
         queryKey: queryKeys.songs,
-        queryFn: listSongs,
+        queryFn: () => listSongs({ pageSize: 100 }),
         staleTime: 60000,
     })
 }

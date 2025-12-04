@@ -85,17 +85,23 @@ export function RecordPage() {
 
     // Check microphone permission on mount
     useEffect(() => {
+        let permissionResult: PermissionStatus | null = null
+        let handleChange: (() => void) | null = null
+        
         async function checkPermission() {
             try {
                 // Try to query permission status (not supported in all browsers)
                 if (navigator.permissions && navigator.permissions.query) {
-                    const result = await navigator.permissions.query({ name: 'microphone' as PermissionName })
-                    setPermissionState(result.state as PermissionState)
+                    permissionResult = await navigator.permissions.query({ name: 'microphone' as PermissionName })
+                    setPermissionState(permissionResult.state as PermissionState)
 
                     // Listen for permission changes
-                    result.addEventListener('change', () => {
-                        setPermissionState(result.state as PermissionState)
-                    })
+                    handleChange = () => {
+                        if (permissionResult) {
+                            setPermissionState(permissionResult.state as PermissionState)
+                        }
+                    }
+                    permissionResult.addEventListener('change', handleChange)
                 } else {
                     // Browser doesn't support permission query, assume prompt needed
                     setPermissionState('prompt')
@@ -108,6 +114,13 @@ export function RecordPage() {
 
         if (browserSupport.supported) {
             checkPermission()
+        }
+        
+        // Cleanup listener on unmount
+        return () => {
+            if (permissionResult && handleChange) {
+                permissionResult.removeEventListener('change', handleChange)
+            }
         }
     }, [browserSupport.supported])
 

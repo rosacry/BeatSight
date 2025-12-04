@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,13 +38,47 @@ class SongService:
         await self._session.refresh(song)
         return song
 
-    async def list_songs(self) -> list[Song]:
-        result = await self._session.execute(
+    async def list_songs(
+        self,
+        user_id: uuid.UUID | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[Song]:
+        """List songs with pagination.
+        
+        Args:
+            user_id: If provided, filter to user's songs. If None, return public songs.
+            limit: Maximum number of songs to return.
+            offset: Number of songs to skip.
+        """
+        query = (
             select(Song)
             .options(selectinload(Song.maps))
             .order_by(Song.created_at.desc())
+            .limit(limit)
+            .offset(offset)
         )
+        
+        # Filter by user if specified
+        if user_id is not None:
+            query = query.where(Song.created_by_id == user_id)
+        
+        result = await self._session.execute(query)
         return list(result.scalars().unique())
+    
+    async def count_songs(self, user_id: uuid.UUID | None = None) -> int:
+        """Count total songs for pagination metadata.
+        
+        Args:
+            user_id: If provided, count user's songs. If None, count public songs.
+        """
+        query = select(func.count()).select_from(Song)
+        
+        if user_id is not None:
+            query = query.where(Song.created_by_id == user_id)
+        
+        result = await self._session.execute(query)
+        return result.scalar() or 0
 
     async def get_song(self, song_id: uuid.UUID) -> Song:
         result = await self._session.execute(

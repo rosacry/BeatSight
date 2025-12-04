@@ -12,7 +12,7 @@ export function JobQueuePage() {
 
     const { data: jobs, isLoading, error } = useQuery({
         queryKey: ['jobs'],
-        queryFn: () => listJobs(),
+        queryFn: () => listJobs({ pageSize: 100 }),
         refetchInterval: 10000, // Refresh every 10s
     })
 

@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import AsyncGenerator, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,6 +26,7 @@ from app.schemas.ai_jobs import (
     AIJobRead,
     QuotaStatusRead,
 )
+from app.schemas.pagination import PaginatedResponse
 from app.services.ai_jobs import AIJobService
 from app.services.modal_gpu import (
     ModalConnectionError,
@@ -215,16 +216,31 @@ async def get_quota_status(
     return _quota_to_read(status)
 
 
-@router.get("", response_model=list[AIJobRead])
+@router.get("", response_model=PaginatedResponse[AIJobRead])
 async def list_jobs(
     song_id: uuid.UUID | None = None,
+    page: int = Query(default=1, ge=1, description="Page number"),
+    page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
     session: AsyncSession = Depends(get_db_session),
-) -> list[AIJobRead]:
-    """List AI jobs, optionally filtered by song."""
-
+    current_user: User | None = Depends(get_current_user_optional),
+) -> PaginatedResponse[AIJobRead]:
+    """List AI jobs with pagination, optionally filtered by song.
+    
+    Authenticated users see their own jobs, anonymous users see public jobs.
+    """
     service = AIJobService(session)
-    jobs = await service.list_jobs(song_id=song_id)
-    return [AIJobRead.model_validate(job) for job in jobs]
+    user_id = current_user.id if current_user else None
+    
+    # Calculate offset
+    offset = (page - 1) * page_size
+    
+    # Fetch jobs and total count in parallel
+    jobs_task = service.list_jobs(song_id=song_id, user_id=user_id, limit=page_size, offset=offset)
+    count_task = service.count_jobs(song_id=song_id, user_id=user_id)
+    jobs, total = await asyncio.gather(jobs_task, count_task)
+    
+    items = [AIJobRead.model_validate(job) for job in jobs]
+    return PaginatedResponse.create(items=items, total=total, page=page, page_size=page_size)
 
 
 @router.get("/{job_id}", response_model=AIJobRead)

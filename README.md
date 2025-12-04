@@ -24,7 +24,7 @@
 
 Learning drums is fundamentally different from learning guitar or piano in rhythm games. In Guitar Hero, Dance Dance Revolution, or osu!, players see notes approaching *before* they need to hit them—this visual lookahead is what enables rapid skill acquisition. But drummers? They've been stuck memorizing songs by ear, rewinding the same 4-bar section dozens of times, or squinting at static sheet music that offers no timing guidance.
 
-**This matters more than you might think.** [Research shows](https://www.frontiersin.org/articles/10.3389/fnhum.2021.789467/full) that rhythmic visual and auditory cues prime the motor system by providing anticipatory time references—your brain pre-plans the movement instead of reacting after the fact. It's the same reason why sight-reading musicians improve faster than those who learn purely by ear. Drummers have never had a scrolling, timing-aligned visual guide—until now.
+**This matters more than you might think.** Research on rhythm and motor learning ([Rhythm and Music-Based Interventions in Motor Rehabilitation](https://www.frontiersin.org/articles/10.3389/fnhum.2021.789467/full)) demonstrates that visual anticipation dramatically accelerates motor skill acquisition. When you can *see* what's coming, your brain pre-plans the movement instead of reacting after the fact. Drummers have never had this advantage—until now.
 
 BeatSight brings the rhythm game paradigm to drum practice:
 

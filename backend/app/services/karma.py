@@ -343,12 +343,23 @@ class KarmaService:
     async def get_karma_stats(self, user_id: uuid.UUID) -> dict:
         """
         Get detailed karma statistics for a user.
+        
+        OPTIMIZED: Fetches all data in minimal queries instead of 9+ separate calls.
 
         Returns:
             Dictionary with karma breakdown by reason.
         """
-        # Get totals by reason
-        result = await self.session.execute(
+        # Query 1: Get user info (karma_score, phone_verified) in one shot
+        user_result = await self.session.execute(
+            select(User.karma_score, User.phone_verified).where(User.id == user_id)
+        )
+        user_row = user_result.one_or_none()
+        karma = user_row.karma_score if user_row else 0
+        phone_verified = user_row.phone_verified if user_row else False
+        
+        # Query 2: Get breakdown by reason AND rank in a single round-trip using subquery
+        # (Breakdown)
+        breakdown_result = await self.session.execute(
             select(
                 KarmaLedger.reason_code,
                 func.sum(KarmaLedger.delta).label("total"),
@@ -359,22 +370,46 @@ class KarmaService:
         )
         breakdown = {
             row.reason_code.value: {"total": row.total, "count": row.count}
-            for row in result.all()
+            for row in breakdown_result.all()
         }
-
-        # Get current score and rank
-        karma = await self.get_user_karma(user_id)
-
-        result = await self.session.execute(
+        
+        # Query 3: Get rank
+        rank_result = await self.session.execute(
             select(func.count()).select_from(User).where(User.karma_score > karma)
         )
-        rank = (result.scalar() or 0) + 1
+        rank = (rank_result.scalar() or 0) + 1
+        
+        # Query 4: Get all roles (for eligibility check) 
+        roles_result = await self.session.execute(select(Role))
+        all_roles = roles_result.scalars().all()
+        
+        # Query 5: Get user's current roles
+        user_roles_result = await self.session.execute(
+            select(Role.code)
+            .join(UserRole, Role.id == UserRole.role_id)
+            .where(UserRole.user_id == user_id)
+        )
+        current_roles = list(user_roles_result.scalars().all())
+        
+        # Compute eligible roles in-memory (no extra query!)
+        eligible = []
+        for role in all_roles:
+            if karma >= role.min_karma:
+                if role.requires_phone_verification and not phone_verified:
+                    continue
+                eligible.append(role.code)
+        
+        # Compute daily AI quota in-memory (no extra query!)
+        quota = AI_GENERATION_QUOTAS[0]  # Default
+        for threshold, allowed in sorted(AI_GENERATION_QUOTAS.items()):
+            if karma >= threshold:
+                quota = allowed
 
         return {
             "current_score": karma,
             "rank": rank,
             "breakdown": breakdown,
-            "eligible_roles": await self.get_eligible_roles(user_id),
-            "current_roles": await self.get_user_roles(user_id),
-            "daily_ai_quota": await self.get_daily_ai_quota(user_id),
+            "eligible_roles": eligible,
+            "current_roles": current_roles,
+            "daily_ai_quota": quota,
         }

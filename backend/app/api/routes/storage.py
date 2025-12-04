@@ -286,6 +286,14 @@ async def get_stem_download_url(
     expires_in: Annotated[int, Query(ge=60, le=86400)] = 3600,
 ) -> PresignedUrlResponse:
     """Get a presigned URL for direct stem download."""
+    # Validate stem parameter to prevent path traversal
+    valid_stems = {"drums", "bass", "vocals", "other", "piano", "guitar"}
+    if stem not in valid_stems:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid stem. Available: {', '.join(valid_stems)}",
+        )
+
     storage = await get_storage()
     audio_storage = AudioStorage(storage)
 

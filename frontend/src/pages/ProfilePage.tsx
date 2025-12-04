@@ -3,7 +3,7 @@
  * Shows user info, stats, achievements, and account details.
  */
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { useQuery } from '@tanstack/react-query'
 import { listJobs, listSongs, listAchievements } from '@/api/client'
@@ -31,6 +31,26 @@ export function ProfilePage() {
     })
 
     const isLoading = jobsLoading || songsLoading
+
+    // PERF: Memoize computed stats to avoid re-calculation on every render
+    const { totalSongs, completedJobs, totalJobs, initials } = useMemo(() => {
+        const total = songs?.length || 0
+        const completed = jobs?.filter((j) => j.state === 'complete').length || 0
+        const jobCount = jobs?.length || 0
+        const userInitials = user?.display_name
+            ?.split(' ')
+            .map((n) => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2) || ''
+        
+        return {
+            totalSongs: total,
+            completedJobs: completed,
+            totalJobs: jobCount,
+            initials: userInitials,
+        }
+    }, [songs, jobs, user?.display_name])
 
     if (!user) {
         return (
@@ -84,19 +104,6 @@ export function ProfilePage() {
             </div>
         )
     }
-
-    // Calculate stats
-    const totalSongs = songs?.length || 0
-    const completedJobs = jobs?.filter((j) => j.state === 'complete').length || 0
-    const totalJobs = jobs?.length || 0
-
-    // Get initials for avatar
-    const initials = user.display_name
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
 
     return (
         <div className="max-w-4xl mx-auto space-y-8">

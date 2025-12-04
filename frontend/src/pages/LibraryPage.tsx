@@ -33,13 +33,13 @@ export function LibraryPage() {
     const songJobMap = useMemo(() => {
         const map = new Map<string, AIJob>()
         if (!jobs) return map
-        
+
         // Sort jobs by created_at descending once, then just take first per song
         // This avoids creating Date objects for every comparison
         const sortedJobs = [...jobs].sort((a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )
-        
+
         for (const job of sortedJobs) {
             if (!map.has(job.song_id)) {
                 map.set(job.song_id, job)
@@ -52,7 +52,7 @@ export function LibraryPage() {
     // PERF: Memoized with all dependencies to avoid expensive filter/sort on every render
     const filteredSongs = useMemo(() => {
         const queryLower = searchQuery.toLowerCase()
-        
+
         return (songs || [])
             .filter((song) => {
                 // Search filter

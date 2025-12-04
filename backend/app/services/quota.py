@@ -190,10 +190,15 @@ class QuotaService:
         plan = subscription.plan_code if subscription else SubscriptionPlan.FREE
         limits = QuotaLimits.for_plan(plan)
 
-        # Get usage from Redis
+        # Get usage from Redis and credit balance in PARALLEL
+        # This saves ~2 network round trips by running concurrently
+        import asyncio
         redis = await get_redis()
-        used_month = await get_quota_usage(redis, user_id, month_key)
-        used_day = await get_quota_usage(redis, user_id, day_key)
+        used_month, used_day, credit_balance = await asyncio.gather(
+            get_quota_usage(redis, user_id, month_key),
+            get_quota_usage(redis, user_id, day_key),
+            self._get_credit_balance(user_id),
+        )
 
         # Calculate resets_at (end of current billing period or end of month for free)
         if subscription:
@@ -204,9 +209,6 @@ class QuotaService:
                 resets_at = datetime(now.year + 1, 1, 1, tzinfo=timezone.utc)
             else:
                 resets_at = datetime(now.year, now.month + 1, 1, tzinfo=timezone.utc)
-
-        # Get credit balance for fallback
-        credit_balance = await self._get_credit_balance(user_id)
 
         return QuotaStatus(
             plan=plan,

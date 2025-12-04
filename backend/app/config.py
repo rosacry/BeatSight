@@ -59,6 +59,22 @@ class Settings(BaseSettings):
         default="CHANGE_ME_IN_PRODUCTION_USE_SECURE_RANDOM_VALUE",
         alias="JWT_SECRET_KEY",
     )
+    
+    def validate_production_secrets(self) -> list[str]:
+        """Validate that production-critical secrets are properly set.
+        
+        Returns list of validation errors. Empty list means all good.
+        Call this during app startup in production.
+        """
+        errors = []
+        if self.is_production:
+            if "CHANGE_ME" in self.jwt_secret_key:
+                errors.append("CRITICAL: JWT_SECRET_KEY must be set to a secure random value in production!")
+            if "CHANGE_ME" in self.modal_webhook_secret:
+                errors.append("CRITICAL: MODAL_WEBHOOK_SECRET must be set to a secure random value in production!")
+            if not self.stripe_webhook_secret and self.stripe_secret_key:
+                errors.append("WARNING: STRIPE_WEBHOOK_SECRET should be set when Stripe is enabled")
+        return errors
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
     access_token_expires_minutes: int = Field(
         default=30, alias="JWT_ACCESS_TOKEN_EXPIRE_MINUTES"
@@ -126,6 +142,13 @@ class Settings(BaseSettings):
     ai_gpu_device: int = Field(default=-1, alias="AI_GPU_DEVICE")
     ai_job_timeout_seconds: int = Field(default=600, alias="AI_JOB_TIMEOUT_SECONDS")
     ai_max_concurrent_jobs: int = Field(default=2, alias="AI_MAX_CONCURRENT_JOBS")
+    
+    # Worker authentication secret (for internal AI job workers)
+    worker_secret: str = Field(
+        default="CHANGE_ME_IN_PRODUCTION_WORKER_SECRET",
+        alias="WORKER_SECRET",
+        description="Shared secret for authenticating AI worker endpoints",
+    )
 
     # -------------------------------------------------------------------------
     # Modal.com GPU Orchestration

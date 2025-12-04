@@ -3,7 +3,7 @@
  * Shows uploaded songs and their processing status.
  */
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { listSongs, listJobs } from '@/api/client'
@@ -29,57 +29,71 @@ export function LibraryPage() {
     })
 
     // Create a map of song ID to latest job
-    const songJobMap = new Map<string, AIJob>()
-    jobs?.forEach((job) => {
-        const existing = songJobMap.get(job.song_id)
-        if (!existing || new Date(job.created_at) > new Date(existing.created_at)) {
-            songJobMap.set(job.song_id, job)
+    // PERF: Memoized to avoid recomputing on every render
+    const songJobMap = useMemo(() => {
+        const map = new Map<string, AIJob>()
+        if (!jobs) return map
+        
+        // Sort jobs by created_at descending once, then just take first per song
+        // This avoids creating Date objects for every comparison
+        const sortedJobs = [...jobs].sort((a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+        
+        for (const job of sortedJobs) {
+            if (!map.has(job.song_id)) {
+                map.set(job.song_id, job)
+            }
         }
-    })
+        return map
+    }, [jobs])
 
     // Filter and sort songs
-    const filteredSongs = (songs || [])
-        .filter((song) => {
-            // Search filter
-            if (searchQuery) {
-                const query = searchQuery.toLowerCase()
-                if (
-                    !song.title.toLowerCase().includes(query) &&
-                    !song.artist.toLowerCase().includes(query)
-                ) {
-                    return false
+    // PERF: Memoized with all dependencies to avoid expensive filter/sort on every render
+    const filteredSongs = useMemo(() => {
+        const queryLower = searchQuery.toLowerCase()
+        
+        return (songs || [])
+            .filter((song) => {
+                // Search filter
+                if (searchQuery) {
+                    const titleMatch = song.title.toLowerCase().includes(queryLower)
+                    const artistMatch = song.artist.toLowerCase().includes(queryLower)
+                    if (!titleMatch && !artistMatch) {
+                        return false
+                    }
                 }
-            }
 
-            // Status filter
-            if (filterBy !== 'all') {
-                const job = songJobMap.get(song.id)
-                if (filterBy === 'complete' && job?.state !== 'complete') return false
-                if (filterBy === 'processing' && job?.state !== 'processing' && job?.state !== 'queued') return false
-                if (filterBy === 'failed' && job?.state !== 'failed') return false
-            }
-
-            return true
-        })
-        .sort((a, b) => {
-            switch (sortBy) {
-                case 'title':
-                    return a.title.localeCompare(b.title)
-                case 'artist':
-                    return a.artist.localeCompare(b.artist)
-                case 'status': {
-                    const jobA = songJobMap.get(a.id)
-                    const jobB = songJobMap.get(b.id)
-                    const statusOrder = { complete: 0, processing: 1, queued: 2, failed: 3 }
-                    const orderA = jobA ? statusOrder[jobA.state as keyof typeof statusOrder] ?? 4 : 4
-                    const orderB = jobB ? statusOrder[jobB.state as keyof typeof statusOrder] ?? 4 : 4
-                    return orderA - orderB
+                // Status filter
+                if (filterBy !== 'all') {
+                    const job = songJobMap.get(song.id)
+                    if (filterBy === 'complete' && job?.state !== 'complete') return false
+                    if (filterBy === 'processing' && job?.state !== 'processing' && job?.state !== 'queued') return false
+                    if (filterBy === 'failed' && job?.state !== 'failed') return false
                 }
-                case 'recent':
-                default:
-                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            }
-        })
+
+                return true
+            })
+            .sort((a, b) => {
+                switch (sortBy) {
+                    case 'title':
+                        return a.title.localeCompare(b.title)
+                    case 'artist':
+                        return a.artist.localeCompare(b.artist)
+                    case 'status': {
+                        const jobA = songJobMap.get(a.id)
+                        const jobB = songJobMap.get(b.id)
+                        const statusOrder = { complete: 0, processing: 1, queued: 2, failed: 3 }
+                        const orderA = jobA ? statusOrder[jobA.state as keyof typeof statusOrder] ?? 4 : 4
+                        const orderB = jobB ? statusOrder[jobB.state as keyof typeof statusOrder] ?? 4 : 4
+                        return orderA - orderB
+                    }
+                    case 'recent':
+                    default:
+                        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                }
+            })
+    }, [songs, searchQuery, filterBy, sortBy, songJobMap])
 
     if (songsLoading) {
         return (

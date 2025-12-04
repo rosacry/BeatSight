@@ -245,3 +245,52 @@ class VoteService:
         )
         votes = result.scalars().all()
         return {vote.map_id: vote.vote_type for vote in votes}
+
+    async def get_bulk_vote_counts(
+        self, map_ids: list[uuid.UUID]
+    ) -> dict[uuid.UUID, dict]:
+        """
+        Get vote counts for multiple maps in a SINGLE query.
+        
+        This is an O(1) database call instead of O(n) when fetching
+        counts for n maps individually. Use this for bulk operations.
+
+        Args:
+            map_ids: List of map IDs to get counts for.
+
+        Returns:
+            Dict mapping map_id -> {"upvotes": int, "downvotes": int, "score": int}
+        """
+        if not map_ids:
+            return {}
+
+        result = await self._session.execute(
+            select(
+                MapVote.map_id,
+                func.count(MapVote.id)
+                .filter(MapVote.vote_type == VoteType.UPVOTE)
+                .label("upvotes"),
+                func.count(MapVote.id)
+                .filter(MapVote.vote_type == VoteType.DOWNVOTE)
+                .label("downvotes"),
+            )
+            .where(MapVote.map_id.in_(map_ids))
+            .group_by(MapVote.map_id)
+        )
+
+        counts = {}
+        for row in result.all():
+            upvotes = row.upvotes or 0
+            downvotes = row.downvotes or 0
+            counts[row.map_id] = {
+                "upvotes": upvotes,
+                "downvotes": downvotes,
+                "score": upvotes - downvotes,
+            }
+
+        # Fill in zeros for maps with no votes
+        for map_id in map_ids:
+            if map_id not in counts:
+                counts[map_id] = {"upvotes": 0, "downvotes": 0, "score": 0}
+
+        return counts

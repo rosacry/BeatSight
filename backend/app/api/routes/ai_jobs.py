@@ -37,6 +37,31 @@ from app.services.quota import QuotaExceededError, QuotaService, QuotaStatus
 router = APIRouter(prefix="/ai-jobs", tags=["ai-jobs"])
 
 
+# =============================================================================
+# Worker Authentication Dependency
+# =============================================================================
+
+async def verify_worker_secret(
+    x_worker_secret: str = Header(..., alias="X-Worker-Secret"),
+) -> bool:
+    """Verify worker secret for internal AI worker endpoints.
+    
+    This protects worker-only endpoints (claim, heartbeat, progress, release)
+    from unauthorized access. Without this, anyone could:
+    - Claim jobs meant for legitimate workers
+    - Mark jobs as failed to disrupt service
+    - Send fake progress updates to deceive users
+    """
+    settings = get_settings()
+    if x_worker_secret != settings.worker_secret:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid worker secret",
+            headers={"WWW-Authenticate": "X-Worker-Secret"},
+        )
+    return True
+
+
 def _quota_to_read(status: QuotaStatus) -> QuotaStatusRead:
     """Convert QuotaStatus to Pydantic model."""
     return QuotaStatusRead(
@@ -219,7 +244,10 @@ async def get_job(
 
 
 @router.post(
-    "/{job_id}/heartbeat", status_code=status.HTTP_204_NO_CONTENT, response_model=None
+    "/{job_id}/heartbeat",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+    dependencies=[Depends(verify_worker_secret)],
 )
 async def worker_heartbeat(
     job_id: uuid.UUID,
@@ -232,6 +260,8 @@ async def worker_heartbeat(
     Workers should call this every 30-60 seconds while processing a job.
     Jobs without a heartbeat for 5 minutes are considered stale and can
     be reclaimed by other workers.
+    
+    **Requires X-Worker-Secret header for authentication.**
     """
     service = AIJobService(session)
     job = await service.get_by_id(job_id)
@@ -249,7 +279,10 @@ async def worker_heartbeat(
 
 
 @router.patch(
-    "/{job_id}/progress", status_code=status.HTTP_204_NO_CONTENT, response_model=None
+    "/{job_id}/progress",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+    dependencies=[Depends(verify_worker_secret)],
 )
 async def update_progress(
     job_id: uuid.UUID,
@@ -261,6 +294,8 @@ async def update_progress(
 
     Workers should call this to report progress during long-running jobs.
     Progress is visible to users in the queue UI.
+    
+    **Requires X-Worker-Secret header for authentication.**
     """
     service = AIJobService(session)
     job = await service.get_by_id(job_id)
@@ -274,7 +309,11 @@ async def update_progress(
     )
 
 
-@router.post("/claim", response_model=AIJobRead | None)
+@router.post(
+    "/claim",
+    response_model=AIJobRead | None,
+    dependencies=[Depends(verify_worker_secret)],
+)
 async def claim_job(
     worker_id: uuid.UUID,
     session: AsyncSession = Depends(get_db_session),
@@ -293,7 +332,10 @@ async def claim_job(
 
 
 @router.post(
-    "/{job_id}/release", status_code=status.HTTP_204_NO_CONTENT, response_model=None
+    "/{job_id}/release",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+    dependencies=[Depends(verify_worker_secret)],
 )
 async def release_job(
     job_id: uuid.UUID,
@@ -304,6 +346,8 @@ async def release_job(
 
     Use this when a worker encounters a recoverable error and wants to
     allow another worker to retry the job.
+    
+    **Requires X-Worker-Secret header for authentication.**
     """
     service = AIJobService(session)
     job = await service.get_by_id(job_id)
@@ -315,7 +359,11 @@ async def release_job(
     await service.release_job(job_id)
 
 
-@router.get("/stale/list", response_model=list[AIJobRead])
+@router.get(
+    "/stale/list",
+    response_model=list[AIJobRead],
+    dependencies=[Depends(verify_worker_secret)],
+)
 async def list_stale_jobs(
     threshold_seconds: int = 300,
     session: AsyncSession = Depends(get_db_session),
@@ -325,6 +373,8 @@ async def list_stale_jobs(
 
     Used by orchestration to identify and reclaim jobs from failed workers.
     Default threshold is 5 minutes (300 seconds).
+    
+    **Requires X-Worker-Secret header for authentication.**
     """
     service = AIJobService(session)
     jobs = await service.find_stale_jobs(threshold_seconds)

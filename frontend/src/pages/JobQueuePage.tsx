@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { listJobs, getQuota } from '@/api/client'
 import { JobCard } from '@/components/JobCard'
@@ -26,14 +26,21 @@ export function JobQueuePage() {
         return job.state === filter
     }) ?? []
 
-    const filterCounts = {
-        all: jobs?.length ?? 0,
-        queued: jobs?.filter((j) => j.state === 'queued').length ?? 0,
-        processing: jobs?.filter((j) => j.state === 'processing').length ?? 0,
-        complete: jobs?.filter((j) => j.state === 'complete').length ?? 0,
-        failed: jobs?.filter((j) => j.state === 'failed').length ?? 0,
-        cancelled: jobs?.filter((j) => j.state === 'cancelled').length ?? 0,
-    }
+    // PERF: Single pass through jobs array instead of 5 separate .filter() calls
+    const filterCounts = useMemo(() => {
+        if (!jobs) {
+            return { all: 0, queued: 0, processing: 0, complete: 0, failed: 0, cancelled: 0 }
+        }
+        
+        const counts = { all: jobs.length, queued: 0, processing: 0, complete: 0, failed: 0, cancelled: 0 }
+        for (const job of jobs) {
+            const state = job.state as keyof typeof counts
+            if (state in counts) {
+                counts[state]++
+            }
+        }
+        return counts
+    }, [jobs])
 
     return (
         <div className="space-y-6">

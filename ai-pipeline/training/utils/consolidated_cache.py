@@ -533,6 +533,36 @@ class ConsolidatedCacheReader:
         
         return tensor
     
+    def close(self) -> None:
+        """Close all memory-mapped shards and file handles.
+        
+        CRITICAL: Must be called when done with the cache to prevent resource leaks.
+        With 225+ shards and multiple DataLoader workers, failing to close can
+        exhaust system file descriptors and cause 'Too many open files' errors.
+        """
+        for shard_id, (mm, f) in list(self._mmap_cache.items()):
+            try:
+                mm.close()
+            except Exception:
+                pass
+            try:
+                f.close()
+            except Exception:
+                pass
+        self._mmap_cache.clear()
+    
+    def __del__(self) -> None:
+        """Destructor to ensure resources are freed."""
+        self.close()
+    
+    def __enter__(self) -> "ConsolidatedCacheReader":
+        """Context manager entry."""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Context manager exit - close all resources."""
+        self.close()
+    
     def __len__(self) -> int:
         return self.total_samples
     

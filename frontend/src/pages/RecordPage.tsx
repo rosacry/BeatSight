@@ -87,7 +87,7 @@ export function RecordPage() {
     useEffect(() => {
         let permissionResult: PermissionStatus | null = null
         let handleChange: (() => void) | null = null
-        
+
         async function checkPermission() {
             try {
                 // Try to query permission status (not supported in all browsers)
@@ -115,7 +115,7 @@ export function RecordPage() {
         if (browserSupport.supported) {
             checkPermission()
         }
-        
+
         // Cleanup listener on unmount
         return () => {
             if (permissionResult && handleChange) {

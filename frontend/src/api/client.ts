@@ -73,7 +73,7 @@ export async function listJobs(params: ListJobsParams = {}): Promise<AIJob[]> {
     if (params.songId) searchParams.set('song_id', params.songId)
     if (params.page) searchParams.set('page', params.page.toString())
     if (params.pageSize) searchParams.set('page_size', params.pageSize.toString())
-    
+
     const query = searchParams.toString()
     const response = await request<PaginatedResponse<AIJob>>(`/ai-jobs${query ? `?${query}` : ''}`)
     return response.items
@@ -84,7 +84,7 @@ export async function listJobsPaginated(params: ListJobsParams = {}): Promise<Pa
     if (params.songId) searchParams.set('song_id', params.songId)
     if (params.page) searchParams.set('page', params.page.toString())
     if (params.pageSize) searchParams.set('page_size', params.pageSize.toString())
-    
+
     const query = searchParams.toString()
     return request<PaginatedResponse<AIJob>>(`/ai-jobs${query ? `?${query}` : ''}`)
 }
@@ -254,7 +254,7 @@ export async function listSongs(params: ListSongsParams = {}): Promise<Song[]> {
     const searchParams = new URLSearchParams()
     if (params.page) searchParams.set('page', params.page.toString())
     if (params.pageSize) searchParams.set('page_size', params.pageSize.toString())
-    
+
     const query = searchParams.toString()
     const response = await request<PaginatedResponse<Song>>(`/songs${query ? `?${query}` : ''}`)
     return response.items
@@ -264,7 +264,7 @@ export async function listSongsPaginated(params: ListSongsParams = {}): Promise<
     const searchParams = new URLSearchParams()
     if (params.page) searchParams.set('page', params.page.toString())
     if (params.pageSize) searchParams.set('page_size', params.pageSize.toString())
-    
+
     const query = searchParams.toString()
     return request<PaginatedResponse<Song>>(`/songs${query ? `?${query}` : ''}`)
 }

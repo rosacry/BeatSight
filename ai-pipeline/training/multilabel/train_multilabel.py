@@ -25,6 +25,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import signal
 import sys
 import time
 from pathlib import Path
@@ -493,90 +495,175 @@ def main():
         )
         wandb.watch(model)
     
+    # =========================================================================
+    # CHECKPOINT/RESUME SUPPORT WITH INTERRUPT HANDLING
+    # =========================================================================
+    
+    def _atomic_torch_save(obj: Any, path: Path) -> None:
+        """Save atomically to prevent corruption from Ctrl+C."""
+        temp_path = path.parent / f".{path.name}.tmp"
+        try:
+            torch.save(obj, temp_path)
+            os.replace(temp_path, path)
+        except Exception:
+            if temp_path.exists():
+                temp_path.unlink()
+            raise
+    
+    def save_checkpoint(epoch: int, val_metrics, reason: str = None) -> None:
+        """Save full resumable checkpoint."""
+        checkpoint = {
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'scheduler_state_dict': scheduler.state_dict(),
+            'scaler_state_dict': scaler.state_dict() if scaler else None,
+            'val_metrics': val_metrics.to_dict() if val_metrics else None,
+            'best_val_f1': best_val_f1,
+            'best_epoch': best_epoch,
+            'args': vars(args),
+            'reason': reason,
+        }
+        _atomic_torch_save(checkpoint, output_dir / 'latest_checkpoint.pt')
+        if reason:
+            print(f"✓ Checkpoint saved ({reason}) at epoch {epoch}")
+    
+    # Signal handler for graceful shutdown
+    _shutdown_requested = False
+    
+    def _signal_handler(signum, frame):
+        nonlocal _shutdown_requested
+        sig_name = signal.Signals(signum).name if hasattr(signal, 'Signals') else str(signum)
+        print(f"\n⚠️  Received {sig_name} - will save checkpoint and exit...")
+        _shutdown_requested = True
+    
+    # Register signal handlers
+    signal.signal(signal.SIGINT, _signal_handler)  # Ctrl+C
+    if hasattr(signal, 'SIGTERM'):
+        signal.signal(signal.SIGTERM, _signal_handler)
+    if hasattr(signal, 'SIGHUP'):
+        signal.signal(signal.SIGHUP, _signal_handler)
+    
+    # Resume from checkpoint if exists
+    start_epoch = 1
+    latest_checkpoint = output_dir / 'latest_checkpoint.pt'
+    if latest_checkpoint.exists() and not args.pretrained_checkpoint:
+        print(f"Found checkpoint at {latest_checkpoint}, resuming...")
+        ckpt = torch.load(latest_checkpoint, map_location=device)
+        model.load_state_dict(ckpt['model_state_dict'])
+        optimizer.load_state_dict(ckpt['optimizer_state_dict'])
+        if ckpt.get('scheduler_state_dict'):
+            scheduler.load_state_dict(ckpt['scheduler_state_dict'])
+        if scaler and ckpt.get('scaler_state_dict'):
+            scaler.load_state_dict(ckpt['scaler_state_dict'])
+        start_epoch = ckpt['epoch'] + 1
+        best_val_f1 = ckpt.get('best_val_f1', 0.0)
+        best_epoch = ckpt.get('best_epoch', 0)
+        print(f"  Resuming from epoch {start_epoch}, best F1: {best_val_f1:.4f}")
+    
     # Training loop
-    best_val_f1 = 0.0
-    best_epoch = 0
+    best_val_f1 = best_val_f1 if 'best_val_f1' in dir() else 0.0
+    best_epoch = best_epoch if 'best_epoch' in dir() else 0
+    last_completed_epoch = start_epoch - 1
     
-    print(f"\nStarting training for {args.epochs} epochs...")
+    print(f"\nStarting training from epoch {start_epoch} to {args.epochs}...")
     
-    for epoch in range(1, args.epochs + 1):
-        epoch_start = time.time()
-        
-        # Train
-        train_loss, train_f1 = train_epoch(
-            model, train_loader, criterion, optimizer, device,
-            scaler=scaler, use_amp=args.use_amp,
-        )
-        
-        # Evaluate
-        val_loss, val_metrics = evaluate(
-            model, val_loader, criterion, device,
-            class_names=full_dataset.class_names,
-        )
-        
-        # Update scheduler
-        scheduler.step()
-        
-        epoch_time = time.time() - epoch_start
-        
-        # Print progress
-        print(
-            f"Epoch {epoch:3d}/{args.epochs} | "
-            f"Train Loss: {train_loss:.4f}, F1: {train_f1:.4f} | "
-            f"Val Loss: {val_loss:.4f}, F1: {val_metrics.micro_f1:.4f}, "
-            f"Subset Acc: {val_metrics.subset_accuracy:.4f} | "
-            f"Time: {epoch_time:.1f}s"
-        )
-        
-        # Log to wandb
-        if HAS_WANDB and args.wandb_project:
-            log_dict = {
-                "epoch": epoch,
-                "train/loss": train_loss,
-                "train/micro_f1": train_f1,
-                "val/loss": val_loss,
-                "val/micro_f1": val_metrics.micro_f1,
-                "val/macro_f1": val_metrics.macro_f1,
-                "val/hamming_loss": val_metrics.hamming_loss,
-                "val/subset_accuracy": val_metrics.subset_accuracy,
-                "lr": scheduler.get_last_lr()[0],
-            }
-            # Add per-class F1
-            for name, f1 in val_metrics.per_class_f1.items():
-                log_dict[f"val/f1_{name}"] = f1
-            wandb.log(log_dict)
-        
-        # Save best model
-        if val_metrics.micro_f1 > best_val_f1:
-            best_val_f1 = val_metrics.micro_f1
-            best_epoch = epoch
+    try:
+        for epoch in range(start_epoch, args.epochs + 1):
+            if _shutdown_requested:
+                print(f"\n🛑 Shutdown requested before epoch {epoch}")
+                save_checkpoint(last_completed_epoch, None, "shutdown_signal")
+                break
             
-            checkpoint = {
-                'epoch': epoch,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'val_metrics': val_metrics.to_dict(),
-                'args': vars(args),
-            }
-            torch.save(checkpoint, output_dir / 'best_multilabel_model.pt')
-            print(f"  → New best model saved (F1: {best_val_f1:.4f})")
+            epoch_start = time.time()
+            
+            # Train
+            train_loss, train_f1 = train_epoch(
+                model, train_loader, criterion, optimizer, device,
+                scaler=scaler, use_amp=args.use_amp,
+            )
+            
+            if _shutdown_requested:
+                print(f"\n🛑 Shutdown after training epoch {epoch}")
+                save_checkpoint(epoch, None, "shutdown_after_train")
+                print(f"✓ Resume with checkpoint at: {output_dir / 'latest_checkpoint.pt'}")
+                break
+            
+            # Evaluate
+            val_loss, val_metrics = evaluate(
+                model, val_loader, criterion, device,
+                class_names=full_dataset.class_names,
+            )
+            
+            # Update scheduler
+            scheduler.step()
         
-        # Save periodic checkpoint
-        if epoch % 10 == 0:
-            checkpoint = {
-                'epoch': epoch,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'val_metrics': val_metrics.to_dict(),
-                'args': vars(args),
-            }
-            torch.save(checkpoint, output_dir / f'checkpoint_epoch_{epoch}.pt')
+            epoch_time = time.time() - epoch_start
+            
+            # Print progress
+            print(
+                f"Epoch {epoch:3d}/{args.epochs} | "
+                f"Train Loss: {train_loss:.4f}, F1: {train_f1:.4f} | "
+                f"Val Loss: {val_loss:.4f}, F1: {val_metrics.micro_f1:.4f}, "
+                f"Subset Acc: {val_metrics.subset_accuracy:.4f} | "
+                f"Time: {epoch_time:.1f}s"
+            )
+            
+            # Log to wandb
+            if HAS_WANDB and args.wandb_project:
+                log_dict = {
+                    "epoch": epoch,
+                    "train/loss": train_loss,
+                    "train/micro_f1": train_f1,
+                    "val/loss": val_loss,
+                    "val/micro_f1": val_metrics.micro_f1,
+                    "val/macro_f1": val_metrics.macro_f1,
+                    "val/hamming_loss": val_metrics.hamming_loss,
+                    "val/subset_accuracy": val_metrics.subset_accuracy,
+                    "lr": scheduler.get_last_lr()[0],
+                }
+                # Add per-class F1
+                for name, f1 in val_metrics.per_class_f1.items():
+                    log_dict[f"val/f1_{name}"] = f1
+                wandb.log(log_dict)
+            
+            # Save best model
+            if val_metrics.micro_f1 > best_val_f1:
+                best_val_f1 = val_metrics.micro_f1
+                best_epoch = epoch
+                
+                checkpoint = {
+                    'epoch': epoch,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'val_metrics': val_metrics.to_dict(),
+                    'args': vars(args),
+                }
+                _atomic_torch_save(checkpoint, output_dir / 'best_multilabel_model.pt')
+                print(f"  → New best model saved (F1: {best_val_f1:.4f})")
+            
+            # Save periodic checkpoint (resumable)
+            save_checkpoint(epoch, val_metrics, reason=None)
+            last_completed_epoch = epoch
+            
+            if _shutdown_requested:
+                print(f"\n🛑 Clean shutdown after epoch {epoch}")
+                print(f"✓ Resume with: {output_dir / 'latest_checkpoint.pt'}")
+                break
+        
+        if not _shutdown_requested:
+            # Final summary
+            print(f"\n{'='*60}")
+            print("Training complete!")
+            print(f"Best validation F1: {best_val_f1:.4f} at epoch {best_epoch}")
+            print(f"Best model saved to: {output_dir / 'best_multilabel_model.pt'}")
     
-    # Final summary
-    print(f"\n{'='*60}")
-    print("Training complete!")
-    print(f"Best validation F1: {best_val_f1:.4f} at epoch {best_epoch}")
-    print(f"Best model saved to: {output_dir / 'best_multilabel_model.pt'}")
+    except KeyboardInterrupt:
+        print(f"\n🛑 Training interrupted (Ctrl+C). Saving checkpoint...")
+        save_checkpoint(last_completed_epoch, None, "keyboard_interrupt")
+        print(f"✓ Checkpoint saved. Resume with: {output_dir / 'latest_checkpoint.pt'}")
+        print("Exiting gracefully (checkpoint is safe).")
+        return
     
     # Find optimal thresholds on validation set
     print("\nFinding optimal classification thresholds...")

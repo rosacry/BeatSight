@@ -4501,11 +4501,14 @@ def main():
         print(f"\n⚠️  Received {sig_name} - saving checkpoint and shutting down gracefully...")
         _shutdown_requested = True
     
-    # Register signal handlers (Unix only - Windows doesn't support SIGTERM/SIGHUP the same way)
+    # Register signal handlers for graceful shutdown
+    # SIGINT (Ctrl+C) works on both Unix and Windows
+    # SIGTERM/SIGHUP are Unix-only but useful for kill commands
+    signal.signal(signal.SIGINT, _signal_handler)  # Ctrl+C (Windows + Unix)
     if hasattr(signal, 'SIGTERM'):
-        signal.signal(signal.SIGTERM, _signal_handler)
+        signal.signal(signal.SIGTERM, _signal_handler)  # kill command (Unix)
     if hasattr(signal, 'SIGHUP'):
-        signal.signal(signal.SIGHUP, _signal_handler)
+        signal.signal(signal.SIGHUP, _signal_handler)  # terminal close (Unix)
 
     if args.resume_from:
         if not args.resume_from.exists():
@@ -5035,9 +5038,11 @@ def main():
                     _safe_print(f"⚠ wandb.save() failed: {e} (continuing anyway)")
 
     except KeyboardInterrupt:
-        print("Training interrupted by user. Saving checkpoint before exiting...")
-        save_checkpoint(last_completed_epoch, reason="interrupt")
-        raise
+        print("\n🛑 Training interrupted by user (Ctrl+C). Saving checkpoint...")
+        save_checkpoint(last_completed_epoch, reason="keyboard_interrupt")
+        print(f"✓ Checkpoint saved. Resume with: --resume-from {checkpoint_dir / 'latest_checkpoint.pth'}")
+        print("Exiting gracefully (checkpoint is safe).")
+        return  # Exit cleanly - don't re-raise, checkpoint is already saved
 
     save_checkpoint(last_completed_epoch, reason="complete")
     

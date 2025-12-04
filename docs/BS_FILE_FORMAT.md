@@ -1,4 +1,16 @@
-# BeatSight Beatmap Format (.bs)
+# ⚠️ DEPRECATED - See BEATMAP_FORMAT.md
+
+> **⚠️ This document is DEPRECATED and kept for historical reference only.**
+> 
+> **Please refer to [`BEATMAP_FORMAT.md`](./BEATMAP_FORMAT.md) for the current, authoritative beatmap format specification.**
+> 
+> This document contains outdated information (e.g., PascalCase keys, `.bs` as primary extension) that does not match the current implementation. The actual format uses **camelCase** keys and `.bsm` as the primary extension.
+>
+> **Deprecated:** December 2025
+
+---
+
+# BeatSight Beatmap Format (.bs) - HISTORICAL
 
 BeatSight uses a JSON-based beatmap format with the `.bs` file extension (also supports `.bsm` for backwards compatibility).
 

@@ -30,6 +30,7 @@ from app.api.routes import (
 )
 from app.config import get_settings
 from app.logging import configure_logging, get_logger
+from app.middleware.request_id import RequestIdMiddleware
 
 configure_logging()
 logger = get_logger(__name__)
@@ -159,6 +160,10 @@ Authorization: Bearer <access_token>
         },
     ],
 )
+
+# Add request ID middleware for request tracing
+app.add_middleware(RequestIdMiddleware)
+logger.info("request_id_middleware_enabled")
 
 # Set up Prometheus metrics (conditionally to avoid import errors in tests)
 try:

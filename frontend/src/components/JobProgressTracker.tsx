@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import type { AIJob } from '@/types/api'
 import { subscribeToJobProgress, type JobProgressUpdate, type JobCompleteEvent } from '@/api/client'
 import { ProgressBar } from './ProgressBar'
@@ -24,6 +24,12 @@ export function JobProgressTracker({ job, onComplete }: JobProgressTrackerProps)
     const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected')
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
+    // Use refs to store latest callbacks to avoid re-subscription on callback changes
+    const onCompleteRef = useRef(onComplete)
+    useEffect(() => {
+        onCompleteRef.current = onComplete
+    }, [onComplete])
+
     const handleProgress = useCallback((update: JobProgressUpdate) => {
         setProgress({
             percent: update.percent,
@@ -36,8 +42,8 @@ export function JobProgressTracker({ job, onComplete }: JobProgressTrackerProps)
 
     const handleComplete = useCallback((event?: JobCompleteEvent) => {
         setConnectionStatus('disconnected')
-        onComplete?.(event?.beatmap_id)
-    }, [onComplete])
+        onCompleteRef.current?.(event?.beatmap_id)
+    }, [])
 
     const handleError = useCallback((error: Error) => {
         setConnectionStatus('error')
@@ -50,16 +56,26 @@ export function JobProgressTracker({ job, onComplete }: JobProgressTrackerProps)
             return
         }
 
+        // Track if effect is still active (for cleanup race conditions)
+        let isActive = true
+
         const unsubscribe = subscribeToJobProgress(
             job.id,
-            handleProgress,
-            handleComplete,
-            handleError
+            (update) => {
+                if (isActive) handleProgress(update)
+            },
+            (event) => {
+                if (isActive) handleComplete(event)
+            },
+            (error) => {
+                if (isActive) handleError(error)
+            }
         )
 
         setConnectionStatus('connected')
 
         return () => {
+            isActive = false
             unsubscribe()
             setConnectionStatus('disconnected')
         }

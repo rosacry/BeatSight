@@ -90,9 +90,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                     hitObjectInfos.Add(new HitObjectInfo
                     {
                         Index = i,
-                        TimeMs = ho.StartTimeMs,
-                        ComponentName = ho.ComponentName ?? "snare",
-                        XPosition = ManuscriptBackgroundEnhanced.GetStaffPositionForComponent(ho.ComponentName ?? "snare"),
+                        TimeMs = ho.Time,
+                        ComponentName = ho.Component ?? "snare",
+                        XPosition = ManuscriptBackgroundEnhanced.GetStaffPositionForComponent(ho.Component ?? "snare"),
                         YPosition = 0 // Will be calculated dynamically based on scroll position
                     });
                 }

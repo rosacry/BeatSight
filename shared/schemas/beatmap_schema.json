@@ -1,0 +1,508 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://beatsight.app/schemas/beatmap/v1.0.0",
+    "title": "BeatSight Beatmap Schema",
+    "description": "JSON Schema for BeatSight .bsm beatmap format (v1.0.0)",
+    "type": "object",
+    "required": [
+        "version",
+        "metadata",
+        "audio",
+        "timing",
+        "drumKit",
+        "hitObjects"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "version": {
+            "type": "string",
+            "description": "Format version (semantic versioning)",
+            "pattern": "^\\d+\\.\\d+\\.\\d+$",
+            "examples": [
+                "1.0.0",
+                "1.1.0"
+            ]
+        },
+        "metadata": {
+            "$ref": "#/$defs/metadata"
+        },
+        "audio": {
+            "$ref": "#/$defs/audio"
+        },
+        "timing": {
+            "$ref": "#/$defs/timing"
+        },
+        "drumKit": {
+            "$ref": "#/$defs/drumKit"
+        },
+        "hitObjects": {
+            "type": "array",
+            "description": "Array of drum hits, should be sorted by time (ascending)",
+            "items": {
+                "$ref": "#/$defs/hitObject"
+            }
+        },
+        "editor": {
+            "$ref": "#/$defs/editor"
+        }
+    },
+    "$defs": {
+        "metadata": {
+            "type": "object",
+            "description": "Song and beatmap metadata",
+            "required": [
+                "title",
+                "artist",
+                "creator",
+                "difficulty",
+                "beatmapId",
+                "createdAt",
+                "modifiedAt"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "Song title",
+                    "minLength": 1,
+                    "maxLength": 256
+                },
+                "artist": {
+                    "type": "string",
+                    "description": "Song artist/band",
+                    "minLength": 1,
+                    "maxLength": 256
+                },
+                "creator": {
+                    "type": "string",
+                    "description": "Beatmap creator username",
+                    "minLength": 1,
+                    "maxLength": 64
+                },
+                "source": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Source (album, game, etc.)",
+                    "maxLength": 256
+                },
+                "tags": {
+                    "type": "array",
+                    "description": "Search tags (genre, style, etc.)",
+                    "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32,
+                        "pattern": "^[a-z0-9-]+$"
+                    },
+                    "uniqueItems": true,
+                    "maxItems": 20
+                },
+                "difficulty": {
+                    "type": "number",
+                    "description": "Difficulty rating (0.0 - 10.0)",
+                    "minimum": 0.0,
+                    "maximum": 10.0
+                },
+                "previewTime": {
+                    "type": "integer",
+                    "description": "Preview start time in milliseconds",
+                    "minimum": 0
+                },
+                "beatmapId": {
+                    "type": "string",
+                    "description": "Unique identifier (UUID format recommended)",
+                    "minLength": 1,
+                    "maxLength": 64
+                },
+                "createdAt": {
+                    "type": "string",
+                    "description": "Creation timestamp (ISO 8601 format)",
+                    "format": "date-time"
+                },
+                "modifiedAt": {
+                    "type": "string",
+                    "description": "Last modification timestamp (ISO 8601 format)",
+                    "format": "date-time"
+                },
+                "description": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Optional description/notes",
+                    "maxLength": 2048
+                },
+                "provider": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Content provider/mapping group",
+                    "maxLength": 128
+                },
+                "releaseDate": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Original song release date (YYYY-MM-DD format)",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                }
+            }
+        },
+        "audio": {
+            "type": "object",
+            "description": "Audio file information",
+            "required": [
+                "filename",
+                "hash",
+                "duration",
+                "sampleRate"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "filename": {
+                    "type": "string",
+                    "description": "Main audio file (relative path)",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[^<>:\"/\\|?*]+\\.(mp3|wav|ogg|flac|m4a)$"
+                },
+                "hash": {
+                    "type": "string",
+                    "description": "SHA-256 hash (for integrity verification)",
+                    "pattern": "^sha256:[a-f0-9]{64}$"
+                },
+                "duration": {
+                    "type": "integer",
+                    "description": "Duration in milliseconds",
+                    "minimum": 1000,
+                    "maximum": 3600000
+                },
+                "sampleRate": {
+                    "type": "integer",
+                    "description": "Sample rate in Hz",
+                    "enum": [
+                        22050,
+                        44100,
+                        48000,
+                        88200,
+                        96000
+                    ]
+                },
+                "drumStem": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Isolated drum track filename",
+                    "maxLength": 256
+                },
+                "drumStemHash": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "SHA-256 hash of drum stem",
+                    "pattern": "^sha256:[a-f0-9]{64}$"
+                }
+            }
+        },
+        "timing": {
+            "type": "object",
+            "description": "BPM and timing configuration",
+            "required": [
+                "bpm",
+                "offset",
+                "timeSignature"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "bpm": {
+                    "type": "number",
+                    "description": "Base BPM (beats per minute)",
+                    "minimum": 20.0,
+                    "maximum": 400.0
+                },
+                "offset": {
+                    "type": "integer",
+                    "description": "Global timing offset in milliseconds",
+                    "minimum": -10000,
+                    "maximum": 10000
+                },
+                "timeSignature": {
+                    "type": "string",
+                    "description": "Default time signature (e.g., '4/4')",
+                    "pattern": "^[1-9][0-9]?/[1248]$",
+                    "examples": [
+                        "4/4",
+                        "3/4",
+                        "6/8",
+                        "5/4",
+                        "7/8"
+                    ]
+                },
+                "timingPoints": {
+                    "type": "array",
+                    "description": "BPM/timing changes during song",
+                    "items": {
+                        "$ref": "#/$defs/timingPoint"
+                    }
+                }
+            }
+        },
+        "timingPoint": {
+            "type": "object",
+            "description": "A BPM or time signature change",
+            "required": [
+                "time",
+                "bpm"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "time": {
+                    "type": "integer",
+                    "description": "Time in milliseconds",
+                    "minimum": 0
+                },
+                "bpm": {
+                    "type": "number",
+                    "description": "New BPM value",
+                    "minimum": 20.0,
+                    "maximum": 400.0
+                },
+                "timeSignature": {
+                    "type": "string",
+                    "description": "New time signature (optional)",
+                    "pattern": "^[1-9][0-9]?/[1248]$"
+                }
+            }
+        },
+        "drumKit": {
+            "type": "object",
+            "description": "Drum kit component definition",
+            "required": [
+                "components"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "components": {
+                    "type": "array",
+                    "description": "List of drum parts used in this beatmap",
+                    "items": {
+                        "$ref": "#/$defs/drumComponent"
+                    },
+                    "minItems": 1,
+                    "uniqueItems": true
+                },
+                "layout": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Preset kit layout identifier",
+                    "enum": [
+                        null,
+                        "standard_5piece",
+                        "standard_4piece",
+                        "standard_6piece",
+                        "electronic",
+                        "custom"
+                    ]
+                },
+                "customSamples": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "description": "Custom sample file mappings",
+                    "additionalProperties": {
+                        "type": "string",
+                        "description": "Relative path to custom sample file"
+                    }
+                }
+            }
+        },
+        "drumComponent": {
+            "type": "string",
+            "description": "Drum component identifier",
+            "enum": [
+                "kick",
+                "snare",
+                "hihat_closed",
+                "hihat_open",
+                "hihat_pedal",
+                "crash",
+                "crash2",
+                "ride",
+                "ride_bell",
+                "china",
+                "splash",
+                "tom_high",
+                "tom_mid",
+                "tom_low",
+                "cowbell",
+                "tambourine"
+            ]
+        },
+        "hitObject": {
+            "type": "object",
+            "description": "A single drum hit",
+            "required": [
+                "time",
+                "component"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "time": {
+                    "type": "integer",
+                    "description": "Hit time in milliseconds",
+                    "minimum": 0
+                },
+                "component": {
+                    "type": "string",
+                    "description": "Drum component ID (must be in drumKit.components)",
+                    "minLength": 1
+                },
+                "velocity": {
+                    "type": "number",
+                    "description": "Hit velocity (0.0 - 1.0, default 0.8)",
+                    "minimum": 0.0,
+                    "maximum": 1.0,
+                    "default": 0.8
+                },
+                "lane": {
+                    "type": "integer",
+                    "description": "Visual lane/track number (for rendering)",
+                    "minimum": 0,
+                    "maximum": 15
+                },
+                "duration": {
+                    "type": "integer",
+                    "description": "Sustain duration in ms (for cymbals/open hi-hat)",
+                    "minimum": 0,
+                    "maximum": 10000
+                }
+            }
+        },
+        "editor": {
+            "type": "object",
+            "description": "Editor-specific settings and metadata (doesn't affect playback)",
+            "additionalProperties": false,
+            "properties": {
+                "snapDivisor": {
+                    "type": "integer",
+                    "description": "Note snap divisor (1, 2, 4, 8, 16, etc.)",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        6,
+                        8,
+                        12,
+                        16,
+                        24,
+                        32,
+                        48,
+                        64
+                    ]
+                },
+                "visualLanes": {
+                    "type": "integer",
+                    "description": "Number of visual lanes",
+                    "minimum": 3,
+                    "maximum": 12,
+                    "default": 7
+                },
+                "bookmarks": {
+                    "type": "array",
+                    "description": "Bookmarked times in milliseconds",
+                    "items": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "uniqueItems": true
+                },
+                "aiGenerationMetadata": {
+                    "$ref": "#/$defs/aiGenerationMetadata"
+                },
+                "timelineZoom": {
+                    "type": "number",
+                    "description": "Editor timeline zoom level",
+                    "minimum": 0.1,
+                    "maximum": 10.0,
+                    "default": 1.0
+                },
+                "waveformScale": {
+                    "type": "number",
+                    "description": "Waveform display scale",
+                    "minimum": 0.1,
+                    "maximum": 10.0,
+                    "default": 1.0
+                },
+                "beatGridVisible": {
+                    "type": "boolean",
+                    "description": "Whether beat grid overlay is visible",
+                    "default": true
+                }
+            }
+        },
+        "aiGenerationMetadata": {
+            "type": "object",
+            "description": "AI processing information",
+            "additionalProperties": false,
+            "properties": {
+                "modelVersion": {
+                    "type": "string",
+                    "description": "AI model version used",
+                    "maxLength": 64
+                },
+                "confidence": {
+                    "type": "number",
+                    "description": "Average confidence score (0.0 - 1.0)",
+                    "minimum": 0.0,
+                    "maximum": 1.0
+                },
+                "processedAt": {
+                    "type": "string",
+                    "description": "Processing timestamp (ISO 8601)",
+                    "format": "date-time"
+                },
+                "manualEdits": {
+                    "type": "boolean",
+                    "description": "Whether map was manually edited after AI generation",
+                    "default": false
+                },
+                "quantization": {
+                    "type": "string",
+                    "description": "Quantization level used during generation",
+                    "enum": [
+                        "quarter",
+                        "eighth",
+                        "sixteenth",
+                        "thirty_second"
+                    ]
+                },
+                "separationModel": {
+                    "type": "string",
+                    "description": "Drum separation model used",
+                    "maxLength": 64
+                },
+                "metadataProvider": {
+                    "type": "string",
+                    "description": "Source of metadata (e.g., 'handcrafted-reference', 'ai-detected')",
+                    "maxLength": 64
+                },
+                "metadataConfidence": {
+                    "type": "number",
+                    "description": "Confidence score for metadata detection",
+                    "minimum": 0.0,
+                    "maximum": 1.0
+                }
+            }
+        }
+    }
+}

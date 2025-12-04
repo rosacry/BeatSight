@@ -9,17 +9,14 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
+from redis.asyncio import Redis
 
 from app.api.deps import get_current_user_ws, get_redis
 from app.logging import get_logger
 from app.models.user import User
-
-if TYPE_CHECKING:
-    from redis.asyncio import Redis
 
 logger = get_logger(__name__)
 

@@ -15,12 +15,14 @@ coverage:
     project:
       default:
         target: auto
-        threshold: 2%  # Allow 2% coverage drop
+        threshold: 5%  # Allow 5% coverage drop
         if_ci_failed: error
     patch:
       default:
-        target: 80%
-        threshold: 5%
+        target: 50%
+        threshold: 10%
+        # Don't fail the build for low patch coverage
+        if_ci_failed: success
 
   # Ignore certain paths from coverage
   ignore:

@@ -144,7 +144,7 @@ jobs:
           JWT_SECRET_KEY: test-secret-key
       
       - name: Upload coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: backend/coverage.xml
           flags: backend

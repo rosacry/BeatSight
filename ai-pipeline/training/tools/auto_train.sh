@@ -2461,38 +2461,45 @@ ENSEMBLE_PY
             # → Fewer workers (CPU bound on consumer hardware)
             # → Gradient checkpointing (reduces VRAM at cost of speed)
             #
-            # Expected performance on 3080 Ti:
-            # → ~3-4 hours per epoch
-            # → ~60-80 hours for 20 epochs
+            # TUNED FOR: 3080 Ti + 9800X3D + 32GB DDR5 + Samsung 980 Pro NVMe
+            # → Batch 384 (pushes 12GB VRAM with grad checkpointing)
+            # → 12 workers (9800X3D can handle it with fast NVMe)
+            # → Prefetch 6 (NVMe is fast enough)
+            #
+            # Expected performance on 3080 Ti + 9800X3D:
+            # → ~2-3 hours per epoch
+            # → ~40-60 hours for 20 epochs
             # → FREE (just electricity!)
             # =====================================================================
             
-            log "🖥️  Starting V5 LOCAL training (optimized for consumer GPUs)..."
-            log "   💾 VRAM: Optimized for 12GB (3080 Ti, 3090, 4070 Super, etc.)"
+            log "🖥️  Starting V5 LOCAL training (tuned for 3080 Ti + 9800X3D)..."
+            log "   💾 VRAM: 12GB 3080 Ti with gradient checkpointing"
+            log "   🧠 CPU: 9800X3D - excellent single-thread for data loading"
+            log "   💨 Storage: Samsung 980 Pro NVMe (7000 MB/s reads)"
             log ""
-            log "   ⚡ LOCAL GPU OPTIMIZATIONS:"
-            log "      → Batch size: 256 (fits in 12GB VRAM)"
-            log "      → Gradient accumulation: 8 (effective batch = 2048)"
-            log "      → float16 precision (better Ampere/Ada support)"
-            log "      → Gradient checkpointing (saves ~30% VRAM)"
-            log "      → torch.compile disabled (avoid Windows/driver issues)"
-            log "      → 8 workers (good for consumer CPUs)"
+            log "   ⚡ OPTIMIZED SETTINGS:"
+            log "      → Batch size: 384 (max for 12GB with grad checkpoint)"
+            log "      → Gradient accumulation: 6 (effective batch = 2304)"
+            log "      → float16 precision (optimal for Ampere)"
+            log "      → Gradient checkpointing enabled"
+            log "      → 12 workers + prefetch 6 (9800X3D + NVMe can handle it)"
             log ""
             log "   ⏱️  Expected time:"
-            log "      → ~3-4 hours per epoch"
-            log "      → ~60-80 hours for 20 epochs"
-            log "      → ~150-200 hours for 50 epochs"
+            log "      → ~2-3 hours per epoch"
+            log "      → ~40-60 hours for 20 epochs"
             log ""
             log "   💰 Cost: FREE (just electricity!)"
             log ""
             export WANDB_RUN_GROUP=v5_local_auto
             
-            # LOCAL GPU FLAGS - Conservative for consumer hardware
-            LOCAL_BATCH_SIZE="256"
-            LOCAL_GRAD_ACCUM="8"  # 256 * 8 = 2048 effective
+            # TUNED FOR 3080 Ti + 9800X3D + Samsung 980 Pro
+            LOCAL_BATCH_SIZE="384"
+            LOCAL_GRAD_ACCUM="6"  # 384 * 6 = 2304 effective (close to cloud's 2048)
             LOCAL_AMP_DTYPE="float16"
-            LOCAL_NUM_WORKERS="8"
-            LOCAL_VAL_WORKERS="4"
+            LOCAL_NUM_WORKERS="12"  # 9800X3D has great single-thread, NVMe is fast
+            LOCAL_VAL_WORKERS="6"
+            LOCAL_PREFETCH="6"      # NVMe can keep up
+            LOCAL_VAL_PREFETCH="4"
             
             # Same proven techniques as v5-full-cached-simple
             LOCAL_MODEL_FLAGS="--model-version v5 --v5-size large --drop-path-rate 0.15"
@@ -2505,7 +2512,7 @@ ENSEMBLE_PY
             LOCAL_SWA_FLAGS="--use-swa --swa-start 0.75"
             LOCAL_FMIX_FLAGS="--use-fmix --fmix-alpha 0.5"
             LOCAL_EARLY_STOPPING="--early-stopping --early-stopping-patience 15 --early-stopping-min-delta 0.001 --early-stopping-warmup 5"
-            # Gradient checkpointing to reduce VRAM usage
+            # Gradient checkpointing to reduce VRAM usage (required for batch 384)
             LOCAL_GRAD_CHECKPOINT="--gradient-checkpointing"
             
             # Check for existing checkpoint to resume from
@@ -2539,7 +2546,7 @@ ENSEMBLE_PY
               --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
               --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
               --device cuda \
-              --num-workers ${LOCAL_NUM_WORKERS} --val-num-workers ${LOCAL_VAL_WORKERS} --prefetch-factor 4 --val-prefetch-factor 2 \
+              --num-workers ${LOCAL_NUM_WORKERS} --val-num-workers ${LOCAL_VAL_WORKERS} --prefetch-factor ${LOCAL_PREFETCH} --val-prefetch-factor ${LOCAL_VAL_PREFETCH} \
               --persistent-workers \
               --pin-memory --amp-dtype ${LOCAL_AMP_DTYPE} \
               --epochs 100 \

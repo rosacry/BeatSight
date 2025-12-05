@@ -271,7 +271,9 @@ class JobProcessor:
             raise  # Re-raise to allow proper cancellation handling
         except Exception as e:
             # Unexpected error - log full stack trace for debugging
-            log.exception("Unexpected job failure", error=str(e), error_type=type(e).__name__)
+            log.exception(
+                "Unexpected job failure", error=str(e), error_type=type(e).__name__
+            )
             return False
         finally:
             self._stop_heartbeat()
@@ -286,7 +288,7 @@ class JobProcessor:
         self, song: dict[str, Any], log: structlog.BoundLogger
     ) -> Path | None:
         """Download audio file from storage.
-        
+
         Raises:
             AudioDownloadError: If download fails after all retries.
         """
@@ -326,7 +328,7 @@ class JobProcessor:
         log: structlog.BoundLogger,
     ) -> dict[str, Any]:
         """Run the beatmap generation pipeline.
-        
+
         Raises:
             AudioProcessingError: If pipeline processing fails.
         """
@@ -371,7 +373,7 @@ class JobProcessor:
         log: structlog.BoundLogger,
     ) -> bool:
         """Upload generated beatmap to storage.
-        
+
         Raises:
             ResultUploadError: If upload fails.
         """
@@ -382,7 +384,7 @@ class JobProcessor:
             raise ResultUploadError("Beatmap file not found", uri=str(beatmap_path))
 
         uri: str | None = None
-        
+
         try:
             storage = get_storage_client()
 

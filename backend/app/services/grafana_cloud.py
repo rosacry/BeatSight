@@ -120,7 +120,7 @@ class GrafanaCloudPusher:
 
     def _prometheus_to_otlp(self) -> dict[str, Any]:
         """Convert Prometheus metrics to OTLP JSON format."""
-        from prometheus_client import generate_latest, REGISTRY
+        from prometheus_client import generate_latest
 
         # Get current metrics in Prometheus text format
         metrics_text = generate_latest(REGISTRY).decode("utf-8")
@@ -200,8 +200,14 @@ class GrafanaCloudPusher:
                 {
                     "resource": {
                         "attributes": [
-                            {"key": "service.name", "value": {"stringValue": "beatsight-backend"}},
-                            {"key": "service.version", "value": {"stringValue": "1.0.0"}},
+                            {
+                                "key": "service.name",
+                                "value": {"stringValue": "beatsight-backend"},
+                            },
+                            {
+                                "key": "service.version",
+                                "value": {"stringValue": "1.0.0"},
+                            },
                         ]
                     },
                     "scopeMetrics": [

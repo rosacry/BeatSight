@@ -4,8 +4,10 @@
 
 import type { AIJob, AIJobEnqueueResponse, QuotaStatus, Song } from '@/types/api'
 import { getAccessToken } from '@/stores/authStore'
+import { createLogger } from '@/lib/logger'
 
 const API_BASE = '/api'
+const sseLogger = createLogger('SSE')
 
 /** Generic paginated response wrapper */
 export interface PaginatedResponse<T> {
@@ -330,7 +332,7 @@ export function subscribeToJobProgress(
                 stage: null,
             })
         } catch (e) {
-            console.error('Failed to parse SSE status message:', e)
+            sseLogger.error('Failed to parse SSE status message', e)
         }
     })
 
@@ -345,7 +347,7 @@ export function subscribeToJobProgress(
                 timestamp: data.timestamp,
             })
         } catch (e) {
-            console.error('Failed to parse SSE progress message:', e)
+            sseLogger.error('Failed to parse SSE progress message', e)
         }
     })
 

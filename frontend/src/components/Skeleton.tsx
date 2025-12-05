@@ -1,21 +1,29 @@
 /**
  * Loading skeleton components for content placeholders.
+ * Provides visual loading indicators with proper accessibility.
  */
 
 import clsx from 'clsx';
 
 interface SkeletonProps {
     className?: string;
+    /** Accessible label for screen readers */
+    label?: string;
 }
 
-export function Skeleton({ className }: SkeletonProps) {
+export function Skeleton({ className, label = 'Loading' }: SkeletonProps) {
     return (
         <div
             className={clsx(
                 'animate-pulse bg-gray-700 rounded',
                 className
             )}
-        />
+            role="status"
+            aria-label={label}
+            aria-busy="true"
+        >
+            <span className="sr-only">{label}...</span>
+        </div>
     );
 }
 

@@ -121,23 +121,84 @@ def report_gpu_metrics():
 
 ## Grafana Cloud Setup
 
-For Grafana Cloud users:
+For Grafana Cloud users (14-day free trial, then free tier available):
 
-1. Create a free account at [grafana.com](https://grafana.com)
-2. Create a Prometheus data source pointing to your metrics endpoint
-3. Import the dashboard JSON
-4. Set up alert notification channels (Slack, PagerDuty, etc.)
+### Step 1: Create Account
+1. Go to [grafana.com](https://grafana.com) and sign up
+2. You'll see the "Get started" page with quickstarts
 
-## Local Development
+### Step 2: Connect Prometheus Metrics
+1. Click **"Prometheus metrics"** on the Get started page
+2. Choose **"From my local Prometheus server"** or **"From my application"**
+3. Copy the remote write URL provided (looks like `https://prometheus-xxx.grafana.net/api/prom/push`)
+4. Copy the username (numeric ID) and generate an API key
 
-For local testing with Docker:
+### Step 3: Configure Your Backend
+Add remote write to your Prometheus or configure the backend to push directly:
+
+**Option A: Prometheus Remote Write**
+Add to your `prometheus.yml`:
+```yaml
+remote_write:
+  - url: https://prometheus-xxx.grafana.net/api/prom/push
+    basic_auth:
+      username: YOUR_GRAFANA_CLOUD_USER_ID
+      password: YOUR_GRAFANA_CLOUD_API_KEY
+```
+
+**Option B: Direct Push from Backend (Grafana Agent)**
+Install Grafana Agent and configure it to scrape `localhost:8000/metrics`
+
+### Step 4: Import Dashboard
+1. In Grafana Cloud, go to **Dashboards → Import**
+2. Upload `monitoring/grafana/dashboards/modal-workers.json`
+3. Select your Prometheus data source
+4. Click **Import**
+
+### Step 5: Configure Alerts (Optional)
+1. Go to **Alerting → Alert rules**
+2. Import rules from `monitoring/prometheus/rules/beatsight-alerts.yml`
+3. Configure notification channels (Slack, email, PagerDuty) under **Contact points**
+
+## Local Development Stack
+
+For local testing with Docker Compose:
 
 ```bash
-# Start Prometheus and Grafana
-docker-compose -f monitoring/docker-compose.yml up -d
+# Start Prometheus and Grafana locally
+docker-compose -f docker-compose.monitoring.yml up -d
 
-# Access Grafana at http://localhost:3000 (admin/admin)
-# Access Prometheus at http://localhost:9090
+# Access:
+# - Grafana:    http://localhost:3001 (admin/beatsight)
+# - Prometheus: http://localhost:9090
+
+# Stop the stack
+docker-compose -f docker-compose.monitoring.yml down
+```
+
+The local stack auto-provisions:
+- Prometheus as default data source
+- BeatSight dashboards folder
+- Scrapes backend at `host.docker.internal:8000/metrics`
+
+### Verify Backend Metrics
+
+Before setting up Grafana, verify your backend exposes metrics:
+
+```bash
+# Start your backend
+cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+# Check metrics endpoint
+curl http://localhost:8000/metrics
+```
+
+You should see Prometheus-formatted metrics like:
+```
+# HELP http_requests_total Total HTTP requests
+# TYPE http_requests_total counter
+http_requests_total{method="GET",path="/health",status="200"} 42.0
+...
 ```
 
 ## Runbook Links

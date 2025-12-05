@@ -156,3 +156,89 @@ The frontend connects to the BeatSight backend API at `/api/v1`. Configure the A
 
 1. Create component in `src/components/`
 2. Export from `src/components/index.ts`
+
+## PWA Testing Guide
+
+BeatSight is a Progressive Web App (PWA) that can be installed on mobile devices. Follow this guide to test PWA functionality.
+
+### Prerequisites
+
+- Build the production version: `npm run build`
+- Serve with HTTPS (required for PWA): `npm run preview` or use a tool like `ngrok`
+- Device and browser ready for testing
+
+### Testing on Android (Chrome)
+
+1. **Open the site in Chrome** on your Android device
+2. **Look for the install prompt** - Chrome shows a banner at the bottom
+3. **Or use the menu** - Tap ⋮ → "Add to Home Screen" or "Install App"
+4. **Verify installation:**
+   - App icon appears on home screen
+   - Opens in standalone mode (no browser chrome)
+   - Works offline (cached pages load without network)
+
+### Testing on iOS (Safari)
+
+> **⚠️ Note:** iOS PWA debugging requires a Mac with Safari. If you only have an iOS device (no Mac), you can still test the install flow and basic functionality, but cannot access Safari Web Inspector for debugging.
+
+1. **Open the site in Safari** on your iPhone/iPad
+2. **Tap the Share button** (square with arrow)
+3. **Scroll down and tap "Add to Home Screen"**
+4. **Name the app** and tap "Add"
+5. **Verify installation:**
+   - App icon appears on home screen
+   - Opens in standalone mode
+   - Splash screen shows on launch
+
+### iOS Testing Without a Mac
+
+If you don't have access to macOS for Safari Web Inspector:
+
+1. **Use Eruda for on-device debugging** - Add `eruda` script to test builds for a mobile console
+2. **Check manifest directly** - Visit `/manifest.json` in Safari to verify it loads
+3. **Test offline manually** - Enable Airplane Mode after first visit
+4. **Console logs via alert** - For critical debugging, use `alert()` temporarily
+5. **Use BrowserStack/Sauce Labs** - Cloud-based iOS testing with debugging tools
+
+### PWA Feature Checklist
+
+| Feature | How to Test | Expected Behavior |
+|---------|-------------|-------------------|
+| **Install Prompt** | Visit site, wait 30s | Banner appears on Android |
+| **Offline Mode** | Enable airplane mode after loading | Cached pages load, offline indicator shows |
+| **App Icon** | Check home screen after install | BeatSight icon with correct artwork |
+| **Splash Screen** | Launch from home screen | Branded splash while loading |
+| **Standalone Mode** | Launch from home screen | No browser URL bar or navigation |
+| **Push Notifications** | Enable in settings (if supported) | Test notification appears |
+| **Update Prompt** | Deploy new version, revisit | "New version available" toast |
+
+### Debugging PWA Issues
+
+**Chrome DevTools (Desktop):**
+```bash
+# Open DevTools → Application tab
+# - Manifest: Check manifest.json parsing
+# - Service Workers: Verify registration
+# - Cache Storage: Inspect cached assets
+```
+
+**Android Remote Debugging:**
+1. Enable USB debugging on Android device
+2. Connect device via USB
+3. Open `chrome://inspect` on desktop Chrome
+4. Click "inspect" under your device
+
+**iOS Remote Debugging:**
+1. Enable Web Inspector in iOS Settings → Safari → Advanced
+2. Connect device via USB
+3. Open Safari on Mac → Develop menu → [Device name]
+
+### Common Issues
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| No install prompt | Not HTTPS or already installed | Use HTTPS, uninstall first |
+| Offline not working | Service worker not registered | Check SW registration in DevTools |
+| Old version cached | SW cache not updated | Clear site data, hard refresh |
+| Icon not showing | Manifest icons misconfigured | Verify manifest.json paths |
+

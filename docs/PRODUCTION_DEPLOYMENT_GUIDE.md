@@ -8,8 +8,11 @@
 
 ## 📋 Executive Summary
 
-**Where You Are:** Step 14 (Label Audit) running locally  
-**Where You're Going:** Production deployment on Modal with revolutionary speed  
+**This guide covers CLOUD training on Lambda Labs H100.** For local GPU training (RTX 3080 Ti), see `docs/PATH_TO_90_PERCENT.md`.
+
+**Cloud Path:** `14 → 17a → 17d → 17e → 19 → 19c` (Lambda H100, ~40 hours, ~$100)  
+**Local Path:** `14 → 17a → 17d-balanced → 17e-local → 19 → 19c` (RTX 3080 Ti, ~8-14 days, free)
+
 **Estimated Time:** ~40 hours total (~3 hours local + ~37 hours cloud)  
 **Estimated Cost:** ~$91-100 Lambda Labs + ~$5-10/month Modal
 

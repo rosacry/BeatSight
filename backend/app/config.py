@@ -267,6 +267,20 @@ class Settings(BaseSettings):
     )
 
     # -------------------------------------------------------------------------
+    # Grafana Cloud (Metrics Push)
+    # -------------------------------------------------------------------------
+    grafana_cloud_enabled: bool = Field(default=False, alias="GRAFANA_CLOUD_ENABLED")
+    grafana_cloud_instance_id: Optional[str] = Field(
+        default=None, alias="GRAFANA_CLOUD_INSTANCE_ID"
+    )
+    grafana_cloud_api_key: Optional[str] = Field(
+        default=None, alias="GRAFANA_CLOUD_API_KEY"
+    )
+    grafana_cloud_push_interval: int = Field(
+        default=60, alias="GRAFANA_CLOUD_PUSH_INTERVAL"
+    )
+
+    # -------------------------------------------------------------------------
     # Feature Flags
     # -------------------------------------------------------------------------
     feature_community: bool = Field(default=True, alias="FEATURE_COMMUNITY")

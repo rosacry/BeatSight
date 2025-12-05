@@ -1,8 +1,12 @@
 # BeatSight Engineering Action Tracker
 
+> ⚠️ **DEPRECATED:** This document has been superseded by **`BEATSIGHT_WORK_TRACKER.md`**.
+> Please use the new consolidated tracker for all current work tracking.
+> This file is kept for historical reference only.
+
 > **Created:** December 3, 2025  
 > **Last Updated:** December 4, 2025  
-> **Status:** ✅ Complete
+> **Status:** ✅ Complete (ARCHIVED)
 
 This document tracks all engineering work identified during the comprehensive codebase analysis. Each item must be completed - no skipping or avoiding issues.
 

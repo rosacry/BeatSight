@@ -1,0 +1,47 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Alertmanager configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+# Rule files
+rule_files:
+  - "rules/*.yml"
+
+# Scrape configuration
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # BeatSight Backend API
+  # Update the target to match your backend's host:port
+  - job_name: 'beatsight-backend'
+    metrics_path: '/metrics'
+    static_configs:
+      # For local development (backend running on host machine)
+      - targets: ['host.docker.internal:8000']
+        labels:
+          environment: 'development'
+          service: 'backend'
+    # For production, uncomment and configure:
+    # - targets: ['api.beatsight.com:443']
+    #   labels:
+    #     environment: 'production'
+    #     service: 'backend'
+    # scheme: https
+
+  # Modal GPU Workers (if exposing metrics)
+  # Uncomment and configure when Modal workers expose metrics
+  # - job_name: 'beatsight-modal-workers'
+  #   static_configs:
+  #     - targets: ['modal-worker-1:8080', 'modal-worker-2:8080']
+  #       labels:
+  #         environment: 'production'
+  #         service: 'modal-worker'

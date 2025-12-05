@@ -1,0 +1,73 @@
+# GKE Autopilot Ingress Configuration
+# Uses GKE's managed certificates for TLS
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: beatsight-ingress
+  namespace: beatsight
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "beatsight-ip"
+    networking.gke.io/managed-certificates: "beatsight-cert"
+    kubernetes.io/ingress.allow-http: "false"
+spec:
+  rules:
+    - host: beatsight.io
+      http:
+        paths:
+          - path: /*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: beatsight-frontend
+                port:
+                  number: 80
+    - host: www.beatsight.io
+      http:
+        paths:
+          - path: /*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: beatsight-frontend
+                port:
+                  number: 80
+    - host: api.beatsight.io
+      http:
+        paths:
+          - path: /*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: beatsight-backend
+                port:
+                  number: 8000
+    - host: docs.beatsight.io
+      http:
+        paths:
+          - path: /*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: beatsight-docs
+                port:
+                  number: 80
+
+---
+# GKE Managed Certificate (auto-provisions Let's Encrypt)
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: beatsight-cert
+  namespace: beatsight
+spec:
+  domains:
+    - beatsight.io
+    - www.beatsight.io
+    - api.beatsight.io
+    - docs.beatsight.io
+
+---
+# Reserve static IP (run: gcloud compute addresses create beatsight-ip --global)
+# This ensures your IP doesn't change on redeployment

@@ -702,7 +702,7 @@ class DrumSampleDataset(Dataset):
                     sample_audio = self.data_dir / "audio"
                     has_audio_fallback = sample_audio.exists() and any(sample_audio.glob("**/*.wav"))
                     if not has_audio_fallback:
-                        print(f"[CACHE] ⚠️  WARNING: {invalid_count:,} samples have invalid cache mappings and no audio fallback available!")
+                        print(f"[CACHE] [!] WARNING: {invalid_count:,} samples have invalid cache mappings and no audio fallback available!")
                         print(f"[CACHE]    These samples will cause errors during training.")
                         print(f"[CACHE]    Fix: Regenerate cache mapping or ensure 100% cache coverage.")
             except Exception as e:
@@ -2216,6 +2216,12 @@ def main():
     )
     parser.add_argument("--epochs", type=int, default=50, help="Number of epochs")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size")
+    parser.add_argument(
+        "--samples-per-epoch",
+        type=int,
+        default=None,
+        help="Limit samples per epoch (faster epochs with more validation checks). Default: use all samples.",
+    )
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
     parser.add_argument("--output", default="models", help="Output directory for models")
     parser.add_argument("--device", default=None, help="Device (cuda/cpu)")
@@ -2500,6 +2506,22 @@ def main():
         type=float,
         default=10.0,
         help="Maximum class weight cap to prevent training instability (default: 10.0, 0 to disable)",
+    )
+    parser.add_argument(
+        "--balanced-sampling",
+        action="store_true",
+        help="Use class-balanced sampling (each class sampled equally). CRITICAL for extreme class imbalance (>10x). "
+             "This is applied at the data loading level, not the loss function. "
+             "Recommended to combine with --class-weights=none when using this option.",
+    )
+    parser.add_argument(
+        "--sampling-strategy",
+        choices=["sqrt", "log", "uniform"],
+        default="sqrt",
+        help="Sampling strategy when --balanced-sampling is enabled: "
+             "sqrt (default, sqrt of inverse frequency - good balance), "
+             "log (log-dampened inverse frequency), "
+             "uniform (pure equal sampling per class - most aggressive)",
     )
     parser.add_argument(
         "--label-smoothing",
@@ -3531,6 +3553,91 @@ def main():
             print(f"[SHARD] Shard-aware sampling ENABLED (chunks={args.shard_chunks}, samples_per_shard={args.samples_per_shard})")
             print("[SHARD] This reduces mmap page faults by 10-50x for large datasets!")
 
+    # === CLASS-BALANCED SAMPLING ===
+    # This is CRITICAL for extreme class imbalance (>10x ratio).
+    # Without this, the model ignores rare classes entirely.
+    balanced_sampler = None
+    if args.balanced_sampling:
+        print("\n[BALANCED SAMPLING] Computing class-balanced sample weights...")
+        
+        # Get labels from the training dataset
+        # Support both numpy and dict formats
+        if hasattr(train_dataset_full, '_use_numpy') and train_dataset_full._use_numpy:
+            train_labels_arr = train_dataset_full._numpy_labels
+        else:
+            train_labels_arr = np.array([item['component_idx'] for item in train_dataset_full.labels])
+        
+        # If using a subset, filter to just those indices
+        if train_subset_indices is not None:
+            train_labels_arr = train_labels_arr[train_subset_indices]
+        
+        # Get number of classes from the maximum label + 1
+        num_classes_sampling = int(train_labels_arr.max()) + 1
+        
+        # Count samples per class
+        class_counts = np.bincount(train_labels_arr, minlength=num_classes_sampling)
+        
+        # Compute sample weights based on strategy
+        if args.sampling_strategy == "uniform":
+            # Pure class-balanced: each class is sampled equally
+            # Weight = 1 / (num_classes * class_count)
+            # This gives equal probability to each class, regardless of size
+            class_weights_sampling = 1.0 / (class_counts + 1e-6)
+        elif args.sampling_strategy == "sqrt":
+            # Square-root dampened: reduces aggressive oversampling of tiny classes
+            # Good balance between class balance and sample diversity
+            class_weights_sampling = 1.0 / (np.sqrt(class_counts) + 1e-6)
+        elif args.sampling_strategy == "log":
+            # Log dampened: even more conservative oversampling
+            class_weights_sampling = 1.0 / (np.log1p(class_counts) + 1e-6)
+        else:
+            raise ValueError(f"Unknown sampling strategy: {args.sampling_strategy}")
+        
+        # Normalize weights to sum to num_classes_sampling (for interpretability)
+        class_weights_sampling = class_weights_sampling / class_weights_sampling.sum() * num_classes_sampling
+        
+        # Assign weight to each sample based on its class
+        sample_weights = class_weights_sampling[train_labels_arr]
+        sample_weights_tensor = torch.from_numpy(sample_weights.astype(np.float64))
+        
+        # Print diagnostics
+        print(f"   Strategy: {args.sampling_strategy}")
+        print(f"   Dataset size: {len(train_labels_arr):,}")
+        print(f"   Classes: {num_classes_sampling}")
+        
+        # Show weight extremes
+        nonzero_counts = class_counts[class_counts > 0]
+        min_class = np.where(class_counts == nonzero_counts.min())[0][0]
+        max_class = np.argmax(class_counts)
+        min_count = class_counts[min_class]
+        max_count = class_counts[max_class]
+        print(f"   Smallest class: idx={min_class} ({min_count:,} samples, weight={class_weights_sampling[min_class]:.4f})")
+        print(f"   Largest class: idx={max_class} ({max_count:,} samples, weight={class_weights_sampling[max_class]:.4f})")
+        print(f"   Rebalancing ratio: {class_weights_sampling[min_class] / class_weights_sampling[max_class]:.1f}x")
+        
+        # Expected effective class distribution after balanced sampling
+        expected_samples_per_class = len(train_labels_arr) * class_weights_sampling / class_weights_sampling.sum()
+        print(f"   Expected samples/class/epoch: min={expected_samples_per_class.min():.0f}, max={expected_samples_per_class.max():.0f}")
+        
+        from torch.utils.data import WeightedRandomSampler
+        # Allow configurable samples per epoch for faster iteration
+        epoch_samples = args.samples_per_epoch if args.samples_per_epoch else len(train_labels_arr)
+        if args.samples_per_epoch:
+            print(f"   Samples per epoch: {epoch_samples:,} (user-specified, {epoch_samples / len(train_labels_arr) * 100:.1f}% of full dataset)")
+        balanced_sampler = WeightedRandomSampler(
+            weights=sample_weights_tensor,
+            num_samples=epoch_samples,
+            replacement=True,  # Must be True for weighted sampling
+        )
+        
+        # Note: balanced_sampler is incompatible with shard-aware sampling
+        if use_shard_aware:
+            print("[BALANCED SAMPLING] WARNING: Disabling shard-aware sampling (incompatible with balanced sampler)")
+            print("[BALANCED SAMPLING]    Class balance is more important than I/O locality for extreme imbalance")
+            use_shard_aware = False
+        
+        print("[BALANCED SAMPLING] Enabled - rare classes will now be seen equally often!")
+
     def _resolve_subset_chain(ds: Dataset) -> Tuple[Optional[np.ndarray], Dataset]:
         """Flatten nested torch.utils.data.Subset wrappers into a root dataset.
         
@@ -3558,6 +3665,7 @@ def main():
         use_shard_sampler: bool = False,
         num_samples: Optional[int] = None,
         split_label: str = "train",
+        sampler: Optional[Any] = None,  # WeightedRandomSampler for balanced sampling
     ) -> DataLoader:
         loader_kwargs: Dict[str, Any] = {
             "dataset": dataset_obj,
@@ -3588,9 +3696,25 @@ def main():
             )
             loader_kwargs["batch_sampler"] = shard_sampler
             # batch_sampler is mutually exclusive with batch_size/shuffle/sampler/drop_last
+        elif sampler is not None:
+            # Use provided sampler (e.g., WeightedRandomSampler for class-balanced sampling)
+            loader_kwargs["batch_size"] = batch_size
+            loader_kwargs["sampler"] = sampler
+            # Note: cannot use shuffle=True with a sampler
         else:
             loader_kwargs["batch_size"] = batch_size
-            loader_kwargs["shuffle"] = shuffle
+            # If num_samples is specified and less than dataset, use RandomSampler to limit epoch size
+            if num_samples is not None and num_samples < len(dataset_obj) and shuffle:
+                from torch.utils.data import RandomSampler
+                epoch_sampler = RandomSampler(
+                    dataset_obj,
+                    replacement=False,  # Sample without replacement
+                    num_samples=num_samples,
+                )
+                loader_kwargs["sampler"] = epoch_sampler
+                # Note: cannot use shuffle=True with a sampler
+            else:
+                loader_kwargs["shuffle"] = shuffle
         
         if workers > 0:
             if prefetch is not None:
@@ -3607,16 +3731,20 @@ def main():
     train_prefetch = args.prefetch_factor if args.prefetch_factor is not None else None
     val_prefetch = args.val_prefetch_factor if args.val_prefetch_factor is not None else None
 
+    # Determine samples per epoch (for faster iteration if specified)
+    epoch_samples = args.samples_per_epoch if args.samples_per_epoch else len(train_dataset)
+    
     train_loader = build_loader(
         train_dataset,
         batch_size=args.batch_size,
-        shuffle=True,
+        shuffle=True,  # Ignored if balanced_sampler is provided
         workers=num_workers,
         prefetch=train_prefetch,
         persistent=train_persistent,
         use_shard_sampler=use_shard_aware,
-        num_samples=len(train_dataset),
+        num_samples=epoch_samples,
         split_label="train",
+        sampler=balanced_sampler,  # Class-balanced sampling if enabled
     )
     val_loader = build_loader(
         val_dataset,
@@ -3639,7 +3767,13 @@ def main():
     print(f"   Persistent workers: {train_persistent}")
     print(f"   Pin memory: {pin_memory}")
     print(f"   Shard-aware sampling: {use_shard_aware}")
-    print(f"   Batches/epoch: {batches_per_epoch:,} ({samples_per_epoch:,} samples)")
+    print(f"   Balanced sampling: {args.balanced_sampling}" + (f" ({args.sampling_strategy})" if args.balanced_sampling else ""))
+    if args.samples_per_epoch and args.samples_per_epoch < len(train_dataset):
+        full_batches = len(train_dataset) // args.batch_size
+        speedup = full_batches / batches_per_epoch
+        print(f"   Batches/epoch: {batches_per_epoch:,} ({samples_per_epoch:,} samples) [FAST: {speedup:.1f}x faster epochs]")
+    else:
+        print(f"   Batches/epoch: {batches_per_epoch:,} ({samples_per_epoch:,} samples)")
     
     # Optional cache warmup (preloads mmap pages into RAM)
     # CRITICAL: When using subset mode, only warm up shards that will be accessed!
@@ -4456,7 +4590,7 @@ def main():
 
         if is_mid_epoch:
             pct = 100 * batch_index / total_batches if total_batches else 0
-            print(f"\n💾 Mid-epoch checkpoint saved (epoch {epoch_index}, batch {batch_index}/{total_batches}, {pct:.0f}%)")
+            print(f"\n[Checkpoint] Mid-epoch checkpoint saved (epoch {epoch_index}, batch {batch_index}/{total_batches}, {pct:.0f}%)")
         elif reason:
             print(f"Checkpoint saved ({reason}) at epoch {epoch_index}")
         else:
@@ -4489,7 +4623,7 @@ def main():
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
         best_checkpoint_path = checkpoint_dir / "best_checkpoint.pth"
         _atomic_torch_save(checkpoint_payload, best_checkpoint_path)
-        print(f"✓ Saved best FULL checkpoint (acc: {val_acc:.2f}%) - can resume from here")
+        print(f"[OK] Saved best FULL checkpoint (acc: {val_acc:.2f}%) - can resume from here")
         return best_checkpoint_path
 
     # Signal handler for graceful shutdown (SIGTERM from kill, SIGHUP from terminal close)
@@ -4498,7 +4632,7 @@ def main():
     def _signal_handler(signum, frame):
         nonlocal _shutdown_requested
         sig_name = signal.Signals(signum).name if hasattr(signal, 'Signals') else str(signum)
-        print(f"\n⚠️  Received {sig_name} - saving checkpoint and shutting down gracefully...")
+        print(f"\n[!] Received {sig_name} - saving checkpoint and shutting down gracefully...")
         _shutdown_requested = True
     
     # Register signal handlers for graceful shutdown
@@ -4514,7 +4648,19 @@ def main():
         if not args.resume_from.exists():
             raise FileNotFoundError(f"Checkpoint not found: {args.resume_from}")
         # weights_only=False needed for checkpoints containing pathlib.WindowsPath (PyTorch 2.6+)
-        checkpoint_state = torch.load(args.resume_from, map_location=torch_device, weights_only=False)
+        # Cross-platform checkpoint loading: Linux checkpoints use PosixPath, Windows can't instantiate them
+        import platform
+        _posix_path_backup = None
+        if platform.system() == "Windows":
+            import pathlib
+            _posix_path_backup = pathlib.PosixPath
+            pathlib.PosixPath = pathlib.WindowsPath
+        try:
+            checkpoint_state = torch.load(args.resume_from, map_location=torch_device, weights_only=False)
+        finally:
+            if _posix_path_backup is not None:
+                import pathlib
+                pathlib.PosixPath = _posix_path_backup
         if "model_state" not in checkpoint_state or "optimizer_state" not in checkpoint_state:
             raise KeyError(f"Invalid checkpoint format: {args.resume_from}")
         
@@ -4994,14 +5140,14 @@ def main():
 
             # Check for shutdown signal (SIGTERM/SIGHUP)
             if _shutdown_requested:
-                print(f"\n🛑 Shutdown requested - saving checkpoint at epoch {epoch + 1}")
+                print(f"\n[STOP] Shutdown requested - saving checkpoint at epoch {epoch + 1}")
                 save_checkpoint(epoch + 1, reason="shutdown_signal")
                 break
 
             # Check early stopping
             if early_stopper is not None:
                 if early_stopper(val_acc, epoch):
-                    print(f"\n🛑 Early stopping triggered at epoch {epoch + 1}")
+                    print(f"\n[STOP] Early stopping triggered at epoch {epoch + 1}")
                     print(f"   Best validation accuracy: {best_val_acc:.2f}% at epoch {best_epoch}")
                     save_checkpoint(epoch + 1, reason="early_stopping")
                     break
@@ -5038,9 +5184,9 @@ def main():
                     _safe_print(f"⚠ wandb.save() failed: {e} (continuing anyway)")
 
     except KeyboardInterrupt:
-        print("\n🛑 Training interrupted by user (Ctrl+C). Saving checkpoint...")
+        print("\n[STOP] Training interrupted by user (Ctrl+C). Saving checkpoint...")
         save_checkpoint(last_completed_epoch, reason="keyboard_interrupt")
-        print(f"✓ Checkpoint saved. Resume with: --resume-from {checkpoint_dir / 'latest_checkpoint.pth'}")
+        print(f"[OK] Checkpoint saved. Resume with: --resume-from {checkpoint_dir / 'latest_checkpoint.pth'}")
         print("Exiting gracefully (checkpoint is safe).")
         return  # Exit cleanly - don't re-raise, checkpoint is already saved
 

@@ -5,6 +5,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.UI.Components;
 using BeatSight.Game.UI.Theming;
@@ -31,7 +33,18 @@ namespace BeatSight.Game.Screens.Settings
         private FillFlowContainer developerContent = null!;
         private Container developerUnlockSection = null!;
         private Bindable<bool> developerModeEnabled = null!;
-        private const string DEVELOPER_PASSWORD = "beatsight-dev-2024";
+
+        /// <summary>
+        /// SHA-256 hash of the developer password.
+        /// The actual password should be set via BEATSIGHT_DEV_PASSWORD environment variable
+        /// or entered by the developer. This hash is for the default dev password.
+        /// </summary>
+        /// <remarks>
+        /// SECURITY NOTE: This hash is visible in the open-source code. For production use,
+        /// developers should set their own password via the BEATSIGHT_DEV_PASSWORD environment variable.
+        /// The default password is intentionally weak for local development convenience.
+        /// </remarks>
+        private const string DEVELOPER_PASSWORD_HASH = "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"; // SHA-256 of "123"
 
         public AISettingsSection(BeatSightConfigManager config, GameHost host, Container dropdownOverlay, SettingsTooltipOverlay tooltipOverlay)
             : base("AI / Processing", dropdownOverlay, tooltipOverlay)
@@ -195,7 +208,7 @@ namespace BeatSight.Game.Screens.Settings
                                 Height = 32,
                                 Action = () =>
                                 {
-                                    if (passwordBox.Text == DEVELOPER_PASSWORD)
+                                    if (verifyDeveloperPassword(passwordBox.Text))
                                     {
                                         developerModeEnabled.Value = true;
                                         Logger.Log("Developer mode enabled", LoggingTarget.Runtime, LogLevel.Important);
@@ -404,6 +417,43 @@ namespace BeatSight.Game.Screens.Settings
                 Action = action,
                 BackgroundColour = UITheme.SurfaceAlt
             };
+        }
+
+        /// <summary>
+        /// Verifies a developer password against the environment variable or default hash.
+        /// </summary>
+        /// <param name="password">The password entered by the user.</param>
+        /// <returns>True if the password is valid.</returns>
+        private static bool verifyDeveloperPassword(string password)
+        {
+            if (string.IsNullOrEmpty(password))
+                return false;
+
+            // First, check if a custom password is set via environment variable
+            string? envPassword = Environment.GetEnvironmentVariable("BEATSIGHT_DEV_PASSWORD");
+            if (!string.IsNullOrEmpty(envPassword))
+            {
+                // Direct comparison for environment-set password (assumed to be secure)
+                return password == envPassword;
+            }
+
+            // Otherwise, compare against the default password hash
+            string inputHash = computeSha256Hash(password);
+            return string.Equals(inputHash, DEVELOPER_PASSWORD_HASH, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Computes a SHA-256 hash of the input string.
+        /// </summary>
+        private static string computeSha256Hash(string input)
+        {
+            byte[] bytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
+            StringBuilder builder = new StringBuilder();
+            foreach (byte b in bytes)
+            {
+                builder.Append(b.ToString("x2"));
+            }
+            return builder.ToString();
         }
     }
 }

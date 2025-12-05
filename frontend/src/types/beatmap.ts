@@ -108,6 +108,40 @@ export interface EditorMetadata {
     }
 }
 
+/**
+ * Detected onset peak from AI analysis.
+ * Used for visualizing raw detection before drum classification.
+ */
+export interface DetectedOnset {
+    /** Time in seconds */
+    time: number
+    /** Detection confidence (0.0 - 1.0) */
+    confidence: number
+    /** Energy level at this peak */
+    energy?: number
+}
+
+/**
+ * Analysis data from AI pipeline - debug/visualization info.
+ * Matches ai-pipeline OnsetDetectionResult.to_debug_payload()
+ */
+export interface AnalysisData {
+    /** Sample rate of analysis */
+    sampleRate: number
+    /** Hop length used in analysis */
+    hopLength: number
+    /** Detected tempo (BPM) */
+    tempo: number
+    /** Alternative tempo candidates */
+    tempoCandidates: number[]
+    /** Onset envelope (normalized energy over time) */
+    envelope?: number[]
+    /** Adaptive threshold used for peak picking */
+    adaptiveThreshold?: number[]
+    /** Raw detected peaks before classification */
+    peaks: DetectedOnset[]
+}
+
 export interface Beatmap {
     version: string
     metadata: BeatmapMetadata
@@ -116,6 +150,8 @@ export interface Beatmap {
     drumKit: DrumKit
     hitObjects: HitObject[]
     editor?: EditorMetadata
+    /** Analysis data for visualization (envelope, peaks, etc.) */
+    analysis?: AnalysisData
 }
 
 // Timeline Editor specific types

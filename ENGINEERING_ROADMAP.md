@@ -1,14 +1,26 @@
 # BeatSight Engineering Roadmap & Progress Tracker
 
+> ⚠️ **DEPRECATED:** This document has been superseded by **`BEATSIGHT_WORK_TRACKER.md`**.
+> Please use the new consolidated tracker for all current work tracking.
+> This file is kept for historical reference only.
+
 *Created: December 2, 2025*  
 *Last Updated: December 3, 2025*  
-*Author: Senior Engineering Partner (GitHub Copilot)*
+*Author: Senior Engineering Partner (GitHub Copilot)*  
+*Status: **ARCHIVED***
 
 ---
 
 ## Executive Summary
 
 This document tracks all engineering priorities, implementation progress, and future plans for BeatSight. It consolidates recommendations from the comprehensive codebase analysis into actionable items with clear status tracking.
+
+**🔥 ACTIVE: AI Training (as of Dec 5, 2025):**
+- **Mode:** `v5-local-balanced` (17d-balanced) with UNIFORM balanced sampling
+- **Path:** `14 → 17a → 17d-balanced → 17e-local → 19 → 19c`
+- **Hardware:** RTX 3080 Ti FE (12GB), 9800X3D, 32GB DDR5-6000
+- **Status:** Training in progress (~4-7 days ETA per phase)
+- **Critical Fix:** Class-balanced sampling addresses 630x class imbalance (19/21 classes were at 0% before fix)
 
 **Codebase Health (as of Dec 3, 2025):**
 | Component | Quality | Test Coverage | Status |

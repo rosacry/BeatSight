@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: beatsight
+
+resources:
+  - namespace.yaml
+  - backend.yaml
+  - frontend.yaml
+  # Note: ingress.yaml excluded - each overlay defines its own ingress
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: beatsight
+      app.kubernetes.io/managed-by: kustomize

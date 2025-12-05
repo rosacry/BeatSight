@@ -1,0 +1,21 @@
+# Frontend deployment patch for GKE Autopilot
+# Autopilot requires ephemeral-storage requests/limits
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: beatsight-frontend
+  namespace: beatsight
+spec:
+  template:
+    spec:
+      containers:
+        - name: frontend
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+              ephemeral-storage: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+              ephemeral-storage: "512Mi"

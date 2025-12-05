@@ -1,10 +1,13 @@
 # BeatSight Master Action Plan
 
+> ⚠️ **DEPRECATED:** This document has been superseded by **`BEATSIGHT_WORK_TRACKER.md`**.
+> Please use the new consolidated tracker for all current work tracking.
+> This file is kept for historical reference only.
 
 > **Created:** December 3, 2025  
 > **Author:** Senior Engineering Partner (GitHub Copilot)  
-> **Status:** Active Implementation  
-> **Last Updated:** December 4, 2025
+> **Status:** ~~Active Implementation~~ **ARCHIVED**  
+> **Last Updated:** December 5, 2025
 
 This document serves as the comprehensive, prioritized work tracker for BeatSight. Every identified issue, enhancement, and task is tracked here to ensure nothing is missed.
 
@@ -14,6 +17,22 @@ This document serves as the comprehensive, prioritized work tracker for BeatSigh
 
 ### Project Overview
 BeatSight is an AI-powered drum transcription and follow-along learning tool. It transforms any song into a visual, scrolling drum score that drummers can practice with in real time. **This is NOT a game** - there are no scores, streaks, combos, or gamification mechanics beyond visual polish (graphics, animations, UI/UX).
+
+### 🎯 Active Training Status (December 2025)
+
+**Current Mode:** `v5-local-balanced` (17d-balanced)  
+**Hardware:** RTX 3080 Ti, 9800X3D, 32GB DDR5-6000, Samsung 990 Pro NVMe  
+**Path:** `14 → 17a → 17d-balanced → 17e-local → 19 → 19c`  
+**ETA:** ~15-25 days total for production-ready model
+
+| Phase | Mode | Status | Time |
+|-------|------|--------|------|
+| 14 | label-audit | ✅ Complete | 30 min |
+| 17a | v5-warmup | ✅ Complete | 1 hr |
+| **17d-balanced** | **v5-local-balanced** | 🔄 **IN PROGRESS** | 4-7 days |
+| 17e-local | v5-local-balanced-distill | ⏳ Pending | 4-7 days |
+| 19 | generate-multilabel | ⏳ Pending | 10 min |
+| 19c | multilabel-finetune | ⏳ Pending | 1-2 days |
 
 ### Codebase Health (Dec 4, 2025)
 
@@ -35,11 +54,11 @@ BeatSight is an AI-powered drum transcription and follow-along learning tool. It
 - ✅ Real API integrations (no mock data in production paths)
 
 ### Critical Note
-**ML models are assumed trained and deployed** per the PRODUCTION_DEPLOYMENT_GUIDE. Do not interfere with:
-- Model training (Steps 14-19)
-- Lambda Labs/Modal deployment
-- Model encryption/security
-- Cloud training infrastructure
+**ML training is IN PROGRESS on local hardware.** Current training path:
+- **Do NOT interrupt** the running `v5-local-balanced` training
+- After completion, run `v5-local-balanced-distill` (17e-local)
+- Then generate multi-label dataset (19) and fine-tune (19c)
+- See `docs/PATH_TO_90_PERCENT.md` for detailed progress
 
 ---
 

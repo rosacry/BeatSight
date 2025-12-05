@@ -7,6 +7,13 @@ import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { PRICING_PLANS } from '@/types/billing'
 import { LandingDemo } from '@/components/LandingDemo'
+import {
+    EXTERNAL_LINKS,
+    getCommunityLink,
+    getDocsLink,
+    getApiDocsLink,
+    getDownloadLink
+} from '@/lib/externalLinks'
 
 export function LandingPage() {
     const { isAuthenticated } = useAuthStore()
@@ -245,23 +252,23 @@ export function LandingPage() {
                             <ul className="space-y-2 text-gray-400 text-sm">
                                 <li><Link to="/pricing" className="hover:text-white">Pricing</Link></li>
                                 <li><a href="#features" className="hover:text-white">Features</a></li>
-                                <li><a href="#" className="hover:text-white">Desktop App</a></li>
+                                <li><a href={getDownloadLink()} target="_blank" rel="noopener noreferrer" className="hover:text-white">Desktop App</a></li>
                             </ul>
                         </div>
                         <div>
                             <h4 className="text-white font-semibold mb-4">Resources</h4>
                             <ul className="space-y-2 text-gray-400 text-sm">
-                                <li><a href="#" className="hover:text-white">Documentation</a></li>
-                                <li><a href="#" className="hover:text-white">API Reference</a></li>
-                                <li><a href="#" className="hover:text-white">Community</a></li>
+                                <li><a href={getDocsLink()} target="_blank" rel="noopener noreferrer" className="hover:text-white">Documentation</a></li>
+                                <li><a href={getApiDocsLink()} target="_blank" rel="noopener noreferrer" className="hover:text-white">API Reference</a></li>
+                                <li><a href={getCommunityLink()} target="_blank" rel="noopener noreferrer" className="hover:text-white">Community</a></li>
                             </ul>
                         </div>
                         <div>
                             <h4 className="text-white font-semibold mb-4">Legal</h4>
                             <ul className="space-y-2 text-gray-400 text-sm">
-                                <li><a href="#" className="hover:text-white">Privacy Policy</a></li>
-                                <li><a href="#" className="hover:text-white">Terms of Service</a></li>
-                                <li><a href="#" className="hover:text-white">Contact</a></li>
+                                <li><Link to={EXTERNAL_LINKS.legal.privacy} className="hover:text-white">Privacy Policy</Link></li>
+                                <li><Link to={EXTERNAL_LINKS.legal.terms} className="hover:text-white">Terms of Service</Link></li>
+                                <li><a href={EXTERNAL_LINKS.legal.contact} className="hover:text-white">Contact</a></li>
                             </ul>
                         </div>
                     </div>

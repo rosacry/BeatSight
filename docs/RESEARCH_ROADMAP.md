@@ -8,14 +8,27 @@ A guide to BeatSight's training architecture and research potential.
 
 **Path G (V5 Ultimate)** is the recommended default for production. It combines all proven 2024/2025 innovations into a single, optimized model.
 
-```bash
-# Production Training Path
-./auto_train.sh label-audit      # 14  - Find bad labels (~30min)
-./auto_train.sh v5-warmup        # 17a - Validate system (~2hr)
-./auto_train.sh v5-full          # 17d - Full training (~24hr)
-./auto_train.sh v5-self-distill  # 17e - Born-Again boost (~24hr) [optional]
+### 🖥️ LOCAL GPU Path (Current - RTX 3080 Ti)
 
-# Total: ~26.5 hours minimum, ~50.5 hours maximum quality
+```bash
+# LOCAL Training Path - Uses balanced sampling to fix class imbalance
+./auto_train.sh label-audit        # 14  - Find bad labels (~30min)
+./auto_train.sh v5-warmup          # 17a - Validate system (~2hr)
+./auto_train.sh v5-local-balanced  # 17d-balanced - UNIFORM sampling (~4-7 days)
+./auto_train.sh v5-local-balanced-distill  # 17e-local - Self-distillation (~4-7 days)
+./post_export_commands.sh          # 19  - Generate multilabel dataset (~10min)
+./auto_train.sh multilabel-finetune # 19c - Multilabel finetune (~6-12hr)
+```
+
+> **🔥 CURRENTLY RUNNING**: `v5-local-balanced` (17d-balanced)
+> See `docs/PATH_TO_90_PERCENT.md` for live training status.
+
+### ☁️ Cloud GPU Path (H100/A100)
+
+```bash
+# Cloud Training Path (Lambda/vast.ai)
+./auto_train.sh v5-full-cached     # 17d - Full training (~24hr, H100)
+./auto_train.sh v5-self-distill-cached  # 17e - Born-Again boost (~24hr)
 ```
 
 See `docs/CUTTING_EDGE_TRAINING_FEATURES.md` for full details.

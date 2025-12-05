@@ -146,7 +146,7 @@ describe('computeWaveformData', () => {
 describe('useWaveform', () => {
     beforeEach(() => {
         // Mock AudioContext
-        ; (globalThis as any).AudioContext = MockAudioContext as unknown as typeof AudioContext
+         (globalThis as any).AudioContext = MockAudioContext as unknown as typeof AudioContext
 
             // Mock fetch
             ; (globalThis as any).fetch = vi.fn().mockResolvedValue({
@@ -156,7 +156,7 @@ describe('useWaveform', () => {
     })
 
     afterEach(() => {
-        ; (globalThis as any).AudioContext = originalAudioContext
+         (globalThis as any).AudioContext = originalAudioContext
             ; (globalThis as any).fetch = originalFetch
     })
 
@@ -196,7 +196,7 @@ describe('useWaveform', () => {
     })
 
     it('should handle fetch error', async () => {
-        ; (globalThis as any).fetch = vi.fn().mockResolvedValue({
+         (globalThis as any).fetch = vi.fn().mockResolvedValue({
             ok: false,
             statusText: 'Not Found',
         })
@@ -220,7 +220,7 @@ describe('useWaveform', () => {
             async close(): Promise<void> { }
         }
 
-        ; (globalThis as any).AudioContext = FailingAudioContext as unknown as typeof AudioContext
+         (globalThis as any).AudioContext = FailingAudioContext as unknown as typeof AudioContext
 
         const { result } = renderHook(() =>
             useWaveform({ audioUrl: 'https://example.com/bad.mp3' })

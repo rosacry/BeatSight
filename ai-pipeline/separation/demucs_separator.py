@@ -289,8 +289,8 @@ def separate_drums(
 ) -> Tuple[np.ndarray, int] | Tuple[Tuple[np.ndarray, int], dict]:
     """
     Separate drums from audio using Demucs.
-    
-    Thread-safe: Uses locking to ensure singleton separators are 
+
+    Thread-safe: Uses locking to ensure singleton separators are
     initialized safely in concurrent environments.
 
     Args:

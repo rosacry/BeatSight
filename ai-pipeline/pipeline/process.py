@@ -133,7 +133,9 @@ def process_audio_file(
     # Ghost notes setting (experimental)
     include_ghost_notes: bool = True,  # Include ghost notes in beatmap (experimental)
     # Progress callback for external progress reporting (e.g., Modal deployment)
-    progress_callback: Optional[callable] = None,  # Callback(percent: float, message: str)
+    progress_callback: Optional[
+        callable
+    ] = None,  # Callback(percent: float, message: str)
 ) -> Dict[str, Any]:
     """
     Process an audio file and generate a beatmap.
@@ -157,13 +159,13 @@ def process_audio_file(
         ml_device: Torch device override for ML inference
         start_time: Start time in seconds for partial processing
         end_time: End time in seconds for partial processing
-        progress_callback: Optional callback function(percent: float, message: str) for 
+        progress_callback: Optional callback function(percent: float, message: str) for
             external progress reporting (e.g., Modal deployment). Percent is 0-100.
 
     Returns:
         Dictionary with processing results and statistics
     """
-    
+
     # Helper function to report progress
     def _report_progress(percent: float, message: str):
         """Report progress if callback is provided."""
@@ -172,7 +174,7 @@ def process_audio_file(
                 progress_callback(percent, message)
             except Exception:
                 pass  # Don't let callback errors break the pipeline
-    
+
     input_path = Path(input_path)
     output_path = Path(output_path)
     debug_output_path = Path(debug_output_path) if debug_output_path else None

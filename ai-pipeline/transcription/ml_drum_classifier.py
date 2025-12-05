@@ -116,30 +116,33 @@ class DrumClassifierCNN(nn.Module):
 class MLDrumClassifier:
     """
     ML-based drum classifier with inference capabilities.
-    
+
     Features:
     - Automatic device detection (CUDA/CPU)
     - Model warm-up for optimal first-inference latency
     - Batch processing for efficient GPU utilization
     - Thread-safe inference (eval mode with torch.inference_mode)
     """
-    
+
     # Class-level model cache for reuse across instances
     _model_cache: Dict[str, "MLDrumClassifier"] = {}
     _cache_lock = None  # Will be initialized lazily
-    
+
     @classmethod
-    def get_cached(cls, model_path: str, device: Optional[str] = None) -> "MLDrumClassifier":
+    def get_cached(
+        cls, model_path: str, device: Optional[str] = None
+    ) -> "MLDrumClassifier":
         """Get a cached classifier instance, creating one if needed.
-        
+
         This avoids reloading the model for every inference call.
         """
         import threading
+
         if cls._cache_lock is None:
             cls._cache_lock = threading.Lock()
-        
+
         cache_key = f"{model_path}:{device or 'auto'}"
-        
+
         with cls._cache_lock:
             if cache_key not in cls._model_cache:
                 cls._model_cache[cache_key] = cls(model_path, device)
@@ -161,10 +164,10 @@ class MLDrumClassifier:
 
         self.model.to(self.device)
         self.model.eval()
-        
+
         # Warm up the model with a dummy inference
         self._warm_up()
-    
+
     def _warm_up(self):
         """Warm up the model with a dummy inference to compile CUDA kernels."""
         dummy_input = torch.zeros(1, 1, 128, 128, device=self.device)
@@ -190,7 +193,7 @@ class MLDrumClassifier:
     ) -> np.ndarray:
         """
         Extract mel-spectrogram features for a single onset (CPU, no tensor).
-        
+
         Returns:
             Numpy array of shape (128, 128) or None if invalid window
         """
@@ -242,17 +245,21 @@ class MLDrumClassifier:
         feat = self._extract_single_feature(audio, sr, onset_time, window_ms)
         if feat is None:
             return torch.zeros(1, 1, 128, 128, device=self.device)
-        
+
         features = torch.from_numpy(feat).float()
         features = features.unsqueeze(0).unsqueeze(0)  # Add batch and channel dims
         return features.to(self.device)
 
     def extract_features_batch(
-        self, audio: np.ndarray, sr: int, onset_times: List[float], window_ms: float = 100.0
+        self,
+        audio: np.ndarray,
+        sr: int,
+        onset_times: List[float],
+        window_ms: float = 100.0,
     ) -> Tuple[torch.Tensor, List[int]]:
         """
         Extract mel-spectrogram features for multiple onsets efficiently.
-        
+
         This extracts all features on CPU first, then transfers to GPU in one batch,
         which is MUCH faster than transferring one at a time.
 
@@ -264,34 +271,38 @@ class MLDrumClassifier:
 
         Returns:
             Tuple of:
-                - Batched tensor of shape (N, 1, 128, 128) 
+                - Batched tensor of shape (N, 1, 128, 128)
                 - List of valid indices (indices where features were successfully extracted)
         """
         features_list = []
         valid_indices = []
-        
+
         for i, onset_time in enumerate(onset_times):
             feat = self._extract_single_feature(audio, sr, onset_time, window_ms)
             if feat is not None:
                 features_list.append(feat)
                 valid_indices.append(i)
-        
+
         if not features_list:
             return torch.zeros(0, 1, 128, 128, device=self.device), []
-        
+
         # Stack all features and transfer to GPU in one operation
         batch_np = np.stack(features_list, axis=0)  # (N, 128, 128)
         batch_tensor = torch.from_numpy(batch_np).float()
         batch_tensor = batch_tensor.unsqueeze(1)  # (N, 1, 128, 128)
-        
+
         return batch_tensor.to(self.device), valid_indices
 
     def classify_onset_batch(
-        self, audio: np.ndarray, sr: int, onset_times: List[float], window_ms: float = 100.0
+        self,
+        audio: np.ndarray,
+        sr: int,
+        onset_times: List[float],
+        window_ms: float = 100.0,
     ) -> List[Tuple[str, float]]:
         """
         Classify multiple drum hits in a single batch inference.
-        
+
         This is 10-50x faster than calling classify_onset repeatedly because:
         1. Feature extraction can be parallelized
         2. GPU batch inference is massively more efficient
@@ -309,33 +320,33 @@ class MLDrumClassifier:
         """
         if not onset_times:
             return []
-        
+
         # Initialize results with default values
         results: List[Tuple[str, float]] = [("unknown", 0.0)] * len(onset_times)
-        
+
         # Extract features in batch
         features_batch, valid_indices = self.extract_features_batch(
             audio, sr, onset_times, window_ms
         )
-        
+
         if len(valid_indices) == 0:
             return results
-        
+
         # Batch inference - single forward pass for all onsets!
         # Using inference_mode for ~10% faster inference than no_grad
         with torch.inference_mode():
             logits = self.model(features_batch)  # (N, num_classes)
             probs = F.softmax(logits, dim=1)
             confidences, pred_indices = torch.max(probs, dim=1)
-        
+
         # Map results back to original indices
         confidences_cpu = confidences.cpu().numpy()
         pred_indices_cpu = pred_indices.cpu().numpy()
-        
+
         for i, valid_idx in enumerate(valid_indices):
             component = DrumClassifierCNN.DRUM_COMPONENTS[pred_indices_cpu[i]]
             results[valid_idx] = (component, float(confidences_cpu[i]))
-        
+
         return results
 
     def classify_onset(
@@ -397,7 +408,7 @@ def classify_drums_ml(
 
         classifier = SimpleDrumClassifier()
         use_ml = False
-        
+
         # Heuristic classifier doesn't support batch - use sequential
         classified_hits = []
         for onset_time, onset_confidence in onsets:
@@ -406,14 +417,16 @@ def classify_drums_ml(
             )
             combined_confidence = (onset_confidence + class_confidence) / 2.0
             if combined_confidence >= confidence_threshold and component != "unknown":
-                classified_hits.append({
-                    "time": onset_time,
-                    "component": component,
-                    "confidence": combined_confidence,
-                    "onset_confidence": onset_confidence,
-                    "class_confidence": class_confidence,
-                    "ml_based": use_ml,
-                })
+                classified_hits.append(
+                    {
+                        "time": onset_time,
+                        "component": component,
+                        "confidence": combined_confidence,
+                        "onset_confidence": onset_confidence,
+                        "class_confidence": class_confidence,
+                        "ml_based": use_ml,
+                    }
+                )
         return classified_hits
 
     # Use ML classifier with batch processing
@@ -424,29 +437,31 @@ def classify_drums_ml(
 
     # Process in batches for memory efficiency on very long tracks
     for batch_start in range(0, len(onsets), batch_size):
-        batch_onsets = onsets[batch_start:batch_start + batch_size]
+        batch_onsets = onsets[batch_start : batch_start + batch_size]
         onset_times = [onset_time for onset_time, _ in batch_onsets]
         onset_confidences = [onset_conf for _, onset_conf in batch_onsets]
-        
+
         # Batch inference - MUCH faster than sequential!
         batch_results = classifier.classify_onset_batch(audio_data, sr, onset_times)
-        
+
         for i, (component, class_confidence) in enumerate(batch_results):
             onset_confidence = onset_confidences[i]
             onset_time = onset_times[i]
-            
+
             # Combine onset detection confidence and classification confidence
             combined_confidence = (onset_confidence + class_confidence) / 2.0
 
             if combined_confidence >= confidence_threshold and component != "unknown":
-                classified_hits.append({
-                    "time": onset_time,
-                    "component": component,
-                    "confidence": combined_confidence,
-                    "onset_confidence": onset_confidence,
-                    "class_confidence": class_confidence,
-                    "ml_based": use_ml,
-                })
+                classified_hits.append(
+                    {
+                        "time": onset_time,
+                        "component": component,
+                        "confidence": combined_confidence,
+                        "onset_confidence": onset_confidence,
+                        "class_confidence": class_confidence,
+                        "ml_based": use_ml,
+                    }
+                )
 
     return classified_hits
 
@@ -472,13 +487,13 @@ class DrumClassifierModel(MLDrumClassifier):
     def classify_batch(self, audio, sr, onsets, **kwargs):
         """
         Classify multiple onsets efficiently using true batch processing.
-        
+
         Args:
             audio: Audio data
-            sr: Sample rate  
+            sr: Sample rate
             onsets: List of onset times in seconds
             **kwargs: Additional arguments (e.g., window_ms)
-            
+
         Returns:
             List of (component, confidence) tuples
         """

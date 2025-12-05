@@ -382,6 +382,15 @@ case "$TRAIN_MODE" in
         TRAIN_MODE="v5-full-cached-simple"
         RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/v5/full-cached-simple"
         ;;
+    # =====================================================================
+    # V5 LOCAL 3080 Ti (17d-local) - Optimized for 12GB VRAM consumer GPUs
+    # Batch 256 + gradient accumulation 8 = effective batch 2048
+    # ~4 hours per epoch (vs 35min on H100), but FREE to run!
+    # =====================================================================
+    v5-local|v5-3080|17d-local)
+        TRAIN_MODE="v5-local"
+        RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/v5/local"
+        ;;
     v5-full|17e)
         TRAIN_MODE="v5-full"
         RUN_DIR="$BEATSIGHT_RUN_CUTTING_EDGE/v5/full"
@@ -515,6 +524,8 @@ case "$TRAIN_MODE" in
         echo "    v5-full-cached      (17d) - V5 TURBO: 200 epochs (~20-25hr)"
         echo "    v5-full-cached-simple (17d-simple) - 🧹 SIMPLIFIED: fewer techniques (~15hr) ⭐ NEW"
         echo "                           Can resume from 17d checkpoint to rescue stuck training!"
+        echo "    v5-local            (17d-local)  - 🖥️ LOCAL GPU: 3080 Ti/3090 optimized (~4hr/epoch)"
+        echo "                           Batch 256 + grad accum 8 = effective 2048"
         echo "    v5-full             (17e) - V5 + ghost/waveform augment (~400hr, +2-4% on ghosts)"
         echo "    v5-self-distill-cached (17f) - Self-distill CACHED (~20-25hr, +1-2%)"
         echo "    v5-self-distill     (17g) - Self-distill + augment (~400hr, +1-2% + ghost boost)"
@@ -2436,6 +2447,139 @@ ENSEMBLE_PY
             log ""
             log "🧹 V5 SIMPLE training complete!"
             log "If results are good, you can optionally fine-tune with more techniques."
+            ;;
+        
+        v5-local)
+            # =====================================================================
+            # V5 LOCAL - Optimized for consumer GPUs (3080 Ti, 3090, 4070, 4080, etc.)
+            # =====================================================================
+            # 12GB VRAM optimizations:
+            # → Batch size: 256 (fits in 12GB)
+            # → Gradient accumulation: 8 (effective batch = 2048)
+            # → float16 instead of bfloat16 (better Ampere support)
+            # → torch.compile disabled (can be buggy on Windows/consumer GPUs)
+            # → Fewer workers (CPU bound on consumer hardware)
+            # → Gradient checkpointing (reduces VRAM at cost of speed)
+            #
+            # Expected performance on 3080 Ti:
+            # → ~3-4 hours per epoch
+            # → ~60-80 hours for 20 epochs
+            # → FREE (just electricity!)
+            # =====================================================================
+            
+            log "🖥️  Starting V5 LOCAL training (optimized for consumer GPUs)..."
+            log "   💾 VRAM: Optimized for 12GB (3080 Ti, 3090, 4070 Super, etc.)"
+            log ""
+            log "   ⚡ LOCAL GPU OPTIMIZATIONS:"
+            log "      → Batch size: 256 (fits in 12GB VRAM)"
+            log "      → Gradient accumulation: 8 (effective batch = 2048)"
+            log "      → float16 precision (better Ampere/Ada support)"
+            log "      → Gradient checkpointing (saves ~30% VRAM)"
+            log "      → torch.compile disabled (avoid Windows/driver issues)"
+            log "      → 8 workers (good for consumer CPUs)"
+            log ""
+            log "   ⏱️  Expected time:"
+            log "      → ~3-4 hours per epoch"
+            log "      → ~60-80 hours for 20 epochs"
+            log "      → ~150-200 hours for 50 epochs"
+            log ""
+            log "   💰 Cost: FREE (just electricity!)"
+            log ""
+            export WANDB_RUN_GROUP=v5_local_auto
+            
+            # LOCAL GPU FLAGS - Conservative for consumer hardware
+            LOCAL_BATCH_SIZE="256"
+            LOCAL_GRAD_ACCUM="8"  # 256 * 8 = 2048 effective
+            LOCAL_AMP_DTYPE="float16"
+            LOCAL_NUM_WORKERS="8"
+            LOCAL_VAL_WORKERS="4"
+            
+            # Same proven techniques as v5-full-cached-simple
+            LOCAL_MODEL_FLAGS="--model-version v5 --v5-size large --drop-path-rate 0.15"
+            LOCAL_MIXUP_FLAGS="--mixup-alpha 0.2 --cutmix-alpha 0.5 --mixup-prob 0.5"
+            LOCAL_SPECAUGMENT_FLAGS="--specaugment drum"
+            LOCAL_FOCAL_FLAGS="--focal-loss --focal-gamma 3.0"
+            LOCAL_EMA_FLAGS="--use-ema --ema-decay 0.999"
+            LOCAL_LABEL_SMOOTHING="--label-smoothing 0.05"
+            LOCAL_CLASS_WEIGHTS="--class-weights effective --max-class-weight 10.0"
+            LOCAL_SWA_FLAGS="--use-swa --swa-start 0.75"
+            LOCAL_FMIX_FLAGS="--use-fmix --fmix-alpha 0.5"
+            LOCAL_EARLY_STOPPING="--early-stopping --early-stopping-patience 15 --early-stopping-min-delta 0.001 --early-stopping-warmup 5"
+            # Gradient checkpointing to reduce VRAM usage
+            LOCAL_GRAD_CHECKPOINT="--gradient-checkpointing"
+            
+            # Check for existing checkpoint to resume from
+            LOCAL_OUTPUT_DIR="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/local"
+            # Can resume from cloud-trained checkpoint!
+            CLOUD_BEST_CHECKPOINT="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached-simple/checkpoints/best_checkpoint.pth"
+            CLOUD_LATEST_CHECKPOINT="${BEATSIGHT_RUN_CUTTING_EDGE}/v5/full-cached-simple/checkpoints/latest_checkpoint.pth"
+            LOCAL_CHECKPOINT="${LOCAL_OUTPUT_DIR}/checkpoints/latest_checkpoint.pth"
+            
+            resume_from_flag=""
+            if [[ -f "$LOCAL_CHECKPOINT" ]]; then
+                log "   📂 Found local checkpoint: $LOCAL_CHECKPOINT"
+                log "      Will resume from this checkpoint"
+                resume_from_flag="--resume-from $LOCAL_CHECKPOINT"
+            elif [[ -f "$CLOUD_BEST_CHECKPOINT" ]]; then
+                log "   📂 Found cloud checkpoint: $CLOUD_BEST_CHECKPOINT"
+                log "      Will transfer weights from cloud training!"
+                log "      (Optimizer will be reset, model weights preserved)"
+                resume_from_flag="--resume-from $CLOUD_BEST_CHECKPOINT"
+            elif [[ -f "$CLOUD_LATEST_CHECKPOINT" ]]; then
+                log "   📂 Found cloud checkpoint: $CLOUD_LATEST_CHECKPOINT"
+                log "      Will transfer weights from cloud training!"
+                resume_from_flag="--resume-from $CLOUD_LATEST_CHECKPOINT"
+            else
+                log "   📂 No checkpoint found - starting fresh"
+                log "      💡 TIP: Download checkpoint from cloud to resume here!"
+            fi
+            
+            PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
+              --dataset "${BEATSIGHT_DATASET_DIR}" \
+              --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
+              --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
+              --device cuda \
+              --num-workers ${LOCAL_NUM_WORKERS} --val-num-workers ${LOCAL_VAL_WORKERS} --prefetch-factor 4 --val-prefetch-factor 2 \
+              --persistent-workers \
+              --pin-memory --amp-dtype ${LOCAL_AMP_DTYPE} \
+              --epochs 100 \
+              --batch-size ${LOCAL_BATCH_SIZE} \
+              --grad-accum-steps ${LOCAL_GRAD_ACCUM} \
+              --lr 0.001 \
+              ${LOCAL_MODEL_FLAGS} \
+              ${LOCAL_MIXUP_FLAGS} \
+              ${LOCAL_SPECAUGMENT_FLAGS} \
+              ${LOCAL_FOCAL_FLAGS} \
+              ${LOCAL_EMA_FLAGS} \
+              ${LOCAL_LABEL_SMOOTHING} \
+              ${LOCAL_CLASS_WEIGHTS} \
+              ${LOCAL_SWA_FLAGS} \
+              ${LOCAL_FMIX_FLAGS} \
+              ${LOCAL_EARLY_STOPPING} \
+              ${LOCAL_GRAD_CHECKPOINT} \
+              --scheduler cosine_warm_restarts \
+              --warm-restart-t0 20 \
+              --warm-restart-mult 2 \
+              --warmup-epochs 5 \
+              --warmup-lr-factor 0.1 \
+              --grad-clip-norm 1.0 \
+              --weight-decay 0.01 \
+              --channels-last \
+              --output "${LOCAL_OUTPUT_DIR}" \
+              --seed 1337 \
+              --checkpoint-every 5 \
+              --checkpoint-every-batches 2000 \
+              --wandb-project beatsight-v5 \
+              ${resume_from_flag}
+            
+            PYTHON_EXIT_CODE=$?
+            if [[ $PYTHON_EXIT_CODE -ne 0 ]]; then
+                log "❌ Training crashed with exit code $PYTHON_EXIT_CODE"
+                return $PYTHON_EXIT_CODE
+            fi
+            
+            log ""
+            log "🖥️  V5 LOCAL training complete!"
             ;;
         
         v5-full)

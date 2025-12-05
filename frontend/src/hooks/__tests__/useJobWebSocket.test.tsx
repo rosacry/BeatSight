@@ -28,8 +28,6 @@ vi.mock('@/lib/logger', () => ({
     }),
 }))
 
-import { useAuthStore } from '@/stores/authStore'
-
 // Store WebSocket instances for testing
 let wsInstances: MockWebSocket[] = []
 

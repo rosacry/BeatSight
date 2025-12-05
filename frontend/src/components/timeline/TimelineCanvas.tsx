@@ -6,6 +6,7 @@ import type {
     TimelineSelection,
     SnapSettings,
     NoteDiff,
+    DetectedOnset,
 } from '../../types/beatmap'
 import { LANE_COLORS, LANE_LABELS } from '../../types/beatmap'
 import type { WaveformData } from '../../hooks/useWaveform'
@@ -35,6 +36,8 @@ interface TimelineCanvasProps {
     beatGridVisible?: boolean
     /** Whether onset detection layer is visible - matches desktop EditorTimeline */
     onsetLayerVisible?: boolean
+    /** Detected onsets from AI analysis - for onset layer visualization */
+    detectedOnsets?: DetectedOnset[]
     /** Waveform scale (0.5-2.5) - matches desktop EditorTimeline */
     waveformScale?: number
     /** Waveform data for rendering - matches desktop WaveformGraph */
@@ -90,6 +93,7 @@ export function TimelineCanvas({
     showDiff = false,
     beatGridVisible = true,
     onsetLayerVisible = false,
+    detectedOnsets = [],
     waveformScale = 1.0,
     waveformData,
     onViewportChange,
@@ -361,8 +365,42 @@ export function TimelineCanvas({
             ctx.stroke()
         }
 
-        // TODO: Draw onset detection layer (when onsetLayerVisible)
-        void onsetLayerVisible
+        // Draw onset detection layer - shows raw detected peaks before classification
+        // Matches desktop DetectionDebugOverlay peak visualization
+        if (onsetLayerVisible && detectedOnsets.length > 0) {
+            const contentTop = HEADER_HEIGHT + RULER_HEIGHT
+            const contentHeight = lanes.length * LANE_HEIGHT
+
+            detectedOnsets.forEach((onset) => {
+                // onset.time is in seconds, convert to milliseconds for timeToX
+                const timeMs = onset.time * 1000
+                const x = SIDEBAR_WIDTH + timeToX(timeMs)
+
+                // Skip if outside visible area
+                if (x < SIDEBAR_WIDTH || x > width) return
+
+                // Confidence determines opacity and height
+                const alpha = Math.max(0.3, Math.min(0.9, onset.confidence))
+                const lineHeight = contentHeight * Math.max(0.3, onset.confidence)
+
+                // Draw vertical line from top of content area
+                ctx.beginPath()
+                ctx.strokeStyle = `rgba(251, 191, 36, ${alpha})` // amber-400 with alpha
+                ctx.lineWidth = 2
+                ctx.moveTo(x, contentTop)
+                ctx.lineTo(x, contentTop + lineHeight)
+                ctx.stroke()
+
+                // Draw small triangle marker at top
+                ctx.fillStyle = `rgba(251, 191, 36, ${alpha})`
+                ctx.beginPath()
+                ctx.moveTo(x, contentTop)
+                ctx.lineTo(x - 4, contentTop - 6)
+                ctx.lineTo(x + 4, contentTop - 6)
+                ctx.closePath()
+                ctx.fill()
+            })
+        }
 
         // Draw removed notes (diff mode)
         if (showDiff) {
@@ -483,6 +521,7 @@ export function TimelineCanvas({
         waveformScale,
         waveformData,
         onsetLayerVisible,
+        detectedOnsets,
         noteDiffs,
         timeToX,
         laneToY,

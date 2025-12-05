@@ -1,0 +1,74 @@
+# Backend deployment patch for GKE with Cloud SQL Proxy sidecar
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: beatsight-backend
+  namespace: beatsight
+spec:
+  replicas: 1
+  template:
+    spec:
+      serviceAccountName: beatsight-backend-sa
+      containers:
+        # Main application container - override with GKE-specific config
+        - name: backend
+          image: ghcr.io/rosacry/beatsight-backend:latest
+          env:
+            - name: DATABASE_URL
+              value: "postgresql+asyncpg://beatsight:$(DB_PASSWORD)@localhost:5432/beatsight"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: beatsight-secrets
+                  key: DB_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: beatsight-secrets
+                  key: JWT_SECRET
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: beatsight-secrets
+                  key: SENTRY_DSN
+                  optional: true
+            - name: ENVIRONMENT
+              value: "production"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+              ephemeral-storage: "1Gi"
+            limits:
+              cpu: "1000m"
+              memory: "2Gi"
+              ephemeral-storage: "2Gi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+        
+        # Cloud SQL Proxy sidecar
+        - name: cloud-sql-proxy
+          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.8.0
+          args:
+            - "--structured-logs"
+            - "--auto-iam-authn"
+            - "beatsight:us-central1:beatsight-db"
+          securityContext:
+            runAsNonRoot: true
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"

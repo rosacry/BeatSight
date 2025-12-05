@@ -5,7 +5,12 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
-    <!-- Icon.ico will be added later -->
+    <ApplicationIcon>Icon.ico</ApplicationIcon>
+    <AssemblyName>BeatSight</AssemblyName>
+    <Product>BeatSight</Product>
+    <Description>AI-powered drum transcription and practice tool</Description>
+    <Company>BeatSight</Company>
+    <Copyright>© 2025 BeatSight</Copyright>
   </PropertyGroup>
 
   <ItemGroup>

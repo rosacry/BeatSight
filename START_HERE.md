@@ -69,8 +69,12 @@ source ai-pipeline/training/tools/beatsight_env.sh
 
 ## 5. Active Workstreams (sync with status doc)
 
-- **⭐ AI Training:** Run Path G (V5 Ultimate, modes 17a-17d) via `post_export_commands.sh` - this is the recommended default for production
-- **Storage migration:** move the production dataset to the new HDD mount; verify permissions so the training pipeline can stream directly
+- **⭐ AI Training (IN PROGRESS):** V5 Ultimate with balanced sampling is actively training!
+  - **Path:** `17d-balanced` → `17e-local` → `19` → `19c`
+  - **Hardware:** RTX 3080 Ti FE (12GB), 9800X3D, 32GB DDR5-6000
+  - **ETA:** ~4-7 days to complete full pipeline
+  - **Details:** See `docs/PATH_TO_90_PERCENT.md` for current progress
+- **Storage migration:** Dataset now on Seagate 2TB HDD (E:), feature cache on Samsung 990 Pro NVMe (C:)
 - **Probe evaluation:** follow the warm-up probe notes in `docs/ml_training_runbook.md` before kicking off long trainings
 - **Desktop polishing:** see the "Critical Actions" section in `docs/product/status.md` for the UI backlog
 

@@ -134,12 +134,15 @@ if [ -z "${BEATSIGHT_GRAD_ACCUM_STEPS:-}" ]; then
 fi
 
 # DataLoader workers based on CPU cores:
-#   - Use cores + 2 workers (oversubscription helps with I/O-bound mmap)
+#   - For NVMe mmap caching, fewer workers is often better (less memory pressure)
 #   - persistent_workers=True eliminates Windows spawn overhead
+#   - With 9800X3D's 96MB X3D cache, workers benefit from cache locality
 if [ -z "${BEATSIGHT_TRAIN_WORKERS:-}" ]; then
-    BEATSIGHT_TRAIN_WORKERS=$((BEATSIGHT_CPU_CORES + 2))
-    # Cap at 16 workers max (diminishing returns)
-    [ "$BEATSIGHT_TRAIN_WORKERS" -gt 16 ] && BEATSIGHT_TRAIN_WORKERS=16
+    # Optimal formula for NVMe mmap: half of cores (avoids thrashing)
+    BEATSIGHT_TRAIN_WORKERS=$((BEATSIGHT_CPU_CORES / 2))
+    # Clamp between 4 and 12 (diminishing returns beyond 12)
+    [ "$BEATSIGHT_TRAIN_WORKERS" -lt 4 ] && BEATSIGHT_TRAIN_WORKERS=4
+    [ "$BEATSIGHT_TRAIN_WORKERS" -gt 12 ] && BEATSIGHT_TRAIN_WORKERS=12
 fi
 
 # DataLoader workers for validation (half of training workers)
@@ -150,8 +153,9 @@ if [ -z "${BEATSIGHT_VAL_WORKERS:-}" ]; then
 fi
 
 # Prefetch factor (samples per worker to prefetch)
-# Higher prefetch hides I/O latency - 4-8 is optimal for NVMe SSD + memory-mapped cache
-BEATSIGHT_PREFETCH_FACTOR=${BEATSIGHT_PREFETCH_FACTOR:-6}
+# Higher prefetch hides I/O latency - 6-10 is optimal for NVMe SSD + memory-mapped cache
+# For HDD-based datasets, use lower values (2-4) to avoid excessive memory usage
+BEATSIGHT_PREFETCH_FACTOR=${BEATSIGHT_PREFETCH_FACTOR:-8}
 
 set +a  # Stop auto-exporting
 

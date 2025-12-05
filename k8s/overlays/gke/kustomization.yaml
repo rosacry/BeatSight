@@ -1,0 +1,36 @@
+# GKE Autopilot Overlay
+# Apply with: kustomize build k8s/overlays/gke | kubectl apply -f -
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+  - ingress.yaml
+  - service-account.yaml
+
+namespace: beatsight
+
+# GKE-specific patches
+patches:
+  # Backend with Cloud SQL proxy sidecar - use JSON patch to remove PVC volume
+  - path: backend-patch.yaml
+  - target:
+      kind: Deployment
+      name: beatsight-backend
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/volumes
+      - op: remove
+        path: /spec/template/spec/containers/0/volumeMounts
+  # GKE-specific resource limits for frontend (Autopilot requires ephemeral-storage)
+  - path: frontend-patch.yaml
+
+# Image configuration (updated by CI/CD)
+images:
+  - name: beatsight-backend
+    newName: ghcr.io/rosacry/beatsight-backend
+    newTag: latest
+  - name: beatsight-frontend
+    newName: ghcr.io/rosacry/beatsight-frontend
+    newTag: latest

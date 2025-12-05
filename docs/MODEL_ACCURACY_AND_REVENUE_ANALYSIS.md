@@ -1,14 +1,16 @@
 # BeatSight Model Accuracy & Revenue Analysis
 
-**Date:** November 26, 2025 (Updated)  
+**Date:** December 5, 2025 (Updated)  
 **Context:** Analysis of what 85% validation accuracy means in practice and realistic revenue projections  
-**Training Path:** V5 Ultimate (Path G) - 22 proven innovations in single model
+**Training Path:** V5 Ultimate with balanced sampling (Local: `17d-balanced` → `17e-local` → `19` → `19c`)
 
 ---
 
 ## 1. What Does 85% Validation Accuracy Actually Mean?
 
-The 85% validation accuracy is for the **drum classifier model** - which classifies individual drum hits (short audio clips ~100ms) into one of 19 drum classes (kick, snare, hihat, etc.).
+The 85% validation accuracy is for the **drum classifier model** - which classifies individual drum hits (short audio clips ~100ms) into one of 21 drum classes (kick, snare, hihat, etc.).
+
+> **⚠️ Critical Discovery (Dec 2025):** Previous models showed ~41% accuracy with **catastrophic class collapse** - 19/21 classes at 0% accuracy due to 630x class imbalance. The fix: UNIFORM balanced sampling ensures all classes are learned equally.
 
 Here's how it translates to beatmap quality:
 
@@ -45,14 +47,14 @@ With your 16.3M sample dataset and the V5 Ultimate model, realistically:
 | Target | Achievable? | What It Takes |
 |--------|-------------|---------------|
 | 88-90% | ✅ Very likely | Current approach, good hyperparameters |
-| 92-94% | ✅ Likely | V5 with all innovations (Path G) |
-| 95-97% | ✅ **Target with V5 Self-Distill** | Path G: 14 → 17a → 17d → 17e |
+| 92-94% | ✅ Likely | V5 with balanced sampling + all innovations |
+| 95-97% | ✅ **Target with Self-Distillation** | `17d-balanced` → `17e-local` → `19c` |
 | 98%+ | ⚠️ Challenging | Would need ensemble + human verification |
 
-**Key insight:** V5 Ultimate targets the remaining errors with:
+**Key insight:** V5 Ultimate with balanced sampling targets the remaining errors with:
 - Ghost notes → Coordinate Attention + Deep Supervision
-- Class imbalance → Hard Negative Mining + Effective Class Weights
-- Overfitting → Self-Distillation + Progressive Augmentation
+- Class imbalance → **UNIFORM balanced sampling** (critical fix!)
+- Rare classes → Every class sampled equally per epoch
 - Timing precision → Multi-Scale Fusion + FMix
 
 ---

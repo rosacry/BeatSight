@@ -8,6 +8,8 @@ import { Link, useLocation, NavLink } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { UserMenu } from './UserMenu'
 import { CreditBalance } from './CreditBalance'
+import { EXTERNAL_LINKS, getDocsLink, getCommunityLink } from '@/lib/externalLinks'
+import { SKIP_LINK_TARGETS, ARIA_LABELS } from '@/lib/accessibility'
 
 interface LayoutProps {
     children: React.ReactNode
@@ -94,16 +96,30 @@ export function Layout({ children }: LayoutProps) {
 
     return (
         <div className="min-h-screen bg-gray-900 flex flex-col">
+            {/* Skip to main content link for screen readers */}
+            <a
+                href={`#${SKIP_LINK_TARGETS.MAIN_CONTENT}`}
+                className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-primary-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-md focus:outline-none focus:ring-2 focus:ring-white"
+            >
+                Skip to main content
+            </a>
+
             {/* Desktop Navigation */}
-            <nav className="bg-gray-800 border-b border-gray-700">
+            <nav
+                className="bg-gray-800 border-b border-gray-700"
+                id={SKIP_LINK_TARGETS.NAVIGATION}
+                aria-label="Main navigation"
+            >
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
                         {/* Logo and main nav */}
                         <div className="flex items-center">
                             <Link to="/" className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
-                                    <span className="text-white font-bold">B</span>
-                                </div>
+                                <img
+                                    src="/icons/logo-navbar.png"
+                                    alt="BeatSight"
+                                    className="w-8 h-8"
+                                />
                                 <span className="text-xl font-bold text-white hidden sm:block">BeatSight</span>
                             </Link>
 
@@ -165,6 +181,9 @@ export function Layout({ children }: LayoutProps) {
                             <button
                                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                                 className="md:hidden p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                aria-expanded={isMobileMenuOpen}
+                                aria-controls="mobile-menu"
+                                aria-label={isMobileMenuOpen ? ARIA_LABELS.MENU_CLOSE : ARIA_LABELS.MENU}
                             >
                                 {isMobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
                             </button>
@@ -174,7 +193,12 @@ export function Layout({ children }: LayoutProps) {
 
                 {/* Mobile menu */}
                 {isMobileMenuOpen && (
-                    <div className="md:hidden border-t border-gray-700">
+                    <div
+                        className="md:hidden border-t border-gray-700"
+                        id="mobile-menu"
+                        role="menu"
+                        aria-label="Mobile navigation menu"
+                    >
                         <div className="px-2 pt-2 pb-3 space-y-1">
                             {visibleNavItems.map((item) => (
                                 <NavLink
@@ -260,26 +284,33 @@ export function Layout({ children }: LayoutProps) {
             <Breadcrumb />
 
             {/* Main content */}
-            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main
+                id={SKIP_LINK_TARGETS.MAIN_CONTENT}
+                className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8"
+                tabIndex={-1}
+            >
                 {children}
             </main>
 
             {/* Footer */}
-            <footer className="bg-gray-800 border-t border-gray-700 mt-auto">
+            <footer className="bg-gray-800 border-t border-gray-700 mt-auto" role="contentinfo">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                         <p className="text-gray-400 text-sm">
                             © 2025 BeatSight. AI-powered drum beatmap generation.
                         </p>
                         <div className="flex items-center gap-6">
-                            <a href="/docs" className="text-gray-400 hover:text-white text-sm">
+                            <a href={getDocsLink()} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white text-sm">
                                 Documentation
+                                <span className="sr-only"> (opens in new tab)</span>
                             </a>
-                            <a href="/support" className="text-gray-400 hover:text-white text-sm">
+                            <a href={getCommunityLink()} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white text-sm">
                                 Support
+                                <span className="sr-only"> (opens in new tab)</span>
                             </a>
-                            <a href="https://github.com/beatsight" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white text-sm">
+                            <a href={EXTERNAL_LINKS.github.org} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white text-sm">
                                 GitHub
+                                <span className="sr-only"> (opens in new tab)</span>
                             </a>
                         </div>
                     </div>

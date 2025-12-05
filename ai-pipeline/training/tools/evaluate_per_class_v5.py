@@ -21,7 +21,7 @@ from typing import List, Dict, Any, Optional
 import numpy as np
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 from sklearn.metrics import classification_report, confusion_matrix
 
@@ -29,6 +29,15 @@ from sklearn.metrics import classification_report, confusion_matrix
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+
+# Drum classes (21 classes)
+DRUM_CLASSES = [
+    "aux_percussion", "china", "crash", "cross_stick", "cymbal_choke",
+    "hihat_closed", "hihat_foot_splash", "hihat_open", "hihat_pedal", "hihat_splash",
+    "kick", "ride_bell", "ride_bow", "rimshot", "snare",
+    "snare_center", "snare_cross_stick", "snare_rimshot", "splash", "tom_high", "tom_low"
+]
 
 
 def parse_args():
@@ -46,15 +55,7 @@ def parse_args():
 def main():
     args = parse_args()
     device = torch.device(args.device)
-    
-    # Components (21 classes)
-    components = [
-        "aux_percussion", "china", "crash", "cross_stick", "cymbal_choke",
-        "hihat_closed", "hihat_foot_splash", "hihat_open", "hihat_pedal", "hihat_splash",
-        "kick", "ride_bell", "ride_bow", "rimshot", "snare",
-        "snare_center", "snare_cross_stick", "snare_rimshot", "splash", "tom_high", "tom_low"
-    ]
-    num_classes = len(components)
+    num_classes = len(DRUM_CLASSES)
     
     print(f"Loading V5 {args.v5_size} model...")
     
@@ -79,42 +80,53 @@ def main():
     
     print(f"Model loaded: {sum(p.numel() for p in model.parameters()):,} parameters")
     
-    # Load dataset
+    # Load dataset - use the val split specifically
     print("Loading validation dataset...")
     from training.train_classifier import DrumSampleDataset
     
     labels_dir = Path("data/dataset_index")
-    cache_dir = Path("data/feature_cache/prod_combined_warmup_consolidated")
     
-    # Find labels file
-    val_labels_path = labels_dir / "val_labels.json"
-    if not val_labels_path.exists():
-        # Try numpy labels
-        val_labels_npy = labels_dir / "val_labels_labels.npy"
-        val_files_npy = labels_dir / "val_labels_files.npy"
-        if val_labels_npy.exists():
-            print(f"Loading numpy labels from {val_labels_npy}")
-            labels_arr = np.load(val_labels_npy)
-            files_arr = np.load(val_files_npy) if val_files_npy.exists() else None
-        else:
-            raise FileNotFoundError("Could not find val labels")
+    # Important: Point to the val-specific cache directory, not the parent
+    cache_dir = Path("data/feature_cache/prod_combined_warmup_consolidated/val")
     
-    # Load cache mapping
+    # Cache mapping  
     cache_mapping_path = labels_dir / "val_cache_mapping.npz"
     
+    # Check paths
+    print(f"  Labels dir: {labels_dir.absolute()}")
+    print(f"  Cache dir: {cache_dir.absolute()}")
+    print(f"  Cache manifest exists: {(cache_dir / 'manifest.json').exists()}")
+    print(f"  Cache mapping exists: {cache_mapping_path.exists()}")
+    
+    # Labels file
+    val_labels_path = labels_dir / "val_labels.json"
+    if not val_labels_path.exists():
+        # Try alternative naming
+        alt_paths = [
+            labels_dir / "val_labels.json",
+            labels_dir / "val_labels_labels.npy",  # numpy format marker
+        ]
+        val_labels_path = None
+        for p in alt_paths:
+            if p.exists():
+                val_labels_path = p.parent / "val_labels.json"  # Dataset loads from stem
+                break
+    
+    # Create dataset
     val_dataset = DrumSampleDataset(
-        data_dir=labels_dir,  # Not used when cache is available
-        labels_file=val_labels_path if val_labels_path.exists() else labels_dir / "val_labels.json",
-        cache_dir=cache_dir,
+        data_dir=labels_dir,  # Not actually used when cache is available
+        labels_file=labels_dir / "val_labels.json",  # Will load from numpy if available
+        cache_dir=cache_dir,  # The val consolidated cache directory
         cache_mapping=cache_mapping_path if cache_mapping_path.exists() else None,
     )
     
     # Use subset for faster evaluation
     total_samples = len(val_dataset)
     subset_size = int(total_samples * args.fraction)
-    indices = np.random.RandomState(42).choice(total_samples, subset_size, replace=False)
     
-    from torch.utils.data import Subset
+    # Sample stratified by class to get representative results
+    print(f"Sampling {args.fraction*100:.0f}% of validation set...")
+    indices = np.random.RandomState(42).choice(total_samples, subset_size, replace=False)
     val_subset = Subset(val_dataset, indices)
     
     print(f"Evaluating on {subset_size:,} / {total_samples:,} samples ({args.fraction*100:.0f}%)")
@@ -132,10 +144,13 @@ def main():
     all_labels = []
     all_probs = []
     
+    print("Running inference...")
     with torch.no_grad(), torch.amp.autocast(device_type="cuda", dtype=torch.float16):
         for batch in tqdm(val_loader, desc="Evaluating"):
-            features = batch["features"].to(device)
-            labels = batch["label"].to(device)
+            # Dataset returns (features, labels) tuple
+            features, labels = batch
+            features = features.to(device)
+            labels = labels.to(device)
             
             outputs = model(features)
             if isinstance(outputs, tuple):
@@ -152,117 +167,138 @@ def main():
     all_labels = np.array(all_labels)
     all_probs = np.array(all_probs)
     
-    # Overall accuracy
-    overall_acc = (all_preds == all_labels).mean() * 100
-    print(f"\n{'='*70}")
-    print(f"OVERALL ACCURACY: {overall_acc:.2f}%")
-    print(f"{'='*70}")
+    # Calculate per-class metrics
+    print("\n" + "="*80)
+    print("PER-CLASS ACCURACY ANALYSIS")
+    print("="*80)
     
-    # Per-class metrics
-    print(f"\n{'CLASS':<20} {'SUPPORT':>10} {'PREC':>8} {'RECALL':>8} {'F1':>8} {'STATUS'}")
-    print("-" * 70)
-    
+    # Classification report
     report = classification_report(
-        all_labels, all_preds, 
+        all_labels, all_preds,
         labels=list(range(num_classes)),
-        target_names=components,
+        target_names=DRUM_CLASSES,
         output_dict=True,
         zero_division=0
     )
     
-    # Sort by F1 score (worst first)
-    class_metrics = []
-    for i, name in enumerate(components):
-        metrics = report.get(name, {})
-        support = int(metrics.get("support", 0))
-        precision = metrics.get("precision", 0)
-        recall = metrics.get("recall", 0)
-        f1 = metrics.get("f1-score", 0)
+    # Calculate per-class accuracy
+    per_class_correct = Counter()
+    per_class_total = Counter()
+    
+    for pred, label in zip(all_preds, all_labels):
+        per_class_total[label] += 1
+        if pred == label:
+            per_class_correct[label] += 1
+    
+    # Build results sorted by accuracy (worst first)
+    results = []
+    for i, cls_name in enumerate(DRUM_CLASSES):
+        total = per_class_total.get(i, 0)
+        correct = per_class_correct.get(i, 0)
+        accuracy = correct / total if total > 0 else 0
         
-        # Status indicator
-        if f1 < 0.3:
-            status = "FAILING"
-        elif f1 < 0.5:
-            status = "POOR"
-        elif f1 < 0.7:
-            status = "OK"
-        elif f1 < 0.85:
-            status = "GOOD"
-        else:
-            status = "EXCELLENT"
-        
-        class_metrics.append({
-            "class_idx": i,
-            "name": name,
-            "support": support,
-            "precision": precision,
-            "recall": recall,
-            "f1": f1,
-            "status": status,
+        cls_report = report.get(cls_name, {})
+        results.append({
+            "class_id": i,
+            "class_name": cls_name,
+            "accuracy": accuracy,
+            "precision": cls_report.get("precision", 0),
+            "recall": cls_report.get("recall", 0),
+            "f1": cls_report.get("f1-score", 0),
+            "support": total,
+            "correct": correct,
         })
     
-    # Sort by F1 (worst first)
-    class_metrics.sort(key=lambda x: x["f1"])
+    # Sort by accuracy (worst first)
+    results_sorted = sorted(results, key=lambda x: x["accuracy"])
     
-    for m in class_metrics:
-        status_color = {
-            "FAILING": "***",
-            "POOR": "** ",
-            "OK": "*  ",
-            "GOOD": "   ",
-            "EXCELLENT": "   ",
-        }[m["status"]]
-        print(f"{m['name']:<20} {m['support']:>10,} {m['precision']:>7.2%} {m['recall']:>7.2%} {m['f1']:>7.2%} {status_color}{m['status']}")
+    # Print results
+    print(f"\n{'Class':<20} {'Acc':<8} {'Prec':<8} {'Recall':<8} {'F1':<8} {'Support':<10} {'Correct':<10}")
+    print("-" * 80)
     
-    print("-" * 70)
+    for r in results_sorted:
+        acc_color = "🔴" if r["accuracy"] < 0.3 else ("🟡" if r["accuracy"] < 0.6 else "🟢")
+        print(f"{r['class_name']:<20} {acc_color}{r['accuracy']*100:>5.1f}%  {r['precision']*100:>5.1f}%  "
+              f"{r['recall']*100:>5.1f}%  {r['f1']*100:>5.1f}%  {r['support']:<10,} {r['correct']:<10,}")
     
-    # Summary statistics
-    failing = [m for m in class_metrics if m["status"] == "FAILING"]
-    poor = [m for m in class_metrics if m["status"] == "POOR"]
+    # Overall metrics
+    overall_accuracy = np.mean(all_preds == all_labels)
+    macro_f1 = report.get("macro avg", {}).get("f1-score", 0)
+    weighted_f1 = report.get("weighted avg", {}).get("f1-score", 0)
     
-    print(f"\nSUMMARY:")
-    print(f"  FAILING classes (F1 < 30%): {len(failing)}")
-    for m in failing:
-        print(f"    - {m['name']}: {m['f1']:.1%} F1, {m['support']:,} samples")
+    print("-" * 80)
+    print(f"\n{'OVERALL':<20} {overall_accuracy*100:>5.1f}%")
+    print(f"{'Macro F1':<20} {macro_f1*100:>5.1f}%")
+    print(f"{'Weighted F1':<20} {weighted_f1*100:>5.1f}%")
     
-    print(f"  POOR classes (F1 30-50%): {len(poor)}")
-    for m in poor:
-        print(f"    - {m['name']}: {m['f1']:.1%} F1, {m['support']:,} samples")
+    # Analysis summary
+    print("\n" + "="*80)
+    print("DIAGNOSIS SUMMARY")
+    print("="*80)
     
-    # Confusion analysis - most confused pairs
-    cm = confusion_matrix(all_labels, all_preds, labels=list(range(num_classes)))
+    # Identify failing classes (< 30% accuracy)
+    failing = [r for r in results if r["accuracy"] < 0.30]
+    struggling = [r for r in results if 0.30 <= r["accuracy"] < 0.60]
+    good = [r for r in results if r["accuracy"] >= 0.60]
     
-    print(f"\nMOST CONFUSED PAIRS (off-diagonal):")
-    confusions = []
-    for i in range(num_classes):
-        for j in range(num_classes):
-            if i != j and cm[i, j] > 0:
-                confusions.append({
-                    "true": components[i],
-                    "pred": components[j],
-                    "count": cm[i, j],
-                    "rate": cm[i, j] / cm[i].sum() if cm[i].sum() > 0 else 0,
-                })
+    print(f"\n🔴 FAILING (<30% accuracy): {len(failing)} classes")
+    for r in failing:
+        print(f"   - {r['class_name']}: {r['accuracy']*100:.1f}% ({r['support']:,} samples)")
     
-    confusions.sort(key=lambda x: x["count"], reverse=True)
-    for c in confusions[:15]:
-        print(f"  {c['true']:>20} -> {c['pred']:<20} : {c['count']:>6,} ({c['rate']:.1%})")
+    print(f"\n🟡 STRUGGLING (30-60% accuracy): {len(struggling)} classes")
+    for r in struggling:
+        print(f"   - {r['class_name']}: {r['accuracy']*100:.1f}% ({r['support']:,} samples)")
+    
+    print(f"\n🟢 GOOD (>60% accuracy): {len(good)} classes")
+    for r in good:
+        print(f"   - {r['class_name']}: {r['accuracy']*100:.1f}% ({r['support']:,} samples)")
+    
+    # Confusion analysis for worst classes
+    if len(failing) > 0:
+        print("\n" + "="*80)
+        print("CONFUSION ANALYSIS FOR FAILING CLASSES")
+        print("="*80)
+        
+        cm = confusion_matrix(all_labels, all_preds, labels=list(range(num_classes)))
+        
+        for r in failing[:5]:  # Top 5 failing
+            cls_id = r["class_id"]
+            cls_name = r["class_name"]
+            
+            # What does this class get confused with?
+            row = cm[cls_id]
+            total = row.sum()
+            if total == 0:
+                continue
+            
+            print(f"\n{cls_name} ({r['accuracy']*100:.1f}% accuracy) - TOP CONFUSIONS:")
+            
+            # Sort by confusion count
+            confusions = [(DRUM_CLASSES[i], count, count/total*100) 
+                          for i, count in enumerate(row) if i != cls_id and count > 0]
+            confusions.sort(key=lambda x: -x[1])
+            
+            for conf_class, count, pct in confusions[:5]:
+                print(f"   → {conf_class}: {count:,} ({pct:.1f}%)")
     
     # Save results
     if args.output:
-        results = {
-            "overall_accuracy": overall_acc,
-            "per_class": class_metrics,
-            "confusion_pairs": confusions[:50],
-            "checkpoint": str(args.checkpoint),
-            "samples_evaluated": len(all_preds),
+        output_data = {
+            "overall_accuracy": float(overall_accuracy),
+            "macro_f1": float(macro_f1),
+            "weighted_f1": float(weighted_f1),
+            "samples_evaluated": int(subset_size),
+            "samples_total": int(total_samples),
+            "fraction": float(args.fraction),
+            "per_class": results,
         }
+        
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        with open(args.output, "w") as f:
-            json.dump(results, f, indent=2)
-        print(f"\nResults saved to {args.output}")
+        with open(args.output, 'w') as f:
+            json.dump(output_data, f, indent=2)
+        print(f"\nResults saved to: {args.output}")
     
-    return overall_acc
+    return overall_accuracy
 
 
 if __name__ == "__main__":

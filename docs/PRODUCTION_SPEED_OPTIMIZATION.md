@@ -2,7 +2,11 @@
 
 ## Executive Summary
 
-Your current training path (14 → 17a → 17d → 17e → 19 → 19c) is **excellent** and already includes most optimizations. Here's what you can add for **maximum speed without sacrificing accuracy**.
+**Training Paths:**
+- **Local GPU:** `14 → 17a → 17d-balanced → 17e-local → 19 → 19c` (current)
+- **Cloud GPU:** `14 → 17a → 17d → 17e → 19 → 19c`
+
+Both paths include most optimizations. Here's what you can add for **maximum speed without sacrificing accuracy**.
 
 ## Current State (Already Optimized ✅)
 

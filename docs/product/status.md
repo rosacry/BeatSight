@@ -1,14 +1,23 @@
-# BeatSight Status (December 3, 2025)
+# BeatSight Status (December 5, 2025)
 
 ## Snapshot
 - Desktop reference build: ✅ shipping-quality playback experience and editor skeleton remain green; the live-input experiment has been shelved and its code/config removed to reduce maintenance drag.
-- AI pipeline: 🟢 **Training actively running** (warm-up probe step 5a). Hardware-optimized configs created, class weighting added, environment hook implemented. **NEW: Cutting-edge 2024 techniques added. ⭐ RECOMMENDED: Path G (V5 Ultimate, modes 17a-17d) for production training.**
+- **🔥 AI pipeline: V5 LOCAL BALANCED training actively running** (`17d-balanced` → `17e-local` → `19` → `19c`). Uses UNIFORM balanced sampling to fix catastrophic class collapse (19/21 classes were at 0% before fix). Hardware: RTX 3080 Ti, 9800X3D, 32GB DDR5. See `docs/PATH_TO_90_PERCENT.md` for live status.
 - Web pivot: 🟢 **Priority 1-3 COMPLETE, Verifier Dashboard polish in progress**. Backend scaffold now includes Modal GPU orchestration, SSE streaming, S3 storage, notifications, map edit proposals, type generation, quality/robustness improvements, and verifier diff visualization.
 - **Monetization: ✅ Credit system fully implemented** - 2-tier pricing (Free 3/mo + Pro $12 50/mo) plus pay-per-use credits ($0.35/song). All 1147 backend tests passing.
 - Documentation: 🟢 consolidated under `docs/Guidebook.md`; historical logs preserved in `docs/archive/`.
 - **AI Integrations Verification: ✅ All 39 features in `MISSING_INTEGRATIONS.md` verified as fully implemented and robust.**
 - **Desktop/Web Alignment Audit: ✅ Schema alignment verified. Backend `AIGenerationOptions` now matches desktop `AiGenerationOptions`.**
 - **Test Coverage (Dec 3, 2025):** Backend: 1147 tests | Frontend: 223 test cases (14 files) | Desktop: 75 tests | AI Pipeline: 158 tests
+
+## Session Progress (December 5, 2025)
+
+### AI Training Pipeline Updates (IN PROGRESS)
+- 🔥 **Class collapse fix**: Discovered 19/21 classes at 0% accuracy due to 630x class imbalance
+- ✅ **Balanced sampling**: Implemented UNIFORM balanced sampling strategy
+- ✅ **Pipeline updates**: Created `v5-local-balanced-distill` mode (17e-local)
+- ✅ **Documentation**: Updated PATH_TO_90_PERCENT.md, MASTER_ACTION_PLAN.md, START_HERE.md, and training docs
+- 🔄 **Training status**: `v5-local-balanced` running, ~4-7 days per phase
 
 ## Session Progress (December 3, 2025)
 

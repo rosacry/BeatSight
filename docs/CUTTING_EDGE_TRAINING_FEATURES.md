@@ -6,17 +6,29 @@ This document describes BeatSight's production training pipeline using the **V5 
 
 ## ⭐ TL;DR - Production Path
 
-**V5 Ultimate is the recommended path for production:**
+**V5 Ultimate is the recommended path for production.**
+
+### 🖥️ LOCAL GPU Path (RTX 3080 Ti) - CURRENTLY ACTIVE
 
 ```bash
-./auto_train.sh label-audit      # 14  - Find bad labels (~30min)
-./auto_train.sh v5-warmup        # 17a - Validate system (~2hr)
-./auto_train.sh v5-full          # 17d - Full training (~24hr)
-./auto_train.sh v5-self-distill  # 17e - Born-Again boost (~24hr) [optional]
-./auto_train.sh v5-pseudo-label  # 20  - Semi-supervised boost (~6hr) [optional, needs unlabeled data]
+./auto_train.sh label-audit          # 14  - Find bad labels (~30min)
+./auto_train.sh v5-warmup            # 17a - Validate system (~2hr)
+./auto_train.sh v5-local-balanced    # 17d-balanced - Full with balanced sampling (~4-7 days)
+./auto_train.sh v5-local-balanced-distill  # 17e-local - Self-distillation (~4-7 days)
+./post_export_commands.sh            # 19  - Generate multilabel dataset (~10min)
+./auto_train.sh multilabel-finetune  # 19c - Multilabel finetune (~6-12hr)
 ```
 
-**Total: ~26.5 hours minimum, ~56.5 hours maximum quality (with pseudo-labeling)**
+> 🔥 **CURRENT STATUS**: Training `v5-local-balanced`. See `docs/PATH_TO_90_PERCENT.md`
+
+### ☁️ Cloud GPU Path (H100/A100)
+
+```bash
+./auto_train.sh v5-full-cached       # 17d - Full training (~24hr on H100)
+./auto_train.sh v5-self-distill-cached  # 17e - Born-Again boost (~24hr)
+```
+
+**Total: ~8-14 days local GPU, ~50 hours cloud GPU**
 
 ---
 
@@ -26,11 +38,12 @@ This document describes BeatSight's production training pipeline using the **V5 
 |------|----------|----------|
 | **14** | ~30 min | Label Audit - Find mislabeled samples (⭐ RUN FIRST!) |
 | **17a** | ~2 hours | V5 warmup - Validate all innovations work |
-| **17b** | ~5 hours | V5 quick - All innovations in single model |
-| **17c** | ~12 hours | V5 long - Production quality |
-| **17d** | ~22-24 hours | V5 full - 300 epochs, maximum quality (⭐ RECOMMENDED) |
-| **17e** | ~22-24 hours | V5 Self-Distill - Born-Again Networks (+1-2% boost) |
-| **20** | ~6 hours | Pseudo-Labeling - Semi-supervised learning (+1-5% with unlabeled data) |
+| **17d-balanced** | ~4-7 days | 🔥 V5 LOCAL with UNIFORM balanced sampling (LOCAL GPU) |
+| **17e-local** | ~4-7 days | Self-distillation from 17d-balanced (LOCAL GPU) |
+| **17d** | ~22-24 hours | V5 full - 300 epochs (CLOUD GPU) |
+| **17e** | ~22-24 hours | V5 Self-Distill - Born-Again Networks (CLOUD GPU) |
+| **19** | ~10 min | Generate multilabel dataset (LOCAL) |
+| **19c** | ~6-12 hours | Multilabel finetune - simultaneous drum detection |
 
 ---
 
@@ -39,17 +52,21 @@ This document describes BeatSight's production training pipeline using the **V5 
 **Always run warmup first before long training sessions:**
 
 ```
-✅ CORRECT:
-   14 (label-audit) → 17a (warmup, ~2hr) → verify logs → 17d (full, ~24hr)
+✅ CORRECT (Local GPU):
+   14 (label-audit) → 17a (warmup) → verify logs → 17d-balanced (~4-7 days)
+
+✅ CORRECT (Cloud GPU):
+   14 (label-audit) → 17a (warmup) → verify logs → 17d (full, ~24hr)
 
 ❌ INCORRECT:
-   Jump straight to 17d without validation
+   Jump straight to 17d/17d-balanced without validation
 ```
 
 ### What to Check After Warmup
 
 - [ ] Training loss is decreasing
-- [ ] Validation accuracy is improving
+- [ ] Validation accuracy is improving (above 4.76% random baseline)
+- [ ] **All 21 classes** showing non-zero accuracy (check with quick_class_check.py)
 - [ ] No GPU out-of-memory errors
 - [ ] Models are saving to disk correctly
 - [ ] No NaN or infinity values in loss

@@ -1317,28 +1317,28 @@ while true; do
     echo "║   4r) Rebuild Cache (4 + 4c combined) ⚡ NEW DATA                    ║"
     echo "║   4n) Convert Labels to NumPy (fixes MemoryError) ⭐ REQUIRED       ║"
     echo "╠═════════════════════════════════════════════════════════════════════╣"
-    echo "║  💎 V5 ULTIMATE - PRODUCTION PATH (⭐ RECOMMENDED)                   ║"
+    echo "║  💎 V5 ULTIMATE - PRODUCTION PATH                                    ║"
     echo "║─────────────────────────────────────────────────────────────────────║"
     echo "║   14)  Label Audit: Find noisy labels (~30min) ⭐ RUN FIRST!        ║"
-    echo "║   14k) Label Audit K-Fold: 5-fold cross-val (~2hr) 🔬 RIGOROUS      ║"
-    echo "║   17a) V5: Warmup - validates all innovations (~1hr)                ║"
-    echo "║   17b) V5: Quick  - all innovations in one (~5hr)                   ║"
-    echo "║   17c) V5: Long   - production quality (~12hr)                      ║"
-    echo "║   17d) V5: Full   - large model, max quality (~24hr) ⭐ RECOMMENDED ║"
-    echo "║   17e) V5: Self-Distill - Born-Again +1-2% (~24hr)                  ║"
+    echo "║   17a) V5: Warmup - validates setup (~2hr)                          ║"
+    echo "║   17d) V5: Local Balanced - full training (~4-7 days) ⭐ BEST       ║"
+    echo "║   17e) V5: Distill LOCAL - self-distillation (~4-7 days)            ║"
     echo "║                                                                     ║"
-    echo "║   ⭐ PATH: 14 → 17a → 17d → 17e (~50 hours total)                  ║"
-    echo "║   🔬 RIGOROUS: 14 → 17a → 17d → 17e → 21 (+ holdout eval)          ║"
+    echo "║   🖥️  LOCAL GPU PATH (3080 Ti / 4080 / 4090):                       ║"
+    echo "║       14 → 17a → 17d → 17e → 19 → 19c                               ║"
+    echo "║       (~15-25 days total on RTX 3080 Ti)                            ║"
+    echo "║                                                                     ║"
+    echo "║   ☁️  CLOUD PATH (H100 / A100):                                     ║"
+    echo "║   17d-cloud) V5: Cloud Full (~24hr)                                 ║"
+    echo "║   17f)       V5: Cloud Distill (~24hr)                              ║"
     echo "╠═════════════════════════════════════════════════════════════════════╣"
     echo "║  🥁 MULTI-LABEL - SIMULTANEOUS DRUM DETECTION                       ║"
     echo "║─────────────────────────────────────────────────────────────────────║"
     echo "║   19)  Generate Multi-Label Dataset (~10min) ⭐ RUN FIRST!          ║"
-    echo "║   19a) Multi-Label: Warmup - validate setup (~2hr)                  ║"
-    echo "║   19b) Multi-Label: Full   - production quality (~12hr)             ║"
-    echo "║   19c) Multi-Label: Finetune - from V5 pretrained (~6hr) ⭐ BEST    ║"
+    echo "║   19c) Multi-Label: Finetune from V5 pretrained (~6-12hr) ⭐ BEST   ║"
     echo "║                                                                     ║"
     echo "║   Detects: kick+hihat, snare+crash, any simultaneous combo!         ║"
-    echo "║   ⭐ FULL PATH: 14 → 17a → 17d → 17e → 19 → 19c                     ║"
+    echo "║   ⭐ FULL LOCAL PATH: 14 → 17a → 17d → 17e → 19 → 19c               ║"
     echo "╠═════════════════════════════════════════════════════════════════════╣"
     echo "║  EVALUATION & ANALYSIS:                                             ║"
     echo "║   21)     Holdout Eval: Final test on unseen sources (~15min) 🔬    ║"
@@ -1368,17 +1368,14 @@ while true; do
         pre) run_preflight_check ;;
         # V5 ULTIMATE: Single Model with All Innovations (⭐ RECOMMENDED)
         14) run_auto_train label-audit ;;
-        14k) run_auto_train label-audit-kfold ;;
         17a) run_auto_train v5-warmup ;;
-        17b) run_auto_train v5-quick ;;
-        17c) run_auto_train v5-long ;;
-        17d) run_auto_train v5-full ;;
-        17e) run_auto_train v5-self-distill ;;
+        17d|17d-balanced) run_auto_train v5-local-balanced ;;
+        17e|17e-local) run_auto_train v5-distill ;;
+        17d-cloud) run_auto_train v5-cloud ;;
+        17f) run_auto_train v5-cloud-distill ;;
         # Multi-Label: Simultaneous Drum Detection
         19) generate_multilabel_dataset ;;
-        19a) run_auto_train multilabel-warmup ;;
-        19b) run_auto_train multilabel-full ;;
-        19c) run_auto_train multilabel-finetune ;;
+        19c) run_auto_train multilabel ;;
         # Evaluation & Analysis
         21) run_auto_train evaluate-holdout ;;
         eval) run_eval ;;

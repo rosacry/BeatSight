@@ -1084,6 +1084,29 @@ def generate_beatmap(
         },
     }
 
+    # Add analysis data for frontend visualization (onset layer, envelope, etc.)
+    # This is a subset of detection_debug optimized for the web frontend
+    if detection_debug:
+        peaks = detection_debug.get("peaks", [])
+        beatmap["analysis"] = {
+            "sampleRate": detection_debug.get("sample_rate", 44100),
+            "hopLength": detection_debug.get("hop_length", 512),
+            "tempo": detection_debug.get("tempo", quantization_result["bpm"]),
+            "tempoCandidates": detection_debug.get("tempo_candidates", []),
+            # Include peaks (detected onsets before classification)
+            # Each peak has: time (seconds), confidence, energy
+            "peaks": [
+                {
+                    "time": p.get("time", 0.0),
+                    "confidence": p.get("confidence", 0.5),
+                    "energy": p.get("energy"),
+                }
+                for p in peaks
+            ],
+            # Note: envelope/threshold arrays are large, omit for bandwidth
+            # Desktop loads from debug file, web uses just peaks
+        }
+
     # Add drum stem info if available
     if drum_stem_path:
         beatmap["audio"]["drumStem"] = Path(drum_stem_path).name

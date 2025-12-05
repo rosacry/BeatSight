@@ -2,7 +2,11 @@
 
 ## Overview
 
-This guide covers **everything you need to do AFTER training completes** to achieve maximum production performance. Run these steps after completing the training pipeline (`14 → 17a → 17d → 17e → 19 → 19c`).
+This guide covers **everything you need to do AFTER training completes** to achieve maximum production performance.
+
+**Training Paths:**
+- **Local GPU:** `14 → 17a → 17d-balanced → 17e-local → 19 → 19c`
+- **Cloud GPU:** `14 → 17a → 17d → 17e → 19 → 19c`
 
 > **Goal:** Transform your trained V5-Large model into a **2-3ms/sample** production beast
 > while maintaining maximum accuracy.

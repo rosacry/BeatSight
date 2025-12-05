@@ -351,7 +351,13 @@ The training system supports multiple model architectures, from baseline CNN to 
 | **v1** | Baseline CNN | ~840K | Simple 4-layer CNN | Legacy |
 | **beats** 🎵 | BEATs Foundation | ~90M | Microsoft's pretrained audio transformer | Research |
 
-> **⭐ RECOMMENDED**: Use **v5** (Path G) for production. It combines all 2024 innovations in a single efficient model.
+> **⭐ RECOMMENDED**: Use **v5** with balanced sampling for production.
+> 
+> **Training Paths:**
+> - **Local GPU:** `17d-balanced` → `17e-local` → `19` → `19c` (uses UNIFORM balanced sampling)
+> - **Cloud GPU:** `17d` → `17e` → `19` → `19c`
+> 
+> See `docs/PATH_TO_90_PERCENT.md` for current training status.
 
 ### V1 Baseline CNN
 ```

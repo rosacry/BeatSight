@@ -266,6 +266,35 @@ Contains editor-specific data that doesn't affect playback.
 
 ---
 
+### `analysis` Object (Optional)
+
+Contains analysis data for visualization (onset layer, tempo candidates).
+Added in version 1.1.0 for web frontend onset visualization support.
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `sampleRate` | integer | ❌ | Analysis sample rate in Hz |
+| `hopLength` | integer | ❌ | Hop length used in analysis |
+| `tempo` | number | ❌ | Detected tempo in BPM |
+| `tempoCandidates` | array[number] | ❌ | Alternative tempo candidates |
+| `peaks` | array[Peak] | ❌ | Raw detected onset peaks |
+
+#### `Peak` Object
+
+Each peak represents a detected onset before drum classification.
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `time` | number | ✅ | Time in seconds |
+| `confidence` | number | ✅ | Detection confidence (0.0 - 1.0) |
+| `energy` | number | ❌ | Energy level at peak |
+
+**Usage**: The `analysis.peaks` array enables the onset detection layer visualization
+in the timeline editor. This shows raw detected onsets (before classification) as
+vertical markers, helping users understand AI detection behavior.
+
+---
+
 ## Version Compatibility
 
 ### Forward Compatibility
@@ -278,6 +307,7 @@ Breaking changes require a major version bump (e.g., 1.x.x → 2.0.0).
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.0 | 2025-12-05 | Added `analysis` object for onset visualization |
 | 1.0.0 | 2025-11-02 | Initial specification |
 
 ---

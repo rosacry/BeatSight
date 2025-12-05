@@ -30,7 +30,8 @@ This guidebook is the navigation hub for every Markdown reference inside the rep
   - `ai-pipeline/training/README.md`
   - `ai-pipeline/training/DATASET_READINESS_PLAN.md`
   - `docs/ml_training_runbook.md`
-  - `docs/CUTTING_EDGE_TRAINING_FEATURES.md` - **⭐ RECOMMENDED: Path G (V5 Ultimate, modes 17a-17d)**
+  - `docs/CUTTING_EDGE_TRAINING_FEATURES.md` - **⭐ Training features reference**
+  - `docs/PATH_TO_90_PERCENT.md` - **🔥 CURRENT: Live training status & path**
 - Backend & services: `backend/README.md`, `docs/web_backend_architecture.md` (architecture), `docs/web_backend_schema.md` (data model).
 
 ## Domain Specs & Research

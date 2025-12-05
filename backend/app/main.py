@@ -77,8 +77,33 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         else:
             logger.warning("security_validation_warning", warning=error)
 
+    # Start Grafana Cloud metrics pusher if enabled
+    if settings.grafana_cloud_enabled:
+        from app.services.grafana_cloud import start_grafana_cloud_pusher
+
+        if settings.grafana_cloud_instance_id and settings.grafana_cloud_api_key:
+            await start_grafana_cloud_pusher(
+                instance_id=settings.grafana_cloud_instance_id,
+                api_key=settings.grafana_cloud_api_key,
+                push_interval=settings.grafana_cloud_push_interval,
+                enabled=True,
+            )
+            logger.info("grafana_cloud_pusher_started")
+        else:
+            logger.warning(
+                "grafana_cloud_enabled_but_missing_credentials",
+                has_instance_id=bool(settings.grafana_cloud_instance_id),
+                has_api_key=bool(settings.grafana_cloud_api_key),
+            )
+
     yield
-    # Shutdown (nothing to do currently)
+
+    # Shutdown
+    if settings.grafana_cloud_enabled:
+        from app.services.grafana_cloud import stop_grafana_cloud_pusher
+
+        await stop_grafana_cloud_pusher()
+        logger.info("grafana_cloud_pusher_stopped")
 
 
 app = FastAPI(

@@ -1,10 +1,12 @@
 /**
  * Navigation shell component.
  * Full-featured app shell with responsive navigation.
+ * Enhanced with glassmorphism and smooth animations.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation, NavLink } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { UserMenu } from './UserMenu'
 import { CreditBalance } from './CreditBalance'
@@ -88,6 +90,16 @@ function UploadIcon() {
 export function Layout({ children }: LayoutProps) {
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated())
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+    const [isScrolled, setIsScrolled] = useState(false)
+
+    // Track scroll for header effects
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 10)
+        }
+        window.addEventListener('scroll', handleScroll, { passive: true })
+        return () => window.removeEventListener('scroll', handleScroll)
+    }, [])
 
     // Filter nav items based on auth state
     const visibleNavItems = navItems.filter(
@@ -95,18 +107,25 @@ export function Layout({ children }: LayoutProps) {
     )
 
     return (
-        <div className="min-h-screen bg-gray-900 flex flex-col">
+        <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-black flex flex-col">
             {/* Skip to main content link for screen readers */}
             <a
                 href={`#${SKIP_LINK_TARGETS.MAIN_CONTENT}`}
-                className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-primary-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-md focus:outline-none focus:ring-2 focus:ring-white"
+                className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-cyan-500 focus:text-white focus:px-4 focus:py-2 focus:rounded-md focus:outline-none focus:ring-2 focus:ring-white"
             >
                 Skip to main content
             </a>
 
-            {/* Desktop Navigation */}
-            <nav
-                className="bg-gray-800 border-b border-gray-700"
+            {/* Desktop Navigation - Glass effect with scroll awareness */}
+            <motion.nav
+                initial={{ y: -100 }}
+                animate={{ y: 0 }}
+                transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+                    isScrolled 
+                        ? 'bg-slate-900/80 backdrop-blur-xl border-b border-white/10 shadow-lg shadow-black/20' 
+                        : 'bg-transparent'
+                }`}
                 id={SKIP_LINK_TARGETS.NAVIGATION}
                 aria-label="Main navigation"
             >
@@ -114,13 +133,18 @@ export function Layout({ children }: LayoutProps) {
                     <div className="flex items-center justify-between h-16">
                         {/* Logo and main nav */}
                         <div className="flex items-center">
-                            <Link to="/" className="flex items-center gap-2">
-                                <img
+                            <Link to="/" className="flex items-center gap-2 group">
+                                <motion.img
                                     src="/icons/logo-navbar.png"
                                     alt="BeatSight"
                                     className="w-8 h-8"
+                                    whileHover={{ scale: 1.1, rotate: 5 }}
+                                    transition={{ type: 'spring', stiffness: 400 }}
                                 />
-                                <span className="text-xl font-bold text-white hidden sm:block">BeatSight</span>
+                                <span className="text-xl font-bold text-white hidden sm:block 
+                                               group-hover:text-cyan-400 transition-colors">
+                                    BeatSight
+                                </span>
                             </Link>
 
                             {/* Desktop nav links */}
@@ -130,14 +154,28 @@ export function Layout({ children }: LayoutProps) {
                                         key={item.path}
                                         to={item.path}
                                         className={({ isActive }) =>
-                                            `flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive
-                                                ? 'bg-gray-700 text-white'
-                                                : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+                                            `relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                                isActive
+                                                    ? 'text-white'
+                                                    : 'text-slate-400 hover:text-white'
                                             }`
                                         }
                                     >
-                                        {item.icon}
-                                        {item.label}
+                                        {({ isActive }) => (
+                                            <>
+                                                {isActive && (
+                                                    <motion.span
+                                                        layoutId="activeNavBg"
+                                                        className="absolute inset-0 bg-white/10 rounded-lg"
+                                                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                                                    />
+                                                )}
+                                                <span className="relative flex items-center gap-2">
+                                                    {item.icon}
+                                                    {item.label}
+                                                </span>
+                                            </>
+                                        )}
                                     </NavLink>
                                 ))}
                             </div>
@@ -151,7 +189,13 @@ export function Layout({ children }: LayoutProps) {
                                     <>
                                         <Link
                                             to="/upload"
-                                            className="btn btn-primary flex items-center gap-2"
+                                            className="group relative flex items-center gap-2 px-5 py-2.5 
+                                                     bg-gradient-to-r from-cyan-500 to-cyan-600 
+                                                     hover:from-cyan-400 hover:to-cyan-500
+                                                     text-white font-medium rounded-xl
+                                                     shadow-[0_0_20px_rgba(0,212,255,0.3)]
+                                                     hover:shadow-[0_0_30px_rgba(0,212,255,0.5)]
+                                                     transition-all duration-300"
                                         >
                                             <UploadIcon />
                                             <span className="hidden lg:inline">Upload Song</span>
@@ -163,13 +207,18 @@ export function Layout({ children }: LayoutProps) {
                                     <>
                                         <Link
                                             to="/login"
-                                            className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                                            className="text-slate-400 hover:text-white px-4 py-2 rounded-lg 
+                                                     text-sm font-medium transition-colors"
                                         >
                                             Sign in
                                         </Link>
                                         <Link
                                             to="/register"
-                                            className="btn btn-primary"
+                                            className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-fuchsia-500 
+                                                     text-white font-medium rounded-xl
+                                                     shadow-[0_0_20px_rgba(0,212,255,0.3)]
+                                                     hover:shadow-[0_0_30px_rgba(0,212,255,0.5)]
+                                                     transition-all duration-300"
                                         >
                                             Sign up
                                         </Link>
@@ -180,7 +229,8 @@ export function Layout({ children }: LayoutProps) {
                             {/* Mobile menu button */}
                             <button
                                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                                className="md:hidden p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                className="md:hidden p-2 rounded-lg text-slate-400 hover:text-white 
+                                         hover:bg-white/10 transition-all duration-200"
                                 aria-expanded={isMobileMenuOpen}
                                 aria-controls="mobile-menu"
                                 aria-label={isMobileMenuOpen ? ARIA_LABELS.MENU_CLOSE : ARIA_LABELS.MENU}
@@ -191,59 +241,72 @@ export function Layout({ children }: LayoutProps) {
                     </div>
                 </div>
 
-                {/* Mobile menu */}
-                {isMobileMenuOpen && (
-                    <div
-                        className="md:hidden border-t border-gray-700"
-                        id="mobile-menu"
-                        role="menu"
-                        aria-label="Mobile navigation menu"
-                    >
+                {/* Mobile menu - Animated slide down */}
+                <AnimatePresence>
+                    {isMobileMenuOpen && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                            className="md:hidden border-t border-white/10 bg-slate-900/95 backdrop-blur-xl"
+                            id="mobile-menu"
+                            role="menu"
+                            aria-label="Mobile navigation menu"
+                        >
                         <div className="px-2 pt-2 pb-3 space-y-1">
-                            {visibleNavItems.map((item) => (
-                                <NavLink
+                            {visibleNavItems.map((item, index) => (
+                                <motion.div
                                     key={item.path}
-                                    to={item.path}
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                    className={({ isActive }) =>
-                                        `flex items-center gap-3 px-3 py-2 rounded-md text-base font-medium ${isActive
-                                            ? 'bg-gray-700 text-white'
-                                            : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
-                                        }`
-                                    }
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: index * 0.05 }}
                                 >
-                                    {item.icon}
-                                    {item.label}
-                                </NavLink>
+                                    <NavLink
+                                        to={item.path}
+                                        onClick={() => setIsMobileMenuOpen(false)}
+                                        className={({ isActive }) =>
+                                            `flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 ${
+                                                isActive
+                                                    ? 'bg-white/10 text-white'
+                                                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                            }`
+                                        }
+                                    >
+                                        {item.icon}
+                                        {item.label}
+                                    </NavLink>
+                                </motion.div>
                             ))}
                         </div>
 
                         {/* Mobile auth section */}
-                        <div className="px-2 pt-2 pb-4 border-t border-gray-700">
+                        <div className="px-2 pt-2 pb-4 border-t border-white/10">
                             {isAuthenticated ? (
                                 <div className="space-y-2">
                                     <Link
                                         to="/upload"
                                         onClick={() => setIsMobileMenuOpen(false)}
-                                        className="flex items-center gap-3 px-3 py-2 rounded-md text-base font-medium bg-primary-500 text-white"
+                                        className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium 
+                                                 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white"
                                     >
                                         <UploadIcon />
                                         Upload Song
                                     </Link>
-                                    <div className="px-3 py-2">
+                                    <div className="px-4 py-3">
                                         <CreditBalance showWhenZero />
                                     </div>
                                     <Link
                                         to="/profile"
                                         onClick={() => setIsMobileMenuOpen(false)}
-                                        className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700/50"
+                                        className="block px-4 py-3 rounded-xl text-base font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all"
                                     >
                                         Profile
                                     </Link>
                                     <Link
                                         to="/settings"
                                         onClick={() => setIsMobileMenuOpen(false)}
-                                        className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700/50"
+                                        className="block px-4 py-3 rounded-xl text-base font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all"
                                     >
                                         Settings
                                     </Link>
@@ -252,7 +315,7 @@ export function Layout({ children }: LayoutProps) {
                                             useAuthStore.getState().logout()
                                             setIsMobileMenuOpen(false)
                                         }}
-                                        className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-400 hover:text-red-300 hover:bg-gray-700/50"
+                                        className="block w-full text-left px-4 py-3 rounded-xl text-base font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all"
                                     >
                                         Sign out
                                     </button>
@@ -262,23 +325,28 @@ export function Layout({ children }: LayoutProps) {
                                     <Link
                                         to="/login"
                                         onClick={() => setIsMobileMenuOpen(false)}
-                                        className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700/50"
+                                        className="block px-4 py-3 rounded-xl text-base font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all"
                                     >
                                         Sign in
                                     </Link>
                                     <Link
                                         to="/register"
                                         onClick={() => setIsMobileMenuOpen(false)}
-                                        className="block px-3 py-2 rounded-md text-base font-medium bg-primary-500 text-white text-center"
+                                        className="block px-4 py-3 rounded-xl text-base font-medium 
+                                                 bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white text-center"
                                     >
                                         Sign up
                                     </Link>
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </motion.div>
                 )}
-            </nav>
+                </AnimatePresence>
+            </motion.nav>
+
+            {/* Spacer for fixed nav */}
+            <div className="h-16" />
 
             {/* Breadcrumb (for nested pages) */}
             <Breadcrumb />
@@ -286,29 +354,50 @@ export function Layout({ children }: LayoutProps) {
             {/* Main content */}
             <main
                 id={SKIP_LINK_TARGETS.MAIN_CONTENT}
-                className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8"
+                className="flex-1 w-full"
                 tabIndex={-1}
             >
                 {children}
             </main>
 
-            {/* Footer */}
-            <footer className="bg-gray-800 border-t border-gray-700 mt-auto" role="contentinfo">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <p className="text-gray-400 text-sm">
-                            © 2025 BeatSight. AI-powered drum beatmap generation.
-                        </p>
-                        <div className="flex items-center gap-6">
-                            <a href={getDocsLink()} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white text-sm">
+            {/* Footer - Glass effect */}
+            <footer className="relative bg-slate-900/50 backdrop-blur-xl border-t border-white/10 mt-auto" role="contentinfo">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+                        {/* Logo and copyright */}
+                        <div className="flex items-center gap-3">
+                            <img src="/icons/logo-navbar.png" alt="" className="w-6 h-6 opacity-70" />
+                            <p className="text-slate-500 text-sm">
+                                © 2025 BeatSight. AI-powered drum beatmap generation.
+                            </p>
+                        </div>
+                        
+                        {/* Links */}
+                        <div className="flex items-center gap-8">
+                            <a 
+                                href={getDocsLink()} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-slate-500 hover:text-cyan-400 text-sm transition-colors"
+                            >
                                 Documentation
                                 <span className="sr-only"> (opens in new tab)</span>
                             </a>
-                            <a href={getCommunityLink()} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white text-sm">
+                            <a 
+                                href={getCommunityLink()} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-slate-500 hover:text-cyan-400 text-sm transition-colors"
+                            >
                                 Support
                                 <span className="sr-only"> (opens in new tab)</span>
                             </a>
-                            <a href={EXTERNAL_LINKS.github.org} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white text-sm">
+                            <a 
+                                href={EXTERNAL_LINKS.github.org} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-slate-500 hover:text-cyan-400 text-sm transition-colors"
+                            >
                                 GitHub
                                 <span className="sr-only"> (opens in new tab)</span>
                             </a>
@@ -367,22 +456,26 @@ function Breadcrumb() {
     }
 
     return (
-        <div className="bg-gray-850 border-b border-gray-700/50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+        <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-slate-900/30 backdrop-blur-sm border-b border-white/5"
+        >
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
                 <nav className="flex items-center gap-2 text-sm">
                     {breadcrumbs.map((crumb, index) => (
                         <span key={crumb.path} className="flex items-center gap-2">
                             {index > 0 && (
-                                <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg className="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                 </svg>
                             )}
                             {index === breadcrumbs.length - 1 ? (
-                                <span className="text-gray-300">{crumb.label}</span>
+                                <span className="text-slate-400">{crumb.label}</span>
                             ) : (
                                 <Link
                                     to={crumb.path}
-                                    className="text-gray-400 hover:text-white transition-colors"
+                                    className="text-slate-500 hover:text-cyan-400 transition-colors"
                                 >
                                     {crumb.label}
                                 </Link>
@@ -391,6 +484,6 @@ function Breadcrumb() {
                     ))}
                 </nav>
             </div>
-        </div>
+        </motion.div>
     )
 }

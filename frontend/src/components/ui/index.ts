@@ -696,3 +696,9 @@ export {
     type SkeletonTableProps as PremiumSkeletonTableProps,
 } from './Skeleton'
 
+// Particle Background Components
+export {
+    ParticleBackground,
+    GradientOrbs,
+    AudioBars,
+} from './ParticleBackground'

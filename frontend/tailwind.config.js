@@ -85,6 +85,11 @@ export default {
                 'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
                 'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
                 'border-spin': 'border-spin 3s linear infinite',
+                // Particle background animations
+                'float-slow': 'floatSlow 20s ease-in-out infinite',
+                'float-slower': 'floatSlower 25s ease-in-out infinite',
+                'audio-bar': 'audioBar 1s ease-in-out infinite',
+                'fadeInUp': 'fadeInUp 0.6s ease-out forwards',
             },
             keyframes: {
                 progress: {
@@ -164,6 +169,26 @@ export default {
                 'border-spin': {
                     '0%': { '--border-angle': '0deg' },
                     '100%': { '--border-angle': '360deg' },
+                },
+                // Particle background keyframes
+                floatSlow: {
+                    '0%, 100%': { transform: 'translate(0, 0) rotate(0deg)' },
+                    '25%': { transform: 'translate(20px, -20px) rotate(2deg)' },
+                    '50%': { transform: 'translate(-10px, 10px) rotate(-1deg)' },
+                    '75%': { transform: 'translate(15px, 5px) rotate(1deg)' },
+                },
+                floatSlower: {
+                    '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+                    '33%': { transform: 'translate(-30px, 20px) scale(1.05)' },
+                    '66%': { transform: 'translate(20px, -15px) scale(0.95)' },
+                },
+                audioBar: {
+                    '0%, 100%': { height: '20%' },
+                    '50%': { height: '100%' },
+                },
+                fadeInUp: {
+                    '0%': { opacity: '0', transform: 'translateY(20px)' },
+                    '100%': { opacity: '1', transform: 'translateY(0)' },
                 },
             },
             // Additional design tokens

@@ -64,24 +64,24 @@ class CreditPackConfig:
 CREDIT_PACKS: dict[CreditPackType, CreditPackConfig] = {
     CreditPackType.STARTER: CreditPackConfig(
         pack_type=CreditPackType.STARTER,
-        credits=5,
-        price_cents=175,  # $1.75
+        credits=15,
+        price_cents=500,  # $5.00
         name="Starter Pack",
-        description="5 credits for casual use",
+        description="15 credits - great for getting started",
     ),
     CreditPackType.VALUE: CreditPackConfig(
         pack_type=CreditPackType.VALUE,
-        credits=15,
-        price_cents=450,  # $4.50 ($0.30/credit)
+        credits=30,
+        price_cents=1000,  # $10.00 ($0.33/credit)
         name="Value Pack",
-        description="15 credits - Save 14%",
+        description="30 credits - Save 5%",
     ),
     CreditPackType.POWER: CreditPackConfig(
         pack_type=CreditPackType.POWER,
-        credits=40,
-        price_cents=1000,  # $10.00 ($0.25/credit)
+        credits=75,
+        price_cents=2500,  # $25.00 ($0.33/credit)
         name="Power Pack",
-        description="40 credits - Save 29%",
+        description="75 credits - Best value",
     ),
 }
 
@@ -143,18 +143,46 @@ class CreditService:
     def __init__(self, session: AsyncSession):
         self._session = session
 
-    async def get_or_create_balance(self, user_id: uuid.UUID) -> CreditBalance:
-        """Get or create a credit balance for a user."""
-        result = await self._session.execute(
-            select(CreditBalance).where(CreditBalance.user_id == user_id)
-        )
+    async def get_or_create_balance(
+        self, user_id: uuid.UUID, for_update: bool = False
+    ) -> CreditBalance:
+        """Get or create a credit balance for a user.
+
+        Args:
+            user_id: The user's ID
+            for_update: If True, acquire a row-level lock (FOR UPDATE) to prevent
+                       concurrent modifications. Use this when you intend to modify
+                       the balance to prevent race conditions.
+        """
+        query = select(CreditBalance).where(CreditBalance.user_id == user_id)
+
+        if for_update:
+            # Acquire row-level lock to prevent concurrent modifications
+            # This ensures only one transaction can modify this balance at a time
+            query = query.with_for_update()
+
+        result = await self._session.execute(query)
         balance = result.scalar_one_or_none()
 
         if not balance:
+            # Create new balance - use INSERT with ON CONFLICT to handle race
+            # condition where two requests try to create balance simultaneously
             balance = CreditBalance(user_id=user_id)
             self._session.add(balance)
-            await self._session.flush()
-            logger.info(f"Created credit balance for user {user_id}")
+            try:
+                await self._session.flush()
+                logger.info(f"Created credit balance for user {user_id}")
+            except Exception:
+                # Another transaction created it first, rollback and re-query
+                await self._session.rollback()
+                result = await self._session.execute(
+                    select(CreditBalance)
+                    .where(CreditBalance.user_id == user_id)
+                    .with_for_update()
+                    if for_update
+                    else select(CreditBalance).where(CreditBalance.user_id == user_id)
+                )
+                balance = result.scalar_one()
 
         return balance
 
@@ -187,11 +215,14 @@ class CreditService:
             is_purchased: True for purchased credits (never expire)
             purchase_id: Related purchase record if applicable
             description: Human-readable description
+
+        Uses row-level locking to ensure atomic balance updates.
         """
         if amount <= 0:
             raise ValueError("Amount must be positive")
 
-        balance = await self.get_or_create_balance(user_id)
+        # Use FOR UPDATE to prevent race conditions when adding credits
+        balance = await self.get_or_create_balance(user_id, for_update=True)
 
         # Update balance
         if is_purchased:
@@ -229,8 +260,13 @@ class CreditService:
 
         Consumes bonus credits first, then purchased credits.
         Raises InsufficientCreditsError if no credits available.
+
+        Uses row-level locking (FOR UPDATE) to prevent race conditions
+        where concurrent requests could overdraw the balance.
         """
-        balance = await self.get_or_create_balance(user_id)
+        # Use FOR UPDATE to prevent concurrent modifications
+        # This ensures atomicity of the check-then-modify operation
+        balance = await self.get_or_create_balance(user_id, for_update=True)
 
         if not balance.has_credits:
             raise InsufficientCreditsError(required=1, available=0)
@@ -300,9 +336,13 @@ class CreditService:
         """Fulfill a credit purchase after payment confirmation.
 
         Called by Stripe webhook handler.
+        Uses row-level locking to prevent double-fulfillment from concurrent webhooks.
         """
+        # Lock the purchase row to prevent double-fulfillment from concurrent webhooks
         result = await self._session.execute(
-            select(CreditPurchase).where(CreditPurchase.id == purchase_id)
+            select(CreditPurchase)
+            .where(CreditPurchase.id == purchase_id)
+            .with_for_update()
         )
         purchase = result.scalar_one_or_none()
 

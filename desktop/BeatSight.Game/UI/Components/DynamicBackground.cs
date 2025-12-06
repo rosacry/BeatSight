@@ -301,5 +301,18 @@ namespace BeatSight.Game.UI.Components
                 if (Position.Y > bounds.Y + margin) Position = new Vector2(Position.X, -margin);
             }
         }
+
+        /// <summary>
+        /// Unsubscribe from events to prevent memory leaks.
+        /// The UIAudioController is a long-lived service, so we must clean up
+        /// when this background instance is disposed.
+        /// </summary>
+        protected override void Dispose(bool isDisposing)
+        {
+            if (uiAudio != null)
+                uiAudio.OnClickEvent -= Pulse;
+
+            base.Dispose(isDisposing);
+        }
     }
 }

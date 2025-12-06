@@ -103,4 +103,8 @@ class AIJob(Base):
         Index("ix_ai_job_retry", "state", "next_retry_at"),
         # Index for finding stale jobs by worker heartbeat
         Index("ix_ai_job_heartbeat", "state", "last_heartbeat"),
+        # Index for user's job listing ("My Jobs" page)
+        Index("ix_ai_jobs_requested_by_id", "requested_by_id"),
+        # Index for finding all jobs for a specific song
+        Index("ix_ai_jobs_song_id", "song_id"),
     )

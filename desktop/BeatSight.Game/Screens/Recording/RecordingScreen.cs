@@ -619,8 +619,32 @@ namespace BeatSight.Game.Screens.Recording
 
         public override bool OnExiting(ScreenExitEvent e)
         {
-            recordingService?.Dispose();
+            CleanupRecordingService();
             return base.OnExiting(e);
+        }
+
+        /// <summary>
+        /// Properly clean up the recording service by unsubscribing from events first.
+        /// This prevents memory leaks if the screen is disposed without calling OnExiting.
+        /// </summary>
+        private void CleanupRecordingService()
+        {
+            if (recordingService != null)
+            {
+                recordingService.LevelChanged -= onLevelChanged;
+                recordingService.RecordingCompleted -= onRecordingCompleted;
+                recordingService.Error -= onRecordingError;
+                recordingService.Dispose();
+                recordingService = null!;
+            }
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            if (isDisposing)
+                CleanupRecordingService();
+
+            base.Dispose(isDisposing);
         }
 
         private static QualitySettings GetQualitySettings(AudioQuality quality) => quality switch

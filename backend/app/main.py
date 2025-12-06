@@ -5,8 +5,9 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.routes import (
     achievements,
@@ -255,6 +256,47 @@ app.include_router(maps.router, prefix=settings.api_prefix)
 app.include_router(votes.router, prefix=settings.api_prefix)
 app.include_router(contributions.router, prefix=settings.api_prefix)
 app.include_router(websocket.router)  # No prefix - /ws/jobs
+
+
+# Global exception handler to prevent internal error details from leaking
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Handle unhandled exceptions without leaking internal details.
+    
+    In production, returns a generic error message.
+    In development, includes the exception details for debugging.
+    """
+    request_id = getattr(request.state, "request_id", None)
+    
+    # Log the full exception for debugging
+    logger.exception(
+        "unhandled_exception",
+        request_id=request_id,
+        path=request.url.path,
+        method=request.method,
+        exc_type=type(exc).__name__,
+        exc_message=str(exc),
+    )
+    
+    if settings.is_production:
+        # In production, don't leak internal details
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": "An internal error occurred. Please try again later.",
+                "request_id": request_id,
+            },
+        )
+    else:
+        # In development, include exception details
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": str(exc),
+                "type": type(exc).__name__,
+                "request_id": request_id,
+            },
+        )
 
 
 @app.get("/", tags=["root"])

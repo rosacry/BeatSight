@@ -255,7 +255,17 @@ namespace BeatSight.Game.Services.Recording
             StopRecording();
             StopMonitoring();
             StopMetronome();
-            recorder?.Dispose();
+
+            // IMPORTANT: Unsubscribe from events before disposing to prevent memory leaks
+            // The recorder may hold references through event handlers
+            if (recorder != null)
+            {
+                recorder.DataAvailable -= onDataAvailable;
+                // Note: Error handler is a lambda that captures 'this', but disposing
+                // the recorder should clean it up. For extra safety, we set recorder to null.
+                recorder.Dispose();
+                recorder = null;
+            }
         }
     }
 

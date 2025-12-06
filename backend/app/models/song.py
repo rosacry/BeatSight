@@ -53,6 +53,10 @@ class Song(Base):
     __table_args__ = (
         UniqueConstraint("fingerprint_hash", name="uq_song_fingerprint"),
         Index("ix_song_status", "status"),
+        # Index for "My Songs" page - finding songs created by a user
+        Index("ix_songs_created_by_id", "created_by_id"),
+        # Index for sorting by creation date (newest first pagination)
+        Index("ix_songs_created_at", "created_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(

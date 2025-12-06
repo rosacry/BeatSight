@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
 from app.db.redis import get_redis
+from app.services.stripe_service import get_stripe_service
 
 router = APIRouter(prefix="/health", tags=["health"])
 
@@ -102,6 +103,26 @@ async def check_redis() -> ComponentHealth:
         )
 
 
+def check_stripe() -> ComponentHealth:
+    """Check Stripe configuration status."""
+    try:
+        stripe_service = get_stripe_service()
+        if not stripe_service.is_configured():
+            return ComponentHealth(
+                status=HealthStatus.DEGRADED,
+                message="Stripe not configured (payments disabled)",
+            )
+        return ComponentHealth(
+            status=HealthStatus.HEALTHY,
+            message="Configured",
+        )
+    except Exception as e:
+        return ComponentHealth(
+            status=HealthStatus.DEGRADED,
+            message=f"Configuration error: {str(e)[:100]}",
+        )
+
+
 def aggregate_status(components: dict[str, ComponentHealth]) -> HealthStatus:
     """Aggregate component statuses into overall status."""
     statuses = [c.status for c in components.values()]
@@ -170,10 +191,12 @@ async def detailed_health_check(
     """
     db_health = await check_database(db)
     redis_health = await check_redis()
+    stripe_health = check_stripe()
 
     components = {
         "database": db_health,
         "redis": redis_health,
+        "stripe": stripe_health,
     }
 
     return HealthResponse(

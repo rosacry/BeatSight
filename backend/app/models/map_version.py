@@ -11,6 +11,7 @@ from sqlalchemy import (
     DateTime,
     Enum as SAEnum,
     ForeignKey,
+    Index,
     Integer,
     JSON,
     String,
@@ -44,6 +45,10 @@ class MapVersion(Base):
     __tablename__ = "map_versions"
     __table_args__ = (
         UniqueConstraint("map_id", "version_number", name="uq_map_version_number"),
+        # Index for loading all versions of a map (version history)
+        Index("ix_map_versions_map_id", "map_id"),
+        # Index for finding versions created by a user (contribution stats)
+        Index("ix_map_versions_created_by", "created_by"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(

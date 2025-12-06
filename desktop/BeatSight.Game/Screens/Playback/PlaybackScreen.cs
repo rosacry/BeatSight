@@ -1780,9 +1780,12 @@ namespace BeatSight.Game.Screens.Playback
 
         protected override void Dispose(bool isDisposing)
         {
-            base.Dispose(isDisposing);
+            // Clean up resources BEFORE calling base.Dispose
+            // This ensures our cleanup happens while the object is still valid
             stopMetronomeChannels();
             disposeTrack();
+
+            base.Dispose(isDisposing);
         }
 
         protected override bool OnKeyDown(KeyDownEvent e)

@@ -661,6 +661,74 @@ class TestModalWebhook:
 
     @patch("app.api.routes.ai_jobs.get_settings")
     @patch("app.api.routes.ai_jobs.AIJobService")
+    def test_webhook_idempotent_already_complete(
+        self,
+        mock_service_cls: MagicMock,
+        mock_settings: MagicMock,
+        client_authenticated: TestClient,
+        mock_job: AIJob,
+    ) -> None:
+        """Test webhook skips processing for already completed jobs (idempotency)."""
+        mock_settings.return_value.modal_webhook_secret = "test-secret"
+        
+        # Job is already in terminal state COMPLETE
+        mock_job.state = AIJobState.COMPLETE
+        mock_service = AsyncMock()
+        mock_service.get_by_id = AsyncMock(return_value=mock_job)
+        mock_service_cls.return_value = mock_service
+
+        response = client_authenticated.post(
+            "/api/ai-jobs/modal-webhook",
+            headers={"X-Webhook-Secret": "test-secret"},
+            json={
+                "job_id": str(mock_job.id),
+                "success": True,
+                "beatmap": {"notes": []},
+            },
+        )
+
+        # Should return 200 with skipped status (idempotent)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "skipped"
+        assert "already in terminal state" in data["message"]
+
+    @patch("app.api.routes.ai_jobs.get_settings")
+    @patch("app.api.routes.ai_jobs.AIJobService")
+    def test_webhook_idempotent_already_failed(
+        self,
+        mock_service_cls: MagicMock,
+        mock_settings: MagicMock,
+        client_authenticated: TestClient,
+        mock_job: AIJob,
+    ) -> None:
+        """Test webhook skips processing for already failed jobs (idempotency)."""
+        mock_settings.return_value.modal_webhook_secret = "test-secret"
+        
+        # Job is already in terminal state FAILED
+        mock_job.state = AIJobState.FAILED
+        mock_service = AsyncMock()
+        mock_service.get_by_id = AsyncMock(return_value=mock_job)
+        mock_service_cls.return_value = mock_service
+
+        response = client_authenticated.post(
+            "/api/ai-jobs/modal-webhook",
+            headers={"X-Webhook-Secret": "test-secret"},
+            json={
+                "job_id": str(mock_job.id),
+                "success": True,
+                "beatmap": {"notes": []},
+            },
+        )
+
+        # Should return 200 with skipped status (idempotent)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "skipped"
+        assert "already in terminal state" in data["message"]
+
+    @patch("app.api.routes.ai_jobs.get_settings")
+    @patch("app.api.routes.ai_jobs.AIJobService")
     def test_webhook_invalid_secret(
         self,
         mock_service_cls: MagicMock,

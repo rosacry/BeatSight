@@ -40,6 +40,55 @@ spec:
                   name: beatsight-secrets
                   key: SENTRY_DSN
                   optional: true
+            # Stripe Payment Processing
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: beatsight-secrets
+                  key: STRIPE_SECRET_KEY
+                  optional: true
+            - name: STRIPE_PUBLISHABLE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: beatsight-secrets
+                  key: STRIPE_PUBLISHABLE_KEY
+                  optional: true
+            - name: STRIPE_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: beatsight-secrets
+                  key: STRIPE_WEBHOOK_SECRET
+                  optional: true
+            - name: STRIPE_PRO_MONTHLY_PRICE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: beatsight-secrets
+                  key: STRIPE_PRO_MONTHLY_PRICE_ID
+                  optional: true
+            - name: STRIPE_PRO_YEARLY_PRICE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: beatsight-secrets
+                  key: STRIPE_PRO_YEARLY_PRICE_ID
+                  optional: true
+            - name: STRIPE_CREDITS_15_PRICE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: beatsight-secrets
+                  key: STRIPE_CREDITS_15_PRICE_ID
+                  optional: true
+            - name: STRIPE_CREDITS_30_PRICE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: beatsight-secrets
+                  key: STRIPE_CREDITS_30_PRICE_ID
+                  optional: true
+            - name: STRIPE_CREDITS_75_PRICE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: beatsight-secrets
+                  key: STRIPE_CREDITS_75_PRICE_ID
+                  optional: true
             - name: CORS_ALLOWED_ORIGINS
               value: '["https://beatsight.io","https://www.beatsight.io"]'
           resources:

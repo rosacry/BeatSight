@@ -65,6 +65,30 @@ ENDPOINT_LIMITS = {
         "premium": 3,
         "admin": 10,
     },
+    # Password reset - VERY strict to prevent abuse/enumeration
+    # Only 3 requests per 15 minutes (handled via longer window in middleware)
+    "/api/auth/forgot-password": {
+        "anonymous": 3,
+        "authenticated": 3,
+        "basic": 3,
+        "premium": 3,
+        "admin": 10,
+    },
+    "/api/auth/reset-password": {
+        "anonymous": 5,
+        "authenticated": 5,
+        "basic": 5,
+        "premium": 5,
+        "admin": 10,
+    },
+    # Token refresh - moderate limits
+    "/api/auth/refresh": {
+        "anonymous": 10,
+        "authenticated": 20,
+        "basic": 20,
+        "premium": 30,
+        "admin": 100,
+    },
     # Billing - prevent abuse
     "/api/billing": {
         "anonymous": 0,
@@ -72,6 +96,14 @@ ENDPOINT_LIMITS = {
         "basic": 10,
         "premium": 20,
         "admin": 100,
+    },
+    # Credit purchases - prevent rapid purchase attempts
+    "/api/credits/purchase": {
+        "anonymous": 0,
+        "authenticated": 5,
+        "basic": 5,
+        "premium": 10,
+        "admin": 50,
     },
 }
 

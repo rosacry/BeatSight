@@ -6,6 +6,7 @@ Supports email (SendGrid/SES) and WebPush notifications.
 from __future__ import annotations
 
 import asyncio
+import html
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -88,9 +89,17 @@ class EmailBackend(NotificationBackend):
         return "BeatSight notification"
 
     def _render_body_html(self, payload: NotificationPayload) -> str:
-        """Render HTML email body."""
+        """Render HTML email body.
+        
+        All user-provided content is escaped to prevent XSS attacks.
+        """
         settings = get_settings()
         base_url = settings.frontend_url or "https://beatsight.io"
+        
+        # Escape user-provided content to prevent XSS
+        safe_title = html.escape(payload.song_title)
+        safe_artist = html.escape(payload.song_artist)
+        safe_error = html.escape(payload.error_message or "Unknown error")
 
         if payload.event == NotificationEvent.JOB_COMPLETE:
             return f"""
@@ -114,8 +123,8 @@ class EmailBackend(NotificationBackend):
         </div>
         <div class="content">
             <p>Great news! Your AI-generated beatmap is complete.</p>
-            <p><strong>Song:</strong> {payload.song_title}<br>
-               <strong>Artist:</strong> {payload.song_artist}</p>
+            <p><strong>Song:</strong> {safe_title}<br>
+               <strong>Artist:</strong> {safe_artist}</p>
             <a href="{payload.result_url or f"{base_url}/jobs/{payload.job_id}"}" class="button">
                 View Your Beatmap
             </a>
@@ -155,9 +164,9 @@ class EmailBackend(NotificationBackend):
         </div>
         <div class="content">
             <p>Unfortunately, we couldn't generate a beatmap for your song.</p>
-            <p><strong>Song:</strong> {payload.song_title}<br>
-               <strong>Artist:</strong> {payload.song_artist}</p>
-            {f'<div class="error">{payload.error_message}</div>' if payload.error_message else ""}
+            <p><strong>Song:</strong> {safe_title}<br>
+               <strong>Artist:</strong> {safe_artist}</p>
+            {f'<div class="error">{safe_error}</div>' if payload.error_message else ""}
             <a href="{base_url}/jobs/{payload.job_id}" class="button">
                 View Details & Retry
             </a>
@@ -195,8 +204,8 @@ class EmailBackend(NotificationBackend):
         </div>
         <div class="content">
             <p>Your beatmap generation took longer than expected and was cancelled.</p>
-            <p><strong>Song:</strong> {payload.song_title}<br>
-               <strong>Artist:</strong> {payload.song_artist}</p>
+            <p><strong>Song:</strong> {safe_title}<br>
+               <strong>Artist:</strong> {safe_artist}</p>
             <a href="{base_url}/jobs/{payload.job_id}" class="button">
                 Retry Generation
             </a>

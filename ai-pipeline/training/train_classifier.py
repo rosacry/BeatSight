@@ -2004,14 +2004,29 @@ def validate(
     use_velocity: bool = False,
     velocity_weight: float = 0.1,
     velocity_criterion: Optional[nn.Module] = None,
-) -> tuple[float, float]:
-    """Validate the model with optional AMP and velocity prediction."""
+    num_classes: Optional[int] = None,
+    return_balanced_acc: bool = False,
+) -> tuple[float, float] | tuple[float, float, float]:
+    """Validate the model with optional AMP and velocity prediction.
+    
+    Args:
+        return_balanced_acc: If True, also returns balanced accuracy (macro-averaged per-class accuracy).
+                            This is the correct metric when training with balanced sampling but
+                            validating on imbalanced data.
+    
+    Returns:
+        (mean_loss, accuracy) or (mean_loss, accuracy, balanced_accuracy) if return_balanced_acc=True
+    """
 
     model.eval()
     total_loss = 0.0
     correct = 0
     total = 0
     non_blocking = device.type == "cuda"
+    
+    # For balanced accuracy calculation
+    all_predictions = []
+    all_labels = []
 
     with torch.no_grad():
         for batch_data in tqdm(dataloader, desc="Validation"):
@@ -2063,9 +2078,43 @@ def validate(
             _, predicted = torch.max(main_outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
+            
+            # Collect for balanced accuracy
+            if return_balanced_acc:
+                all_predictions.append(predicted.cpu())
+                all_labels.append(labels.cpu())
 
     mean_loss = total_loss / max(len(dataloader), 1)
     accuracy = 100 * correct / max(total, 1)
+    
+    if return_balanced_acc:
+        # Compute balanced accuracy (macro-averaged per-class accuracy)
+        all_predictions = torch.cat(all_predictions)
+        all_labels = torch.cat(all_labels)
+        
+        # Determine number of classes
+        n_classes = num_classes or max(int(all_labels.max().item()) + 1, int(all_predictions.max().item()) + 1)
+        
+        # Per-class accuracy
+        per_class_correct = torch.zeros(n_classes)
+        per_class_total = torch.zeros(n_classes)
+        
+        for c in range(n_classes):
+            mask = all_labels == c
+            per_class_total[c] = mask.sum().item()
+            if per_class_total[c] > 0:
+                per_class_correct[c] = ((all_predictions == c) & mask).sum().item()
+        
+        # Balanced accuracy = mean of per-class accuracies (only for classes with samples)
+        valid_classes = per_class_total > 0
+        if valid_classes.sum() > 0:
+            per_class_acc = per_class_correct[valid_classes] / per_class_total[valid_classes]
+            balanced_acc = 100 * per_class_acc.mean().item()
+        else:
+            balanced_acc = 0.0
+        
+        return mean_loss, accuracy, balanced_acc
+    
     return mean_loss, accuracy
 
 
@@ -5071,8 +5120,11 @@ def main():
                     autocast_dtype=autocast_dtype,
                     channels_last=args.channels_last,
                 )
+                val_balanced_acc = None  # TTA doesn't support balanced acc yet
             else:
-                val_loss, val_acc = validate(
+                # When using balanced sampling, also compute balanced accuracy for meaningful comparison
+                compute_balanced = args.balanced_sampling
+                val_result = validate(
                     model,
                     val_loader,
                     criterion,
@@ -5083,7 +5135,14 @@ def main():
                     use_velocity=use_velocity_training,
                     velocity_weight=args.velocity_weight,
                     velocity_criterion=velocity_criterion,
+                    num_classes=num_classes,
+                    return_balanced_acc=compute_balanced,
                 )
+                if compute_balanced:
+                    val_loss, val_acc, val_balanced_acc = val_result
+                else:
+                    val_loss, val_acc = val_result
+                    val_balanced_acc = None
 
             history.append(
                 {
@@ -5092,6 +5151,7 @@ def main():
                     "train_accuracy": float(train_acc),
                     "val_loss": float(val_loss),
                     "val_accuracy": float(val_acc),
+                    **({"val_balanced_accuracy": float(val_balanced_acc)} if val_balanced_acc is not None else {}),
                 }
             )
 
@@ -5102,40 +5162,49 @@ def main():
                     scheduler.step()
 
             print(f"Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.2f}%")
-            print(f"Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.2f}%")
+            if val_balanced_acc is not None:
+                print(f"Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.2f}% | Val Balanced Acc: {val_balanced_acc:.2f}%")
+            else:
+                print(f"Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.2f}%")
+
+            # Use balanced accuracy for best model selection when training with balanced sampling
+            val_metric_for_best = val_balanced_acc if val_balanced_acc is not None else val_acc
 
             if wandb_run is not None:
-                wandb_run.log(  # type: ignore[call-arg]
-                    {
-                        "epoch": epoch + 1,
-                        "train/loss": train_loss,
-                        "train/accuracy": train_acc,
-                        "val/loss": val_loss,
-                        "val/accuracy": val_acc,
-                        "lr": optimizer.param_groups[0]["lr"],
-                    },
-                    step=epoch + 1,
-                )
+                log_dict = {
+                    "epoch": epoch + 1,
+                    "train/loss": train_loss,
+                    "train/accuracy": train_acc,
+                    "val/loss": val_loss,
+                    "val/accuracy": val_acc,
+                    "lr": optimizer.param_groups[0]["lr"],
+                }
+                if val_balanced_acc is not None:
+                    log_dict["val/balanced_accuracy"] = val_balanced_acc
+                wandb_run.log(log_dict, step=epoch + 1)
 
-            if val_acc > best_val_acc:
-                best_val_acc = val_acc
+            if val_metric_for_best > best_val_acc:
+                best_val_acc = val_metric_for_best
                 best_epoch = epoch + 1
                 model_path = output_dir / "best_drum_classifier.pth"
                 _atomic_torch_save(_normalize_state_dict_keys(model.state_dict()), model_path)
                 best_model_path = model_path
-                _safe_print(f"✓ Saved best model (acc: {val_acc:.2f}%)")
+                metric_name = "balanced_acc" if val_balanced_acc is not None else "acc"
+                _safe_print(f"✓ Saved best model ({metric_name}: {val_metric_for_best:.2f}%)")
                 
                 # Save FULL resumable checkpoint at best point
-                save_best_checkpoint(epoch + 1, val_acc)
+                save_best_checkpoint(epoch + 1, val_metric_for_best)
                 
                 # Also save EMA model if enabled (often performs even better)
                 if ema is not None:
                     ema_model_path = output_dir / "best_drum_classifier_ema.pth"
                     _atomic_torch_save(_normalize_state_dict_keys(ema.ema_model.state_dict()), ema_model_path)
-                    _safe_print(f"✓ Saved best EMA model (acc: {val_acc:.2f}%)")
+                    _safe_print(f"✓ Saved best EMA model ({metric_name}: {val_metric_for_best:.2f}%)")
                 
                 if wandb_run is not None:
                     wandb_run.summary["best_val_accuracy"] = best_val_acc  # type: ignore[index]
+                    if val_balanced_acc is not None:
+                        wandb_run.summary["best_val_balanced_accuracy"] = best_val_acc
                     wandb_run.summary["best_epoch"] = best_epoch  # type: ignore[index]
 
             # Check for shutdown signal (SIGTERM/SIGHUP)
@@ -5144,11 +5213,12 @@ def main():
                 save_checkpoint(epoch + 1, reason="shutdown_signal")
                 break
 
-            # Check early stopping
+            # Check early stopping (use balanced acc if available)
             if early_stopper is not None:
-                if early_stopper(val_acc, epoch):
+                if early_stopper(val_metric_for_best, epoch):
+                    metric_name = "balanced accuracy" if val_balanced_acc is not None else "accuracy"
                     print(f"\n[STOP] Early stopping triggered at epoch {epoch + 1}")
-                    print(f"   Best validation accuracy: {best_val_acc:.2f}% at epoch {best_epoch}")
+                    print(f"   Best validation {metric_name}: {best_val_acc:.2f}% at epoch {best_epoch}")
                     save_checkpoint(epoch + 1, reason="early_stopping")
                     break
 

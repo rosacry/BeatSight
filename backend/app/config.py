@@ -220,6 +220,16 @@ class Settings(BaseSettings):
     stripe_pro_yearly_price_id: Optional[str] = Field(
         default=None, alias="STRIPE_PRO_YEARLY_PRICE_ID"
     )
+    # Credit pack price IDs
+    stripe_credits_15_price_id: Optional[str] = Field(
+        default=None, alias="STRIPE_CREDITS_15_PRICE_ID"
+    )
+    stripe_credits_30_price_id: Optional[str] = Field(
+        default=None, alias="STRIPE_CREDITS_30_PRICE_ID"
+    )
+    stripe_credits_75_price_id: Optional[str] = Field(
+        default=None, alias="STRIPE_CREDITS_75_PRICE_ID"
+    )
 
     # -------------------------------------------------------------------------
     # Subscription Quotas & Pricing

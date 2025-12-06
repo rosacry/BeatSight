@@ -628,6 +628,7 @@ async def modal_webhook(
     5. Triggering notifications
 
     Security: Verifies shared secret from Modal.
+    Idempotency: Uses ProcessedWebhookEvent to prevent duplicate processing.
     """
     import logging
 
@@ -651,6 +652,21 @@ async def modal_webhook(
             detail="Invalid job_id format",
         )
 
+    # Idempotency check - use job_id as event_id for Modal webhooks
+    from app.models.webhook_event import ProcessedWebhookEvent
+    from sqlalchemy import select
+    
+    event_id = f"modal_job_{result.job_id}"
+    existing_event = await session.execute(
+        select(ProcessedWebhookEvent).where(
+            ProcessedWebhookEvent.provider == "modal",
+            ProcessedWebhookEvent.event_id == event_id,
+        )
+    )
+    if existing_event.scalar_one_or_none():
+        logger.info(f"Modal webhook already processed for job {result.job_id}, skipping")
+        return {"status": "already_processed", "job_id": result.job_id}
+
     # Get the job
     ai_service = AIJobService(session)
     job = await ai_service.get_by_id(job_id)
@@ -660,6 +676,11 @@ async def modal_webhook(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Job not found",
         )
+    
+    # Check if job is already in a terminal state (additional safety)
+    if job.state in (AIJobState.COMPLETE, AIJobState.FAILED, AIJobState.CANCELLED):
+        logger.info(f"Job {job_id} already in terminal state {job.state}, skipping webhook")
+        return {"status": "already_completed", "job_id": result.job_id, "state": job.state.value}
 
     if result.success and result.beatmap:
         try:
@@ -757,6 +778,15 @@ async def modal_webhook(
             except Exception as e:
                 logger.warning(f"Failed to send notification for job {job_id}: {e}")
 
+            # Record webhook as processed for idempotency
+            processed_event = ProcessedWebhookEvent(
+                provider="modal",
+                event_id=event_id,
+                event_type="job_complete",
+            )
+            session.add(processed_event)
+            await session.commit()
+
             return {"status": "success", "map_version_id": str(new_version.id)}
 
         except Exception as e:
@@ -771,5 +801,14 @@ async def modal_webhook(
         error_msg = result.error or "Unknown error from Modal"
         await ai_service.mark_finished(job_id, error=error_msg)
         logger.warning(f"Job {job_id} failed in Modal: {error_msg}")
+
+        # Record webhook as processed for idempotency
+        processed_event = ProcessedWebhookEvent(
+            provider="modal",
+            event_id=event_id,
+            event_type="job_failed",
+        )
+        session.add(processed_event)
+        await session.commit()
 
         return {"status": "failed", "error": error_msg}

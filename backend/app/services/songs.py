@@ -27,8 +27,14 @@ class SongService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def create_song(self, payload: SongCreate) -> Song:
-        song = Song(**payload.model_dump())
+    async def create_song(self, payload: SongCreate, user_id: uuid.UUID) -> Song:
+        """Create a new song.
+
+        Args:
+            payload: Song data
+            user_id: The creating user's ID (will be set as owner)
+        """
+        song = Song(**payload.model_dump(), created_by_id=user_id)
         self._session.add(song)
         try:
             await self._session.commit()
@@ -90,13 +96,22 @@ class SongService:
         return song
 
     async def update_song(
-        self, song_id: uuid.UUID, payload: SongUpdate, user_id: uuid.UUID | None = None
+        self, song_id: uuid.UUID, payload: SongUpdate, user_id: uuid.UUID
     ) -> Song:
-        """Update a song. If user_id is provided, verifies ownership."""
+        """Update a song. Verifies ownership before allowing modification.
+
+        Args:
+            song_id: The song to update
+            payload: Fields to update
+            user_id: The requesting user's ID (required for authorization)
+
+        Raises:
+            SongNotFoundError: If song doesn't exist or user doesn't own it
+        """
         song = await self.get_song(song_id)
 
-        # Security: verify ownership if user_id provided
-        if user_id is not None and song.created_by_id != user_id:
+        # Security: ALWAYS verify ownership - no bypass allowed
+        if song.created_by_id != user_id:
             raise SongNotFoundError  # Don't reveal the song exists
 
         for field, value in payload.model_dump(exclude_unset=True).items():
@@ -106,13 +121,21 @@ class SongService:
         return song
 
     async def delete_song(
-        self, song_id: uuid.UUID, user_id: uuid.UUID | None = None
+        self, song_id: uuid.UUID, user_id: uuid.UUID
     ) -> None:
-        """Delete a song. If user_id is provided, verifies ownership."""
+        """Delete a song. Verifies ownership before allowing deletion.
+
+        Args:
+            song_id: The song to delete
+            user_id: The requesting user's ID (required for authorization)
+
+        Raises:
+            SongNotFoundError: If song doesn't exist or user doesn't own it
+        """
         song = await self.get_song(song_id)
 
-        # Security: verify ownership if user_id provided
-        if user_id is not None and song.created_by_id != user_id:
+        # Security: ALWAYS verify ownership - no bypass allowed
+        if song.created_by_id != user_id:
             raise SongNotFoundError  # Don't reveal the song exists
 
         await self._session.delete(song)

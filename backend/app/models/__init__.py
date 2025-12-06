@@ -35,6 +35,7 @@ from .training_contribution import (
     TrainingContribution,
 )
 from .user import User
+from .webhook_event import ProcessedWebhookEvent
 
 __all__ = [
     "Achievement",
@@ -54,6 +55,7 @@ __all__ = [
     "MapVerificationDecision",
     "MapVersion",
     "MapVote",
+    "ProcessedWebhookEvent",
     "PushSubscription",
     "Role",
     "Song",

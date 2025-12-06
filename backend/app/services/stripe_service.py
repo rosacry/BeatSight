@@ -273,9 +273,16 @@ class StripeService:
     ) -> dict[str, Any]:
         """Process incoming Stripe webhook.
 
+        Implements idempotency by tracking processed event IDs to prevent
+        duplicate processing from Stripe's retry mechanism.
+
         Returns:
             Dict with event_type and any relevant data
         """
+        from sqlalchemy import select
+        from sqlalchemy.exc import IntegrityError
+        from app.models.webhook_event import ProcessedWebhookEvent
+
         if not self.webhook_secret:
             raise ValueError("Stripe webhook secret not configured")
 
@@ -287,10 +294,21 @@ class StripeService:
             logger.warning(f"Invalid Stripe webhook signature: {e}")
             raise ValueError("Invalid signature")
 
+        event_id = event["id"]
         event_type = event["type"]
         data = event["data"]["object"]
 
-        logger.info(f"Processing Stripe webhook: {event_type}")
+        # Check if we've already processed this event (idempotency)
+        existing = await db.execute(
+            select(ProcessedWebhookEvent).where(
+                ProcessedWebhookEvent.event_id == event_id
+            )
+        )
+        if existing.scalar_one_or_none():
+            logger.info(f"Skipping duplicate Stripe webhook: {event_id}")
+            return {"event_type": event_type, "processed": False, "duplicate": True}
+
+        logger.info(f"Processing Stripe webhook: {event_type} ({event_id})")
 
         handlers = {
             "checkout.session.completed": self._handle_checkout_completed,
@@ -304,6 +322,23 @@ class StripeService:
         handler = handlers.get(event_type)
         if handler:
             result = await handler(db, data)
+
+            # Record that we processed this event (idempotency)
+            processed_event = ProcessedWebhookEvent(
+                event_id=event_id,
+                event_type=event_type,
+                provider="stripe",
+                event_metadata=str(result.get("user_id", "")),
+            )
+            db.add(processed_event)
+            try:
+                await db.flush()
+            except IntegrityError:
+                # Another request processed this event concurrently
+                logger.info(f"Event {event_id} was processed concurrently")
+                await db.rollback()
+                return {"event_type": event_type, "processed": False, "duplicate": True}
+
             return {"event_type": event_type, "processed": True, **result}
 
         return {"event_type": event_type, "processed": False}

@@ -9,6 +9,9 @@ import type { User, TokenResponse, LoginCredentials, RegisterCredentials } from 
 
 const API_BASE = '/api'
 
+/** Margin in seconds before token expiration to trigger refresh */
+const TOKEN_REFRESH_MARGIN = 60
+
 interface AuthStore {
     // State
     user: User | null
@@ -18,6 +21,8 @@ interface AuthStore {
 
     // Computed
     isAuthenticated: () => boolean
+    isTokenExpired: () => boolean
+    getTokenExpirationTime: () => number | null
 
     // Actions
     login: (credentials: LoginCredentials) => Promise<void>
@@ -33,6 +38,29 @@ class AuthError extends Error {
     constructor(public status: number, message: string) {
         super(message)
         this.name = 'AuthError'
+    }
+}
+
+/**
+ * Parse JWT token and extract payload without verification.
+ * Note: This is for client-side expiry checking only, not security.
+ */
+function parseJwt(token: string): { exp?: number; iat?: number; sub?: string } | null {
+    try {
+        const parts = token.split('.')
+        if (parts.length !== 3) return null
+        const payload = parts[1]
+        // Handle URL-safe base64
+        const base64 = payload.replace(/-/g, '+').replace(/_/g, '/')
+        const jsonPayload = decodeURIComponent(
+            atob(base64)
+                .split('')
+                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                .join('')
+        )
+        return JSON.parse(jsonPayload)
+    } catch {
+        return null
     }
 }
 
@@ -77,13 +105,49 @@ export const useAuthStore = create<AuthStore>()(
             // Computed property
             isAuthenticated: () => {
                 const state = get()
-                return state.accessToken !== null && state.user !== null
+                return state.accessToken !== null && state.user !== null && !state.isTokenExpired()
+            },
+
+            // Check if the access token is expired or about to expire
+            isTokenExpired: () => {
+                const state = get()
+                if (!state.accessToken) return true
+
+                const payload = parseJwt(state.accessToken)
+                if (!payload?.exp) return true
+
+                const now = Math.floor(Date.now() / 1000)
+                return payload.exp - TOKEN_REFRESH_MARGIN <= now
+            },
+
+            // Get token expiration time in milliseconds
+            getTokenExpirationTime: () => {
+                const state = get()
+                if (!state.accessToken) return null
+
+                const payload = parseJwt(state.accessToken)
+                if (!payload?.exp) return null
+
+                return payload.exp * 1000
             },
 
             // Initialize auth state on app load
             initialize: async () => {
                 const state = get()
-                if (state.accessToken && !state.user) {
+                if (!state.accessToken) return
+
+                // Check if token is expired
+                if (state.isTokenExpired()) {
+                    // Try to refresh
+                    const refreshed = await get().refreshTokens()
+                    if (!refreshed) {
+                        get().logout()
+                        return
+                    }
+                }
+
+                // Fetch user if we have a valid token but no user
+                if (!state.user) {
                     try {
                         await get().fetchCurrentUser()
                     } catch {

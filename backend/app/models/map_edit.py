@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, String, JSON, func
+from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Index, String, JSON, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -39,6 +39,12 @@ class MapEditProposal(Base):
     """User-submitted adjustments to a map version."""
 
     __tablename__ = "map_edit_proposals"
+    __table_args__ = (
+        # Index for verification queue (pending edits)
+        Index("ix_map_edit_proposals_status", "status"),
+        # Index for user's edit history
+        Index("ix_map_edit_proposals_proposer_id", "proposer_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4

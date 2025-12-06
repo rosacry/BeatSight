@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Integer, String, func
+from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Index, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -45,6 +45,12 @@ class Subscription(Base):
     """Tracks active subscriptions and quotas."""
 
     __tablename__ = "subscriptions"
+    __table_args__ = (
+        # Index for looking up a user's subscription (common query)
+        Index("ix_subscriptions_user_id", "user_id"),
+        # Index for filtering by status (active subscriptions, batch updates)
+        Index("ix_subscriptions_status", "status"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -100,6 +106,12 @@ class BillingTransaction(Base):
     """Transaction ledger for billing events."""
 
     __tablename__ = "billing_transactions"
+    __table_args__ = (
+        # Index for billing history queries per user
+        Index("ix_billing_transactions_user_id", "user_id"),
+        # Index for looking up transactions by payment provider reference
+        Index("ix_billing_transactions_provider_ref", "provider_ref"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4

@@ -5,8 +5,9 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { useAuthStore } from '@/stores/authStore'
+import { API_CONFIG } from '@/lib/config'
 
-const API_BASE = '/api'
+const API_BASE = API_CONFIG.baseUrl
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 

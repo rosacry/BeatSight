@@ -6,8 +6,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { User, TokenResponse, LoginCredentials, RegisterCredentials } from '@/types/auth'
+import { API_CONFIG } from '@/lib/config'
 
-const API_BASE = '/api'
+const API_BASE = API_CONFIG.baseUrl
 
 /** Margin in seconds before token expiration to trigger refresh */
 const TOKEN_REFRESH_MARGIN = 60

@@ -11,8 +11,9 @@ import type {
     AutoTopupConfig,
 } from '@/types/credits'
 import { getAccessToken } from '@/stores/authStore'
+import { API_CONFIG } from '@/lib/config'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+const API_BASE = API_CONFIG.baseUrl
 
 async function creditsRequest<T>(
     endpoint: string,

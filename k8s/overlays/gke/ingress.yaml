@@ -9,7 +9,7 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: "gce"
     kubernetes.io/ingress.global-static-ip-name: "beatsight-ip"
-    networking.gke.io/managed-certificates: "beatsight-cert"
+    networking.gke.io/managed-certificates: "beatsight-cert,beatsight-docs-cert"
     kubernetes.io/ingress.allow-http: "true"
 spec:
   rules:
@@ -55,7 +55,7 @@ spec:
                   number: 80
 
 ---
-# GKE Managed Certificate (auto-provisions Let's Encrypt)
+# GKE Managed Certificate for main site (auto-provisions Let's Encrypt)
 apiVersion: networking.gke.io/v1
 kind: ManagedCertificate
 metadata:
@@ -66,6 +66,16 @@ spec:
     - beatsight.io
     - www.beatsight.io
     - api.beatsight.io
+
+---
+# Separate certificate for docs (can be managed independently)
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: beatsight-docs-cert
+  namespace: beatsight
+spec:
+  domains:
     - docs.beatsight.io
 
 ---

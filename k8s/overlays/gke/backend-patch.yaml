@@ -13,6 +13,9 @@ spec:
         # Main application container - override with GKE-specific config
         - name: backend
           image: ghcr.io/rosacry/beatsight-backend:latest
+          envFrom:
+            - configMapRef:
+                name: beatsight-config
           env:
             - name: DATABASE_URL
               value: "postgresql+asyncpg://beatsight:$(DB_PASSWORD)@localhost:5432/beatsight"
@@ -32,8 +35,8 @@ spec:
                   name: beatsight-secrets
                   key: SENTRY_DSN
                   optional: true
-            - name: ENVIRONMENT
-              value: "production"
+            - name: CORS_ALLOWED_ORIGINS
+              value: "https://beatsight.io,https://www.beatsight.io"
           resources:
             requests:
               cpu: "250m"

@@ -1,6 +1,5 @@
 # BeatSight Backend Dockerfile
 # Multi-stage build for production deployment
-# NOTE: Build context is repo root, paths are relative to root
 
 # =============================================================================
 # Build Stage
@@ -17,10 +16,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy dependency files (README.md is required by pyproject.toml)
-COPY backend/pyproject.toml backend/README.md ./
+COPY pyproject.toml README.md ./
 
 # Copy application source code (required for package building)
-COPY backend/app/ ./app/
+COPY app/ ./app/
 
 # Install dependencies using pip
 RUN pip install --no-cache-dir --upgrade pip \
@@ -49,9 +48,9 @@ COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
-COPY backend/app/ ./app/
-COPY backend/alembic/ ./alembic/
-COPY backend/alembic.ini ./
+COPY app/ ./app/
+COPY alembic/ ./alembic/
+COPY alembic.ini ./
 
 # Create non-root user for security
 RUN useradd --create-home --shell /bin/bash --uid 1000 appuser \

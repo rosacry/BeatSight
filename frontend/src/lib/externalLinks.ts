@@ -6,26 +6,25 @@
 export const EXTERNAL_LINKS = {
     // GitHub
     github: {
-        org: 'https://github.com/beatsight',
-        repo: 'https://github.com/beatsight/beatsight',
-        issues: 'https://github.com/beatsight/beatsight/issues',
-        discussions: 'https://github.com/beatsight/beatsight/discussions',
+        org: 'https://github.com/rosacry/BeatSight',
+        repo: 'https://github.com/rosacry/BeatSight',
+        issues: 'https://github.com/rosacry/BeatSight/issues',
+        discussions: 'https://github.com/rosacry/BeatSight/discussions',
     },
 
     // Community
     community: {
         discord: 'https://discord.gg/T57fDWcHDQ',
         // Use GitHub Discussions as fallback community space
-        forum: 'https://github.com/beatsight/beatsight/discussions',
+        forum: 'https://github.com/rosacry/BeatSight/discussions',
     },
 
-    // Documentation (update when docs site is deployed)
+    // Documentation - docs site is deployed!
     docs: {
-        // TODO: Update when documentation site is deployed
-        main: null as string | null, // e.g., 'https://docs.beatsight.io'
-        api: null as string | null, // e.g., 'https://docs.beatsight.io/api'
+        main: 'https://docs.beatsight.io',
+        api: 'https://docs.beatsight.io/docs/api',
         // Fallback to GitHub docs folder
-        github: 'https://github.com/beatsight/beatsight/tree/main/docs',
+        github: 'https://github.com/rosacry/BeatSight/tree/main/docs',
     },
 
     // Desktop app downloads (update when releases are published)
@@ -34,7 +33,7 @@ export const EXTERNAL_LINKS = {
         mac: null as string | null,
         linux: null as string | null,
         // Fallback to GitHub releases
-        releases: 'https://github.com/beatsight/beatsight/releases',
+        releases: 'https://github.com/rosacry/BeatSight/releases',
     },
 
     // Legal pages

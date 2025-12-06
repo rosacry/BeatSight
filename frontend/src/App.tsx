@@ -43,7 +43,7 @@ const pageTransition = {
 
 function AnimatedRoutes() {
     const location = useLocation()
-    
+
     return (
         <AnimatePresence mode="wait">
             <motion.div

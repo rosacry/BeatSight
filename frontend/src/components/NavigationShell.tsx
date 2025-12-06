@@ -121,11 +121,10 @@ export function Layout({ children }: LayoutProps) {
                 initial={{ y: -100 }}
                 animate={{ y: 0 }}
                 transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-                    isScrolled 
-                        ? 'bg-slate-900/80 backdrop-blur-xl border-b border-white/10 shadow-lg shadow-black/20' 
+                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
+                        ? 'bg-slate-900/80 backdrop-blur-xl border-b border-white/10 shadow-lg shadow-black/20'
                         : 'bg-transparent'
-                }`}
+                    }`}
                 id={SKIP_LINK_TARGETS.NAVIGATION}
                 aria-label="Main navigation"
             >
@@ -154,10 +153,9 @@ export function Layout({ children }: LayoutProps) {
                                         key={item.path}
                                         to={item.path}
                                         className={({ isActive }) =>
-                                            `relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                                isActive
-                                                    ? 'text-white'
-                                                    : 'text-slate-400 hover:text-white'
+                                            `relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
+                                                ? 'text-white'
+                                                : 'text-slate-400 hover:text-white'
                                             }`
                                         }
                                     >
@@ -254,94 +252,93 @@ export function Layout({ children }: LayoutProps) {
                             role="menu"
                             aria-label="Mobile navigation menu"
                         >
-                        <div className="px-2 pt-2 pb-3 space-y-1">
-                            {visibleNavItems.map((item, index) => (
-                                <motion.div
-                                    key={item.path}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.05 }}
-                                >
-                                    <NavLink
-                                        to={item.path}
-                                        onClick={() => setIsMobileMenuOpen(false)}
-                                        className={({ isActive }) =>
-                                            `flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 ${
-                                                isActive
+                            <div className="px-2 pt-2 pb-3 space-y-1">
+                                {visibleNavItems.map((item, index) => (
+                                    <motion.div
+                                        key={item.path}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.05 }}
+                                    >
+                                        <NavLink
+                                            to={item.path}
+                                            onClick={() => setIsMobileMenuOpen(false)}
+                                            className={({ isActive }) =>
+                                                `flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 ${isActive
                                                     ? 'bg-white/10 text-white'
                                                     : 'text-slate-400 hover:text-white hover:bg-white/5'
-                                            }`
-                                        }
-                                    >
-                                        {item.icon}
-                                        {item.label}
-                                    </NavLink>
-                                </motion.div>
-                            ))}
-                        </div>
+                                                }`
+                                            }
+                                        >
+                                            {item.icon}
+                                            {item.label}
+                                        </NavLink>
+                                    </motion.div>
+                                ))}
+                            </div>
 
-                        {/* Mobile auth section */}
-                        <div className="px-2 pt-2 pb-4 border-t border-white/10">
-                            {isAuthenticated ? (
-                                <div className="space-y-2">
-                                    <Link
-                                        to="/upload"
-                                        onClick={() => setIsMobileMenuOpen(false)}
-                                        className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium 
+                            {/* Mobile auth section */}
+                            <div className="px-2 pt-2 pb-4 border-t border-white/10">
+                                {isAuthenticated ? (
+                                    <div className="space-y-2">
+                                        <Link
+                                            to="/upload"
+                                            onClick={() => setIsMobileMenuOpen(false)}
+                                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium 
                                                  bg-gradient-to-r from-cyan-500 to-cyan-600 text-white"
-                                    >
-                                        <UploadIcon />
-                                        Upload Song
-                                    </Link>
-                                    <div className="px-4 py-3">
-                                        <CreditBalance showWhenZero />
+                                        >
+                                            <UploadIcon />
+                                            Upload Song
+                                        </Link>
+                                        <div className="px-4 py-3">
+                                            <CreditBalance showWhenZero />
+                                        </div>
+                                        <Link
+                                            to="/profile"
+                                            onClick={() => setIsMobileMenuOpen(false)}
+                                            className="block px-4 py-3 rounded-xl text-base font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                                        >
+                                            Profile
+                                        </Link>
+                                        <Link
+                                            to="/settings"
+                                            onClick={() => setIsMobileMenuOpen(false)}
+                                            className="block px-4 py-3 rounded-xl text-base font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                                        >
+                                            Settings
+                                        </Link>
+                                        <button
+                                            onClick={() => {
+                                                useAuthStore.getState().logout()
+                                                setIsMobileMenuOpen(false)
+                                            }}
+                                            className="block w-full text-left px-4 py-3 rounded-xl text-base font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all"
+                                        >
+                                            Sign out
+                                        </button>
                                     </div>
-                                    <Link
-                                        to="/profile"
-                                        onClick={() => setIsMobileMenuOpen(false)}
-                                        className="block px-4 py-3 rounded-xl text-base font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all"
-                                    >
-                                        Profile
-                                    </Link>
-                                    <Link
-                                        to="/settings"
-                                        onClick={() => setIsMobileMenuOpen(false)}
-                                        className="block px-4 py-3 rounded-xl text-base font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all"
-                                    >
-                                        Settings
-                                    </Link>
-                                    <button
-                                        onClick={() => {
-                                            useAuthStore.getState().logout()
-                                            setIsMobileMenuOpen(false)
-                                        }}
-                                        className="block w-full text-left px-4 py-3 rounded-xl text-base font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all"
-                                    >
-                                        Sign out
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    <Link
-                                        to="/login"
-                                        onClick={() => setIsMobileMenuOpen(false)}
-                                        className="block px-4 py-3 rounded-xl text-base font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all"
-                                    >
-                                        Sign in
-                                    </Link>
-                                    <Link
-                                        to="/register"
-                                        onClick={() => setIsMobileMenuOpen(false)}
-                                        className="block px-4 py-3 rounded-xl text-base font-medium 
+                                ) : (
+                                    <div className="space-y-2">
+                                        <Link
+                                            to="/login"
+                                            onClick={() => setIsMobileMenuOpen(false)}
+                                            className="block px-4 py-3 rounded-xl text-base font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                                        >
+                                            Sign in
+                                        </Link>
+                                        <Link
+                                            to="/register"
+                                            onClick={() => setIsMobileMenuOpen(false)}
+                                            className="block px-4 py-3 rounded-xl text-base font-medium 
                                                  bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white text-center"
-                                    >
-                                        Sign up
-                                    </Link>
-                                </div>
-                            )}
-                        </div>
-                    </motion.div>
-                )}
+                                        >
+                                            Sign up
+                                        </Link>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
                 </AnimatePresence>
             </motion.nav>
 
@@ -371,31 +368,31 @@ export function Layout({ children }: LayoutProps) {
                                 © 2025 BeatSight. AI-powered drum beatmap generation.
                             </p>
                         </div>
-                        
+
                         {/* Links */}
                         <div className="flex items-center gap-8">
-                            <a 
-                                href={getDocsLink()} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
+                            <a
+                                href={getDocsLink()}
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="text-slate-500 hover:text-cyan-400 text-sm transition-colors"
                             >
                                 Documentation
                                 <span className="sr-only"> (opens in new tab)</span>
                             </a>
-                            <a 
-                                href={getCommunityLink()} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
+                            <a
+                                href={getCommunityLink()}
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="text-slate-500 hover:text-cyan-400 text-sm transition-colors"
                             >
                                 Support
                                 <span className="sr-only"> (opens in new tab)</span>
                             </a>
-                            <a 
-                                href={EXTERNAL_LINKS.github.org} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
+                            <a
+                                href={EXTERNAL_LINKS.github.org}
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="text-slate-500 hover:text-cyan-400 text-sm transition-colors"
                             >
                                 GitHub
@@ -456,7 +453,7 @@ function Breadcrumb() {
     }
 
     return (
-        <motion.div 
+        <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-slate-900/30 backdrop-blur-sm border-b border-white/5"

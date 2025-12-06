@@ -31,18 +31,18 @@ async def create_admin(
     session: AsyncSession,
 ) -> User:
     """Create an admin user with all required roles."""
-    
+
     # Create auth service for password hashing
     auth_service = AuthService(session)
-    
+
     # Check if user already exists
     result = await session.execute(select(User).where(User.email == email))
     existing_user = result.scalar_one_or_none()
-    
+
     if existing_user:
         print(f"User with email {email} already exists!")
         print(f"User ID: {existing_user.id}")
-        
+
         # Check if they have admin role
         role_result = await session.execute(
             select(Role)
@@ -51,7 +51,7 @@ async def create_admin(
             .where(Role.code == RoleCode.ADMIN)
         )
         has_admin = role_result.scalar_one_or_none()
-        
+
         if not has_admin:
             print("Adding admin role to existing user...")
             await assign_admin_role(existing_user, session)
@@ -59,9 +59,9 @@ async def create_admin(
             print("✅ Admin role assigned!")
         else:
             print("✅ User already has admin role!")
-        
+
         return existing_user
-    
+
     # Create new user
     user = User(
         email=email,
@@ -72,38 +72,35 @@ async def create_admin(
     )
     session.add(user)
     await session.flush()  # Get the user ID
-    
+
     print(f"Created user: {email}")
     print(f"User ID: {user.id}")
-    
+
     # Assign admin role
     await assign_admin_role(user, session)
-    
+
     await session.commit()
     print("✅ Admin user created successfully!")
-    
+
     return user
 
 
 async def assign_admin_role(user: User, session: AsyncSession) -> None:
     """Assign admin role to a user."""
-    
+
     # Get admin role
-    result = await session.execute(
-        select(Role).where(Role.code == RoleCode.ADMIN)
-    )
+    result = await session.execute(select(Role).where(Role.code == RoleCode.ADMIN))
     admin_role = result.scalar_one_or_none()
-    
+
     if not admin_role:
         print("⚠️  Admin role doesn't exist! Running role seeder...")
         from app.db.seed_roles import seed_roles
+
         await seed_roles(session)
-        
-        result = await session.execute(
-            select(Role).where(Role.code == RoleCode.ADMIN)
-        )
+
+        result = await session.execute(select(Role).where(Role.code == RoleCode.ADMIN))
         admin_role = result.scalar_one_or_none()
-    
+
     if admin_role:
         # Check if assignment already exists
         existing = await session.execute(
@@ -115,13 +112,11 @@ async def assign_admin_role(user: User, session: AsyncSession) -> None:
             user_role = UserRole(user_id=user.id, role_id=admin_role.id)
             session.add(user_role)
             print(f"Assigned role: {RoleCode.ADMIN}")
-    
+
     # Also assign basic user role
-    result = await session.execute(
-        select(Role).where(Role.code == RoleCode.USER)
-    )
+    result = await session.execute(select(Role).where(Role.code == RoleCode.USER))
     user_role_obj = result.scalar_one_or_none()
-    
+
     if user_role_obj:
         existing = await session.execute(
             select(UserRole)
@@ -140,24 +135,24 @@ async def main() -> None:
         print(__doc__)
         print("\n❌ Error: Please provide email, password, and display_name")
         sys.exit(1)
-    
+
     email = sys.argv[1]
     password = sys.argv[2]
     display_name = sys.argv[3]
-    
+
     # Validate password length
     if len(password) < 8:
         print("❌ Error: Password must be at least 8 characters")
         sys.exit(1)
-    
+
     print("\n🔧 Creating admin account:")
     print(f"   Email: {email}")
     print(f"   Display Name: {display_name}")
     print()
-    
+
     async with async_session_factory() as session:
         await create_admin(email, password, display_name, session)
-    
+
     print("\n🎉 Done! You can now log in at https://beatsight.io/login")
 
 

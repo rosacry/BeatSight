@@ -39,8 +39,8 @@ export function LoginPage() {
             <div className="w-full max-w-md">
                 <div className="bg-gray-800 rounded-xl p-8 shadow-xl border border-gray-700">
                     <div className="text-center mb-8">
-                        <div className="w-16 h-16 bg-primary-500 rounded-xl flex items-center justify-center mx-auto mb-4">
-                            <span className="text-white font-bold text-2xl">B</span>
+                        <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4 bg-gradient-to-br from-cyan-500/20 to-fuchsia-500/20 border border-white/10">
+                            <img src="/icons/logo-navbar.png" alt="BeatSight" className="w-10 h-10" />
                         </div>
                         <h1 className="text-2xl font-bold text-white">Welcome back</h1>
                         <p className="text-gray-400 mt-2">Sign in to your BeatSight account</p>

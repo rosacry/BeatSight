@@ -17,7 +17,6 @@ import {
     AnimatedCounter,
     TiltCard,
     SpotlightCard,
-    MagneticButton,
 } from '@/components/ui'
 import { ParticleBackground, GradientOrbs, AudioBars } from '@/components/ui/ParticleBackground'
 
@@ -163,42 +162,36 @@ export function HomePage() {
                             variants={itemVariants}
                             className="flex flex-col sm:flex-row justify-center gap-4"
                         >
-                            <MagneticButton strength={0.2}>
-                                <Link
-                                    to="/upload"
-                                    className="group relative inline-flex items-center gap-2 px-8 py-4 
-                                             bg-gradient-to-r from-cyan-500 to-cyan-600 
-                                             hover:from-cyan-400 hover:to-cyan-500
-                                             text-white font-semibold rounded-xl
-                                             shadow-[0_0_30px_rgba(0,212,255,0.4)]
-                                             hover:shadow-[0_0_50px_rgba(0,212,255,0.6)]
-                                             transition-all duration-300 transform hover:scale-105"
-                                >
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                                    </svg>
-                                    Upload Song
-                                    <span className="absolute inset-0 rounded-xl bg-white/20 opacity-0 
-                                                   group-hover:opacity-100 transition-opacity duration-300" />
-                                </Link>
-                            </MagneticButton>
+                            <Link
+                                to="/upload"
+                                className="group relative inline-flex items-center justify-center gap-2 px-8 py-4 
+                                         bg-gradient-to-r from-cyan-500 to-cyan-600 
+                                         hover:from-cyan-400 hover:to-cyan-500
+                                         text-white font-semibold rounded-xl
+                                         shadow-[0_0_30px_rgba(0,212,255,0.4)]
+                                         hover:shadow-[0_0_50px_rgba(0,212,255,0.6)]
+                                         transition-all duration-300 transform hover:scale-105"
+                            >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                </svg>
+                                Upload Song
+                            </Link>
 
-                            <MagneticButton strength={0.2}>
-                                <Link
-                                    to="/queue"
-                                    className="group relative inline-flex items-center gap-2 px-8 py-4 
-                                             bg-white/5 hover:bg-white/10
-                                             border border-white/20 hover:border-white/30
-                                             text-white font-semibold rounded-xl
-                                             backdrop-blur-xl
-                                             transition-all duration-300"
-                                >
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                    </svg>
-                                    View Queue
-                                </Link>
-                            </MagneticButton>
+                            <Link
+                                to="/queue"
+                                className="group relative inline-flex items-center justify-center gap-2 px-8 py-4 
+                                         bg-white/5 hover:bg-white/10
+                                         border border-white/20 hover:border-white/30
+                                         text-white font-semibold rounded-xl
+                                         backdrop-blur-xl
+                                         transition-all duration-300 hover:scale-105"
+                            >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                                View Queue
+                            </Link>
                         </motion.div>
 
                         {/* Audio Visualizer */}

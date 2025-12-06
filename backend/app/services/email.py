@@ -444,7 +444,12 @@ The BeatSight Team
         return await self._send_email(email, subject, html_content, text_content)
 
     async def send_credit_purchase_confirmation(
-        self, email: str, display_name: str, credits: int, amount_dollars: float, new_balance: int
+        self,
+        email: str,
+        display_name: str,
+        credits: int,
+        amount_dollars: float,
+        new_balance: int,
     ) -> bool:
         """Send credit purchase confirmation email."""
         subject = f"🎵 {credits} Credits Added to Your BeatSight Account"
@@ -504,7 +509,7 @@ The BeatSight Team
             </div>
             <div class="footer">
                 <p>View your credit history in your <a href="{self.frontend_url}/settings/credits" style="color: #7c3aed;">account settings</a>.</p>
-                <p>Questions? Contact us at <a href="mailto:support@beatsight.app" style="color: #7c3aed;">support@beatsight.app</a></p>
+                <p>Questions? Contact us at <a href="mailto:support@beatsight.io" style="color: #7c3aed;">support@beatsight.io</a></p>
             </div>
         </div>
     </div>
@@ -527,7 +532,7 @@ Create a beatmap now: {self.frontend_url}/upload
 
 View credit history: {self.frontend_url}/settings/credits
 
-Questions? Contact support@beatsight.app
+Questions? Contact support@beatsight.io
 
 The BeatSight Team
 """

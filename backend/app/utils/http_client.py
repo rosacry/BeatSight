@@ -41,7 +41,7 @@ T = TypeVar("T")
 
 class HTTPMethod(str, Enum):
     """HTTP methods."""
-    
+
     GET = "GET"
     POST = "POST"
     PUT = "PUT"
@@ -53,7 +53,7 @@ class HTTPMethod(str, Enum):
 
 class HTTPError(Exception):
     """Base HTTP error."""
-    
+
     def __init__(
         self,
         message: str,
@@ -70,17 +70,19 @@ class HTTPError(Exception):
 
 class HTTPTimeoutError(HTTPError):
     """HTTP timeout error."""
+
     pass
 
 
 class HTTPConnectionError(HTTPError):
     """HTTP connection error."""
+
     pass
 
 
 class RateLimitedError(HTTPError):
     """Rate limited (429) error."""
-    
+
     def __init__(
         self,
         message: str,
@@ -96,7 +98,7 @@ class RateLimitedError(HTTPError):
 class HTTPClientConfig:
     """
     Configuration for HTTP client.
-    
+
     Attributes:
         base_url: Base URL for all requests
         timeout: Request timeout in seconds
@@ -108,7 +110,7 @@ class HTTPClientConfig:
         follow_redirects: Whether to follow redirects
         verify_ssl: Whether to verify SSL certificates
     """
-    
+
     base_url: str | None = None
     timeout: float = 30.0
     connect_timeout: float = 10.0
@@ -124,7 +126,7 @@ class HTTPClientConfig:
 class HTTPResponse:
     """
     HTTP response wrapper.
-    
+
     Attributes:
         status_code: HTTP status code
         headers: Response headers
@@ -134,7 +136,7 @@ class HTTPResponse:
         elapsed: Request duration in seconds
         url: Final URL (after redirects)
     """
-    
+
     status_code: int
     headers: dict[str, str]
     body: bytes
@@ -143,57 +145,58 @@ class HTTPResponse:
     _text: str | None = field(default=None, repr=False)
     _json_data: Any = field(default=None, repr=False)
     _json_parsed: bool = field(default=False, repr=False)
-    
+
     @property
     def text(self) -> str:
         """Get response body as text."""
         if self._text is None:
             self._text = self.body.decode("utf-8", errors="replace")
         return self._text
-    
+
     @property
     def json_data(self) -> Any:
         """Get parsed JSON data."""
         if not self._json_parsed:
             import json
+
             try:
                 self._json_data = json.loads(self.body)
             except (json.JSONDecodeError, UnicodeDecodeError):
                 self._json_data = None
             self._json_parsed = True
         return self._json_data
-    
+
     @property
     def ok(self) -> bool:
         """Check if status code indicates success (2xx)."""
         return 200 <= self.status_code < 300
-    
+
     @property
     def is_redirect(self) -> bool:
         """Check if status code indicates redirect (3xx)."""
         return 300 <= self.status_code < 400
-    
+
     @property
     def is_client_error(self) -> bool:
         """Check if status code indicates client error (4xx)."""
         return 400 <= self.status_code < 500
-    
+
     @property
     def is_server_error(self) -> bool:
         """Check if status code indicates server error (5xx)."""
         return 500 <= self.status_code < 600
-    
+
     def raise_for_status(self) -> None:
         """
         Raise HTTPError if response indicates an error.
-        
+
         Raises:
             RateLimitedError: If 429 status
             HTTPError: If 4xx or 5xx status
         """
         if self.ok:
             return
-        
+
         if self.status_code == 429:
             retry_after = self.headers.get("retry-after")
             raise RateLimitedError(
@@ -201,9 +204,11 @@ class HTTPResponse:
                 status_code=self.status_code,
                 response_body=self.json_data or self.text,
                 url=self.url,
-                retry_after=int(retry_after) if retry_after and retry_after.isdigit() else None,
+                retry_after=int(retry_after)
+                if retry_after and retry_after.isdigit()
+                else None,
             )
-        
+
         raise HTTPError(
             f"HTTP {self.status_code}: {self.url}",
             status_code=self.status_code,
@@ -215,13 +220,13 @@ class HTTPResponse:
 class HTTPClient:
     """
     Async HTTP client with retry and error handling.
-    
+
     Example:
         async with HTTPClient(base_url="https://api.example.com") as client:
             response = await client.get("/users/1")
             user = response.json_data
     """
-    
+
     def __init__(
         self,
         config: HTTPClientConfig | None = None,
@@ -233,7 +238,7 @@ class HTTPClient:
     ):
         """
         Initialize HTTP client.
-        
+
         Args:
             config: Full configuration object
             base_url: Base URL (shorthand for config)
@@ -250,18 +255,18 @@ class HTTPClient:
                 max_retries=max_retries,
                 headers=headers or {},
             )
-        
+
         self._client: httpx.AsyncClient | None = None
-    
+
     async def __aenter__(self) -> HTTPClient:
         """Enter async context manager."""
         await self._ensure_client()
         return self
-    
+
     async def __aexit__(self, *args: Any) -> None:
         """Exit async context manager."""
         await self.close()
-    
+
     async def _ensure_client(self) -> httpx.AsyncClient:
         """Ensure HTTP client is initialized."""
         if self._client is None:
@@ -277,13 +282,13 @@ class HTTPClient:
                 verify=self.config.verify_ssl,
             )
         return self._client
-    
+
     async def close(self) -> None:
         """Close the HTTP client."""
         if self._client:
             await self._client.aclose()
             self._client = None
-    
+
     async def request(
         self,
         method: HTTPMethod | str,
@@ -300,7 +305,7 @@ class HTTPClient:
     ) -> HTTPResponse:
         """
         Make an HTTP request with retry support.
-        
+
         Args:
             method: HTTP method
             url: Request URL (relative to base_url if set)
@@ -312,26 +317,26 @@ class HTTPClient:
             timeout: Override timeout for this request
             max_retries: Override max retries for this request
             raise_for_status: Raise exception on error status
-            
+
         Returns:
             HTTPResponse object
-            
+
         Raises:
             HTTPTimeoutError: On timeout
             HTTPConnectionError: On connection error
             HTTPError: On error status (if raise_for_status=True)
         """
         client = await self._ensure_client()
-        
+
         method_str = method.value if isinstance(method, HTTPMethod) else method.upper()
         retries = max_retries if max_retries is not None else self.config.max_retries
         delay = self.config.retry_delay
         last_error: Exception | None = None
-        
+
         for attempt in range(retries + 1):
             try:
                 start_time = time.perf_counter()
-                
+
                 response = await client.request(
                     method=method_str,
                     url=url,
@@ -342,9 +347,9 @@ class HTTPClient:
                     content=content,
                     timeout=timeout,
                 )
-                
+
                 elapsed = time.perf_counter() - start_time
-                
+
                 result = HTTPResponse(
                     status_code=response.status_code,
                     headers=dict(response.headers),
@@ -352,7 +357,7 @@ class HTTPClient:
                     elapsed=elapsed,
                     url=str(response.url),
                 )
-                
+
                 # Check if we should retry on this status
                 if (
                     attempt < retries
@@ -363,7 +368,7 @@ class HTTPClient:
                         retry_after = response.headers.get("retry-after")
                         if retry_after and retry_after.isdigit():
                             delay = float(retry_after)
-                    
+
                     logger.warning(
                         "Retrying request",
                         method=method_str,
@@ -375,12 +380,12 @@ class HTTPClient:
                     await asyncio.sleep(delay)
                     delay *= 2  # Exponential backoff
                     continue
-                
+
                 if raise_for_status:
                     result.raise_for_status()
-                
+
                 return result
-                
+
             except httpx.TimeoutException as e:
                 last_error = HTTPTimeoutError(
                     f"Request timed out: {url}",
@@ -397,7 +402,7 @@ class HTTPClient:
                     delay *= 2
                     continue
                 raise last_error from e
-                
+
             except httpx.ConnectError as e:
                 last_error = HTTPConnectionError(
                     f"Connection error: {url}",
@@ -414,12 +419,12 @@ class HTTPClient:
                     delay *= 2
                     continue
                 raise last_error from e
-        
+
         # Should not reach here, but just in case
         if last_error:
             raise last_error
         raise HTTPError(f"Request failed: {url}")
-    
+
     async def get(
         self,
         url: str,
@@ -436,7 +441,7 @@ class HTTPClient:
             headers=headers,
             **kwargs,
         )
-    
+
     async def post(
         self,
         url: str,
@@ -455,7 +460,7 @@ class HTTPClient:
             headers=headers,
             **kwargs,
         )
-    
+
     async def put(
         self,
         url: str,
@@ -474,7 +479,7 @@ class HTTPClient:
             headers=headers,
             **kwargs,
         )
-    
+
     async def patch(
         self,
         url: str,
@@ -493,7 +498,7 @@ class HTTPClient:
             headers=headers,
             **kwargs,
         )
-    
+
     async def delete(
         self,
         url: str,
@@ -521,16 +526,16 @@ def create_client(
 ) -> HTTPClient:
     """
     Create a new HTTP client instance.
-    
+
     Args:
         base_url: Base URL for all requests
         timeout: Request timeout in seconds
         max_retries: Maximum retry attempts
         headers: Default headers
-        
+
     Returns:
         HTTPClient instance
-        
+
     Example:
         client = create_client("https://api.example.com")
         async with client:
@@ -552,12 +557,12 @@ async def request(
 ) -> HTTPResponse:
     """
     Make a one-off HTTP request.
-    
+
     Args:
         method: HTTP method
         url: Full URL
         **kwargs: Additional arguments for HTTPClient.request
-        
+
     Returns:
         HTTPResponse object
     """

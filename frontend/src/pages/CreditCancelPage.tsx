@@ -77,7 +77,7 @@ export function CreditCancelPage() {
 
                 {/* Help text */}
                 <p className="text-sm text-gray-500 mt-8">
-                    Having trouble? <a href="mailto:support@beatsight.app" className="text-primary-400 hover:underline">Contact support</a>
+                    Having trouble? <a href="mailto:support@beatsight.io" className="text-primary-400 hover:underline">Contact support</a>
                 </p>
             </div>
         </div>

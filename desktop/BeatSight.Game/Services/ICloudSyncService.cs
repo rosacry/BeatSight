@@ -75,7 +75,7 @@ namespace BeatSight.Game.Services
     /// </summary>
     public sealed class StubCloudSyncService : ICloudSyncService
     {
-        public string ApiBaseUrl { get; set; } = "https://api.beatsight.app";
+        public string ApiBaseUrl { get; set; } = "https://api.beatsight.io";
         public bool IsAuthenticated => false;
         public SyncStatus Status => SyncStatus.Offline;
 

@@ -47,3 +47,35 @@ export {
     useLeadingDebounce,
 } from './useDebounce'
 
+// Real-time connection hooks
+export {
+    useRealtime,
+    useSSE,
+    usePresence,
+} from './useRealtime'
+export type {
+    ConnectionState,
+    ConnectionStats,
+    UseRealtimeOptions,
+    UseSSEOptions,
+    PresenceUser,
+} from './useRealtime'
+
+// Feature flags system
+export {
+    FeatureFlagsProvider,
+    useFeatureFlags,
+    useFeatureFlag,
+    useFeatureVariant,
+    Feature,
+    Variant,
+    withFeature,
+    FeatureFlagsDebugPanel,
+    DEFAULT_FLAGS,
+} from './useFeatureFlags'
+export type {
+    FeatureFlag,
+    FeatureFlagConfig,
+    UserContext,
+} from './useFeatureFlags'
+

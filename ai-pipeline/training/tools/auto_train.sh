@@ -57,13 +57,13 @@ V5_MODEL="--model-version v5 --v5-size large --drop-path-rate 0.15"
 # Training Enhancements
 V5_MIXUP="--mixup-alpha 0.2 --cutmix-alpha 0.5 --mixup-prob 0.5"
 V5_AUGMENT="--specaugment drum"
-V5_LOSS="--focal-loss --focal-gamma 3.0 --label-smoothing 0.1"
-V5_EMA="--use-ema --ema-decay 0.9995"
+V5_LOSS="--focal-loss --focal-gamma 1.5 --label-smoothing 0.1"
+V5_EMA="--use-ema --ema-decay 0.999 --ema-warmup-steps 1000"
 V5_EARLY_STOP="--early-stopping --early-stopping-patience 25 --early-stopping-min-delta 0.001 --early-stopping-warmup 5"
 V5_GRAD_CKPT="--gradient-checkpointing"
 
 # Balanced Sampling (CRITICAL for rare class accuracy)
-V5_BALANCED="--balanced-sampling --sampling-strategy uniform --class-weights none"
+V5_BALANCED="--balanced-sampling --sampling-strategy sqrt --class-weights none"
 
 # Learning Rate Schedule
 V5_SCHEDULER="--scheduler cosine_warm_restarts --warm-restart-t0 20 --warm-restart-mult 2 --warmup-epochs 5 --warmup-lr-factor 0.1"
@@ -179,9 +179,9 @@ case "$TRAIN_MODE" in
     # V5 LOCAL BALANCED (17d-balanced) - Full training for local GPU ⭐
     # =========================================================================
     v5-local-balanced|v5-balanced|balanced|17d-balanced|17d)
-        log "🎯 Starting V5 LOCAL BALANCED training (UNIFORM sampling)..."
+        log "🎯 Starting V5 LOCAL BALANCED training (SQRT sampling)..."
         log "   Hardware: RTX 3080 Ti (12GB), optimized batch/worker settings"
-        log "   Critical: Uses UNIFORM balanced sampling for all 21 classes"
+        log "   Critical: Uses SQRT balanced sampling for all 21 classes"
         RUN_DIR="${BEATSIGHT_RUN_ROOT}/v5/local-balanced"
         mkdir -p "$RUN_DIR"
         
@@ -204,7 +204,7 @@ case "$TRAIN_MODE" in
             --batch-size 512 \
             --grad-accum-steps 3 \
             --lr 0.002 \
-            --num-workers 4 --val-num-workers 2 --prefetch-factor 4 \
+            --num-workers 4 --val-num-workers 4 --prefetch-factor 4 --val-prefetch-factor 4 \
             --persistent-workers --pin-memory \
             --amp-dtype bfloat16 \
             --cache-warmup --cache-warmup-samples 500000 \
@@ -216,7 +216,7 @@ case "$TRAIN_MODE" in
             --output "$RUN_DIR" \
             --seed 1337 \
             --checkpoint-every 5 --checkpoint-every-batches 5000 \
-            --val-fraction 0.2 \
+            --val-fraction 0.05 \
             --wandb-project beatsight-v5 \
             $RESUME_FLAG
         

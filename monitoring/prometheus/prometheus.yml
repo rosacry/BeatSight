@@ -31,7 +31,7 @@ scrape_configs:
           environment: 'development'
           service: 'backend'
     # For production, uncomment and configure:
-    # - targets: ['api.beatsight.com:443']
+    # - targets: ['api.beatsight.io:443']
     #   labels:
     #     environment: 'production'
     #     service: 'backend'

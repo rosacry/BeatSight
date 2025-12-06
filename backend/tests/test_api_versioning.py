@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.utils.api_versioning import (
@@ -123,7 +123,10 @@ class TestDeprecatedDecorator:
         assert response.status_code == 200
         assert "Deprecation" in response.headers
         # Link header should not be present without replacement
-        assert "Link" not in response.headers or "successor-version" not in response.headers.get("Link", "")
+        assert (
+            "Link" not in response.headers
+            or "successor-version" not in response.headers.get("Link", "")
+        )
 
 
 class TestRequireVersionDecorator:

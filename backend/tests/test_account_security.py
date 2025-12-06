@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import pytest
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 from app.services.account_security import (
     AccountSecurityService,
     get_account_security_service,
     MAX_FAILED_ATTEMPTS,
-    LOCKOUT_DURATION_MINUTES,
 )
 
 
@@ -88,7 +87,7 @@ class TestAccountSecurityService:
     ) -> None:
         """Test checking lock status for locked account."""
         from datetime import timedelta
-        
+
         future_time = datetime.now(timezone.utc) + timedelta(minutes=10)
         mock_redis.get = AsyncMock(return_value=future_time.isoformat())
 
@@ -104,7 +103,7 @@ class TestAccountSecurityService:
     ) -> None:
         """Test that expired lockouts are automatically cleared."""
         from datetime import timedelta
-        
+
         past_time = datetime.now(timezone.utc) - timedelta(minutes=10)
         mock_redis.get = AsyncMock(return_value=past_time.isoformat())
 

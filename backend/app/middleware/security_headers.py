@@ -15,7 +15,7 @@ from app.config import get_settings
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add security headers to all responses.
-    
+
     Security headers included:
     - X-Content-Type-Options: Prevents MIME type sniffing
     - X-Frame-Options: Prevents clickjacking
@@ -26,38 +26,40 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     - Content-Security-Policy: Restricts resource loading
     - Permissions-Policy: Restricts browser features
     """
-    
+
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         """Add security headers to the response."""
         response = await call_next(request)
         settings = get_settings()
-        
+
         # Prevent MIME type sniffing attacks
         response.headers["X-Content-Type-Options"] = "nosniff"
-        
+
         # Prevent clickjacking - API shouldn't be embedded in iframes
         response.headers["X-Frame-Options"] = "DENY"
-        
+
         # Legacy XSS protection for older browsers
         response.headers["X-XSS-Protection"] = "1; mode=block"
-        
+
         # Control referrer information
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        
+
         # Prevent caching of API responses containing sensitive data
         # Individual endpoints can override this if caching is desired
         if "Cache-Control" not in response.headers:
-            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private"
-        
+            response.headers["Cache-Control"] = (
+                "no-store, no-cache, must-revalidate, private"
+            )
+
         # HSTS - enforce HTTPS in production
         if settings.is_production:
             # 1 year max-age, include subdomains, allow preload list inclusion
             response.headers["Strict-Transport-Security"] = (
                 "max-age=31536000; includeSubDomains; preload"
             )
-        
+
         # Content Security Policy - restrictive for API
         # APIs generally don't serve HTML, but if they do (like docs), this helps
         csp_directives = [
@@ -71,7 +73,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "base-uri 'self'",
         ]
         response.headers["Content-Security-Policy"] = "; ".join(csp_directives)
-        
+
         # Permissions Policy - disable unnecessary browser features
         permissions = [
             "accelerometer=()",
@@ -96,5 +98,5 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "xr-spatial-tracking=()",
         ]
         response.headers["Permissions-Policy"] = ", ".join(permissions)
-        
+
         return response

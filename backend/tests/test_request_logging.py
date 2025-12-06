@@ -14,29 +14,30 @@ def app() -> FastAPI:
     """Create a test FastAPI application with request logging middleware."""
     app = FastAPI()
     app.add_middleware(RequestLoggingMiddleware)
-    
+
     @app.get("/test")
     async def test_endpoint() -> dict:
         return {"status": "ok"}
-    
+
     @app.get("/health")
     async def health_endpoint() -> dict:
         return {"status": "healthy"}
-    
+
     @app.get("/slow")
     async def slow_endpoint() -> dict:
         import time
+
         time.sleep(0.1)  # Simulate slow endpoint
         return {"status": "slow"}
-    
+
     @app.get("/error")
     async def error_endpoint() -> dict:
         raise ValueError("Test error")
-    
+
     @app.get("/sensitive")
     async def sensitive_endpoint() -> dict:
         return {"status": "ok"}
-    
+
     return app
 
 
@@ -79,17 +80,13 @@ class TestRequestLoggingMiddleware:
     def test_handles_forwarded_ip(self, client: TestClient) -> None:
         """Test X-Forwarded-For header handling."""
         response = client.get(
-            "/test",
-            headers={"X-Forwarded-For": "192.168.1.1, 10.0.0.1"}
+            "/test", headers={"X-Forwarded-For": "192.168.1.1, 10.0.0.1"}
         )
         assert response.status_code == 200
 
     def test_handles_real_ip(self, client: TestClient) -> None:
         """Test X-Real-IP header handling."""
-        response = client.get(
-            "/test",
-            headers={"X-Real-IP": "192.168.1.100"}
-        )
+        response = client.get("/test", headers={"X-Real-IP": "192.168.1.100"})
         assert response.status_code == 200
 
 

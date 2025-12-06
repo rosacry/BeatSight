@@ -5,9 +5,6 @@ Tests retry decorator, configuration, and circuit breaker.
 
 from __future__ import annotations
 
-import asyncio
-from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock, patch
 
 import pytest
 

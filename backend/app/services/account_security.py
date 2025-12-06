@@ -54,7 +54,7 @@ class AccountSecurityService:
     async def record_failed_attempt(self, email: str, ip_address: str) -> dict:
         """
         Record a failed login attempt.
-        
+
         Returns:
             dict with keys:
             - locked: bool - whether account is now locked
@@ -74,10 +74,10 @@ class AccountSecurityService:
             }
 
         attempt_key = self._get_attempt_key(email)
-        
+
         # Increment attempt counter
         attempts = await redis.incr(attempt_key)
-        
+
         # Set expiry on first attempt
         if attempts == 1:
             await redis.expire(attempt_key, ATTEMPT_WINDOW_MINUTES * 60)
@@ -89,7 +89,7 @@ class AccountSecurityService:
                 "ip_address": ip_address,
                 "attempts": attempts,
                 "max_attempts": MAX_FAILED_ATTEMPTS,
-            }
+            },
         )
 
         # Check if we should lock the account
@@ -121,14 +121,18 @@ class AccountSecurityService:
             count_str = await redis.get(lockout_count_key)
             if count_str:
                 lockout_count = min(int(count_str) + 1, 4)  # Max 4x multiplier
-            await redis.set(lockout_count_key, str(lockout_count), ex=86400)  # 24hr expiry
+            await redis.set(
+                lockout_count_key, str(lockout_count), ex=86400
+            )  # 24hr expiry
 
         # Calculate lockout duration (progressive: 15, 30, 60, 120 minutes)
         duration_minutes = LOCKOUT_DURATION_MINUTES * lockout_count
         lockout_until = datetime.now(timezone.utc) + timedelta(minutes=duration_minutes)
 
         # Set lockout flag
-        await redis.set(lockout_key, lockout_until.isoformat(), ex=duration_minutes * 60)
+        await redis.set(
+            lockout_key, lockout_until.isoformat(), ex=duration_minutes * 60
+        )
 
         # Clear attempt counter
         await redis.delete(self._get_attempt_key(email))
@@ -140,7 +144,7 @@ class AccountSecurityService:
                 "duration_minutes": duration_minutes,
                 "lockout_count": lockout_count,
                 "unlock_at": lockout_until.isoformat(),
-            }
+            },
         )
 
         return lockout_until
@@ -148,7 +152,7 @@ class AccountSecurityService:
     async def is_account_locked(self, email: str) -> tuple[bool, Optional[datetime]]:
         """
         Check if an account is currently locked.
-        
+
         Returns:
             Tuple of (is_locked, unlock_time)
         """
@@ -185,13 +189,12 @@ class AccountSecurityService:
 
         # Clear attempt counter
         await redis.delete(attempt_key)
-        
+
         # Reset progressive lockout counter on successful login
         await redis.delete(lockout_count_key)
 
         logger.info(
-            "login_success_attempts_cleared",
-            extra={"email": email[:3] + "***"}
+            "login_success_attempts_cleared", extra={"email": email[:3] + "***"}
         )
 
     async def get_attempt_status(self, email: str) -> dict:
@@ -221,7 +224,7 @@ class AccountSecurityService:
     async def manually_unlock_account(self, email: str) -> bool:
         """
         Manually unlock an account (admin action).
-        
+
         Returns True if account was locked and is now unlocked.
         """
         redis = await self._get_redis()
@@ -236,10 +239,7 @@ class AccountSecurityService:
         await redis.delete(self._get_lockout_count_key(email))
 
         if was_locked:
-            logger.info(
-                "account_manually_unlocked",
-                extra={"email": email[:3] + "***"}
-            )
+            logger.info("account_manually_unlocked", extra={"email": email[:3] + "***"})
 
         return bool(was_locked)
 

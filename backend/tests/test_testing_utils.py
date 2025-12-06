@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock
 
 import pytest
 
@@ -270,25 +269,28 @@ class TestAssertRaisesWithMessage:
 
     def test_passes_on_match(self):
         """Test passes when exception and message match."""
+
         def raises():
             raise ValueError("Invalid value")
-        
+
         # Should not raise
         assert_raises_with_message(ValueError, "Invalid", raises)
 
     def test_fails_on_no_exception(self):
         """Test fails when no exception raised."""
+
         def no_raise():
             pass
-        
+
         with pytest.raises(AssertionError):
             assert_raises_with_message(ValueError, "error", no_raise)
 
     def test_fails_on_wrong_message(self):
         """Test fails when message doesn't match."""
+
         def raises():
             raise ValueError("Wrong message")
-        
+
         with pytest.raises(AssertionError):
             assert_raises_with_message(ValueError, "different", raises)
 
@@ -469,6 +471,7 @@ class TestCaptureOutput:
     def test_captures_stderr(self):
         """Test captures stderr."""
         import sys
+
         with CaptureOutput() as output:
             print("error", file=sys.stderr)
         assert output.stderr == "error\n"
@@ -501,9 +504,10 @@ class TestRunAsync:
 
     def test_runs_coroutine(self):
         """Test runs coroutine synchronously."""
+
         async def async_func():
             return "result"
-        
+
         result = run_async(async_func())
         assert result == "result"
 
@@ -524,10 +528,7 @@ class TestDataBuilder:
     def test_without_field(self):
         """Test removing field."""
         data = (
-            DataBuilder()
-            .with_fields(name="Alice", age=30)
-            .without_field("age")
-            .build()
+            DataBuilder().with_fields(name="Alice", age=30).without_field("age").build()
         )
         assert data == {"name": "Alice"}
 
@@ -545,9 +546,7 @@ class TestDataBuilder:
     def test_build_list(self):
         """Test building list of items."""
         items = (
-            DataBuilder()
-            .with_field("name", "item")
-            .build_list(3, vary_field="name")
+            DataBuilder().with_field("name", "item").build_list(3, vary_field="name")
         )
         assert len(items) == 3
         assert items[0]["name"] == "item_0"

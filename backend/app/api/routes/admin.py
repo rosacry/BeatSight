@@ -1130,14 +1130,14 @@ async def get_lockout_status(
 ) -> AccountLockoutStatus:
     """
     Check the lockout status of an account.
-    
+
     Requires ADMIN_DASHBOARD permission.
     """
     from app.services.account_security import get_account_security_service
-    
+
     security_service = get_account_security_service()
     status = await security_service.get_attempt_status(email)
-    
+
     return AccountLockoutStatus(
         email=email,
         is_locked=status["is_locked"],
@@ -1158,24 +1158,23 @@ async def unlock_account(
 ) -> UnlockAccountResponse:
     """
     Manually unlock a user account that was locked due to failed login attempts.
-    
+
     Requires ADMIN_DASHBOARD permission.
     """
     from app.services.account_security import get_account_security_service
-    
+
     security_service = get_account_security_service()
     was_locked = await security_service.manually_unlock_account(request.email)
-    
+
     if was_locked:
         logger.info(
-            "admin_unlocked_account",
-            extra={"email": request.email[:3] + "***"}
+            "admin_unlocked_account", extra={"email": request.email[:3] + "***"}
         )
         return UnlockAccountResponse(
             success=True,
             message=f"Account {request.email} has been unlocked.",
         )
-    
+
     return UnlockAccountResponse(
         success=True,
         message=f"Account {request.email} was not locked.",

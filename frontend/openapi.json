@@ -5,8 +5,8 @@
     "description": "\n## BeatSight Web API\n\nBeatSight is an AI-powered drum beatmap generation platform. This API provides:\n\n### Features\n- **Authentication**: JWT-based auth with access/refresh tokens\n- **Songs**: Upload, manage, and organize your music library\n- **AI Jobs**: Queue songs for AI beatmap generation with real-time progress\n- **Cloud Sync**: Sync preferences and progress across devices\n- **Storage**: Secure file upload with presigned URLs\n\n### Authentication\nMost endpoints require authentication. Include the JWT token in the Authorization header:\n```\nAuthorization: Bearer <access_token>\n```\n\n### Rate Limits\n- Standard users: 100 requests/minute\n- Premium users: 500 requests/minute\n- AI job quota: Based on subscription tier\n    ",
     "contact": {
       "name": "BeatSight Support",
-      "url": "https://beatsight.app/support",
-      "email": "support@beatsight.app"
+      "url": "https://beatsight.io/support",
+      "email": "support@beatsight.io"
     },
     "license": {
       "name": "MIT",

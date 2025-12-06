@@ -141,8 +141,8 @@ Authorization: Bearer <access_token>
     openapi_url="/openapi.json",
     contact={
         "name": "BeatSight Support",
-        "url": "https://beatsight.app/support",
-        "email": "support@beatsight.app",
+        "url": "https://beatsight.io/support",
+        "email": "support@beatsight.io",
     },
     license_info={
         "name": "MIT",
@@ -273,12 +273,12 @@ app.include_router(websocket.router)  # No prefix - /ws/jobs
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle unhandled exceptions without leaking internal details.
-    
+
     In production, returns a generic error message.
     In development, includes the exception details for debugging.
     """
     request_id = getattr(request.state, "request_id", None)
-    
+
     # Log the full exception for debugging
     logger.exception(
         "unhandled_exception",
@@ -288,7 +288,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
         exc_type=type(exc).__name__,
         exc_message=str(exc),
     )
-    
+
     if settings.is_production:
         # In production, don't leak internal details
         return JSONResponse(

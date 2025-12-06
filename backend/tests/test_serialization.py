@@ -8,7 +8,6 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from enum import Enum
 from pathlib import Path
-from typing import Any
 
 import pytest
 from pydantic import BaseModel, Field
@@ -86,6 +85,7 @@ class TestSerializeValue:
     def test_serialize_datetime_with_timezone(self):
         """Test serializing datetime with timezone."""
         from datetime import timezone
+
         dt = datetime(2024, 1, 15, 12, 30, 45, tzinfo=timezone.utc)
         assert serialize_value(dt) == "2024-01-15T12:30:45+00:00"
 
@@ -132,6 +132,7 @@ class TestSerializeValue:
     def test_serialize_bytes(self):
         """Test serializing bytes."""
         import base64
+
         data = b"hello world"
         result = serialize_value(data)
         assert base64.b64decode(result) == data
@@ -168,20 +169,22 @@ class TestSerializeValue:
 
     def test_serialize_object_with_to_dict(self):
         """Test serializing object with to_dict method."""
+
         class Custom:
             def to_dict(self):
                 return {"type": "custom"}
-        
+
         result = serialize_value(Custom())
         assert result == {"type": "custom"}
 
     def test_serialize_object_with_dict(self):
         """Test serializing object with __dict__."""
+
         class Simple:
             def __init__(self):
                 self.x = 1
                 self.y = 2
-        
+
         result = serialize_value(Simple())
         assert result == {"x": 1, "y": 2}
 
@@ -243,6 +246,7 @@ class TestDeserializeValue:
     def test_deserialize_bytes(self):
         """Test deserializing to bytes."""
         import base64
+
         encoded = base64.b64encode(b"hello").decode()
         result = deserialize_value(encoded, bytes)
         assert result == b"hello"
@@ -315,13 +319,13 @@ class TestFromJson:
 
     def test_json_array(self):
         """Test parsing JSON array."""
-        result = from_json('[1, 2, 3]')
+        result = from_json("[1, 2, 3]")
         assert result == [1, 2, 3]
 
     def test_invalid_json(self):
         """Test parsing invalid JSON raises error."""
         with pytest.raises(json.JSONDecodeError):
-            from_json('invalid json')
+            from_json("invalid json")
 
 
 class TestSafeJsonLoads:
@@ -334,7 +338,7 @@ class TestSafeJsonLoads:
 
     def test_invalid_json_returns_default(self):
         """Test invalid JSON returns default."""
-        result = safe_json_loads('invalid', default={})
+        result = safe_json_loads("invalid", default={})
         assert result == {}
 
     def test_none_input(self):
@@ -364,19 +368,21 @@ class TestToDict:
 
     def test_object_with_to_dict(self):
         """Test object with to_dict method."""
+
         class Custom:
             def to_dict(self):
                 return {"custom": True}
-        
+
         result = to_dict(Custom())
         assert result == {"custom": True}
 
     def test_object_with_dict(self):
         """Test object with __dict__."""
+
         class Simple:
             def __init__(self):
                 self.value = 42
-        
+
         result = to_dict(Simple())
         assert result == {"value": 42}
 
@@ -744,9 +750,10 @@ class TestJsonSerializer:
 
     def test_unsupported_type(self):
         """Test unsupported type behavior."""
+
         class Custom:
             pass
-        
+
         # Objects with __dict__ get serialized
         result = json_serializer(Custom())
         assert result == {}

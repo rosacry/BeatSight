@@ -120,9 +120,7 @@ class SongService:
         await self._session.refresh(song)
         return song
 
-    async def delete_song(
-        self, song_id: uuid.UUID, user_id: uuid.UUID
-    ) -> None:
+    async def delete_song(self, song_id: uuid.UUID, user_id: uuid.UUID) -> None:
         """Delete a song. Verifies ownership before allowing deletion.
 
         Args:

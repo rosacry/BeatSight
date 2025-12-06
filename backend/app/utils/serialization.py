@@ -47,7 +47,7 @@ ModelT = TypeVar("ModelT", bound=BaseModel)
 class JSONEncoder(json.JSONEncoder):
     """
     Custom JSON encoder that handles common Python types.
-    
+
     Supports:
     - datetime, date, time objects -> ISO format strings
     - timedelta -> total seconds as float
@@ -61,7 +61,7 @@ class JSONEncoder(json.JSONEncoder):
     - Objects with to_dict() method
     - Objects with __dict__ attribute
     """
-    
+
     def default(self, obj: Any) -> Any:
         """Convert object to JSON-serializable type."""
         return serialize_value(obj)
@@ -70,13 +70,13 @@ class JSONEncoder(json.JSONEncoder):
 def serialize_value(value: Any) -> Any:
     """
     Convert a value to a JSON-serializable type.
-    
+
     Args:
         value: Any Python value
-        
+
     Returns:
         JSON-serializable representation
-        
+
     Examples:
         >>> serialize_value(datetime(2024, 1, 15, 12, 0, 0))
         '2024-01-15T12:00:00'
@@ -86,58 +86,58 @@ def serialize_value(value: Any) -> Any:
         '12345678-1234-5678-1234-567812345678'
     """
     import base64
-    
+
     if value is None:
         return None
-    
+
     if isinstance(value, (str, int, float, bool)):
         return value
-    
+
     if isinstance(value, datetime):
         return value.isoformat()
-    
+
     if isinstance(value, date):
         return value.isoformat()
-    
+
     if isinstance(value, time):
         return value.isoformat()
-    
+
     if isinstance(value, timedelta):
         return value.total_seconds()
-    
+
     if isinstance(value, Decimal):
         return str(value)
-    
+
     if isinstance(value, uuid.UUID):
         return str(value)
-    
+
     if isinstance(value, Enum):
         return value.value
-    
+
     if isinstance(value, (set, frozenset)):
         return [serialize_value(v) for v in value]
-    
+
     if isinstance(value, bytes):
         return base64.b64encode(value).decode("utf-8")
-    
+
     if isinstance(value, Path):
         return str(value)
-    
+
     if isinstance(value, (list, tuple)):
         return [serialize_value(v) for v in value]
-    
+
     if isinstance(value, dict):
         return {str(k): serialize_value(v) for k, v in value.items()}
-    
+
     if isinstance(value, BaseModel):
         return value.model_dump(mode="json")
-    
+
     if hasattr(value, "to_dict"):
         return value.to_dict()
-    
+
     if hasattr(value, "__dict__"):
         return serialize_value(value.__dict__)
-    
+
     # Last resort: try str()
     return str(value)
 
@@ -148,14 +148,14 @@ def deserialize_value(
 ) -> T | Any:
     """
     Convert a serialized value back to Python type.
-    
+
     Args:
         value: Serialized value
         target_type: Optional target type for conversion
-        
+
     Returns:
         Deserialized Python value
-        
+
     Examples:
         >>> deserialize_value('2024-01-15T12:00:00', datetime)
         datetime(2024, 1, 15, 12, 0, 0)
@@ -164,53 +164,54 @@ def deserialize_value(
     """
     if value is None or target_type is None:
         return value
-    
+
     if target_type is datetime:
         if isinstance(value, datetime):
             return value
         return datetime.fromisoformat(value)
-    
+
     if target_type is date:
         if isinstance(value, date) and not isinstance(value, datetime):
             return value
         if isinstance(value, datetime):
             return value.date()
         return date.fromisoformat(value)
-    
+
     if target_type is time:
         if isinstance(value, time):
             return value
         return time.fromisoformat(value)
-    
+
     if target_type is timedelta:
         if isinstance(value, timedelta):
             return value
         return timedelta(seconds=float(value))
-    
+
     if target_type is Decimal:
         return Decimal(str(value))
-    
+
     if target_type is uuid.UUID:
         if isinstance(value, uuid.UUID):
             return value
         return uuid.UUID(value)
-    
+
     if target_type is bytes:
         import base64
+
         if isinstance(value, bytes):
             return value
         return base64.b64decode(value.encode("utf-8"))
-    
+
     if target_type is bool:
         if isinstance(value, bool):
             return value
         if isinstance(value, str):
             return value.lower() in ("true", "1", "yes", "on")
         return bool(value)
-    
+
     if target_type in (int, float, str):
         return target_type(value)
-    
+
     return value
 
 
@@ -223,16 +224,16 @@ def to_json(
 ) -> str:
     """
     Serialize object to JSON string with custom type handling.
-    
+
     Args:
         obj: Object to serialize
         indent: Indentation level for pretty printing
         ensure_ascii: If True, escape non-ASCII characters
         sort_keys: If True, sort dictionary keys
-        
+
     Returns:
         JSON string
-        
+
     Examples:
         >>> to_json({"name": "test", "created": datetime(2024, 1, 15)})
         '{"name": "test", "created": "2024-01-15T00:00:00"}'
@@ -253,17 +254,17 @@ def from_json(
 ) -> Any:
     """
     Parse JSON string to Python object.
-    
+
     Args:
         json_str: JSON string to parse
         strict: If False, allow NaN and Infinity
-        
+
     Returns:
         Parsed Python object
-        
+
     Raises:
         json.JSONDecodeError: If string is not valid JSON
-        
+
     Examples:
         >>> from_json('{"name": "test", "count": 42}')
         {'name': 'test', 'count': 42}
@@ -278,14 +279,14 @@ def safe_json_loads(
 ) -> Any | T:
     """
     Safely parse JSON string, returning default on error.
-    
+
     Args:
         json_str: JSON string to parse
         default: Default value if parsing fails
-        
+
     Returns:
         Parsed object or default value
-        
+
     Examples:
         >>> safe_json_loads('{"valid": true}')
         {'valid': True}
@@ -294,7 +295,7 @@ def safe_json_loads(
     """
     if json_str is None:
         return default
-    
+
     try:
         return json.loads(json_str)
     except (json.JSONDecodeError, TypeError):
@@ -304,13 +305,13 @@ def safe_json_loads(
 def to_dict(obj: Any) -> dict[str, Any]:
     """
     Convert object to dictionary.
-    
+
     Args:
         obj: Object to convert
-        
+
     Returns:
         Dictionary representation
-        
+
     Examples:
         >>> class Person:
         ...     def __init__(self, name, age):
@@ -321,55 +322,55 @@ def to_dict(obj: Any) -> dict[str, Any]:
     """
     if isinstance(obj, dict):
         return obj
-    
+
     if isinstance(obj, BaseModel):
         return obj.model_dump()
-    
+
     if hasattr(obj, "to_dict"):
         return obj.to_dict()
-    
+
     if hasattr(obj, "__dict__"):
         return dict(obj.__dict__)
-    
+
     raise TypeError(f"Cannot convert {type(obj).__name__} to dict")
 
 
 def deep_dict(obj: Any) -> dict[str, Any] | list | Any:
     """
     Recursively convert object to dictionary with all nested values serialized.
-    
+
     Args:
         obj: Object to convert
-        
+
     Returns:
         Deep dictionary representation with all values JSON-serializable
-        
+
     Examples:
         >>> deep_dict({"nested": {"date": datetime(2024, 1, 15)}})
         {'nested': {'date': '2024-01-15T00:00:00'}}
     """
     if obj is None:
         return None
-    
+
     if isinstance(obj, (str, int, float, bool)):
         return obj
-    
+
     if isinstance(obj, dict):
         return {str(k): deep_dict(v) for k, v in obj.items()}
-    
+
     if isinstance(obj, (list, tuple, set, frozenset)):
         return [deep_dict(v) for v in obj]
-    
+
     # Try to convert to dict first
     if isinstance(obj, BaseModel):
         return deep_dict(obj.model_dump())
-    
+
     if hasattr(obj, "to_dict"):
         return deep_dict(obj.to_dict())
-    
+
     if hasattr(obj, "__dict__"):
         return deep_dict(obj.__dict__)
-    
+
     # Fallback to serialization
     return serialize_value(obj)
 
@@ -383,16 +384,16 @@ def model_to_dict(
 ) -> dict[str, Any]:
     """
     Convert Pydantic model to dictionary with options.
-    
+
     Args:
         model: Pydantic model instance
         exclude_unset: Exclude fields that were not explicitly set
         exclude_none: Exclude fields with None value
         by_alias: Use field aliases instead of names
-        
+
     Returns:
         Dictionary representation
-        
+
     Examples:
         >>> from pydantic import BaseModel, Field
         >>> class User(BaseModel):
@@ -416,18 +417,18 @@ def dict_to_model(
 ) -> ModelT:
     """
     Convert dictionary to Pydantic model instance.
-    
+
     Args:
         data: Dictionary data
         model_class: Target Pydantic model class
         strict: If True, use strict validation mode
-        
+
     Returns:
         Model instance
-        
+
     Raises:
         ValidationError: If data doesn't match model schema
-        
+
     Examples:
         >>> from pydantic import BaseModel
         >>> class User(BaseModel):
@@ -444,13 +445,13 @@ def dict_to_model(
 def camel_to_snake(name: str) -> str:
     """
     Convert camelCase or PascalCase to snake_case.
-    
+
     Args:
         name: String in camelCase or PascalCase
-        
+
     Returns:
         String in snake_case
-        
+
     Examples:
         >>> camel_to_snake('camelCase')
         'camel_case'
@@ -460,7 +461,7 @@ def camel_to_snake(name: str) -> str:
         'get_http_response'
     """
     import re
-    
+
     # Handle acronyms (HTTP -> http)
     name = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", name)
     # Handle normal camelCase
@@ -471,14 +472,14 @@ def camel_to_snake(name: str) -> str:
 def snake_to_camel(name: str, *, pascal: bool = False) -> str:
     """
     Convert snake_case to camelCase or PascalCase.
-    
+
     Args:
         name: String in snake_case
         pascal: If True, return PascalCase instead of camelCase
-        
+
     Returns:
         String in camelCase or PascalCase
-        
+
     Examples:
         >>> snake_to_camel('snake_case')
         'snakeCase'
@@ -499,15 +500,15 @@ def transform_keys(
 ) -> dict[str, Any]:
     """
     Transform all keys in a dictionary using a function.
-    
+
     Args:
         data: Dictionary to transform
         transform: Function to apply to each key
         deep: If True, recursively transform nested dicts
-        
+
     Returns:
         New dictionary with transformed keys
-        
+
     Examples:
         >>> transform_keys({'firstName': 'Alice'}, camel_to_snake)
         {'first_name': 'Alice'}
@@ -534,15 +535,15 @@ def flatten_dict(
 ) -> dict[str, Any]:
     """
     Flatten a nested dictionary into a single-level dictionary.
-    
+
     Args:
         data: Nested dictionary to flatten
         separator: Separator to use between key parts
         parent_key: Prefix for all keys (internal use)
-        
+
     Returns:
         Flattened dictionary
-        
+
     Examples:
         >>> flatten_dict({'user': {'name': 'Alice', 'address': {'city': 'NYC'}}})
         {'user.name': 'Alice', 'user.address.city': 'NYC'}
@@ -566,14 +567,14 @@ def unflatten_dict(
 ) -> dict[str, Any]:
     """
     Unflatten a flat dictionary into a nested structure.
-    
+
     Args:
         data: Flat dictionary with dot-notation keys
         separator: Separator used between key parts
-        
+
     Returns:
         Nested dictionary
-        
+
     Examples:
         >>> unflatten_dict({'user.name': 'Alice', 'user.address.city': 'NYC'})
         {'user': {'name': 'Alice', 'address': {'city': 'NYC'}}}
@@ -596,14 +597,14 @@ def merge_dicts(
 ) -> dict[str, Any]:
     """
     Merge multiple dictionaries, with later values overwriting earlier ones.
-    
+
     Args:
         *dicts: Dictionaries to merge
         deep: If True, recursively merge nested dicts
-        
+
     Returns:
         Merged dictionary
-        
+
     Examples:
         >>> merge_dicts({'a': 1, 'b': {'c': 2}}, {'b': {'d': 3}})
         {'a': 1, 'b': {'c': 2, 'd': 3}}
@@ -629,14 +630,14 @@ def pick_keys(
 ) -> dict[str, Any]:
     """
     Create a dictionary with only the specified keys.
-    
+
     Args:
         data: Source dictionary
         keys: Keys to include
-        
+
     Returns:
         Dictionary with only specified keys
-        
+
     Examples:
         >>> pick_keys({'a': 1, 'b': 2, 'c': 3}, ['a', 'c'])
         {'a': 1, 'c': 3}
@@ -651,14 +652,14 @@ def omit_keys(
 ) -> dict[str, Any]:
     """
     Create a dictionary without the specified keys.
-    
+
     Args:
         data: Source dictionary
         keys: Keys to exclude
-        
+
     Returns:
         Dictionary without specified keys
-        
+
     Examples:
         >>> omit_keys({'a': 1, 'b': 2, 'c': 3}, ['b'])
         {'a': 1, 'c': 3}
@@ -670,18 +671,18 @@ def omit_keys(
 def json_serializer(obj: Any) -> Any:
     """
     Default JSON serializer function for use with json.dumps.
-    
+
     This function is designed to be passed to json.dumps(default=...)
-    
+
     Args:
         obj: Object to serialize
-        
+
     Returns:
         JSON-serializable representation
-        
+
     Raises:
         TypeError: If object cannot be serialized
-        
+
     Examples:
         >>> import json
         >>> json.dumps({'date': datetime(2024, 1, 15)}, default=json_serializer)

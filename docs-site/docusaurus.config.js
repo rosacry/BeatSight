@@ -96,7 +96,7 @@ const config = {
                         items: [
                             {
                                 label: "Discord",
-                                href: "https://discord.gg/beatsight",
+                                href: "https://discord.gg/T57fDWcHDQ",
                             },
                             {
                                 label: "GitHub Discussions",

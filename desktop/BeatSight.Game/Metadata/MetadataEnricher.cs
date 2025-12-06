@@ -32,7 +32,7 @@ namespace BeatSight.Game.Metadata
             };
 
             // MusicBrainz requires a descriptive user agent identifying the application and maintainer.
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("BeatSight/1.0 (+https://beatsight.app/contact)");
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("BeatSight/1.0 (+https://beatsight.io/contact)");
             httpClient.DefaultRequestHeaders.Accept.ParseAdd("application/json");
         }
 

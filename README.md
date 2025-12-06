@@ -1,7 +1,9 @@
 <!-- prettier-ignore -->
 <div align="center">
 
-# ��� BeatSight
+<img src="assets/logo.png" alt="BeatSight Logo" width="120" />
+
+# BeatSight
 
 **See the music before you play it.**
 
@@ -15,7 +17,7 @@
 
 [Why BeatSight](#why-beatsight) • [Features](#features) • [Getting Started](#getting-started) • [Architecture](#architecture) • [Contributing](#contributing)
 
-**��� Live at [beatsight.io](https://beatsight.io)** | **��� [API Docs](https://api.beatsight.io/docs)**
+��� **Live at [beatsight.io](https://beatsight.io)** | ��� **[API Docs](https://api.beatsight.io/docs)**
 
 </div>
 
@@ -61,7 +63,7 @@ BeatSight brings the rhythm game paradigm to drum practice:
 | **Web App** | [beatsight.io](https://beatsight.io) | ✅ Live |
 | **API** | [api.beatsight.io](https://api.beatsight.io/docs) | ✅ Live |
 | **Desktop** | osu!-framework client | ✅ Available |
-| **Mobile** | iOS/Android | ��� Planned |
+| **Mobile** | iOS/Android | ���️ Planned |
 
 > [!NOTE]
 > The AI transcription model runs on secure cloud infrastructure (Modal). Users access it through the desktop app or web interface with their account credits.
@@ -83,18 +85,18 @@ BeatSight brings the rhythm game paradigm to drum practice:
 
 ### Desktop Client
 
-\`\`\`bash
+```bash
 cd desktop/BeatSight.Desktop
 dotnet restore
 dotnet run
-\`\`\`
+```
 
 The desktop app connects to beatsight.io for AI transcription. Sign in with your account to use your credits.
 
 <details>
 <summary><strong>Backend API (for developers)</strong></summary>
 
-\`\`\`bash
+```bash
 cd backend
 pip install -e ".[dev]"
 
@@ -106,22 +108,22 @@ alembic upgrade head
 
 # Start server
 uvicorn app.main:app --reload
-\`\`\`
+```
 
-API available at \`http://localhost:8000\`. Interactive docs at \`/docs\`.
+API available at `http://localhost:8000`. Interactive docs at `/docs`.
 
 </details>
 
 <details>
 <summary><strong>Web Frontend (for developers)</strong></summary>
 
-\`\`\`bash
+```bash
 cd frontend
 npm install
 npm run dev
-\`\`\`
+```
 
-Opens at \`http://localhost:5173\` with hot module replacement.
+Opens at `http://localhost:5173` with hot module replacement.
 
 </details>
 
@@ -129,31 +131,31 @@ Opens at \`http://localhost:5173\` with hot module replacement.
 
 | Tier | Price | Monthly Quota | Best For |
 |------|-------|---------------|----------|
-| **Free** | \$0 | 3 songs | Trying it out |
-| **Pro** | \$12/mo | 50 songs | Regular practice |
-| **Credits** | \$0.35/song | Pay-as-you-go | Occasional use |
+| **Free** | $0 | 3 songs | Trying it out |
+| **Pro** | $12/mo | 50 songs | Regular practice |
+| **Credits** | $0.35/song | Pay-as-you-go | Occasional use |
 
 ## Architecture
 
-\`\`\`
+```
 BeatSight/
-├── desktop/              # osu-framework desktop client (C#/.NET 8)
+├── desktop/                  # osu-framework desktop client (C#/.NET 8)
 │   ├── BeatSight.Desktop/    # Platform host & window management
 │   ├── BeatSight.Game/       # Playback screens, editor, UI components
 │   └── BeatSight.Tests/      # Unit tests
-├── ai-pipeline/          # ML training & inference pipeline (Python)
+├── ai-pipeline/              # ML training & inference pipeline (Python)
 │   ├── pipeline/             # Audio processing orchestration
 │   ├── training/             # Model training scripts & configs
 │   ├── transcription/        # Onset detection, drum classification
 │   └── separation/           # Demucs source separation
-├── backend/              # FastAPI web services (Python 3.12)
+├── backend/                  # FastAPI web services (Python 3.12)
 │   └── app/                  # API routes, services, models
-├── frontend/             # React + TypeScript SPA
+├── frontend/                 # React + TypeScript SPA
 │   └── src/                  # Components, hooks, state management
-├── docs/                 # All documentation
-├── data/                 # Dataset storage (gitignored)
-└── shared/               # Format specs, shared assets
-\`\`\`
+├── docs/                     # All documentation
+├── data/                     # Dataset storage (gitignored)
+└── shared/                   # Format specs, shared assets
+```
 
 ### Tech Stack
 
@@ -179,9 +181,9 @@ BeatSight/
 
 ### Beatmap Format
 
-BeatSight uses \`.bsm\` (BeatSight Map), a JSON-based format:
+BeatSight uses `.bsm` (BeatSight Map), a JSON-based format:
 
-\`\`\`json
+```json
 {
   "version": "1.0.0",
   "metadata": { "title": "Song Name", "artist": "Artist", "difficulty": 7.5 },
@@ -191,36 +193,36 @@ BeatSight uses \`.bsm\` (BeatSight Map), a JSON-based format:
     { "time": 1500, "component": "snare", "velocity": 0.92, "articulation": "ghost" }
   ]
 }
-\`\`\`
+```
 
-See [\`docs/BEATMAP_FORMAT.md\`](docs/BEATMAP_FORMAT.md) for the full specification.
+See [`docs/BEATMAP_FORMAT.md`](docs/BEATMAP_FORMAT.md) for the full specification.
 
 ## Documentation
 
-All documentation lives in the [\`docs/\`](docs/) folder:
+All documentation lives in the [`docs/`](docs/) folder:
 
 | Document | Description |
 |----------|-------------|
-| [\`docs/START_HERE.md\`](docs/START_HERE.md) | Quick orientation and launch commands |
-| [\`docs/SETUP.md\`](docs/SETUP.md) | Platform-specific installation |
-| [\`docs/ARCHITECTURE.md\`](docs/ARCHITECTURE.md) | System design deep-dive |
-| [\`docs/CONTRIBUTING.md\`](docs/CONTRIBUTING.md) | Contribution guidelines |
-| [\`docs/BEATMAP_FORMAT.md\`](docs/BEATMAP_FORMAT.md) | \`.bsm\` file format spec |
-| [\`docs/API_REFERENCE.md\`](docs/API_REFERENCE.md) | Backend API documentation |
-| [\`docs/ENGINEERING_ROADMAP.md\`](docs/ENGINEERING_ROADMAP.md) | Development roadmap |
+| [`docs/START_HERE.md`](docs/START_HERE.md) | Quick orientation and launch commands |
+| [`docs/SETUP.md`](docs/SETUP.md) | Platform-specific installation |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System design deep-dive |
+| [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | Contribution guidelines |
+| [`docs/BEATMAP_FORMAT.md`](docs/BEATMAP_FORMAT.md) | `.bsm` file format spec |
+| [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md) | Backend API documentation |
+| [`docs/ENGINEERING_ROADMAP.md`](docs/ENGINEERING_ROADMAP.md) | Development roadmap |
 
 ## Contributing
 
-Contributions are welcome! Please read [\`docs/CONTRIBUTING.md\`](docs/CONTRIBUTING.md) before submitting a PR.
+Contributions are welcome! Please read [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) before submitting a PR.
 
 1. Fork the repository
-2. Create a feature branch: \`git checkout -b feature/amazing-feature\`
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
 3. Make your changes and add tests
-4. Run tests: \`cd backend && pytest\` and \`cd frontend && npm test\`
+4. Run tests: `cd backend && pytest` and `cd frontend && npm test`
 5. Submit a pull request
 
 > [!IMPORTANT]
-> The AI model training code in \`ai-pipeline/training/\` is provided for transparency but trained weights are proprietary.
+> The AI model training code in `ai-pipeline/training/` is provided for transparency but trained weights are proprietary.
 
 ## License
 

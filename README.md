@@ -14,7 +14,7 @@
 
 [Why BeatSight](#why-beatsight) • [Features](#features) • [Getting Started](#getting-started) • [Architecture](#architecture) • [Contributing](#contributing)
 
-**🌐 [beatsight.io](https://beatsight.io)** *(coming soon)*
+**🌐 [beatsight.io](https://beatsight.io)**
 
 </div>
 

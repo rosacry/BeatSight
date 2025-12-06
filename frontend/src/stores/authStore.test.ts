@@ -1,6 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useAuthStore, getAccessToken, isAuthenticated } from './authStore'
 
+// Helper to create a mock JWT token with a future expiration
+function createMockJwt(expiresInSeconds: number = 3600): string {
+    const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    const payload = btoa(JSON.stringify({
+        sub: 'user123',
+        exp: Math.floor(Date.now() / 1000) + expiresInSeconds,
+        iat: Math.floor(Date.now() / 1000),
+    }));
+    const signature = btoa('mock-signature');
+    return `${header}.${payload}.${signature}`;
+}
+
 describe('authStore', () => {
     const getState = () => useAuthStore.getState()
     const setState = useAuthStore.setState
@@ -35,7 +47,7 @@ describe('authStore', () => {
 
         it('isAuthenticated returns true when logged in', () => {
             setState({
-                accessToken: 'token',
+                accessToken: createMockJwt(3600),
                 user: { id: '1', email: 'a@b.com', display_name: 'user', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01' },
             })
             expect(getState().isAuthenticated()).toBe(true)
@@ -46,7 +58,7 @@ describe('authStore', () => {
         it('clears all auth state', () => {
             setState({
                 user: { id: 'user-123', email: 'test@example.com', display_name: 'testuser', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01' },
-                accessToken: 'token',
+                accessToken: createMockJwt(3600),
                 refreshToken: 'refresh',
                 isLoading: false,
             })
@@ -86,7 +98,7 @@ describe('authStore', () => {
 
         it('does nothing when user already exists', async () => {
             setState({
-                accessToken: 'token',
+                accessToken: createMockJwt(3600),
                 user: { id: '1', email: 'e@e.com', display_name: 'u', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01' },
             })
 
@@ -115,8 +127,9 @@ describe('authStore', () => {
         })
 
         it('getAccessToken returns current token', () => {
-            setState({ accessToken: 'helper-token' })
-            expect(getAccessToken()).toBe('helper-token')
+            const mockToken = createMockJwt(3600)
+            setState({ accessToken: mockToken })
+            expect(getAccessToken()).toBe(mockToken)
         })
 
         it('isAuthenticated returns false when not logged in', () => {
@@ -125,7 +138,7 @@ describe('authStore', () => {
 
         it('isAuthenticated returns true when logged in', () => {
             setState({
-                accessToken: 'token',
+                accessToken: createMockJwt(3600),
                 user: { id: '1', email: 'a@b.com', display_name: 'user', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01' },
             })
 
@@ -137,15 +150,16 @@ describe('authStore', () => {
         it('partializes state to only include tokens', () => {
             // The store is configured to only persist accessToken and refreshToken
             // Verify the shape is correct in state
+            const mockToken = createMockJwt(3600)
             setState({
-                accessToken: 'access',
+                accessToken: mockToken,
                 refreshToken: 'refresh',
                 user: { id: '1', email: 'e@e.com', display_name: 'u', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01' },
                 isLoading: true,
             })
 
             const state = getState()
-            expect(state.accessToken).toBe('access')
+            expect(state.accessToken).toBe(mockToken)
             expect(state.refreshToken).toBe('refresh')
         })
     })

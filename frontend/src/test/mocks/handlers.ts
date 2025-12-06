@@ -1,5 +1,22 @@
 import { http, HttpResponse } from 'msw';
 
+// Helper to create a mock JWT token with a future expiration
+// This creates a structurally valid JWT (header.payload.signature)
+function createMockJwt(expiresInSeconds: number = 3600): string {
+    const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    const payload = btoa(JSON.stringify({
+        sub: 'user123',
+        exp: Math.floor(Date.now() / 1000) + expiresInSeconds,
+        iat: Math.floor(Date.now() / 1000),
+    }));
+    // Mock signature (not cryptographically valid, but structurally correct)
+    const signature = btoa('mock-signature');
+    return `${header}.${payload}.${signature}`;
+}
+
+// Export for use in tests that need to create tokens
+export { createMockJwt };
+
 // Mock user data
 const mockUser = {
     id: '1',
@@ -11,12 +28,13 @@ const mockUser = {
     roles: ['user'],
 };
 
-const mockTokens = {
-    access_token: 'mock-access-token',
+// Generate fresh tokens each time to ensure they have valid expiration
+const getMockTokens = () => ({
+    access_token: createMockJwt(3600),  // Valid for 1 hour
     refresh_token: 'mock-refresh-token',
     token_type: 'bearer',
     expires_in: 3600,
-};
+});
 
 // Mock songs data
 const mockSongs = [
@@ -66,10 +84,11 @@ export const handlers = [
                 { status: 400 }
             );
         }
+        const tokens = getMockTokens();
         return HttpResponse.json({
-            access_token: mockTokens.access_token,
-            refresh_token: mockTokens.refresh_token,
-            token_type: mockTokens.token_type,
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token,
+            token_type: tokens.token_type,
         });
     }),
 
@@ -78,7 +97,7 @@ export const handlers = [
         if (body.email === 'test@example.com' && body.password === 'password123') {
             return HttpResponse.json({
                 user: mockUser,
-                ...mockTokens,
+                ...getMockTokens(),
             });
         }
         return HttpResponse.json(
@@ -90,7 +109,7 @@ export const handlers = [
     http.post('/api/auth/refresh', async ({ request }) => {
         const body = await request.json() as { refresh_token?: string };
         if (body.refresh_token === 'mock-refresh-token') {
-            return HttpResponse.json(mockTokens);
+            return HttpResponse.json(getMockTokens());
         }
         return HttpResponse.json(
             { detail: 'Invalid refresh token' },
@@ -104,7 +123,8 @@ export const handlers = [
 
     http.get('/api/auth/me', ({ request }) => {
         const authHeader = request.headers.get('Authorization');
-        if (authHeader === 'Bearer mock-access-token') {
+        // Check if it's a Bearer token (starts with 'Bearer ')
+        if (authHeader?.startsWith('Bearer ')) {
             return HttpResponse.json(mockUser);
         }
         return HttpResponse.json(

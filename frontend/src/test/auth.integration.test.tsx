@@ -5,6 +5,19 @@ import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { useAuthStore } from '../stores/authStore';
 
+// Helper to create a mock JWT token with a future expiration
+function createMockJwt(expiresInSeconds: number = 3600): string {
+    const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    const payload = btoa(JSON.stringify({
+        sub: 'user123',
+        exp: Math.floor(Date.now() / 1000) + expiresInSeconds,
+        iat: Math.floor(Date.now() / 1000),
+    }));
+    // Mock signature (not actually valid, but good enough for tests)
+    const signature = btoa('mock-signature');
+    return `${header}.${payload}.${signature}`;
+}
+
 // Mock useNavigate
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -58,7 +71,10 @@ describe('Authentication Integration Tests', () => {
             await user.click(screen.getByRole('button', { name: /sign in/i }));
 
             await waitFor(() => {
-                expect(useAuthStore.getState().accessToken).toBe('mock-access-token');
+                const token = useAuthStore.getState().accessToken;
+                // Token should be a JWT (three base64 parts separated by dots)
+                expect(token).not.toBeNull();
+                expect(token?.split('.').length).toBe(3);
             }, { timeout: 3000 });
 
             expect(mockNavigate).toHaveBeenCalled();
@@ -147,22 +163,23 @@ describe('Authentication Integration Tests', () => {
 
             await waitFor(() => {
                 const state = useAuthStore.getState();
-                expect(state.accessToken).toBe('mock-access-token');
+                // Token should be a valid JWT format
+                expect(state.accessToken?.split('.').length).toBe(3);
                 expect(state.refreshToken).toBe('mock-refresh-token');
             }, { timeout: 3000 });
         });
 
         it('clears tokens on logout', async () => {
-            // Set up authenticated state
+            // Set up authenticated state with valid mock JWT
             useAuthStore.setState({
                 user: { id: '1', email: 'test@example.com', display_name: 'Test', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01' },
-                accessToken: 'mock-access-token',
+                accessToken: createMockJwt(3600),
                 refreshToken: 'mock-refresh-token',
                 isLoading: false,
             });
 
             // Verify authenticated
-            expect(useAuthStore.getState().accessToken).toBe('mock-access-token');
+            expect(useAuthStore.getState().accessToken).not.toBeNull();
 
             // Logout
             useAuthStore.getState().logout();
@@ -176,10 +193,10 @@ describe('Authentication Integration Tests', () => {
             // Not authenticated initially
             expect(useAuthStore.getState().isAuthenticated()).toBe(false);
 
-            // Set authenticated state
+            // Set authenticated state with a valid mock JWT
             useAuthStore.setState({
                 user: { id: '1', email: 'test@example.com', display_name: 'Test', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01' },
-                accessToken: 'mock-access-token',
+                accessToken: createMockJwt(3600), // Valid for 1 hour
                 refreshToken: 'mock-refresh-token',
                 isLoading: false,
             });

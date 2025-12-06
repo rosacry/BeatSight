@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useAuthStore } from '../stores/authStore';
+import { createMockJwt } from './mocks/handlers';
 
 // Simple fetch wrapper for testing API endpoints directly
 const API_BASE = '/api';
@@ -91,7 +92,8 @@ describe('API Client Integration Tests', () => {
                 password: 'password123',
             });
 
-            expect(response.access_token).toBe('mock-access-token');
+            // Token should be a valid JWT format (three parts separated by dots)
+            expect(response.access_token.split('.').length).toBe(3);
             expect(response.user.email).toBe('test@example.com');
         });
 
@@ -124,8 +126,8 @@ describe('API Client Integration Tests', () => {
 
     describe('Protected Endpoints', () => {
         beforeEach(() => {
-            // Setup authentication
-            localStorage.setItem('access_token', 'mock-access-token');
+            // Setup authentication with valid mock JWT
+            localStorage.setItem('access_token', createMockJwt(3600));
             localStorage.setItem('refresh_token', 'mock-refresh-token');
         });
 
@@ -182,7 +184,7 @@ describe('API Client Integration Tests', () => {
 
     describe('AI Jobs API', () => {
         beforeEach(() => {
-            localStorage.setItem('access_token', 'mock-access-token');
+            localStorage.setItem('access_token', createMockJwt(3600));
         });
 
         it('successfully creates AI job', async () => {
@@ -212,7 +214,7 @@ describe('API Client Integration Tests', () => {
 
     describe('Storage API', () => {
         beforeEach(() => {
-            localStorage.setItem('access_token', 'mock-access-token');
+            localStorage.setItem('access_token', createMockJwt(3600));
         });
 
         it('successfully uploads file', async () => {

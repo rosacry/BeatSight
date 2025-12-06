@@ -193,12 +193,20 @@ jobs:
         working-directory: docs-site
         run: npm run build
 
+      - name: Create Cloudflare Pages project if needed
+        uses: cloudflare/wrangler-action@v3
+        continue-on-error: true
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages project create beatsight-docs --production-branch=main
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy docs-site/build --project-name=beatsight-docs --branch=main
+          command: pages deploy docs-site/build --project-name=beatsight-docs --branch=main --commit-dirty=true
 
       - name: Deployment Summary
         run: |

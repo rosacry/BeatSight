@@ -1,10 +1,31 @@
 /**
  * Login page component.
+ * Enhanced with modern glassmorphism design and improved UX.
  */
 
 import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
+import { ParticleBackground, GradientOrbs } from '@/components/ui/ParticleBackground'
+
+// Eye icons for password visibility toggle
+function EyeIcon() {
+    return (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        </svg>
+    )
+}
+
+function EyeOffIcon() {
+    return (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+        </svg>
+    )
+}
 
 export function LoginPage() {
     const navigate = useNavigate()
@@ -13,6 +34,7 @@ export function LoginPage() {
 
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    const [showPassword, setShowPassword] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     // Get redirect path from location state or default to home
@@ -35,26 +57,74 @@ export function LoginPage() {
     }
 
     return (
-        <div className="min-h-[80vh] flex items-center justify-center">
-            <div className="w-full max-w-md">
-                <div className="bg-gray-800 rounded-xl p-8 shadow-xl border border-gray-700">
-                    <div className="text-center mb-8">
-                        <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4 bg-gradient-to-br from-cyan-500/20 to-fuchsia-500/20 border border-white/10">
-                            <img src="/icons/logo-navbar.png" alt="BeatSight" className="w-10 h-10" />
-                        </div>
-                        <h1 className="text-2xl font-bold text-white">Welcome back</h1>
-                        <p className="text-gray-400 mt-2">Sign in to your BeatSight account</p>
+        <div className="min-h-[80vh] flex items-center justify-center relative overflow-hidden">
+            {/* Background effects */}
+            <ParticleBackground particleCount={30} />
+            <GradientOrbs />
+            
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="w-full max-w-md relative z-10"
+            >
+                <div className="relative bg-slate-900/60 backdrop-blur-xl rounded-2xl p-8 
+                              border border-white/10 shadow-2xl shadow-black/50">
+                    {/* Subtle gradient border effect */}
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-transparent to-fuchsia-500/10 pointer-events-none" />
+                    
+                    <div className="relative text-center mb-8">
+                        {/* Logo with glow effect */}
+                        <motion.div 
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
+                            className="w-20 h-20 mx-auto mb-6 relative"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/30 to-fuchsia-500/30 rounded-2xl blur-xl" />
+                            <div className="relative w-full h-full rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 
+                                          border border-white/20 flex items-center justify-center
+                                          shadow-lg shadow-cyan-500/20">
+                                <img src="/icons/logo-navbar.png" alt="BeatSight" className="w-12 h-12" />
+                            </div>
+                        </motion.div>
+                        
+                        <motion.h1 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.2 }}
+                            className="text-3xl font-bold text-white mb-2"
+                        >
+                            Welcome back
+                        </motion.h1>
+                        <motion.p 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.3 }}
+                            className="text-slate-400"
+                        >
+                            Sign in to your BeatSight account
+                        </motion.p>
                     </div>
 
                     {error && (
-                        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-lg">
-                            <p className="text-red-400 text-sm">{error}</p>
-                        </div>
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl backdrop-blur-sm"
+                        >
+                            <p className="text-red-400 text-sm flex items-center gap-2">
+                                <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                {error}
+                            </p>
+                        </motion.div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-5 relative">
                         <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+                            <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
                                 Email address
                             </label>
                             <input
@@ -64,36 +134,60 @@ export function LoginPage() {
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
                                 autoComplete="email"
-                                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                                className="w-full px-4 py-3.5 bg-slate-800/50 border border-white/10 rounded-xl 
+                                         text-white placeholder-slate-500 
+                                         focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50
+                                         transition-all duration-200"
                                 placeholder="you@example.com"
                             />
                         </div>
 
                         <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+                            <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
                                 Password
                             </label>
-                            <input
-                                id="password"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                autoComplete="current-password"
-                                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                                placeholder="••••••••"
-                            />
+                            <div className="relative">
+                                <input
+                                    id="password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                    autoComplete="current-password"
+                                    className="w-full px-4 py-3.5 pr-12 bg-slate-800/50 border border-white/10 rounded-xl 
+                                             text-white placeholder-slate-500 
+                                             focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50
+                                             transition-all duration-200"
+                                    placeholder="••••••••"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 
+                                             text-slate-400 hover:text-white transition-colors"
+                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                >
+                                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                                </button>
+                            </div>
                             <div className="mt-2 text-right">
-                                <Link to="/forgot-password" className="text-sm text-primary-400 hover:text-primary-300">
+                                <Link to="/forgot-password" className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors">
                                     Forgot password?
                                 </Link>
                             </div>
                         </div>
 
-                        <button
+                        <motion.button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full py-3 px-4 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-500/50 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                            className="w-full py-3.5 px-4 bg-gradient-to-r from-cyan-500 to-cyan-600 
+                                     hover:from-cyan-400 hover:to-cyan-500
+                                     disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed
+                                     text-white font-semibold rounded-xl 
+                                     shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40
+                                     transition-all duration-300"
                         >
                             {isLoading ? (
                                 <span className="flex items-center justify-center gap-2">
@@ -106,19 +200,19 @@ export function LoginPage() {
                             ) : (
                                 'Sign in'
                             )}
-                        </button>
+                        </motion.button>
                     </form>
 
-                    <div className="mt-6 text-center">
-                        <p className="text-gray-400">
+                    <div className="mt-8 text-center">
+                        <p className="text-slate-400">
                             Don't have an account?{' '}
-                            <Link to="/register" className="text-primary-400 hover:text-primary-300 font-medium">
+                            <Link to="/register" className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors">
                                 Sign up
                             </Link>
                         </p>
                     </div>
                 </div>
-            </div>
+            </motion.div>
         </div>
     )
 }

@@ -2,7 +2,7 @@
  * PageTransition - Animated page transitions using Framer Motion
  * 
  * Provides smooth fade and slide animations between route changes,
- * inspired by osu!'s fluid navigation experience.
+ * inspired by modern rhythm game navigation experiences.
  */
 
 import { ReactNode } from 'react'

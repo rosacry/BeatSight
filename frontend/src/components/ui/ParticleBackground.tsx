@@ -1,7 +1,7 @@
 /**
  * ParticleBackground - Animated floating particles background
  * 
- * Creates an immersive, osu!-inspired particle field with floating circles
+ * Creates an immersive particle field with floating circles inspired by rhythm games
  * that respond to mouse movement and create depth.
  */
 

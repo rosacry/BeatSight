@@ -54,7 +54,7 @@ export const PRICING_PLANS: PricingPlan[] = [
         features: [
             '3 AI beatmap generations/month',
             'V5-Distilled model',
-            'Export to .osu format',
+            'Export to .bs format',
             'Community support',
             'Buy credits for extra songs',
         ],

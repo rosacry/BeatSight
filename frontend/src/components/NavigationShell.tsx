@@ -121,9 +121,9 @@ export function Layout({ children }: LayoutProps) {
                 initial={{ y: -100 }}
                 animate={{ y: 0 }}
                 transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
-                        ? 'bg-slate-900/80 backdrop-blur-xl border-b border-white/10 shadow-lg shadow-black/20'
-                        : 'bg-transparent'
+                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled
+                        ? 'bg-slate-900/90 backdrop-blur-xl border-b border-white/10 shadow-lg shadow-black/30'
+                        : 'bg-gradient-to-b from-slate-900/80 via-slate-900/40 to-transparent backdrop-blur-sm'
                     }`}
                 id={SKIP_LINK_TARGETS.NAVIGATION}
                 aria-label="Main navigation"
@@ -132,14 +132,24 @@ export function Layout({ children }: LayoutProps) {
                     <div className="flex items-center justify-between h-16">
                         {/* Logo and main nav */}
                         <div className="flex items-center">
-                            <Link to="/" className="flex items-center gap-2 group">
-                                <motion.img
-                                    src="/icons/logo-navbar.png"
-                                    alt="BeatSight"
-                                    className="w-8 h-8"
-                                    whileHover={{ scale: 1.1, rotate: 5 }}
+                            <Link to="/" className="flex items-center gap-2.5 group">
+                                {/* Logo with subtle glow effect */}
+                                <motion.div 
+                                    className="relative"
+                                    whileHover={{ scale: 1.05 }}
                                     transition={{ type: 'spring', stiffness: 400 }}
-                                />
+                                >
+                                    <div className="absolute inset-0 bg-cyan-500/20 rounded-lg blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <div className="relative w-9 h-9 rounded-lg bg-gradient-to-br from-slate-800/80 to-slate-900/80 
+                                                  border border-white/10 flex items-center justify-center
+                                                  group-hover:border-cyan-500/30 transition-colors">
+                                        <img
+                                            src="/icons/logo-navbar.png"
+                                            alt="BeatSight"
+                                            className="w-6 h-6"
+                                        />
+                                    </div>
+                                </motion.div>
                                 <span className="text-xl font-bold text-white hidden sm:block 
                                                group-hover:text-cyan-400 transition-colors">
                                     BeatSight
@@ -363,7 +373,10 @@ export function Layout({ children }: LayoutProps) {
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
                         {/* Logo and copyright */}
                         <div className="flex items-center gap-3">
-                            <img src="/icons/logo-navbar.png" alt="" className="w-6 h-6 opacity-70" />
+                            <div className="w-7 h-7 rounded-md bg-gradient-to-br from-slate-800/80 to-slate-900/80 
+                                          border border-white/10 flex items-center justify-center">
+                                <img src="/icons/logo-navbar.png" alt="" className="w-4 h-4" />
+                            </div>
                             <p className="text-slate-500 text-sm">
                                 © 2025 BeatSight. AI-powered drum beatmap generation.
                             </p>

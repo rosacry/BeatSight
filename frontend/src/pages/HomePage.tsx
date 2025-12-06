@@ -1,5 +1,5 @@
 /**
- * HomePage - Enhanced landing page with osu!-inspired design
+ * HomePage - Enhanced landing page with modern rhythm game design
  * 
  * Features:
  * - Animated particle background

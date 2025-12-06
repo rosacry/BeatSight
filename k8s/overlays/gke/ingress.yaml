@@ -10,7 +10,7 @@ metadata:
     kubernetes.io/ingress.class: "gce"
     kubernetes.io/ingress.global-static-ip-name: "beatsight-ip"
     networking.gke.io/managed-certificates: "beatsight-cert"
-    kubernetes.io/ingress.allow-http: "false"
+    kubernetes.io/ingress.allow-http: "true"
 spec:
   rules:
     - host: beatsight.io

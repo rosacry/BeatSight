@@ -90,7 +90,10 @@ class FeatureFlagDefinition:
         # Gradual rollout based on user ID hash
         if self.rollout_percentage < 100.0 and user_id:
             hash_value = int(
-                hashlib.md5(f"{self.key}:{user_id}".encode()).hexdigest(), 16
+                hashlib.md5(
+                    f"{self.key}:{user_id}".encode(), usedforsecurity=False
+                ).hexdigest(),
+                16,
             )
             bucket = (hash_value % 100) + 1
             if bucket > self.rollout_percentage:
@@ -108,7 +111,10 @@ class FeatureFlagDefinition:
 
         # Consistent variant assignment based on user ID
         hash_value = int(
-            hashlib.md5(f"{self.key}:variant:{user_id}".encode()).hexdigest(), 16
+            hashlib.md5(
+                f"{self.key}:variant:{user_id}".encode(), usedforsecurity=False
+            ).hexdigest(),
+            16,
         )
         variant_index = hash_value % len(self.variants)
         return self.variants[variant_index]

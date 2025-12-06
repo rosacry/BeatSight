@@ -564,7 +564,7 @@ def md5(data: str | bytes) -> str:
     """
     if isinstance(data, str):
         data = data.encode("utf-8")
-    return hashlib.md5(data).hexdigest()
+    return hashlib.md5(data, usedforsecurity=False).hexdigest()
 
 
 def hash_file(

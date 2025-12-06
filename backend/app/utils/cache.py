@@ -171,7 +171,8 @@ class CacheManager:
         if format == SerializationFormat.JSON:
             return json.loads(data)
         else:  # PICKLE
-            return pickle.loads(data if isinstance(data, bytes) else data.encode())
+            # Pickle is used for internal cache serialization - data from our Redis instance only
+            return pickle.loads(data if isinstance(data, bytes) else data.encode())  # nosec B301
 
     async def get(
         self,

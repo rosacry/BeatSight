@@ -248,7 +248,9 @@ def get_rate_limit_key(request: Request, include_path: bool = True) -> str:
 
     # Include path for endpoint-specific limits
     if include_path:
-        path_hash = hashlib.md5(request.url.path.encode()).hexdigest()[:8]
+        path_hash = hashlib.md5(
+            request.url.path.encode(), usedforsecurity=False
+        ).hexdigest()[:8]
         parts.append(f"path:{path_hash}")
 
     return ":".join(parts)

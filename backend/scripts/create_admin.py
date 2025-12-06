@@ -150,7 +150,7 @@ async def main() -> None:
         print("❌ Error: Password must be at least 8 characters")
         sys.exit(1)
     
-    print(f"\n🔧 Creating admin account:")
+    print("\n🔧 Creating admin account:")
     print(f"   Email: {email}")
     print(f"   Display Name: {display_name}")
     print()
@@ -158,7 +158,7 @@ async def main() -> None:
     async with async_session_factory() as session:
         await create_admin(email, password, display_name, session)
     
-    print(f"\n🎉 Done! You can now log in at https://beatsight.io/login")
+    print("\n🎉 Done! You can now log in at https://beatsight.io/login")
 
 
 if __name__ == "__main__":

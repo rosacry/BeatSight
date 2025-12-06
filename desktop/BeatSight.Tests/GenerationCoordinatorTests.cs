@@ -162,16 +162,22 @@ public class GenerationCoordinatorTests
 
         using var cts = new CancellationTokenSource();
         var pipelineStarted = new TaskCompletionSource<bool>();
+        var firstYieldProcessed = new TaskCompletionSource<bool>();
 
-        var pipeline = new FakePipeline(ct => slowSequence(ct, pipelineStarted));
+        var pipeline = new FakePipeline(ct => slowSequence(ct, pipelineStarted, firstYieldProcessed));
         var coordinator = new GenerationCoordinator(pipeline, action => action());
 
         var parameters = new GenerationParams(track, DetectionSensitivity: 60, Quantization: QuantizationGrid.Sixteenth, DebugOverlayEnabled: false, TempoOverride: null);
 
         var resultTask = coordinator.RunAsync(parameters, cts.Token);
 
-        // Wait for pipeline to actually start before cancelling
+        // Wait for pipeline to actually start AND first yield to be processed before cancelling
         await pipelineStarted.Task;
+        await firstYieldProcessed.Task;
+        
+        // Small delay to ensure coordinator has processed the first item
+        await Task.Delay(50);
+        
         cts.Cancel();
 
         var result = await resultTask;
@@ -181,7 +187,7 @@ public class GenerationCoordinatorTests
 
         coordinator.Dispose();
 
-        static async IAsyncEnumerable<PipelineProgress> slowSequence([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct, TaskCompletionSource<bool> started)
+        static async IAsyncEnumerable<PipelineProgress> slowSequence([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct, TaskCompletionSource<bool> started, TaskCompletionSource<bool> firstYieldProcessed)
         {
             // Signal that pipeline has started
             started.TrySetResult(true);
@@ -200,8 +206,11 @@ public class GenerationCoordinatorTests
                 StageLabel: GenerationStagePlan.StageLabels[GenerationStageId.ModelLoad],
                 StageDurations: new Dictionary<GenerationStageId, double>());
 
-            // Simulate a slow operation that can be cancelled
-            await Task.Delay(100, ct);
+            // Signal that the first yield has been processed (we've returned from the yield)
+            firstYieldProcessed.TrySetResult(true);
+
+            // Simulate a slow operation that can be cancelled - use longer delay for reliability
+            await Task.Delay(500, ct);
 
             ct.ThrowIfCancellationRequested();
 

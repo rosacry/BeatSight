@@ -174,10 +174,10 @@ public class GenerationCoordinatorTests
         // Wait for pipeline to actually start AND first yield to be processed before cancelling
         await pipelineStarted.Task;
         await firstYieldProcessed.Task;
-        
+
         // Small delay to ensure coordinator has processed the first item
         await Task.Delay(50);
-        
+
         cts.Cancel();
 
         var result = await resultTask;

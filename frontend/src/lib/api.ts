@@ -8,8 +8,9 @@
 
 // Re-export shared types from main client
 export { APIError } from '@/api/client'
+import { API_CONFIG } from '@/lib/config'
 
-const API_BASE = '/api'
+const API_BASE = API_CONFIG.baseUrl
 
 /**
  * Simple API client for unauthenticated endpoints.

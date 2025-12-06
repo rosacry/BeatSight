@@ -8,11 +8,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { createLogger, getDeveloperModeEnabled, enableDeveloperMode, disableDeveloperMode } from '@/lib/logger'
 import { AvatarUpload } from '@/components/AvatarUpload'
+import { API_CONFIG } from '@/lib/config'
 import type { UserPreferences } from '@/types/sync'
 import { DEFAULT_CUSTOM_SETTINGS } from '@/types/sync'
 
 const logger = createLogger('Settings')
-const API_BASE = '/api'
+const API_BASE = API_CONFIG.baseUrl
 
 type SettingsTab = 'account' | 'preferences' | 'notifications' | 'privacy' | 'developer' | 'danger'
 

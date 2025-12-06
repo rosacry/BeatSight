@@ -5,8 +5,9 @@
 import type { AIJob, AIJobEnqueueResponse, QuotaStatus, Song } from '@/types/api'
 import { getAccessToken } from '@/stores/authStore'
 import { createLogger } from '@/lib/logger'
+import { API_CONFIG } from '@/lib/config'
 
-const API_BASE = '/api'
+const API_BASE = API_CONFIG.baseUrl
 const sseLogger = createLogger('SSE')
 
 /** Generic paginated response wrapper */

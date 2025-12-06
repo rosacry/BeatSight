@@ -7,6 +7,7 @@ resources:
   - namespace.yaml
   - backend.yaml
   - frontend.yaml
+  - docs.yaml
   # Note: ingress.yaml excluded - each overlay defines its own ingress
 
 labels:

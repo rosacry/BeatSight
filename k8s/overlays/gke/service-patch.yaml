@@ -16,3 +16,12 @@ metadata:
   annotations:
     cloud.google.com/backend-config: '{"default": "beatsight-frontend-config"}'
     cloud.google.com/neg: '{"ingress": true}'
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: beatsight-docs
+  namespace: beatsight
+  annotations:
+    cloud.google.com/backend-config: '{"default": "beatsight-docs-config"}'
+    cloud.google.com/neg: '{"ingress": true}'

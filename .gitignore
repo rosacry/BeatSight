@@ -197,3 +197,7 @@ exp/
 # Dataset index files (labels cache - regenerated locally)
 data/dataset_index/
 docs-site/.docusaurus/
+
+# Private documentation and notes (not for public repo)
+docs/
+personal_notes/

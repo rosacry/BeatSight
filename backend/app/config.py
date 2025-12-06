@@ -47,6 +47,17 @@ class Settings(BaseSettings):
     database_max_overflow: int = Field(default=20, alias="DATABASE_MAX_OVERFLOW")
     database_pool_timeout: int = Field(default=30, alias="DATABASE_POOL_TIMEOUT")
 
+    @field_validator("database_dsn", mode="after")
+    @classmethod
+    def ensure_asyncpg_driver(cls, v: str) -> str:
+        """Ensure the database DSN uses the asyncpg driver."""
+        # Railway/Heroku provide postgresql:// but we need postgresql+asyncpg://
+        if v.startswith("postgresql://"):
+            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        if v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql+asyncpg://", 1)
+        return v
+
     # -------------------------------------------------------------------------
     # Redis / Caching
     # -------------------------------------------------------------------------

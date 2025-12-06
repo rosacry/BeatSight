@@ -1089,3 +1089,94 @@ async def get_system_overview(
         processing_jobs=processing,
         failed_jobs_24h=failed_24h,
     )
+
+
+# =============================================================================
+# Account Security Management
+# =============================================================================
+
+
+class AccountLockoutStatus(BaseModel):
+    """Account lockout status response."""
+
+    email: str
+    is_locked: bool
+    lockout_until: datetime | None
+    failed_attempts: int
+    remaining_attempts: int
+
+
+class UnlockAccountRequest(BaseModel):
+    """Request to unlock an account."""
+
+    email: str
+
+
+class UnlockAccountResponse(BaseModel):
+    """Response for account unlock action."""
+
+    success: bool
+    message: str
+
+
+@router.get(
+    "/security/lockout-status",
+    response_model=AccountLockoutStatus,
+    summary="Check account lockout status",
+)
+async def get_lockout_status(
+    email: str = Query(..., description="Email address to check"),
+    _admin_check: Annotated[None, RequireAdminDashboard] = None,
+) -> AccountLockoutStatus:
+    """
+    Check the lockout status of an account.
+    
+    Requires ADMIN_DASHBOARD permission.
+    """
+    from app.services.account_security import get_account_security_service
+    
+    security_service = get_account_security_service()
+    status = await security_service.get_attempt_status(email)
+    
+    return AccountLockoutStatus(
+        email=email,
+        is_locked=status["is_locked"],
+        lockout_until=status["lockout_until"],
+        failed_attempts=status["attempts"],
+        remaining_attempts=status["remaining_attempts"],
+    )
+
+
+@router.post(
+    "/security/unlock-account",
+    response_model=UnlockAccountResponse,
+    summary="Manually unlock a locked account",
+)
+async def unlock_account(
+    request: UnlockAccountRequest,
+    _admin_check: Annotated[None, RequireAdminDashboard] = None,
+) -> UnlockAccountResponse:
+    """
+    Manually unlock a user account that was locked due to failed login attempts.
+    
+    Requires ADMIN_DASHBOARD permission.
+    """
+    from app.services.account_security import get_account_security_service
+    
+    security_service = get_account_security_service()
+    was_locked = await security_service.manually_unlock_account(request.email)
+    
+    if was_locked:
+        logger.info(
+            "admin_unlocked_account",
+            extra={"email": request.email[:3] + "***"}
+        )
+        return UnlockAccountResponse(
+            success=True,
+            message=f"Account {request.email} has been unlocked.",
+        )
+    
+    return UnlockAccountResponse(
+        success=True,
+        message=f"Account {request.email} was not locked.",
+    )

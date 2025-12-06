@@ -3,19 +3,30 @@
  * Shown after successful credit purchase via Stripe checkout.
  */
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useRefreshCreditBalance, useCreditBalance } from '@/hooks/useCredits'
+import { useToast } from '@/components/Toast'
 
 export function CreditSuccessPage() {
     const [searchParams] = useSearchParams()
     const refreshBalance = useRefreshCreditBalance()
     const { data: balance, isLoading } = useCreditBalance()
+    const { success } = useToast()
+    const hasShownToast = useRef(false)
 
     // Refresh balance on mount to get updated credit count
     useEffect(() => {
         refreshBalance()
     }, [refreshBalance])
+
+    // Show success toast once when balance loads
+    useEffect(() => {
+        if (balance && !hasShownToast.current) {
+            success('Credits Added!', `Your account now has ${balance.balance} credits`)
+            hasShownToast.current = true
+        }
+    }, [balance, success])
 
     const sessionId = searchParams.get('session_id')
 

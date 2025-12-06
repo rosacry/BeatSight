@@ -34,6 +34,7 @@ from app.api.routes import (
 from app.config import get_settings
 from app.logging import configure_logging, get_logger
 from app.middleware.request_id import RequestIdMiddleware
+from app.middleware.request_logging import RequestLoggingMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 
 configure_logging()
@@ -221,6 +222,11 @@ logger.info("request_id_middleware_enabled")
 # Add security headers middleware
 app.add_middleware(SecurityHeadersMiddleware)
 logger.info("security_headers_middleware_enabled")
+
+# Add request logging middleware (skip in test environment)
+if settings.environment != "test":
+    app.add_middleware(RequestLoggingMiddleware)
+    logger.info("request_logging_middleware_enabled")
 
 # Set up Prometheus metrics (conditionally to avoid import errors in tests)
 try:

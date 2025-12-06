@@ -15,6 +15,7 @@ from app.models.user import User
 from app.services.auth import AuthService
 from app.services.email import get_email_service
 from app.services.account_security import get_account_security_service
+from app.utils.password_validation import validate_password
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +97,18 @@ async def register(
     Returns access and refresh tokens upon successful registration.
     """
     auth_service = AuthService(session)
+
+    # Validate password strength
+    password_result = validate_password(
+        request.password,
+        email=request.email,
+        display_name=request.display_name,
+    )
+    if not password_result.is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=password_result.error_message,
+        )
 
     # Check if email already exists
     existing_user = await auth_service.get_user_by_email(request.email)
@@ -289,6 +302,14 @@ async def reset_password(
     """
     Reset password using a valid reset token.
     """
+    # Validate password strength first (before token verification)
+    password_result = validate_password(request.new_password)
+    if not password_result.is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=password_result.error_message,
+        )
+
     email_service = get_email_service()
     payload = email_service.verify_password_reset_token(request.token)
 

@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     # Application
     # -------------------------------------------------------------------------
     app_name: str = "BeatSight Backend"
+    app_version: str = Field(default="1.0.0", alias="APP_VERSION")
     environment: Literal["development", "staging", "production", "testing"] = Field(
         default="development", alias="ENVIRONMENT"
     )

@@ -67,21 +67,20 @@ ENV PYTHONUNBUFFERED=1 \
     LOG_LEVEL=INFO \
     LOGGING_JSON=true
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+# Health check (Railway handles this via railway.toml)
+# For local Docker, we use the /health/live endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8000}/health/live || exit 1
 
-# Expose API port
-EXPOSE 8000
+# Expose API port (Railway dynamically assigns via $PORT)
+EXPOSE ${PORT:-8000}
+
+# Default port (Railway overrides with $PORT via startCommand)
+ENV PORT=8000
 
 # Run with uvicorn (production settings)
-# Workers: 2-4 x CPU cores is recommended; using 4 as default
-CMD ["uvicorn", "app.main:app", \
-    "--host", "0.0.0.0", \
-    "--port", "8000", \
-    "--workers", "4", \
-    "--loop", "uvloop", \
-    "--http", "httptools"]
+# Note: Railway overrides CMD with startCommand in railway.toml
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --workers 1
 
 # =============================================================================
 # Development Stage (optional, for local development)

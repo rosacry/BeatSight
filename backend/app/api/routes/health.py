@@ -9,8 +9,10 @@ Provides:
 
 from __future__ import annotations
 
+import os
+import platform
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
@@ -19,11 +21,15 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.db.session import get_session
 from app.db.redis import get_redis
 from app.services.stripe_service import get_stripe_service
 
 router = APIRouter(prefix="/health", tags=["health"])
+
+# Track service start time
+_service_start_time = datetime.now(timezone.utc)
 
 
 class HealthStatus(str, Enum):
@@ -42,14 +48,26 @@ class ComponentHealth(BaseModel):
     latency_ms: float | None = None
 
 
+class SystemInfo(BaseModel):
+    """System information for health reporting."""
+    
+    python_version: str
+    platform: str
+    pid: int
+    uptime_seconds: float
+
+
 class HealthResponse(BaseModel):
     """Health check response."""
 
     status: HealthStatus
     service: str = "beatsight-api"
-    version: str = "0.1.0"
+    version: str
+    environment: str
     timestamp: datetime
+    uptime_seconds: float | None = None
     components: dict[str, ComponentHealth] | None = None
+    system: SystemInfo | None = None
 
 
 class ReadinessResponse(BaseModel):
@@ -59,6 +77,22 @@ class ReadinessResponse(BaseModel):
     service: str = "beatsight-api"
     timestamp: datetime
     checks: dict[str, bool] | None = None
+
+
+def get_system_info() -> SystemInfo:
+    """Get system information."""
+    uptime = (datetime.now(timezone.utc) - _service_start_time).total_seconds()
+    return SystemInfo(
+        python_version=platform.python_version(),
+        platform=platform.system(),
+        pid=os.getpid(),
+        uptime_seconds=round(uptime, 2),
+    )
+
+
+def get_uptime_seconds() -> float:
+    """Get service uptime in seconds."""
+    return (datetime.now(timezone.utc) - _service_start_time).total_seconds()
 
 
 async def check_database(db: AsyncSession) -> ComponentHealth:
@@ -189,6 +223,7 @@ async def detailed_health_check(
     Returns health status of all components including latency information.
     Useful for debugging and monitoring dashboards.
     """
+    settings = get_settings()
     db_health = await check_database(db)
     redis_health = await check_redis()
     stripe_health = check_stripe()
@@ -201,8 +236,12 @@ async def detailed_health_check(
 
     return HealthResponse(
         status=aggregate_status(components),
-        timestamp=datetime.utcnow(),
+        version=settings.app_version,
+        environment=settings.environment,
+        timestamp=datetime.now(timezone.utc),
+        uptime_seconds=round(get_uptime_seconds(), 2),
         components=components,
+        system=get_system_info(),
     )
 
 
@@ -218,7 +257,11 @@ async def health_check() -> HealthResponse:
     Returns service health status quickly.
     Use /health/detailed for full component checks.
     """
+    settings = get_settings()
     return HealthResponse(
         status=HealthStatus.HEALTHY,
-        timestamp=datetime.utcnow(),
+        version=settings.app_version,
+        environment=settings.environment,
+        timestamp=datetime.now(timezone.utc),
+        uptime_seconds=round(get_uptime_seconds(), 2),
     )

@@ -1,0 +1,57 @@
+# Git
+.git
+.gitignore
+
+# Frontend (not needed for backend build)
+frontend
+docs-site
+
+# Desktop app
+desktop
+
+# AI Pipeline (separate service)
+ai-pipeline
+
+# Data files
+data
+models
+wandb
+logs
+temp
+
+# Documentation
+docs
+*.md
+!backend/README.md
+
+# IDE
+.vscode
+.idea
+
+# Python cache
+__pycache__
+*.py[cod]
+*$py.class
+.pytest_cache
+.mypy_cache
+.coverage
+htmlcov
+
+# Virtual environments
+.venv
+venv
+
+# Build artifacts
+*.egg-info
+dist
+build
+
+# Local config
+.env
+.env.*
+!.env.example
+
+# Misc
+*.log
+.DS_Store
+Thumbs.db

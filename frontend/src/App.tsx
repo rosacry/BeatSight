@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Layout } from './components/NavigationShell'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -28,6 +29,116 @@ import { useAuthStore } from './stores/authStore'
 import { useServiceWorkerUpdate } from './hooks/usePWA'
 import { KeyboardShortcutsProvider } from './hooks/useKeyboardShortcuts'
 
+// Page transition animation variants
+const pageVariants = {
+    initial: { opacity: 0, y: 8 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -8 },
+}
+
+const pageTransition = {
+    duration: 0.2,
+    ease: [0.25, 0.46, 0.45, 0.94],
+}
+
+function AnimatedRoutes() {
+    const location = useLocation()
+    
+    return (
+        <AnimatePresence mode="wait">
+            <motion.div
+                key={location.pathname}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={pageVariants}
+                transition={pageTransition}
+                className="min-h-full"
+            >
+                <Routes location={location}>
+                    {/* Public routes */}
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/queue" element={<JobQueuePage />} />
+                    <Route path="/jobs/:jobId" element={<JobDetailPage />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                    <Route path="/reset-password" element={<ResetPasswordPage />} />
+                    <Route path="/pricing" element={<PricingPage />} />
+                    <Route path="/credits/success" element={<CreditSuccessPage />} />
+                    <Route path="/credits/cancel" element={<CreditCancelPage />} />
+
+                    {/* Protected routes */}
+                    <Route
+                        path="/upload"
+                        element={
+                            <ProtectedRoute>
+                                <UploadPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/library"
+                        element={
+                            <ProtectedRoute>
+                                <LibraryPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/profile"
+                        element={
+                            <ProtectedRoute>
+                                <ProfilePage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/settings"
+                        element={
+                            <ProtectedRoute>
+                                <SettingsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin"
+                        element={
+                            <ProtectedRoute>
+                                <AdminDashboardPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/verifier"
+                        element={
+                            <ProtectedRoute>
+                                <VerifierDashboardPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/maps/:mapId/edit"
+                        element={
+                            <ProtectedRoute>
+                                <MapEditPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/record"
+                        element={
+                            <ProtectedRoute>
+                                <RecordPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                </Routes>
+            </motion.div>
+        </AnimatePresence>
+    )
+}
+
 function App() {
     const initialize = useAuthStore((state) => state.initialize)
     const { updateAvailable, applyUpdate } = useServiceWorkerUpdate()
@@ -49,85 +160,7 @@ function App() {
 
                         <Layout>
                             <ErrorBoundary>
-                                <Routes>
-                                    {/* Public routes */}
-                                    <Route path="/" element={<HomePage />} />
-                                    <Route path="/queue" element={<JobQueuePage />} />
-                                    <Route path="/jobs/:jobId" element={<JobDetailPage />} />
-                                    <Route path="/login" element={<LoginPage />} />
-                                    <Route path="/register" element={<RegisterPage />} />
-                                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                                    <Route path="/reset-password" element={<ResetPasswordPage />} />
-                                    <Route path="/pricing" element={<PricingPage />} />
-                                    <Route path="/credits/success" element={<CreditSuccessPage />} />
-                                    <Route path="/credits/cancel" element={<CreditCancelPage />} />
-
-                                    {/* Protected routes */}
-                                    <Route
-                                        path="/upload"
-                                        element={
-                                            <ProtectedRoute>
-                                                <UploadPage />
-                                            </ProtectedRoute>
-                                        }
-                                    />
-                                    <Route
-                                        path="/library"
-                                        element={
-                                            <ProtectedRoute>
-                                                <LibraryPage />
-                                            </ProtectedRoute>
-                                        }
-                                    />
-                                    <Route
-                                        path="/profile"
-                                        element={
-                                            <ProtectedRoute>
-                                                <ProfilePage />
-                                            </ProtectedRoute>
-                                        }
-                                    />
-                                    <Route
-                                        path="/settings"
-                                        element={
-                                            <ProtectedRoute>
-                                                <SettingsPage />
-                                            </ProtectedRoute>
-                                        }
-                                    />
-                                    <Route
-                                        path="/admin"
-                                        element={
-                                            <ProtectedRoute>
-                                                <AdminDashboardPage />
-                                            </ProtectedRoute>
-                                        }
-                                    />
-                                    <Route
-                                        path="/verifier"
-                                        element={
-                                            <ProtectedRoute>
-                                                <VerifierDashboardPage />
-                                            </ProtectedRoute>
-                                        }
-                                    />
-                                    <Route
-                                        path="/maps/:mapId/edit"
-                                        element={
-                                            <ProtectedRoute>
-                                                <MapEditPage />
-                                            </ProtectedRoute>
-                                        }
-                                    />
-                                    <Route
-                                        path="/record"
-                                        element={
-                                            <ProtectedRoute>
-                                                <RecordPage />
-                                            </ProtectedRoute>
-                                        }
-                                    />
-                                </Routes>
+                                <AnimatedRoutes />
                             </ErrorBoundary>
                         </Layout>
                     </KeyboardShortcutsProvider>

@@ -26,6 +26,8 @@ patches:
         path: /spec/template/spec/containers/0/volumeMounts
   # GKE-specific resource limits for frontend (Autopilot requires ephemeral-storage)
   - path: frontend-patch.yaml
+  # GKE-specific resource limits for docs (Autopilot requires ephemeral-storage)
+  - path: docs-patch.yaml
   # Service patches for BackendConfig annotations
   - path: service-patch.yaml
 
@@ -36,4 +38,7 @@ images:
     newTag: latest
   - name: beatsight-frontend
     newName: ghcr.io/rosacry/beatsight-frontend
+    newTag: latest
+  - name: beatsight-docs
+    newName: ghcr.io/rosacry/beatsight-docs
     newTag: latest

@@ -41,13 +41,26 @@ const pageTransition = {
     ease: [0.25, 0.46, 0.45, 0.94],
 }
 
+// Scroll restoration component - scrolls to top on route change
+function ScrollToTop() {
+    const { pathname } = useLocation()
+    
+    useEffect(() => {
+        window.scrollTo(0, 0)
+    }, [pathname])
+    
+    return null
+}
+
 function AnimatedRoutes() {
     const location = useLocation()
 
     return (
-        <AnimatePresence mode="wait">
-            <motion.div
-                key={location.pathname}
+        <>
+            <ScrollToTop />
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={location.pathname}
                 initial="initial"
                 animate="animate"
                 exit="exit"
@@ -136,6 +149,7 @@ function AnimatedRoutes() {
                 </Routes>
             </motion.div>
         </AnimatePresence>
+        </>
     )
 }
 

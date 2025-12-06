@@ -124,7 +124,7 @@ export function LandingPage() {
                             step={3}
                             icon={<PlayIcon />}
                             title="Play & Enjoy"
-                            description="Export to osu! format or play directly in the BeatSight desktop app."
+                            description="Export to .bs format or play directly in the BeatSight desktop app."
                         />
                     </div>
                 </div>

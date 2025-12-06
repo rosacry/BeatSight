@@ -443,9 +443,7 @@ class FeatureFlag:
             Percentage value 0-99
         """
         hash_input = f"{self.name}:{identifier}"
-        hash_value = hashlib.md5(
-            hash_input.encode(), usedforsecurity=False
-        ).hexdigest()
+        hash_value = hashlib.md5(hash_input.encode(), usedforsecurity=False).hexdigest()
         return int(hash_value[:8], 16) % 100
 
 

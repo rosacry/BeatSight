@@ -655,7 +655,7 @@ async def modal_webhook(
     # Idempotency check - use job_id as event_id for Modal webhooks
     from app.models.webhook_event import ProcessedWebhookEvent
     from sqlalchemy import select
-    
+
     event_id = f"modal_job_{result.job_id}"
     existing_event = await session.execute(
         select(ProcessedWebhookEvent).where(
@@ -664,7 +664,9 @@ async def modal_webhook(
         )
     )
     if existing_event.scalar_one_or_none():
-        logger.info(f"Modal webhook already processed for job {result.job_id}, skipping")
+        logger.info(
+            f"Modal webhook already processed for job {result.job_id}, skipping"
+        )
         return {"status": "already_processed", "job_id": result.job_id}
 
     # Get the job
@@ -676,11 +678,17 @@ async def modal_webhook(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Job not found",
         )
-    
+
     # Check if job is already in a terminal state (additional safety)
     if job.state in (AIJobState.COMPLETE, AIJobState.FAILED, AIJobState.CANCELLED):
-        logger.info(f"Job {job_id} already in terminal state {job.state}, skipping webhook")
-        return {"status": "already_completed", "job_id": result.job_id, "state": job.state.value}
+        logger.info(
+            f"Job {job_id} already in terminal state {job.state}, skipping webhook"
+        )
+        return {
+            "status": "already_completed",
+            "job_id": result.job_id,
+            "state": job.state.value,
+        }
 
     if result.success and result.beatmap:
         try:

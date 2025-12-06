@@ -38,7 +38,7 @@ namespace BeatSight.Game.Services
         /// </summary>
         public event Action<SyncedPreferences>? PreferencesSynced;
 
-        public string ApiBaseUrl { get; set; } = "https://api.beatsight.app";
+        public string ApiBaseUrl { get; set; } = "https://api.beatsight.io";
         public bool IsAuthenticated => !string.IsNullOrEmpty(accessToken) && DateTime.UtcNow < tokenExpiry;
         public SyncStatus Status { get; private set; } = SyncStatus.Offline;
         public DateTime? LastSyncTimestamp => lastSyncTimestamp;

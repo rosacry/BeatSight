@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 
 from app.utils.sanitization import (
     sanitize_html,
@@ -73,7 +72,7 @@ class TestSanitizeFilename:
 
     def test_removes_dangerous_characters(self) -> None:
         """Test removal of dangerous characters."""
-        result = sanitize_filename('file<name>:test?.txt')
+        result = sanitize_filename("file<name>:test?.txt")
         assert "<" not in result
         assert ">" not in result
         assert ":" not in result
@@ -189,7 +188,7 @@ class TestSanitizeDict:
         data = {
             "name": "  John  ",
             "bio": "<script>evil()</script>",
-            "nested": {"value": "  test  "}
+            "nested": {"value": "  test  "},
         }
         result = sanitize_dict(data, html_fields=["bio"])
         assert result["name"] == "John"

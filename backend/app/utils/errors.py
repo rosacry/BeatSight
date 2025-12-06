@@ -23,7 +23,7 @@ Usage:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import field
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
@@ -148,9 +148,7 @@ class ErrorResponse(BaseModel):
     request_id: str | None = None
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
-    model_config = {
-        "json_encoders": {datetime: lambda v: v.isoformat()}
-    }
+    model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
 
 
 # =============================================================================
@@ -505,9 +503,7 @@ async def api_error_handler(request: Request, exc: APIError) -> JSONResponse:
     )
 
 
-async def http_exception_handler(
-    request: Request, exc: HTTPException
-) -> JSONResponse:
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     """Handle standard HTTPExceptions and convert to standardized format."""
     request_id = request.headers.get("X-Request-ID")
 
@@ -541,9 +537,7 @@ async def http_exception_handler(
     )
 
 
-async def unhandled_exception_handler(
-    request: Request, exc: Exception
-) -> JSONResponse:
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle unhandled exceptions with standardized error response."""
     request_id = request.headers.get("X-Request-ID")
 

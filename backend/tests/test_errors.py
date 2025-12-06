@@ -6,13 +6,12 @@ and exception handlers.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock
+from datetime import datetime
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException, status
-from fastapi.testclient import TestClient
+from fastapi import HTTPException
 
 from app.utils.errors import (
     APIError,
@@ -44,7 +43,10 @@ class TestErrorCode:
         assert ErrorCode.AUTH_INVALID_TOKEN.value == "AUTH_INVALID_TOKEN"
         assert ErrorCode.AUTH_EXPIRED_TOKEN.value == "AUTH_EXPIRED_TOKEN"
         assert ErrorCode.AUTH_ACCOUNT_LOCKED.value == "AUTH_ACCOUNT_LOCKED"
-        assert ErrorCode.AUTH_INSUFFICIENT_PERMISSIONS.value == "AUTH_INSUFFICIENT_PERMISSIONS"
+        assert (
+            ErrorCode.AUTH_INSUFFICIENT_PERMISSIONS.value
+            == "AUTH_INSUFFICIENT_PERMISSIONS"
+        )
 
     def test_validation_error_codes_exist(self):
         """Test validation error codes exist."""

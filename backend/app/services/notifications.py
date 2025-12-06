@@ -90,12 +90,12 @@ class EmailBackend(NotificationBackend):
 
     def _render_body_html(self, payload: NotificationPayload) -> str:
         """Render HTML email body.
-        
+
         All user-provided content is escaped to prevent XSS attacks.
         """
         settings = get_settings()
         base_url = settings.frontend_url or "https://beatsight.io"
-        
+
         # Escape user-provided content to prevent XSS
         safe_title = html.escape(payload.song_title)
         safe_artist = html.escape(payload.song_artist)

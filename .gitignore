@@ -80,6 +80,9 @@ yarn-error.log
 .npm
 .eslintcache
 
+# Personal documentation (private notes)
+docs/
+
 # Test reports
 frontend/playwright-report/
 frontend/test-results/

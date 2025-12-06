@@ -11,7 +11,6 @@ Provides utilities for:
 
 import asyncio
 import functools
-import sys
 import time
 from contextlib import asynccontextmanager, contextmanager
 from contextvars import ContextVar
@@ -36,7 +35,7 @@ trace_id_var: ContextVar[str | None] = ContextVar("trace_id", default=None)
 @dataclass
 class LogConfig:
     """Configuration for logging setup."""
-    
+
     level: str = "INFO"
     format: str = "json"  # json, console, or key_value
     timestamp_format: str = "iso"
@@ -46,13 +45,21 @@ class LogConfig:
     add_thread_name: bool = False
     add_process_name: bool = False
     exception_formatter: str = "plain"  # plain or rich
-    
+
     # Fields to redact from logs
-    redact_fields: list[str] = field(default_factory=lambda: [
-        "password", "token", "secret", "api_key", "authorization",
-        "credit_card", "ssn", "private_key",
-    ])
-    
+    redact_fields: list[str] = field(
+        default_factory=lambda: [
+            "password",
+            "token",
+            "secret",
+            "api_key",
+            "authorization",
+            "credit_card",
+            "ssn",
+            "private_key",
+        ]
+    )
+
     # Fields to include in all logs
     default_context: dict[str, Any] = field(default_factory=dict)
 
@@ -60,13 +67,13 @@ class LogConfig:
 def configure_logging(config: LogConfig | None = None) -> None:
     """
     Configure structlog with standard processors.
-    
+
     Args:
         config: Logging configuration
     """
     if config is None:
         config = LogConfig()
-    
+
     # Build processors
     processors: list[Processor] = [
         structlog.contextvars.merge_contextvars,
@@ -74,15 +81,15 @@ def configure_logging(config: LogConfig | None = None) -> None:
         structlog.processors.add_log_level,
         structlog.processors.StackInfoRenderer(),
     ]
-    
+
     if config.add_timestamp:
         processors.append(structlog.processors.TimeStamper(fmt=config.timestamp_format))
-    
+
     if config.redact_fields:
         processors.append(create_redactor(config.redact_fields))
-    
+
     processors.append(structlog.processors.format_exc_info)
-    
+
     # Add formatter based on config
     if config.format == "json":
         processors.append(structlog.processors.JSONRenderer())
@@ -90,7 +97,7 @@ def configure_logging(config: LogConfig | None = None) -> None:
         processors.append(structlog.dev.ConsoleRenderer(colors=True))
     else:
         processors.append(structlog.processors.KeyValueRenderer())
-    
+
     structlog.configure(
         processors=processors,
         wrapper_class=structlog.make_filtering_bound_logger(
@@ -111,29 +118,29 @@ def add_context_vars(
     request_id = request_id_var.get()
     user_id = user_id_var.get()
     trace_id = trace_id_var.get()
-    
+
     if request_id:
         event_dict["request_id"] = request_id
     if user_id:
         event_dict["user_id"] = user_id
     if trace_id:
         event_dict["trace_id"] = trace_id
-    
+
     return event_dict
 
 
 def create_redactor(fields: list[str]) -> Processor:
     """
     Create a processor that redacts sensitive fields.
-    
+
     Args:
         fields: List of field names to redact
-        
+
     Returns:
         Structlog processor
     """
     fields_lower = {f.lower() for f in fields}
-    
+
     def redactor(
         logger: Any,
         method_name: str,
@@ -143,7 +150,7 @@ def create_redactor(fields: list[str]) -> Processor:
             if key.lower() in fields_lower:
                 event_dict[key] = "[REDACTED]"
         return event_dict
-    
+
     return redactor
 
 
@@ -152,17 +159,19 @@ def create_redactor(fields: list[str]) -> Processor:
 # =============================================================================
 
 
-def get_logger(name: str | None = None, **initial_context: Any) -> structlog.BoundLogger:
+def get_logger(
+    name: str | None = None, **initial_context: Any
+) -> structlog.BoundLogger:
     """
     Get a configured logger instance.
-    
+
     Args:
         name: Logger name (module name if not provided)
         **initial_context: Initial context to bind
-        
+
     Returns:
         Configured logger
-        
+
     Example:
         >>> logger = get_logger(__name__, service="api")
         >>> logger.info("Request received", path="/users")
@@ -176,12 +185,12 @@ def get_logger(name: str | None = None, **initial_context: Any) -> structlog.Bou
 class LoggerAdapter:
     """
     Adapter that adds consistent context to all log calls.
-    
+
     Example:
         >>> logger = LoggerAdapter(get_logger(), service="api", version="1.0")
         >>> logger.info("Started")  # Includes service and version
     """
-    
+
     def __init__(
         self,
         logger: structlog.BoundLogger,
@@ -189,31 +198,31 @@ class LoggerAdapter:
     ) -> None:
         """Initialize with base logger and context."""
         self._logger = logger.bind(**context)
-    
+
     def bind(self, **context: Any) -> "LoggerAdapter":
         """Create new adapter with additional context."""
         return LoggerAdapter(self._logger.bind(**context))
-    
+
     def debug(self, event: str, **kwargs: Any) -> None:
         """Log debug message."""
         self._logger.debug(event, **kwargs)
-    
+
     def info(self, event: str, **kwargs: Any) -> None:
         """Log info message."""
         self._logger.info(event, **kwargs)
-    
+
     def warning(self, event: str, **kwargs: Any) -> None:
         """Log warning message."""
         self._logger.warning(event, **kwargs)
-    
+
     def error(self, event: str, **kwargs: Any) -> None:
         """Log error message."""
         self._logger.error(event, **kwargs)
-    
+
     def exception(self, event: str, **kwargs: Any) -> None:
         """Log exception with traceback."""
         self._logger.exception(event, **kwargs)
-    
+
     def critical(self, event: str, **kwargs: Any) -> None:
         """Log critical message."""
         self._logger.critical(event, **kwargs)
@@ -228,10 +237,10 @@ class LoggerAdapter:
 def log_context(**context: Any) -> Generator[None, None, None]:
     """
     Context manager to add temporary logging context.
-    
+
     Args:
         **context: Context to add
-        
+
     Example:
         >>> logger = get_logger()
         >>> with log_context(request_id="abc123"):
@@ -256,25 +265,25 @@ def request_context(
 ) -> Generator[None, None, None]:
     """
     Context manager for request-scoped logging.
-    
+
     Args:
         request_id: Request identifier
         user_id: User identifier
         trace_id: Distributed trace identifier
-        
+
     Example:
         >>> with request_context(request_id="req-123"):
         ...     logger.info("Handling request")
     """
     tokens = []
-    
+
     if request_id:
         tokens.append(request_id_var.set(request_id))
     if user_id:
         tokens.append(user_id_var.set(user_id))
     if trace_id:
         tokens.append(trace_id_var.set(trace_id))
-    
+
     try:
         yield
     finally:
@@ -293,16 +302,16 @@ def timed_log(
 ) -> Generator[dict[str, Any], None, None]:
     """
     Context manager that logs duration on exit.
-    
+
     Args:
         logger: Logger instance
         event: Event name
         level: Log level
         **context: Additional context
-        
+
     Yields:
         Dict to add extra context
-        
+
     Example:
         >>> logger = get_logger()
         >>> with timed_log(logger, "database_query", table="users") as ctx:
@@ -312,7 +321,7 @@ def timed_log(
     """
     extra_context: dict[str, Any] = {}
     start = time.perf_counter()
-    
+
     try:
         yield extra_context
     finally:
@@ -335,19 +344,19 @@ async def async_timed_log(
 ):
     """
     Async context manager that logs duration on exit.
-    
+
     Args:
         logger: Logger instance
         event: Event name
         level: Log level
         **context: Additional context
-        
+
     Yields:
         Dict to add extra context
     """
     extra_context: dict[str, Any] = {}
     start = time.perf_counter()
-    
+
     try:
         yield extra_context
     finally:
@@ -378,44 +387,45 @@ def log_call(
 ) -> Callable[[F], F]:
     """
     Decorator to log function calls.
-    
+
     Args:
         logger: Logger to use (creates one if not provided)
         level: Log level for calls
         log_args: Whether to log arguments
         log_result: Whether to log return value
         log_exceptions: Whether to log exceptions
-        
+
     Returns:
         Decorator function
-        
+
     Example:
         >>> @log_call()
         ... def process_item(item_id: int) -> dict:
         ...     return {"id": item_id}
     """
+
     def decorator(func: F) -> F:
         _logger = logger or get_logger(func.__module__)
         log_fn = getattr(_logger, level)
-        
+
         @functools.wraps(func)
         def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             call_context: dict[str, Any] = {"function": func.__name__}
-            
+
             if log_args:
                 call_context["args"] = args
                 call_context["kwargs"] = kwargs
-            
+
             log_fn(f"calling_{func.__name__}", **call_context)
-            
+
             try:
                 result = func(*args, **kwargs)
-                
+
                 if log_result:
                     log_fn(f"returned_{func.__name__}", result=result)
-                
+
                 return result
-                
+
             except Exception as e:
                 if log_exceptions:
                     _logger.exception(
@@ -424,25 +434,25 @@ def log_call(
                         error_type=type(e).__name__,
                     )
                 raise
-        
+
         @functools.wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             call_context: dict[str, Any] = {"function": func.__name__}
-            
+
             if log_args:
                 call_context["args"] = args
                 call_context["kwargs"] = kwargs
-            
+
             log_fn(f"calling_{func.__name__}", **call_context)
-            
+
             try:
                 result = await func(*args, **kwargs)
-                
+
                 if log_result:
                     log_fn(f"returned_{func.__name__}", result=result)
-                
+
                 return result
-                
+
             except Exception as e:
                 if log_exceptions:
                     _logger.exception(
@@ -451,11 +461,11 @@ def log_call(
                         error_type=type(e).__name__,
                     )
                 raise
-        
+
         if asyncio.iscoroutinefunction(func):
             return async_wrapper  # type: ignore
         return sync_wrapper  # type: ignore
-    
+
     return decorator
 
 
@@ -466,24 +476,25 @@ def log_execution_time(
 ) -> Callable[[F], F]:
     """
     Decorator to log function execution time.
-    
+
     Args:
         logger: Logger to use
         level: Log level
         threshold_ms: Only log if duration exceeds threshold
-        
+
     Returns:
         Decorator function
-        
+
     Example:
         >>> @log_execution_time(threshold_ms=100)
         ... def slow_function():
         ...     time.sleep(0.2)
     """
+
     def decorator(func: F) -> F:
         _logger = logger or get_logger(func.__module__)
         log_fn = getattr(_logger, level)
-        
+
         @functools.wraps(func)
         def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             start = time.perf_counter()
@@ -496,7 +507,7 @@ def log_execution_time(
                         f"execution_time_{func.__name__}",
                         duration_ms=round(duration_ms, 2),
                     )
-        
+
         @functools.wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             start = time.perf_counter()
@@ -509,11 +520,11 @@ def log_execution_time(
                         f"execution_time_{func.__name__}",
                         duration_ms=round(duration_ms, 2),
                     )
-        
+
         if asyncio.iscoroutinefunction(func):
             return async_wrapper  # type: ignore
         return sync_wrapper  # type: ignore
-    
+
     return decorator
 
 
@@ -525,11 +536,11 @@ def log_execution_time(
 def should_log(level: str, min_level: str = "DEBUG") -> bool:
     """
     Check if a log level should be logged.
-    
+
     Args:
         level: Level to check
         min_level: Minimum level to log
-        
+
     Returns:
         True if level should be logged
     """
@@ -540,17 +551,17 @@ def should_log(level: str, min_level: str = "DEBUG") -> bool:
         "ERROR": 40,
         "CRITICAL": 50,
     }
-    
+
     return levels.get(level.upper(), 0) >= levels.get(min_level.upper(), 0)
 
 
 def level_to_int(level: str) -> int:
     """
     Convert log level string to integer.
-    
+
     Args:
         level: Level string
-        
+
     Returns:
         Integer level value
     """
@@ -574,15 +585,15 @@ def level_to_int(level: str) -> int:
 def format_exception(exc: BaseException) -> dict[str, Any]:
     """
     Format exception for logging.
-    
+
     Args:
         exc: Exception to format
-        
+
     Returns:
         Dictionary with exception details
     """
     import traceback
-    
+
     return {
         "type": type(exc).__name__,
         "message": str(exc),
@@ -599,14 +610,14 @@ def format_request(
 ) -> dict[str, Any]:
     """
     Format HTTP request for logging.
-    
+
     Args:
         method: HTTP method
         path: Request path
         status_code: Response status code
         duration_ms: Request duration in milliseconds
         **extra: Additional context
-        
+
     Returns:
         Dictionary with request details
     """
@@ -626,25 +637,25 @@ def format_sql_query(
 ) -> dict[str, Any]:
     """
     Format SQL query for logging.
-    
+
     Args:
         query: SQL query string
         params: Query parameters
         duration_ms: Query duration
-        
+
     Returns:
         Dictionary with query details
     """
     result: dict[str, Any] = {
         "query": query[:500],  # Truncate long queries
     }
-    
+
     if params:
         result["params"] = str(params)[:200]
-    
+
     if duration_ms is not None:
         result["duration_ms"] = round(duration_ms, 2)
-    
+
     return result
 
 
@@ -656,12 +667,12 @@ def format_sql_query(
 class SamplingLogger:
     """
     Logger that samples log messages at a configurable rate.
-    
+
     Example:
         >>> sampler = SamplingLogger(get_logger(), sample_rate=0.1)
         >>> sampler.info("High volume event")  # Only logs 10% of calls
     """
-    
+
     def __init__(
         self,
         logger: structlog.BoundLogger,
@@ -670,7 +681,7 @@ class SamplingLogger:
     ) -> None:
         """
         Initialize sampling logger.
-        
+
         Args:
             logger: Base logger
             sample_rate: Fraction of logs to emit (0.0 to 1.0)
@@ -680,41 +691,42 @@ class SamplingLogger:
         self._sample_rate = sample_rate
         self._always_log_errors = always_log_errors
         self._counter = 0
-    
+
     def _should_log(self, is_error: bool = False) -> bool:
         """Check if this log should be emitted."""
         if is_error and self._always_log_errors:
             return True
-        
+
         if self._sample_rate >= 1.0:
             return True
-        
+
         if self._sample_rate <= 0.0:
             return False
-        
+
         import random
+
         return random.random() < self._sample_rate
-    
+
     def debug(self, event: str, **kwargs: Any) -> None:
         """Log debug message (sampled)."""
         if self._should_log():
             self._logger.debug(event, **kwargs)
-    
+
     def info(self, event: str, **kwargs: Any) -> None:
         """Log info message (sampled)."""
         if self._should_log():
             self._logger.info(event, **kwargs)
-    
+
     def warning(self, event: str, **kwargs: Any) -> None:
         """Log warning message (sampled)."""
         if self._should_log():
             self._logger.warning(event, **kwargs)
-    
+
     def error(self, event: str, **kwargs: Any) -> None:
         """Log error message."""
         if self._should_log(is_error=True):
             self._logger.error(event, **kwargs)
-    
+
     def exception(self, event: str, **kwargs: Any) -> None:
         """Log exception."""
         if self._should_log(is_error=True):
@@ -724,13 +736,13 @@ class SamplingLogger:
 class RateLimitedLogger:
     """
     Logger that rate limits repeated messages.
-    
+
     Example:
         >>> logger = RateLimitedLogger(get_logger(), max_per_minute=10)
         >>> for i in range(100):
         ...     logger.warning("rate_limited_event")  # Only logs first 10 per minute
     """
-    
+
     def __init__(
         self,
         logger: structlog.BoundLogger,
@@ -738,7 +750,7 @@ class RateLimitedLogger:
     ) -> None:
         """
         Initialize rate limited logger.
-        
+
         Args:
             logger: Base logger
             max_per_minute: Maximum logs per event per minute
@@ -746,44 +758,44 @@ class RateLimitedLogger:
         self._logger = logger
         self._max_per_minute = max_per_minute
         self._counts: dict[str, list[float]] = {}
-    
+
     def _should_log(self, event: str) -> bool:
         """Check if event should be logged."""
         now = time.time()
         minute_ago = now - 60
-        
+
         if event not in self._counts:
             self._counts[event] = []
-        
+
         # Remove old entries
         self._counts[event] = [t for t in self._counts[event] if t > minute_ago]
-        
+
         if len(self._counts[event]) < self._max_per_minute:
             self._counts[event].append(now)
             return True
-        
+
         return False
-    
+
     def debug(self, event: str, **kwargs: Any) -> None:
         """Log debug message (rate limited)."""
         if self._should_log(event):
             self._logger.debug(event, **kwargs)
-    
+
     def info(self, event: str, **kwargs: Any) -> None:
         """Log info message (rate limited)."""
         if self._should_log(event):
             self._logger.info(event, **kwargs)
-    
+
     def warning(self, event: str, **kwargs: Any) -> None:
         """Log warning message (rate limited)."""
         if self._should_log(event):
             self._logger.warning(event, **kwargs)
-    
+
     def error(self, event: str, **kwargs: Any) -> None:
         """Log error message (rate limited)."""
         if self._should_log(event):
             self._logger.error(event, **kwargs)
-    
+
     def exception(self, event: str, **kwargs: Any) -> None:
         """Log exception (rate limited)."""
         if self._should_log(event):
@@ -798,7 +810,7 @@ class RateLimitedLogger:
 @dataclass
 class AuditEvent:
     """Structured audit event."""
-    
+
     action: str
     actor_id: str
     actor_type: str = "user"
@@ -808,7 +820,7 @@ class AuditEvent:
     timestamp: datetime = field(default_factory=datetime.utcnow)
     ip_address: str = ""
     user_agent: str = ""
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for logging."""
         return {
@@ -828,25 +840,25 @@ class AuditEvent:
 class AuditLogger:
     """
     Specialized logger for audit events.
-    
+
     Example:
         >>> audit = AuditLogger(get_logger("audit"))
         >>> audit.log_action("user.login", actor_id="user-123", ip_address="1.2.3.4")
     """
-    
+
     def __init__(self, logger: structlog.BoundLogger) -> None:
         """Initialize audit logger."""
         self._logger = logger
-    
+
     def log_event(self, event: AuditEvent) -> None:
         """
         Log an audit event.
-        
+
         Args:
             event: Audit event to log
         """
         self._logger.info("audit_event", **event.to_dict())
-    
+
     def log_action(
         self,
         action: str,
@@ -861,7 +873,7 @@ class AuditLogger:
     ) -> None:
         """
         Log an audit action.
-        
+
         Args:
             action: Action name (e.g., "user.login", "document.delete")
             actor_id: ID of the actor performing the action

@@ -254,7 +254,7 @@ namespace BeatSight.Game
                     Child = new BeatSightContextMenuContainer
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Child = new TooltipContainer
+                        Child = new osu.Framework.Graphics.Cursor.TooltipContainer
                         {
                             RelativeSizeAxes = Axes.Both,
                             Child = screenStack = new ScreenStack { RelativeSizeAxes = Axes.Both }

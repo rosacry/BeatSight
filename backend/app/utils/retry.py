@@ -30,7 +30,7 @@ import asyncio
 import functools
 import random
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Coroutine, TypeVar
 
@@ -521,9 +521,7 @@ class CircuitBreaker:
         @functools.wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> T:
             if self.is_open:
-                raise ServiceUnavailableError(
-                    f"Circuit breaker open for {self.name}"
-                )
+                raise ServiceUnavailableError(f"Circuit breaker open for {self.name}")
 
             try:
                 result = await func(*args, **kwargs)

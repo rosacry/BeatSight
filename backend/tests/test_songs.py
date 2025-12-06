@@ -35,9 +35,14 @@ class TestSongService:
         """Create a SongService with mocked session."""
         return SongService(mock_session)
 
+    @pytest.fixture
+    def user_id(self) -> uuid.UUID:
+        """Create a test user ID."""
+        return uuid.uuid4()
+
     @pytest.mark.asyncio
     async def test_create_song_success(
-        self, service: SongService, mock_session: AsyncMock
+        self, service: SongService, mock_session: AsyncMock, user_id: uuid.UUID
     ) -> None:
         """Test successful song creation."""
         payload = SongCreate(
@@ -47,7 +52,7 @@ class TestSongService:
             bpm=120,
         )
 
-        await service.create_song(payload)
+        await service.create_song(payload, user_id)
 
         mock_session.add.assert_called_once()
         mock_session.commit.assert_called_once()
@@ -55,7 +60,7 @@ class TestSongService:
 
     @pytest.mark.asyncio
     async def test_create_song_duplicate_fingerprint_raises(
-        self, service: SongService, mock_session: AsyncMock
+        self, service: SongService, mock_session: AsyncMock, user_id: uuid.UUID
     ) -> None:
         """Test that duplicate fingerprint raises SongAlreadyExistsError."""
         payload = SongCreate(
@@ -68,7 +73,7 @@ class TestSongService:
         )
 
         with pytest.raises(SongAlreadyExistsError):
-            await service.create_song(payload)
+            await service.create_song(payload, user_id)
 
         mock_session.rollback.assert_called_once()
 
@@ -135,7 +140,7 @@ class TestSongService:
 
     @pytest.mark.asyncio
     async def test_update_song_success(
-        self, service: SongService, mock_session: AsyncMock
+        self, service: SongService, mock_session: AsyncMock, user_id: uuid.UUID
     ) -> None:
         """Test successfully updating a song."""
         song_id = uuid.uuid4()
@@ -144,6 +149,7 @@ class TestSongService:
             title="Original Title",
             artist="Original Artist",
             fingerprint_hash="hash123",
+            created_by_id=user_id,  # Set owner for authorization check
         )
 
         mock_result = MagicMock()
@@ -152,7 +158,7 @@ class TestSongService:
 
         payload = SongUpdate(title="Updated Title", bpm=140)
 
-        result = await service.update_song(song_id, payload)
+        result = await service.update_song(song_id, payload, user_id)
 
         assert result.title == "Updated Title"
         mock_session.commit.assert_called_once()
@@ -160,7 +166,7 @@ class TestSongService:
 
     @pytest.mark.asyncio
     async def test_update_song_not_found_raises(
-        self, service: SongService, mock_session: AsyncMock
+        self, service: SongService, mock_session: AsyncMock, user_id: uuid.UUID
     ) -> None:
         """Test that updating non-existent song raises SongNotFoundError."""
         mock_result = MagicMock()
@@ -170,11 +176,11 @@ class TestSongService:
         payload = SongUpdate(title="New Title")
 
         with pytest.raises(SongNotFoundError):
-            await service.update_song(uuid.uuid4(), payload)
+            await service.update_song(uuid.uuid4(), payload, user_id)
 
     @pytest.mark.asyncio
     async def test_update_song_partial_fields(
-        self, service: SongService, mock_session: AsyncMock
+        self, service: SongService, mock_session: AsyncMock, user_id: uuid.UUID
     ) -> None:
         """Test that partial updates only modify specified fields."""
         song_id = uuid.uuid4()
@@ -184,6 +190,7 @@ class TestSongService:
             artist="Original Artist",
             bpm=120,
             fingerprint_hash="hash123",
+            created_by_id=user_id,  # Set owner for authorization check
         )
 
         mock_result = MagicMock()
@@ -193,7 +200,7 @@ class TestSongService:
         # Only update BPM, leave title and artist unchanged
         payload = SongUpdate(bpm=180)
 
-        result = await service.update_song(song_id, payload)
+        result = await service.update_song(song_id, payload, user_id)
 
         assert result.title == "Original"  # Unchanged
         assert result.artist == "Original Artist"  # Unchanged

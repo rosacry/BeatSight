@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -304,12 +303,14 @@ class TestHTTPClient:
         mock_response.content = b'{"success": true}'
         mock_response.url = "https://example.com/api"
 
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.return_value = mock_response
-            
+
             async with HTTPClient() as client:
                 response = await client.get("https://example.com/api")
-            
+
             assert response.status_code == 200
             assert response.json_data == {"success": True}
             mock_request.assert_called_once()
@@ -323,15 +324,17 @@ class TestHTTPClient:
         mock_response.content = b'{"id": 1}'
         mock_response.url = "https://example.com/api"
 
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.return_value = mock_response
-            
+
             async with HTTPClient() as client:
                 response = await client.post(
                     "https://example.com/api",
                     json={"name": "test"},
                 )
-            
+
             assert response.status_code == 201
             assert response.json_data == {"id": 1}
 
@@ -344,15 +347,17 @@ class TestHTTPClient:
         mock_response.content = b""
         mock_response.url = "https://example.com/api"
 
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.return_value = mock_response
-            
+
             async with HTTPClient(headers={"Authorization": "Bearer token"}) as client:
                 await client.get(
                     "https://example.com/api",
                     headers={"X-Custom": "value"},
                 )
-            
+
             # Check that request was called with custom headers
             call_kwargs = mock_request.call_args.kwargs
             assert call_kwargs["headers"] == {"X-Custom": "value"}
@@ -366,24 +371,28 @@ class TestHTTPClient:
         mock_response.content = b""
         mock_response.url = "https://example.com/api?page=1"
 
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.return_value = mock_response
-            
+
             async with HTTPClient() as client:
                 await client.get(
                     "https://example.com/api",
                     params={"page": 1, "limit": 10},
                 )
-            
+
             call_kwargs = mock_request.call_args.kwargs
             assert call_kwargs["params"] == {"page": 1, "limit": 10}
 
     @pytest.mark.asyncio
     async def test_timeout_error(self):
         """Test timeout error handling."""
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.side_effect = httpx.TimeoutException("Timeout")
-            
+
             async with HTTPClient(max_retries=0) as client:
                 with pytest.raises(HTTPTimeoutError):
                     await client.get("https://example.com/api")
@@ -391,9 +400,11 @@ class TestHTTPClient:
     @pytest.mark.asyncio
     async def test_connection_error(self):
         """Test connection error handling."""
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.side_effect = httpx.ConnectError("Connection refused")
-            
+
             async with HTTPClient(max_retries=0) as client:
                 with pytest.raises(HTTPConnectionError):
                     await client.get("https://example.com/api")
@@ -413,13 +424,15 @@ class TestHTTPClient:
         mock_response_200.content = b'{"success": true}'
         mock_response_200.url = "https://example.com/api"
 
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.side_effect = [mock_response_503, mock_response_200]
-            
+
             config = HTTPClientConfig(retry_delay=0.01, max_retries=2)
             async with HTTPClient(config=config) as client:
                 response = await client.get("https://example.com/api")
-            
+
             assert response.status_code == 200
             assert mock_request.call_count == 2
 
@@ -432,16 +445,18 @@ class TestHTTPClient:
         mock_response.content = b""
         mock_response.url = "https://example.com/api"
 
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.side_effect = [
                 httpx.TimeoutException("Timeout"),
                 mock_response,
             ]
-            
+
             config = HTTPClientConfig(retry_delay=0.01, max_retries=2)
             async with HTTPClient(config=config) as client:
                 response = await client.get("https://example.com/api")
-            
+
             assert response.status_code == 200
             assert mock_request.call_count == 2
 
@@ -454,9 +469,11 @@ class TestHTTPClient:
         mock_response.content = b'{"error": "Not found"}'
         mock_response.url = "https://example.com/api"
 
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.return_value = mock_response
-            
+
             async with HTTPClient(max_retries=0) as client:
                 with pytest.raises(HTTPError) as exc_info:
                     await client.get(
@@ -474,15 +491,17 @@ class TestHTTPClient:
         mock_response.content = b'{"updated": true}'
         mock_response.url = "https://example.com/api/1"
 
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.return_value = mock_response
-            
+
             async with HTTPClient() as client:
                 response = await client.put(
                     "https://example.com/api/1",
                     json={"name": "updated"},
                 )
-            
+
             assert response.status_code == 200
             call_kwargs = mock_request.call_args.kwargs
             assert call_kwargs["method"] == "PUT"
@@ -496,15 +515,17 @@ class TestHTTPClient:
         mock_response.content = b'{"patched": true}'
         mock_response.url = "https://example.com/api/1"
 
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.return_value = mock_response
-            
+
             async with HTTPClient() as client:
                 response = await client.patch(
                     "https://example.com/api/1",
                     json={"field": "value"},
                 )
-            
+
             assert response.status_code == 200
             call_kwargs = mock_request.call_args.kwargs
             assert call_kwargs["method"] == "PATCH"
@@ -518,12 +539,14 @@ class TestHTTPClient:
         mock_response.content = b""
         mock_response.url = "https://example.com/api/1"
 
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.return_value = mock_response
-            
+
             async with HTTPClient() as client:
                 response = await client.delete("https://example.com/api/1")
-            
+
             assert response.status_code == 204
             call_kwargs = mock_request.call_args.kwargs
             assert call_kwargs["method"] == "DELETE"
@@ -543,13 +566,15 @@ class TestHTTPClient:
         mock_response_200.content = b"{}"
         mock_response_200.url = "https://example.com/api"
 
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.side_effect = [mock_response_429, mock_response_200]
-            
+
             config = HTTPClientConfig(retry_delay=0.01, max_retries=2)
             async with HTTPClient(config=config) as client:
                 response = await client.get("https://example.com/api")
-            
+
             assert response.status_code == 200
 
 
@@ -592,11 +617,13 @@ class TestConvenienceFunctions:
         mock_response.content = b'{"key": "value"}'
         mock_response.url = "https://example.com/api"
 
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.return_value = mock_response
-            
+
             response = await get("https://example.com/api")
-            
+
             assert response.status_code == 200
             assert response.json_data == {"key": "value"}
 
@@ -609,14 +636,16 @@ class TestConvenienceFunctions:
         mock_response.content = b'{"id": 1}'
         mock_response.url = "https://example.com/api"
 
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.return_value = mock_response
-            
+
             response = await post(
                 "https://example.com/api",
                 json={"name": "test"},
             )
-            
+
             assert response.status_code == 201
 
     @pytest.mark.asyncio
@@ -625,17 +654,19 @@ class TestConvenienceFunctions:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.headers = {}
-        mock_response.content = b'{}'
+        mock_response.content = b"{}"
         mock_response.url = "https://example.com/api/1"
 
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.return_value = mock_response
-            
+
             response = await put(
                 "https://example.com/api/1",
                 json={"name": "updated"},
             )
-            
+
             assert response.status_code == 200
 
     @pytest.mark.asyncio
@@ -644,17 +675,19 @@ class TestConvenienceFunctions:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.headers = {}
-        mock_response.content = b'{}'
+        mock_response.content = b"{}"
         mock_response.url = "https://example.com/api/1"
 
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.return_value = mock_response
-            
+
             response = await http_patch(
                 "https://example.com/api/1",
                 json={"field": "value"},
             )
-            
+
             assert response.status_code == 200
 
     @pytest.mark.asyncio
@@ -663,14 +696,16 @@ class TestConvenienceFunctions:
         mock_response = MagicMock()
         mock_response.status_code = 204
         mock_response.headers = {}
-        mock_response.content = b''
+        mock_response.content = b""
         mock_response.url = "https://example.com/api/1"
 
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.return_value = mock_response
-            
+
             response = await delete("https://example.com/api/1")
-            
+
             assert response.status_code == 204
 
     @pytest.mark.asyncio
@@ -679,17 +714,19 @@ class TestConvenienceFunctions:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.headers = {}
-        mock_response.content = b'{}'
+        mock_response.content = b"{}"
         mock_response.url = "https://example.com/api"
 
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.return_value = mock_response
-            
+
             response = await request(
                 HTTPMethod.OPTIONS,
                 "https://example.com/api",
             )
-            
+
             assert response.status_code == 200
 
 
@@ -702,15 +739,17 @@ class TestHTTPMethodString:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.headers = {}
-        mock_response.content = b'{}'
+        mock_response.content = b"{}"
         mock_response.url = "https://example.com/api"
 
-        with patch.object(httpx.AsyncClient, "request", new_callable=AsyncMock) as mock_request:
+        with patch.object(
+            httpx.AsyncClient, "request", new_callable=AsyncMock
+        ) as mock_request:
             mock_request.return_value = mock_response
-            
+
             async with HTTPClient() as client:
                 response = await client.request("get", "https://example.com/api")
-            
+
             assert response.status_code == 200
             call_kwargs = mock_request.call_args.kwargs
             assert call_kwargs["method"] == "GET"

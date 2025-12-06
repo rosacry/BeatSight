@@ -645,7 +645,7 @@ async def _process_audio_impl(
     log.info("Starting audio processing on Modal GPU")
     
     # Get API URL for progress updates
-    api_url = os.environ.get("BEATSIGHT_API_URL", "https://api.beatsight.app")
+    api_url = os.environ.get("BEATSIGHT_API_URL", "https://api.beatsight.io")
     
     async def update_progress(percent: int, message: str):
         """Report progress back to the API."""
@@ -783,7 +783,7 @@ async def _notify_backend(job_id: str, result: dict) -> None:
     import structlog
     
     log = structlog.get_logger().bind(job_id=job_id)
-    api_url = os.environ.get("BEATSIGHT_API_URL", "https://api.beatsight.app")
+    api_url = os.environ.get("BEATSIGHT_API_URL", "https://api.beatsight.io")
     
     try:
         async with httpx.AsyncClient() as client:
@@ -822,7 +822,7 @@ async def poll_and_process():
     import structlog
     
     log = structlog.get_logger()
-    api_url = os.environ.get("BEATSIGHT_API_URL", "https://api.beatsight.app")
+    api_url = os.environ.get("BEATSIGHT_API_URL", "https://api.beatsight.io")
     worker_id = str(uuid.uuid4())
     
     log.info("Starting job polling", worker_id=worker_id)

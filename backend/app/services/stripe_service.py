@@ -454,13 +454,20 @@ class StripeService:
 
             # Send confirmation email
             try:
-                user_result = await db.execute(select(User).where(User.id == UUID(user_id)))
+                user_result = await db.execute(
+                    select(User).where(User.id == UUID(user_id))
+                )
                 user = user_result.scalar_one_or_none()
                 if user and credits_amount:
                     from app.services.credits import CREDIT_PACKS, CreditPackType
+
                     pack_config = CREDIT_PACKS.get(CreditPackType(pack_type))
-                    amount_dollars = pack_config.price_dollars if pack_config else (int(credits_amount) * 0.33)
-                    
+                    amount_dollars = (
+                        pack_config.price_dollars
+                        if pack_config
+                        else (int(credits_amount) * 0.33)
+                    )
+
                     email_service = get_email_service()
                     await email_service.send_credit_purchase_confirmation(
                         user.email,

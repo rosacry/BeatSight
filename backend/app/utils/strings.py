@@ -54,17 +54,17 @@ def slugify(
 ) -> str:
     """
     Convert text to URL-friendly slug.
-    
+
     Args:
         text: Text to convert
         separator: Character to use between words
         lowercase: Convert to lowercase
         max_length: Maximum length of slug
         allow_unicode: Allow unicode characters
-        
+
     Returns:
         URL-safe slug
-        
+
     Examples:
         >>> slugify("Hello World!")
         'hello-world'
@@ -77,20 +77,20 @@ def slugify(
         text = text.encode("ascii", "ignore").decode("ascii")
     else:
         text = unicodedata.normalize("NFKC", text)
-    
+
     # Lowercase
     if lowercase:
         text = text.lower()
-    
+
     # Replace spaces and invalid chars with separator
     text = re.sub(r"[^\w\s-]", "", text)
     text = re.sub(r"[-\s]+", separator, text)
     text = text.strip(separator)
-    
+
     # Truncate if needed
     if max_length and len(text) > max_length:
         text = text[:max_length].rstrip(separator)
-    
+
     return text
 
 
@@ -103,16 +103,16 @@ def truncate(
 ) -> str:
     """
     Truncate text to specified length.
-    
+
     Args:
         text: Text to truncate
         length: Maximum length (including suffix)
         suffix: Suffix to append when truncated
         word_boundary: Truncate at word boundary
-        
+
     Returns:
         Truncated text
-        
+
     Examples:
         >>> truncate("Hello World", 8)
         'Hello...'
@@ -121,20 +121,20 @@ def truncate(
     """
     if len(text) <= length:
         return text
-    
+
     # Calculate truncation point
     trunc_length = length - len(suffix)
     if trunc_length <= 0:
         return suffix[:length]
-    
+
     truncated = text[:trunc_length]
-    
+
     # Find word boundary
     if word_boundary:
         last_space = truncated.rfind(" ")
         if last_space > 0:
             truncated = truncated[:last_space]
-    
+
     return truncated.rstrip() + suffix
 
 
@@ -146,15 +146,15 @@ def truncate_words(
 ) -> str:
     """
     Truncate text to specified number of words.
-    
+
     Args:
         text: Text to truncate
         word_count: Maximum number of words
         suffix: Suffix to append when truncated
-        
+
     Returns:
         Truncated text
-        
+
     Examples:
         >>> truncate_words("The quick brown fox jumps", 3)
         'The quick brown...'
@@ -162,21 +162,21 @@ def truncate_words(
     words = text.split()
     if len(words) <= word_count:
         return text
-    
+
     return " ".join(words[:word_count]) + suffix
 
 
 def strip_html(text: str, *, keep_links: bool = False) -> str:
     """
     Remove HTML tags from text.
-    
+
     Args:
         text: Text containing HTML
         keep_links: If True, keep link URLs as text
-        
+
     Returns:
         Text with HTML removed
-        
+
     Examples:
         >>> strip_html("<p>Hello <b>World</b></p>")
         'Hello World'
@@ -185,30 +185,30 @@ def strip_html(text: str, *, keep_links: bool = False) -> str:
         # Replace links with their href
         text = re.sub(
             r'<a[^>]*href=["\']([^"\']*)["\'][^>]*>([^<]*)</a>',
-            r'\2 (\1)',
+            r"\2 (\1)",
             text,
             flags=re.IGNORECASE,
         )
-    
+
     # Remove HTML tags
     text = re.sub(r"<[^>]+>", "", text)
-    
+
     # Decode HTML entities
     text = html.unescape(text)
-    
+
     return normalize_whitespace(text)
 
 
 def normalize_whitespace(text: str) -> str:
     """
     Normalize whitespace in text (collapse multiple spaces, trim).
-    
+
     Args:
         text: Text to normalize
-        
+
     Returns:
         Normalized text
-        
+
     Examples:
         >>> normalize_whitespace("  Hello   World  ")
         'Hello World'
@@ -219,15 +219,15 @@ def normalize_whitespace(text: str) -> str:
 def to_title_case(text: str) -> str:
     """
     Convert text to title case (capitalize first letter of each word).
-    
+
     Handles articles and prepositions correctly.
-    
+
     Args:
         text: Text to convert
-        
+
     Returns:
         Title-cased text
-        
+
     Examples:
         >>> to_title_case("the quick brown fox")
         'The Quick Brown Fox'
@@ -236,36 +236,51 @@ def to_title_case(text: str) -> str:
     """
     # Words that should remain lowercase (unless first word)
     small_words = {
-        "a", "an", "the", "and", "but", "or", "for", "nor", "on",
-        "at", "to", "from", "by", "of", "in", "with", "as",
+        "a",
+        "an",
+        "the",
+        "and",
+        "but",
+        "or",
+        "for",
+        "nor",
+        "on",
+        "at",
+        "to",
+        "from",
+        "by",
+        "of",
+        "in",
+        "with",
+        "as",
     }
-    
+
     words = text.lower().split()
     result = []
-    
+
     for i, word in enumerate(words):
         if i == 0 or word not in small_words:
             result.append(word.capitalize())
         else:
             result.append(word)
-    
+
     return " ".join(result)
 
 
 def pluralize(word: str, count: int = 2) -> str:
     """
     Get plural form of a word based on count.
-    
+
     Basic pluralization rules. For complex cases, consider
     using a library like inflect.
-    
+
     Args:
         word: Word to pluralize
         count: Number to determine plural form
-        
+
     Returns:
         Singular or plural form
-        
+
     Examples:
         >>> pluralize("item", 1)
         'item'
@@ -276,7 +291,7 @@ def pluralize(word: str, count: int = 2) -> str:
     """
     if count == 1:
         return word
-    
+
     # Common irregular plurals
     irregulars = {
         "child": "children",
@@ -288,12 +303,12 @@ def pluralize(word: str, count: int = 2) -> str:
         "goose": "geese",
         "mouse": "mice",
     }
-    
+
     lower = word.lower()
     if lower in irregulars:
         plural = irregulars[lower]
         return plural.capitalize() if word[0].isupper() else plural
-    
+
     # Rules for pluralization
     if lower.endswith(("s", "ss", "sh", "ch", "x", "z")):
         return word + "es"
@@ -310,16 +325,16 @@ def pluralize(word: str, count: int = 2) -> str:
 def singularize(word: str) -> str:
     """
     Get singular form of a word.
-    
+
     Basic singularization. For complex cases, consider
     using a library like inflect.
-    
+
     Args:
         word: Word to singularize
-        
+
     Returns:
         Singular form
-        
+
     Examples:
         >>> singularize("items")
         'item'
@@ -337,12 +352,12 @@ def singularize(word: str) -> str:
         "geese": "goose",
         "mice": "mouse",
     }
-    
+
     lower = word.lower()
     if lower in irregulars:
         singular = irregulars[lower]
         return singular.capitalize() if word[0].isupper() else singular
-    
+
     # Rules for singularization
     if lower.endswith("ies") and len(word) > 3:
         return word[:-3] + "y"
@@ -356,20 +371,20 @@ def singularize(word: str) -> str:
         return word[:-2]
     elif lower.endswith("s") and not lower.endswith("ss"):
         return word[:-1]
-    
+
     return word
 
 
 def ordinalize(number: int) -> str:
     """
     Convert number to ordinal string (1st, 2nd, 3rd, etc.).
-    
+
     Args:
         number: Number to convert
-        
+
     Returns:
         Ordinal string
-        
+
     Examples:
         >>> ordinalize(1)
         '1st'
@@ -382,20 +397,20 @@ def ordinalize(number: int) -> str:
         suffix = "th"
     else:
         suffix = {1: "st", 2: "nd", 3: "rd"}.get(abs(number) % 10, "th")
-    
+
     return f"{number}{suffix}"
 
 
 def humanize(text: str) -> str:
     """
     Convert identifier to human-readable string.
-    
+
     Args:
         text: Snake_case or camelCase identifier
-        
+
     Returns:
         Human-readable string
-        
+
     Examples:
         >>> humanize("user_name")
         'User name'
@@ -414,16 +429,16 @@ def humanize(text: str) -> str:
 def parameterize(text: str, separator: str = "-") -> str:
     """
     Convert text to URL parameter format.
-    
+
     Similar to slugify but specifically for URL parameters.
-    
+
     Args:
         text: Text to convert
         separator: Character to use between words
-        
+
     Returns:
         Parameterized string
-        
+
     Examples:
         >>> parameterize("Hello World!")
         'hello-world'
@@ -442,7 +457,7 @@ def generate_random_string(
 ) -> str:
     """
     Generate a cryptographically secure random string.
-    
+
     Args:
         length: Length of string to generate
         charset: Custom character set (overrides other options)
@@ -450,10 +465,10 @@ def generate_random_string(
         include_lowercase: Include lowercase letters
         include_digits: Include digits
         include_special: Include special characters
-        
+
     Returns:
         Random string
-        
+
     Examples:
         >>> len(generate_random_string(32))
         32
@@ -468,10 +483,10 @@ def generate_random_string(
             charset += string.digits
         if include_special:
             charset += "!@#$%^&*"
-        
+
         if not charset:
             charset = string.ascii_letters + string.digits
-    
+
     return "".join(secrets.choice(charset) for _ in range(length))
 
 
@@ -482,14 +497,14 @@ def generate_token(
 ) -> str:
     """
     Generate a URL-safe token.
-    
+
     Args:
         length: Length of token (not including prefix)
         prefix: Optional prefix for the token
-        
+
     Returns:
         URL-safe token
-        
+
     Examples:
         >>> token = generate_token(prefix="api_")
         >>> token.startswith("api_")
@@ -511,17 +526,17 @@ def mask_string(
 ) -> str:
     """
     Mask a string, showing only start and end characters.
-    
+
     Args:
         text: String to mask
         visible_start: Number of characters visible at start
         visible_end: Number of characters visible at end
         mask_char: Character to use for masking
         min_masked: Minimum number of masked characters
-        
+
     Returns:
         Masked string
-        
+
     Examples:
         >>> mask_string("1234567890", visible_end=4)
         '******7890'
@@ -533,26 +548,26 @@ def mask_string(
         mask_length = max(len(text) - visible_start - visible_end, min_masked)
         if mask_length >= len(text):
             return mask_char * len(text)
-    
+
     mask_length = len(text) - visible_start - visible_end
     mask_length = max(mask_length, min_masked)
-    
+
     start = text[:visible_start] if visible_start > 0 else ""
     end = text[-visible_end:] if visible_end > 0 else ""
-    
+
     return start + (mask_char * mask_length) + end
 
 
 def extract_numbers(text: str) -> list[str]:
     """
     Extract all numbers from text.
-    
+
     Args:
         text: Text to search
-        
+
     Returns:
         List of number strings
-        
+
     Examples:
         >>> extract_numbers("I have 3 apples and 42 oranges")
         ['3', '42']
@@ -565,13 +580,13 @@ def extract_numbers(text: str) -> list[str]:
 def extract_emails(text: str) -> list[str]:
     """
     Extract email addresses from text.
-    
+
     Args:
         text: Text to search
-        
+
     Returns:
         List of email addresses
-        
+
     Examples:
         >>> extract_emails("Contact us at info@example.com")
         ['info@example.com']
@@ -583,13 +598,13 @@ def extract_emails(text: str) -> list[str]:
 def extract_urls(text: str) -> list[str]:
     """
     Extract URLs from text.
-    
+
     Args:
         text: Text to search
-        
+
     Returns:
         List of URLs
-        
+
     Examples:
         >>> extract_urls("Visit https://example.com for more")
         ['https://example.com']
@@ -601,13 +616,13 @@ def extract_urls(text: str) -> list[str]:
 def is_blank(text: str | None) -> bool:
     """
     Check if string is None, empty, or contains only whitespace.
-    
+
     Args:
         text: String to check
-        
+
     Returns:
         True if blank
-        
+
     Examples:
         >>> is_blank("")
         True
@@ -624,10 +639,10 @@ def is_blank(text: str | None) -> bool:
 def is_not_blank(text: str | None) -> bool:
     """
     Check if string is not blank.
-    
+
     Args:
         text: String to check
-        
+
     Returns:
         True if not blank
     """
@@ -637,14 +652,14 @@ def is_not_blank(text: str | None) -> bool:
 def coalesce(*values: str | None, default: str = "") -> str:
     """
     Return the first non-blank value, or default.
-    
+
     Args:
         *values: Values to check
         default: Default value if all are blank
-        
+
     Returns:
         First non-blank value or default
-        
+
     Examples:
         >>> coalesce(None, "", "hello", "world")
         'hello'
@@ -658,14 +673,14 @@ def coalesce(*values: str | None, default: str = "") -> str:
 def safe_str(value: Any, default: str = "") -> str:
     """
     Safely convert any value to string.
-    
+
     Args:
         value: Value to convert
         default: Default if value is None
-        
+
     Returns:
         String representation
-        
+
     Examples:
         >>> safe_str(None)
         ''
@@ -680,15 +695,15 @@ def safe_str(value: Any, default: str = "") -> str:
 def indent(text: str, spaces: int = 4, *, first_line: bool = True) -> str:
     """
     Indent text by adding spaces to each line.
-    
+
     Args:
         text: Text to indent
         spaces: Number of spaces to add
         first_line: Whether to indent the first line
-        
+
     Returns:
         Indented text
-        
+
     Examples:
         >>> print(indent("line1\\nline2", 2))
           line1
@@ -696,7 +711,7 @@ def indent(text: str, spaces: int = 4, *, first_line: bool = True) -> str:
     """
     prefix = " " * spaces
     lines = text.split("\n")
-    
+
     if first_line:
         return "\n".join(prefix + line for line in lines)
     else:
@@ -706,19 +721,20 @@ def indent(text: str, spaces: int = 4, *, first_line: bool = True) -> str:
 def dedent(text: str) -> str:
     """
     Remove common leading whitespace from all lines.
-    
+
     Args:
         text: Text to dedent
-        
+
     Returns:
         Dedented text
-        
+
     Examples:
         >>> print(dedent("    line1\\n    line2"))
         line1
         line2
     """
     import textwrap
+
     return textwrap.dedent(text)
 
 
@@ -731,17 +747,18 @@ def wrap_text(
 ) -> str:
     """
     Wrap text to specified width.
-    
+
     Args:
         text: Text to wrap
         width: Maximum line width
         break_long_words: Break words longer than width
         break_on_hyphens: Break on hyphens
-        
+
     Returns:
         Wrapped text
     """
     import textwrap
+
     return textwrap.fill(
         text,
         width=width,
@@ -753,18 +770,18 @@ def wrap_text(
 def levenshtein_distance(s1: str, s2: str) -> int:
     """
     Calculate the Levenshtein distance between two strings.
-    
+
     The Levenshtein distance is the minimum number of single-character
     edits (insertions, deletions, substitutions) needed to transform
     one string into another.
-    
+
     Args:
         s1: First string
         s2: Second string
-        
+
     Returns:
         Edit distance between strings
-        
+
     Examples:
         >>> levenshtein_distance("kitten", "sitting")
         3
@@ -773,12 +790,12 @@ def levenshtein_distance(s1: str, s2: str) -> int:
     """
     if len(s1) < len(s2):
         s1, s2 = s2, s1
-    
+
     if len(s2) == 0:
         return len(s1)
-    
+
     previous_row = list(range(len(s2) + 1))
-    
+
     for i, c1 in enumerate(s1):
         current_row = [i + 1]
         for j, c2 in enumerate(s2):
@@ -788,24 +805,24 @@ def levenshtein_distance(s1: str, s2: str) -> int:
             substitutions = previous_row[j] + (c1 != c2)
             current_row.append(min(insertions, deletions, substitutions))
         previous_row = current_row
-    
+
     return previous_row[-1]
 
 
 def similarity_ratio(s1: str, s2: str) -> float:
     """
     Calculate similarity ratio between two strings (0.0 to 1.0).
-    
+
     Based on Levenshtein distance. Returns 1.0 for identical strings,
     0.0 for completely different strings.
-    
+
     Args:
         s1: First string
         s2: Second string
-        
+
     Returns:
         Similarity ratio (0.0 to 1.0)
-        
+
     Examples:
         >>> similarity_ratio("hello", "hello")
         1.0
@@ -814,10 +831,10 @@ def similarity_ratio(s1: str, s2: str) -> float:
     """
     if not s1 and not s2:
         return 1.0
-    
+
     max_len = max(len(s1), len(s2))
     if max_len == 0:
         return 1.0
-    
+
     distance = levenshtein_distance(s1, s2)
     return 1.0 - (distance / max_len)

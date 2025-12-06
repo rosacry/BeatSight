@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 
 from app.utils.password_validation import (
     validate_password,
@@ -52,7 +51,10 @@ class TestPasswordValidation:
             result = validate_password(password)
             # Common passwords should have errors or low score
             if "password" in password.lower():
-                assert "too common" in result.error_message.lower() or result.strength_score <= 2
+                assert (
+                    "too common" in result.error_message.lower()
+                    or result.strength_score <= 2
+                )
 
     def test_password_with_email(self) -> None:
         """Test password containing email is rejected."""
@@ -92,7 +94,7 @@ class TestPasswordValidation:
         # Weak password
         weak_result = validate_password("password")  # Common password
         assert weak_result.strength_label in ["weak", "fair"]
-        
+
         # Strong password
         strong_result = validate_password("V3ryS3cur3P@ssw0rd!")
         assert strong_result.strength_score >= 3
@@ -101,7 +103,7 @@ class TestPasswordValidation:
         """Test custom minimum length."""
         result = validate_password("Short1A", min_length=6)
         assert result.is_valid is True
-        
+
         result = validate_password("Short1A", min_length=10)
         assert result.is_valid is False
 

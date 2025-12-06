@@ -50,7 +50,7 @@ class ComponentHealth(BaseModel):
 
 class SystemInfo(BaseModel):
     """System information for health reporting."""
-    
+
     python_version: str
     platform: str
     pid: int

@@ -60,7 +60,7 @@ The goal isn't gamification for its own sake—it's giving drummers the same vis
 | Platform | Description | Status |
 |----------|-------------|--------|
 | **Desktop** | Full-featured practice environment built on osu!-framework | ✅ Available |
-| **Web** | Library management, uploads, AI job tracking at [beatsight.io](https://beatsight.io) | 🚧 In development |
+| **Web** | Library management, uploads, AI job tracking at [beatsight.io](https://beatsight.io) | ✅ Production Ready |
 | **Mobile** | Flutter-based iOS/Android clients | 📋 Planned |
 
 > [!NOTE]
@@ -74,8 +74,8 @@ The goal isn't gamification for its own sake—it's giving drummers the same vis
 |------|---------|---------|
 | .NET SDK | 8.0+ | Desktop client |
 | Python | 3.10+ | Backend services |
-| Poetry | 1.7+ | Backend dependencies |
-| Node.js | 18+ | Web frontend |
+| pip | Latest | Backend dependencies |
+| Node.js | 20+ | Web frontend |
 | FFmpeg | Latest | Audio processing |
 
 > [!TIP]
@@ -96,8 +96,8 @@ The desktop app connects to beatsight.io for AI transcription. Sign in with your
 
 ```bash
 cd backend
-poetry install
-poetry run uvicorn app.main:app --reload
+pip install -e ".[dev]"
+uvicorn app.main:app --reload
 ```
 
 API available at `http://localhost:8000`. Health check: `GET /health/live`
@@ -112,6 +112,7 @@ cd frontend
 npm install
 npm run dev
 ```
+
 
 Opens at `http://localhost:5173` with hot module replacement.
 
@@ -143,8 +144,8 @@ BeatSight/
 │   ├── transcription/        # Onset detection, drum classification
 │   └── separation/           # Demucs source separation
 ├── backend/              # FastAPI web services (Python)
-│   └── app/                  # API routes, services, models (1147 tests, 84% coverage)
-├── frontend/             # React + TypeScript SPA (223 tests)
+│   └── app/                  # API routes, services, models (2895 tests, 84% coverage)
+├── frontend/             # React + TypeScript SPA (283 tests)
 │   └── src/                  # Components, hooks, state management
 ├── data/                 # Dataset storage (gitignored)
 ├── docs/                 # Architecture, guides, specifications
@@ -153,15 +154,13 @@ BeatSight/
 
 ### Key Technologies
 
-| Component | Stack | Coverage |
-|-----------|-------|----------|
+| Component | Stack | Tests/Coverage |
+|-----------|-------|----------------|
 | Desktop | osu-framework, .NET 8, OpenGL | 75 tests |
-| Backend | FastAPI, SQLAlchemy, PostgreSQL, Redis | 84% |
-| Frontend | React 18, TypeScript, TailwindCSS, Vite | 223 tests |
-| AI Pipeline | PyTorch, Demucs, librosa | 21%* |
+| Backend | FastAPI, SQLAlchemy, PostgreSQL, Redis | 2895 tests, 84% cov |
+| Frontend | React 18, TypeScript, TailwindCSS, Vite | 283 tests |
+| AI Pipeline | PyTorch, Demucs, librosa | 195 tests |
 | Infrastructure | Modal (GPU), S3, Stripe | — |
-
-*AI pipeline coverage is lower because full model integration tests require the trained production model, which is still in active training.
 
 ### Beatmap Format
 
@@ -198,7 +197,7 @@ Contributions are welcome! Please read [`docs/CONTRIBUTING.md`](docs/CONTRIBUTIN
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
 3. Make your changes and add tests
-4. Run CI locally: `dotnet test BeatSight.sln` and `cd backend && poetry run pytest`
+4. Run CI locally: `dotnet test BeatSight.sln` and `cd backend && pytest tests/`
 5. Submit a pull request
 
 > [!IMPORTANT]
@@ -210,5 +209,7 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## Support
 
+- **Discord**: [Join our community](https://discord.gg/T57fDWcHDQ)
 - **Issues**: [GitHub Issues](https://github.com/rosacry/BeatSight/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/rosacry/BeatSight/discussions)
+- **Email**: [support@beatsight.io](mailto:support@beatsight.io)

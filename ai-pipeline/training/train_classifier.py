@@ -11,6 +11,7 @@ Optionally emit a metrics JSON for downstream automation:
 from __future__ import annotations
 
 import argparse
+import gc
 import inspect
 import json
 import logging
@@ -18,6 +19,7 @@ import math
 import os
 import random
 import signal
+import time
 import warnings
 from collections import OrderedDict
 from pathlib import Path
@@ -918,7 +920,13 @@ class DrumSampleDataset(Dataset):
             self.ghost_augmenter is not None or 
             self.accent_tap_augmenter is not None
         )
-        audio_file_available = audio_path is not None and audio_path.exists()
+        
+        # OPTIMIZATION: Only check if audio file exists when augmentation is enabled
+        # This avoids expensive filesystem stat() calls on slow drives (USB, network)
+        # when using cached features. For validation (no augmentation), this is skipped entirely.
+        audio_file_available = False
+        if augmentation_enabled and audio_path is not None:
+            audio_file_available = audio_path.exists()
         
         # Warn once if augmentation is enabled but audio files are missing
         if augmentation_enabled and audio_path is not None and not audio_file_available:
@@ -1694,11 +1702,55 @@ def train_epoch(
     non_blocking = device.type == "cuda"
     accum_steps = max(1, grad_accum_steps)
     total_batches = len(dataloader)
+    
+    # CUDA stability: periodic memory cleanup to prevent fragmentation during long epochs
+    cuda_cleanup_interval = 2500  # Clean up every N batches
+    cuda_error_retries = 3  # Number of retries on CUDA errors
+    consecutive_cuda_errors = 0  # Track consecutive failures for early stopping
+    
+    def safe_cuda_step(step_fn, description="optimizer step"):
+        """Execute a CUDA operation with error recovery."""
+        nonlocal consecutive_cuda_errors
+        last_error = None
+        for attempt in range(cuda_error_retries):
+            try:
+                result = step_fn()
+                consecutive_cuda_errors = 0  # Reset on success
+                return result
+            except RuntimeError as e:
+                if "CUDA" in str(e) or "cuda" in str(e):
+                    last_error = e
+                    print(f"\n⚠️ CUDA error during {description} (attempt {attempt + 1}/{cuda_error_retries}): {e}")
+                    
+                    # Aggressive memory cleanup
+                    if device.type == "cuda":
+                        torch.cuda.empty_cache()
+                        torch.cuda.synchronize()
+                        gc.collect()
+                        
+                    if attempt < cuda_error_retries - 1:
+                        # Brief pause before retry
+                        time.sleep(0.5 * (attempt + 1))
+                else:
+                    raise  # Non-CUDA error, re-raise immediately
+        
+        # All retries failed
+        consecutive_cuda_errors += 1
+        if consecutive_cuda_errors >= 3:
+            raise RuntimeError(f"CUDA stability issue: {consecutive_cuda_errors} consecutive batches failed. Last error: {last_error}")
+        
+        # Log but continue - skip this batch
+        print(f"⚠️ Skipping batch due to persistent CUDA error: {last_error}")
+        return None
 
     optimizer.zero_grad(set_to_none=True)
 
     pbar = tqdm(dataloader, desc="Training")
     for batch_index, batch_data in enumerate(pbar, start=1):
+        # Periodic CUDA memory cleanup to prevent fragmentation
+        if device.type == "cuda" and batch_index % cuda_cleanup_interval == 0:
+            torch.cuda.empty_cache()
+        
         # Handle both (features, labels) and (features, labels, velocities) formats
         if use_velocity and len(batch_data) == 3:
             features, labels, velocities = batch_data
@@ -1897,9 +1949,17 @@ def train_epoch(
                     if grad_clip_norm is not None:
                         scaler.unscale_(optimizer)
                         clip_grad_norm_(model.parameters(), grad_clip_norm)
-                    scaler.step(optimizer)
-                    scaler.update()
-                    optimizer.zero_grad(set_to_none=True)
+                    
+                    # Wrap optimizer step in CUDA error recovery
+                    def amp_optimizer_step():
+                        scaler.step(optimizer)
+                        scaler.update()
+                        optimizer.zero_grad(set_to_none=True)
+                    
+                    step_result = safe_cuda_step(amp_optimizer_step, "AMP optimizer step")
+                    if step_result is None:
+                        # CUDA error recovery - skip to next batch
+                        continue
                 
                 # AWP (Adversarial Weight Perturbation) step for AMP path
                 if awp is not None and awp.should_attack(current_epoch, batch_index, awp_freq):
@@ -1954,8 +2014,15 @@ def train_epoch(
                     # Step 3: Apply update using adversarial gradients
                     optimizer.second_step(zero_grad=True)
                 else:
-                    optimizer.step()
-                    optimizer.zero_grad(set_to_none=True)
+                    # Wrap non-AMP optimizer step in CUDA error recovery
+                    def non_amp_optimizer_step():
+                        optimizer.step()
+                        optimizer.zero_grad(set_to_none=True)
+                    
+                    step_result = safe_cuda_step(non_amp_optimizer_step, "optimizer step")
+                    if step_result is None:
+                        # CUDA error recovery - skip to next batch
+                        continue
                 
                 # AWP (Adversarial Weight Perturbation) step
                 if awp is not None and awp.should_attack(current_epoch, batch_index, awp_freq):
@@ -2116,6 +2183,176 @@ def validate(
         return mean_loss, accuracy, balanced_acc
     
     return mean_loss, accuracy
+
+
+def check_class_health(
+    model: nn.Module,
+    dataloader: DataLoader,
+    device: torch.device,
+    num_classes: int,
+    class_names: Optional[List[str]] = None,
+    *,
+    amp_enabled: bool = False,
+    autocast_dtype: Optional[torch.dtype] = None,
+    max_batches: int = 100,
+) -> dict:
+    """
+    Quick class health check to detect class collapse early.
+    
+    This runs a fast evaluation to check if all classes are being learned.
+    Class collapse (where model only predicts a few classes) is a serious
+    training failure that should be caught early.
+    
+    Args:
+        model: Model to evaluate
+        dataloader: Validation data loader
+        device: Device to run on
+        num_classes: Number of classes
+        class_names: Optional list of class names for logging
+        amp_enabled: Use automatic mixed precision
+        autocast_dtype: AMP dtype
+        max_batches: Maximum batches to evaluate (for speed)
+        
+    Returns:
+        Dictionary with:
+        - 'per_class_acc': Per-class accuracy percentages
+        - 'zero_acc_classes': List of classes with 0% accuracy
+        - 'low_acc_classes': List of classes with <5% accuracy  
+        - 'collapse_detected': True if class collapse detected
+        - 'overall_acc': Overall accuracy
+        - 'random_baseline': Random baseline accuracy
+    """
+    model.eval()
+    
+    # Per-class counters
+    correct_per_class = torch.zeros(num_classes)
+    total_per_class = torch.zeros(num_classes)
+    
+    batches_evaluated = 0
+    
+    with torch.no_grad():
+        for batch_data in dataloader:
+            if batches_evaluated >= max_batches:
+                break
+            
+            features, labels = batch_data[:2]
+            features = features.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
+            
+            with autocast(device_type=device.type, dtype=autocast_dtype, enabled=amp_enabled):
+                outputs = model(features)
+                if isinstance(outputs, tuple):
+                    outputs = outputs[0]
+            
+            _, predicted = torch.max(outputs, 1)
+            
+            # Count per-class
+            for pred, label in zip(predicted.cpu(), labels.cpu()):
+                label_idx = int(label.item())
+                if label_idx < num_classes:
+                    total_per_class[label_idx] += 1
+                    if pred.item() == label_idx:
+                        correct_per_class[label_idx] += 1
+            
+            batches_evaluated += 1
+    
+    # Compute per-class accuracy
+    per_class_acc = {}
+    zero_acc_classes = []
+    low_acc_classes = []
+    
+    default_names = [f"class_{i}" for i in range(num_classes)]
+    names = class_names if class_names else default_names
+    
+    for i in range(num_classes):
+        name = names[i] if i < len(names) else f"class_{i}"
+        total = total_per_class[i].item()
+        if total > 0:
+            acc = 100 * correct_per_class[i].item() / total
+            per_class_acc[name] = acc
+            if acc == 0:
+                zero_acc_classes.append(name)
+            elif acc < 5:
+                low_acc_classes.append((name, acc))
+        else:
+            per_class_acc[name] = None  # No samples
+    
+    # Overall accuracy
+    total = total_per_class.sum().item()
+    correct = correct_per_class.sum().item()
+    overall_acc = 100 * correct / max(total, 1)
+    
+    # Random baseline
+    random_baseline = 100 / num_classes
+    
+    # Class collapse detection
+    collapse_detected = len(zero_acc_classes) >= num_classes // 2  # Half or more classes at 0%
+    
+    return {
+        'per_class_acc': per_class_acc,
+        'zero_acc_classes': zero_acc_classes,
+        'low_acc_classes': low_acc_classes,
+        'collapse_detected': collapse_detected,
+        'overall_acc': overall_acc,
+        'random_baseline': random_baseline,
+        'batches_evaluated': batches_evaluated,
+    }
+
+
+def log_class_health(health: dict, epoch: int, num_classes: int) -> None:
+    """Log class health check results with appropriate warnings."""
+    print(f"\n{'=' * 60}")
+    print(f"  CLASS HEALTH CHECK (Epoch {epoch})")
+    print(f"{'=' * 60}")
+    
+    # Show classes with issues
+    if health['zero_acc_classes']:
+        print(f"\n❌ ZERO ACCURACY ({len(health['zero_acc_classes'])}/{num_classes} classes):")
+        for cls in health['zero_acc_classes'][:10]:
+            print(f"   - {cls}")
+        if len(health['zero_acc_classes']) > 10:
+            print(f"   ... and {len(health['zero_acc_classes']) - 10} more")
+    
+    if health['low_acc_classes']:
+        print(f"\n⚠️  LOW ACCURACY (<5%, {len(health['low_acc_classes'])} classes):")
+        for cls, acc in health['low_acc_classes'][:5]:
+            print(f"   - {cls}: {acc:.1f}%")
+    
+    # Show classes doing well
+    good_classes = [(k, v) for k, v in health['per_class_acc'].items() 
+                    if v is not None and v >= 5]
+    if good_classes:
+        good_classes.sort(key=lambda x: x[1], reverse=True)
+        print(f"\n✅ LEARNING ({len(good_classes)}/{num_classes} classes):")
+        for cls, acc in good_classes[:5]:
+            print(f"   - {cls}: {acc:.1f}%")
+        if len(good_classes) > 5:
+            print(f"   ... and {len(good_classes) - 5} more")
+    
+    # Overall stats
+    print(f"\n📊 Overall: {health['overall_acc']:.2f}% (random baseline: {health['random_baseline']:.2f}%)")
+    
+    # Critical warning
+    if health['collapse_detected']:
+        print(f"\n{'🚨' * 10}")
+        print("🚨 CLASS COLLAPSE DETECTED!")
+        print(f"{'🚨' * 10}")
+        print(f"\n{len(health['zero_acc_classes'])}/{num_classes} classes have 0% accuracy.")
+        print("The model is NOT learning all classes!")
+        print("\nPOSSIBLE CAUSES:")
+        print("  1. Focal gamma too high (try --focal-gamma 1.5 or lower)")
+        print("  2. Learning rate too high (try reducing by 2-5x)")
+        print("  3. Double-weighting (don't use --class-weights with --balanced-sampling)")
+        print("  4. EMA decay too high for early training")
+        print("\nRECOMMENDED ACTIONS:")
+        print("  - Stop training and adjust hyperparameters")
+        print("  - Use --sampling-strategy sqrt instead of uniform")
+        print("  - Reduce --focal-gamma to 1.5 or disable focal loss")
+    elif health['overall_acc'] < health['random_baseline']:
+        print(f"\n⚠️  WARNING: Accuracy below random baseline!")
+        print(f"   This suggests the model is struggling to learn.")
+    
+    print(f"{'=' * 60}\n")
 
 
 def validate_with_tta(
@@ -3824,6 +4061,53 @@ def main():
     else:
         print(f"   Batches/epoch: {batches_per_epoch:,} ({samples_per_epoch:,} samples)")
     
+    # AGGRESSIVE SETTINGS SAFEGUARD
+    # Warn about potentially problematic combinations that can cause class collapse
+    aggressive_warnings = []
+    
+    if args.balanced_sampling and args.sampling_strategy == "uniform":
+        aggressive_warnings.append(
+            "  • Uniform sampling (most aggressive) - consider 'sqrt' if seeing collapse"
+        )
+    
+    if args.focal_loss and args.focal_gamma >= 3.0:
+        aggressive_warnings.append(
+            f"  • Focal gamma={args.focal_gamma} (high) - reduces gradient signal for 'easy' examples"
+        )
+    
+    if args.balanced_sampling and args.class_weights != "none":
+        aggressive_warnings.append(
+            "  • Double-weighting (balanced sampling + class weights) - can over-correct"
+        )
+    
+    if args.use_ema and args.ema_decay >= 0.999 and not args.ema_warmup_steps:
+        aggressive_warnings.append(
+            f"  • EMA decay={args.ema_decay} without warmup - EMA model updates slowly"
+        )
+    
+    if args.label_smoothing > 0.1:
+        aggressive_warnings.append(
+            f"  • Label smoothing={args.label_smoothing} (high) - may hurt rare class learning"
+        )
+    
+    if args.mixup_alpha > 0 and args.cutmix_alpha > 0 and (args.mixup_alpha + args.cutmix_alpha) > 1.5:
+        aggressive_warnings.append(
+            f"  • Heavy augmentation (mixup={args.mixup_alpha}, cutmix={args.cutmix_alpha})"
+        )
+    
+    if aggressive_warnings:
+        print("\n" + "=" * 70)
+        print("⚠️  AGGRESSIVE SETTINGS DETECTED")
+        print("=" * 70)
+        print("The following settings can cause training instability or class collapse:")
+        print()
+        for warning in aggressive_warnings:
+            print(warning)
+        print()
+        print("If you see class collapse (many classes at 0% accuracy), try:")
+        print("  --focal-gamma 1.5  --sampling-strategy sqrt  --class-weights none")
+        print("=" * 70)
+    
     # Optional cache warmup (preloads mmap pages into RAM)
     # CRITICAL: When using subset mode, only warm up shards that will be accessed!
     # Otherwise we waste time loading pages that won't be used during training.
@@ -3844,12 +4128,16 @@ def main():
         # Warm up validation dataset cache (subset-aware if using a subset)
         if hasattr(val_dataset_full, '_consolidated_reader') and val_dataset_full._consolidated_reader is not None:
             val_subset_aware = val_subset_indices is not None and len(val_subset_indices) > 0
+            # Warm up ALL validation samples if subset is small, otherwise scale warmup
+            val_warmup_samples = len(val_subset_indices) if val_subset_aware else len(val_dataset_full)
+            # Cap at a reasonable max but ensure we warm up at least the subset size
+            val_warmup_samples = min(val_warmup_samples, max(args.cache_warmup_samples // 2, 100_000))
             if val_subset_aware:
                 print(f"   Warming up validation cache (subset-aware: {len(val_subset_indices):,} samples)...")
             else:
                 print("   Warming up validation cache...")
             val_dataset_full._consolidated_reader.warmup(
-                num_samples=args.cache_warmup_samples // 10,  # Val is smaller
+                num_samples=val_warmup_samples,  # Warm more samples for validation
                 verbose=True,
                 subset_indices=val_subset_indices,  # Focus warmup on active shards
             )
@@ -4078,6 +4366,21 @@ def main():
     # Loss and optimizer with optional class weighting
     class_weights_tensor: Optional[torch.Tensor] = None
     if args.class_weights != "none":
+        # DOUBLE-WEIGHTING WARNING: Using both balanced sampling AND class weights
+        # can cause over-correction and training instability
+        if args.balanced_sampling:
+            print("\n" + "=" * 70)
+            print("⚠️  WARNING: DOUBLE-WEIGHTING DETECTED")
+            print("=" * 70)
+            print("You are using BOTH --balanced-sampling AND --class-weights.")
+            print("This applies class rebalancing TWICE:")
+            print("  1. At sampling level (WeightedRandomSampler upsamples rare classes)")
+            print("  2. At loss level (class weights increase loss for rare classes)")
+            print("")
+            print("This can cause over-correction and training instability!")
+            print("RECOMMENDATION: Use --class-weights=none with --balanced-sampling")
+            print("=" * 70 + "\n")
+        
         # Get labels for class weight computation - prefer numpy for efficiency
         if hasattr(train_dataset_full, '_use_numpy') and train_dataset_full._use_numpy:
             labels_for_weights = train_dataset_full._numpy_labels
@@ -4094,21 +4397,47 @@ def main():
     
     # Initialize loss function (standard CrossEntropy or Focal Loss)
     use_focal = args.focal_loss and HAS_FOCAL_LOSS
+    
+    # AUTO-ADJUST FOCAL GAMMA: Reduce gamma when using balanced sampling
+    # Balanced sampling already ensures rare classes are seen equally
+    # High focal gamma (>2.0) with balanced sampling can cause gradient starvation
+    effective_focal_gamma = args.focal_gamma
+    if use_focal and args.balanced_sampling and args.focal_gamma > 2.0:
+        original_gamma = args.focal_gamma
+        effective_focal_gamma = min(args.focal_gamma, 2.0)  # Cap at 2.0
+        print("\n" + "=" * 70)
+        print("⚠️  AUTO-ADJUSTMENT: Focal Loss Gamma Reduced")
+        print("=" * 70)
+        print(f"Original gamma: {original_gamma}")
+        print(f"Adjusted gamma: {effective_focal_gamma}")
+        print("")
+        print("REASON: Using --balanced-sampling with high focal gamma (>2.0)")
+        print("can cause gradient starvation and class collapse.")
+        print("Balanced sampling already ensures rare classes are seen equally.")
+        print("High gamma then over-penalizes 'easy' examples, starving gradients.")
+        print("")
+        print("To override: Use --focal-gamma 2.0 or lower explicitly.")
+        print("=" * 70 + "\n")
+    
     if use_focal:
         if args.mixup_alpha > 0 or args.cutmix_alpha > 0:
             # Use mixup-compatible focal loss
             criterion = FocalLossWithMixup(
-                gamma=args.focal_gamma,
+                gamma=effective_focal_gamma,
                 alpha=class_weights_tensor,
                 label_smoothing=args.label_smoothing,
             )
         else:
             criterion = FocalLoss(
-                gamma=args.focal_gamma,
+                gamma=effective_focal_gamma,
                 alpha=class_weights_tensor,
                 label_smoothing=args.label_smoothing,
             )
-        print(f"Focal Loss enabled: gamma={args.focal_gamma}")
+        # Show both original and effective gamma if they differ
+        if effective_focal_gamma != args.focal_gamma:
+            print(f"Focal Loss enabled: gamma={effective_focal_gamma} (auto-adjusted from {args.focal_gamma})")
+        else:
+            print(f"Focal Loss enabled: gamma={effective_focal_gamma}")
     else:
         criterion = nn.CrossEntropyLoss(
             weight=class_weights_tensor,
@@ -5166,6 +5495,36 @@ def main():
                 print(f"Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.2f}% | Val Balanced Acc: {val_balanced_acc:.2f}%")
             else:
                 print(f"Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.2f}%")
+
+            # CLASS HEALTH CHECK: Run every 3 epochs (or first 5 epochs) to detect collapse early
+            # This catches class collapse MUCH earlier than waiting until training ends
+            should_check_health = (epoch + 1) <= 5 or (epoch + 1) % 3 == 0
+            if should_check_health and args.balanced_sampling:
+                class_names = components_info.get('class_names', None)
+                health = check_class_health(
+                    model=model,
+                    dataloader=val_loader,
+                    device=torch_device,
+                    num_classes=num_classes,
+                    class_names=class_names,
+                    amp_enabled=amp_enabled,
+                    autocast_dtype=autocast_dtype,
+                    max_batches=50,  # Fast check, ~50 batches
+                )
+                log_class_health(health, epoch + 1, num_classes)
+                
+                # If class collapse detected in first 5 epochs, it's likely a config issue
+                if health['collapse_detected'] and (epoch + 1) <= 5:
+                    print("\n" + "🛑" * 20)
+                    print("🛑 CRITICAL: Class collapse detected in early training!")
+                    print("🛑 This is almost certainly a hyperparameter issue, not data issue.")
+                    print("🛑" * 20)
+                    print("\nSUGGESTED FIX:")
+                    print("  Stop training and try:")
+                    print("    --focal-gamma 1.5    (or remove --focal-loss entirely)")
+                    print("    --sampling-strategy sqrt   (instead of uniform)")
+                    print("    --class-weights none  (if using --balanced-sampling)")
+                    print("\n")
 
             # Use balanced accuracy for best model selection when training with balanced sampling
             val_metric_for_best = val_balanced_acc if val_balanced_acc is not None else val_acc

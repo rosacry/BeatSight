@@ -128,7 +128,9 @@ def downgrade() -> None:
     op.drop_index("ix_map_edit_proposals_status", table_name="map_edit_proposals")
 
     # Billing transaction indexes
-    op.drop_index("ix_billing_transactions_provider_ref", table_name="billing_transactions")
+    op.drop_index(
+        "ix_billing_transactions_provider_ref", table_name="billing_transactions"
+    )
     op.drop_index("ix_billing_transactions_user_id", table_name="billing_transactions")
 
     # Map version indexes

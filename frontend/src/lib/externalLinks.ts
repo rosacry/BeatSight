@@ -12,10 +12,9 @@ export const EXTERNAL_LINKS = {
         discussions: 'https://github.com/beatsight/beatsight/discussions',
     },
 
-    // Community (update when Discord server is created)
+    // Community
     community: {
-        // TODO: Update when Discord server is created
-        discord: null as string | null, // e.g., 'https://discord.gg/beatsight'
+        discord: 'https://discord.gg/T57fDWcHDQ',
         // Use GitHub Discussions as fallback community space
         forum: 'https://github.com/beatsight/beatsight/discussions',
     },
@@ -23,8 +22,8 @@ export const EXTERNAL_LINKS = {
     // Documentation (update when docs site is deployed)
     docs: {
         // TODO: Update when documentation site is deployed
-        main: null as string | null, // e.g., 'https://docs.beatsight.com'
-        api: null as string | null, // e.g., 'https://docs.beatsight.com/api'
+        main: null as string | null, // e.g., 'https://docs.beatsight.io'
+        api: null as string | null, // e.g., 'https://docs.beatsight.io/api'
         // Fallback to GitHub docs folder
         github: 'https://github.com/beatsight/beatsight/tree/main/docs',
     },
@@ -42,7 +41,7 @@ export const EXTERNAL_LINKS = {
     legal: {
         privacy: '/privacy', // Internal route
         terms: '/terms', // Internal route
-        contact: 'mailto:support@beatsight.com',
+        contact: 'mailto:support@beatsight.io',
     },
 
     // Social media

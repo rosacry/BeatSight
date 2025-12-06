@@ -550,5 +550,197 @@ namespace BeatSight.Game.UI.Theming
         }
 
         #endregion
+
+        #region UI Component Constants
+
+        /// <summary>Standard shear angle for osu!-style buttons (parallelogram effect).</summary>
+        public const float ShearAngle = 0.15f;
+
+        /// <summary>Heavy shear angle for more dramatic effects.</summary>
+        public const float ShearAngleHeavy = 0.2f;
+
+        /// <summary>Subtle shear for lightweight elements.</summary>
+        public const float ShearAngleSubtle = 0.08f;
+
+        /// <summary>Standard shear vector for use with osu.Framework transformations.</summary>
+        public static readonly Vector2 Shear = new Vector2(ShearAngle, 0);
+
+        /// <summary>Heavy shear vector.</summary>
+        public static readonly Vector2 ShearHeavy = new Vector2(ShearAngleHeavy, 0);
+
+        /// <summary>Subtle shear vector.</summary>
+        public static readonly Vector2 ShearSubtle = new Vector2(ShearAngleSubtle, 0);
+
+        #endregion
+
+        #region Glow and Effects
+
+        /// <summary>Standard glow radius for hover states.</summary>
+        public const float GlowRadiusStandard = 15f;
+
+        /// <summary>Large glow radius for emphasis.</summary>
+        public const float GlowRadiusLarge = 25f;
+
+        /// <summary>Subtle glow radius for ambient effects.</summary>
+        public const float GlowRadiusSubtle = 8f;
+
+        /// <summary>Standard glow opacity when active.</summary>
+        public const float GlowOpacityActive = 0.4f;
+
+        /// <summary>Dimmed glow opacity for background elements.</summary>
+        public const float GlowOpacityDim = 0.15f;
+
+        /// <summary>Standard shadow radius.</summary>
+        public const float ShadowRadiusStandard = 10f;
+
+        /// <summary>Large shadow radius for elevated elements.</summary>
+        public const float ShadowRadiusLarge = 20f;
+
+        /// <summary>Standard shadow opacity.</summary>
+        public const float ShadowOpacity = 0.3f;
+
+        /// <summary>Standard shadow offset.</summary>
+        public static readonly Vector2 ShadowOffset = new Vector2(0, 4);
+
+        /// <summary>Large shadow offset for elevated elements.</summary>
+        public static readonly Vector2 ShadowOffsetLarge = new Vector2(0, 8);
+
+        #endregion
+
+        #region Button and Interactive Element Constants
+
+        /// <summary>Button gradient border width.</summary>
+        public const float ButtonBorderWidth = 3f;
+
+        /// <summary>Button border width for lightweight variant.</summary>
+        public const float ButtonBorderWidthLight = 2f;
+
+        /// <summary>Standard button hover scale.</summary>
+        public const float ButtonHoverScale = 1.05f;
+
+        /// <summary>Button click scale (momentary shrink).</summary>
+        public const float ButtonClickScale = 0.95f;
+
+        /// <summary>Standard icon button size.</summary>
+        public const float IconButtonSize = 40f;
+
+        /// <summary>Small icon button size.</summary>
+        public const float IconButtonSizeSmall = 32f;
+
+        /// <summary>Large icon button size.</summary>
+        public const float IconButtonSizeLarge = 48f;
+
+        /// <summary>Icon scale relative to button size.</summary>
+        public const float IconScaleInButton = 0.5f;
+
+        #endregion
+
+        #region Card and Panel Constants
+
+        /// <summary>Standard card corner radius.</summary>
+        public const float CardCornerRadius = 12f;
+
+        /// <summary>Standard card height.</summary>
+        public const float CardHeight = 100f;
+
+        /// <summary>Card cover art width.</summary>
+        public const float CardCoverWidth = 100f;
+
+        /// <summary>Card hover elevation scale.</summary>
+        public const float CardHoverScale = 1.02f;
+
+        #endregion
+
+        #region Toast and Notification Constants
+
+        /// <summary>Toast notification width.</summary>
+        public const float ToastWidth = 350f;
+
+        /// <summary>Toast notification height.</summary>
+        public const float ToastHeight = 72f;
+
+        /// <summary>Default toast display duration in milliseconds.</summary>
+        public const double ToastDisplayDuration = 4000;
+
+        /// <summary>Maximum visible toasts at once.</summary>
+        public const int ToastMaxVisible = 5;
+
+        /// <summary>Toast spacing between stacked notifications.</summary>
+        public const float ToastSpacing = 12f;
+
+        #endregion
+
+        #region Progress and Counter Constants
+
+        /// <summary>Standard progress ring size.</summary>
+        public const float ProgressRingSize = 64f;
+
+        /// <summary>Standard progress ring stroke width.</summary>
+        public const float ProgressRingStroke = 6f;
+
+        /// <summary>Counter roll animation duration.</summary>
+        public const double CounterRollDuration = 600;
+
+        /// <summary>Score counter roll duration (longer for dramatic effect).</summary>
+        public const double ScoreRollDuration = 800;
+
+        #endregion
+
+        #region Wave Animation Constants
+
+        /// <summary>Number of wave layers in wave container.</summary>
+        public const int WaveLayerCount = 3;
+
+        /// <summary>Wave animation speed multiplier.</summary>
+        public const float WaveSpeed = 1f;
+
+        /// <summary>Wave maximum amplitude as ratio of container height.</summary>
+        public const float WaveAmplitudeMax = 0.15f;
+
+        /// <summary>Wave opacity when visible.</summary>
+        public const float WaveOpacity = 0.3f;
+
+        #endregion
+
+        #region Easing Presets
+
+        /// <summary>Standard ease out for responsive UI (OutQuint).</summary>
+        public const Easing EaseResponsive = Easing.OutQuint;
+
+        /// <summary>Bounce ease for playful interactions (OutBack).</summary>
+        public const Easing EaseBounce = Easing.OutBack;
+
+        /// <summary>Smooth ease for gentle transitions (InOutQuint).</summary>
+        public const Easing EaseSmooth = Easing.InOutQuint;
+
+        /// <summary>Sharp ease for quick actions (OutExpo).</summary>
+        public const Easing EaseSharp = Easing.OutExpo;
+
+        /// <summary>Elastic ease for attention-grabbing effects (OutElastic).</summary>
+        public const Easing EaseElastic = Easing.OutElastic;
+
+        #endregion
+
+        #region Difficulty Colors
+
+        /// <summary>Easy difficulty color.</summary>
+        public static readonly Color4 ColorDifficultyEasy = new Color4(136, 204, 0, 255);
+
+        /// <summary>Normal difficulty color.</summary>
+        public static readonly Color4 ColorDifficultyNormal = new Color4(0, 212, 255, 255);
+
+        /// <summary>Hard difficulty color.</summary>
+        public static readonly Color4 ColorDifficultyHard = new Color4(255, 204, 0, 255);
+
+        /// <summary>Insane difficulty color.</summary>
+        public static readonly Color4 ColorDifficultyInsane = new Color4(255, 102, 170, 255);
+
+        /// <summary>Expert difficulty color.</summary>
+        public static readonly Color4 ColorDifficultyExpert = new Color4(170, 102, 255, 255);
+
+        /// <summary>Expert+ difficulty color.</summary>
+        public static readonly Color4 ColorDifficultyExpertPlus = new Color4(26, 26, 46, 255);
+
+        #endregion
     }
 }

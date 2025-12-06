@@ -8,7 +8,7 @@ Run this once during initial setup or when adding new products.
 Usage:
     # Set your Stripe secret key first
     export STRIPE_SECRET_KEY=sk_test_...
-    
+
     # Run the script
     python -m scripts.setup_stripe
 
@@ -26,6 +26,7 @@ import stripe
 @dataclass
 class ProductConfig:
     """Configuration for a Stripe product."""
+
     name: str
     description: str
     prices: list[dict]
@@ -107,30 +108,30 @@ PRODUCTS = [
 def create_products_and_prices():
     """Create all products and prices in Stripe."""
     api_key = os.environ.get("STRIPE_SECRET_KEY")
-    
+
     if not api_key:
         print("❌ Error: STRIPE_SECRET_KEY environment variable not set")
         print("\nSet it with:")
         print("  export STRIPE_SECRET_KEY=sk_test_...")
         sys.exit(1)
-    
+
     stripe.api_key = api_key
-    
+
     # Check if we're in test or live mode
     mode = "LIVE" if api_key.startswith("sk_live_") else "TEST"
     print(f"\n🔑 Running in {mode} mode\n")
-    
+
     if mode == "LIVE":
         confirm = input("⚠️  You're in LIVE mode. Continue? (yes/no): ")
         if confirm.lower() != "yes":
             print("Aborted.")
             sys.exit(0)
-    
+
     created_prices = {}
-    
+
     for product_config in PRODUCTS:
         print(f"📦 Creating product: {product_config.name}")
-        
+
         # Create product
         product = stripe.Product.create(
             name=product_config.name,
@@ -140,7 +141,7 @@ def create_products_and_prices():
             },
         )
         print(f"   ✅ Product created: {product.id}")
-        
+
         # Create prices for this product
         for price_config in product_config.prices:
             price = stripe.Price.create(
@@ -152,12 +153,12 @@ def create_products_and_prices():
             )
             print(f"   💰 Price created: {price.id} ({price_config['nickname']})")
             created_prices[price_config["nickname"]] = price.id
-    
+
     print("\n" + "=" * 60)
     print("✅ All products and prices created successfully!")
     print("=" * 60)
     print("\n📋 Add these to your .env file:\n")
-    
+
     # Print environment variables
     env_mapping = {
         "Pro Monthly": "STRIPE_PRO_MONTHLY_PRICE_ID",
@@ -167,11 +168,11 @@ def create_products_and_prices():
         "Bundle (100 credits)": "STRIPE_CREDIT_BUNDLE_PRICE_ID",
         "Studio (250 credits)": "STRIPE_CREDIT_STUDIO_PRICE_ID",
     }
-    
+
     for nickname, env_var in env_mapping.items():
         if nickname in created_prices:
             print(f"{env_var}={created_prices[nickname]}")
-    
+
     print("\n🔗 View in Stripe Dashboard:")
     if mode == "TEST":
         print("   https://dashboard.stripe.com/test/products")
@@ -182,41 +183,43 @@ def create_products_and_prices():
 def list_existing_products():
     """List existing products and prices."""
     api_key = os.environ.get("STRIPE_SECRET_KEY")
-    
+
     if not api_key:
         print("❌ Error: STRIPE_SECRET_KEY not set")
         sys.exit(1)
-    
+
     stripe.api_key = api_key
-    
+
     print("\n📦 Existing Products:\n")
-    
+
     products = stripe.Product.list(active=True, limit=100)
-    
+
     for product in products.data:
         print(f"  {product.name}")
         print(f"    ID: {product.id}")
-        
+
         prices = stripe.Price.list(product=product.id, active=True)
         for price in prices.data:
             amount = price.unit_amount / 100 if price.unit_amount else 0
-            interval = f"/{price.recurring.interval}" if price.recurring else " (one-time)"
+            interval = (
+                f"/{price.recurring.interval}" if price.recurring else " (one-time)"
+            )
             print(f"    💰 ${amount:.2f}{interval} - {price.id}")
         print()
 
 
 if __name__ == "__main__":
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="Stripe setup script for BeatSight")
     parser.add_argument(
         "--list",
         action="store_true",
         help="List existing products instead of creating new ones",
     )
-    
+
     args = parser.parse_args()
-    
+
     if args.list:
         list_existing_products()
     else:

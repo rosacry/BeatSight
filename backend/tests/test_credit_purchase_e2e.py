@@ -13,11 +13,9 @@ Created: 2025
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -94,9 +92,7 @@ class TestCreditPurchaseInitiation:
     ):
         """Test purchasing starter pack creates Stripe checkout session."""
         with (
-            patch(
-                "app.api.routes.credits.get_stripe_service"
-            ) as mock_get_stripe,
+            patch("app.api.routes.credits.get_stripe_service") as mock_get_stripe,
             patch(
                 "app.services.stripe_service.get_settings",
                 return_value=mock_stripe_settings,
@@ -202,9 +198,7 @@ class TestWebhookCreditFulfillment:
         mock_balance.purchased_credits = 30
         mock_balance.bonus_credits = 0
 
-        with patch(
-            "app.services.credits.CreditService"
-        ) as mock_credit_service_class:
+        with patch("app.services.credits.CreditService") as mock_credit_service_class:
             mock_credit_service = MagicMock()
             mock_credit_service.fulfill_purchase = AsyncMock(return_value=mock_balance)
             mock_credit_service_class.return_value = mock_credit_service
@@ -270,12 +264,8 @@ class TestWebhookCreditFulfillment:
         mock_db_session.execute = AsyncMock(return_value=mock_result)
 
         with (
-            patch(
-                "app.services.credits.CreditService"
-            ) as mock_credit_service_class,
-            patch(
-                "app.services.email.get_email_service"
-            ) as mock_get_email,
+            patch("app.services.credits.CreditService") as mock_credit_service_class,
+            patch("app.services.email.get_email_service") as mock_get_email,
         ):
             mock_credit_service = MagicMock()
             mock_credit_service.fulfill_purchase = AsyncMock(return_value=mock_balance)
@@ -335,7 +325,7 @@ class TestCreditServiceFulfillment:
         service = CreditService(mock_db_session)
 
         # Execute
-        result = await service.fulfill_purchase(purchase_id)
+        await service.fulfill_purchase(purchase_id)
 
         # Verify purchase was marked fulfilled
         assert mock_purchase.is_fulfilled is True
@@ -476,7 +466,7 @@ class TestCreditBalanceUpdates:
         )
 
         service = CreditService(mock_db_session)
-        result = await service.fulfill_purchase(mock_purchase.id)
+        await service.fulfill_purchase(mock_purchase.id)
 
         # Purchase should be marked fulfilled
         assert mock_purchase.is_fulfilled is True
@@ -649,7 +639,7 @@ class TestConcurrentPurchases:
             )
 
             service = CreditService(mock_db_session)
-            result = await service.fulfill_purchase(purchase_id)
+            await service.fulfill_purchase(purchase_id)
 
             # Each purchase should complete successfully
             assert mock_purchase.is_fulfilled is True

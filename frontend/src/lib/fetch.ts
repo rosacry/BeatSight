@@ -163,7 +163,7 @@ export async function request<T>(
         maxRetries: retries,
     }
 
-    while (true) {
+    for (; ;) {
         try {
             const response = await fetchWithTimeout(
                 url,

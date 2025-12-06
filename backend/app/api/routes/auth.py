@@ -153,12 +153,13 @@ async def login(
     Implements account lockout after multiple failed attempts.
     """
     security_service = get_account_security_service()
-    
+
     # Check if account is locked
     is_locked, lockout_until = await security_service.is_account_locked(request.email)
     if is_locked:
         # Calculate remaining lockout time
         from datetime import timezone
+
         remaining = lockout_until - datetime.now(timezone.utc)
         minutes_remaining = max(1, int(remaining.total_seconds() / 60))
         raise HTTPException(
@@ -176,14 +177,14 @@ async def login(
         attempt_result = await security_service.record_failed_attempt(
             request.email, client_ip
         )
-        
+
         if attempt_result["locked"]:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Account locked due to multiple failed login attempts. Try again later.",
                 headers={"Retry-After": "900"},  # 15 minutes
             )
-        
+
         # Include remaining attempts hint (but don't reveal if email exists)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

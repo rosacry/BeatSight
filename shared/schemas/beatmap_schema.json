@@ -1,6 +1,6 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "$id": "https://beatsight.app/schemas/beatmap/v1.0.0",
+    "$id": "https://beatsight.io/schemas/beatmap/v1.0.0",
     "title": "BeatSight Beatmap Schema",
     "description": "JSON Schema for BeatSight .bsm beatmap format (v1.0.0)",
     "type": "object",

@@ -28,6 +28,7 @@ stripe = "^8.0.0"
 sendgrid = "^6.11.0"
 pywebpush = "^2.0.0"
 sentry-sdk = { version = "^2.0.0", extras = ["fastapi"] }
+aiofiles = "^24.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.1.1"
@@ -69,6 +70,7 @@ dependencies = [
     "sendgrid>=6.11.0",
     "pywebpush>=2.0.0",
     "Pillow>=10.0.0",
+    "aiofiles>=24.1.0",
 ]
 
 [project.optional-dependencies]

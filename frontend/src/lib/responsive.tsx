@@ -376,7 +376,7 @@ interface ResponsiveShowProps {
 export function ResponsiveShow({ above, below, children }: ResponsiveShowProps) {
   // Always call hooks unconditionally (React hooks rules)
   const isAboveResult = useBreakpointUp(above ?? 'xs')
-  const isBelowResult = useBreakpointDown(below ?? 'xxl')
+  const isBelowResult = useBreakpointDown(below ?? '2xl')
 
   const isAbove = above ? isAboveResult : true
   const isBelow = below ? isBelowResult : true

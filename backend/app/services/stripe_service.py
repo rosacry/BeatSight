@@ -9,7 +9,6 @@ Handles:
 
 from __future__ import annotations
 
-import logging
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
@@ -19,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
+from app.logging import get_logger
 from app.models.subscription import (
     BillingProvider,
     BillingTransaction,
@@ -31,7 +31,7 @@ from app.models.subscription import (
 from app.models.user import User
 from app.services.email import get_email_service
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class StripeService:
@@ -95,7 +95,11 @@ class StripeService:
             },
         )
 
-        logger.info(f"Created Stripe customer {customer.id} for user {user.id}")
+        logger.info(
+            "stripe_customer_created",
+            customer_id=customer.id,
+            user_id=str(user.id),
+        )
         return customer.id
 
     async def create_checkout_session(
@@ -232,8 +236,12 @@ class StripeService:
         )
 
         logger.info(
-            f"Created credit checkout session {session.id} for user {user.id}, "
-            f"{pack_config.credits} credits at ${pack_config.price_dollars}"
+            "stripe_credit_checkout_created",
+            session_id=session.id,
+            user_id=str(user.id),
+            credits=pack_config.credits,
+            price_dollars=pack_config.price_dollars,
+            pack_type=pack_config.pack_type.value,
         )
 
         return {
@@ -291,7 +299,10 @@ class StripeService:
                 payload, signature, self.webhook_secret
             )
         except stripe.error.SignatureVerificationError as e:
-            logger.warning(f"Invalid Stripe webhook signature: {e}")
+            logger.warning(
+                "stripe_webhook_signature_invalid",
+                error=str(e),
+            )
             raise ValueError("Invalid signature")
 
         event_id = event["id"]
@@ -305,10 +316,18 @@ class StripeService:
             )
         )
         if existing.scalar_one_or_none():
-            logger.info(f"Skipping duplicate Stripe webhook: {event_id}")
+            logger.info(
+                "stripe_webhook_duplicate_skipped",
+                event_id=event_id,
+                event_type=event_type,
+            )
             return {"event_type": event_type, "processed": False, "duplicate": True}
 
-        logger.info(f"Processing Stripe webhook: {event_type} ({event_id})")
+        logger.info(
+            "stripe_webhook_processing",
+            event_id=event_id,
+            event_type=event_type,
+        )
 
         handlers = {
             "checkout.session.completed": self._handle_checkout_completed,
@@ -335,7 +354,11 @@ class StripeService:
                 await db.flush()
             except IntegrityError:
                 # Another request processed this event concurrently
-                logger.info(f"Event {event_id} was processed concurrently")
+                logger.info(
+                    "stripe_webhook_concurrent_processing",
+                    event_id=event_id,
+                    event_type=event_type,
+                )
                 await db.rollback()
                 return {"event_type": event_type, "processed": False, "duplicate": True}
 
@@ -413,8 +436,12 @@ class StripeService:
             await db.commit()
 
             logger.info(
-                f"Fulfilled credit purchase {purchase_id}: "
-                f"user now has {balance.total_credits} credits"
+                "credit_purchase_fulfilled",
+                purchase_id=purchase_id,
+                user_id=user_id,
+                credits_added=int(credits_amount) if credits_amount else 0,
+                new_balance=balance.total_credits,
+                pack_type=pack_type,
             )
 
             return {
@@ -424,8 +451,50 @@ class StripeService:
                 "new_balance": balance.total_credits,
                 "pack_type": pack_type,
             }
+
+            # Send confirmation email
+            try:
+                user_result = await db.execute(select(User).where(User.id == UUID(user_id)))
+                user = user_result.scalar_one_or_none()
+                if user and credits_amount:
+                    from app.services.credits import CREDIT_PACKS, CreditPackType
+                    pack_config = CREDIT_PACKS.get(CreditPackType(pack_type))
+                    amount_dollars = pack_config.price_dollars if pack_config else (int(credits_amount) * 0.33)
+                    
+                    email_service = get_email_service()
+                    await email_service.send_credit_purchase_confirmation(
+                        user.email,
+                        user.display_name,
+                        int(credits_amount),
+                        amount_dollars,
+                        balance.total_credits,
+                    )
+                    logger.info(
+                        "credit_purchase_email_sent",
+                        email=user.email,
+                        user_id=user_id,
+                        credits=credits_amount,
+                    )
+            except Exception as email_error:
+                logger.warning(
+                    "credit_purchase_email_failed",
+                    user_id=user_id,
+                    error=str(email_error),
+                )
+
+            return {
+                "user_id": user_id,
+                "purchase_id": purchase_id,
+                "credits_added": int(credits_amount) if credits_amount else 0,
+                "new_balance": balance.total_credits,
+                "pack_type": pack_type,
+            }
         except Exception as e:
-            logger.error(f"Failed to fulfill credit purchase {purchase_id}: {e}")
+            logger.error(
+                "credit_purchase_fulfillment_failed",
+                purchase_id=purchase_id,
+                error=str(e),
+            )
             return {"error": str(e), "purchase_id": purchase_id}
 
     async def _handle_subscription_created(
@@ -448,9 +517,18 @@ class StripeService:
                     await email_service.send_subscription_confirmation(
                         user.email, user.display_name, plan_name
                     )
-                    logger.info(f"Sent subscription confirmation email to {user.email}")
+                    logger.info(
+                        "subscription_confirmation_email_sent",
+                        email=user.email,
+                        user_id=str(user_id),
+                        plan=plan_name,
+                    )
             except Exception as e:
-                logger.warning(f"Failed to send subscription confirmation email: {e}")
+                logger.warning(
+                    "subscription_confirmation_email_failed",
+                    user_id=str(result.get("user_id")),
+                    error=str(e),
+                )
 
         return result
 
@@ -485,7 +563,10 @@ class StripeService:
             subscription.ai_quota_remaining = 0
             subscription.last_synced_at = datetime.now(timezone.utc)
             await db.commit()
-            logger.info(f"Cancelled subscription for user {user_id}")
+            logger.info(
+                "subscription_cancelled",
+                user_id=user_id,
+            )
 
         return {"user_id": user_id, "status": "cancelled"}
 
@@ -521,7 +602,11 @@ class StripeService:
                     await db.commit()
 
                     logger.info(
-                        f"Recorded payment of {amount_paid} {currency} for user {user_id}"
+                        "payment_recorded",
+                        user_id=user_id,
+                        amount_cents=amount_paid,
+                        currency=currency,
+                        invoice_id=invoice.get("id"),
                     )
                     return {
                         "user_id": user_id,
@@ -529,7 +614,11 @@ class StripeService:
                         "currency": currency,
                     }
             except Exception as e:
-                logger.error(f"Failed to record payment: {e}")
+                logger.error(
+                    "payment_recording_failed",
+                    error=str(e),
+                    subscription_id=subscription_id,
+                )
 
         return {"subscription_id": subscription_id}
 
@@ -559,10 +648,18 @@ class StripeService:
                         subscription.last_synced_at = datetime.now(timezone.utc)
                         await db.commit()
 
-                        logger.warning(f"Payment failed for user {user_id}")
+                        logger.warning(
+                            "payment_failed",
+                            user_id=user_id,
+                            subscription_id=subscription_id,
+                        )
                         return {"user_id": user_id, "status": "past_due"}
             except Exception as e:
-                logger.error(f"Failed to update subscription status: {e}")
+                logger.error(
+                    "subscription_status_update_failed",
+                    error=str(e),
+                    subscription_id=subscription_id,
+                )
 
         return {"subscription_id": subscription_id}
 

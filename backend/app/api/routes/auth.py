@@ -6,7 +6,7 @@ import logging
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,6 +14,7 @@ from app.api.deps import get_current_user, get_db_session
 from app.models.user import User
 from app.services.auth import AuthService
 from app.services.email import get_email_service
+from app.services.account_security import get_account_security_service
 
 logger = logging.getLogger(__name__)
 
@@ -129,22 +130,56 @@ async def register(
 @router.post("/login", response_model=TokenResponse)
 async def login(
     request: LoginRequest,
+    http_request: Request,
     session: AsyncSession = Depends(get_db_session),
 ) -> TokenResponse:
     """
     Authenticate a user and return tokens.
 
     Validates email and password, returns access and refresh tokens.
+    Implements account lockout after multiple failed attempts.
     """
+    security_service = get_account_security_service()
+    
+    # Check if account is locked
+    is_locked, lockout_until = await security_service.is_account_locked(request.email)
+    if is_locked:
+        # Calculate remaining lockout time
+        from datetime import timezone
+        remaining = lockout_until - datetime.now(timezone.utc)
+        minutes_remaining = max(1, int(remaining.total_seconds() / 60))
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Account temporarily locked due to multiple failed login attempts. Try again in {minutes_remaining} minutes.",
+            headers={"Retry-After": str(int(remaining.total_seconds()))},
+        )
+
     auth_service = AuthService(session)
     user = await auth_service.authenticate_user(request.email, request.password)
 
     if user is None:
+        # Record failed attempt
+        client_ip = http_request.client.host if http_request.client else "unknown"
+        attempt_result = await security_service.record_failed_attempt(
+            request.email, client_ip
+        )
+        
+        if attempt_result["locked"]:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Account locked due to multiple failed login attempts. Try again later.",
+                headers={"Retry-After": "900"},  # 15 minutes
+            )
+        
+        # Include remaining attempts hint (but don't reveal if email exists)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # Successful login - clear any failed attempts
+    await security_service.clear_failed_attempts(request.email)
 
     access_token = auth_service.create_access_token(user.id)
     refresh_token = auth_service.create_refresh_token(user.id)

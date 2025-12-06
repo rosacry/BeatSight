@@ -443,6 +443,96 @@ The BeatSight Team
 """
         return await self._send_email(email, subject, html_content, text_content)
 
+    async def send_credit_purchase_confirmation(
+        self, email: str, display_name: str, credits: int, amount_dollars: float, new_balance: int
+    ) -> bool:
+        """Send credit purchase confirmation email."""
+        subject = f"🎵 {credits} Credits Added to Your BeatSight Account"
+        html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background: #111827; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .card {{ background: #1f2937; border-radius: 12px; overflow: hidden; }}
+        .header {{ background: linear-gradient(135deg, #7c3aed, #ec4899); padding: 30px; text-align: center; }}
+        .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+        .content {{ padding: 30px; color: #d1d5db; }}
+        .content p {{ line-height: 1.6; margin: 0 0 16px 0; }}
+        .stats {{ display: flex; justify-content: space-around; margin: 25px 0; text-align: center; }}
+        .stat {{ background: #374151; padding: 20px; border-radius: 8px; flex: 1; margin: 0 8px; }}
+        .stat-value {{ font-size: 28px; font-weight: 700; color: #7c3aed; }}
+        .stat-label {{ font-size: 12px; color: #9ca3af; margin-top: 4px; }}
+        .button {{ display: inline-block; background: #7c3aed; color: white !important; padding: 14px 28px; 
+                   text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }}
+        .footer {{ padding: 20px 30px; color: #6b7280; font-size: 12px; border-top: 1px solid #374151; }}
+        .receipt {{ background: #374151; padding: 16px; border-radius: 8px; margin: 20px 0; font-size: 14px; }}
+        .receipt-row {{ display: flex; justify-content: space-between; margin: 8px 0; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <h1>💰 Credits Added!</h1>
+            </div>
+            <div class="content">
+                <p>Hi {display_name},</p>
+                <p>Your credit purchase was successful! Here's a summary:</p>
+                
+                <div class="receipt">
+                    <div class="receipt-row">
+                        <span>Credits Purchased:</span>
+                        <strong style="color: #10b981;">+{credits}</strong>
+                    </div>
+                    <div class="receipt-row">
+                        <span>Amount Paid:</span>
+                        <span>${amount_dollars:.2f}</span>
+                    </div>
+                    <div class="receipt-row" style="border-top: 1px solid #4b5563; padding-top: 12px; margin-top: 12px;">
+                        <span>New Balance:</span>
+                        <strong style="color: #7c3aed; font-size: 18px;">{new_balance} credits</strong>
+                    </div>
+                </div>
+                
+                <p>Each credit lets you generate one AI drum transcription. Your credits never expire!</p>
+                
+                <p style="text-align: center;">
+                    <a href="{self.frontend_url}/upload" class="button">Create a Beatmap Now</a>
+                </p>
+            </div>
+            <div class="footer">
+                <p>View your credit history in your <a href="{self.frontend_url}/settings/credits" style="color: #7c3aed;">account settings</a>.</p>
+                <p>Questions? Contact us at <a href="mailto:support@beatsight.app" style="color: #7c3aed;">support@beatsight.app</a></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+"""
+        text_content = f"""
+Hi {display_name},
+
+Your credit purchase was successful!
+
+Purchase Summary:
+- Credits Purchased: +{credits}
+- Amount Paid: ${amount_dollars:.2f}
+- New Balance: {new_balance} credits
+
+Each credit lets you generate one AI drum transcription. Your credits never expire!
+
+Create a beatmap now: {self.frontend_url}/upload
+
+View credit history: {self.frontend_url}/settings/credits
+
+Questions? Contact support@beatsight.app
+
+The BeatSight Team
+"""
+        return await self._send_email(email, subject, html_content, text_content)
+
 
 # Singleton instance
 _email_service: EmailService | None = None

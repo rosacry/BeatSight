@@ -134,3 +134,64 @@ class TestRateLimiting:
         
         # For now, just verify the request succeeds
         assert response.status_code == 200
+
+
+class TestSecurityHeadersMiddleware:
+    """Tests for security headers middleware."""
+
+    def test_x_content_type_options_header(self, client: TestClient) -> None:
+        """Test X-Content-Type-Options header prevents MIME sniffing."""
+        response = client.get("/health/")
+        assert response.headers.get("X-Content-Type-Options") == "nosniff"
+
+    def test_x_frame_options_header(self, client: TestClient) -> None:
+        """Test X-Frame-Options header prevents clickjacking."""
+        response = client.get("/health/")
+        assert response.headers.get("X-Frame-Options") == "DENY"
+
+    def test_x_xss_protection_header(self, client: TestClient) -> None:
+        """Test X-XSS-Protection header for legacy browser protection."""
+        response = client.get("/health/")
+        assert response.headers.get("X-XSS-Protection") == "1; mode=block"
+
+    def test_referrer_policy_header(self, client: TestClient) -> None:
+        """Test Referrer-Policy header controls referrer information."""
+        response = client.get("/health/")
+        assert response.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
+
+    def test_cache_control_default(self, client: TestClient) -> None:
+        """Test default Cache-Control prevents caching sensitive data."""
+        response = client.get("/health/")
+        cache_control = response.headers.get("Cache-Control", "")
+        assert "no-store" in cache_control
+        assert "private" in cache_control
+
+    def test_content_security_policy_header(self, client: TestClient) -> None:
+        """Test Content-Security-Policy header restricts resource loading."""
+        response = client.get("/health/")
+        csp = response.headers.get("Content-Security-Policy", "")
+        assert "default-src 'self'" in csp
+        assert "frame-ancestors 'none'" in csp
+
+    def test_permissions_policy_header(self, client: TestClient) -> None:
+        """Test Permissions-Policy header restricts browser features."""
+        response = client.get("/health/")
+        policy = response.headers.get("Permissions-Policy", "")
+        assert "geolocation=()" in policy
+        assert "camera=()" in policy
+        assert "microphone=()" in policy
+
+    def test_all_security_headers_present(self, client: TestClient) -> None:
+        """Test all required security headers are present."""
+        response = client.get("/health/")
+        required_headers = [
+            "X-Content-Type-Options",
+            "X-Frame-Options",
+            "X-XSS-Protection",
+            "Referrer-Policy",
+            "Cache-Control",
+            "Content-Security-Policy",
+            "Permissions-Policy",
+        ]
+        for header in required_headers:
+            assert header in response.headers, f"Missing security header: {header}"

@@ -34,6 +34,7 @@ from app.api.routes import (
 from app.config import get_settings
 from app.logging import configure_logging, get_logger
 from app.middleware.request_id import RequestIdMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
 
 configure_logging()
 logger = get_logger(__name__)
@@ -216,6 +217,10 @@ logger.info("cors_middleware_enabled", origins=settings.cors_origins)
 # Add request ID middleware for request tracing
 app.add_middleware(RequestIdMiddleware)
 logger.info("request_id_middleware_enabled")
+
+# Add security headers middleware
+app.add_middleware(SecurityHeadersMiddleware)
+logger.info("security_headers_middleware_enabled")
 
 # Set up Prometheus metrics (conditionally to avoid import errors in tests)
 try:

@@ -43,16 +43,6 @@ spec:
                 name: beatsight-backend
                 port:
                   number: 8000
-    - host: docs.beatsight.io
-      http:
-        paths:
-          - path: /*
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: beatsight-docs
-                port:
-                  number: 80
 
 ---
 # GKE Managed Certificate (auto-provisions Let's Encrypt)
@@ -66,7 +56,6 @@ spec:
     - beatsight.io
     - www.beatsight.io
     - api.beatsight.io
-    - docs.beatsight.io
 
 ---
 # Reserve static IP (run: gcloud compute addresses create beatsight-ip --global)

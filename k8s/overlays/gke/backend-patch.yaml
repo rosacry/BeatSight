@@ -24,11 +24,16 @@ spec:
                 secretKeyRef:
                   name: beatsight-secrets
                   key: DB_PASSWORD
-            - name: JWT_SECRET
+            - name: JWT_SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   name: beatsight-secrets
                   key: JWT_SECRET
+            - name: MODAL_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: beatsight-secrets
+                  key: MODAL_WEBHOOK_SECRET
             - name: SENTRY_DSN
               valueFrom:
                 secretKeyRef:
@@ -36,7 +41,7 @@ spec:
                   key: SENTRY_DSN
                   optional: true
             - name: CORS_ALLOWED_ORIGINS
-              value: "https://beatsight.io,https://www.beatsight.io"
+              value: '["https://beatsight.io","https://www.beatsight.io"]'
           resources:
             requests:
               cpu: "250m"

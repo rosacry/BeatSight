@@ -68,7 +68,7 @@ export function PricingPage() {
         }
 
         purchaseCreditsMutation.mutate({
-            packType: packType as 'starter' | 'standard' | 'bulk' | 'mega',
+            packType: packType as 'starter' | 'value' | 'power',
             successUrl: `${window.location.origin}/credits/success`,
             cancelUrl: `${window.location.origin}/pricing?cancelled=true`,
         })

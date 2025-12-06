@@ -2,7 +2,13 @@
  * Tests for credit hooks: useCredits, useCreditBalance, useHasCredits, etc.
  *
  * Created: December 3, 2025
+ * Updated: June 2025 - Updated credit pack values to match new pricing
  * References: ENGINEERING_ACTION_TRACKER.md item 4.5
+ *
+ * Credit pack pricing:
+ * - Starter: 15 credits @ $5.00 ($0.33/credit)
+ * - Value: 30 credits @ $10.00 ($0.33/credit)
+ * - Power: 75 credits @ $25.00 ($0.33/credit)
  */
 
 import { describe, it, expect, beforeEach } from 'vitest'
@@ -43,29 +49,29 @@ const mockCreditPacks = [
     {
         type: 'starter' as const,
         name: 'Starter Pack',
-        credits: 5,
-        price_cents: 175,
-        price_display: '$1.75',
-        per_credit_cents: 35,
+        credits: 15,
+        price_cents: 500,
+        price_display: '$5',
+        per_credit_cents: 33.3,
         savings_percent: 0,
     },
     {
-        type: 'standard' as const,
-        name: 'Standard Pack',
-        credits: 15,
-        price_cents: 450,
-        price_display: '$4.50',
-        per_credit_cents: 30,
-        savings_percent: 14,
+        type: 'value' as const,
+        name: 'Value Pack',
+        credits: 30,
+        price_cents: 1000,
+        price_display: '$10',
+        per_credit_cents: 33.3,
+        savings_percent: 0,
     },
     {
-        type: 'bulk' as const,
-        name: 'Bulk Pack',
-        credits: 40,
-        price_cents: 1000,
-        price_display: '$10.00',
-        per_credit_cents: 25,
-        savings_percent: 29,
+        type: 'power' as const,
+        name: 'Power Pack',
+        credits: 75,
+        price_cents: 2500,
+        price_display: '$25',
+        per_credit_cents: 33.3,
+        savings_percent: 0,
     },
 ]
 
@@ -183,9 +189,9 @@ describe('useCreditPacks', () => {
         await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
         expect(result.current.data).toHaveLength(3)
-        expect(result.current.data?.[0].credits).toBe(5)
-        expect(result.current.data?.[1].credits).toBe(15)
-        expect(result.current.data?.[2].credits).toBe(40)
+        expect(result.current.data?.[0].credits).toBe(15)  // starter
+        expect(result.current.data?.[1].credits).toBe(30)  // value
+        expect(result.current.data?.[2].credits).toBe(75)  // power
     })
 
     it('should include pricing information', async () => {
@@ -195,9 +201,9 @@ describe('useCreditPacks', () => {
 
         await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-        const packStandard = result.current.data?.find((p) => p.type === 'standard')
-        expect(packStandard?.price_cents).toBe(450)
-        expect(packStandard?.savings_percent).toBe(14)
+        const starterPack = result.current.data?.find((p) => p.type === 'starter')
+        expect(starterPack?.price_cents).toBe(500)
+        expect(starterPack?.per_credit_cents).toBeCloseTo(33.3, 1)
     })
 })
 

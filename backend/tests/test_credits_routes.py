@@ -102,38 +102,44 @@ class TestCreditsRoutes:
             assert "savings_percent" in pack
 
     def test_get_packs_correct_pricing(self) -> None:
-        """Test that pack pricing is correct."""
+        """Test that pack pricing is correct.
+
+        Current pricing (June 2025):
+        - Starter: 15 credits @ $5.00
+        - Value: 30 credits @ $10.00
+        - Power: 75 credits @ $25.00
+        """
         client = TestClient(app)
 
         response = client.get("/api/credits/packs")
         packs = {p["id"]: p for p in response.json()}
 
         # Verify specific pack pricing
-        assert packs["starter"]["credits"] == 5
-        assert packs["starter"]["price_cents"] == 175
+        assert packs["starter"]["credits"] == 15
+        assert packs["starter"]["price_cents"] == 500
 
-        assert packs["value"]["credits"] == 15
-        assert packs["value"]["price_cents"] == 450
+        assert packs["value"]["credits"] == 30
+        assert packs["value"]["price_cents"] == 1000
 
-        assert packs["power"]["credits"] == 40
-        assert packs["power"]["price_cents"] == 1000
+        assert packs["power"]["credits"] == 75
+        assert packs["power"]["price_cents"] == 2500
 
-    def test_get_packs_savings_calculated_correctly(self) -> None:
-        """Test that savings percentages are calculated correctly."""
+    def test_get_packs_same_per_credit_rate(self) -> None:
+        """Test that all packs have the same per-credit rate (~$0.33)."""
         client = TestClient(app)
 
         response = client.get("/api/credits/packs")
         packs = {p["id"]: p for p in response.json()}
 
-        # Starter has no savings (baseline)
-        assert packs["starter"]["savings_percent"] == 0
+        # All packs should have the same per-credit rate
+        starter_rate = packs["starter"]["per_credit_cents"]
+        value_rate = packs["value"]["per_credit_cents"]
+        power_rate = packs["power"]["per_credit_cents"]
 
-        # Value should have ~14% savings
-        assert packs["value"]["savings_percent"] > 0
-        assert packs["value"]["savings_percent"] < 20
-
-        # Power should have more savings than value
-        assert packs["power"]["savings_percent"] > packs["value"]["savings_percent"]
+        # Allow small floating point differences
+        assert abs(starter_rate - value_rate) < 0.1
+        assert abs(value_rate - power_rate) < 0.1
+        assert abs(starter_rate - 33.33) < 0.1
 
 
 class TestCreditPurchaseFlow:
@@ -274,8 +280,8 @@ class TestCreditPackIntegrity:
             assert config.price_cents > 0, f"{pack_type} has non-positive price"
             assert len(config.name) > 0, f"{pack_type} has empty name"
 
-    def test_per_credit_price_decreases_with_size(self) -> None:
-        """Test that larger packs have lower per-credit prices."""
+    def test_all_packs_same_per_credit_rate(self) -> None:
+        """Test that all packs have the same per-credit rate (~$0.33)."""
         pack_list = [
             (CreditPackType.STARTER, CREDIT_PACKS[CreditPackType.STARTER]),
             (CreditPackType.VALUE, CREDIT_PACKS[CreditPackType.VALUE]),
@@ -287,11 +293,9 @@ class TestCreditPackIntegrity:
             for pack_type, config in pack_list
         ]
 
-        # Each subsequent pack should have lower per-credit price
-        for i in range(len(per_credit_prices) - 1):
-            current = per_credit_prices[i]
-            next_pack = per_credit_prices[i + 1]
-            assert current[1] > next_pack[1], (
-                f"{current[0]} per-credit ({current[1]:.2f}) should be > "
-                f"{next_pack[0]} per-credit ({next_pack[1]:.2f})"
+        # All packs should have the same per-credit rate (~33.33 cents)
+        base_rate = per_credit_prices[0][1]
+        for pack_type, rate in per_credit_prices:
+            assert abs(rate - base_rate) < 0.1, (
+                f"{pack_type} per-credit ({rate:.2f}) should be ~{base_rate:.2f}"
             )

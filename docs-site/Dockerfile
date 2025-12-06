@@ -24,9 +24,6 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Copy built static files
 COPY --from=builder /app/build /usr/share/nginx/html
 
-# Add security headers and health check
-RUN echo 'server_tokens off;' >> /etc/nginx/nginx.conf
-
 EXPOSE 80
 
 # Health check

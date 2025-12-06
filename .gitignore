@@ -202,5 +202,33 @@ data/dataset_index/
 docs-site/.docusaurus/
 
 # Private documentation and notes (not for public repo)
-docs/
 personal_notes/
+
+# Private internal docs (work trackers, action plans, internal guides)
+docs/*_WORK_TRACKER.md
+docs/*_ACTION_PLAN.md
+docs/*_ACTION_TRACKER.md
+docs/*_ROADMAP.md
+docs/*_CHECKLIST.md
+docs/HONEST_ASSESSMENT.md
+docs/AI_MODEL_PROMPT.md
+docs/MONETIZATION_STRATEGY.md
+docs/MODEL_ACCURACY_AND_REVENUE_ANALYSIS.md
+docs/CLOUD_TRAINING_GUIDE.md
+docs/CLOUD_VS_LOCAL_TRAINING_ANALYSIS.md
+docs/CUTTING_EDGE_TRAINING_FEATURES.md
+docs/TECHNIQUE_DETECTION_TRAINING.md
+docs/POST_TRAINING_OPTIMIZATION_GUIDE.md
+docs/PATH_TO_90_PERCENT.md
+docs/CREDIT_SYSTEM_DEPLOYMENT.md
+docs/PRODUCTION_DEPLOYMENT_GUIDE.md
+docs/PRODUCTION_SPEED_OPTIMIZATION.md
+docs/DISCORD_SERVER_SETUP.md
+docs/ml_training_runbook.md
+docs/SETTINGS_REFERENCE.md
+docs/START_HERE.md
+docs/Guidebook.md
+docs/per_class_analysis.json
+docs/web_*.md
+docs/product/
+docs/archive/

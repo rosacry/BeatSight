@@ -1,0 +1,32 @@
+# GKE BackendConfig for custom health check configuration
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: beatsight-backend-config
+  namespace: beatsight
+spec:
+  healthCheck:
+    checkIntervalSec: 15
+    timeoutSec: 10
+    healthyThreshold: 1
+    unhealthyThreshold: 3
+    type: HTTP
+    requestPath: /health/
+    port: 8000
+  connectionDraining:
+    drainingTimeoutSec: 30
+---
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: beatsight-frontend-config
+  namespace: beatsight
+spec:
+  healthCheck:
+    checkIntervalSec: 15
+    timeoutSec: 10
+    healthyThreshold: 1
+    unhealthyThreshold: 3
+    type: HTTP
+    requestPath: /
+    port: 80

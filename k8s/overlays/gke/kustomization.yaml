@@ -8,6 +8,7 @@ resources:
   - ../../base
   - ingress.yaml
   - service-account.yaml
+  - backend-config.yaml
 
 namespace: beatsight
 
@@ -25,6 +26,8 @@ patches:
         path: /spec/template/spec/containers/0/volumeMounts
   # GKE-specific resource limits for frontend (Autopilot requires ephemeral-storage)
   - path: frontend-patch.yaml
+  # Service patches for BackendConfig annotations
+  - path: service-patch.yaml
 
 # Image configuration (updated by CI/CD)
 images:

@@ -21,10 +21,10 @@ export const API_CONFIG = {
      * - In development: 'ws://localhost:8000/ws'
      * - In production: 'wss://api.beatsight.io/ws'
      */
-    wsUrl: import.meta.env.VITE_WS_URL || 
-           (import.meta.env.VITE_API_BASE_URL 
-               ? import.meta.env.VITE_API_BASE_URL.replace(/^http/, 'ws') + '/ws'
-               : 'ws://localhost:8000/ws'),
+    wsUrl: import.meta.env.VITE_WS_URL ||
+        (import.meta.env.VITE_API_BASE_URL
+            ? import.meta.env.VITE_API_BASE_URL.replace(/^http/, 'ws') + '/ws'
+            : 'ws://localhost:8000/ws'),
 } as const
 
 /**
@@ -32,19 +32,19 @@ export const API_CONFIG = {
  */
 export const APP_CONFIG = {
     name: import.meta.env.VITE_APP_NAME || 'BeatSight',
-    
+
     /** Maximum file upload size in bytes (default: 100MB) */
     maxUploadSize: Number(import.meta.env.VITE_MAX_UPLOAD_SIZE) || 104857600,
-    
+
     /** Supported audio file formats */
     supportedFormats: (import.meta.env.VITE_SUPPORTED_FORMATS || '.mp3,.wav,.flac,.ogg,.m4a').split(','),
-    
+
     /** PWA features enabled */
     pwaEnabled: import.meta.env.VITE_ENABLE_PWA === 'true',
-    
+
     /** Debug mode enabled */
     debug: import.meta.env.VITE_DEBUG === 'true',
-    
+
     /** Use mock API responses */
     useMocks: import.meta.env.VITE_USE_MOCKS === 'true',
 } as const

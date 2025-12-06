@@ -110,7 +110,7 @@ export function HomePage() {
             {/* Background Effects */}
             <div className="fixed inset-0 bg-gradient-to-b from-slate-900 via-slate-950 to-black" />
             <GradientOrbs />
-            <ParticleBackground 
+            <ParticleBackground
                 particleCount={60}
                 colors={['#00d4ff', '#ff3296', '#f59e0b']}
                 speed={0.3}
@@ -121,7 +121,7 @@ export function HomePage() {
             <div className="relative z-10">
                 {/* Hero Section */}
                 <section className="relative pt-12 pb-20 sm:pt-20 sm:pb-32 px-4">
-                    <motion.div 
+                    <motion.div
                         className="max-w-6xl mx-auto text-center"
                         initial="hidden"
                         animate="visible"
@@ -137,7 +137,7 @@ export function HomePage() {
                         </motion.div>
 
                         {/* Main Title */}
-                        <motion.h1 
+                        <motion.h1
                             variants={itemVariants}
                             className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-6 tracking-tight"
                         >
@@ -150,7 +150,7 @@ export function HomePage() {
                         </motion.h1>
 
                         {/* Subtitle */}
-                        <motion.p 
+                        <motion.p
                             variants={itemVariants}
                             className="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed"
                         >
@@ -159,12 +159,12 @@ export function HomePage() {
                         </motion.p>
 
                         {/* CTA Buttons */}
-                        <motion.div 
+                        <motion.div
                             variants={itemVariants}
                             className="flex flex-col sm:flex-row justify-center gap-4"
                         >
                             <MagneticButton strength={0.2}>
-                                <Link 
+                                <Link
                                     to="/upload"
                                     className="group relative inline-flex items-center gap-2 px-8 py-4 
                                              bg-gradient-to-r from-cyan-500 to-cyan-600 
@@ -184,8 +184,8 @@ export function HomePage() {
                             </MagneticButton>
 
                             <MagneticButton strength={0.2}>
-                                <Link 
-                                    to="/jobs"
+                                <Link
+                                    to="/queue"
                                     className="group relative inline-flex items-center gap-2 px-8 py-4 
                                              bg-white/5 hover:bg-white/10
                                              border border-white/20 hover:border-white/30
@@ -202,7 +202,7 @@ export function HomePage() {
                         </motion.div>
 
                         {/* Audio Visualizer */}
-                        <motion.div 
+                        <motion.div
                             variants={itemVariants}
                             className="mt-12 flex justify-center"
                         >
@@ -213,7 +213,7 @@ export function HomePage() {
 
                 {/* Stats Section */}
                 <section className="relative py-12 px-4">
-                    <motion.div 
+                    <motion.div
                         className="max-w-5xl mx-auto"
                         initial="hidden"
                         whileInView="visible"
@@ -291,14 +291,14 @@ export function HomePage() {
 
                 {/* Features Section */}
                 <section className="relative py-16 px-4">
-                    <motion.div 
+                    <motion.div
                         className="max-w-6xl mx-auto"
                         initial="hidden"
                         whileInView="visible"
                         viewport={{ once: true, margin: '-100px' }}
                         variants={containerVariants}
                     >
-                        <motion.h2 
+                        <motion.h2
                             variants={itemVariants}
                             className="text-2xl sm:text-3xl font-bold text-white text-center mb-12"
                         >
@@ -337,14 +337,14 @@ export function HomePage() {
 
                 {/* How It Works Section */}
                 <section className="relative py-16 px-4">
-                    <motion.div 
+                    <motion.div
                         className="max-w-4xl mx-auto"
                         initial="hidden"
                         whileInView="visible"
                         viewport={{ once: true, margin: '-100px' }}
                         variants={containerVariants}
                     >
-                        <motion.h2 
+                        <motion.h2
                             variants={itemVariants}
                             className="text-2xl sm:text-3xl font-bold text-white text-center mb-12"
                         >
@@ -355,14 +355,14 @@ export function HomePage() {
                             {/* Connection Line */}
                             <div className="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 
                                           bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-                            
+
                             <div className="flex flex-col md:flex-row items-center justify-between gap-8">
                                 {[
                                     { step: 1, title: 'Upload Song', desc: 'Any MP3, WAV, or FLAC', icon: '📁' },
                                     { step: 2, title: 'AI Processing', desc: 'Drum separation & analysis', icon: '🤖' },
                                     { step: 3, title: 'Get Beatmap', desc: 'Download & practice', icon: '🎵' },
                                 ].map((item, index) => (
-                                    <motion.div 
+                                    <motion.div
                                         key={index}
                                         variants={itemVariants}
                                         className="flex flex-col items-center text-center relative z-10"
@@ -390,14 +390,14 @@ export function HomePage() {
 
                 {/* CTA Section */}
                 <section className="relative py-20 px-4">
-                    <motion.div 
+                    <motion.div
                         className="max-w-3xl mx-auto text-center"
                         initial="hidden"
                         whileInView="visible"
                         viewport={{ once: true }}
                         variants={containerVariants}
                     >
-                        <motion.div 
+                        <motion.div
                             variants={itemVariants}
                             className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-cyan-500/10 via-fuchsia-500/5 to-transparent 
                                      border border-white/10 backdrop-blur-xl"
@@ -409,7 +409,7 @@ export function HomePage() {
                                 Join thousands of drummers who are improving their skills with AI-generated beatmaps.
                             </p>
                             <div className="flex flex-col sm:flex-row justify-center gap-4">
-                                <Link 
+                                <Link
                                     to="/register"
                                     className="inline-flex items-center justify-center gap-2 px-8 py-4 
                                              bg-gradient-to-r from-cyan-500 to-fuchsia-500 
@@ -423,7 +423,7 @@ export function HomePage() {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                                     </svg>
                                 </Link>
-                                <Link 
+                                <Link
                                     to="/pricing"
                                     className="inline-flex items-center justify-center gap-2 px-8 py-4 
                                              bg-white/5 hover:bg-white/10

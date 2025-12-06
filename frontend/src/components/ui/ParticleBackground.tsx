@@ -228,7 +228,7 @@ interface AudioBarsProps {
 }
 
 export function AudioBars({ className, barCount = 5, color = '#00d4ff' }: AudioBarsProps) {
-    const bars = useMemo(() => 
+    const bars = useMemo(() =>
         Array.from({ length: barCount }, (_, i) => ({
             delay: i * 0.1,
             height: 40 + Math.random() * 40,

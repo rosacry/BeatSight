@@ -72,7 +72,7 @@ interface AnimatedRoutesProps {
 
 export function AnimatedRoutes({ children }: AnimatedRoutesProps) {
     const location = useLocation()
-    
+
     return (
         <AnimatePresence mode="wait">
             <motion.div

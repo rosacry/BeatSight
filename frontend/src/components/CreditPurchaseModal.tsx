@@ -94,8 +94,8 @@ export function CreditPurchaseModal({
                                 key={pack.type}
                                 onClick={() => setSelectedPack(pack.type)}
                                 className={`w-full p-4 rounded-lg border transition-all text-left ${selectedPack === pack.type
-                                        ? 'border-primary-500 bg-primary-500/10'
-                                        : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
+                                    ? 'border-primary-500 bg-primary-500/10'
+                                    : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
                                     }`}
                             >
                                 <div className="flex justify-between items-center">

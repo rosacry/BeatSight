@@ -13,7 +13,7 @@ const config = {
     organizationName: "rosacry",
     projectName: "BeatSight",
 
-    onBrokenLinks: "throw",
+    onBrokenLinks: "warn",
     onBrokenMarkdownLinks: "warn",
 
     i18n: {

@@ -17,7 +17,7 @@ export function CreditPurchaseModal({
     onClose,
     context = 'voluntary',
 }: CreditPurchaseModalProps) {
-    const [selectedPack, setSelectedPack] = useState<CreditPackType>('standard')
+    const [selectedPack, setSelectedPack] = useState<CreditPackType>('starter')
     const { data: packs, isLoading: loadingPacks } = useCreditPacks()
     const purchaseMutation = usePurchaseCredits()
 

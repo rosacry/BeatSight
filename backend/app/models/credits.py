@@ -49,11 +49,20 @@ class CreditTransactionType(str, enum.Enum):
 
 
 class CreditPackType(str, enum.Enum):
-    """Available credit pack sizes."""
+    """Available credit pack sizes.
 
-    STARTER = "starter"  # 5 credits - $1.75
-    VALUE = "value"  # 15 credits - $4.50
-    POWER = "power"  # 40 credits - $10.00
+    Pricing (as of June 2025):
+    - STARTER: 15 credits @ $5.00 ($0.33/credit)
+    - VALUE: 30 credits @ $10.00 ($0.33/credit)
+    - POWER: 75 credits @ $25.00 ($0.33/credit)
+
+    All packs have the same per-credit rate for simplicity.
+    See backend/app/services/credits.py for full config.
+    """
+
+    STARTER = "starter"
+    VALUE = "value"
+    POWER = "power"
 
 
 class CreditBalance(Base):

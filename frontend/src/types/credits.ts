@@ -1,10 +1,15 @@
 /**
  * Credit system type definitions.
  * Must match backend app/models/credits.py and app/services/credits.py
+ *
+ * Credit packs (as of June 2025):
+ * - Starter: 15 credits @ $5 ($0.33/credit)
+ * - Value: 30 credits @ $10 ($0.33/credit)
+ * - Power: 75 credits @ $25 ($0.33/credit, best value)
  */
 
-export type CreditPackType = 'starter' | 'standard' | 'bulk' | 'mega'
-export type CreditTransactionType = 'purchase' | 'consumption' | 'refund' | 'bonus' | 'expiration' | 'auto_topup'
+export type CreditPackType = 'starter' | 'value' | 'power'
+export type CreditTransactionType = 'purchase' | 'consumption' | 'refund' | 'bonus' | 'subscription_grant' | 'expiry'
 
 export interface CreditBalance {
     balance: number
@@ -56,43 +61,43 @@ export interface AutoTopupConfig {
     pack_type: CreditPackType
 }
 
-// Credit pack definitions (must match backend/app/services/credits.py)
+/**
+ * Credit pack definitions.
+ * These MUST match the backend configuration in backend/app/services/credits.py
+ * and the Stripe products/prices.
+ *
+ * Stripe Price IDs (LIVE):
+ * - starter: price_1SbCCh013gobhhgaqvNvxsUh
+ * - value: price_1SbCD1013gobhhgaRr7Eqy2M
+ * - power: price_1SbCDF013gobhhgaENw5U7Tp
+ */
 export const CREDIT_PACKS: CreditPack[] = [
     {
         type: 'starter',
         name: 'Starter Pack',
-        credits: 5,
-        price_cents: 175,
-        price_display: '$1.75',
-        per_credit_cents: 35,
+        credits: 15,
+        price_cents: 500,
+        price_display: '$5',
+        per_credit_cents: 33.3,
         savings_percent: 0,
     },
     {
-        type: 'standard',
-        name: 'Standard Pack',
-        credits: 15,
-        price_cents: 450,
-        price_display: '$4.50',
-        per_credit_cents: 30,
-        savings_percent: 14,
-    },
-    {
-        type: 'bulk',
-        name: 'Bulk Pack',
-        credits: 40,
+        type: 'value',
+        name: 'Value Pack',
+        credits: 30,
         price_cents: 1000,
-        price_display: '$10.00',
-        per_credit_cents: 25,
-        savings_percent: 29,
+        price_display: '$10',
+        per_credit_cents: 33.3,
+        savings_percent: 0,
     },
     {
-        type: 'mega',
-        name: 'Mega Pack',
-        credits: 100,
-        price_cents: 2000,
-        price_display: '$20.00',
-        per_credit_cents: 20,
-        savings_percent: 43,
+        type: 'power',
+        name: 'Power Pack',
+        credits: 75,
+        price_cents: 2500,
+        price_display: '$25',
+        per_credit_cents: 33.3,
+        savings_percent: 0,
     },
 ]
 

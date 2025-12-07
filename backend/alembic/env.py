@@ -39,6 +39,11 @@ if not config.get_main_option("sqlalchemy.url"):
         "DATABASE_DSN",
         "postgresql+asyncpg://beatsight:beatsight@localhost:5432/beatsight",
     )
+    # Railway/Heroku provide postgresql:// but asyncpg needs postgresql+asyncpg://
+    if database_dsn.startswith("postgresql://"):
+        database_dsn = database_dsn.replace("postgresql://", "postgresql+asyncpg://", 1)
+    elif database_dsn.startswith("postgres://"):
+        database_dsn = database_dsn.replace("postgres://", "postgresql+asyncpg://", 1)
     config.set_main_option("sqlalchemy.url", database_dsn)
 
 # Interpret the config file for Python logging.

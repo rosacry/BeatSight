@@ -9,7 +9,8 @@
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+# Run migrations with explicit error output, then start the server
+startCommand = "cd /app && python -m alembic upgrade head 2>&1 && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/health/live"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"

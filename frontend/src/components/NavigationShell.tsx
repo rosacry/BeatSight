@@ -165,16 +165,20 @@ export function Layout({ children }: LayoutProps) {
                                 >
                                     <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/30 to-fuchsia-500/20 rounded-xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity" />
                                     <div className="relative w-9 h-9 rounded-xl 
-                                                  bg-gradient-to-br from-slate-800/90 to-slate-900/90 
+                                                  bg-slate-900/95
                                                   border border-white/10 flex items-center justify-center
                                                   group-hover:border-cyan-500/40 transition-all
                                                   shadow-lg shadow-black/30 group-hover:shadow-cyan-500/20
                                                   overflow-hidden">
-                                        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-fuchsia-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-transparent to-fuchsia-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                                         <img
                                             src="/icons/logo-navbar.png"
                                             alt="BeatSight"
-                                            className="w-6 h-6 relative z-10 brightness-105 contrast-110 drop-shadow-[0_0_6px_rgba(0,212,255,0.2)] group-hover:drop-shadow-[0_0_8px_rgba(0,212,255,0.4)] transition-all"
+                                            className="w-6 h-6 relative z-10 
+                                                     [mix-blend-mode:screen] brightness-[1.4] saturate-[1.2]
+                                                     drop-shadow-[0_0_6px_rgba(0,212,255,0.3)] 
+                                                     group-hover:drop-shadow-[0_0_10px_rgba(0,212,255,0.5)] 
+                                                     transition-all"
                                         />
                                     </div>
                                 </motion.div>

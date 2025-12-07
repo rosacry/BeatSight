@@ -249,38 +249,51 @@ export function PricingPage() {
                         )}
                     </div>
 
-                    {showCredits && (
-                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl mx-auto animate-in fade-in duration-300">
-                            {CREDIT_PACKS.map((pack) => (
-                                <div
-                                    key={pack.type}
-                                    className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-primary-500/50 transition-colors"
-                                >
-                                    <div className="flex justify-between items-start mb-3">
-                                        <h4 className="font-semibold text-white">{pack.name}</h4>
-                                        {pack.savings_percent > 0 && (
-                                            <span className="px-2 py-0.5 text-xs font-medium bg-green-500/20 text-green-400 rounded-full">
-                                                -{pack.savings_percent}%
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="text-3xl font-bold text-white mb-1">
-                                        {pack.price_display}
-                                    </p>
-                                    <p className="text-sm text-gray-400 mb-4">
-                                        {formatCredits(pack.credits)} • ${(pack.per_credit_cents / 100).toFixed(2)}/song
-                                    </p>
-                                    <button
-                                        onClick={() => handleBuyCredits(pack.type)}
-                                        disabled={purchaseCreditsMutation.isPending}
-                                        className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
-                                    >
-                                        {purchaseCreditsMutation.isPending ? 'Processing...' : 'Buy Now'}
-                                    </button>
+                    <AnimatePresence>
+                        {showCredits && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                                animate={{ opacity: 1, height: 'auto', marginTop: 24 }}
+                                exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                                className="overflow-hidden"
+                            >
+                                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl mx-auto">
+                                    {CREDIT_PACKS.map((pack, index) => (
+                                        <motion.div
+                                            key={pack.type}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.1, duration: 0.3 }}
+                                            className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-primary-500/50 transition-all duration-200 hover:scale-[1.02]"
+                                        >
+                                            <div className="flex justify-between items-start mb-3">
+                                                <h4 className="font-semibold text-white">{pack.name}</h4>
+                                                {pack.savings_percent > 0 && (
+                                                    <span className="px-2 py-0.5 text-xs font-medium bg-green-500/20 text-green-400 rounded-full">
+                                                        -{pack.savings_percent}%
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-3xl font-bold text-white mb-1">
+                                                {pack.price_display}
+                                            </p>
+                                            <p className="text-sm text-gray-400 mb-4">
+                                                {formatCredits(pack.credits)} • ${(pack.per_credit_cents / 100).toFixed(2)}/song
+                                            </p>
+                                            <button
+                                                onClick={() => handleBuyCredits(pack.type)}
+                                                disabled={purchaseCreditsMutation.isPending}
+                                                className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-all duration-200 disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
+                                            >
+                                                {purchaseCreditsMutation.isPending ? 'Processing...' : 'Buy Now'}
+                                            </button>
+                                        </motion.div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
 
                 {/* FAQ Section */}

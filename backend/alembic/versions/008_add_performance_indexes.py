@@ -99,14 +99,6 @@ def upgrade() -> None:
             ["map_id"],
             unique=False,
         )
-    # Finding versions created by a user (contribution stats)
-    if not index_exists("ix_map_versions_created_by", "map_versions"):
-        op.create_index(
-            "ix_map_versions_created_by",
-            "map_versions",
-            ["created_by"],
-            unique=False,
-        )
 
     # Billing transaction indexes - MEDIUM-HIGH IMPACT
     # Billing history for a user
@@ -158,7 +150,6 @@ def downgrade() -> None:
     op.drop_index("ix_billing_transactions_user_id", table_name="billing_transactions")
 
     # Map version indexes
-    op.drop_index("ix_map_versions_created_by", table_name="map_versions")
     op.drop_index("ix_map_versions_map_id", table_name="map_versions")
 
     # Song indexes

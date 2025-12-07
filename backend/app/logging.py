@@ -43,19 +43,20 @@ def configure_logging() -> None:
         add_request_id,  # Automatically add request ID to all logs
         timestamper,
         structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
     ]
 
     if settings.logging_json:
         structlog.configure(
             processors=[
                 *shared_processors,
+                structlog.processors.format_exc_info,
                 structlog.processors.JSONRenderer(),
             ],
             wrapper_class=structlog.make_filtering_bound_logger(log_level),
             cache_logger_on_first_use=True,
         )
     else:
+        # Don't include format_exc_info with ConsoleRenderer as it handles exceptions
         structlog.configure(
             processors=[
                 *shared_processors,

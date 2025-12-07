@@ -255,8 +255,8 @@ export function PricingPage() {
                                 initial={{ opacity: 0, height: 0, marginTop: 0 }}
                                 animate={{ opacity: 1, height: 'auto', marginTop: 24 }}
                                 exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                                transition={{ 
-                                    duration: 0.3, 
+                                transition={{
+                                    duration: 0.3,
                                     ease: [0.4, 0, 0.2, 1],
                                     opacity: { duration: 0.15 }
                                 }}

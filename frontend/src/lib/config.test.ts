@@ -44,7 +44,7 @@ describe('Config', () => {
             })
 
             const { API_CONFIG } = await import('./config')
-            expect(API_CONFIG.baseUrl).toBe('https://api.beatsight.io/api')
+            expect(API_CONFIG.baseUrl).toBe('https://api.beatsight.io')
             vi.unstubAllEnvs()
         })
 
@@ -56,7 +56,7 @@ describe('Config', () => {
             })
 
             const { API_CONFIG } = await import('./config')
-            expect(API_CONFIG.baseUrl).toBe('https://api.beatsight.io/api')
+            expect(API_CONFIG.baseUrl).toBe('https://api.beatsight.io')
             vi.unstubAllEnvs()
         })
 
@@ -68,7 +68,7 @@ describe('Config', () => {
             })
 
             const { API_CONFIG } = await import('./config')
-            expect(API_CONFIG.baseUrl).toBe('https://api.beatsight.io/api')
+            expect(API_CONFIG.baseUrl).toBe('https://api.beatsight.io')
             vi.unstubAllEnvs()
         })
     })

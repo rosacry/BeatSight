@@ -32,11 +32,21 @@ class AccountSecurityService:
 
     def __init__(self):
         self._redis: Optional[object] = None
+        self._redis_failed: bool = False
 
     async def _get_redis(self):
-        """Get Redis connection lazily."""
+        """Get Redis connection lazily. Returns None if Redis is unavailable."""
+        if self._redis_failed:
+            return None
         if self._redis is None:
-            self._redis = await get_redis()
+            try:
+                self._redis = await get_redis()
+                # Test the connection
+                await self._redis.ping()
+            except Exception as e:
+                logger.warning(f"Redis connection failed: {e}. Login attempt tracking disabled.")
+                self._redis_failed = True
+                return None
         return self._redis
 
     def _get_attempt_key(self, email: str) -> str:

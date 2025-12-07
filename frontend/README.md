@@ -242,3 +242,4 @@ If you don't have access to macOS for Safari Web Inspector:
 | Old version cached | SW cache not updated | Clear site data, hard refresh |
 | Icon not showing | Manifest icons misconfigured | Verify manifest.json paths |
 
+# Trigger redeploy

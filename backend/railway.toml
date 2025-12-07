@@ -8,8 +8,8 @@
 # Let Railway auto-detect the Dockerfile
 
 [deploy]
-# Direct uvicorn start - no shell tricks
-startCommand = "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
+# Use sh -c to ensure PORT variable is expanded
+startCommand = "sh -c 'uvicorn app.main:app --host 0.0.0.0 --port $PORT'"
 healthcheckPath = "/health/live"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"

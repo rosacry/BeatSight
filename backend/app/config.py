@@ -114,25 +114,15 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     # CORS
     # -------------------------------------------------------------------------
-    cors_origins: List[str] = Field(
-        default_factory=lambda: ["http://localhost:3000", "http://localhost:5173"],
+    cors_origins_str: str = Field(
+        default="http://localhost:3000,http://localhost:5173",
+        alias="CORS_ORIGINS",
     )
 
-    @field_validator("cors_origins", mode="before")
-    @classmethod
-    def parse_cors_origins(cls, v):
-        """Parse comma-separated CORS origins from env var.
-        
-        Supports both CORS_ORIGINS and CORS_ALLOWED_ORIGINS env vars.
-        """
-        import os
-        # Check both env var names if no value provided
-        if v is None or (isinstance(v, list) and len(v) == 0):
-            v = os.environ.get("CORS_ORIGINS") or os.environ.get("CORS_ALLOWED_ORIGINS")
-        
-        if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",") if origin.strip()]
-        return v
+    @property
+    def cors_origins(self) -> List[str]:
+        """Parse comma-separated CORS origins."""
+        return [origin.strip() for origin in self.cors_origins_str.split(",") if origin.strip()]
 
     # -------------------------------------------------------------------------
     # File Storage

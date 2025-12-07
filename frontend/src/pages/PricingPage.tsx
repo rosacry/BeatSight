@@ -211,25 +211,35 @@ export function PricingPage() {
                 </div>
 
                 {/* Credits Section */}
-                <div className="max-w-4xl mx-auto">
+                <div className="max-w-4xl mx-auto mt-16">
                     <div className="text-center mb-8">
-                        <button
+                        <motion.button
                             onClick={() => setShowCredits(!showCredits)}
-                            className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+                            className="group inline-flex items-center gap-2 px-6 py-3 rounded-xl
+                                     bg-gradient-to-r from-slate-800/80 to-slate-800/60
+                                     hover:from-cyan-500/20 hover:to-fuchsia-500/20
+                                     border border-white/10 hover:border-cyan-500/30
+                                     text-gray-300 hover:text-white
+                                     transition-all duration-300 ease-out
+                                     shadow-lg shadow-black/20 hover:shadow-cyan-500/10"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
                         >
                             <span className="text-lg font-medium">
                                 Or pay per song with Credits
                             </span>
-                            <svg
-                                className={`w-5 h-5 transition-transform ${showCredits ? 'rotate-180' : ''}`}
+                            <motion.svg
+                                animate={{ rotate: showCredits ? 180 : 0 }}
+                                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                                className="w-5 h-5 text-cyan-400"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
                             >
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
-                        <p className="text-gray-500 text-sm mt-2">
+                            </motion.svg>
+                        </motion.button>
+                        <p className="text-gray-500 text-sm mt-3">
                             Credits never expire • Use anytime • Available to all users
                         </p>
                         {creditBalance && creditBalance.balance > 0 && (

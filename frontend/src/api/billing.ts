@@ -9,9 +9,10 @@ import type {
     PortalResponse,
     SubscriptionPlan
 } from '@/types/billing'
+import { API_CONFIG } from '@/lib/config'
 import { getAccessToken } from '@/stores/authStore'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+const API_BASE = API_CONFIG.baseUrl
 
 async function billingRequest<T>(
     endpoint: string,
@@ -26,7 +27,7 @@ async function billingRequest<T>(
         headers['Authorization'] = `Bearer ${token}`
     }
 
-    const response = await fetch(`${API_BASE}/api/billing${endpoint}`, {
+    const response = await fetch(`${API_BASE}/billing${endpoint}`, {
         ...options,
         headers: { ...headers, ...options.headers as Record<string, string> },
     })

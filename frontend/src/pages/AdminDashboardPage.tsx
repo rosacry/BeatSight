@@ -84,9 +84,11 @@ export function AdminDashboardPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState('')
+    const [updatingRoleUserId, setUpdatingRoleUserId] = useState<string | null>(null)
+    const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
     const fetchWithAuth = async (endpoint: string) => {
-        const response = await fetch(`${API_CONFIG.baseUrl}/api${endpoint}`, {
+        const response = await fetch(`${API_CONFIG.baseUrl}${endpoint}`, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
@@ -168,6 +170,35 @@ export function AdminDashboardPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab, accessToken])
 
+    // Update user role
+    const handleUpdateRole = async (userId: string, newRole: string) => {
+        if (!accessToken) return
+        setUpdatingRoleUserId(userId)
+        setError(null)
+        try {
+            const response = await fetch(`${API_CONFIG.baseUrl}/admin/users/${userId}/role`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ role: newRole }),
+            })
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({ detail: 'Failed to update role' }))
+                throw new Error(data.detail || 'Failed to update role')
+            }
+            // Update local state
+            setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u))
+            setSuccessMessage(`Role updated to ${newRole}`)
+            setTimeout(() => setSuccessMessage(null), 3000)
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to update role')
+        } finally {
+            setUpdatingRoleUserId(null)
+        }
+    }
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -176,7 +207,7 @@ export function AdminDashboardPage() {
         )
     }
 
-    if (error) {
+    if (error && !overview) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="text-center">
@@ -226,6 +257,29 @@ export function AdminDashboardPage() {
                     </button>
                 ))}
             </div>
+
+            {/* Success/Error Messages */}
+            {successMessage && (
+                <div className="mb-4 p-4 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center gap-2">
+                    <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-green-400">{successMessage}</span>
+                </div>
+            )}
+            {error && !loading && (
+                <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-2">
+                    <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-red-400">{error}</span>
+                    <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-300">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            )}
 
             {/* Overview Tab */}
             {activeTab === 'overview' && overview && userStats && queueStats && (
@@ -335,6 +389,7 @@ export function AdminDashboardPage() {
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Plan</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Jobs</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Joined</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-700">
@@ -360,7 +415,7 @@ export function AdminDashboardPage() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex px-2 py-1 text-xs rounded-full ${user.role === 'admin' ? 'bg-red-500/10 text-red-400' :
-                                                user.role === 'moderator' ? 'bg-yellow-500/10 text-yellow-400' :
+                                                user.role === 'verifier' ? 'bg-purple-500/10 text-purple-400' :
                                                     'bg-gray-500/10 text-gray-400'
                                                 }`}>
                                                 {user.role}
@@ -378,11 +433,28 @@ export function AdminDashboardPage() {
                                         <td className="px-6 py-4 text-gray-400 text-sm">
                                             {new Date(user.created_at).toLocaleDateString()}
                                         </td>
+                                        <td className="px-6 py-4">
+                                            <select
+                                                value={user.role}
+                                                onChange={(e) => handleUpdateRole(user.id, e.target.value)}
+                                                disabled={updatingRoleUserId === user.id}
+                                                className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg 
+                                                         px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500
+                                                         disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                <option value="user">User</option>
+                                                <option value="verifier">Verifier</option>
+                                                <option value="admin">Admin</option>
+                                            </select>
+                                            {updatingRoleUserId === user.id && (
+                                                <span className="ml-2 text-gray-400 text-xs">Updating...</span>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))}
                                 {users.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="px-6 py-8 text-center text-gray-400">
+                                        <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
                                             No users found
                                         </td>
                                     </tr>

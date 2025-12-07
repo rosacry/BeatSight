@@ -20,7 +20,7 @@ const getApiBaseUrl = () => {
         (window.location.hostname === 'beatsight.io' ||
             window.location.hostname === 'www.beatsight.io' ||
             window.location.hostname.endsWith('.pages.dev'))) {
-        return 'https://api.beatsight.io'
+        return 'https://api.beatsight.io/api'
     }
     // Development fallback
     return '/api'
@@ -42,7 +42,12 @@ export const API_CONFIG = {
     wsUrl: import.meta.env.VITE_WS_URL ||
         (import.meta.env.VITE_API_BASE_URL
             ? import.meta.env.VITE_API_BASE_URL.replace(/^http/, 'ws') + '/ws'
-            : 'ws://localhost:8000/ws'),
+            : (typeof window !== 'undefined' &&
+                (window.location.hostname === 'beatsight.io' ||
+                    window.location.hostname === 'www.beatsight.io' ||
+                    window.location.hostname.endsWith('.pages.dev'))
+                ? 'wss://api.beatsight.io/ws'
+                : 'ws://localhost:8000/ws')),
 } as const
 
 /**

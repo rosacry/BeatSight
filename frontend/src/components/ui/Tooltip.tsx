@@ -166,18 +166,38 @@ export function Tooltip({
     const [position, setPosition] = useState<Position>({ top: 0, left: 0, actualPlacement: placement })
     const triggerRef = useRef<HTMLElement | null>(null)
     const tooltipRef = useRef<HTMLDivElement>(null)
-    const timeoutRef = useRef<ReturnType<typeof setTimeout>>()
+    const showTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
+    const hideTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
+    const isHoveringTooltipRef = useRef(false)
 
     const show = useCallback(() => {
         if (disabled) return
-        timeoutRef.current = setTimeout(() => setIsVisible(true), delay)
+        // Cancel any pending hide
+        if (hideTimeoutRef.current) {
+            clearTimeout(hideTimeoutRef.current)
+            hideTimeoutRef.current = undefined
+        }
+        showTimeoutRef.current = setTimeout(() => setIsVisible(true), delay)
     }, [disabled, delay])
 
-    const hide = useCallback(() => {
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current)
+    const hide = useCallback((immediate = false) => {
+        if (showTimeoutRef.current) {
+            clearTimeout(showTimeoutRef.current)
+            showTimeoutRef.current = undefined
         }
-        setIsVisible(false)
+        // Don't hide if hovering over tooltip
+        if (isHoveringTooltipRef.current && !immediate) return
+
+        // Add small delay to prevent flicker on quick interactions
+        if (immediate) {
+            setIsVisible(false)
+        } else {
+            hideTimeoutRef.current = setTimeout(() => {
+                if (!isHoveringTooltipRef.current) {
+                    setIsVisible(false)
+                }
+            }, 100)
+        }
     }, [])
 
     // Update position when visible
@@ -209,8 +229,11 @@ export function Tooltip({
     // Cleanup timeout on unmount
     useEffect(() => {
         return () => {
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current)
+            if (showTimeoutRef.current) {
+                clearTimeout(showTimeoutRef.current)
+            }
+            if (hideTimeoutRef.current) {
+                clearTimeout(hideTimeoutRef.current)
             }
         }
     }, [])
@@ -229,7 +252,7 @@ export function Tooltip({
             children.props.onMouseEnter?.(e)
         },
         onMouseLeave: (e: React.MouseEvent) => {
-            hide()
+            hide(false) // Use delayed hide
             children.props.onMouseLeave?.(e)
         },
         onFocus: (e: React.FocusEvent) => {
@@ -237,7 +260,7 @@ export function Tooltip({
             children.props.onFocus?.(e)
         },
         onBlur: (e: React.FocusEvent) => {
-            hide()
+            hide(false) // Use delayed hide
             children.props.onBlur?.(e)
         },
         'aria-describedby': isVisible ? 'tooltip' : undefined,
@@ -256,6 +279,18 @@ export function Tooltip({
                         style={{
                             top: position.top,
                             left: position.left,
+                        }}
+                        onMouseEnter={() => {
+                            isHoveringTooltipRef.current = true
+                            // Cancel any pending hide
+                            if (hideTimeoutRef.current) {
+                                clearTimeout(hideTimeoutRef.current)
+                                hideTimeoutRef.current = undefined
+                            }
+                        }}
+                        onMouseLeave={() => {
+                            isHoveringTooltipRef.current = false
+                            hide(false)
                         }}
                     >
                         {arrow && (

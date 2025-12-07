@@ -54,6 +54,7 @@ class UserResponse(BaseModel):
     email_verified: bool
     karma_score: int
     created_at: datetime
+    roles: list[str] = []
 
     model_config = {"from_attributes": True}
 
@@ -271,13 +272,37 @@ async def refresh_tokens(
 @router.get("/me", response_model=UserResponse)
 async def get_me(
     current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
 ) -> UserResponse:
     """
     Get current authenticated user's profile.
 
     Requires valid access token.
     """
-    return UserResponse.model_validate(current_user)
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    from app.models.role import UserRole, Role
+    
+    # Eagerly load roles
+    result = await session.execute(
+        select(User)
+        .options(selectinload(User.roles).selectinload(UserRole.role))
+        .where(User.id == current_user.id)
+    )
+    user = result.scalar_one()
+    
+    # Extract role codes
+    role_codes = [ur.role.code for ur in user.roles if ur.role]
+    
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        display_name=user.display_name,
+        email_verified=user.email_verified,
+        karma_score=user.karma_score,
+        created_at=user.created_at,
+        roles=role_codes,
+    )
 
 
 @router.post("/forgot-password", response_model=MessageResponse)

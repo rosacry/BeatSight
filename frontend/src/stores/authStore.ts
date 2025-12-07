@@ -24,6 +24,9 @@ interface AuthStore {
     isAuthenticated: () => boolean
     isTokenExpired: () => boolean
     getTokenExpirationTime: () => number | null
+    hasRole: (role: string) => boolean
+    isAdmin: () => boolean
+    isVerifier: () => boolean
 
     // Actions
     login: (credentials: LoginCredentials) => Promise<void>
@@ -137,6 +140,24 @@ export const useAuthStore = create<AuthStore>()(
                 if (!payload?.exp) return null
 
                 return payload.exp * 1000
+            },
+
+            // Check if user has a specific role
+            hasRole: (role: string) => {
+                const state = get()
+                if (!state.user?.roles) return false
+                return state.user.roles.includes(role)
+            },
+
+            // Check if user is admin
+            isAdmin: () => {
+                return get().hasRole('admin')
+            },
+
+            // Check if user is verifier (or admin, since admin inherits verifier)
+            isVerifier: () => {
+                const state = get()
+                return state.hasRole('verifier') || state.hasRole('admin')
             },
 
             // Initialize auth state on app load
@@ -281,4 +302,14 @@ export function getAccessToken(): string | null {
 // Helper to check if authenticated
 export function isAuthenticated(): boolean {
     return useAuthStore.getState().isAuthenticated()
+}
+
+// Helper to check if user is admin
+export function isAdmin(): boolean {
+    return useAuthStore.getState().isAdmin()
+}
+
+// Helper to check if user is verifier
+export function isVerifier(): boolean {
+    return useAuthStore.getState().isVerifier()
 }

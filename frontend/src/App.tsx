@@ -117,7 +117,7 @@ function AnimatedRoutes() {
                         <Route
                             path="/admin"
                             element={
-                                <ProtectedRoute>
+                                <ProtectedRoute requiredRoles={['admin']}>
                                     <AdminDashboardPage />
                                 </ProtectedRoute>
                             }
@@ -125,7 +125,7 @@ function AnimatedRoutes() {
                         <Route
                             path="/verifier"
                             element={
-                                <ProtectedRoute>
+                                <ProtectedRoute requiredRoles={['verifier', 'admin']}>
                                     <VerifierDashboardPage />
                                 </ProtectedRoute>
                             }

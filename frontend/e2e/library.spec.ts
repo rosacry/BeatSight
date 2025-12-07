@@ -152,7 +152,7 @@ test.describe('Library Page - Search', () => {
         if (await searchInput.count() > 0) {
             // Get initial count
             const songItems = page.locator('[data-testid="song-item"], .song-card, .song-row');
-            const initialCount = await songItems.count();
+            const _initialCount = await songItems.count();
 
             // Type search query
             await searchInput.fill('test');

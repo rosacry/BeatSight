@@ -54,36 +54,7 @@ export function AvatarUpload({
         .toUpperCase()
         .slice(0, 2) || '?'
 
-    const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0]
-        if (!file) return
-
-        setError(null)
-
-        // Validate file type
-        if (!ALLOWED_TYPES.includes(file.type)) {
-            setError('Please upload a JPEG, PNG, WebP, or GIF image')
-            return
-        }
-
-        // Validate file size
-        if (file.size > MAX_FILE_SIZE) {
-            setError('Image must be smaller than 5MB')
-            return
-        }
-
-        // Create preview
-        const reader = new FileReader()
-        reader.onload = (e) => {
-            setPreviewUrl(e.target?.result as string)
-        }
-        reader.readAsDataURL(file)
-
-        // Upload immediately
-        uploadFile(file)
-    }, [accessToken])
-
-    const uploadFile = async (file: File) => {
+    const uploadFile = useCallback(async (file: File) => {
         if (!accessToken) {
             setError('Please log in to upload an avatar')
             return
@@ -124,7 +95,36 @@ export function AvatarUpload({
         } finally {
             setIsUploading(false)
         }
-    }
+    }, [accessToken, fetchCurrentUser, onUploadSuccess, onUploadError])
+
+    const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0]
+        if (!file) return
+
+        setError(null)
+
+        // Validate file type
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            setError('Please upload a JPEG, PNG, WebP, or GIF image')
+            return
+        }
+
+        // Validate file size
+        if (file.size > MAX_FILE_SIZE) {
+            setError('Image must be smaller than 5MB')
+            return
+        }
+
+        // Create preview
+        const reader = new FileReader()
+        reader.onload = (e) => {
+            setPreviewUrl(e.target?.result as string)
+        }
+        reader.readAsDataURL(file)
+
+        // Upload immediately
+        uploadFile(file)
+    }, [uploadFile])
 
     const handleDelete = async () => {
         if (!accessToken) return

@@ -14,14 +14,14 @@ module.exports = {
     },
     plugins: ['react-refresh'],
     rules: {
-        'react-refresh/only-export-components': [
-            'warn',
-            { allowConstantExport: true },
-        ],
-        '@typescript-eslint/no-unused-vars': ['warn', {
+        // Disable react-refresh rule - it conflicts with legitimate patterns
+        // like exporting variants objects alongside components
+        'react-refresh/only-export-components': 'off',
+        '@typescript-eslint/no-unused-vars': ['error', {
             argsIgnorePattern: '^_',
             varsIgnorePattern: '^_'
         }],
-        '@typescript-eslint/no-explicit-any': 'warn',
+        '@typescript-eslint/no-explicit-any': 'error',
+        'react-hooks/exhaustive-deps': 'error',
     },
 }

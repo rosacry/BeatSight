@@ -190,6 +190,14 @@ export function Toast({
     const [isVisible, setIsVisible] = useState(true)
     const [isExiting, setIsExiting] = useState(false)
 
+    const handleClose = useCallback(() => {
+        setIsExiting(true)
+        setTimeout(() => {
+            setIsVisible(false)
+            onClose?.()
+        }, 200)
+    }, [onClose])
+
     useEffect(() => {
         if (duration > 0) {
             const timer = setTimeout(() => {
@@ -197,15 +205,7 @@ export function Toast({
             }, duration)
             return () => clearTimeout(timer)
         }
-    }, [duration])
-
-    const handleClose = () => {
-        setIsExiting(true)
-        setTimeout(() => {
-            setIsVisible(false)
-            onClose?.()
-        }, 200)
-    }
+    }, [duration, handleClose])
 
     if (!isVisible) return null
 

@@ -42,8 +42,8 @@ class MockAudioContext {
 }
 
 // Store original globals
-const originalAudioContext = (globalThis as any).AudioContext
-const originalFetch = (globalThis as any).fetch
+const originalAudioContext = (globalThis as { AudioContext?: typeof AudioContext }).AudioContext
+const originalFetch = globalThis.fetch
 
 describe('computeWaveformData', () => {
     it('should compute min/max values for waveform buckets', () => {
@@ -146,18 +146,18 @@ describe('computeWaveformData', () => {
 describe('useWaveform', () => {
     beforeEach(() => {
         // Mock AudioContext
-         (globalThis as any).AudioContext = MockAudioContext as unknown as typeof AudioContext
+        (globalThis as { AudioContext?: unknown }).AudioContext = MockAudioContext as unknown as typeof AudioContext
 
-            // Mock fetch
-            ; (globalThis as any).fetch = vi.fn().mockResolvedValue({
-                ok: true,
-                arrayBuffer: () => Promise.resolve(new ArrayBuffer(1024)),
-            })
+        // Mock fetch
+        globalThis.fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(1024)),
+        })
     })
 
     afterEach(() => {
-         (globalThis as any).AudioContext = originalAudioContext
-            ; (globalThis as any).fetch = originalFetch
+        (globalThis as { AudioContext?: unknown }).AudioContext = originalAudioContext
+        globalThis.fetch = originalFetch!
     })
 
     it('should return null waveform when audioUrl is null', () => {
@@ -196,7 +196,7 @@ describe('useWaveform', () => {
     })
 
     it('should handle fetch error', async () => {
-         (globalThis as any).fetch = vi.fn().mockResolvedValue({
+        globalThis.fetch = vi.fn().mockResolvedValue({
             ok: false,
             statusText: 'Not Found',
         })
@@ -220,7 +220,7 @@ describe('useWaveform', () => {
             async close(): Promise<void> { }
         }
 
-         (globalThis as any).AudioContext = FailingAudioContext as unknown as typeof AudioContext
+         (globalThis as { AudioContext?: unknown }).AudioContext = FailingAudioContext as unknown as typeof AudioContext
 
         const { result } = renderHook(() =>
             useWaveform({ audioUrl: 'https://example.com/bad.mp3' })
@@ -239,7 +239,7 @@ describe('useWaveform', () => {
 
         expect(result.current.isLoading).toBe(false)
         expect(result.current.waveformData).toBeNull()
-        expect((globalThis as any).fetch).not.toHaveBeenCalled()
+        expect(globalThis.fetch).not.toHaveBeenCalled()
     })
 
     it('should recompute when URL changes', async () => {
@@ -250,14 +250,14 @@ describe('useWaveform', () => {
 
         await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-        expect((globalThis as any).fetch).toHaveBeenCalledTimes(1)
+        expect(globalThis.fetch).toHaveBeenCalledTimes(1)
 
         // Change URL
         rerender({ url: 'https://example.com/audio2.mp3' })
 
         await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-        expect((globalThis as any).fetch).toHaveBeenCalledTimes(2)
+        expect(globalThis.fetch).toHaveBeenCalledTimes(2)
     })
 
     it('should provide refresh function', async () => {
@@ -267,7 +267,7 @@ describe('useWaveform', () => {
 
         await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-        expect((globalThis as any).fetch).toHaveBeenCalledTimes(1)
+        expect(globalThis.fetch).toHaveBeenCalledTimes(1)
 
         // Call refresh
         act(() => {
@@ -276,6 +276,6 @@ describe('useWaveform', () => {
 
         await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-        expect((globalThis as any).fetch).toHaveBeenCalledTimes(2)
+        expect(globalThis.fetch).toHaveBeenCalledTimes(2)
     })
 })

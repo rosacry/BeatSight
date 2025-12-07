@@ -139,7 +139,7 @@ export interface AccordionItemProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 export const AccordionItem = forwardRef<HTMLDivElement, AccordionItemProps>(
-    ({ className, id, disabled = false, children, ...props }, ref) => {
+    ({ className, id: _id, disabled = false, children, ...props }, ref) => {
         const context = useContext(AccordionContext)
         if (!context) throw new Error('AccordionItem must be used within Accordion')
 

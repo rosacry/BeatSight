@@ -849,7 +849,7 @@ export const PerformanceMeter = forwardRef<HTMLDivElement, PerformanceMeterProps
 
             frame = requestAnimationFrame(animate)
             return () => cancelAnimationFrame(frame)
-        }, [score, animated])
+        }, [score, animated, displayScore])
 
         const circumference = 2 * Math.PI * ((size - thickness) / 2)
         const strokeDashoffset = circumference * (1 - displayScore / 100)

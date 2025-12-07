@@ -53,6 +53,11 @@ export function AchievementToast({ achievement, onDismiss }: AchievementToastPro
     const [isVisible, setIsVisible] = useState(false)
     const [isLeaving, setIsLeaving] = useState(false)
 
+    const handleDismiss = useCallback(() => {
+        setIsLeaving(true)
+        setTimeout(onDismiss, 300) // Wait for exit animation
+    }, [onDismiss])
+
     useEffect(() => {
         // Trigger enter animation
         requestAnimationFrame(() => setIsVisible(true))
@@ -63,12 +68,7 @@ export function AchievementToast({ achievement, onDismiss }: AchievementToastPro
         }, 5000)
 
         return () => clearTimeout(timer)
-    }, [])
-
-    const handleDismiss = useCallback(() => {
-        setIsLeaving(true)
-        setTimeout(onDismiss, 300) // Wait for exit animation
-    }, [onDismiss])
+    }, [handleDismiss])
 
     const iconPath = ICON_PATHS[achievement.icon] || ICON_PATHS.trophy
     const gradientColor = CATEGORY_COLORS[achievement.category] || CATEGORY_COLORS.generation

@@ -16,7 +16,6 @@ from typing import TYPE_CHECKING
 
 import pyotp
 from cryptography.fernet import Fernet
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings

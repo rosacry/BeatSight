@@ -5,9 +5,7 @@
 # =============================================================================
 
 [build]
-# Use the Dockerfile in backend/
-builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+# Let Railway auto-detect the Dockerfile
 
 [deploy]
 # Run migrations then start the server (workdir is already /app from Dockerfile)

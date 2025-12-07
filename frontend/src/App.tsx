@@ -44,11 +44,11 @@ const pageTransition = {
 // Scroll restoration component - scrolls to top on route change
 function ScrollToTop() {
     const { pathname } = useLocation()
-    
+
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [pathname])
-    
+
     return null
 }
 
@@ -61,94 +61,94 @@ function AnimatedRoutes() {
             <AnimatePresence mode="wait">
                 <motion.div
                     key={location.pathname}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                variants={pageVariants}
-                transition={pageTransition}
-                className="min-h-full"
-            >
-                <Routes location={location}>
-                    {/* Public routes */}
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/queue" element={<JobQueuePage />} />
-                    <Route path="/jobs/:jobId" element={<JobDetailPage />} />
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/register" element={<RegisterPage />} />
-                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                    <Route path="/reset-password" element={<ResetPasswordPage />} />
-                    <Route path="/pricing" element={<PricingPage />} />
-                    <Route path="/credits/success" element={<CreditSuccessPage />} />
-                    <Route path="/credits/cancel" element={<CreditCancelPage />} />
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    variants={pageVariants}
+                    transition={pageTransition}
+                    className="min-h-full"
+                >
+                    <Routes location={location}>
+                        {/* Public routes */}
+                        <Route path="/" element={<HomePage />} />
+                        <Route path="/queue" element={<JobQueuePage />} />
+                        <Route path="/jobs/:jobId" element={<JobDetailPage />} />
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/register" element={<RegisterPage />} />
+                        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                        <Route path="/reset-password" element={<ResetPasswordPage />} />
+                        <Route path="/pricing" element={<PricingPage />} />
+                        <Route path="/credits/success" element={<CreditSuccessPage />} />
+                        <Route path="/credits/cancel" element={<CreditCancelPage />} />
 
-                    {/* Protected routes */}
-                    <Route
-                        path="/upload"
-                        element={
-                            <ProtectedRoute>
-                                <UploadPage />
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/library"
-                        element={
-                            <ProtectedRoute>
-                                <LibraryPage />
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/profile"
-                        element={
-                            <ProtectedRoute>
-                                <ProfilePage />
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/settings"
-                        element={
-                            <ProtectedRoute>
-                                <SettingsPage />
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/admin"
-                        element={
-                            <ProtectedRoute>
-                                <AdminDashboardPage />
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/verifier"
-                        element={
-                            <ProtectedRoute>
-                                <VerifierDashboardPage />
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/maps/:mapId/edit"
-                        element={
-                            <ProtectedRoute>
-                                <MapEditPage />
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/record"
-                        element={
-                            <ProtectedRoute>
-                                <RecordPage />
-                            </ProtectedRoute>
-                        }
-                    />
-                </Routes>
-            </motion.div>
-        </AnimatePresence>
+                        {/* Protected routes */}
+                        <Route
+                            path="/upload"
+                            element={
+                                <ProtectedRoute>
+                                    <UploadPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/library"
+                            element={
+                                <ProtectedRoute>
+                                    <LibraryPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/profile"
+                            element={
+                                <ProtectedRoute>
+                                    <ProfilePage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/settings"
+                            element={
+                                <ProtectedRoute>
+                                    <SettingsPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/admin"
+                            element={
+                                <ProtectedRoute>
+                                    <AdminDashboardPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/verifier"
+                            element={
+                                <ProtectedRoute>
+                                    <VerifierDashboardPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/maps/:mapId/edit"
+                            element={
+                                <ProtectedRoute>
+                                    <MapEditPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/record"
+                            element={
+                                <ProtectedRoute>
+                                    <RecordPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                    </Routes>
+                </motion.div>
+            </AnimatePresence>
         </>
     )
 }

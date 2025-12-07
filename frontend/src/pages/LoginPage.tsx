@@ -61,8 +61,8 @@ export function LoginPage() {
             {/* Background effects */}
             <ParticleBackground particleCount={30} />
             <GradientOrbs />
-            
-            <motion.div 
+
+            <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
@@ -72,10 +72,10 @@ export function LoginPage() {
                               border border-white/10 shadow-2xl shadow-black/50">
                     {/* Subtle gradient border effect */}
                     <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-transparent to-fuchsia-500/10 pointer-events-none" />
-                    
+
                     <div className="relative text-center mb-8">
                         {/* Logo with glow effect */}
-                        <motion.div 
+                        <motion.div
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
@@ -88,8 +88,8 @@ export function LoginPage() {
                                 <img src="/icons/logo-navbar.png" alt="BeatSight" className="w-12 h-12" />
                             </div>
                         </motion.div>
-                        
-                        <motion.h1 
+
+                        <motion.h1
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: 0.2 }}
@@ -97,7 +97,7 @@ export function LoginPage() {
                         >
                             Welcome back
                         </motion.h1>
-                        <motion.p 
+                        <motion.p
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: 0.3 }}
@@ -108,7 +108,7 @@ export function LoginPage() {
                     </div>
 
                     {error && (
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl backdrop-blur-sm"

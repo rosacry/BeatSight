@@ -100,24 +100,6 @@ def upgrade() -> None:
             unique=False,
         )
 
-    # Billing transaction indexes - MEDIUM-HIGH IMPACT
-    # Billing history for a user
-    if not index_exists("ix_billing_transactions_user_id", "billing_transactions"):
-        op.create_index(
-            "ix_billing_transactions_user_id",
-            "billing_transactions",
-            ["user_id"],
-            unique=False,
-        )
-    # Looking up transactions by payment provider reference
-    if not index_exists("ix_billing_transactions_provider_ref", "billing_transactions"):
-        op.create_index(
-            "ix_billing_transactions_provider_ref",
-            "billing_transactions",
-            ["provider_ref"],
-            unique=False,
-        )
-
     # Map edit proposal indexes - MEDIUM IMPACT
     # Verification queue (pending edits)
     if not index_exists("ix_map_edit_proposals_status", "map_edit_proposals"):
@@ -142,12 +124,6 @@ def downgrade() -> None:
     # Map edit proposal indexes
     op.drop_index("ix_map_edit_proposals_proposer_id", table_name="map_edit_proposals")
     op.drop_index("ix_map_edit_proposals_status", table_name="map_edit_proposals")
-
-    # Billing transaction indexes
-    op.drop_index(
-        "ix_billing_transactions_provider_ref", table_name="billing_transactions"
-    )
-    op.drop_index("ix_billing_transactions_user_id", table_name="billing_transactions")
 
     # Map version indexes
     op.drop_index("ix_map_versions_map_id", table_name="map_versions")

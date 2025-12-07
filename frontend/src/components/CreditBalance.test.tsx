@@ -83,7 +83,7 @@ describe('CreditBalance', () => {
         expect(button).toHaveClass('custom-class')
     })
 
-    it('has tooltip with credit info', () => {
+    it('has accessible label with credit info', () => {
         vi.mocked(useCreditCount).mockReturnValue({
             credits: 5,
             isLoading: false,
@@ -92,7 +92,8 @@ describe('CreditBalance', () => {
         render(<CreditBalance />)
 
         const button = screen.getByRole('button')
-        expect(button).toHaveAttribute('title', 'Credit balance - click to buy more')
+        // We now use aria-label instead of title (tooltip is handled by Tooltip component)
+        expect(button).toHaveAttribute('aria-label', '5 credits available. Click to buy more.')
     })
 
     it('renders credit coin icon', () => {

@@ -124,7 +124,9 @@ async def register(
         hashed_password = auth_service.hash_password(request.password)
         logger.debug("Password hashed for email: %s", request.email)
     except Exception as e:
-        logger.exception("Password hash failed for email: %s - %s", request.email, str(e))
+        logger.exception(
+            "Password hash failed for email: %s - %s", request.email, str(e)
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process password",
@@ -143,7 +145,9 @@ async def register(
         await session.refresh(user)
         logger.info("User registered: id=%s, email=%s", user.id, request.email)
     except Exception as e:
-        logger.exception("User creation failed for email: %s - %s", request.email, str(e))
+        logger.exception(
+            "User creation failed for email: %s - %s", request.email, str(e)
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create user account",
@@ -281,8 +285,8 @@ async def get_me(
     """
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
-    from app.models.role import UserRole, Role
-    
+    from app.models.role import UserRole
+
     # Eagerly load roles
     result = await session.execute(
         select(User)
@@ -290,10 +294,10 @@ async def get_me(
         .where(User.id == current_user.id)
     )
     user = result.scalar_one()
-    
+
     # Extract role codes
     role_codes = [ur.role.code for ur in user.roles if ur.role]
-    
+
     return UserResponse(
         id=user.id,
         email=user.email,

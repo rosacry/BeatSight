@@ -48,12 +48,18 @@ class TestPermissionDefinitions:
 
     def test_role_hierarchy_order(self):
         """Role hierarchy should be in ascending privilege order."""
-        assert ROLE_HIERARCHY == [RoleCode.USER, RoleCode.VERIFIER, RoleCode.ADMIN]
+        assert ROLE_HIERARCHY == [
+            RoleCode.USER,
+            RoleCode.VERIFIER,
+            RoleCode.STAFF,
+            RoleCode.ADMIN,
+        ]
 
     def test_role_hierarchy_inheritance(self):
         """Higher roles should have all permissions of lower roles."""
         user_perms = EFFECTIVE_PERMISSIONS.get(RoleCode.USER, set())
         verifier_perms = EFFECTIVE_PERMISSIONS.get(RoleCode.VERIFIER, set())
+        staff_perms = EFFECTIVE_PERMISSIONS.get(RoleCode.STAFF, set())
         admin_perms = EFFECTIVE_PERMISSIONS.get(RoleCode.ADMIN, set())
 
         # User should have some permissions
@@ -62,8 +68,11 @@ class TestPermissionDefinitions:
         # Verifier should have all user permissions
         assert user_perms.issubset(verifier_perms)
 
-        # Admin should have all verifier permissions
-        assert verifier_perms.issubset(admin_perms)
+        # Staff should have all verifier permissions
+        assert verifier_perms.issubset(staff_perms)
+
+        # Admin should have all staff permissions
+        assert staff_perms.issubset(admin_perms)
 
     def test_admin_has_all_admin_permissions(self):
         """Admin role should have all admin-specific permissions."""

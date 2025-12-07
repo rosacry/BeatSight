@@ -160,7 +160,16 @@ export function MagneticButton({
     }
 
     // Exclude conflicting event handlers from props to avoid type conflicts with Framer Motion
-    const { onDrag: _onDrag, onDragStart: _onDragStart, onDragEnd: _onDragEnd, ...restProps } = props as React.ButtonHTMLAttributes<HTMLButtonElement>;
+    // These props conflict with Framer Motion's types - destructure and ignore them
+    const { 
+        onDrag, 
+        onDragStart, 
+        onDragEnd, 
+        onAnimationStart,
+        ...restProps 
+    } = props
+    // Suppress unused variable warnings - these are intentionally excluded
+    void onDrag; void onDragStart; void onDragEnd; void onAnimationStart;
 
     return (
         <motion.button

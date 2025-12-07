@@ -220,7 +220,7 @@ describe('useWaveform', () => {
             async close(): Promise<void> { }
         }
 
-         (globalThis as { AudioContext?: unknown }).AudioContext = FailingAudioContext as unknown as typeof AudioContext
+        (globalThis as { AudioContext?: unknown }).AudioContext = FailingAudioContext as unknown as typeof AudioContext
 
         const { result } = renderHook(() =>
             useWaveform({ audioUrl: 'https://example.com/bad.mp3' })

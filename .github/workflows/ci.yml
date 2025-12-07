@@ -11,9 +11,39 @@ concurrency:
 
 jobs:
   # ==========================================================================
+  # Detect Changes - Only run relevant jobs
+  # ==========================================================================
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      desktop: ${{ steps.filter.outputs.desktop }}
+      ai-pipeline: ${{ steps.filter.outputs.ai-pipeline }}
+      docs: ${{ steps.filter.outputs.docs }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            desktop:
+              - 'desktop/**'
+              - '*.sln'
+            ai-pipeline:
+              - 'ai-pipeline/**'
+            docs:
+              - 'docs/**'
+              - 'README.md'
+
+  # ==========================================================================
   # Backend (FastAPI/Python)
   # ==========================================================================
   backend-lint:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     name: Backend Lint
     runs-on: ubuntu-latest
     defaults:
@@ -44,7 +74,8 @@ jobs:
   backend-test:
     name: Backend Tests
     runs-on: ubuntu-latest
-    needs: backend-lint
+    needs: [changes, backend-lint]
+    if: needs.changes.outputs.backend == 'true'
     defaults:
       run:
         working-directory: backend
@@ -110,6 +141,8 @@ jobs:
   # ==========================================================================
   desktop-build:
     name: Desktop Build
+    needs: changes
+    if: needs.changes.outputs.desktop == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -135,6 +168,8 @@ jobs:
   # ==========================================================================
   ai-pipeline-test:
     name: AI Pipeline Tests
+    needs: changes
+    if: needs.changes.outputs.ai-pipeline == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -170,10 +205,12 @@ jobs:
           fail_ci_if_error: false
 
   # ==========================================================================
-  # Security Scan
+  # Security Scan (only on code changes)
   # ==========================================================================
   security-scan:
     name: Security Scan
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.ai-pipeline == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -189,20 +226,35 @@ jobs:
           exit-code: '0'  # Don't fail on vulnerabilities for now
 
   # ==========================================================================
-  # Final Check (requires all jobs to pass)
+  # Final Check (always runs, but checks only jobs that ran)
   # ==========================================================================
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [backend-test, desktop-build]
+    needs: [changes, backend-test, desktop-build, ai-pipeline-test]
     if: always()
 
     steps:
       - name: Check all jobs passed
         run: |
-          if [[ "${{ needs.backend-test.result }}" == "failure" ]] || \
-             [[ "${{ needs.desktop-build.result }}" == "failure" ]]; then
-            echo "One or more required jobs failed"
+          echo "Backend changed: ${{ needs.changes.outputs.backend }}"
+          echo "Desktop changed: ${{ needs.changes.outputs.desktop }}"
+          echo "AI Pipeline changed: ${{ needs.changes.outputs.ai-pipeline }}"
+          
+          # Only check jobs that were supposed to run
+          if [[ "${{ needs.changes.outputs.backend }}" == "true" && "${{ needs.backend-test.result }}" == "failure" ]]; then
+            echo "Backend tests failed"
             exit 1
           fi
-          echo "All required jobs passed!"
+          
+          if [[ "${{ needs.changes.outputs.desktop }}" == "true" && "${{ needs.desktop-build.result }}" == "failure" ]]; then
+            echo "Desktop build failed"
+            exit 1
+          fi
+          
+          if [[ "${{ needs.changes.outputs.ai-pipeline }}" == "true" && "${{ needs.ai-pipeline-test.result }}" == "failure" ]]; then
+            echo "AI Pipeline tests failed"
+            exit 1
+          fi
+          
+          echo "All required jobs passed (or were skipped because no relevant changes)!"

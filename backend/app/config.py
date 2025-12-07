@@ -122,7 +122,11 @@ class Settings(BaseSettings):
     @property
     def cors_origins(self) -> List[str]:
         """Parse comma-separated CORS origins."""
-        return [origin.strip() for origin in self.cors_origins_str.split(",") if origin.strip()]
+        return [
+            origin.strip()
+            for origin in self.cors_origins_str.split(",")
+            if origin.strip()
+        ]
 
     # -------------------------------------------------------------------------
     # File Storage

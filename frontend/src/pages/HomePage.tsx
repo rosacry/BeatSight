@@ -45,8 +45,8 @@ const features = [
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
             </svg>
         ),
-        title: 'Any Song Format',
-        description: 'Upload MP3, WAV, or FLAC files. Our AI analyzes the audio and extracts drum patterns with 96% accuracy.',
+        title: 'Any Audio Source',
+        description: 'Upload any audio with drums: published songs, band practices, original compositions, or isolated drum tracks.',
         color: 'cyan',
     },
     {
@@ -153,7 +153,7 @@ export function HomePage() {
                             variants={itemVariants}
                             className="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed"
                         >
-                            Upload any song and get an AI-generated drum practice beatmap in minutes.
+                            Upload any audio with drums—songs, band rehearsals, original tracks, or isolated drums—and get an AI-generated beatmap in minutes.
                             <span className="text-white font-medium"> Perfect for drummers of all skill levels.</span>
                         </motion.p>
 

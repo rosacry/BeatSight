@@ -383,22 +383,22 @@ export const welcomeTour: Tour = {
         {
             id: 'welcome-1',
             target: '[data-tour="upload-button"]',
-            title: 'Upload Your Music',
-            content: 'Start by uploading a song. We support MP3, WAV, FLAC, and more.',
+            title: 'Upload Any Audio',
+            content: 'Upload any audio with drums—songs, band rehearsals, original tracks, or isolated drums. We support MP3, WAV, FLAC, and more.',
             placement: 'bottom',
         },
         {
             id: 'welcome-2',
             target: '[data-tour="library"]',
-            title: 'Your Music Library',
-            content: 'All your uploaded songs appear here. Click any song to start creating a beatmap.',
+            title: 'Your Audio Library',
+            content: 'All your uploaded audio appears here. Click any track to start creating a beatmap.',
             placement: 'right',
         },
         {
             id: 'welcome-3',
             target: '[data-tour="ai-transcribe"]',
             title: 'AI Transcription',
-            content: 'Our AI analyzes your music and creates beatmaps automatically. It detects drums, tempo, and more!',
+            content: 'Our AI analyzes your audio and creates beatmaps automatically. It detects drums, tempo, and more—whether it\'s a published song or your own recording!',
             placement: 'bottom',
         },
         {

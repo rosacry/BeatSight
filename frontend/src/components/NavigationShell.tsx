@@ -107,6 +107,7 @@ function VerifyIcon() {
 export function Layout({ children }: LayoutProps) {
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated())
     const isAdmin = useAuthStore((state) => state.isAdmin())
+    const isStaff = useAuthStore((state) => state.isStaff())
     const isVerifier = useAuthStore((state) => state.isVerifier())
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [isScrolled, setIsScrolled] = useState(false)
@@ -123,10 +124,10 @@ export function Layout({ children }: LayoutProps) {
     // Build nav items dynamically based on roles
     const visibleNavItems: NavItem[] = [
         ...navItems.filter((item) => !item.requiresAuth || isAuthenticated),
-        // Add verifier dashboard for verifiers and admins
+        // Add verifier dashboard for verifiers, staff, and admins
         ...(isVerifier ? [{ path: '/verifier', label: 'Verify', requiresAuth: true, icon: <VerifyIcon /> }] : []),
-        // Add admin dashboard for admins only
-        ...(isAdmin ? [{ path: '/admin', label: 'Admin', requiresAuth: true, icon: <AdminIcon /> }] : []),
+        // Add admin dashboard for staff and admins
+        ...(isStaff || isAdmin ? [{ path: '/admin', label: 'Admin', requiresAuth: true, icon: <AdminIcon /> }] : []),
     ]
 
     return (
@@ -156,20 +157,24 @@ export function Layout({ children }: LayoutProps) {
                         {/* Logo and main nav */}
                         <div className="flex items-center">
                             <Link to="/" className="flex items-center gap-2.5 group">
-                                {/* Logo with subtle glow effect */}
+                                {/* Logo with enhanced blend effect */}
                                 <motion.div
                                     className="relative"
                                     whileHover={{ scale: 1.05 }}
                                     transition={{ type: 'spring', stiffness: 400 }}
                                 >
-                                    <div className="absolute inset-0 bg-cyan-500/20 rounded-lg blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    <div className="relative w-9 h-9 rounded-lg bg-gradient-to-br from-slate-800/80 to-slate-900/80 
+                                    <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/30 to-fuchsia-500/20 rounded-xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <div className="relative w-9 h-9 rounded-xl 
+                                                  bg-gradient-to-br from-slate-800/90 to-slate-900/90 
                                                   border border-white/10 flex items-center justify-center
-                                                  group-hover:border-cyan-500/30 transition-colors">
+                                                  group-hover:border-cyan-500/40 transition-all
+                                                  shadow-lg shadow-black/30 group-hover:shadow-cyan-500/20
+                                                  overflow-hidden">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-fuchsia-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                         <img
                                             src="/icons/logo-navbar.png"
                                             alt="BeatSight"
-                                            className="w-6 h-6"
+                                            className="w-6 h-6 relative z-10 drop-shadow-[0_0_6px_rgba(0,212,255,0.2)] group-hover:drop-shadow-[0_0_8px_rgba(0,212,255,0.4)] transition-all"
                                         />
                                     </div>
                                 </motion.div>
@@ -396,9 +401,11 @@ export function Layout({ children }: LayoutProps) {
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
                         {/* Logo and copyright */}
                         <div className="flex items-center gap-3">
-                            <div className="w-7 h-7 rounded-md bg-gradient-to-br from-slate-800/80 to-slate-900/80 
-                                          border border-white/10 flex items-center justify-center">
-                                <img src="/icons/logo-navbar.png" alt="" className="w-4 h-4" />
+                            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-slate-800/90 to-slate-900/90 
+                                          border border-white/10 flex items-center justify-center
+                                          shadow-lg shadow-black/20 overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-fuchsia-500/5" />
+                                <img src="/icons/logo-navbar.png" alt="" className="w-4 h-4 relative z-10 drop-shadow-[0_0_4px_rgba(0,212,255,0.2)]" />
                             </div>
                             <p className="text-slate-500 text-sm">
                                 © 2025 BeatSight. AI-powered drum beatmap generation.

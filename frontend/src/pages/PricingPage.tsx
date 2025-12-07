@@ -6,6 +6,7 @@
 
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { PRICING_PLANS, type SubscriptionPlan } from '@/types/billing'
 import { CREDIT_PACKS, formatCredits } from '@/types/credits'
 import { useSubscription, useUpgradeSubscription, useStripeConfig } from '@/hooks/useBilling'
@@ -337,33 +338,58 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
     const [isOpen, setIsOpen] = useState(false)
 
     return (
-        <div className="border border-gray-700 rounded-lg">
-            <button
+        <motion.div
+            className="border border-gray-700/50 rounded-xl overflow-hidden bg-gradient-to-br from-slate-800/30 to-slate-900/30 backdrop-blur-sm"
+            initial={false}
+            whileHover={{ borderColor: 'rgba(34, 211, 238, 0.3)' }}
+            transition={{ duration: 0.2 }}
+        >
+            <motion.button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full px-6 py-4 text-left flex justify-between items-center"
+                className="w-full px-6 py-5 text-left flex justify-between items-center gap-4 group"
+                whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
+                whileTap={{ scale: 0.995 }}
+                transition={{ duration: 0.15 }}
             >
-                <span className="font-medium text-white">{question}</span>
-                <svg
-                    className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''
-                        }`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                <span className="font-medium text-white group-hover:text-cyan-400 transition-colors duration-200">
+                    {question}
+                </span>
+                <motion.div
+                    animate={{ rotate: isOpen ? 180 : 0 }}
+                    transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                    className="flex-shrink-0"
                 >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                    />
-                </svg>
-            </button>
-            {isOpen && (
-                <div className="px-6 pb-4 text-gray-400">
-                    {answer}
-                </div>
-            )}
-        </div>
+                    <svg
+                        className="w-5 h-5 text-gray-400 group-hover:text-cyan-400 transition-colors duration-200"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                        />
+                    </svg>
+                </motion.div>
+            </motion.button>
+            <AnimatePresence initial={false}>
+                {isOpen && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                        className="overflow-hidden"
+                    >
+                        <div className="px-6 pb-5 text-gray-400 leading-relaxed border-t border-gray-700/30 pt-4">
+                            {answer}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
     )
 }
 

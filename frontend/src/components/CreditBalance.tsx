@@ -1,9 +1,11 @@
 /**
  * CreditBalance - displays user's credit balance in the nav bar.
- * Only shown when user has credits > 0.
+ * Only shown when user has credits > 0 (unless showWhenZero is true).
  */
 
+import { useState, useRef, useEffect } from 'react'
 import { useCreditCount } from '@/hooks/useCredits'
+import { Tooltip } from '@/components/ui/Tooltip'
 
 interface CreditBalanceProps {
     onClick?: () => void
@@ -17,38 +19,70 @@ export function CreditBalance({
     showWhenZero = false,
 }: CreditBalanceProps) {
     const { credits, isLoading } = useCreditCount()
+    const [lastKnownCredits, setLastKnownCredits] = useState<number | null>(null)
+    const hasEverHadCredits = useRef(false)
+
+    // Track last known credits to prevent disappearing during refetch
+    useEffect(() => {
+        if (!isLoading && credits !== undefined) {
+            setLastKnownCredits(credits)
+            if (credits > 0) {
+                hasEverHadCredits.current = true
+            }
+        }
+    }, [credits, isLoading])
+
+    // Use last known value during loading to prevent flicker
+    const displayCredits = isLoading && lastKnownCredits !== null
+        ? lastKnownCredits
+        : credits
 
     // Don't show if no credits and showWhenZero is false
-    if (!showWhenZero && credits === 0 && !isLoading) {
+    // But keep showing during loading if we had credits before
+    const shouldHide = !showWhenZero && displayCredits === 0 && !isLoading && !hasEverHadCredits.current
+
+    if (shouldHide) {
         return null
     }
 
     return (
-        <button
-            onClick={onClick}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full 
-                  bg-primary-500/10 border border-primary-500/30 
-                  hover:bg-primary-500/20 transition-colors ${className}`}
-            title="Credit balance - click to buy more"
+        <Tooltip
+            content={
+                <div className="text-center">
+                    <div className="font-medium">Credit Balance</div>
+                    <div className="text-slate-400 text-xs mt-1">Click to buy more credits</div>
+                </div>
+            }
         >
-            {/* Credit coin icon */}
-            <svg
-                className="w-4 h-4 text-primary-400"
-                fill="currentColor"
-                viewBox="0 0 20 20"
+            <button
+                onClick={onClick}
+                data-tour="credits"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full 
+                      bg-cyan-500/10 border border-cyan-500/30 
+                      hover:bg-cyan-500/20 hover:border-cyan-400/50
+                      active:scale-95
+                      transition-all duration-200 ${className}`}
+                aria-label={`${displayCredits} credits available. Click to buy more.`}
             >
-                <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
-            </svg>
+                {/* Credit coin icon */}
+                <svg
+                    className="w-4 h-4 text-cyan-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                >
+                    <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
+                </svg>
 
-            {/* Balance */}
-            {isLoading ? (
-                <span className="text-sm text-gray-400">...</span>
-            ) : (
-                <span className="text-sm font-medium text-primary-300">
-                    {credits}
-                </span>
-            )}
-        </button>
+                {/* Balance */}
+                {isLoading && lastKnownCredits === null ? (
+                    <span className="text-sm text-slate-400 animate-pulse">...</span>
+                ) : (
+                    <span className="text-sm font-medium text-cyan-300 tabular-nums">
+                        {displayCredits}
+                    </span>
+                )}
+            </button>
+        </Tooltip>
     )
 }
 

@@ -40,7 +40,7 @@ export function LandingPage() {
                         </div>
 
                         <h1 className="text-5xl sm:text-7xl font-bold text-white mb-6 tracking-tight">
-                            Turn Any Song Into
+                            Turn Any Audio Into
                             <br />
                             <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
                                 Playable Beatmaps
@@ -48,8 +48,8 @@ export function LandingPage() {
                         </h1>
 
                         <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-10">
-                            BeatSight uses advanced AI to transcribe drums from any audio track
-                            and generate rhythm game beatmaps you can actually play.
+                            BeatSight uses advanced AI to transcribe drums from any audio—songs,
+                            practice recordings, original compositions, or even isolated drum tracks.
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -111,8 +111,8 @@ export function LandingPage() {
                         <FeatureCard
                             step={1}
                             icon={<UploadIcon />}
-                            title="Upload Your Track"
-                            description="Upload any audio file (MP3, WAV, FLAC). Our AI handles the rest."
+                            title="Upload Any Audio"
+                            description="Songs, band practice recordings, original compositions, or solo drums—if it has drums, we can transcribe it."
                         />
                         <FeatureCard
                             step={2}

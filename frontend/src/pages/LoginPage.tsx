@@ -74,18 +74,29 @@ export function LoginPage() {
                     <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-transparent to-fuchsia-500/10 pointer-events-none" />
 
                     <div className="relative text-center mb-8">
-                        {/* Logo with glow effect */}
+                        {/* Logo with enhanced glow and blend effect */}
                         <motion.div
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
-                            className="w-20 h-20 mx-auto mb-6 relative"
+                            className="w-24 h-24 mx-auto mb-6 relative"
                         >
-                            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/30 to-fuchsia-500/30 rounded-2xl blur-xl" />
-                            <div className="relative w-full h-full rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 
-                                          border border-white/20 flex items-center justify-center
-                                          shadow-lg shadow-cyan-500/20">
-                                <img src="/icons/logo-navbar.png" alt="BeatSight" className="w-12 h-12" />
+                            {/* Outer glow */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/40 to-fuchsia-500/40 rounded-3xl blur-2xl" />
+                            {/* Inner container with gradient background */}
+                            <div className="relative w-full h-full rounded-2xl 
+                                          bg-gradient-to-br from-slate-800/90 to-slate-900/90 
+                                          border border-white/10
+                                          flex items-center justify-center
+                                          shadow-2xl shadow-cyan-500/20
+                                          overflow-hidden">
+                                {/* Subtle inner gradient overlay for blend */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-fuchsia-500/5" />
+                                <img
+                                    src="/icons/logo-navbar.png"
+                                    alt="BeatSight"
+                                    className="w-14 h-14 relative z-10 drop-shadow-[0_0_12px_rgba(0,212,255,0.3)]"
+                                />
                             </div>
                         </motion.div>
 

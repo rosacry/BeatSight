@@ -8,13 +8,31 @@
 /**
  * API Configuration
  */
+
+// Detect production environment and use appropriate API URL
+const getApiBaseUrl = () => {
+    // Explicit env var takes priority
+    if (import.meta.env.VITE_API_BASE_URL) {
+        return import.meta.env.VITE_API_BASE_URL
+    }
+    // Production domains use the production API
+    if (typeof window !== 'undefined' && 
+        (window.location.hostname === 'beatsight.io' || 
+         window.location.hostname === 'www.beatsight.io' ||
+         window.location.hostname.endsWith('.pages.dev'))) {
+        return 'https://api.beatsight.io'
+    }
+    // Development fallback
+    return '/api'
+}
+
 export const API_CONFIG = {
     /**
      * Base URL for API requests.
      * - In development: '/api' (proxied by Vite to localhost:8000)
      * - In production: Full URL like 'https://api.beatsight.io'
      */
-    baseUrl: import.meta.env.VITE_API_BASE_URL || '/api',
+    baseUrl: getApiBaseUrl(),
 
     /**
      * WebSocket URL for real-time updates.

@@ -122,8 +122,8 @@ export function Layout({ children }: LayoutProps) {
                 animate={{ y: 0 }}
                 transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
                 className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
-                    ? 'bg-slate-900/95 backdrop-blur-xl border-b border-white/5 shadow-lg shadow-black/30'
-                    : 'bg-slate-900/60 backdrop-blur-md'
+                    ? 'bg-slate-900/95 backdrop-blur-xl shadow-lg shadow-black/50'
+                    : 'bg-slate-900/80 backdrop-blur-md'
                     }`}
                 id={SKIP_LINK_TARGETS.NAVIGATION}
                 aria-label="Main navigation"

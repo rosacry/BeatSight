@@ -216,11 +216,8 @@ def upgrade() -> None:
         sa.Column("progress", sa.Float, default=0.0),
         sa.Column("result_url", sa.String(512)),
         sa.Column("error_message", sa.Text),
-        sa.Column("retries", sa.Integer, default=0, nullable=False),
-        sa.Column("max_retries", sa.Integer, default=3, nullable=False),
-        sa.Column("last_retry_at", sa.DateTime(timezone=True)),
-        sa.Column("worker_id", sa.String(128)),
-        sa.Column("worker_heartbeat_at", sa.DateTime(timezone=True)),
+        # Note: worker_id, worker_heartbeat_at, retries, max_retries, last_retry_at
+        # are added by subsequent migrations (001_worker_heartbeat, 002_job_retry)
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),

@@ -249,13 +249,18 @@ export function PricingPage() {
                         )}
                     </div>
 
-                    <AnimatePresence>
+                    <AnimatePresence mode="wait">
                         {showCredits && (
                             <motion.div
                                 initial={{ opacity: 0, height: 0, marginTop: 0 }}
                                 animate={{ opacity: 1, height: 'auto', marginTop: 24 }}
                                 exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                                transition={{
+                                    duration: 0.3,
+                                    ease: [0.4, 0, 0.2, 1],
+                                    height: { duration: 0.35 },
+                                    opacity: { duration: 0.2 }
+                                }}
                                 className="overflow-hidden"
                             >
                                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl mx-auto">
@@ -264,40 +269,41 @@ export function PricingPage() {
                                             key={pack.type}
                                             initial={{ opacity: 0, y: 20 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: index * 0.1, duration: 0.3 }}
-                                            className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-primary-500/50 transition-all duration-200 hover:scale-[1.02]"
+                                            exit={{ opacity: 0, y: -10, transition: { duration: 0.15, delay: 0 } }}
+                                            transition={{ delay: index * 0.1, duration: 0.3 }}}
+                                    className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-primary-500/50 transition-all duration-200 hover:scale-[1.02]"
                                         >
-                                            <div className="flex justify-between items-start mb-3">
-                                                <h4 className="font-semibold text-white">{pack.name}</h4>
-                                                {pack.savings_percent > 0 && (
-                                                    <span className="px-2 py-0.5 text-xs font-medium bg-green-500/20 text-green-400 rounded-full">
-                                                        -{pack.savings_percent}%
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p className="text-3xl font-bold text-white mb-1">
-                                                {pack.price_display}
-                                            </p>
-                                            <p className="text-sm text-gray-400 mb-4">
-                                                {formatCredits(pack.credits)} • ${(pack.per_credit_cents / 100).toFixed(2)}/song
-                                            </p>
-                                            <button
-                                                onClick={() => handleBuyCredits(pack.type)}
-                                                disabled={purchaseCreditsMutation.isPending}
-                                                className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-all duration-200 disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
-                                            >
-                                                {purchaseCreditsMutation.isPending ? 'Processing...' : 'Buy Now'}
-                                            </button>
-                                        </motion.div>
-                                    ))}
-                                </div>
+                                    <div className="flex justify-between items-start mb-3">
+                                        <h4 className="font-semibold text-white">{pack.name}</h4>
+                                        {pack.savings_percent > 0 && (
+                                            <span className="px-2 py-0.5 text-xs font-medium bg-green-500/20 text-green-400 rounded-full">
+                                                -{pack.savings_percent}%
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-3xl font-bold text-white mb-1">
+                                        {pack.price_display}
+                                    </p>
+                                    <p className="text-sm text-gray-400 mb-4">
+                                        {formatCredits(pack.credits)} • ${(pack.per_credit_cents / 100).toFixed(2)}/song
+                                    </p>
+                                    <button
+                                        onClick={() => handleBuyCredits(pack.type)}
+                                        disabled={purchaseCreditsMutation.isPending}
+                                        className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-all duration-200 disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
+                                    >
+                                        {purchaseCreditsMutation.isPending ? 'Processing...' : 'Buy Now'}
+                                    </button>
                             </motion.div>
-                        )}
-                    </AnimatePresence>
+                        ))}
                 </div>
+            </motion.div>
+                        )}
+        </AnimatePresence>
+                </div >
 
-                {/* FAQ Section */}
-                <div className="mt-20 max-w-3xl mx-auto">
+        {/* FAQ Section */ }
+        < div className = "mt-20 max-w-3xl mx-auto" >
                     <h2 className="text-2xl font-bold text-white text-center mb-8">
                         Frequently Asked Questions
                     </h2>
@@ -327,33 +333,33 @@ export function PricingPage() {
                             answer="We accept all major credit cards (Visa, Mastercard, American Express) through our secure payment processor, Stripe."
                         />
                     </div>
-                </div>
+                </div >
 
-                {/* Trust badges */}
-                <div className="mt-16 text-center">
-                    <div className="flex flex-wrap justify-center gap-8 text-gray-500 text-sm">
-                        <div className="flex items-center gap-2">
-                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                            </svg>
-                            <span>Secure payments via Stripe</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                            </svg>
-                            <span>7-day money-back guarantee</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-                            </svg>
-                            <span>Cancel anytime</span>
-                        </div>
-                    </div>
+        {/* Trust badges */ }
+        < div className = "mt-16 text-center" >
+            <div className="flex flex-wrap justify-center gap-8 text-gray-500 text-sm">
+                <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                    </svg>
+                    <span>Secure payments via Stripe</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                    </svg>
+                    <span>7-day money-back guarantee</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                    </svg>
+                    <span>Cancel anytime</span>
                 </div>
             </div>
-        </div>
+                </div >
+            </div >
+        </div >
     )
 }
 

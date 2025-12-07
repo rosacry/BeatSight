@@ -107,7 +107,7 @@ export function HomePage() {
     return (
         <div className="relative min-h-screen overflow-hidden">
             {/* Background Effects */}
-            <div className="fixed inset-0 bg-gradient-to-b from-slate-900 via-slate-950 to-black" />
+            <div className="fixed inset-0 bg-gradient-to-b from-slate-900 via-slate-950 to-black pointer-events-none" />
             <GradientOrbs />
             <ParticleBackground
                 particleCount={60}

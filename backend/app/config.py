@@ -115,7 +115,7 @@ class Settings(BaseSettings):
     # CORS
     # -------------------------------------------------------------------------
     cors_origins_str: str = Field(
-        default="http://localhost:3000,http://localhost:5173",
+        default="http://localhost:3000,http://localhost:5173,https://beatsight.io,https://www.beatsight.io,https://beatsight.pages.dev",
         alias="CORS_ORIGINS",
     )
 

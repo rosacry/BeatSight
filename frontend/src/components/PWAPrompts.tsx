@@ -44,33 +44,45 @@ export function InstallPrompt() {
     }
 
     return (
-        <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-md z-50">
-            <div className="bg-gray-800 rounded-xl shadow-xl border border-gray-700 p-4">
-                <div className="flex items-start gap-4">
+        <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-sm z-50">
+            <div className="bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10 p-4 overflow-hidden relative">
+                {/* Gradient accent */}
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-transparent to-fuchsia-500/10 pointer-events-none" />
+                
+                <div className="flex items-start gap-3 relative">
                     {/* App icon */}
-                    <div className="flex-shrink-0 w-12 h-12 bg-primary-500 rounded-xl flex items-center justify-center">
-                        <span className="text-white font-bold text-xl">B</span>
+                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex items-center justify-center shadow-lg">
+                        <img 
+                            src="/icon.svg" 
+                            alt="BeatSight" 
+                            className="w-8 h-8"
+                            onError={(e) => {
+                                // Fallback to text if image fails
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.parentElement!.innerHTML = '<span class="text-cyan-400 font-bold text-xl">B</span>';
+                            }}
+                        />
                     </div>
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                        <h3 className="text-white font-semibold">Install BeatSight</h3>
-                        <p className="text-gray-400 text-sm mt-1">
-                            Install our app for a better experience with offline support and quick access.
+                        <h3 className="text-white font-semibold text-sm">Install BeatSight</h3>
+                        <p className="text-gray-400 text-xs mt-0.5 leading-relaxed">
+                            Get offline support and quick access from your home screen.
                         </p>
 
                         {/* Actions */}
-                        <div className="flex items-center gap-3 mt-3">
+                        <div className="flex items-center gap-2 mt-3">
                             <button
                                 onClick={handleInstall}
                                 disabled={isInstalling}
-                                className="px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-500/50 text-white text-sm font-medium rounded-lg transition-colors"
+                                className="px-4 py-1.5 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-all shadow-lg shadow-cyan-500/25"
                             >
                                 {isInstalling ? 'Installing...' : 'Install'}
                             </button>
                             <button
                                 onClick={handleDismiss}
-                                className="px-4 py-2 text-gray-400 hover:text-white text-sm font-medium transition-colors"
+                                className="px-3 py-1.5 text-gray-400 hover:text-white text-xs font-medium transition-colors"
                             >
                                 Not now
                             </button>
@@ -80,9 +92,9 @@ export function InstallPrompt() {
                     {/* Close button */}
                     <button
                         onClick={handleDismiss}
-                        className="flex-shrink-0 text-gray-500 hover:text-gray-300 transition-colors"
+                        className="flex-shrink-0 text-gray-500 hover:text-white transition-colors p-1 -mt-1 -mr-1"
                     >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>

@@ -1,28 +1,29 @@
 :root {
-    --ifm-color-primary: #8b5cf6;
-    --ifm-color-primary-dark: #7c3aed;
-    --ifm-color-primary-darker: #6d28d9;
-    --ifm-color-primary-darkest: #5b21b6;
-    --ifm-color-primary-light: #a78bfa;
-    --ifm-color-primary-lighter: #c4b5fd;
-    --ifm-color-primary-lightest: #ddd6fe;
+    --ifm-color-primary: #22d3ee;
+    --ifm-color-primary-dark: #06b6d4;
+    --ifm-color-primary-darker: #0891b2;
+    --ifm-color-primary-darkest: #0e7490;
+    --ifm-color-primary-light: #67e8f9;
+    --ifm-color-primary-lighter: #a5f3fc;
+    --ifm-color-primary-lightest: #cffafe;
     --ifm-code-font-size: 95%;
-    --docusaurus-highlighted-code-line-bg: rgba(139, 92, 246, 0.1);
+    --docusaurus-highlighted-code-line-bg: rgba(34, 211, 238, 0.1);
 }
 
 /* Dark mode overrides */
 [data-theme='dark'] {
-    --ifm-color-primary: #a78bfa;
-    --ifm-color-primary-dark: #8b5cf6;
-    --ifm-color-primary-darker: #7c3aed;
-    --ifm-color-primary-darkest: #6d28d9;
-    --ifm-color-primary-light: #c4b5fd;
-    --ifm-color-primary-lighter: #ddd6fe;
-    --ifm-color-primary-lightest: #ede9fe;
-    --ifm-background-color: #111827;
-    --ifm-background-surface-color: #1f2937;
-    --ifm-navbar-background-color: #111827;
-    --ifm-footer-background-color: #0f172a;
+    --ifm-color-primary: #22d3ee;
+    --ifm-color-primary-dark: #06b6d4;
+    --ifm-color-primary-darker: #0891b2;
+    --ifm-color-primary-darkest: #0e7490;
+    --ifm-color-primary-light: #67e8f9;
+    --ifm-color-primary-lighter: #a5f3fc;
+    --ifm-color-primary-lightest: #cffafe;
+    --ifm-background-color: #0f172a;
+    --ifm-background-surface-color: #1e293b;
+    --ifm-navbar-background-color: #0f172a;
+    --ifm-footer-background-color: #020617;
+    --ifm-card-background-color: #1e293b;
 }
 
 /* Custom scrollbar */
@@ -51,7 +52,7 @@
 
 .hero__title {
     font-size: 3rem;
-    background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+    background: linear-gradient(135deg, #22d3ee, #c026d3);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

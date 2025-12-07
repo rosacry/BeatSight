@@ -16,10 +16,10 @@ const getApiBaseUrl = () => {
         return import.meta.env.VITE_API_BASE_URL
     }
     // Production domains use the production API
-    if (typeof window !== 'undefined' && 
-        (window.location.hostname === 'beatsight.io' || 
-         window.location.hostname === 'www.beatsight.io' ||
-         window.location.hostname.endsWith('.pages.dev'))) {
+    if (typeof window !== 'undefined' &&
+        (window.location.hostname === 'beatsight.io' ||
+            window.location.hostname === 'www.beatsight.io' ||
+            window.location.hostname.endsWith('.pages.dev'))) {
         return 'https://api.beatsight.io'
     }
     // Development fallback

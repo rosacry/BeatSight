@@ -11,6 +11,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision: str = "005_credit_system"
@@ -19,14 +20,25 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def table_exists(table_name: str) -> bool:
+    """Check if a table exists."""
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    return table_name in inspector.get_table_names()
+
+
 def upgrade() -> None:
+    # Skip if already migrated
+    if table_exists("credit_balances"):
+        return
+
     # Create CreditPackType enum
     credit_pack_type_enum = postgresql.ENUM(
         "starter",
         "value",
         "power",
         name="creditpacktype",
-        create_type=True,
+        create_type=False,
     )
     credit_pack_type_enum.create(op.get_bind(), checkfirst=True)
 
@@ -39,7 +51,7 @@ def upgrade() -> None:
         "subscription_grant",
         "expiry",
         name="credittransactiontype",
-        create_type=True,
+        create_type=False,
     )
     credit_transaction_type_enum.create(op.get_bind(), checkfirst=True)
 

@@ -13,6 +13,7 @@ Create Date: 2025-01-25
 """
 
 from alembic import op
+from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = "008_add_performance_indexes"
@@ -21,104 +22,127 @@ branch_labels = None
 depends_on = None
 
 
+def index_exists(index_name: str, table_name: str) -> bool:
+    """Check if an index exists."""
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    try:
+        indexes = [idx["name"] for idx in inspector.get_indexes(table_name)]
+        return index_name in indexes
+    except Exception:
+        return False
+
+
 def upgrade() -> None:
     """Add performance indexes for common query patterns."""
 
     # Subscription indexes - HIGH IMPACT
     # User subscription lookups (every authenticated request checks subscription)
-    op.create_index(
-        "ix_subscriptions_user_id",
-        "subscriptions",
-        ["user_id"],
-        unique=False,
-    )
+    if not index_exists("ix_subscriptions_user_id", "subscriptions"):
+        op.create_index(
+            "ix_subscriptions_user_id",
+            "subscriptions",
+            ["user_id"],
+            unique=False,
+        )
     # Filter by status (active subscriptions, batch updates for expired)
-    op.create_index(
-        "ix_subscriptions_status",
-        "subscriptions",
-        ["status"],
-        unique=False,
-    )
+    if not index_exists("ix_subscriptions_status", "subscriptions"):
+        op.create_index(
+            "ix_subscriptions_status",
+            "subscriptions",
+            ["status"],
+            unique=False,
+        )
 
     # AI Job indexes - HIGH IMPACT
     # User's job listing ("My Jobs" page)
-    op.create_index(
-        "ix_ai_jobs_requested_by_id",
-        "ai_jobs",
-        ["requested_by_id"],
-        unique=False,
-    )
+    if not index_exists("ix_ai_jobs_requested_by_id", "ai_jobs"):
+        op.create_index(
+            "ix_ai_jobs_requested_by_id",
+            "ai_jobs",
+            ["requested_by_id"],
+            unique=False,
+        )
     # Finding all jobs for a specific song
-    op.create_index(
-        "ix_ai_jobs_song_id",
-        "ai_jobs",
-        ["song_id"],
-        unique=False,
-    )
+    if not index_exists("ix_ai_jobs_song_id", "ai_jobs"):
+        op.create_index(
+            "ix_ai_jobs_song_id",
+            "ai_jobs",
+            ["song_id"],
+            unique=False,
+        )
 
     # Song indexes - MEDIUM-HIGH IMPACT
     # User's uploaded songs ("My Songs" page)
-    op.create_index(
-        "ix_songs_created_by_id",
-        "songs",
-        ["created_by_id"],
-        unique=False,
-    )
+    if not index_exists("ix_songs_created_by_id", "songs"):
+        op.create_index(
+            "ix_songs_created_by_id",
+            "songs",
+            ["created_by_id"],
+            unique=False,
+        )
     # Sorting by creation date (newest first pagination)
-    op.create_index(
-        "ix_songs_created_at",
-        "songs",
-        ["created_at"],
-        unique=False,
-    )
+    if not index_exists("ix_songs_created_at", "songs"):
+        op.create_index(
+            "ix_songs_created_at",
+            "songs",
+            ["created_at"],
+            unique=False,
+        )
 
     # Map version indexes - MEDIUM IMPACT
     # Loading all versions of a map (version history)
-    op.create_index(
-        "ix_map_versions_map_id",
-        "map_versions",
-        ["map_id"],
-        unique=False,
-    )
+    if not index_exists("ix_map_versions_map_id", "map_versions"):
+        op.create_index(
+            "ix_map_versions_map_id",
+            "map_versions",
+            ["map_id"],
+            unique=False,
+        )
     # Finding versions created by a user (contribution stats)
-    op.create_index(
-        "ix_map_versions_created_by",
-        "map_versions",
-        ["created_by"],
-        unique=False,
-    )
+    if not index_exists("ix_map_versions_created_by", "map_versions"):
+        op.create_index(
+            "ix_map_versions_created_by",
+            "map_versions",
+            ["created_by"],
+            unique=False,
+        )
 
     # Billing transaction indexes - MEDIUM-HIGH IMPACT
     # Billing history for a user
-    op.create_index(
-        "ix_billing_transactions_user_id",
-        "billing_transactions",
-        ["user_id"],
-        unique=False,
-    )
+    if not index_exists("ix_billing_transactions_user_id", "billing_transactions"):
+        op.create_index(
+            "ix_billing_transactions_user_id",
+            "billing_transactions",
+            ["user_id"],
+            unique=False,
+        )
     # Looking up transactions by payment provider reference
-    op.create_index(
-        "ix_billing_transactions_provider_ref",
-        "billing_transactions",
-        ["provider_ref"],
-        unique=False,
-    )
+    if not index_exists("ix_billing_transactions_provider_ref", "billing_transactions"):
+        op.create_index(
+            "ix_billing_transactions_provider_ref",
+            "billing_transactions",
+            ["provider_ref"],
+            unique=False,
+        )
 
     # Map edit proposal indexes - MEDIUM IMPACT
     # Verification queue (pending edits)
-    op.create_index(
-        "ix_map_edit_proposals_status",
-        "map_edit_proposals",
-        ["status"],
-        unique=False,
-    )
+    if not index_exists("ix_map_edit_proposals_status", "map_edit_proposals"):
+        op.create_index(
+            "ix_map_edit_proposals_status",
+            "map_edit_proposals",
+            ["status"],
+            unique=False,
+        )
     # User's edit history
-    op.create_index(
-        "ix_map_edit_proposals_proposer_id",
-        "map_edit_proposals",
-        ["proposer_id"],
-        unique=False,
-    )
+    if not index_exists("ix_map_edit_proposals_proposer_id", "map_edit_proposals"):
+        op.create_index(
+            "ix_map_edit_proposals_proposer_id",
+            "map_edit_proposals",
+            ["proposer_id"],
+            unique=False,
+        )
 
 
 def downgrade() -> None:

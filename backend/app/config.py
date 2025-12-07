@@ -7,7 +7,7 @@ See .env.example for all available configuration options.
 from functools import lru_cache
 from typing import List, Literal, Optional
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -116,7 +116,7 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     cors_origins: List[str] = Field(
         default_factory=lambda: ["http://localhost:3000", "http://localhost:5173"],
-        alias="CORS_ALLOWED_ORIGINS",
+        validation_alias=AliasChoices("CORS_ORIGINS", "CORS_ALLOWED_ORIGINS"),
     )
 
     @field_validator("cors_origins", mode="before")

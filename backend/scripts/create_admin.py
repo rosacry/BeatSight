@@ -18,8 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import async_session_factory
 from app.models.user import User
-from app.models.role import Role
-from app.models.user_role import UserRole
+from app.models.role import Role, UserRole
 from app.services.auth import AuthService
 from app.services.rbac import RoleCode
 

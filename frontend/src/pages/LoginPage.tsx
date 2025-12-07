@@ -95,7 +95,7 @@ export function LoginPage() {
                                 <img
                                     src="/icons/logo-navbar.png"
                                     alt="BeatSight"
-                                    className="w-14 h-14 relative z-10 drop-shadow-[0_0_12px_rgba(0,212,255,0.3)]"
+                                    className="w-14 h-14 relative z-10 brightness-105 contrast-110 drop-shadow-[0_0_12px_rgba(0,212,255,0.3)]"
                                 />
                             </div>
                         </motion.div>

@@ -174,7 +174,7 @@ export function Layout({ children }: LayoutProps) {
                                         <img
                                             src="/icons/logo-navbar.png"
                                             alt="BeatSight"
-                                            className="w-6 h-6 relative z-10 drop-shadow-[0_0_6px_rgba(0,212,255,0.2)] group-hover:drop-shadow-[0_0_8px_rgba(0,212,255,0.4)] transition-all"
+                                            className="w-6 h-6 relative z-10 brightness-105 contrast-110 drop-shadow-[0_0_6px_rgba(0,212,255,0.2)] group-hover:drop-shadow-[0_0_8px_rgba(0,212,255,0.4)] transition-all"
                                         />
                                     </div>
                                 </motion.div>
@@ -405,7 +405,7 @@ export function Layout({ children }: LayoutProps) {
                                           border border-white/10 flex items-center justify-center
                                           shadow-lg shadow-black/20 overflow-hidden">
                                 <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-fuchsia-500/5" />
-                                <img src="/icons/logo-navbar.png" alt="" className="w-4 h-4 relative z-10 drop-shadow-[0_0_4px_rgba(0,212,255,0.2)]" />
+                                <img src="/icons/logo-navbar.png" alt="" className="w-4 h-4 relative z-10 brightness-105 contrast-110 drop-shadow-[0_0_4px_rgba(0,212,255,0.2)]" />
                             </div>
                             <p className="text-slate-500 text-sm">
                                 © 2025 BeatSight. AI-powered drum beatmap generation.

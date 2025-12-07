@@ -174,10 +174,12 @@ export function AvatarUpload({
                     className={`
                         ${sizeClasses[size]}
                         rounded-full overflow-hidden
-                        bg-primary-600 flex items-center justify-center
-                        border-2 border-transparent hover:border-primary-400
-                        transition-all duration-200
-                        focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-gray-900
+                        bg-gradient-to-br from-cyan-500 to-cyan-600 
+                        flex items-center justify-center
+                        border-2 border-transparent 
+                        hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(0,212,255,0.3)]
+                        transition-all duration-300
+                        focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-gray-900
                         ${isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                     `}
                 >
@@ -191,11 +193,11 @@ export function AvatarUpload({
                         <span className="text-white text-xl font-bold">{initials}</span>
                     )}
 
-                    {/* Hover overlay */}
+                    {/* Hover overlay - CIRCULAR to match button */}
                     {!isUploading && (
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <div className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center">
                             <svg
-                                className={`${iconSizes[size]} text-white`}
+                                className={`${iconSizes[size]} text-white drop-shadow-lg`}
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -218,7 +220,7 @@ export function AvatarUpload({
 
                     {/* Loading spinner */}
                     {isUploading && (
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center">
                             <svg
                                 className={`${iconSizes[size]} text-white animate-spin`}
                                 fill="none"

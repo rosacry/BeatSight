@@ -121,9 +121,9 @@ export function Layout({ children }: LayoutProps) {
                 initial={{ y: -100 }}
                 animate={{ y: 0 }}
                 transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled
-                        ? 'bg-slate-900/90 backdrop-blur-xl border-b border-white/10 shadow-lg shadow-black/30'
-                        : 'bg-gradient-to-b from-slate-900/80 via-slate-900/40 to-transparent backdrop-blur-sm'
+                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
+                    ? 'bg-slate-900/95 backdrop-blur-xl border-b border-white/5 shadow-lg shadow-black/30'
+                    : 'bg-slate-900/60 backdrop-blur-md'
                     }`}
                 id={SKIP_LINK_TARGETS.NAVIGATION}
                 aria-label="Main navigation"
@@ -134,7 +134,7 @@ export function Layout({ children }: LayoutProps) {
                         <div className="flex items-center">
                             <Link to="/" className="flex items-center gap-2.5 group">
                                 {/* Logo with subtle glow effect */}
-                                <motion.div 
+                                <motion.div
                                     className="relative"
                                     whileHover={{ scale: 1.05 }}
                                     transition={{ type: 'spring', stiffness: 400 }}

@@ -2,6 +2,7 @@ import React, { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
+import { KeyboardShortcutsProvider } from '../hooks/useKeyboardShortcuts';
 
 // Create a fresh QueryClient for each test
 function createTestQueryClient() {
@@ -32,7 +33,11 @@ function customRender(
     function Wrapper({ children }: WrapperProps) {
         return (
             <QueryClientProvider client={queryClient}>
-                <BrowserRouter>{children}</BrowserRouter>
+                <BrowserRouter>
+                    <KeyboardShortcutsProvider>
+                        {children}
+                    </KeyboardShortcutsProvider>
+                </BrowserRouter>
             </QueryClientProvider>
         );
     }

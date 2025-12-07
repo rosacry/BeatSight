@@ -46,8 +46,8 @@ describe('Authentication Integration Tests', () => {
         it('renders login form correctly', () => {
             render(<LoginPage />);
 
-            expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-            expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+            expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
+            expect(screen.getByLabelText('Password')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
         });
 
@@ -59,15 +59,15 @@ describe('Authentication Integration Tests', () => {
             await user.click(submitButton);
 
             // HTML5 validation should prevent submission
-            expect(screen.getByLabelText(/email/i)).toBeInvalid();
+            expect(screen.getByLabelText(/email address/i)).toBeInvalid();
         });
 
         it('successfully logs in with valid credentials', async () => {
             const user = userEvent.setup();
             render(<LoginPage />);
 
-            await user.type(screen.getByLabelText(/email/i), 'test@example.com');
-            await user.type(screen.getByLabelText(/password/i), 'password123');
+            await user.type(screen.getByLabelText(/email address/i), 'test@example.com');
+            await user.type(screen.getByLabelText('Password'), 'password123');
             await user.click(screen.getByRole('button', { name: /sign in/i }));
 
             await waitFor(() => {
@@ -84,8 +84,8 @@ describe('Authentication Integration Tests', () => {
             const user = userEvent.setup();
             render(<LoginPage />);
 
-            await user.type(screen.getByLabelText(/email/i), 'wrong@example.com');
-            await user.type(screen.getByLabelText(/password/i), 'wrongpassword');
+            await user.type(screen.getByLabelText(/email address/i), 'wrong@example.com');
+            await user.type(screen.getByLabelText('Password'), 'wrongpassword');
             await user.click(screen.getByRole('button', { name: /sign in/i }));
 
             await waitFor(() => {
@@ -157,8 +157,8 @@ describe('Authentication Integration Tests', () => {
             const user = userEvent.setup();
             render(<LoginPage />);
 
-            await user.type(screen.getByLabelText(/email/i), 'test@example.com');
-            await user.type(screen.getByLabelText(/password/i), 'password123');
+            await user.type(screen.getByLabelText(/email address/i), 'test@example.com');
+            await user.type(screen.getByLabelText('Password'), 'password123');
             await user.click(screen.getByRole('button', { name: /sign in/i }));
 
             await waitFor(() => {

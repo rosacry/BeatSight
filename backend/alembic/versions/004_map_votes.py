@@ -86,14 +86,15 @@ def upgrade() -> None:
             "map_votes",
             ["user_id", "map_id"],
             unique=True,
-    )
+        )
 
     # Create index for efficient vote counting per map
-    op.create_index(
-        "ix_map_vote_map",
-        "map_votes",
-        ["map_id"],
-    )
+    if table_exists("map_votes") and not index_exists("ix_map_vote_map", "map_votes"):
+        op.create_index(
+            "ix_map_vote_map",
+            "map_votes",
+            ["map_id"],
+        )
 
 
 def downgrade() -> None:

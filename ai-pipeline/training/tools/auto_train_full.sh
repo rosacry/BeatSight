@@ -2772,20 +2772,26 @@ ENSEMBLE_PY
             BAL_PREFETCH="4"               # Standard prefetch
             BAL_VAL_PREFETCH="2"
             
-            # Model and augmentation (same as v5-local)
-            BAL_MODEL_FLAGS="--model-version v5 --v5-size large --drop-path-rate 0.15"
-            BAL_MIXUP_FLAGS="--mixup-alpha 0.2 --cutmix-alpha 0.5 --mixup-prob 0.5"
+            # Model and augmentation
+            # FIXED: Lower drop-path (0.1 vs 0.15) for stable early training
+            BAL_MODEL_FLAGS="--model-version v5 --v5-size large --drop-path-rate 0.1"
+            # FIXED: Lower mixup probability (0.3 vs 0.5) - let model learn basics first
+            BAL_MIXUP_FLAGS="--mixup-alpha 0.1 --cutmix-alpha 0.3 --mixup-prob 0.3"
             BAL_SPECAUGMENT_FLAGS="--specaugment drum"
-            # Higher focal gamma for rare classes - focuses on hard examples
-            BAL_FOCAL_FLAGS="--focal-loss --focal-gamma 3.0"
-            BAL_EMA_FLAGS="--use-ema --ema-decay 0.9995"
+            # FIXED: NO FOCAL LOSS - balanced sampling alone is enough
+            # Previous gamma 3.0 with uniform sampling caused class collapse (17/21 classes at 0%)
+            BAL_FOCAL_FLAGS=""
+            # FIXED: Higher EMA decay + longer warmup for stability
+            BAL_EMA_FLAGS="--use-ema --ema-decay 0.9998 --ema-warmup-steps 5000"
             BAL_LABEL_SMOOTHING="--label-smoothing 0.1"
             
-            # UNIFORM BALANCED SAMPLING - equal probability for ALL classes
-            # This is slower than sqrt but guarantees rare classes get enough gradient signal
-            BAL_BALANCED_SAMPLING="--balanced-sampling --sampling-strategy uniform --class-weights none"
+            # FIXED: sqrt sampling instead of uniform
+            # Uniform + focal loss = double emphasis on rare classes = class collapse
+            # sqrt provides gentler rebalancing that actually works
+            BAL_BALANCED_SAMPLING="--balanced-sampling --sampling-strategy sqrt --class-weights none"
             
-            BAL_EARLY_STOPPING="--early-stopping --early-stopping-patience 25 --early-stopping-min-delta 0.001 --early-stopping-warmup 5"
+            # FIXED: Longer patience (30 vs 25), longer warmup (10 vs 5)
+            BAL_EARLY_STOPPING="--early-stopping --early-stopping-patience 30 --early-stopping-min-delta 0.0005 --early-stopping-warmup 10"
             BAL_GRAD_CHECKPOINT="--gradient-checkpointing"
             
             # torch.compile DISABLED - causes CUDA graph conflicts with gradient checkpointing + AMP
@@ -2811,7 +2817,7 @@ ENSEMBLE_PY
             # 2. --checkpoint-every-batches 5000: Less frequent mid-epoch saves
             #    → Reduces I/O overhead from 14 checkpoints to 5 per epoch
             # 3. bfloat16: Better numerical stability on Ampere, similar speed
-            # 4. Early stopping (patience=25) will likely stop at epoch 30-50
+            # 4. Early stopping (patience=30) will likely stop at epoch 30-50
             #    → Could cut total training time in HALF
             # =====================================================================
             
@@ -2827,7 +2833,7 @@ ENSEMBLE_PY
               --epochs 100 \
               --batch-size ${BAL_BATCH_SIZE} \
               --grad-accum-steps ${BAL_GRAD_ACCUM} \
-              --lr 0.002 \
+              --lr 0.0004 \
               ${BAL_MODEL_FLAGS} \
               ${BAL_MIXUP_FLAGS} \
               ${BAL_SPECAUGMENT_FLAGS} \
@@ -2842,15 +2848,15 @@ ENSEMBLE_PY
               --warm-restart-t0 20 \
               --warm-restart-mult 2 \
               --warmup-epochs 5 \
-              --warmup-lr-factor 0.1 \
+              --warmup-lr-factor 0.05 \
               --grad-clip-norm 1.0 \
               --weight-decay 0.01 \
               --channels-last \
               --output "${BAL_OUTPUT_DIR}" \
-              --seed 1337 \
+              --seed 42 \
               --checkpoint-every 5 \
               --checkpoint-every-batches 5000 \
-              --val-fraction 0.2 \
+              --val-fraction 0.1 \
               --wandb-project beatsight-v5 \
               ${resume_from_flag}
             

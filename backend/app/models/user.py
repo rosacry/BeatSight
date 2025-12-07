@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Index, String, func
+from sqlalchemy import Boolean, DateTime, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -51,6 +51,13 @@ class User(Base):
     )
     hashed_password: Mapped[str | None] = mapped_column(String(255))
     karma_score: Mapped[int] = mapped_column(default=0)
+    
+    # Two-Factor Authentication fields
+    totp_secret: Mapped[str | None] = mapped_column(String(64))  # Encrypted TOTP secret
+    totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    totp_backup_codes: Mapped[str | None] = mapped_column(Text)  # JSON array of hashed backup codes
+    totp_enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

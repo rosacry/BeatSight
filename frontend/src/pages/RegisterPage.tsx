@@ -115,19 +115,21 @@ export function RegisterPage() {
                         >
                             {/* Outer glow */}
                             <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/40 to-fuchsia-500/40 rounded-3xl blur-2xl" />
-                            {/* Inner container with gradient background */}
+                            {/* Inner container with solid dark background for better blend */}
                             <div className="relative w-full h-full rounded-2xl 
-                                          bg-gradient-to-br from-slate-800/90 to-slate-900/90 
+                                          bg-slate-900
                                           border border-white/10
                                           flex items-center justify-center
                                           shadow-2xl shadow-fuchsia-500/20
                                           overflow-hidden">
                                 {/* Subtle inner gradient overlay for blend */}
-                                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-fuchsia-500/5" />
+                                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-transparent to-fuchsia-500/10" />
                                 <img
                                     src="/icons/logo-navbar.png"
                                     alt="BeatSight"
-                                    className="w-14 h-14 relative z-10 brightness-105 contrast-110 drop-shadow-[0_0_12px_rgba(217,70,239,0.3)]"
+                                    className="w-14 h-14 relative z-10 
+                                             [mix-blend-mode:screen] brightness-[1.4] saturate-[1.2]
+                                             drop-shadow-[0_0_12px_rgba(217,70,239,0.4)]"
                                 />
                             </div>
                         </motion.div>

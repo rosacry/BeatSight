@@ -39,10 +39,17 @@ interface AuthStore {
     initialize: () => Promise<void>
 }
 
-class AuthError extends Error {
+export class AuthError extends Error {
     constructor(public status: number, message: string) {
         super(message)
         this.name = 'AuthError'
+    }
+}
+
+export class TwoFactorRequiredError extends Error {
+    constructor() {
+        super('Two-factor authentication required')
+        this.name = 'TwoFactorRequiredError'
     }
 }
 
@@ -95,6 +102,36 @@ async function authRequest<T>(
         // Network error - CORS, offline, etc.
         console.error('Network error during auth request:', networkError)
         throw new AuthError(0, 'Unable to connect to server. Please check your internet connection.')
+    }
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: `Server error (${response.status})` }))
+        throw new AuthError(response.status, error.detail || `Request failed (${response.status})`)
+    }
+
+    return response.json()
+}
+
+async function loginRequest(credentials: LoginCredentials): Promise<TokenResponse> {
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+    }
+
+    let response: Response
+    try {
+        response = await fetch(`${API_BASE}/api/auth/login`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(credentials),
+        })
+    } catch (networkError) {
+        console.error('Network error during login request:', networkError)
+        throw new AuthError(0, 'Unable to connect to server. Please check your internet connection.')
+    }
+
+    // Handle 202 - 2FA required
+    if (response.status === 202) {
+        throw new TwoFactorRequiredError()
     }
 
     if (!response.ok) {
@@ -197,10 +234,7 @@ export const useAuthStore = create<AuthStore>()(
             login: async (credentials: LoginCredentials) => {
                 set({ isLoading: true })
                 try {
-                    const tokens = await authRequest<TokenResponse>('/api/auth/login', {
-                        method: 'POST',
-                        body: JSON.stringify(credentials),
-                    })
+                    const tokens = await loginRequest(credentials)
 
                     set({
                         accessToken: tokens.access_token,

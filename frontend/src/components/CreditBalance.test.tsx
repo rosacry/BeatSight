@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { CreditBalance, CreditBadge } from './CreditBalance'
 
 // Mock the useCredits hook
@@ -7,7 +8,26 @@ vi.mock('@/hooks/useCredits', () => ({
     useCreditCount: vi.fn(),
 }))
 
+// Mock react-router-dom navigation
+const mockNavigate = vi.fn()
+vi.mock('react-router-dom', async () => {
+    const actual = await vi.importActual('react-router-dom')
+    return {
+        ...actual,
+        useNavigate: () => mockNavigate,
+    }
+})
+
 import { useCreditCount } from '@/hooks/useCredits'
+
+// Helper function to render with router context
+const renderWithRouter = (component: React.ReactElement) => {
+    return render(
+        <MemoryRouter>
+            {component}
+        </MemoryRouter>
+    )
+}
 
 describe('CreditBalance', () => {
     beforeEach(() => {
@@ -20,7 +40,7 @@ describe('CreditBalance', () => {
             isLoading: false,
         })
 
-        render(<CreditBalance />)
+        renderWithRouter(<CreditBalance />)
 
         expect(screen.getByText('10')).toBeInTheDocument()
     })
@@ -31,9 +51,9 @@ describe('CreditBalance', () => {
             isLoading: false,
         })
 
-        const { container } = render(<CreditBalance />)
+        const { container } = renderWithRouter(<CreditBalance />)
 
-        expect(container.firstChild).toBeNull()
+        expect(container.querySelector('button')).toBeNull()
     })
 
     it('renders when credits is 0 and showWhenZero is true', () => {
@@ -42,7 +62,7 @@ describe('CreditBalance', () => {
             isLoading: false,
         })
 
-        render(<CreditBalance showWhenZero />)
+        renderWithRouter(<CreditBalance showWhenZero />)
 
         expect(screen.getByText('0')).toBeInTheDocument()
     })
@@ -53,7 +73,7 @@ describe('CreditBalance', () => {
             isLoading: true,
         })
 
-        render(<CreditBalance showWhenZero />)
+        renderWithRouter(<CreditBalance showWhenZero />)
 
         expect(screen.getByText('...')).toBeInTheDocument()
     })
@@ -65,10 +85,22 @@ describe('CreditBalance', () => {
         })
 
         const handleClick = vi.fn()
-        render(<CreditBalance onClick={handleClick} />)
+        renderWithRouter(<CreditBalance onClick={handleClick} />)
 
         fireEvent.click(screen.getByRole('button'))
         expect(handleClick).toHaveBeenCalledTimes(1)
+    })
+
+    it('navigates to pricing when clicked without custom handler', () => {
+        vi.mocked(useCreditCount).mockReturnValue({
+            credits: 5,
+            isLoading: false,
+        })
+
+        renderWithRouter(<CreditBalance />)
+
+        fireEvent.click(screen.getByRole('button'))
+        expect(mockNavigate).toHaveBeenCalledWith('/pricing')
     })
 
     it('applies custom className', () => {
@@ -77,7 +109,7 @@ describe('CreditBalance', () => {
             isLoading: false,
         })
 
-        render(<CreditBalance className="custom-class" />)
+        renderWithRouter(<CreditBalance className="custom-class" />)
 
         const button = screen.getByRole('button')
         expect(button).toHaveClass('custom-class')
@@ -89,7 +121,7 @@ describe('CreditBalance', () => {
             isLoading: false,
         })
 
-        render(<CreditBalance />)
+        renderWithRouter(<CreditBalance />)
 
         const button = screen.getByRole('button')
         // We now use aria-label instead of title (tooltip is handled by Tooltip component)
@@ -102,7 +134,7 @@ describe('CreditBalance', () => {
             isLoading: false,
         })
 
-        const { container } = render(<CreditBalance />)
+        const { container } = renderWithRouter(<CreditBalance />)
 
         const svg = container.querySelector('svg')
         expect(svg).toBeInTheDocument()

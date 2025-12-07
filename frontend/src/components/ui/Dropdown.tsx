@@ -4,8 +4,39 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, createContext, useContext } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '../../lib/utils'
+
+// Animation variants for dropdown menu
+const dropdownAnimationVariants = {
+    hidden: {
+        opacity: 0,
+        scale: 0.95,
+        y: -8,
+    },
+    visible: {
+        opacity: 1,
+        scale: 1,
+        y: 0,
+        transition: {
+            duration: 0.15,
+            ease: [0.4, 0, 0.2, 1],
+        },
+    },
+    exit: {
+        opacity: 0,
+        scale: 0.95,
+        y: -8,
+        transition: {
+            duration: 0.1,
+            ease: [0.4, 0, 1, 1],
+        },
+    },
+}
+
+// Animation props that conflict with Framer Motion
+type ConflictingAnimationProps = 'onAnimationStart' | 'onAnimationEnd' | 'onDragStart' | 'onDragEnd' | 'onDrag'
 
 // ============================================================================
 // Dropdown Context
@@ -199,7 +230,7 @@ DropdownTrigger.displayName = 'DropdownTrigger'
 // ============================================================================
 
 export interface DropdownMenuProps
-    extends React.HTMLAttributes<HTMLDivElement>,
+    extends Omit<React.HTMLAttributes<HTMLDivElement>, ConflictingAnimationProps>,
     VariantProps<typeof dropdownMenuVariants> { }
 
 export function DropdownMenu({ className, position, align, children, ...props }: DropdownMenuProps) {
@@ -220,21 +251,26 @@ export function DropdownMenu({ className, position, align, children, ...props }:
         }
     }, [isOpen, setIsOpen])
 
-    if (!isOpen) return null
-
     return (
-        <div
-            ref={menuRef}
-            role="listbox"
-            className={cn(
-                dropdownMenuVariants({ position, align }),
-                'animate-in fade-in-0 zoom-in-95',
-                className
+        <AnimatePresence>
+            {isOpen && (
+                <motion.div
+                    ref={menuRef}
+                    role="listbox"
+                    variants={dropdownAnimationVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    className={cn(
+                        dropdownMenuVariants({ position, align }),
+                        className
+                    )}
+                    {...props}
+                >
+                    <div className="py-1">{children}</div>
+                </motion.div>
             )}
-            {...props}
-        >
-            <div className="py-1">{children}</div>
-        </div>
+        </AnimatePresence>
     )
 }
 

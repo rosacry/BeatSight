@@ -67,10 +67,22 @@ export function VerifierDashboardPage() {
             },
         })
         if (!response.ok) {
+            if (response.status === 401) {
+                throw new Error('Session expired. Please log in again.')
+            }
             if (response.status === 403) {
                 throw new Error('Access denied. Verifier permissions required.')
             }
-            throw new Error('Failed to fetch data')
+            if (response.status === 404) {
+                throw new Error(`API endpoint not found: ${endpoint}. This may be a configuration issue.`)
+            }
+            // Try to get error detail from response
+            try {
+                const errorData = await response.json()
+                throw new Error(errorData.detail || `Request failed with status ${response.status}`)
+            } catch {
+                throw new Error(`Request failed with status ${response.status}`)
+            }
         }
         return response.json()
     }

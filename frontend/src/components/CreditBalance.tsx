@@ -3,7 +3,8 @@
  * Only shown when user has credits > 0 (unless showWhenZero is true).
  */
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useCreditCount } from '@/hooks/useCredits'
 import { Tooltip } from '@/components/ui/Tooltip'
 
@@ -18,6 +19,7 @@ export function CreditBalance({
     className = '',
     showWhenZero = false,
 }: CreditBalanceProps) {
+    const navigate = useNavigate()
     const { credits, isLoading } = useCreditCount()
     const [lastKnownCredits, setLastKnownCredits] = useState<number | null>(null)
     const hasEverHadCredits = useRef(false)
@@ -41,6 +43,15 @@ export function CreditBalance({
     // But keep showing during loading if we had credits before
     const shouldHide = !showWhenZero && displayCredits === 0 && !isLoading && !hasEverHadCredits.current
 
+    // Handle click - use custom handler or navigate to pricing
+    const handleClick = useCallback(() => {
+        if (onClick) {
+            onClick()
+        } else {
+            navigate('/pricing')
+        }
+    }, [onClick, navigate])
+
     if (shouldHide) {
         return null
     }
@@ -55,7 +66,7 @@ export function CreditBalance({
             }
         >
             <button
-                onClick={onClick}
+                onClick={handleClick}
                 data-tour="credits"
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full 
                       bg-cyan-500/10 border border-cyan-500/30 

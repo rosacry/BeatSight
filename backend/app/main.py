@@ -26,6 +26,7 @@ from app.api.routes import (
     songs,
     storage,
     sync,
+    twofa,
     users,
     verifier,
     votes,
@@ -250,6 +251,7 @@ if settings.environment != "test":
 app.include_router(health.router)
 app.include_router(achievements.router, prefix=settings.api_prefix)
 app.include_router(auth.router, prefix=settings.api_prefix)
+app.include_router(twofa.router, prefix=settings.api_prefix)
 app.include_router(users.router, prefix=settings.api_prefix)
 app.include_router(songs.router, prefix=settings.api_prefix)
 app.include_router(ai_jobs.router, prefix=settings.api_prefix)

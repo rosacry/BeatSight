@@ -21,9 +21,15 @@ export interface TokenResponse {
     token_type: string
 }
 
+export interface TwoFactorRequiredResponse {
+    requires_2fa: boolean
+    message: string
+}
+
 export interface LoginCredentials {
     email: string
     password: string
+    totp_code?: string
 }
 
 export interface RegisterCredentials {

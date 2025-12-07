@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr, Field
@@ -15,6 +16,7 @@ from app.models.user import User
 from app.services.auth import AuthService
 from app.services.email import get_email_service
 from app.services.account_security import get_account_security_service
+from app.services.totp import verify_totp_code, verify_backup_code
 from app.utils.password_validation import validate_password
 
 logger = logging.getLogger(__name__)
@@ -35,6 +37,7 @@ class LoginRequest(BaseModel):
 
     email: EmailStr
     password: str
+    totp_code: Optional[str] = Field(None, description="6-digit TOTP code for 2FA")
 
 
 class TokenResponse(BaseModel):
@@ -43,6 +46,13 @@ class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+
+
+class TwoFactorRequiredResponse(BaseModel):
+    """Response when 2FA is required."""
+    
+    requires_2fa: bool = True
+    message: str = "Two-factor authentication required"
 
 
 class UserResponse(BaseModel):
@@ -164,17 +174,26 @@ async def register(
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=TokenResponse, responses={
+    200: {"model": TokenResponse, "description": "Successfully authenticated"},
+    202: {"model": TwoFactorRequiredResponse, "description": "2FA required"},
+    401: {"description": "Invalid credentials"},
+    429: {"description": "Account locked"}
+})
 async def login(
     request: LoginRequest,
     http_request: Request,
     session: AsyncSession = Depends(get_db_session),
-) -> TokenResponse:
+):
     """
     Authenticate a user and return tokens.
 
     Validates email and password, returns access and refresh tokens.
     Implements account lockout after multiple failed attempts.
+    
+    If 2FA is enabled for the user:
+    - First request (without totp_code): Returns 202 with requires_2fa=true
+    - Second request (with totp_code): Validates TOTP and returns tokens
     """
     security_service = get_account_security_service()
 
@@ -215,6 +234,44 @@ async def login(
             detail="Invalid email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # Check if 2FA is enabled
+    if user.totp_enabled and user.totp_secret:
+        if not request.totp_code:
+            # 2FA required but no code provided - return 202 to signal 2FA needed
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=status.HTTP_202_ACCEPTED,
+                content={
+                    "requires_2fa": True,
+                    "message": "Two-factor authentication required"
+                }
+            )
+        
+        # Verify TOTP code
+        if not verify_totp_code(user.totp_secret, request.totp_code):
+            # Check if it's a backup code
+            if user.backup_codes_hash:
+                is_backup_valid, new_hash = verify_backup_code(
+                    user.backup_codes_hash, request.totp_code
+                )
+                if is_backup_valid:
+                    # Update backup codes hash (marks code as used)
+                    user.backup_codes_hash = new_hash
+                    await session.commit()
+                    logger.info(f"User {user.id} authenticated using backup code")
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid two-factor authentication code",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid two-factor authentication code",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
 
     # Successful login - clear any failed attempts
     await security_service.clear_failed_attempts(request.email)

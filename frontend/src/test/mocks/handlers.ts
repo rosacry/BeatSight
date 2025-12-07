@@ -1,4 +1,4 @@
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse, PathParams, HttpResponseResolver } from 'msw';
 
 // Helper to create a mock JWT token with a future expiration
 // This creates a structurally valid JWT (header.payload.signature)
@@ -148,7 +148,7 @@ const handleGetSongs = ({ request }: { request: Request }) => {
     });
 };
 
-const handleGetSong = ({ params, request }: { params: Record<string, string | readonly string[]>; request: Request }) => {
+const handleGetSong: HttpResponseResolver<PathParams<'id'>> = ({ params, request }) => {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader) {
         return HttpResponse.json(
@@ -184,7 +184,7 @@ const handleCreateSong = async ({ request }: { request: Request }) => {
     }, { status: 201 });
 };
 
-const handleDeleteSong = ({ params, request }: { params: Record<string, string | readonly string[]>; request: Request }) => {
+const handleDeleteSong: HttpResponseResolver<PathParams<'id'>> = ({ params, request }) => {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader) {
         return HttpResponse.json(
@@ -213,7 +213,7 @@ const handleCreateJob = ({ request }: { request: Request }) => {
     return HttpResponse.json(mockJob, { status: 201 });
 };
 
-const handleGetJob = ({ params, request }: { params: Record<string, string | readonly string[]>; request: Request }) => {
+const handleGetJob: HttpResponseResolver<PathParams<'id'>> = ({ params, request }) => {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader) {
         return HttpResponse.json(

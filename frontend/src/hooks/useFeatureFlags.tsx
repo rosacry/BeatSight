@@ -56,7 +56,7 @@ export const DEFAULT_FLAGS: FeatureFlagConfig[] = [
     {
         key: 'ai_suggestions',
         defaultValue: true,
-        description: 'AI-powered beatmap suggestions',
+        description: 'Smart beatmap suggestions',
     },
     {
         key: 'social_features',

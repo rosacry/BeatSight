@@ -408,7 +408,7 @@ export function Layout({ children }: LayoutProps) {
                                 <img src="/icons/logo-navbar.png" alt="" className="w-4 h-4 relative z-10 brightness-105 contrast-110 drop-shadow-[0_0_4px_rgba(0,212,255,0.2)]" />
                             </div>
                             <p className="text-slate-500 text-sm">
-                                © 2025 BeatSight. AI-powered drum beatmap generation.
+                                © 2025 BeatSight. See the music before you play it.
                             </p>
                         </div>
 

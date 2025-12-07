@@ -99,10 +99,10 @@ describe('Tooltip', () => {
         )
 
         const button = screen.getByText('Hover me')
-        
+
         // Show tooltip
         fireEvent.mouseEnter(button)
-        
+
         await waitFor(() => {
             expect(screen.getByRole('tooltip')).toBeInTheDocument()
             expect(screen.getByText('Test tooltip')).toBeInTheDocument()
@@ -110,7 +110,7 @@ describe('Tooltip', () => {
 
         // Hide tooltip
         fireEvent.mouseLeave(button)
-        
+
         await waitFor(() => {
             expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
         }, { timeout: 500 })

@@ -8,8 +8,8 @@
 # Let Railway auto-detect the Dockerfile
 
 [deploy]
-# Minimal test - just try to start Python and see output
-startCommand = "python --version && echo PORT=$PORT && python -c 'import sys; print(sys.version); print(\"Testing stdout flush\", flush=True)' && exec uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+# Direct uvicorn start - no shell tricks
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
 healthcheckPath = "/health/live"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"

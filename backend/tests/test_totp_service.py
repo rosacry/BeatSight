@@ -1,6 +1,5 @@
 """Tests for TOTP service."""
 
-import pytest
 import pyotp
 from app.services.totp import (
     generate_totp_secret,

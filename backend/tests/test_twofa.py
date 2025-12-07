@@ -5,7 +5,6 @@ These tests focus on the TOTP service unit tests.
 For API integration tests, see test_totp_service.py
 """
 
-import pytest
 import pyotp
 
 from app.services.totp import (

@@ -48,13 +48,13 @@ export function InstallPrompt() {
             <div className="bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10 p-4 overflow-hidden relative">
                 {/* Gradient accent */}
                 <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-transparent to-fuchsia-500/10 pointer-events-none" />
-                
+
                 <div className="flex items-start gap-3 relative">
                     {/* App icon */}
                     <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex items-center justify-center shadow-lg">
-                        <img 
-                            src="/icon.svg" 
-                            alt="BeatSight" 
+                        <img
+                            src="/icon.svg"
+                            alt="BeatSight"
                             className="w-8 h-8"
                             onError={(e) => {
                                 // Fallback to text if image fails

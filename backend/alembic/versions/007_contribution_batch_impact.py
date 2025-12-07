@@ -8,6 +8,7 @@ Create Date: 2025-12-15
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = "007_contribution_batch_impact"
@@ -16,8 +17,18 @@ branch_labels = None
 depends_on = None
 
 
+def table_exists(table_name: str) -> bool:
+    """Check if a table exists."""
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    return table_name in inspector.get_table_names()
+
+
 def upgrade() -> None:
     """Create contribution_batch_impacts table for tracking training impact."""
+    if table_exists("contribution_batch_impacts"):
+        return
+
     op.create_table(
         "contribution_batch_impacts",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),

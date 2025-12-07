@@ -11,6 +11,7 @@ Create Date: 2025-01-25
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = "009_webhook_idempotency"
@@ -19,8 +20,18 @@ branch_labels = None
 depends_on = None
 
 
+def table_exists(table_name: str) -> bool:
+    """Check if a table exists."""
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    return table_name in inspector.get_table_names()
+
+
 def upgrade() -> None:
     """Create processed_webhook_events table."""
+    if table_exists("processed_webhook_events"):
+        return
+
     op.create_table(
         "processed_webhook_events",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),

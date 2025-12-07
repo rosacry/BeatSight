@@ -48,7 +48,7 @@ describe('authStore', () => {
         it('isAuthenticated returns true when logged in', () => {
             setState({
                 accessToken: createMockJwt(3600),
-                user: { id: '1', email: 'a@b.com', display_name: 'user', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01' },
+                user: { id: '1', email: 'a@b.com', display_name: 'user', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01', roles: [] },
             })
             expect(getState().isAuthenticated()).toBe(true)
         })
@@ -57,7 +57,7 @@ describe('authStore', () => {
     describe('logout', () => {
         it('clears all auth state', () => {
             setState({
-                user: { id: 'user-123', email: 'test@example.com', display_name: 'testuser', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01' },
+                user: { id: 'user-123', email: 'test@example.com', display_name: 'testuser', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01', roles: [] },
                 accessToken: createMockJwt(3600),
                 refreshToken: 'refresh',
                 isLoading: false,
@@ -99,7 +99,7 @@ describe('authStore', () => {
         it('does nothing when user already exists', async () => {
             setState({
                 accessToken: createMockJwt(3600),
-                user: { id: '1', email: 'e@e.com', display_name: 'u', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01' },
+                user: { id: '1', email: 'e@e.com', display_name: 'u', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01', roles: [] },
             })
 
             const existingUser = getState().user
@@ -139,7 +139,7 @@ describe('authStore', () => {
         it('isAuthenticated returns true when logged in', () => {
             setState({
                 accessToken: createMockJwt(3600),
-                user: { id: '1', email: 'a@b.com', display_name: 'user', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01' },
+                user: { id: '1', email: 'a@b.com', display_name: 'user', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01', roles: [] },
             })
 
             expect(isAuthenticated()).toBe(true)
@@ -154,7 +154,7 @@ describe('authStore', () => {
             setState({
                 accessToken: mockToken,
                 refreshToken: 'refresh',
-                user: { id: '1', email: 'e@e.com', display_name: 'u', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01' },
+                user: { id: '1', email: 'e@e.com', display_name: 'u', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01', roles: [] },
                 isLoading: true,
             })
 

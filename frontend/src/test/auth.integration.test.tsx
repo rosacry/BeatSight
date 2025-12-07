@@ -172,7 +172,7 @@ describe('Authentication Integration Tests', () => {
         it('clears tokens on logout', async () => {
             // Set up authenticated state with valid mock JWT
             useAuthStore.setState({
-                user: { id: '1', email: 'test@example.com', display_name: 'Test', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01' },
+                user: { id: '1', email: 'test@example.com', display_name: 'Test', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01', roles: [] },
                 accessToken: createMockJwt(3600),
                 refreshToken: 'mock-refresh-token',
                 isLoading: false,
@@ -195,7 +195,7 @@ describe('Authentication Integration Tests', () => {
 
             // Set authenticated state with a valid mock JWT
             useAuthStore.setState({
-                user: { id: '1', email: 'test@example.com', display_name: 'Test', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01' },
+                user: { id: '1', email: 'test@example.com', display_name: 'Test', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01', roles: [] },
                 accessToken: createMockJwt(3600), // Valid for 1 hour
                 refreshToken: 'mock-refresh-token',
                 isLoading: false,

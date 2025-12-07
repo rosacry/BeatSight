@@ -10,7 +10,10 @@ export interface User {
     avatar_url: string | null
     karma_score: number
     created_at: string
+    roles: string[]
 }
+
+export type UserRole = 'user' | 'verifier' | 'admin'
 
 export interface TokenResponse {
     access_token: string

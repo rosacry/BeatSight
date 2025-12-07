@@ -5,7 +5,7 @@
  * that respond to mouse movement and create depth.
  */
 
-import { useEffect, useRef, useCallback, useMemo } from 'react'
+import { useEffect, useRef, useCallback, useMemo, memo } from 'react'
 import { cn } from '../../lib/utils'
 
 interface Particle {
@@ -27,7 +27,7 @@ interface ParticleBackgroundProps {
     blur?: boolean
 }
 
-export function ParticleBackground({
+function ParticleBackgroundBase({
     className,
     particleCount = 50,
     colors = ['#00d4ff', '#ff00ff', '#ffaa00'],
@@ -181,6 +181,9 @@ export function ParticleBackground({
     )
 }
 
+// Memoize to prevent re-renders when parent state changes (e.g., typing in inputs)
+export const ParticleBackground = memo(ParticleBackgroundBase)
+
 // ============================================================================
 // Gradient Orbs - Floating gradient blobs
 // ============================================================================
@@ -189,7 +192,7 @@ interface GradientOrbsProps {
     className?: string
 }
 
-export function GradientOrbs({ className }: GradientOrbsProps) {
+function GradientOrbsBase({ className }: GradientOrbsProps) {
     return (
         <div className={cn('absolute inset-0 overflow-hidden pointer-events-none', className)}>
             {/* Primary cyan orb */}
@@ -217,6 +220,9 @@ export function GradientOrbs({ className }: GradientOrbsProps) {
     )
 }
 
+// Memoize to prevent re-renders
+export const GradientOrbs = memo(GradientOrbsBase)
+
 // ============================================================================
 // Audio Visualizer Bars - Animated music bars
 // ============================================================================
@@ -227,7 +233,7 @@ interface AudioBarsProps {
     color?: string
 }
 
-export function AudioBars({ className, barCount = 5, color = '#00d4ff' }: AudioBarsProps) {
+function AudioBarsBase({ className, barCount = 5, color = '#00d4ff' }: AudioBarsProps) {
     const bars = useMemo(() =>
         Array.from({ length: barCount }, (_, i) => ({
             delay: i * 0.1,
@@ -252,5 +258,8 @@ export function AudioBars({ className, barCount = 5, color = '#00d4ff' }: AudioB
         </div>
     )
 }
+
+// Memoize to prevent re-renders
+export const AudioBars = memo(AudioBarsBase)
 
 export default ParticleBackground

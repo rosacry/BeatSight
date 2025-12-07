@@ -13,7 +13,7 @@ export interface User {
     roles: string[]
 }
 
-export type UserRole = 'user' | 'verifier' | 'admin'
+export type UserRole = 'user' | 'verifier' | 'staff' | 'admin'
 
 export interface TokenResponse {
     access_token: string

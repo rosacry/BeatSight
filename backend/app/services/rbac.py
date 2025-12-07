@@ -102,6 +102,7 @@ class RoleCode(str, Enum):
 
     USER = "user"
     VERIFIER = "verifier"
+    STAFF = "staff"
     ADMIN = "admin"
 
 
@@ -129,19 +130,25 @@ ROLE_PERMISSIONS: dict[str, set[Permission]] = {
         Permission.MAP_APPROVE,
         Permission.MAP_EDIT_REVIEW,
     },
-    RoleCode.ADMIN: {
-        # Inherits all verifier permissions plus:
-        Permission.USER_DELETE,
+    RoleCode.STAFF: {
+        # Staff can do most admin things but cannot:
+        # - Manage roles (only admin can promote/demote)
+        # - Access system-level admin settings
+        # - Delete users
         Permission.USER_LIST,
-        Permission.ROLE_ASSIGN,
-        Permission.ROLE_REVOKE,
-        Permission.ROLE_LIST,
         Permission.SONG_UPDATE,
-        Permission.SONG_DELETE,
         Permission.JOB_RETRY,
         Permission.JOB_ADMIN,
         Permission.ADMIN_DASHBOARD,
         Permission.ADMIN_METRICS,
+    },
+    RoleCode.ADMIN: {
+        # Admins have full access including:
+        Permission.USER_DELETE,
+        Permission.ROLE_ASSIGN,
+        Permission.ROLE_REVOKE,
+        Permission.ROLE_LIST,
+        Permission.SONG_DELETE,
         Permission.ADMIN_AUDIT,
         Permission.ADMIN_SYSTEM,
         Permission.SUBSCRIPTION_MANAGE,
@@ -149,7 +156,7 @@ ROLE_PERMISSIONS: dict[str, set[Permission]] = {
 }
 
 # Build complete permission sets with inheritance
-ROLE_HIERARCHY = [RoleCode.USER, RoleCode.VERIFIER, RoleCode.ADMIN]
+ROLE_HIERARCHY = [RoleCode.USER, RoleCode.VERIFIER, RoleCode.STAFF, RoleCode.ADMIN]
 
 
 def _build_inherited_permissions() -> dict[str, set[Permission]]:

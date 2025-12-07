@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import { API_CONFIG } from '@/lib/config'
 
 interface SystemOverview {
     total_users: number
@@ -85,7 +86,7 @@ export function AdminDashboardPage() {
     const [searchQuery, setSearchQuery] = useState('')
 
     const fetchWithAuth = async (endpoint: string) => {
-        const response = await fetch(`/api${endpoint}`, {
+        const response = await fetch(`${API_CONFIG.baseUrl}/api${endpoint}`, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',

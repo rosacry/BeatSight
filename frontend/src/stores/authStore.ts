@@ -26,6 +26,7 @@ interface AuthStore {
     getTokenExpirationTime: () => number | null
     hasRole: (role: string) => boolean
     isAdmin: () => boolean
+    isStaff: () => boolean
     isVerifier: () => boolean
 
     // Actions
@@ -154,10 +155,16 @@ export const useAuthStore = create<AuthStore>()(
                 return get().hasRole('admin')
             },
 
-            // Check if user is verifier (or admin, since admin inherits verifier)
+            // Check if user is staff (or admin, since admin inherits staff)
+            isStaff: () => {
+                const state = get()
+                return state.hasRole('staff') || state.hasRole('admin')
+            },
+
+            // Check if user is verifier (or staff/admin, since they inherit verifier)
             isVerifier: () => {
                 const state = get()
-                return state.hasRole('verifier') || state.hasRole('admin')
+                return state.hasRole('verifier') || state.hasRole('staff') || state.hasRole('admin')
             },
 
             // Initialize auth state on app load
@@ -307,6 +314,11 @@ export function isAuthenticated(): boolean {
 // Helper to check if user is admin
 export function isAdmin(): boolean {
     return useAuthStore.getState().isAdmin()
+}
+
+// Helper to check if user is staff
+export function isStaff(): boolean {
+    return useAuthStore.getState().isStaff()
 }
 
 // Helper to check if user is verifier

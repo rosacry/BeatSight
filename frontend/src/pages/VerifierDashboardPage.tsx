@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { ProposalDiffViewer, type DiffPayload } from '@/components/ProposalDiffViewer'
+import { API_CONFIG } from '@/lib/config'
 
 interface Proposer {
     id: string
@@ -57,7 +58,7 @@ export function VerifierDashboardPage() {
     const [hasMore, setHasMore] = useState(false)
 
     const fetchWithAuth = async (endpoint: string, options?: RequestInit) => {
-        const response = await fetch(`/api${endpoint}`, {
+        const response = await fetch(`${API_CONFIG.baseUrl}/api${endpoint}`, {
             ...options,
             headers: {
                 'Authorization': `Bearer ${accessToken}`,

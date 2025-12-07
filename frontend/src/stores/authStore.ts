@@ -169,7 +169,7 @@ export const useAuthStore = create<AuthStore>()(
             login: async (credentials: LoginCredentials) => {
                 set({ isLoading: true })
                 try {
-                    const tokens = await authRequest<TokenResponse>('/auth/login', {
+                    const tokens = await authRequest<TokenResponse>('/api/auth/login', {
                         method: 'POST',
                         body: JSON.stringify(credentials),
                     })
@@ -190,7 +190,7 @@ export const useAuthStore = create<AuthStore>()(
             register: async (credentials: RegisterCredentials) => {
                 set({ isLoading: true })
                 try {
-                    const tokens = await authRequest<TokenResponse>('/auth/register', {
+                    const tokens = await authRequest<TokenResponse>('/api/auth/register', {
                         method: 'POST',
                         body: JSON.stringify(credentials),
                     })
@@ -224,7 +224,7 @@ export const useAuthStore = create<AuthStore>()(
                 }
 
                 try {
-                    const tokens = await authRequest<TokenResponse>('/auth/refresh', {
+                    const tokens = await authRequest<TokenResponse>('/api/auth/refresh', {
                         method: 'POST',
                         body: JSON.stringify({ refresh_token: state.refreshToken }),
                     })
@@ -249,7 +249,7 @@ export const useAuthStore = create<AuthStore>()(
                 }
 
                 const user = await authRequest<User>(
-                    '/auth/me',
+                    '/api/auth/me',
                     { method: 'GET' },
                     state.accessToken
                 )

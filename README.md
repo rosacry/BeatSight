@@ -33,19 +33,21 @@ Rhythm games like Guitar Hero, Rock Band, Dance Dance Revolution, and osu! all s
 BeatSight brings the rhythm game paradigm to drum practice:
 
 - **Visual lookahead** — Notes scroll toward a timing line, giving you time to prepare each hit
-- **AI transcription** — Drop in any song and get a playable beatmap in minutes, not hours of manual transcription  
+- **Community library** — Discover, share, and refine beatmaps for any song—the global index for drum transcriptions
+- **Multiple creation paths** — Build maps from scratch, use AI-assisted transcription, or polish existing community maps
 - **Tempo control** — Slow sections down to 50% without pitch shift, then gradually speed up as you learn
 - **Stem isolation** — Practice with just the drum track, or hear how your part fits the full mix
 
-The goal isn't gamification for its own sake—it's giving drummers the same visual-motor advantage that rhythm games have proven works, but applied to learning *actual songs* on *real drums*.
+The goal isn't gamification for its own sake—it's giving drummers the same visual-motor advantage that rhythm games have proven works, applied to learning *actual songs* on *real drums*, with a community-driven library that grows and improves over time.
 
 ## Features
 
-### AI-Powered Transcription
-- **~96% validation accuracy** on drum classification using a production-trained ML model
-- Technique detection: flams, ghost notes, rolls, accents, rimshots
-- Velocity and dynamics analysis for expressive playback
-- Automatic tempo and time signature detection
+### Beatmap Creation
+- **Manual editor** — Build beatmaps from scratch with a full-featured timeline editor
+- **AI-assisted transcription** — Use machine learning to generate a starting point, then refine it
+- **Community refinement** — Polish existing maps; your corrections feed back to improve the model
+- **Technique detection** — Flams, ghost notes, rolls, accents, rimshots, and more
+- **Automatic analysis** — Tempo, time signature, and velocity detection
 
 ### Multiple Practice Views
 - **2D Lane View** — DDR/StepMania-style vertical scrolling with color-coded drum components
@@ -69,7 +71,7 @@ The goal isn't gamification for its own sake—it's giving drummers the same vis
 | **Mobile** | Flutter-based iOS/Android clients | :calendar: Planned |
 
 > [!NOTE]
-> The AI transcription model runs on secure cloud infrastructure (Modal). Users access it through the desktop app or web interface with their account credits—the model is not distributed for local execution.
+> Community beatmaps and manually-created maps are always free to access and play. AI-assisted transcription uses account credits and runs on secure cloud infrastructure (Modal)—manual creation is unlimited.
 
 ## Getting Started
 
@@ -133,15 +135,15 @@ Opens at `http://localhost:5173` with hot module replacement.
 
 ## Pricing
 
-BeatSight uses a simple 2-tier model with optional credit packs:
+**Playing and creating beatmaps is free.** AI-assisted transcription uses credits:
 
-| Tier | Price | Monthly Quota | Best For |
-|------|-------|---------------|----------|
-| **Free** | $0 | 3 songs | Trying it out |
-| **Pro** | $12/mo | 50 songs | Regular practice |
-| **Credits** | $0.35/song | Pay-as-you-go | Occasional use |
+| Tier | Price | AI Transcriptions | Best For |
+|------|-------|-------------------|----------|
+| **Free** | $0 | 3/month | Getting started |
+| **Pro** | $12/mo | 50/month | Regular creators |
+| **Credits** | $0.35/song | Pay-as-you-go | Occasional AI use |
 
-Credits work for everyone—buy a pack if you just need a few extra transcriptions without committing to Pro.
+Community maps, manual creation, and all practice features are always free. Credits are only for AI-assisted transcription.
 
 ## Architecture
 
@@ -227,7 +229,7 @@ Contributions are welcome! Please read [`docs/CONTRIBUTING.md`](docs/CONTRIBUTIN
 5. Submit a pull request
 
 > [!IMPORTANT]
-> The AI model and training code in `ai-pipeline/training/` is provided for transparency but the trained weights are proprietary. Contributions to the training pipeline are welcome; model weights are not redistributed.
+> Beatmap contributions are what make BeatSight valuable—every refined map helps build the global drum transcription library. The AI training code in `ai-pipeline/training/` is provided for transparency; trained weights are proprietary but community corrections continuously improve the model.
 
 ## License
 

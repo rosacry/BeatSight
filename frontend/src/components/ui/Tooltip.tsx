@@ -220,9 +220,9 @@ export function Tooltip({
         ref: (node: HTMLElement) => {
             triggerRef.current = node
             // Forward ref if child has one
-            const childRef = (children as any).ref
+            const childRef = (children as React.ReactElement<{ ref?: React.Ref<HTMLElement> }>).props.ref
             if (typeof childRef === 'function') childRef(node)
-            else if (childRef) childRef.current = node
+            else if (childRef && typeof childRef === 'object') (childRef as React.MutableRefObject<HTMLElement | null>).current = node
         },
         onMouseEnter: (e: React.MouseEvent) => {
             show()

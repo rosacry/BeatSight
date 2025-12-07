@@ -260,7 +260,7 @@ export const handlers = [
     http.post('/api/auth/refresh', handleRefresh),
     http.post('/api/auth/logout', handleLogout),
     http.get('/api/auth/me', handleMe),
-    
+
     // authStore uses /api/api/auth/* (API_BASE + /api/auth/*)
     http.post('/api/api/auth/register', handleRegister),
     http.post('/api/api/auth/login', handleLogin),
@@ -273,7 +273,7 @@ export const handlers = [
     http.get('/api/songs/:id', handleGetSong),
     http.post('/api/songs', handleCreateSong),
     http.delete('/api/songs/:id', handleDeleteSong),
-    
+
     http.get('/api/api/songs', handleGetSongs),
     http.get('/api/api/songs/:id', handleGetSong),
     http.post('/api/api/songs', handleCreateSong),
@@ -282,7 +282,7 @@ export const handlers = [
     // AI Jobs endpoints - both patterns
     http.post('/api/ai-jobs', handleCreateJob),
     http.get('/api/ai-jobs/:id', handleGetJob),
-    
+
     http.post('/api/api/ai-jobs', handleCreateJob),
     http.get('/api/api/ai-jobs/:id', handleGetJob),
 

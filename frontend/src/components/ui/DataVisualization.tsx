@@ -50,7 +50,7 @@ export function StatCard({
         if (animate && typeof value === 'number') {
             springValue.set(numericValue);
         }
-    }, [numericValue, animate, springValue]);
+    }, [numericValue, animate, springValue, value]);
 
     // Calculate trend if not provided
     const calculatedTrend = trend ?? (

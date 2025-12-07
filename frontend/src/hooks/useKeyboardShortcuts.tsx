@@ -25,7 +25,7 @@ interface KeyboardShortcutsContextValue {
 
 const KeyboardShortcutsContext = createContext<KeyboardShortcutsContextValue | null>(null);
 
-// eslint-disable-next-line react-refresh/only-export-components
+ 
 export function useKeyboardShortcuts() {
     const context = useContext(KeyboardShortcutsContext);
     if (!context) {
@@ -193,7 +193,7 @@ function formatShortcut(shortcut: Shortcut): string {
 }
 
 // Hook for registering shortcuts in components
-// eslint-disable-next-line react-refresh/only-export-components
+ 
 export function useShortcut(shortcut: Shortcut) {
     const { registerShortcut } = useKeyboardShortcuts();
 
@@ -205,7 +205,7 @@ export function useShortcut(shortcut: Shortcut) {
 }
 
 // Common shortcuts
-// eslint-disable-next-line react-refresh/only-export-components
+ 
 export const commonShortcuts = {
     search: { key: '/', description: 'Focus search', scope: 'Navigation' },
     home: { key: 'h', description: 'Go to home', scope: 'Navigation' },

@@ -134,7 +134,7 @@ export const useNotification = (): NotificationContextType => {
  * Notification - Single notification component
  */
 export const Notification = React.forwardRef<HTMLDivElement, NotificationProps & VariantProps<typeof notificationVariants>>(
-    ({ id, title, message, variant = 'default', dismissible = true, action, onDismiss, ...props }, ref) => {
+    ({ id: _id, title, message, variant = 'default', dismissible = true, action, onDismiss, ...props }, ref) => {
         return (
             <div
                 ref={ref}

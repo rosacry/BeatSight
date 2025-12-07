@@ -27,7 +27,7 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-// eslint-disable-next-line react-refresh/only-export-components
+ 
 export function useToast() {
     const context = useContext(ToastContext);
     if (!context) {
@@ -184,7 +184,7 @@ if (styleTag) {
  * Falls back to dev logging if ToastProvider not available.
  * For full functionality, use useToast() hook inside components.
  */
-// eslint-disable-next-line react-refresh/only-export-components
+ 
 export const toast = {
     success: (message: string) => {
         if (import.meta.env.DEV) {

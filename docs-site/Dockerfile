@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20.19-alpine AS builder
+FROM node:22-alpine3.23 AS builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ COPY . .
 RUN npm run build
 
 # Production stage - serve with nginx
-FROM nginx:1.27-alpine
+FROM nginx:1.29-alpine3.22
 
 # Copy custom nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf

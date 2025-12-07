@@ -161,12 +161,12 @@ export function MagneticButton({
 
     // Exclude conflicting event handlers from props to avoid type conflicts with Framer Motion
     // These props conflict with Framer Motion's types - destructure and ignore them
-    const { 
-        onDrag, 
-        onDragStart, 
-        onDragEnd, 
+    const {
+        onDrag,
+        onDragStart,
+        onDragEnd,
         onAnimationStart,
-        ...restProps 
+        ...restProps
     } = props
     // Suppress unused variable warnings - these are intentionally excluded
     void onDrag; void onDragStart; void onDragEnd; void onAnimationStart;

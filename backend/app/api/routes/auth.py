@@ -118,16 +118,35 @@ async def register(
             detail="An account with this email already exists",
         )
 
-    # Create new user
-    user = User(
-        email=request.email,
-        display_name=request.display_name,
-        hashed_password=auth_service.hash_password(request.password),
-        auth_provider_id=f"local:{uuid.uuid4()}",  # Local auth provider
-    )
-    session.add(user)
-    await session.commit()
-    await session.refresh(user)
+    try:
+        # Hash password
+        hashed_password = auth_service.hash_password(request.password)
+        logger.debug("Password hashed for email: %s", request.email)
+    except Exception as e:
+        logger.exception("Password hash failed for email: %s - %s", request.email, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to process password",
+        )
+
+    try:
+        # Create new user
+        user = User(
+            email=request.email,
+            display_name=request.display_name,
+            hashed_password=hashed_password,
+            auth_provider_id=f"local:{uuid.uuid4()}",  # Local auth provider
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        logger.info("User registered: id=%s, email=%s", user.id, request.email)
+    except Exception as e:
+        logger.exception("User creation failed for email: %s - %s", request.email, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create user account",
+        )
 
     # Send welcome email in background
     email_service = get_email_service()

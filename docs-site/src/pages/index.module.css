@@ -15,13 +15,20 @@
     width: 200%;
     height: 200%;
     background: radial-gradient(circle at 30% 30%, rgba(34, 211, 238, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 70% 70%, rgba(192, 38, 211, 0.15) 0%, transparent 50%);
+        radial-gradient(circle at 70% 70%, rgba(192, 38, 211, 0.15) 0%, transparent 50%);
     animation: gradientMove 20s ease-in-out infinite;
 }
 
 @keyframes gradientMove {
-    0%, 100% { transform: translate(0, 0); }
-    50% { transform: translate(-5%, -5%); }
+
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+
+    50% {
+        transform: translate(-5%, -5%);
+    }
 }
 
 .heroContent {
@@ -216,15 +223,15 @@
     .heroTitle {
         font-size: 2.5rem;
     }
-    
+
     .heroSubtitle {
         font-size: 1rem;
     }
-    
+
     .sectionTitle {
         font-size: 2rem;
     }
-    
+
     .ctaTitle {
         font-size: 2rem;
     }

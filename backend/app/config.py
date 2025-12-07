@@ -7,7 +7,7 @@ See .env.example for all available configuration options.
 from functools import lru_cache
 from typing import List, Literal, Optional
 
-from pydantic import AliasChoices, Field, field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -116,13 +116,20 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     cors_origins: List[str] = Field(
         default_factory=lambda: ["http://localhost:3000", "http://localhost:5173"],
-        validation_alias=AliasChoices("CORS_ORIGINS", "CORS_ALLOWED_ORIGINS"),
     )
 
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors_origins(cls, v):
-        """Parse comma-separated CORS origins from env var."""
+        """Parse comma-separated CORS origins from env var.
+        
+        Supports both CORS_ORIGINS and CORS_ALLOWED_ORIGINS env vars.
+        """
+        import os
+        # Check both env var names if no value provided
+        if v is None or (isinstance(v, list) and len(v) == 0):
+            v = os.environ.get("CORS_ORIGINS") or os.environ.get("CORS_ALLOWED_ORIGINS")
+        
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v

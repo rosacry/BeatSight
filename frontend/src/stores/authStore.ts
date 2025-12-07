@@ -78,17 +78,24 @@ async function authRequest<T>(
         headers['Authorization'] = `Bearer ${token}`
     }
 
-    const response = await fetch(`${API_BASE}${endpoint}`, {
-        ...options,
-        headers: {
-            ...headers,
-            ...options.headers,
-        },
-    })
+    let response: Response
+    try {
+        response = await fetch(`${API_BASE}${endpoint}`, {
+            ...options,
+            headers: {
+                ...headers,
+                ...options.headers,
+            },
+        })
+    } catch (networkError) {
+        // Network error - CORS, offline, etc.
+        console.error('Network error during auth request:', networkError)
+        throw new AuthError(0, 'Unable to connect to server. Please check your internet connection.')
+    }
 
     if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
-        throw new AuthError(response.status, error.detail || 'Request failed')
+        const error = await response.json().catch(() => ({ detail: `Server error (${response.status})` }))
+        throw new AuthError(response.status, error.detail || `Request failed (${response.status})`)
     }
 
     return response.json()

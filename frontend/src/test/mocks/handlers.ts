@@ -74,191 +74,224 @@ const mockJob = {
     updated_at: '2024-01-01T00:00:00Z',
 };
 
-export const handlers = [
-    // Auth endpoints
-    http.post('/api/auth/register', async ({ request }) => {
-        const body = await request.json() as Record<string, string>;
-        if (!body.email || !body.password || !body.display_name) {
-            return HttpResponse.json(
-                { detail: 'Missing required fields' },
-                { status: 400 }
-            );
-        }
-        const tokens = getMockTokens();
+// Handler logic functions
+const handleRegister = async ({ request }: { request: Request }) => {
+    const body = await request.json() as Record<string, string>;
+    if (!body.email || !body.password || !body.display_name) {
+        return HttpResponse.json(
+            { detail: 'Missing required fields' },
+            { status: 400 }
+        );
+    }
+    const tokens = getMockTokens();
+    return HttpResponse.json({
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        token_type: tokens.token_type,
+    });
+};
+
+const handleLogin = async ({ request }: { request: Request }) => {
+    const body = await request.json() as Record<string, string>;
+    if (body.email === 'test@example.com' && body.password === 'password123') {
         return HttpResponse.json({
-            access_token: tokens.access_token,
-            refresh_token: tokens.refresh_token,
-            token_type: tokens.token_type,
+            user: mockUser,
+            ...getMockTokens(),
         });
-    }),
+    }
+    return HttpResponse.json(
+        { detail: 'Invalid credentials' },
+        { status: 401 }
+    );
+};
 
-    http.post('/api/auth/login', async ({ request }) => {
-        const body = await request.json() as Record<string, string>;
-        if (body.email === 'test@example.com' && body.password === 'password123') {
-            return HttpResponse.json({
-                user: mockUser,
-                ...getMockTokens(),
-            });
-        }
-        return HttpResponse.json(
-            { detail: 'Invalid credentials' },
-            { status: 401 }
-        );
-    }),
+const handleRefresh = async ({ request }: { request: Request }) => {
+    const body = await request.json() as { refresh_token?: string };
+    if (body.refresh_token === 'mock-refresh-token') {
+        return HttpResponse.json(getMockTokens());
+    }
+    return HttpResponse.json(
+        { detail: 'Invalid refresh token' },
+        { status: 401 }
+    );
+};
 
-    http.post('/api/auth/refresh', async ({ request }) => {
-        const body = await request.json() as { refresh_token?: string };
-        if (body.refresh_token === 'mock-refresh-token') {
-            return HttpResponse.json(getMockTokens());
-        }
-        return HttpResponse.json(
-            { detail: 'Invalid refresh token' },
-            { status: 401 }
-        );
-    }),
+const handleLogout = () => {
+    return HttpResponse.json({ message: 'Logged out successfully' });
+};
 
-    http.post('/api/auth/logout', () => {
-        return HttpResponse.json({ message: 'Logged out successfully' });
-    }),
+const handleMe = ({ request }: { request: Request }) => {
+    const authHeader = request.headers.get('Authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+        return HttpResponse.json(mockUser);
+    }
+    return HttpResponse.json(
+        { detail: 'Not authenticated' },
+        { status: 401 }
+    );
+};
 
-    http.get('/api/auth/me', ({ request }) => {
-        const authHeader = request.headers.get('Authorization');
-        // Check if it's a Bearer token (starts with 'Bearer ')
-        if (authHeader?.startsWith('Bearer ')) {
-            return HttpResponse.json(mockUser);
-        }
+const handleGetSongs = ({ request }: { request: Request }) => {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) {
         return HttpResponse.json(
             { detail: 'Not authenticated' },
             { status: 401 }
         );
-    }),
+    }
+    return HttpResponse.json({
+        items: mockSongs,
+        total: mockSongs.length,
+        page: 1,
+        per_page: 20,
+        total_pages: 1,
+    });
+};
 
-    // Songs endpoints
-    http.get('/api/songs', ({ request }) => {
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader) {
-            return HttpResponse.json(
-                { detail: 'Not authenticated' },
-                { status: 401 }
-            );
-        }
+const handleGetSong = ({ params, request }: { params: Record<string, string | readonly string[]>; request: Request }) => {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) {
+        return HttpResponse.json(
+            { detail: 'Not authenticated' },
+            { status: 401 }
+        );
+    }
+    const song = mockSongs.find((s) => s.id === params.id);
+    if (song) {
+        return HttpResponse.json(song);
+    }
+    return HttpResponse.json(
+        { detail: 'Song not found' },
+        { status: 404 }
+    );
+};
+
+const handleCreateSong = async ({ request }: { request: Request }) => {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) {
+        return HttpResponse.json(
+            { detail: 'Not authenticated' },
+            { status: 401 }
+        );
+    }
+    const body = await request.json() as Record<string, unknown>;
+    return HttpResponse.json({
+        ...mockSongs[0],
+        id: '3',
+        ...body,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+    }, { status: 201 });
+};
+
+const handleDeleteSong = ({ params, request }: { params: Record<string, string | readonly string[]>; request: Request }) => {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) {
+        return HttpResponse.json(
+            { detail: 'Not authenticated' },
+            { status: 401 }
+        );
+    }
+    const song = mockSongs.find((s) => s.id === params.id);
+    if (song) {
+        return new HttpResponse(null, { status: 204 });
+    }
+    return HttpResponse.json(
+        { detail: 'Song not found' },
+        { status: 404 }
+    );
+};
+
+const handleCreateJob = ({ request }: { request: Request }) => {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) {
+        return HttpResponse.json(
+            { detail: 'Not authenticated' },
+            { status: 401 }
+        );
+    }
+    return HttpResponse.json(mockJob, { status: 201 });
+};
+
+const handleGetJob = ({ params, request }: { params: Record<string, string | readonly string[]>; request: Request }) => {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) {
+        return HttpResponse.json(
+            { detail: 'Not authenticated' },
+            { status: 401 }
+        );
+    }
+    if (params.id === '1') {
         return HttpResponse.json({
-            items: mockSongs,
-            total: mockSongs.length,
-            page: 1,
-            per_page: 20,
-            total_pages: 1,
+            ...mockJob,
+            status: 'completed',
+            progress: 100,
         });
-    }),
+    }
+    return HttpResponse.json(
+        { detail: 'Job not found' },
+        { status: 404 }
+    );
+};
 
-    http.get('/api/songs/:id', ({ params, request }) => {
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader) {
-            return HttpResponse.json(
-                { detail: 'Not authenticated' },
-                { status: 401 }
-            );
-        }
-        const song = mockSongs.find((s) => s.id === params.id);
-        if (song) {
-            return HttpResponse.json(song);
-        }
+const handleUpload = ({ request }: { request: Request }) => {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) {
         return HttpResponse.json(
-            { detail: 'Song not found' },
-            { status: 404 }
+            { detail: 'Not authenticated' },
+            { status: 401 }
         );
-    }),
+    }
+    return HttpResponse.json({
+        url: 'https://storage.example.com/uploads/test-file.mp3',
+        key: 'uploads/test-file.mp3',
+    });
+};
 
-    http.post('/api/songs', async ({ request }) => {
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader) {
-            return HttpResponse.json(
-                { detail: 'Not authenticated' },
-                { status: 401 }
-            );
-        }
-        const body = await request.json() as Record<string, unknown>;
-        return HttpResponse.json({
-            ...mockSongs[0],
-            id: '3',
-            ...body,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-        }, { status: 201 });
-    }),
+const handleHealth = () => {
+    return HttpResponse.json({ status: 'healthy' });
+};
 
-    http.delete('/api/songs/:id', ({ params, request }) => {
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader) {
-            return HttpResponse.json(
-                { detail: 'Not authenticated' },
-                { status: 401 }
-            );
-        }
-        const song = mockSongs.find((s) => s.id === params.id);
-        if (song) {
-            return new HttpResponse(null, { status: 204 });
-        }
-        return HttpResponse.json(
-            { detail: 'Song not found' },
-            { status: 404 }
-        );
-    }),
+export const handlers = [
+    // Auth endpoints - both /api/auth/* and /api/api/auth/* patterns
+    // Direct API calls use /api/auth/*
+    http.post('/api/auth/register', handleRegister),
+    http.post('/api/auth/login', handleLogin),
+    http.post('/api/auth/refresh', handleRefresh),
+    http.post('/api/auth/logout', handleLogout),
+    http.get('/api/auth/me', handleMe),
+    
+    // authStore uses /api/api/auth/* (API_BASE + /api/auth/*)
+    http.post('/api/api/auth/register', handleRegister),
+    http.post('/api/api/auth/login', handleLogin),
+    http.post('/api/api/auth/refresh', handleRefresh),
+    http.post('/api/api/auth/logout', handleLogout),
+    http.get('/api/api/auth/me', handleMe),
 
-    // AI Jobs endpoints
-    http.post('/api/ai-jobs', async ({ request }) => {
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader) {
-            return HttpResponse.json(
-                { detail: 'Not authenticated' },
-                { status: 401 }
-            );
-        }
-        return HttpResponse.json(mockJob, { status: 201 });
-    }),
+    // Songs endpoints - both patterns
+    http.get('/api/songs', handleGetSongs),
+    http.get('/api/songs/:id', handleGetSong),
+    http.post('/api/songs', handleCreateSong),
+    http.delete('/api/songs/:id', handleDeleteSong),
+    
+    http.get('/api/api/songs', handleGetSongs),
+    http.get('/api/api/songs/:id', handleGetSong),
+    http.post('/api/api/songs', handleCreateSong),
+    http.delete('/api/api/songs/:id', handleDeleteSong),
 
-    http.get('/api/ai-jobs/:id', ({ params, request }) => {
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader) {
-            return HttpResponse.json(
-                { detail: 'Not authenticated' },
-                { status: 401 }
-            );
-        }
-        if (params.id === '1') {
-            return HttpResponse.json({
-                ...mockJob,
-                status: 'completed',
-                progress: 100,
-            });
-        }
-        return HttpResponse.json(
-            { detail: 'Job not found' },
-            { status: 404 }
-        );
-    }),
+    // AI Jobs endpoints - both patterns
+    http.post('/api/ai-jobs', handleCreateJob),
+    http.get('/api/ai-jobs/:id', handleGetJob),
+    
+    http.post('/api/api/ai-jobs', handleCreateJob),
+    http.get('/api/api/ai-jobs/:id', handleGetJob),
 
-    // Storage endpoints
-    http.post('/api/storage/upload/:category', async ({ request }) => {
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader) {
-            return HttpResponse.json(
-                { detail: 'Not authenticated' },
-                { status: 401 }
-            );
-        }
-        return HttpResponse.json({
-            url: 'https://storage.example.com/uploads/test-file.mp3',
-            key: 'uploads/test-file.mp3',
-        });
-    }),
+    // Storage endpoints - both patterns
+    http.post('/api/storage/upload/:category', handleUpload),
+    http.post('/api/api/storage/upload/:category', handleUpload),
 
-    // Health check
-    http.get('/health/live', () => {
-        return HttpResponse.json({ status: 'healthy' });
-    }),
-
-    http.get('/api/health/live', () => {
-        return HttpResponse.json({ status: 'healthy' });
-    }),
+    // Health check - all patterns
+    http.get('/health/live', handleHealth),
+    http.get('/api/health/live', handleHealth),
+    http.get('/api/api/health/live', handleHealth),
 ];

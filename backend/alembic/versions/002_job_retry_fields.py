@@ -42,10 +42,13 @@ def upgrade() -> None:
         )
     if not column_exists("ai_jobs", "next_retry_at"):
         op.add_column(
-            "ai_jobs", sa.Column("next_retry_at", sa.DateTime(timezone=True), nullable=True)
+            "ai_jobs",
+            sa.Column("next_retry_at", sa.DateTime(timezone=True), nullable=True),
         )
     if not column_exists("ai_jobs", "last_error"):
-        op.add_column("ai_jobs", sa.Column("last_error", sa.String(1024), nullable=True))
+        op.add_column(
+            "ai_jobs", sa.Column("last_error", sa.String(1024), nullable=True)
+        )
 
 
 def downgrade() -> None:

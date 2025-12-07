@@ -80,7 +80,9 @@ def upgrade() -> None:
         )
 
     # Create unique index for user+map (one vote per user per map)
-    if table_exists("map_votes") and not index_exists("ix_map_vote_user_map", "map_votes"):
+    if table_exists("map_votes") and not index_exists(
+        "ix_map_vote_user_map", "map_votes"
+    ):
         op.create_index(
             "ix_map_vote_user_map",
             "map_votes",

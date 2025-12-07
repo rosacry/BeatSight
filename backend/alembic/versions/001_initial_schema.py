@@ -193,19 +193,19 @@ def upgrade() -> None:
                 "map_id",
                 postgresql.UUID(as_uuid=True),
                 sa.ForeignKey("maps.id", ondelete="CASCADE"),
-            nullable=False,
-        ),
-        sa.Column("version", sa.Integer, nullable=False),
-        sa.Column("data_url", sa.String(512), nullable=False),
-        sa.Column("is_current", sa.Boolean, default=True, nullable=False),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.func.now(),
-            nullable=False,
-        ),
-        sa.UniqueConstraint("map_id", "version", name="uq_map_version"),
-    )
+                nullable=False,
+            ),
+            sa.Column("version", sa.Integer, nullable=False),
+            sa.Column("data_url", sa.String(512), nullable=False),
+            sa.Column("is_current", sa.Boolean, default=True, nullable=False),
+            sa.Column(
+                "created_at",
+                sa.DateTime(timezone=True),
+                server_default=sa.func.now(),
+                nullable=False,
+            ),
+            sa.UniqueConstraint("map_id", "version", name="uq_map_version"),
+        )
     if not index_exists("ix_map_versions_map_id", "map_versions"):
         op.create_index("ix_map_versions_map_id", "map_versions", ["map_id"])
 
@@ -290,7 +290,9 @@ def upgrade() -> None:
                 sa.ForeignKey("users.id", ondelete="CASCADE"),
                 nullable=False,
             ),
-            sa.Column("stripe_subscription_id", sa.String(255), unique=True, nullable=False),
+            sa.Column(
+                "stripe_subscription_id", sa.String(255), unique=True, nullable=False
+            ),
             sa.Column("stripe_customer_id", sa.String(255), nullable=False),
             sa.Column("plan_id", sa.String(50), nullable=False),
             sa.Column("status", sa.String(50), nullable=False),
@@ -341,7 +343,9 @@ def upgrade() -> None:
                 nullable=False,
             ),
         )
-    if not index_exists("ix_billing_transactions_subscription_id", "billing_transactions"):
+    if not index_exists(
+        "ix_billing_transactions_subscription_id", "billing_transactions"
+    ):
         op.create_index(
             "ix_billing_transactions_subscription_id",
             "billing_transactions",
@@ -407,7 +411,9 @@ def upgrade() -> None:
             ),
         )
     if not index_exists("ix_map_edit_proposals_map_id", "map_edit_proposals"):
-        op.create_index("ix_map_edit_proposals_map_id", "map_edit_proposals", ["map_id"])
+        op.create_index(
+            "ix_map_edit_proposals_map_id", "map_edit_proposals", ["map_id"]
+        )
     if not index_exists("ix_map_edit_proposals_proposer_id", "map_edit_proposals"):
         op.create_index(
             "ix_map_edit_proposals_proposer_id", "map_edit_proposals", ["proposer_id"]
@@ -439,7 +445,9 @@ def upgrade() -> None:
                 nullable=False,
             ),
         )
-    if not index_exists("ix_map_verification_decisions_proposal_id", "map_verification_decisions"):
+    if not index_exists(
+        "ix_map_verification_decisions_proposal_id", "map_verification_decisions"
+    ):
         op.create_index(
             "ix_map_verification_decisions_proposal_id",
             "map_verification_decisions",
@@ -492,10 +500,14 @@ def upgrade() -> None:
                 server_default=sa.func.now(),
                 nullable=False,
             ),
-            sa.UniqueConstraint("user_id", "achievement_id", name="uq_user_achievement"),
+            sa.UniqueConstraint(
+                "user_id", "achievement_id", name="uq_user_achievement"
+            ),
         )
     if not index_exists("ix_user_achievements_user_id", "user_achievements"):
-        op.create_index("ix_user_achievements_user_id", "user_achievements", ["user_id"])
+        op.create_index(
+            "ix_user_achievements_user_id", "user_achievements", ["user_id"]
+        )
 
     # Create sync tables
     if not table_exists("sync_clients"):
@@ -540,6 +552,8 @@ def upgrade() -> None:
                 nullable=False,
             ),
         )
+
+
 def downgrade() -> None:
     # Drop tables in reverse order of creation
     op.drop_table("user_preferences")

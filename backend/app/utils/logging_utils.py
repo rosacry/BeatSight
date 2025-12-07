@@ -88,14 +88,16 @@ def configure_logging(config: LogConfig | None = None) -> None:
     if config.redact_fields:
         processors.append(create_redactor(config.redact_fields))
 
-    processors.append(structlog.processors.format_exc_info)
-
     # Add formatter based on config
+    # Only add format_exc_info for JSON/KV renderers, not ConsoleRenderer
+    # as ConsoleRenderer handles exception formatting itself
     if config.format == "json":
+        processors.append(structlog.processors.format_exc_info)
         processors.append(structlog.processors.JSONRenderer())
     elif config.format == "console":
         processors.append(structlog.dev.ConsoleRenderer(colors=True))
     else:
+        processors.append(structlog.processors.format_exc_info)
         processors.append(structlog.processors.KeyValueRenderer())
 
     structlog.configure(

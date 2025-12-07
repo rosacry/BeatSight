@@ -31,7 +31,7 @@ from uuid import UUID
 
 from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
 
 from app.logging import get_logger
 
@@ -148,7 +148,9 @@ class ErrorResponse(BaseModel):
     request_id: str | None = None
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
-    model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
+    @field_serializer("timestamp")
+    def serialize_timestamp(self, value: datetime) -> str:
+        return value.isoformat()
 
 
 # =============================================================================

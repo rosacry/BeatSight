@@ -1,7 +1,7 @@
 """add push_subscriptions table
 
 Revision ID: 003_push_subscriptions
-Revises: 002_job_retry_fields
+Revises: 002_job_retry
 Create Date: 2024-11-26
 
 """
@@ -14,7 +14,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "003_push_subscriptions"
-down_revision: Union[str, None] = "002_job_retry_fields"
+down_revision: Union[str, None] = "002_job_retry"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

@@ -35,21 +35,21 @@ export function LandingPage() {
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500" />
                             </span>
                             <span className="text-purple-300 text-sm font-medium">
-                                AI-Powered Drum Transcription
+                                The Drum Transcription Library
                             </span>
                         </div>
 
                         <h1 className="text-5xl sm:text-7xl font-bold text-white mb-6 tracking-tight">
-                            Turn Any Audio Into
+                            See the Music
                             <br />
                             <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                                Playable Beatmaps
+                                Before You Play It
                             </span>
                         </h1>
 
                         <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-10">
-                            BeatSight uses advanced AI to transcribe drums from any audio—songs,
-                            practice recordings, original compositions, or even isolated drum tracks.
+                            Practice drums to any song with visual lookahead. Discover community beatmaps,
+                            create your own, or use AI-assisted transcription to get started quickly.
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -110,21 +110,21 @@ export function LandingPage() {
                     <div className="grid md:grid-cols-3 gap-8">
                         <FeatureCard
                             step={1}
-                            icon={<UploadIcon />}
-                            title="Upload Any Audio"
-                            description="Songs, band practice recordings, original compositions, or solo drums—if it has drums, we can transcribe it."
+                            icon={<PlayIcon />}
+                            title="Discover & Practice"
+                            description="Browse community beatmaps or search for your favorite songs. Practice with visual lookahead on your real drum kit."
                         />
                         <FeatureCard
                             step={2}
-                            icon={<AIIcon />}
-                            title="AI Transcription"
-                            description="Advanced neural networks detect and classify 19 different drum sounds."
+                            icon={<UploadIcon />}
+                            title="Create & Share"
+                            description="Build beatmaps from scratch, use AI-assisted transcription, or refine existing maps. Contribute to the global library."
                         />
                         <FeatureCard
                             step={3}
-                            icon={<PlayIcon />}
-                            title="Play & Enjoy"
-                            description="Export to .bs format or play directly in the BeatSight desktop app."
+                            icon={<AIIcon />}
+                            title="Learn & Improve"
+                            description="Slow down difficult sections, isolate drum tracks, and track your progress as you master each song."
                         />
                     </div>
                 </div>
@@ -136,28 +136,28 @@ export function LandingPage() {
                     <div className="grid lg:grid-cols-2 gap-16 items-center">
                         <div>
                             <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6">
-                                Powered by State-of-the-Art AI
+                                Built for Real Drummers
                             </h2>
                             <p className="text-gray-400 text-lg mb-8">
-                                Our proprietary neural network is trained on over 16 million drum samples,
-                                enabling unprecedented accuracy in drum transcription.
+                                Visual lookahead helps your brain pre-plan movements instead of reacting.
+                                Research shows this dramatically accelerates motor skill acquisition.
                             </p>
                             <ul className="space-y-4">
                                 <TechFeature
-                                    title="19 Drum Classes"
-                                    description="From kicks and snares to hi-hats, toms, and cymbals"
+                                    title="Visual Lookahead"
+                                    description="See notes before you play them, just like rhythm games"
                                 />
                                 <TechFeature
-                                    title="Source Separation"
-                                    description="Demucs-based separation isolates drums from the mix"
+                                    title="Tempo Control"
+                                    description="Slow sections down without pitch shift, then speed up as you learn"
                                 />
                                 <TechFeature
-                                    title="Onset Detection"
-                                    description="Precise timing with sub-10ms accuracy"
+                                    title="Stem Isolation"
+                                    description="Practice with just drums or hear how your part fits the mix"
                                 />
                                 <TechFeature
-                                    title="Velocity Estimation"
-                                    description="Dynamic range preserved for expressive beatmaps"
+                                    title="Community Library"
+                                    description="Access thousands of beatmaps created and verified by drummers"
                                 />
                             </ul>
                         </div>
@@ -244,7 +244,7 @@ export function LandingPage() {
                         <div>
                             <h3 className="text-white font-bold text-lg mb-4">BeatSight</h3>
                             <p className="text-gray-400 text-sm">
-                                AI-powered drum transcription and beatmap generation.
+                                The global drum transcription library for drummers.
                             </p>
                         </div>
                         <div>

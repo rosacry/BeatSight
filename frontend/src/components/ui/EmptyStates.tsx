@@ -180,7 +180,7 @@ export function NoSongsEmptyState({ action, secondaryAction, className }: Preset
         <EmptyState
             icon={<NoSongsIcon className="w-full h-full" />}
             title="No songs yet"
-            description="Upload your first track to start creating beatmaps with AI-powered drum transcription."
+            description="Upload your first track to start creating beatmaps—build from scratch or use AI-assisted transcription."
             action={action}
             secondaryAction={secondaryAction}
             className={className}

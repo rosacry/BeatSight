@@ -131,7 +131,7 @@ export function HomePage() {
                             <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full 
                                            bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-sm font-medium">
                                 <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                                Powered by AI
+                                Visual Drum Practice
                             </span>
                         </motion.div>
 
@@ -140,11 +140,11 @@ export function HomePage() {
                             variants={itemVariants}
                             className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-6 tracking-tight"
                         >
-                            <span className="text-white">AI Drum</span>
+                            <span className="text-white">See the Music</span>
                             <br />
                             <span className="bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-400 
                                            bg-clip-text text-transparent">
-                                Beatmap Generator
+                                Before You Play It
                             </span>
                         </motion.h1>
 
@@ -153,8 +153,8 @@ export function HomePage() {
                             variants={itemVariants}
                             className="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed"
                         >
-                            Upload any audio with drums—songs, band rehearsals, original tracks, or isolated drums—and get an AI-generated beatmap in minutes.
-                            <span className="text-white font-medium"> Perfect for drummers of all skill levels.</span>
+                            Practice drums to any song with visual lookahead. Discover community beatmaps, create your own from scratch, or use AI-assisted transcription.
+                            <span className="text-white font-medium"> The rhythm game advantage for real drummers.</span>
                         </motion.p>
 
                         {/* CTA Buttons */}

@@ -397,8 +397,8 @@ export const welcomeTour: Tour = {
         {
             id: 'welcome-3',
             target: '[data-tour="ai-transcribe"]',
-            title: 'AI Transcription',
-            content: 'Our AI analyzes your audio and creates beatmaps automatically. It detects drums, tempo, and more—whether it\'s a published song or your own recording!',
+            title: 'Create Beatmaps',
+            content: 'Build beatmaps from scratch, use AI-assisted transcription as a starting point, or polish existing maps. Your refinements help improve the community library.',
             placement: 'bottom',
         },
         {
@@ -412,7 +412,7 @@ export const welcomeTour: Tour = {
             id: 'welcome-5',
             target: '[data-tour="credits"]',
             title: 'Credits System',
-            content: 'AI transcription uses credits. You get free credits to start, and can purchase more anytime.',
+            content: 'AI-assisted transcription uses credits. You get free credits to start, and can purchase more anytime. Manual creation is always free.',
             placement: 'bottom',
             nextButtonText: 'Get Started!',
         },

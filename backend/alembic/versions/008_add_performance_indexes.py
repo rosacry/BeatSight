@@ -55,12 +55,12 @@ def upgrade() -> None:
         )
 
     # AI Job indexes - HIGH IMPACT
-    # User's job listing ("My Jobs" page)
-    if not index_exists("ix_ai_jobs_requested_by_id", "ai_jobs"):
+    # User's job listing ("My Jobs" page) - Note: index may already exist from initial schema
+    if not index_exists("ix_ai_jobs_requester_id", "ai_jobs"):
         op.create_index(
-            "ix_ai_jobs_requested_by_id",
+            "ix_ai_jobs_requester_id",
             "ai_jobs",
-            ["requested_by_id"],
+            ["requester_id"],
             unique=False,
         )
     # Finding all jobs for a specific song
@@ -167,7 +167,7 @@ def downgrade() -> None:
 
     # AI Job indexes
     op.drop_index("ix_ai_jobs_song_id", table_name="ai_jobs")
-    op.drop_index("ix_ai_jobs_requested_by_id", table_name="ai_jobs")
+    op.drop_index("ix_ai_jobs_requester_id", table_name="ai_jobs")
 
     # Subscription indexes
     op.drop_index("ix_subscriptions_status", table_name="subscriptions")

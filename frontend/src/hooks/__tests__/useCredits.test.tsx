@@ -302,6 +302,7 @@ describe('useCreditCount', () => {
         await waitFor(() => expect(result.current.isLoading).toBe(false))
 
         expect(result.current.credits).toBe(50)
+        expect(result.current.isError).toBe(false)
     })
 
     it('should return zero credits on error', async () => {
@@ -320,8 +321,9 @@ describe('useCreditCount', () => {
 
         await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-        // Should default to 0 on error
+        // Should default to 0 on error and report isError
         expect(result.current.credits).toBe(0)
+        expect(result.current.isError).toBe(true)
     })
 })
 

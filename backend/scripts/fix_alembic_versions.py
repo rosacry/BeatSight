@@ -7,13 +7,17 @@ import sys
 
 def main():
     """Update alembic_version table with renamed revision IDs."""
-    db_url = os.environ.get("DATABASE_URL", "")
+    # Check both DATABASE_DSN (used by alembic) and DATABASE_URL (Railway default)
+    db_url = os.environ.get("DATABASE_DSN") or os.environ.get("DATABASE_URL", "")
     if not db_url:
-        print("No DATABASE_URL set, skipping alembic version fix")
+        print("No DATABASE_DSN or DATABASE_URL set, skipping alembic version fix")
         return 0
 
     # Fix postgres:// to postgresql:// for SQLAlchemy
-    db_url = db_url.replace("postgres://", "postgresql://")
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    elif db_url.startswith("postgresql+asyncpg://"):
+        db_url = db_url.replace("postgresql+asyncpg://", "postgresql://", 1)
 
     try:
         from sqlalchemy import create_engine, text

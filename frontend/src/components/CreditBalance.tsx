@@ -20,28 +20,31 @@ export function CreditBalance({
     showWhenZero = false,
 }: CreditBalanceProps) {
     const navigate = useNavigate()
-    const { credits, isLoading } = useCreditCount()
+    const { credits, isLoading, isError } = useCreditCount()
     const [lastKnownCredits, setLastKnownCredits] = useState<number | null>(null)
     const hasEverHadCredits = useRef(false)
 
-    // Track last known credits to prevent disappearing during refetch
+    // Track last known credits to prevent disappearing during refetch or errors
     useEffect(() => {
-        if (!isLoading && credits !== undefined) {
+        if (!isLoading && !isError && credits !== undefined && credits > 0) {
             setLastKnownCredits(credits)
-            if (credits > 0) {
-                hasEverHadCredits.current = true
-            }
+            hasEverHadCredits.current = true
         }
-    }, [credits, isLoading])
+    }, [credits, isLoading, isError])
 
-    // Use last known value during loading to prevent flicker
-    const displayCredits = isLoading && lastKnownCredits !== null
+    // Use last known value during loading/error to prevent flicker
+    const displayCredits = (isLoading || isError) && lastKnownCredits !== null
         ? lastKnownCredits
         : credits
 
     // Don't show if no credits and showWhenZero is false
-    // But keep showing during loading if we had credits before
-    const shouldHide = !showWhenZero && displayCredits === 0 && !isLoading && !hasEverHadCredits.current
+    // But keep showing during loading/error if we had credits before
+    // Also show during errors if we've ever had credits (to prevent disappearing)
+    const shouldHide = !showWhenZero && 
+        displayCredits === 0 && 
+        !isLoading && 
+        !isError &&
+        !hasEverHadCredits.current
 
     // Handle click - use custom handler or navigate to pricing
     const handleClick = useCallback(() => {

@@ -126,11 +126,12 @@ export function useHasCredits(): boolean {
 /**
  * Hook to get credit count for display.
  */
-export function useCreditCount(): { credits: number; isLoading: boolean } {
-    const { data: balance, isLoading } = useCreditBalance()
+export function useCreditCount(): { credits: number; isLoading: boolean; isError: boolean } {
+    const { data: balance, isLoading, isError } = useCreditBalance()
     return {
         credits: balance?.total_credits ?? 0,
         isLoading,
+        isError,
     }
 }
 

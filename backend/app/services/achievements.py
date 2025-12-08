@@ -13,6 +13,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Achievement, UserAchievement, AIJob, MapEditProposal
+from app.models.ai_job import AIJobState
 from app.logging import get_logger
 
 logger = get_logger(__name__)
@@ -92,7 +93,7 @@ async def check_beatmap_generation_achievements(
     result = await db.execute(
         select(func.count(AIJob.id))
         .where(AIJob.requested_by_id == user_id)
-        .where(AIJob.state == "complete")
+        .where(AIJob.state == AIJobState.COMPLETE)
     )
     count = result.scalar() or 0
 

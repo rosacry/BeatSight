@@ -23,7 +23,7 @@ from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
-revision = "016_fix_schema_mismatch"
+revision = "016_fix_schema_mismatches"
 down_revision = "015_fix_subscription_col"
 branch_labels = None
 depends_on = None

@@ -20,6 +20,7 @@ from app.api.deps import get_current_user_optional, get_db_session
 from app.api.routes.ai_jobs import verify_worker_secret
 from app.models.ai_job import AIJob, AIJobPriority, AIJobState
 from app.models.user import User
+from app.services.ai_jobs import DuplicateCheckResult, DuplicateType
 from app.services.modal_gpu import ModalConnectionError
 
 
@@ -43,6 +44,11 @@ class TestEnqueueJobModalIntegration:
         session.refresh = AsyncMock()
         session.add = MagicMock()
         session.flush = AsyncMock()
+        # Configure execute to return a mock result with scalar_one_or_none
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_result.scalars.return_value.all.return_value = []
+        session.execute = AsyncMock(return_value=mock_result)
         return session
 
     @pytest.fixture
@@ -108,9 +114,13 @@ class TestEnqueueJobModalIntegration:
         mock_quota.get_priority = AsyncMock(return_value=AIJobPriority.STANDARD)
         mock_quota_cls.return_value = mock_quota
 
+        # Create duplicate check result for no duplicate found
+        no_duplicate = DuplicateCheckResult(duplicate_type=DuplicateType.NONE)
+
         # Setup AI service
         mock_service = AsyncMock()
-        mock_service.enqueue = AsyncMock(return_value=mock_job)
+        mock_service.check_duplicate = AsyncMock(return_value=no_duplicate)
+        mock_service.enqueue_with_duplicate_check = AsyncMock(return_value=(mock_job, no_duplicate))
         mock_service.get_queue_position = AsyncMock(return_value=1)
         mock_service_cls.return_value = mock_service
 
@@ -152,7 +162,12 @@ class TestSSEStreamingEndpoint:
 
     @pytest.fixture
     def mock_session(self):
-        return AsyncMock()
+        session = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_result.scalars.return_value.all.return_value = []
+        session.execute = AsyncMock(return_value=mock_result)
+        return session
 
     @pytest.fixture
     def mock_job_complete(self):
@@ -284,7 +299,10 @@ class TestModalWebhookSuccessPath:
         session.add = MagicMock()
         session.commit = AsyncMock()
         session.flush = AsyncMock()
-        session.execute = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_result.scalars.return_value.all.return_value = []
+        session.execute = AsyncMock(return_value=mock_result)
         return session
 
     @pytest.fixture
@@ -408,7 +426,12 @@ class TestWorkerHeartbeatConflict:
 
     @pytest.fixture
     def mock_session(self):
-        return AsyncMock()
+        session = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_result.scalars.return_value.all.return_value = []
+        session.execute = AsyncMock(return_value=mock_result)
+        return session
 
     @patch("app.api.routes.ai_jobs.AIJobService")
     def test_heartbeat_conflict_different_worker(
@@ -447,7 +470,12 @@ class TestReleaseJobPath:
 
     @pytest.fixture
     def mock_session(self):
-        return AsyncMock()
+        session = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_result.scalars.return_value.all.return_value = []
+        session.execute = AsyncMock(return_value=mock_result)
+        return session
 
     @patch("app.api.routes.ai_jobs.AIJobService")
     def test_release_job_success(
@@ -483,7 +511,12 @@ class TestProgressEventGeneratorPaths:
 
     @pytest.fixture
     def mock_session(self):
-        return AsyncMock()
+        session = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_result.scalars.return_value.all.return_value = []
+        session.execute = AsyncMock(return_value=mock_result)
+        return session
 
     @patch("app.api.routes.ai_jobs.AIJobService")
     def test_stream_completed_job_returns_events(
@@ -660,6 +693,10 @@ class TestModalWebhookSuccessPathDetailed:
         session.add = MagicMock()
         session.commit = AsyncMock()
         session.flush = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_result.scalars.return_value.all.return_value = []
+        session.execute = AsyncMock(return_value=mock_result)
         return session
 
     @pytest.fixture
@@ -901,6 +938,10 @@ class TestEnqueueJobModalDispatch:
         session.refresh = AsyncMock()
         session.add = MagicMock()
         session.flush = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_result.scalars.return_value.all.return_value = []
+        session.execute = AsyncMock(return_value=mock_result)
         return session
 
     @pytest.fixture
@@ -960,12 +1001,16 @@ class TestEnqueueJobModalDispatch:
         mock_quota.check_quota = AsyncMock(return_value=mock_quota_status)
         # consume_quota returns (QuotaStatus, bool) tuple
         mock_quota.consume_quota = AsyncMock(return_value=(mock_quota_status, False))
-        mock_quota.get_priority = AsyncMock(return_value=mock_job.state)
+        mock_quota.get_priority = AsyncMock(return_value=AIJobPriority.STANDARD)
         mock_quota_cls.return_value = mock_quota
+
+        # Create duplicate check result for no duplicate found
+        no_duplicate = DuplicateCheckResult(duplicate_type=DuplicateType.NONE)
 
         # Setup AI service
         mock_service = AsyncMock()
-        mock_service.enqueue = AsyncMock(return_value=mock_job)
+        mock_service.check_duplicate = AsyncMock(return_value=no_duplicate)
+        mock_service.enqueue_with_duplicate_check = AsyncMock(return_value=(mock_job, no_duplicate))
         mock_service.get_queue_position = AsyncMock(return_value=1)
         mock_service.claim_job_directly = AsyncMock()
         mock_service_cls.return_value = mock_service
@@ -1027,12 +1072,16 @@ class TestEnqueueJobModalDispatch:
         mock_quota.check_quota = AsyncMock(return_value=mock_quota_status)
         # consume_quota returns (QuotaStatus, bool) tuple
         mock_quota.consume_quota = AsyncMock(return_value=(mock_quota_status, False))
-        mock_quota.get_priority = AsyncMock(return_value=mock_job.state)
+        mock_quota.get_priority = AsyncMock(return_value=AIJobPriority.STANDARD)
         mock_quota_cls.return_value = mock_quota
+
+        # Create duplicate check result for no duplicate found
+        no_duplicate = DuplicateCheckResult(duplicate_type=DuplicateType.NONE)
 
         # Setup AI service
         mock_service = AsyncMock()
-        mock_service.enqueue = AsyncMock(return_value=mock_job)
+        mock_service.check_duplicate = AsyncMock(return_value=no_duplicate)
+        mock_service.enqueue_with_duplicate_check = AsyncMock(return_value=(mock_job, no_duplicate))
         mock_service.get_queue_position = AsyncMock(return_value=1)
         mock_service_cls.return_value = mock_service
 
@@ -1093,12 +1142,16 @@ class TestEnqueueJobModalDispatch:
         mock_quota.check_quota = AsyncMock(return_value=mock_quota_status)
         # consume_quota returns (QuotaStatus, bool) tuple
         mock_quota.consume_quota = AsyncMock(return_value=(mock_quota_status, False))
-        mock_quota.get_priority = AsyncMock(return_value=mock_job.state)
+        mock_quota.get_priority = AsyncMock(return_value=AIJobPriority.STANDARD)
         mock_quota_cls.return_value = mock_quota
+
+        # Create duplicate check result for no duplicate found
+        no_duplicate = DuplicateCheckResult(duplicate_type=DuplicateType.NONE)
 
         # Setup AI service
         mock_service = AsyncMock()
-        mock_service.enqueue = AsyncMock(return_value=mock_job)
+        mock_service.check_duplicate = AsyncMock(return_value=no_duplicate)
+        mock_service.enqueue_with_duplicate_check = AsyncMock(return_value=(mock_job, no_duplicate))
         mock_service.get_queue_position = AsyncMock(return_value=1)
         mock_service_cls.return_value = mock_service
 

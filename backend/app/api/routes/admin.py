@@ -861,7 +861,10 @@ async def get_user_stats(
     verified_query = select(func.count(User.id)).where(User.email_verified.is_(True))
     pro_query = select(func.count(func.distinct(Subscription.user_id))).where(
         and_(
-            Subscription.plan_code == SubscriptionPlan.PRO,
+            or_(
+                Subscription.plan_code == SubscriptionPlan.PRO_MONTHLY,
+                Subscription.plan_code == SubscriptionPlan.PRO_YEARLY,
+            ),
             Subscription.status == SubscriptionStatus.ACTIVE,
         )
     )
@@ -1050,7 +1053,10 @@ async def get_system_overview(
     # Pro subscribers
     pro_query = select(func.count(func.distinct(Subscription.user_id))).where(
         and_(
-            Subscription.plan_code == SubscriptionPlan.PRO,
+            or_(
+                Subscription.plan_code == SubscriptionPlan.PRO_MONTHLY,
+                Subscription.plan_code == SubscriptionPlan.PRO_YEARLY,
+            ),
             Subscription.status == SubscriptionStatus.ACTIVE,
         )
     )

@@ -126,15 +126,6 @@ export function HomePage() {
                         animate="visible"
                         variants={containerVariants}
                     >
-                        {/* Badge */}
-                        <motion.div variants={itemVariants} className="mb-6">
-                            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full 
-                                           bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-sm font-medium">
-                                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                                AI-Powered Drum Practice
-                            </span>
-                        </motion.div>
-
                         {/* Main Title */}
                         <motion.h1
                             variants={itemVariants}

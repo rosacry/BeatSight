@@ -171,7 +171,7 @@ class CreditService:
             self._session.add(balance)
             try:
                 await self._session.flush()
-                logger.info(f"Created credit balance for user {user_id}")
+                logger.debug(f"Created credit balance for user {user_id}")
             except Exception:
                 # Another transaction created it first, rollback and re-query
                 await self._session.rollback()

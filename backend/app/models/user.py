@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import enum
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Index, String, Text, func
+from sqlalchemy import Boolean, DateTime, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -20,12 +21,22 @@ if TYPE_CHECKING:  # pragma: no cover - type-checking only
     from .map_accuracy import MapAccuracyVote, UserVerificationBonus
     from .map_edit import MapEditProposal, MapVerificationDecision
     from .map_vote import MapVote
+    from .moderation import UserAccountHistory
     from .phone_verification import PhoneVerificationCode
     from .push_subscription import PushSubscription
     from .role import UserRole
     from .song import Song
     from .subscription import Subscription
     from .training_contribution import ContributionConsent, TrainingContribution
+
+
+class RestrictionLevel(str, enum.Enum):
+    """User account restriction levels."""
+    
+    NONE = "none"  # Normal account
+    SILENCED = "silenced"  # Cannot post/comment but can play
+    RESTRICTED = "restricted"  # Hidden from leaderboards, limited interaction
+    BANNED = "banned"  # Full account ban
 
 
 class User(Base):
@@ -53,6 +64,16 @@ class User(Base):
     )
     hashed_password: Mapped[str | None] = mapped_column(String(255))
     karma_score: Mapped[int] = mapped_column(default=0)
+    
+    # Account moderation fields (inspired by osu!)
+    restriction_level: Mapped[str] = mapped_column(
+        String(20), default=RestrictionLevel.NONE.value
+    )
+    restriction_reason: Mapped[str | None] = mapped_column(String(512))
+    restriction_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    restricted_by_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    restricted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    user_warnings: Mapped[int] = mapped_column(Integer, default=0)  # Warning count
     
     # Two-Factor Authentication fields
     totp_secret: Mapped[str | None] = mapped_column(String(64))  # Encrypted TOTP secret
@@ -139,3 +160,41 @@ class User(Base):
     phone_verification_codes: Mapped[list["PhoneVerificationCode"]] = relationship(
         "PhoneVerificationCode", back_populates="user", cascade="all, delete-orphan"
     )
+
+    # Account moderation history
+    account_history: Mapped[list["UserAccountHistory"]] = relationship(
+        "UserAccountHistory",
+        back_populates="user",
+        foreign_keys="UserAccountHistory.user_id",
+        cascade="all, delete-orphan",
+        order_by="desc(UserAccountHistory.created_at)",
+    )
+
+    @property
+    def is_restricted(self) -> bool:
+        """Check if user has any active restriction."""
+        if self.restriction_level == RestrictionLevel.NONE.value:
+            return False
+        # Check if restriction has expired
+        if self.restriction_expires_at and self.restriction_expires_at < datetime.now(self.restriction_expires_at.tzinfo):
+            return False
+        return True
+
+    @property
+    def is_banned(self) -> bool:
+        """Check if user is fully banned."""
+        return self.is_restricted and self.restriction_level == RestrictionLevel.BANNED.value
+
+    @property
+    def is_silenced(self) -> bool:
+        """Check if user is silenced (cannot post/comment)."""
+        return self.is_restricted and self.restriction_level in [
+            RestrictionLevel.SILENCED.value,
+            RestrictionLevel.RESTRICTED.value,
+            RestrictionLevel.BANNED.value,
+        ]
+
+    @property
+    def can_post(self) -> bool:
+        """Check if user can create forum posts/comments."""
+        return not self.is_silenced

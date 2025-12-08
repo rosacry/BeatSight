@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
+import warnings
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+
+# Suppress passlib bcrypt version warning before importing CryptContext
+# This warning appears because passlib hasn't been updated for bcrypt 4.1+
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", message=".*bcrypt.*")
+    from passlib.context import CryptContext
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +23,9 @@ from app.config import get_settings
 from app.models.user import User
 
 settings = get_settings()
+
+# Suppress passlib's internal bcrypt warning at runtime
+logging.getLogger("passlib").setLevel(logging.ERROR)
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

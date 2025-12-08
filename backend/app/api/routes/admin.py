@@ -615,12 +615,18 @@ class AdminUserSummary(BaseModel):
     display_name: str
     role: str
     email_verified: bool
+    phone_verified: bool = False
     karma_score: int
     created_at: datetime
     subscription_plan: str | None = None
     subscription_status: str | None = None
     job_count: int = 0
     last_active: datetime | None = None
+    # Moderation fields
+    restriction_level: str = "none"
+    is_restricted: bool = False
+    is_banned: bool = False
+    user_warnings: int = 0
 
     model_config = {"from_attributes": True}
 
@@ -812,6 +818,7 @@ async def list_users(
                 display_name=user.display_name,
                 role=primary_role,
                 email_verified=user.email_verified,
+                phone_verified=user.phone_verified,
                 karma_score=user.karma_score,
                 created_at=user.created_at,
                 subscription_plan=user_subscription.plan_code.value
@@ -822,6 +829,10 @@ async def list_users(
                 else None,
                 job_count=job_count,
                 last_active=last_job,
+                restriction_level=user.restriction_level,
+                is_restricted=user.is_restricted,
+                is_banned=user.is_banned,
+                user_warnings=user.user_warnings,
             )
         )
 
@@ -937,11 +948,16 @@ async def get_user_detail(
         display_name=user.display_name,
         role=primary_role,
         email_verified=user.email_verified,
+        phone_verified=user.phone_verified,
         karma_score=user.karma_score,
         created_at=user.created_at,
         subscription_plan=subscription.plan_code.value if subscription else "free",
         subscription_status=subscription.status.value if subscription else None,
         job_count=job_count,
+        restriction_level=user.restriction_level,
+        is_restricted=user.is_restricted,
+        is_banned=user.is_banned,
+        user_warnings=user.user_warnings,
     )
 
 
@@ -1180,4 +1196,538 @@ async def unlock_account(
     return UnlockAccountResponse(
         success=True,
         message=f"Account {request.email} was not locked.",
+    )
+
+
+# =============================================================================
+# User Moderation Models
+# =============================================================================
+
+
+class UserModerationStatus(BaseModel):
+    """Current moderation status of a user."""
+
+    user_id: uuid.UUID
+    display_name: str
+    email: str
+    restriction_level: str
+    restriction_reason: str | None
+    restriction_expires_at: datetime | None
+    restricted_at: datetime | None
+    restricted_by: str | None = None
+    user_warnings: int
+    is_restricted: bool
+    is_banned: bool
+    is_silenced: bool
+
+
+class ModerationHistoryItem(BaseModel):
+    """Single entry in moderation history."""
+
+    id: uuid.UUID
+    action: str
+    duration_hours: int | None
+    reason: str | None
+    admin_notes: str | None
+    created_at: datetime
+    actor_name: str | None = None
+
+
+class UserModerationDetail(BaseModel):
+    """Detailed moderation info for a user."""
+
+    status: UserModerationStatus
+    history: list[ModerationHistoryItem]
+
+
+class SilenceUserRequest(BaseModel):
+    """Request to silence a user."""
+
+    duration_hours: int
+    reason: str
+    admin_notes: str | None = None
+
+
+class RestrictUserRequest(BaseModel):
+    """Request to restrict a user."""
+
+    duration_hours: int | None = None  # None = permanent
+    reason: str
+    admin_notes: str | None = None
+
+
+class BanUserRequest(BaseModel):
+    """Request to ban a user."""
+
+    permanent: bool = False
+    duration_hours: int | None = None  # Required if not permanent
+    reason: str
+    admin_notes: str | None = None
+
+
+class AddNoteRequest(BaseModel):
+    """Request to add a note to user's account."""
+
+    note: str
+    admin_notes: str | None = None
+
+
+class ModerationActionResponse(BaseModel):
+    """Response for moderation actions."""
+
+    success: bool
+    message: str
+    action: str | None = None
+
+
+# =============================================================================
+# User Moderation Endpoints
+# =============================================================================
+
+
+@router.get(
+    "/users/{user_id}/moderation",
+    response_model=UserModerationDetail,
+    summary="Get user moderation status and history",
+)
+async def get_user_moderation(
+    user_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(RequireAdminDashboard)],
+) -> UserModerationDetail:
+    """Get the moderation status and history for a user."""
+    from app.models.moderation import UserAccountHistory
+    
+    # Get the user
+    query = select(User).where(User.id == user_id)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User {user_id} not found",
+        )
+
+    # Get the admin who restricted (if any)
+    restricted_by_name = None
+    if user.restricted_by_id:
+        admin_query = select(User.display_name).where(User.id == user.restricted_by_id)
+        admin_result = await db.execute(admin_query)
+        restricted_by_name = admin_result.scalar()
+
+    # Build status
+    mod_status = UserModerationStatus(
+        user_id=user.id,
+        display_name=user.display_name,
+        email=user.email,
+        restriction_level=user.restriction_level,
+        restriction_reason=user.restriction_reason,
+        restriction_expires_at=user.restriction_expires_at,
+        restricted_at=user.restricted_at,
+        restricted_by=restricted_by_name,
+        user_warnings=user.user_warnings,
+        is_restricted=user.is_restricted,
+        is_banned=user.is_banned,
+        is_silenced=user.is_silenced,
+    )
+
+    # Get moderation history
+    history_query = (
+        select(UserAccountHistory)
+        .where(UserAccountHistory.user_id == user_id)
+        .order_by(UserAccountHistory.created_at.desc())
+        .limit(50)
+    )
+    history_result = await db.execute(history_query)
+    history_records = history_result.scalars().all()
+
+    # Build history items with actor names
+    history_items = []
+    for record in history_records:
+        actor_name = None
+        if record.actor_id:
+            actor_query = select(User.display_name).where(User.id == record.actor_id)
+            actor_result = await db.execute(actor_query)
+            actor_name = actor_result.scalar()
+
+        history_items.append(
+            ModerationHistoryItem(
+                id=record.id,
+                action=record.action.value,
+                duration_hours=record.duration_hours,
+                reason=record.reason,
+                admin_notes=record.admin_notes,
+                created_at=record.created_at,
+                actor_name=actor_name,
+            )
+        )
+
+    return UserModerationDetail(
+        status=mod_status,
+        history=history_items,
+    )
+
+
+@router.post(
+    "/users/{user_id}/silence",
+    response_model=ModerationActionResponse,
+    summary="Silence a user (prevent posting)",
+)
+async def silence_user(
+    user_id: uuid.UUID,
+    request: SilenceUserRequest,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(require_permission(Permission.ROLE_ASSIGN))],
+) -> ModerationActionResponse:
+    """Silence a user, preventing them from posting or commenting."""
+    from datetime import timedelta, timezone
+    from app.models.moderation import UserAccountHistory, ModerationAction
+    from app.models.user import RestrictionLevel
+
+    # Get the user
+    query = select(User).where(User.id == user_id)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User {user_id} not found",
+        )
+
+    # Prevent silencing yourself
+    if user.id == admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot silence yourself",
+        )
+
+    # Check if already banned (more severe)
+    if user.restriction_level == RestrictionLevel.BANNED.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is already banned (more severe than silence)",
+        )
+
+    # Apply silence
+    now = datetime.now(timezone.utc)
+    user.restriction_level = RestrictionLevel.SILENCED.value
+    user.restriction_reason = request.reason
+    user.restriction_expires_at = now + timedelta(hours=request.duration_hours)
+    user.restricted_by_id = admin.id
+    user.restricted_at = now
+    user.user_warnings += 1
+
+    # Create history record
+    history = UserAccountHistory.add_silence(
+        user_id=user.id,
+        actor_id=admin.id,
+        duration_hours=request.duration_hours,
+        reason=request.reason,
+        admin_notes=request.admin_notes,
+    )
+    db.add(history)
+
+    await db.commit()
+
+    logger.info(
+        "user_silenced",
+        user_id=str(user_id),
+        admin_id=str(admin.id),
+        duration_hours=request.duration_hours,
+        reason=request.reason,
+    )
+
+    return ModerationActionResponse(
+        success=True,
+        message=f"User silenced for {request.duration_hours} hours",
+        action="silence",
+    )
+
+
+@router.post(
+    "/users/{user_id}/restrict",
+    response_model=ModerationActionResponse,
+    summary="Restrict a user (limited visibility)",
+)
+async def restrict_user(
+    user_id: uuid.UUID,
+    request: RestrictUserRequest,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(require_permission(Permission.ROLE_ASSIGN))],
+) -> ModerationActionResponse:
+    """Restrict a user, hiding them from leaderboards and limiting interactions."""
+    from datetime import timedelta, timezone
+    from app.models.moderation import UserAccountHistory, ModerationAction
+    from app.models.user import RestrictionLevel
+
+    # Get the user
+    query = select(User).where(User.id == user_id)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User {user_id} not found",
+        )
+
+    # Prevent restricting yourself
+    if user.id == admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot restrict yourself",
+        )
+
+    # Check if already banned
+    if user.restriction_level == RestrictionLevel.BANNED.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is already banned (more severe than restriction)",
+        )
+
+    # Apply restriction
+    now = datetime.now(timezone.utc)
+    user.restriction_level = RestrictionLevel.RESTRICTED.value
+    user.restriction_reason = request.reason
+    user.restriction_expires_at = (
+        now + timedelta(hours=request.duration_hours)
+        if request.duration_hours
+        else None
+    )
+    user.restricted_by_id = admin.id
+    user.restricted_at = now
+    user.user_warnings += 1
+
+    # Create history record
+    history = UserAccountHistory.add_restriction(
+        user_id=user.id,
+        actor_id=admin.id,
+        duration_hours=request.duration_hours,
+        reason=request.reason,
+        admin_notes=request.admin_notes,
+    )
+    db.add(history)
+
+    await db.commit()
+
+    duration_msg = f" for {request.duration_hours} hours" if request.duration_hours else " permanently"
+    logger.info(
+        "user_restricted",
+        user_id=str(user_id),
+        admin_id=str(admin.id),
+        duration_hours=request.duration_hours,
+        reason=request.reason,
+    )
+
+    return ModerationActionResponse(
+        success=True,
+        message=f"User restricted{duration_msg}",
+        action="restriction",
+    )
+
+
+@router.post(
+    "/users/{user_id}/ban",
+    response_model=ModerationActionResponse,
+    summary="Ban a user (full account ban)",
+)
+async def ban_user(
+    user_id: uuid.UUID,
+    request: BanUserRequest,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(require_permission(Permission.ROLE_ASSIGN))],
+) -> ModerationActionResponse:
+    """Ban a user, completely disabling their account."""
+    from datetime import timedelta, timezone
+    from app.models.moderation import UserAccountHistory, ModerationAction
+    from app.models.user import RestrictionLevel
+
+    # Get the user
+    query = select(User).where(User.id == user_id)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User {user_id} not found",
+        )
+
+    # Prevent banning yourself
+    if user.id == admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot ban yourself",
+        )
+
+    # Validate duration for non-permanent bans
+    if not request.permanent and not request.duration_hours:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Must specify duration_hours for non-permanent ban",
+        )
+
+    # Apply ban
+    now = datetime.now(timezone.utc)
+    user.restriction_level = RestrictionLevel.BANNED.value
+    user.restriction_reason = request.reason
+    user.restriction_expires_at = (
+        None if request.permanent else now + timedelta(hours=request.duration_hours)
+    )
+    user.restricted_by_id = admin.id
+    user.restricted_at = now
+    user.user_warnings += 1
+
+    # Create history record
+    history = UserAccountHistory.add_ban(
+        user_id=user.id,
+        actor_id=admin.id,
+        reason=request.reason,
+        permanent=request.permanent,
+        duration_hours=request.duration_hours,
+        admin_notes=request.admin_notes,
+    )
+    db.add(history)
+
+    await db.commit()
+
+    duration_msg = "permanently" if request.permanent else f"for {request.duration_hours} hours"
+    logger.info(
+        "user_banned",
+        user_id=str(user_id),
+        admin_id=str(admin.id),
+        permanent=request.permanent,
+        duration_hours=request.duration_hours,
+        reason=request.reason,
+    )
+
+    return ModerationActionResponse(
+        success=True,
+        message=f"User banned {duration_msg}",
+        action="ban",
+    )
+
+
+@router.post(
+    "/users/{user_id}/remove-restriction",
+    response_model=ModerationActionResponse,
+    summary="Remove all restrictions from a user",
+)
+async def remove_restriction(
+    user_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(require_permission(Permission.ROLE_ASSIGN))],
+) -> ModerationActionResponse:
+    """Remove all restrictions from a user."""
+    from datetime import timezone
+    from app.models.moderation import UserAccountHistory, ModerationAction
+    from app.models.user import RestrictionLevel
+
+    # Get the user
+    query = select(User).where(User.id == user_id)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User {user_id} not found",
+        )
+
+    if user.restriction_level == RestrictionLevel.NONE.value:
+        return ModerationActionResponse(
+            success=True,
+            message="User has no active restrictions",
+            action=None,
+        )
+
+    # Determine what action to log
+    action_map = {
+        RestrictionLevel.SILENCED.value: ModerationAction.UNSILENCE,
+        RestrictionLevel.RESTRICTED.value: ModerationAction.UNRESTRICT,
+        RestrictionLevel.BANNED.value: ModerationAction.UNBAN,
+    }
+    log_action = action_map.get(user.restriction_level, ModerationAction.UNRESTRICT)
+    old_level = user.restriction_level
+
+    # Remove restrictions
+    user.restriction_level = RestrictionLevel.NONE.value
+    user.restriction_reason = None
+    user.restriction_expires_at = None
+    user.restricted_by_id = None
+    user.restricted_at = None
+
+    # Create history record
+    history = UserAccountHistory(
+        user_id=user.id,
+        actor_id=admin.id,
+        action=log_action,
+        reason=f"Restriction removed by admin (was: {old_level})",
+    )
+    db.add(history)
+
+    await db.commit()
+
+    logger.info(
+        "user_restriction_removed",
+        user_id=str(user_id),
+        admin_id=str(admin.id),
+        old_restriction=old_level,
+    )
+
+    return ModerationActionResponse(
+        success=True,
+        message=f"Removed {old_level} from user",
+        action=log_action.value,
+    )
+
+
+@router.post(
+    "/users/{user_id}/add-note",
+    response_model=ModerationActionResponse,
+    summary="Add a note to user's account history",
+)
+async def add_user_note(
+    user_id: uuid.UUID,
+    request: AddNoteRequest,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(RequireAdminDashboard)],
+) -> ModerationActionResponse:
+    """Add an administrative note to a user's account without any punishment."""
+    from app.models.moderation import UserAccountHistory
+
+    # Get the user
+    query = select(User).where(User.id == user_id)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User {user_id} not found",
+        )
+
+    # Create history record
+    history = UserAccountHistory.add_note(
+        user_id=user.id,
+        actor_id=admin.id,
+        reason=request.note,
+        admin_notes=request.admin_notes,
+    )
+    db.add(history)
+
+    await db.commit()
+
+    logger.info(
+        "user_note_added",
+        user_id=str(user_id),
+        admin_id=str(admin.id),
+    )
+
+    return ModerationActionResponse(
+        success=True,
+        message="Note added to user's account",
+        action="note",
     )

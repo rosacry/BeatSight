@@ -1,10 +1,10 @@
 /**
  * Admin Dashboard Page
- * Provides system overview, user management, and job monitoring.
+ * Provides system overview, user management, moderation, and job monitoring.
  */
 
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect, useMemo } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { API_CONFIG } from '@/lib/config'
 
@@ -64,17 +64,35 @@ interface AdminUser {
     display_name: string
     role: string
     email_verified: boolean
+    phone_verified: boolean
     karma_score: number
     created_at: string
     subscription_plan: string | null
     subscription_status: string | null
     job_count: number
     last_active: string | null
+    restriction_level: string
+    is_restricted: boolean
+    is_banned: boolean
+    user_warnings: number
 }
+
+// Sorting types
+type SortField = 'display_name' | 'email' | 'role' | 'created_at' | 'karma_score' | 'job_count' | 'restriction_level'
+type SortDirection = 'asc' | 'desc'
+
+const VALID_TABS = ['overview', 'users', 'jobs', 'contributions'] as const
+type TabType = typeof VALID_TABS[number]
 
 export function AdminDashboardPage() {
     const { accessToken } = useAuthStore()
-    const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'jobs' | 'contributions'>('overview')
+    const [searchParams, setSearchParams] = useSearchParams()
+
+    // Get tab from URL or default to 'overview'
+    const tabFromUrl = searchParams.get('tab') as TabType | null
+    const initialTab: TabType = tabFromUrl && VALID_TABS.includes(tabFromUrl) ? tabFromUrl : 'overview'
+    const [activeTab, setActiveTab] = useState<TabType>(initialTab)
+
     const [overview, setOverview] = useState<SystemOverview | null>(null)
     const [userStats, setUserStats] = useState<UserStats | null>(null)
     const [queueStats, setQueueStats] = useState<QueueStats | null>(null)
@@ -88,6 +106,32 @@ export function AdminDashboardPage() {
     const [successMessage, setSuccessMessage] = useState<string | null>(null)
     const [contributionsLoading, setContributionsLoading] = useState(false)
     const [contributionsError, setContributionsError] = useState<string | null>(null)
+
+    // Sorting state for users table
+    const [sortField, setSortField] = useState<SortField>('created_at')
+    const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+
+    // Moderation modal state
+    const [moderationModalUser, setModerationModalUser] = useState<AdminUser | null>(null)
+    const [moderationAction, setModerationAction] = useState<'silence' | 'restrict' | 'ban' | 'note' | null>(null)
+    const [moderationReason, setModerationReason] = useState('')
+    const [moderationDuration, setModerationDuration] = useState(24)
+    const [moderationPermanent, setModerationPermanent] = useState(false)
+    const [moderationSubmitting, setModerationSubmitting] = useState(false)
+
+    // Update URL when tab changes
+    const handleTabChange = (tab: TabType) => {
+        setActiveTab(tab)
+        setSearchParams({ tab })
+    }
+
+    // Sync tab state with URL on mount and URL changes
+    useEffect(() => {
+        const tabFromUrl = searchParams.get('tab') as TabType | null
+        if (tabFromUrl && VALID_TABS.includes(tabFromUrl) && tabFromUrl !== activeTab) {
+            setActiveTab(tabFromUrl)
+        }
+    }, [searchParams])
 
     const fetchWithAuth = async (endpoint: string) => {
         const response = await fetch(`${API_CONFIG.baseUrl}/api${endpoint}`, {
@@ -217,6 +261,151 @@ export function AdminDashboardPage() {
         }
     }
 
+    // Sorted users
+    const sortedUsers = useMemo(() => {
+        if (!users || users.length === 0) return []
+
+        return [...users].sort((a, b) => {
+            let comparison = 0
+
+            switch (sortField) {
+                case 'display_name':
+                    comparison = a.display_name.localeCompare(b.display_name)
+                    break
+                case 'email':
+                    comparison = a.email.localeCompare(b.email)
+                    break
+                case 'role':
+                    comparison = a.role.localeCompare(b.role)
+                    break
+                case 'created_at':
+                    comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                    break
+                case 'karma_score':
+                    comparison = a.karma_score - b.karma_score
+                    break
+                case 'job_count':
+                    comparison = a.job_count - b.job_count
+                    break
+                case 'restriction_level':
+                    comparison = a.restriction_level.localeCompare(b.restriction_level)
+                    break
+                default:
+                    comparison = 0
+            }
+
+            return sortDirection === 'asc' ? comparison : -comparison
+        })
+    }, [users, sortField, sortDirection])
+
+    // Handle sort column click
+    const handleSort = (field: SortField) => {
+        if (sortField === field) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+        } else {
+            setSortField(field)
+            setSortDirection('desc')
+        }
+    }
+
+    // Sort indicator component
+    const SortIndicator = ({ field }: { field: SortField }) => {
+        if (sortField !== field) return <span className="text-gray-600">↕</span>
+        return sortDirection === 'asc'
+            ? <span className="text-primary-400">↑</span>
+            : <span className="text-primary-400">↓</span>
+    }
+
+    // Moderation action handler
+    const handleModerationSubmit = async () => {
+        if (!moderationModalUser || !moderationAction) return
+
+        setModerationSubmitting(true)
+        try {
+            let endpoint = ''
+            let body: Record<string, unknown> = {}
+
+            switch (moderationAction) {
+                case 'silence':
+                    endpoint = `/api/admin/users/${moderationModalUser.id}/silence`
+                    body = { duration_hours: moderationDuration, reason: moderationReason }
+                    break
+                case 'restrict':
+                    endpoint = `/api/admin/users/${moderationModalUser.id}/restrict`
+                    body = {
+                        duration_hours: moderationPermanent ? null : moderationDuration,
+                        reason: moderationReason
+                    }
+                    break
+                case 'ban':
+                    endpoint = `/api/admin/users/${moderationModalUser.id}/ban`
+                    body = {
+                        permanent: moderationPermanent,
+                        duration_hours: moderationPermanent ? null : moderationDuration,
+                        reason: moderationReason
+                    }
+                    break
+                case 'note':
+                    endpoint = `/api/admin/users/${moderationModalUser.id}/add-note`
+                    body = { note: moderationReason }
+                    break
+            }
+
+            const response = await fetch(`${API_CONFIG.baseUrl}${endpoint}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body),
+            })
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({ detail: 'Action failed' }))
+                throw new Error(data.detail || 'Action failed')
+            }
+
+            setSuccessMessage(`${moderationAction.charAt(0).toUpperCase() + moderationAction.slice(1)} action successful`)
+            setTimeout(() => setSuccessMessage(null), 3000)
+
+            // Close modal and refresh users
+            setModerationModalUser(null)
+            setModerationAction(null)
+            setModerationReason('')
+            loadUsers()
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Action failed')
+        } finally {
+            setModerationSubmitting(false)
+        }
+    }
+
+    // Remove restriction handler
+    const handleRemoveRestriction = async (userId: string) => {
+        if (!confirm('Are you sure you want to remove all restrictions from this user?')) return
+
+        try {
+            const response = await fetch(`${API_CONFIG.baseUrl}/api/admin/users/${userId}/remove-restriction`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+            })
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({ detail: 'Action failed' }))
+                throw new Error(data.detail || 'Action failed')
+            }
+
+            setSuccessMessage('Restriction removed successfully')
+            setTimeout(() => setSuccessMessage(null), 3000)
+            loadUsers()
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Action failed')
+        }
+    }
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -259,7 +448,7 @@ export function AdminDashboardPage() {
                 {(['overview', 'users', 'jobs', 'contributions'] as const).map((tab) => (
                     <button
                         key={tab}
-                        onClick={() => setActiveTab(tab)}
+                        onClick={() => handleTabChange(tab)}
                         className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tab
                             ? 'bg-primary-500 text-white'
                             : 'text-gray-400 hover:text-white'
@@ -392,81 +581,212 @@ export function AdminDashboardPage() {
                     </div>
 
                     {/* Users Table */}
-                    <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
-                        <table className="w-full">
+                    <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden overflow-x-auto">
+                        <table className="w-full min-w-[900px]">
                             <thead className="bg-gray-900">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">User</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Role</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Plan</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Jobs</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Joined</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                                    <th
+                                        onClick={() => handleSort('display_name')}
+                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
+                                    >
+                                        User <SortIndicator field="display_name" />
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('role')}
+                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
+                                    >
+                                        Role <SortIndicator field="role" />
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                        Plan
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('karma_score')}
+                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
+                                    >
+                                        Karma <SortIndicator field="karma_score" />
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('job_count')}
+                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
+                                    >
+                                        Jobs <SortIndicator field="job_count" />
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('created_at')}
+                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
+                                    >
+                                        Joined <SortIndicator field="created_at" />
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('restriction_level')}
+                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
+                                    >
+                                        Status <SortIndicator field="restriction_level" />
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                        Actions
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-700">
-                                {users.map((user) => (
+                                {sortedUsers.map((user) => (
                                     <tr key={user.id} className="hover:bg-gray-700/50">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-primary-500/20 rounded-full flex items-center justify-center">
-                                                    <span className="text-primary-400 font-medium text-sm">
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${user.is_banned ? 'bg-red-500/20' :
+                                                        user.is_restricted ? 'bg-yellow-500/20' :
+                                                            'bg-primary-500/20'
+                                                    }`}>
+                                                    <span className={`font-medium text-sm ${user.is_banned ? 'text-red-400' :
+                                                            user.is_restricted ? 'text-yellow-400' :
+                                                                'text-primary-400'
+                                                        }`}>
                                                         {user.display_name.charAt(0).toUpperCase()}
                                                     </span>
                                                 </div>
-                                                <div>
-                                                    <p className="text-white font-medium">{user.display_name}</p>
-                                                    <p className="text-gray-400 text-sm">{user.email}</p>
+                                                <div className="min-w-0">
+                                                    <p className="text-white font-medium truncate">{user.display_name}</p>
+                                                    <p className="text-gray-400 text-xs truncate">{user.email}</p>
                                                 </div>
-                                                {user.email_verified && (
-                                                    <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                                    </svg>
-                                                )}
+                                                <div className="flex gap-1 flex-shrink-0">
+                                                    {user.email_verified && (
+                                                        <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20" title="Email Verified">
+                                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                        </svg>
+                                                    )}
+                                                    {user.phone_verified && (
+                                                        <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20" title="Phone Verified">
+                                                            <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                                                        </svg>
+                                                    )}
+                                                </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex px-2 py-1 text-xs rounded-full ${user.role === 'admin' ? 'bg-red-500/10 text-red-400' :
-                                                user.role === 'verifier' ? 'bg-purple-500/10 text-purple-400' :
-                                                    'bg-gray-500/10 text-gray-400'
-                                                }`}>
-                                                {user.role}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex px-2 py-1 text-xs rounded-full ${user.subscription_plan === 'pro'
-                                                ? 'bg-primary-500/10 text-primary-400'
-                                                : 'bg-gray-500/10 text-gray-400'
-                                                }`}>
-                                                {user.subscription_plan || 'free'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-gray-300">{user.job_count}</td>
-                                        <td className="px-6 py-4 text-gray-400 text-sm">
-                                            {new Date(user.created_at).toLocaleDateString()}
-                                        </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-4 py-3">
                                             <select
                                                 value={user.role}
                                                 onChange={(e) => handleUpdateRole(user.id, e.target.value)}
                                                 disabled={updatingRoleUserId === user.id}
-                                                className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg 
-                                                         px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500
-                                                         disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className={`text-xs rounded-full px-2 py-1 border-0 cursor-pointer ${user.role === 'admin' ? 'bg-red-500/10 text-red-400' :
+                                                        user.role === 'verifier' ? 'bg-purple-500/10 text-purple-400' :
+                                                            'bg-gray-500/10 text-gray-400'
+                                                    } disabled:opacity-50`}
                                             >
                                                 <option value="user">User</option>
                                                 <option value="verifier">Verifier</option>
                                                 <option value="admin">Admin</option>
                                             </select>
-                                            {updatingRoleUserId === user.id && (
-                                                <span className="ml-2 text-gray-400 text-xs">Updating...</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={`inline-flex px-2 py-1 text-xs rounded-full ${user.subscription_plan?.includes('pro')
+                                                    ? 'bg-primary-500/10 text-primary-400'
+                                                    : 'bg-gray-500/10 text-gray-400'
+                                                }`}>
+                                                {user.subscription_plan || 'free'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-gray-300 text-sm">{user.karma_score}</td>
+                                        <td className="px-4 py-3 text-gray-300 text-sm">{user.job_count}</td>
+                                        <td className="px-4 py-3 text-gray-400 text-xs">
+                                            {new Date(user.created_at).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {user.is_banned ? (
+                                                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-red-500/20 text-red-400">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                                                    Banned
+                                                </span>
+                                            ) : user.is_restricted ? (
+                                                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-yellow-500/20 text-yellow-400">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-400"></span>
+                                                    {user.restriction_level}
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-green-500/20 text-green-400">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
+                                                    Active
+                                                </span>
                                             )}
+                                            {user.user_warnings > 0 && (
+                                                <span className="ml-1 text-xs text-yellow-500" title={`${user.user_warnings} warning(s)`}>
+                                                    ⚠️{user.user_warnings}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-1">
+                                                {/* Moderation dropdown */}
+                                                <div className="relative group">
+                                                    <button className="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-white">
+                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                                                        </svg>
+                                                    </button>
+                                                    <div className="absolute right-0 top-full mt-1 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                                                        <div className="p-1">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setModerationModalUser(user)
+                                                                    setModerationAction('note')
+                                                                }}
+                                                                className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded"
+                                                            >
+                                                                📝 Add Note
+                                                            </button>
+                                                            {!user.is_restricted && (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setModerationModalUser(user)
+                                                                            setModerationAction('silence')
+                                                                            setModerationDuration(24)
+                                                                        }}
+                                                                        className="w-full text-left px-3 py-2 text-sm text-yellow-400 hover:bg-gray-700 rounded"
+                                                                    >
+                                                                        🔇 Silence
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setModerationModalUser(user)
+                                                                            setModerationAction('restrict')
+                                                                            setModerationDuration(168)
+                                                                        }}
+                                                                        className="w-full text-left px-3 py-2 text-sm text-orange-400 hover:bg-gray-700 rounded"
+                                                                    >
+                                                                        ⚠️ Restrict
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setModerationModalUser(user)
+                                                                            setModerationAction('ban')
+                                                                            setModerationPermanent(false)
+                                                                            setModerationDuration(720)
+                                                                        }}
+                                                                        className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-gray-700 rounded"
+                                                                    >
+                                                                        🚫 Ban
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                            {user.is_restricted && (
+                                                                <button
+                                                                    onClick={() => handleRemoveRestriction(user.id)}
+                                                                    className="w-full text-left px-3 py-2 text-sm text-green-400 hover:bg-gray-700 rounded"
+                                                                >
+                                                                    ✅ Remove Restriction
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
-                                {users.length === 0 && (
+                                {sortedUsers.length === 0 && (
                                     <tr>
-                                        <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
+                                        <td colSpan={8} className="px-6 py-8 text-center text-gray-400">
                                             No users found
                                         </td>
                                     </tr>
@@ -477,21 +797,166 @@ export function AdminDashboardPage() {
                 </div>
             )}
 
-            {/* Jobs Tab */}
-            {activeTab === 'jobs' && (
-                <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-semibold text-white">Job Management</h3>
-                        <Link
-                            to="/queue"
-                            className="text-primary-400 hover:text-primary-300 text-sm"
-                        >
-                            View full queue →
-                        </Link>
+            {/* Moderation Modal */}
+            {moderationModalUser && moderationAction && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 w-full max-w-md mx-4">
+                        <h3 className="text-lg font-semibold text-white mb-4">
+                            {moderationAction === 'note' && '📝 Add Note'}
+                            {moderationAction === 'silence' && '🔇 Silence User'}
+                            {moderationAction === 'restrict' && '⚠️ Restrict User'}
+                            {moderationAction === 'ban' && '🚫 Ban User'}
+                        </h3>
+
+                        <p className="text-gray-400 text-sm mb-4">
+                            User: <span className="text-white">{moderationModalUser.display_name}</span> ({moderationModalUser.email})
+                        </p>
+
+                        {moderationAction !== 'note' && (
+                            <div className="mb-4">
+                                <label className="block text-sm text-gray-400 mb-1">Duration</label>
+                                {moderationAction === 'ban' && (
+                                    <label className="flex items-center gap-2 mb-2 text-sm text-gray-300">
+                                        <input
+                                            type="checkbox"
+                                            checked={moderationPermanent}
+                                            onChange={(e) => setModerationPermanent(e.target.checked)}
+                                            className="rounded"
+                                        />
+                                        Permanent
+                                    </label>
+                                )}
+                                {!moderationPermanent && (
+                                    <select
+                                        value={moderationDuration}
+                                        onChange={(e) => setModerationDuration(Number(e.target.value))}
+                                        className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
+                                    >
+                                        <option value={1}>1 hour</option>
+                                        <option value={6}>6 hours</option>
+                                        <option value={24}>24 hours</option>
+                                        <option value={72}>3 days</option>
+                                        <option value={168}>1 week</option>
+                                        <option value={336}>2 weeks</option>
+                                        <option value={720}>1 month</option>
+                                        <option value={2160}>3 months</option>
+                                    </select>
+                                )}
+                            </div>
+                        )}
+
+                        <div className="mb-4">
+                            <label className="block text-sm text-gray-400 mb-1">
+                                {moderationAction === 'note' ? 'Note' : 'Reason'}
+                            </label>
+                            <textarea
+                                value={moderationReason}
+                                onChange={(e) => setModerationReason(e.target.value)}
+                                placeholder={moderationAction === 'note' ? 'Enter administrative note...' : 'Enter reason for this action...'}
+                                className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 h-24 resize-none"
+                                required
+                            />
+                        </div>
+
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => {
+                                    setModerationModalUser(null)
+                                    setModerationAction(null)
+                                    setModerationReason('')
+                                }}
+                                className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleModerationSubmit}
+                                disabled={!moderationReason.trim() || moderationSubmitting}
+                                className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 ${moderationAction === 'note' ? 'bg-blue-500 hover:bg-blue-600 text-white' :
+                                        moderationAction === 'silence' ? 'bg-yellow-500 hover:bg-yellow-600 text-black' :
+                                            moderationAction === 'restrict' ? 'bg-orange-500 hover:bg-orange-600 text-white' :
+                                                'bg-red-500 hover:bg-red-600 text-white'
+                                    }`}
+                            >
+                                {moderationSubmitting ? 'Submitting...' : 'Confirm'}
+                            </button>
+                        </div>
                     </div>
-                    <p className="text-gray-400">
-                        Detailed job management available in the queue page. Use this dashboard for overview statistics.
-                    </p>
+                </div>
+            )}
+
+            {/* Jobs Tab */}
+            {activeTab === 'jobs' && queueStats && (
+                <div className="space-y-6">
+                    {/* Job Stats Overview */}
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div className="bg-blue-500/10 rounded-xl p-4 border border-blue-500/30">
+                            <p className="text-3xl font-bold text-blue-400">{queueStats.queued}</p>
+                            <p className="text-sm text-blue-300/80">Queued</p>
+                        </div>
+                        <div className="bg-yellow-500/10 rounded-xl p-4 border border-yellow-500/30">
+                            <p className="text-3xl font-bold text-yellow-400">{queueStats.processing}</p>
+                            <p className="text-sm text-yellow-300/80">Processing</p>
+                        </div>
+                        <div className="bg-green-500/10 rounded-xl p-4 border border-green-500/30">
+                            <p className="text-3xl font-bold text-green-400">{queueStats.complete}</p>
+                            <p className="text-sm text-green-300/80">Complete</p>
+                        </div>
+                        <div className="bg-red-500/10 rounded-xl p-4 border border-red-500/30">
+                            <p className="text-3xl font-bold text-red-400">{queueStats.failed}</p>
+                            <p className="text-sm text-red-300/80">Failed</p>
+                        </div>
+                        <div className="bg-gray-500/10 rounded-xl p-4 border border-gray-500/30">
+                            <p className="text-3xl font-bold text-gray-400">{queueStats.cancelled}</p>
+                            <p className="text-sm text-gray-300/80">Cancelled</p>
+                        </div>
+                    </div>
+
+                    {/* Additional Stats */}
+                    <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                        <h3 className="text-lg font-semibold text-white mb-4">Processing Statistics</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                            <div>
+                                <p className="text-2xl font-bold text-white">{queueStats.total_jobs.toLocaleString()}</p>
+                                <p className="text-gray-400 text-sm">Total Jobs</p>
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold text-white">{queueStats.jobs_today}</p>
+                                <p className="text-gray-400 text-sm">Jobs Today</p>
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold text-white">{queueStats.jobs_this_hour}</p>
+                                <p className="text-gray-400 text-sm">Jobs This Hour</p>
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold text-white">
+                                    {queueStats.avg_processing_time_seconds
+                                        ? `${Math.round(queueStats.avg_processing_time_seconds)}s`
+                                        : 'N/A'
+                                    }
+                                </p>
+                                <p className="text-gray-400 text-sm">Avg Processing Time</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-semibold text-white">Job Management</h3>
+                                <p className="text-gray-400 text-sm mt-1">
+                                    View detailed job information, retry failed jobs, and manage the processing queue.
+                                </p>
+                            </div>
+                            <Link
+                                to="/queue"
+                                className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors"
+                            >
+                                View Full Queue →
+                            </Link>
+                        </div>
+                    </div>
                 </div>
             )}
 

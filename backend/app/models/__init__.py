@@ -39,6 +39,7 @@ from .map_asset import MapAsset
 from .map_edit import MapEditProposal, MapVerificationDecision
 from .map_version import MapVersion
 from .map_vote import MapVote, VoteType
+from .moderation import ModerationAction, UserAccountHistory
 from .phone_verification import PhoneVerificationAttempt, PhoneVerificationCode
 from .push_subscription import PushSubscription
 from .role import Role, UserRole
@@ -60,7 +61,7 @@ from .training_contribution import (
     CorrectionType,
     TrainingContribution,
 )
-from .user import User
+from .user import RestrictionLevel, User
 from .webhook_event import ProcessedWebhookEvent
 
 __all__ = [
@@ -100,11 +101,13 @@ __all__ = [
     "MapVerificationDecision",
     "MapVersion",
     "MapVote",
+    "ModerationAction",
     "PhoneVerificationAttempt",
     "PhoneVerificationCode",
     "ProcessedWebhookEvent",
     "PushSubscription",
     "REQUIRED_VERIFIERS_FOR_ACCURACY",
+    "RestrictionLevel",
     "Role",
     "Song",
     "Subscription",
@@ -119,6 +122,7 @@ __all__ = [
     "ContributionStatus",
     "CorrectionType",
     "User",
+    "UserAccountHistory",
     "UserAchievement",
     "UserPreferences",
     "UserRole",

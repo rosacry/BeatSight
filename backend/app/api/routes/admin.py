@@ -324,13 +324,11 @@ async def get_queue_stats(
     # Jobs this hour
     hour_query = select(func.count(AIJob.id)).where(AIJob.created_at >= hour_ago)
 
-    # Execute all queries in parallel
-    state_result, avg_result, today_result, hour_result = await asyncio.gather(
-        db.execute(state_count_query),
-        db.execute(avg_query),
-        db.execute(today_query),
-        db.execute(hour_query),
-    )
+    # Execute queries sequentially (async SQLAlchemy doesn't support concurrent operations on same session)
+    state_result = await db.execute(state_count_query)
+    avg_result = await db.execute(avg_query)
+    today_result = await db.execute(today_query)
+    hour_result = await db.execute(hour_query)
 
     # Process state counts
     state_counts = {state.value: 0 for state in AIJobState}
@@ -872,15 +870,13 @@ async def get_user_stats(
     week_query = select(func.count(User.id)).where(User.created_at >= week_ago)
     month_query = select(func.count(User.id)).where(User.created_at >= month_ago)
 
-    # Execute all queries in parallel
-    total_r, verified_r, pro_r, today_r, week_r, month_r = await asyncio.gather(
-        db.execute(total_query),
-        db.execute(verified_query),
-        db.execute(pro_query),
-        db.execute(today_query),
-        db.execute(week_query),
-        db.execute(month_query),
-    )
+    # Execute queries sequentially (async SQLAlchemy doesn't support concurrent operations on same session)
+    total_r = await db.execute(total_query)
+    verified_r = await db.execute(verified_query)
+    pro_r = await db.execute(pro_query)
+    today_r = await db.execute(today_query)
+    week_r = await db.execute(week_query)
+    month_r = await db.execute(month_query)
 
     return UserStats(
         total_users=total_r.scalar() or 0,

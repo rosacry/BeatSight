@@ -51,10 +51,12 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY app/ ./app/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
+COPY entrypoint.sh ./
 
 # Create non-root user for security
 RUN useradd --create-home --shell /bin/bash --uid 1000 appuser \
-    && chown -R appuser:appuser /app
+    && chown -R appuser:appuser /app \
+    && chmod +x /app/entrypoint.sh
 
 USER appuser
 
@@ -68,7 +70,6 @@ ENV PYTHONUNBUFFERED=1 \
     LOGGING_JSON=true
 
 # Health check (Railway handles this via railway.toml)
-# For local Docker, we use the /health/live endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/health/live || exit 1
 
@@ -78,8 +79,8 @@ EXPOSE 8000
 # Default port (Railway sets PORT env var)
 ENV PORT=8000
 
-# Run with uvicorn - use shell form to expand $PORT
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1"]
+# Use entrypoint script to properly expand $PORT
+ENTRYPOINT ["/app/entrypoint.sh"]
 
 # =============================================================================
 # Development Stage (optional, for local development)

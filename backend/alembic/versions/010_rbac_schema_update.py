@@ -121,6 +121,7 @@ def upgrade() -> None:
         VALUES 
             ('user', 'Standard user role', 0, false),
             ('verifier', 'Map verifier role', 100, false),
+            ('staff', 'Staff role with admin dashboard access', 0, false),
             ('admin', 'Administrator role', 0, false)
         ON CONFLICT (code) DO NOTHING
     """)

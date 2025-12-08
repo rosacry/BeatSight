@@ -368,21 +368,36 @@ def require_permission(permission: Permission):
         user: User = Depends(get_current_user),
         session: AsyncSession = Depends(get_db_session),
     ) -> User:
-        rbac = RBACService(session)
-        has_permission = await rbac.user_has_permission(user.id, permission)
+        try:
+            rbac = RBACService(session)
+            has_permission = await rbac.user_has_permission(user.id, permission)
 
-        if not has_permission:
-            logger.warning(
-                "Permission denied",
+            if not has_permission:
+                logger.warning(
+                    "Permission denied",
+                    user_id=str(user.id),
+                    permission=permission.value,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Permission denied: {permission.value}",
+                )
+
+            return user
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(
+                "RBAC check failed",
                 user_id=str(user.id),
                 permission=permission.value,
+                error=str(e),
+                exc_info=True,
             )
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Permission denied: {permission.value}",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Authorization check failed: {str(e)}",
             )
-
-        return user
 
     return dependency
 
@@ -406,21 +421,36 @@ def require_any_permission(*permissions: Permission):
         user: User = Depends(get_current_user),
         session: AsyncSession = Depends(get_db_session),
     ) -> User:
-        rbac = RBACService(session)
-        has_any = await rbac.user_has_any_permission(user.id, permissions)
+        try:
+            rbac = RBACService(session)
+            has_any = await rbac.user_has_any_permission(user.id, permissions)
 
-        if not has_any:
-            logger.warning(
-                "Permission denied (any)",
+            if not has_any:
+                logger.warning(
+                    "Permission denied (any)",
+                    user_id=str(user.id),
+                    permissions=[p.value for p in permissions],
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Permission denied",
+                )
+
+            return user
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(
+                "RBAC check failed (any)",
                 user_id=str(user.id),
                 permissions=[p.value for p in permissions],
+                error=str(e),
+                exc_info=True,
             )
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Permission denied",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Authorization check failed: {str(e)}",
             )
-
-        return user
 
     return dependency
 
@@ -434,21 +464,36 @@ def require_all_permissions(*permissions: Permission):
         user: User = Depends(get_current_user),
         session: AsyncSession = Depends(get_db_session),
     ) -> User:
-        rbac = RBACService(session)
-        has_all = await rbac.user_has_all_permissions(user.id, permissions)
+        try:
+            rbac = RBACService(session)
+            has_all = await rbac.user_has_all_permissions(user.id, permissions)
 
-        if not has_all:
-            logger.warning(
-                "Permission denied (all)",
+            if not has_all:
+                logger.warning(
+                    "Permission denied (all)",
+                    user_id=str(user.id),
+                    permissions=[p.value for p in permissions],
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Permission denied",
+                )
+
+            return user
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(
+                "RBAC check failed (all)",
                 user_id=str(user.id),
                 permissions=[p.value for p in permissions],
+                error=str(e),
+                exc_info=True,
             )
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Permission denied",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Authorization check failed: {str(e)}",
             )
-
-        return user
 
     return dependency
 
@@ -469,21 +514,36 @@ def require_role(role_code: str):
         user: User = Depends(get_current_user),
         session: AsyncSession = Depends(get_db_session),
     ) -> User:
-        rbac = RBACService(session)
-        has_role = await rbac.user_has_role(user.id, role_code)
+        try:
+            rbac = RBACService(session)
+            has_role = await rbac.user_has_role(user.id, role_code)
 
-        if not has_role:
-            logger.warning(
-                "Role required",
+            if not has_role:
+                logger.warning(
+                    "Role required",
+                    user_id=str(user.id),
+                    required_role=role_code,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Role required: {role_code}",
+                )
+
+            return user
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(
+                "RBAC role check failed",
                 user_id=str(user.id),
                 required_role=role_code,
+                error=str(e),
+                exc_info=True,
             )
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Role required: {role_code}",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Authorization check failed: {str(e)}",
             )
-
-        return user
 
     return dependency
 

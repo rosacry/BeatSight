@@ -180,7 +180,7 @@ async def get_redis() -> "Redis":
     """
     Get Redis connection for pub/sub operations.
     """
-    from app.services.cache import get_redis_client
+    from app.db.redis import get_redis as get_redis_client
 
     return await get_redis_client()
 

@@ -91,7 +91,7 @@ async def check_beatmap_generation_achievements(
     # Count completed jobs for this user
     result = await db.execute(
         select(func.count(AIJob.id))
-        .where(AIJob.requester_id == user_id)
+        .where(AIJob.requested_by_id == user_id)
         .where(AIJob.state == "complete")
     )
     count = result.scalar() or 0

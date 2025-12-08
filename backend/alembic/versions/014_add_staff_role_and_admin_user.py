@@ -1,7 +1,7 @@
 """Add staff role and grant admin to initial user.
 
-Revision ID: 011_add_staff_role_and_admin_user
-Revises: 010_rbac_schema_update
+Revision ID: 014_add_staff_role_and_admin_user
+Revises: 013_fix_credit_balances_columns
 Create Date: 2025-12-08
 
 This migration:
@@ -16,8 +16,8 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers
-revision = "011_add_staff_role_and_admin_user"
-down_revision = "010_rbac_schema_update"
+revision = "014_add_staff_role_and_admin_user"
+down_revision = "013_fix_credit_balances_columns"
 branch_labels = None
 depends_on = None
 

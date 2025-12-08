@@ -254,9 +254,16 @@ def upgrade() -> None:
     if column_exists("map_edit_proposals", "map_id") and not column_exists("map_edit_proposals", "map_version_id"):
         op.alter_column("map_edit_proposals", "map_id", new_column_name="map_version_id")
     
-    # Rename diff_data to diff_payload if needed
+    # Rename diff_data to diff_payload if needed and convert to JSON
     if column_exists("map_edit_proposals", "diff_data") and not column_exists("map_edit_proposals", "diff_payload"):
+        # First rename
         op.alter_column("map_edit_proposals", "diff_data", new_column_name="diff_payload")
+        # Then convert TEXT to JSON (assuming valid JSON data)
+        op.execute("""
+            ALTER TABLE map_edit_proposals 
+            ALTER COLUMN diff_payload TYPE jsonb 
+            USING diff_payload::jsonb
+        """)
     
     # Rename description to summary if needed
     if column_exists("map_edit_proposals", "description") and not column_exists("map_edit_proposals", "summary"):

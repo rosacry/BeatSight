@@ -24,14 +24,26 @@ settings = get_settings()
 
 # Global Redis client (initialized on first use)
 _redis_client: Redis | None = None
+_redis_initialized: bool = False
 
 
 async def get_redis() -> Redis:
     """Get or create the Redis client singleton."""
-    global _redis_client
+    global _redis_client, _redis_initialized
     if _redis_client is None:
+        redis_url = settings.redis_url
+        # Log Redis URL (without password) for debugging
+        if not _redis_initialized:
+            # Mask password in URL for logging
+            import re
+            safe_url = re.sub(r'://[^:]+:[^@]+@', '://***:***@', redis_url)
+            from app.logging import get_logger
+            logger = get_logger(__name__)
+            logger.info("redis_connecting", url=safe_url)
+            _redis_initialized = True
+        
         _redis_client = redis.from_url(
-            settings.redis_url,
+            redis_url,
             encoding="utf-8",
             decode_responses=True,
         )

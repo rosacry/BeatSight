@@ -154,9 +154,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Get Redis client
         try:
             redis = await self._get_redis()
-        except Exception:
+            # Test connection with a ping
+            await redis.ping()
+        except Exception as e:
             # If Redis is unavailable, allow request (fail open)
-            logger.warning("rate_limit_redis_unavailable")
+            # Log error details once for debugging
+            logger.warning("rate_limit_redis_unavailable", error=str(e), error_type=type(e).__name__)
             return await call_next(request)
 
         # Determine rate limit key and limit
@@ -177,9 +180,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         key = f"ratelimit:{identifier}:{path}"
 
         # Check rate limit using sliding window
-        allowed, remaining, reset_at = await self._check_rate_limit(
-            redis, key, limit, window=60
-        )
+        try:
+            allowed, remaining, reset_at = await self._check_rate_limit(
+                redis, key, limit, window=60
+            )
+        except Exception:
+            # If Redis operation fails, allow request (fail open)
+            logger.warning("rate_limit_redis_unavailable")
+            return await call_next(request)
 
         if not allowed:
             retry_after = max(1, int(reset_at - time.time()))

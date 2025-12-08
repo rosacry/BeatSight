@@ -1731,3 +1731,214 @@ async def add_user_note(
         message="Note added to user's account",
         action="note",
     )
+
+
+# =============================================================================
+# AI Training & Re-evaluation Admin Endpoints
+# =============================================================================
+
+
+class TrainingPipelineStatusResponse(BaseModel):
+    """Status of the autonomous training pipeline."""
+
+    state: str
+    is_enabled: bool
+    contributions_since_last_train: int
+    min_contributions_threshold: int
+    current_model_version: str
+    staged_model_version: str | None
+    last_training_started: datetime | None
+    last_training_completed: datetime | None
+    validation_results: dict[str, Any] | None
+    canary_status: dict[str, Any] | None
+
+
+class ReEvaluationStatusResponse(BaseModel):
+    """Status of re-evaluation candidates."""
+
+    candidates_count: int
+    smart_mode_enabled: bool
+    current_model_version: str
+    versions_pending_upgrade: list[str]
+
+
+class TriggerReEvaluationRequest(BaseModel):
+    """Request to trigger batch re-evaluation."""
+
+    batch_size: int = 100
+    old_model_version: str | None = None
+    use_smart_mode: bool = True
+
+
+class TriggerReEvaluationResponse(BaseModel):
+    """Response from triggering re-evaluation."""
+
+    success: bool
+    message: str
+    jobs_queued: int
+    jobs_skipped: int
+    errors: list[str]
+
+
+class TriggerTrainingRequest(BaseModel):
+    """Request to manually trigger training."""
+
+    force: bool = False  # Bypass minimum contribution threshold
+
+
+class TriggerTrainingResponse(BaseModel):
+    """Response from triggering training."""
+
+    success: bool
+    message: str
+    session_id: str | None = None
+
+
+@router.get(
+    "/ai/training/status",
+    response_model=TrainingPipelineStatusResponse,
+    summary="Get autonomous training pipeline status",
+)
+async def get_training_status(
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(RequireAdminDashboard)],
+) -> TrainingPipelineStatusResponse:
+    """Get the current status of the autonomous training pipeline."""
+    from app.services.autonomous_training import AutonomousTrainingPipeline
+    from app.config import get_settings
+
+    settings = get_settings()
+    pipeline = AutonomousTrainingPipeline(db, settings)
+    status = await pipeline.get_status()
+
+    return TrainingPipelineStatusResponse(
+        state=status["state"],
+        is_enabled=settings.autonomous_training_enabled,
+        contributions_since_last_train=status["contributions_since_last_train"],
+        min_contributions_threshold=settings.autonomous_training_min_contributions,
+        current_model_version=settings.ai_model_version,
+        staged_model_version=status.get("staged_model_version"),
+        last_training_started=status.get("last_training_started"),
+        last_training_completed=status.get("last_training_completed"),
+        validation_results=status.get("validation_results"),
+        canary_status=status.get("canary_status"),
+    )
+
+
+@router.post(
+    "/ai/training/trigger",
+    response_model=TriggerTrainingResponse,
+    summary="Manually trigger model training",
+)
+async def trigger_training(
+    request: TriggerTrainingRequest,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(RequireAdminDashboard)],
+) -> TriggerTrainingResponse:
+    """Manually trigger the model training pipeline.
+
+    Requires admin permission. Use force=true to bypass the minimum
+    contribution threshold check.
+    """
+    from app.services.autonomous_training import AutonomousTrainingPipeline
+    from app.config import get_settings
+
+    settings = get_settings()
+    pipeline = AutonomousTrainingPipeline(db, settings)
+
+    try:
+        session_id = await pipeline.trigger_training(force=request.force)
+        logger.info(
+            "admin_triggered_training",
+            admin_id=str(admin.id),
+            session_id=session_id,
+            force=request.force,
+        )
+        return TriggerTrainingResponse(
+            success=True,
+            message="Training pipeline triggered successfully",
+            session_id=session_id,
+        )
+    except ValueError as e:
+        return TriggerTrainingResponse(
+            success=False,
+            message=str(e),
+            session_id=None,
+        )
+
+
+@router.get(
+    "/ai/re-evaluation/status",
+    response_model=ReEvaluationStatusResponse,
+    summary="Get re-evaluation candidates status",
+)
+async def get_re_evaluation_status(
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(RequireAdminDashboard)],
+) -> ReEvaluationStatusResponse:
+    """Get the current status of songs pending re-evaluation."""
+    from app.services.re_evaluation import ReEvaluationService
+    from app.config import get_settings
+
+    settings = get_settings()
+    service = ReEvaluationService(db, settings)
+    candidates = await service.find_candidates(batch_size=10000)
+
+    # Group by version
+    versions = set()
+    for c in candidates:
+        versions.add(c.current_model_version)
+
+    return ReEvaluationStatusResponse(
+        candidates_count=len(candidates),
+        smart_mode_enabled=settings.use_smart_reevaluation,
+        current_model_version=settings.ai_model_version,
+        versions_pending_upgrade=sorted(versions),
+    )
+
+
+@router.post(
+    "/ai/re-evaluation/trigger",
+    response_model=TriggerReEvaluationResponse,
+    summary="Manually trigger batch re-evaluation",
+)
+async def trigger_re_evaluation(
+    request: TriggerReEvaluationRequest,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(RequireAdminDashboard)],
+) -> TriggerReEvaluationResponse:
+    """Manually trigger re-evaluation of songs processed by older models.
+
+    This will queue AI jobs to re-process songs with the current model version.
+    Users who have opted out of automatic re-evaluation will be skipped.
+    """
+    from app.services.re_evaluation import ReEvaluationService
+    from app.config import get_settings
+
+    settings = get_settings()
+    service = ReEvaluationService(db, settings)
+
+    result = await service.run_batch_re_evaluation(
+        old_model_version=request.old_model_version,
+        batch_size=request.batch_size,
+        use_smart_mode=request.use_smart_mode,
+    )
+
+    logger.info(
+        "admin_triggered_re_evaluation",
+        admin_id=str(admin.id),
+        batch_size=request.batch_size,
+        old_model_version=request.old_model_version,
+        use_smart_mode=request.use_smart_mode,
+        queued=result["queued"],
+        skipped=result["skipped"],
+    )
+
+    return TriggerReEvaluationResponse(
+        success=True,
+        message=f"Re-evaluation triggered: {result['queued']} jobs queued",
+        jobs_queued=result["queued"],
+        jobs_skipped=result["skipped"],
+        errors=result.get("errors", []),
+    )
+

@@ -5,7 +5,14 @@
 nixPkgs = ["python312", "postgresql"]
 
 [phases.install]
-cmds = ["pip install --upgrade pip", "pip install ."]
+cmds = [
+    "python3 -m venv /opt/venv",
+    ". /opt/venv/bin/activate && pip install --upgrade pip",
+    ". /opt/venv/bin/activate && pip install ."
+]
+
+[variables]
+PATH = "/opt/venv/bin:${PATH}"
 
 [start]
 # Run migrations before starting the server

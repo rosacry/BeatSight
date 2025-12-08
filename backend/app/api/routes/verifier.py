@@ -470,20 +470,12 @@ async def get_verifier_stats(
         )
     )
 
-    # Execute all queries in parallel
-    (
-        pending_result,
-        approved_result,
-        rejected_result,
-        user_reviewed_result,
-        avg_review_result,
-    ) = await asyncio.gather(
-        session.execute(pending_query),
-        session.execute(approved_query),
-        session.execute(rejected_query),
-        session.execute(user_reviewed_query),
-        session.execute(avg_review_query),
-    )
+    # Execute queries sequentially (async SQLAlchemy doesn't support concurrent operations on same session)
+    pending_result = await session.execute(pending_query)
+    approved_result = await session.execute(approved_query)
+    rejected_result = await session.execute(rejected_query)
+    user_reviewed_result = await session.execute(user_reviewed_query)
+    avg_review_result = await session.execute(avg_review_query)
 
     pending_count = pending_result.scalar() or 0
     approved_today = approved_result.scalar() or 0

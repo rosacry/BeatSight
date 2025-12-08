@@ -120,7 +120,7 @@ export function useDisableAutoTopup() {
  */
 export function useHasCredits(): boolean {
     const { data: balance } = useCreditBalance()
-    return (balance?.balance ?? 0) > 0
+    return (balance?.total_credits ?? 0) > 0
 }
 
 /**
@@ -129,7 +129,7 @@ export function useHasCredits(): boolean {
 export function useCreditCount(): { credits: number; isLoading: boolean } {
     const { data: balance, isLoading } = useCreditBalance()
     return {
-        credits: balance?.balance ?? 0,
+        credits: balance?.total_credits ?? 0,
         isLoading,
     }
 }
@@ -149,9 +149,9 @@ export function useCanPerformAiAction(): {
     // In a real implementation, you'd also check the quota status
     // For now, we just check if credits are available
     return {
-        canPerform: (balance?.balance ?? 0) > 0,
+        canPerform: (balance?.total_credits ?? 0) > 0,
         willUseCredit: true, // Simplified - would need quota context
-        creditsAvailable: balance?.balance ?? 0,
+        creditsAvailable: balance?.total_credits ?? 0,
         isLoading: loadingCredits,
     }
 }

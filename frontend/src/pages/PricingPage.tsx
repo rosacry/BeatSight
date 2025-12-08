@@ -242,9 +242,9 @@ export function PricingPage() {
                         <p className="text-gray-500 text-sm mt-3">
                             Credits never expire • Use anytime • Available to all users
                         </p>
-                        {creditBalance && creditBalance.balance > 0 && (
+                        {creditBalance && creditBalance.total_credits > 0 && (
                             <p className="text-primary-400 text-sm mt-1">
-                                You have {creditBalance.balance} credits
+                                You have {creditBalance.total_credits} credits
                             </p>
                         )}
                     </div>

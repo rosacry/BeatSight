@@ -23,7 +23,7 @@ export function CreditSuccessPage() {
     // Show success toast once when balance loads
     useEffect(() => {
         if (balance && !hasShownToast.current) {
-            success('Credits Added!', `Your account now has ${balance.balance} credits`)
+            success('Credits Added!', `Your account now has ${balance.total_credits} credits`)
             hasShownToast.current = true
         }
     }, [balance, success])
@@ -65,7 +65,7 @@ export function CreditSuccessPage() {
                         <div className="animate-pulse h-10 bg-gray-700 rounded w-24 mx-auto" />
                     ) : (
                         <p className="text-4xl font-bold text-primary-400">
-                            {balance?.balance ?? 0}
+                            {balance?.total_credits ?? 0}
                             <span className="text-lg font-normal text-gray-400 ml-2">credits</span>
                         </p>
                     )}

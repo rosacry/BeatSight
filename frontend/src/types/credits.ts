@@ -12,11 +12,10 @@ export type CreditPackType = 'starter' | 'value' | 'power'
 export type CreditTransactionType = 'purchase' | 'consumption' | 'refund' | 'bonus' | 'subscription_grant' | 'expiry'
 
 export interface CreditBalance {
-    balance: number
-    lifetime_purchased: number
-    lifetime_consumed: number
+    purchased_credits: number
+    bonus_credits: number
+    total_credits: number
     auto_topup_enabled: boolean
-    auto_topup_threshold: number | null
     auto_topup_pack: CreditPackType | null
 }
 

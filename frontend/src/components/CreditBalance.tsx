@@ -40,9 +40,9 @@ export function CreditBalance({
     // Don't show if no credits and showWhenZero is false
     // But keep showing during loading/error if we had credits before
     // Also show during errors if we've ever had credits (to prevent disappearing)
-    const shouldHide = !showWhenZero && 
-        displayCredits === 0 && 
-        !isLoading && 
+    const shouldHide = !showWhenZero &&
+        displayCredits === 0 &&
+        !isLoading &&
         !isError &&
         !hasEverHadCredits.current
 

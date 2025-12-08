@@ -72,15 +72,14 @@ ENV PYTHONUNBUFFERED=1 \
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/health/live || exit 1
 
-# Expose API port (Railway dynamically assigns via $PORT)
-EXPOSE ${PORT:-8000}
+# Expose API port
+EXPOSE 8000
 
-# Default port (Railway overrides with $PORT via startCommand)
+# Default port (Railway sets PORT env var)
 ENV PORT=8000
 
-# Run with uvicorn (production settings)
-# Note: Railway overrides CMD with startCommand in railway.toml
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --workers 1
+# Run with uvicorn - use shell form to expand $PORT
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1"]
 
 # =============================================================================
 # Development Stage (optional, for local development)

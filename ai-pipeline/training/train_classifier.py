@@ -4886,7 +4886,7 @@ def main():
             # Class-Balanced Focal Loss
             from training.losses.class_balanced_loss import ClassBalancedFocalLoss
             criterion = ClassBalancedFocalLoss(
-                samples_per_cls=samples_per_cls,
+                class_counts=samples_per_cls,
                 num_classes=num_classes,
                 beta=cb_beta,
                 gamma=effective_focal_gamma,
@@ -4894,10 +4894,10 @@ def main():
             ).to(torch_device)
             print(f"Class-Balanced Focal Loss enabled: beta={cb_beta}, gamma={effective_focal_gamma}")
         else:
-            # Class-Balanced CE Loss
-            from training.losses.class_balanced_loss import ClassBalancedCELoss
-            criterion = ClassBalancedCELoss(
-                samples_per_cls=samples_per_cls,
+            # Class-Balanced CE Loss (softmax)
+            from training.losses.class_balanced_loss import ClassBalancedCrossEntropy
+            criterion = ClassBalancedCrossEntropy(
+                class_counts=samples_per_cls,
                 num_classes=num_classes,
                 beta=cb_beta,
                 label_smoothing=args.label_smoothing,
@@ -5874,6 +5874,35 @@ def main():
                 class_names = components_info.get('class_names', None)
                 names = class_names if class_names else [f"class_{i}" for i in range(num_classes)]
                 print(f"    {names[idx]}: {mean_counts[idx]:.1f}")
+            
+            # NEW: Check batch imbalance ratio and warn if too high
+            nonzero_counts = mean_counts[mean_counts > 0]
+            if len(nonzero_counts) > 1:
+                batch_imbalance = nonzero_counts.max() / nonzero_counts.min()
+                expected_per_class = args.batch_size / num_classes
+                
+                if args.sampling_strategy == "uniform":
+                    # With uniform sampling, expect roughly equal counts
+                    if batch_imbalance > 3.0:
+                        print(f"\n  [WARNING] High batch imbalance: {batch_imbalance:.1f}x")
+                        print(f"      With uniform sampling, expected ~{expected_per_class:.1f} samples/class")
+                        print(f"      Actual range: {nonzero_counts.min():.1f} - {nonzero_counts.max():.1f}")
+                        print("      This might indicate a sampling bug!")
+                    else:
+                        print(f"\n  [OK] Batch imbalance acceptable: {batch_imbalance:.1f}x (uniform target: ~1x)")
+                elif args.sampling_strategy == "sqrt":
+                    # With sqrt sampling, some imbalance is expected
+                    if batch_imbalance > 30.0:
+                        print(f"\n  [WARNING] Very high batch imbalance: {batch_imbalance:.1f}x")
+                        print(f"      Even with sqrt sampling, this is quite extreme.")
+                        print(f"      Rare classes get only ~{nonzero_counts.min():.1f} samples/batch")
+                        print("      Consider using 'uniform' sampling for 630:1 imbalance!")
+                    else:
+                        print(f"\n  [INFO] Batch imbalance: {batch_imbalance:.1f}x (expected with sqrt sampling)")
+                        print(f"      Rare classes: ~{nonzero_counts.min():.1f}/batch, Common: ~{nonzero_counts.max():.1f}/batch")
+                        if nonzero_counts.min() < 3:
+                            print(f"      [WARNING] <3 samples/batch for rare classes may cause learning issues!")
+                            print(f"      Consider: --sampling-strategy uniform for more aggressive balancing")
         
         print("=" * 70 + "\n")
     

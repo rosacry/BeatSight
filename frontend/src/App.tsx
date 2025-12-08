@@ -25,6 +25,9 @@ import { MapEditPage } from './pages/MapEditPage'
 import { RecordPage } from './pages/RecordPage'
 import { CreditSuccessPage } from './pages/CreditSuccessPage'
 import { CreditCancelPage } from './pages/CreditCancelPage'
+import { ForumPage } from './pages/ForumPage'
+import { ForumViewPage } from './pages/ForumViewPage'
+import { TopicViewPage } from './pages/TopicViewPage'
 import { useAuthStore } from './stores/authStore'
 import { useServiceWorkerUpdate } from './hooks/usePWA'
 import { KeyboardShortcutsProvider } from './hooks/useKeyboardShortcuts'
@@ -80,6 +83,11 @@ function AnimatedRoutes() {
                         <Route path="/pricing" element={<PricingPage />} />
                         <Route path="/credits/success" element={<CreditSuccessPage />} />
                         <Route path="/credits/cancel" element={<CreditCancelPage />} />
+
+                        {/* Forum routes (public, posting requires auth) */}
+                        <Route path="/forum" element={<ForumPage />} />
+                        <Route path="/forum/:forumId" element={<ForumViewPage />} />
+                        <Route path="/forum/topics/:topicId" element={<TopicViewPage />} />
 
                         {/* Protected routes */}
                         <Route

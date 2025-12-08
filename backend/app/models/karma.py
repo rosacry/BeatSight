@@ -38,11 +38,24 @@ class KarmaReason(str, enum.Enum):
     MAP_DOWNVOTED = "map_downvoted"  # Map creator receives downvote
     CONTRIBUTION_APPROVED = "contribution_approved"  # Training contribution approved
     CONTRIBUTION_REJECTED = "contribution_rejected"  # Training contribution rejected
-    # Email + phone verification bonus - one-time award for verified users
-    VERIFIED_USER_BONUS = "verified_user_bonus"
+    
+    # Verification bonuses - tiered system
+    EMAIL_VERIFIED_BONUS = "email_verified_bonus"  # One-time for email verification
+    PHONE_VERIFIED_BONUS = "phone_verified_bonus"  # One-time for phone verification
+    VERIFIED_USER_BONUS = "verified_user_bonus"  # Legacy: both email + phone (deprecated, use tiered)
+    FULL_VERIFICATION_BONUS = "full_verification_bonus"  # Bonus for completing both
+    
     # Rewards for accuracy verification participation
     ACCURACY_VOTE_CAST = "accuracy_vote_cast"  # Reward for voting on map accuracy
     ACCURACY_CONSENSUS_CONTRIBUTOR = "accuracy_consensus_contributor"  # Extra if your vote matches consensus
+    
+    # Forum karma reasons
+    FORUM_POST_UPVOTED = "forum_post_upvoted"  # Post receives upvote
+    FORUM_POST_DOWNVOTED = "forum_post_downvoted"  # Post receives downvote
+    FORUM_TOPIC_UPVOTED = "forum_topic_upvoted"  # Topic receives upvote
+    FORUM_TOPIC_DOWNVOTED = "forum_topic_downvoted"  # Topic receives downvote
+    FORUM_HELPFUL_ANSWER = "forum_helpful_answer"  # Marked as helpful by topic creator
+    FORUM_SPAM_PENALTY = "forum_spam_penalty"  # Penalty for spam/abuse
 
 
 class KarmaLedger(Base):

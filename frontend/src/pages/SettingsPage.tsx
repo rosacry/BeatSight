@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { createLogger, getDeveloperModeEnabled, enableDeveloperMode, disableDeveloperMode } from '@/lib/logger'
 import { AvatarUpload } from '@/components/AvatarUpload'
 import { TwoFactorSettings } from '@/components/TwoFactorSettings'
+import { PhoneVerificationSettings } from '@/components/PhoneVerificationSettings'
 import { API_CONFIG } from '@/lib/config'
 import type { UserPreferences } from '@/types/sync'
 import { DEFAULT_CUSTOM_SETTINGS } from '@/types/sync'
@@ -624,6 +625,9 @@ export function SettingsPage() {
                                                         )}
                                                     </div>
                                                 </div>
+
+                                                {/* Phone Verification */}
+                                                <PhoneVerificationSettings />
 
                                                 {/* Password Reset */}
                                                 <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-700/50">

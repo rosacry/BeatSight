@@ -9,7 +9,23 @@ from .credits import (
     CreditTransaction,
     CreditTransactionType,
 )
-from .karma import KarmaLedger
+from .forum import (
+    Forum,
+    ForumCategory,
+    ForumPoll,
+    ForumPollOption,
+    ForumPollVote,
+    ForumPost,
+    ForumPostVote,
+    ForumPostVoteType,
+    ForumReadTracker,
+    ForumTopic,
+    ForumTopicStatus,
+    ForumTopicType,
+    ForumTopicVote,
+    ForumTopicWatch,
+)
+from .karma import KarmaLedger, KarmaReason
 from .map_accuracy import (
     AccuracyVoteType,
     MapAccuracyConsensus,
@@ -23,6 +39,7 @@ from .map_asset import MapAsset
 from .map_edit import MapEditProposal, MapVerificationDecision
 from .map_version import MapVersion
 from .map_vote import MapVote, VoteType
+from .phone_verification import PhoneVerificationAttempt, PhoneVerificationCode
 from .push_subscription import PushSubscription
 from .role import Role, UserRole
 from .song import Map, Song
@@ -58,7 +75,22 @@ __all__ = [
     "CreditPurchase",
     "CreditTransaction",
     "CreditTransactionType",
+    "Forum",
+    "ForumCategory",
+    "ForumPoll",
+    "ForumPollOption",
+    "ForumPollVote",
+    "ForumPost",
+    "ForumPostVote",
+    "ForumPostVoteType",
+    "ForumReadTracker",
+    "ForumTopic",
+    "ForumTopicStatus",
+    "ForumTopicType",
+    "ForumTopicVote",
+    "ForumTopicWatch",
     "KarmaLedger",
+    "KarmaReason",
     "Map",
     "MapAccuracyConsensus",
     "MapAccuracyStatus",
@@ -68,6 +100,8 @@ __all__ = [
     "MapVerificationDecision",
     "MapVersion",
     "MapVote",
+    "PhoneVerificationAttempt",
+    "PhoneVerificationCode",
     "ProcessedWebhookEvent",
     "PushSubscription",
     "REQUIRED_VERIFIERS_FOR_ACCURACY",

@@ -7,6 +7,8 @@ export interface User {
     email: string
     display_name: string
     email_verified: boolean
+    phone_number: string | null
+    phone_verified: boolean
     avatar_url: string | null
     karma_score: number
     created_at: string

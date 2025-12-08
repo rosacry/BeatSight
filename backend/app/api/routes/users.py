@@ -41,6 +41,8 @@ class UserResponse(BaseModel):
     email: str
     display_name: str
     email_verified: bool
+    phone_number: Optional[str] = None
+    phone_verified: bool = False
     avatar_url: Optional[str] = None
     karma_score: int
     created_at: datetime

@@ -146,12 +146,13 @@ async def get_progress(
     Returns counts and metrics that are used to determine achievement eligibility.
     """
     from app.models import AIJob
+    from app.models.ai_job import AIJobState
 
     # Count completed beatmap generations
     jobs_result = await db.execute(
         select(func.count(AIJob.id))
         .where(AIJob.requested_by_id == current_user.id)
-        .where(AIJob.state == "complete")
+        .where(AIJob.state == AIJobState.COMPLETE)
     )
     beatmaps_generated = jobs_result.scalar() or 0
 

@@ -131,7 +131,7 @@ export function HomePage() {
                             <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full 
                                            bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-sm font-medium">
                                 <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                                Visual Drum Practice
+                                AI-Powered Drum Practice
                             </span>
                         </motion.div>
 

@@ -4,7 +4,7 @@
  * Supports Two-Factor Authentication (2FA) flow.
  */
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore, TwoFactorRequiredError } from '@/stores/authStore'
@@ -39,7 +39,18 @@ function ShieldIcon() {
 export function LoginPage() {
     const navigate = useNavigate()
     const location = useLocation()
-    const { login, isLoading } = useAuthStore()
+    const { login, isLoading, isAuthenticated } = useAuthStore()
+    const authenticated = isAuthenticated()
+
+    // Get redirect path from location state or default to home
+    const from = (location.state as { from?: string })?.from || '/'
+
+    // Redirect if already authenticated (e.g., after page refresh restored session)
+    useEffect(() => {
+        if (authenticated && !isLoading) {
+            navigate(from, { replace: true })
+        }
+    }, [authenticated, isLoading, navigate, from])
 
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
@@ -51,8 +62,7 @@ export function LoginPage() {
     const [totpCode, setTotpCode] = useState(['', '', '', '', '', ''])
     const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
-    // Get redirect path from location state or default to home
-    const from = (location.state as { from?: string })?.from || '/'
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()

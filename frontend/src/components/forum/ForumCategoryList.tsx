@@ -15,10 +15,10 @@ function ForumCard({ forum }: ForumCardProps) {
     return (
         <Link
             to={`/forum/${forum.id}`}
-            className="flex items-start gap-4 p-4 bg-gray-800/30 rounded-lg hover:bg-gray-800/50 transition-colors border border-gray-700"
+            className="group flex items-start gap-4 p-4 bg-gray-800/30 rounded-xl hover:bg-gray-700/50 transition-all duration-200 border border-gray-700 hover:border-purple-500/30"
         >
             {/* Forum icon */}
-            <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-purple-600/20 flex items-center justify-center">
+            <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600/30 to-fuchsia-600/20 flex items-center justify-center group-hover:from-purple-600/40 group-hover:to-fuchsia-600/30 transition-colors">
                 <svg
                     className="w-6 h-6 text-purple-400"
                     fill="none"
@@ -36,15 +36,19 @@ function ForumCard({ forum }: ForumCardProps) {
 
             {/* Forum info */}
             <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-medium text-white truncate">{forum.name}</h3>
+                <h3 className="text-lg font-medium text-white truncate group-hover:text-purple-300 transition-colors">{forum.name}</h3>
                 {forum.description && (
                     <p className="text-sm text-gray-400 mt-1 line-clamp-2">
                         {forum.description}
                     </p>
                 )}
                 <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                    <span>{forum.topic_count.toLocaleString()} topics</span>
-                    <span>{forum.post_count.toLocaleString()} posts</span>
+                    <span className="flex items-center gap-1">
+                        <span className="text-cyan-400 font-medium">{forum.topic_count.toLocaleString()}</span> topics
+                    </span>
+                    <span className="flex items-center gap-1">
+                        <span className="text-fuchsia-400 font-medium">{forum.post_count.toLocaleString()}</span> posts
+                    </span>
                 </div>
             </div>
 
@@ -83,9 +87,9 @@ function ForumCategoryCard({ category }: ForumCategoryCardProps) {
     if (visibleForums.length === 0) return null
 
     return (
-        <div className="card bg-gray-800/50 border border-gray-700">
+        <div className="card bg-gray-800/40 border border-gray-700 rounded-xl overflow-hidden">
             {/* Category header */}
-            <div className="pb-4 border-b border-gray-700">
+            <div className="p-5 border-b border-gray-700 bg-gradient-to-r from-gray-800/50 to-gray-800/30">
                 <h2 className="text-xl font-bold text-white">{category.name}</h2>
                 {category.description && (
                     <p className="text-sm text-gray-400 mt-1">{category.description}</p>
@@ -93,7 +97,7 @@ function ForumCategoryCard({ category }: ForumCategoryCardProps) {
             </div>
 
             {/* Forums list */}
-            <div className="mt-4 space-y-3">
+            <div className="p-5 space-y-3">
                 {visibleForums.map((forum) => (
                     <ForumCard key={forum.id} forum={forum} />
                 ))}

@@ -780,10 +780,10 @@ async def list_users(
 
         # Skip if subscription filter doesn't match
         if subscription:
-            plan = user_subscription.plan.value if user_subscription else "free"
-            if subscription == "pro" and plan != "pro":
+            plan = user_subscription.plan_code.value if user_subscription else "free"
+            if subscription == "pro" and plan not in ("pro_monthly", "pro_yearly"):
                 continue
-            if subscription == "free" and plan == "pro":
+            if subscription == "free" and plan in ("pro_monthly", "pro_yearly"):
                 continue
 
         # Get job count
@@ -814,7 +814,7 @@ async def list_users(
                 email_verified=user.email_verified,
                 karma_score=user.karma_score,
                 created_at=user.created_at,
-                subscription_plan=user_subscription.plan.value
+                subscription_plan=user_subscription.plan_code.value
                 if user_subscription
                 else "free",
                 subscription_status=user_subscription.status.value
@@ -939,7 +939,7 @@ async def get_user_detail(
         email_verified=user.email_verified,
         karma_score=user.karma_score,
         created_at=user.created_at,
-        subscription_plan=subscription.plan.value if subscription else "free",
+        subscription_plan=subscription.plan_code.value if subscription else "free",
         subscription_status=subscription.status.value if subscription else None,
         job_count=job_count,
     )

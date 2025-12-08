@@ -80,6 +80,9 @@ class Subscription(Base):
     )
     ai_quota_remaining: Mapped[int] = mapped_column(Integer, default=0)
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="subscriptions")
     transactions: Mapped[list["BillingTransaction"]] = relationship(

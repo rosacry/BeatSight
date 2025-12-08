@@ -25,6 +25,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:  # pragma: no cover
     from .ai_job import AIJob
+    from .map_accuracy import MapAccuracyConsensus, MapAccuracyVote
     from .map_asset import MapAsset
     from .map_edit import MapEditProposal
     from .song import Map
@@ -89,5 +90,16 @@ class MapVersion(Base):
     training_contributions: Mapped[list["TrainingContribution"]] = relationship(
         "TrainingContribution",
         back_populates="map_version",
+        cascade="all, delete-orphan",
+    )
+
+    # Map accuracy verification relationships
+    accuracy_votes: Mapped[list["MapAccuracyVote"]] = relationship(
+        "MapAccuracyVote", back_populates="map_version", cascade="all, delete-orphan"
+    )
+    accuracy_consensus: Mapped["MapAccuracyConsensus | None"] = relationship(
+        "MapAccuracyConsensus",
+        back_populates="map_version",
+        uselist=False,
         cascade="all, delete-orphan",
     )

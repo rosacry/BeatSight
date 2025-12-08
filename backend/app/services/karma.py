@@ -57,6 +57,11 @@ KARMA_REWARDS = {
     KarmaReason.MAP_DOWNVOTED: -3,  # Small penalty for receiving downvotes
     KarmaReason.CONTRIBUTION_APPROVED: 15,  # Reward for approved training contribution
     KarmaReason.CONTRIBUTION_REJECTED: -5,  # Penalty for rejected contribution
+    # Verification bonus: brings verified users to 200 karma (past fixer threshold)
+    KarmaReason.VERIFIED_USER_BONUS: 200,
+    # Accuracy verification participation rewards
+    KarmaReason.ACCURACY_VOTE_CAST: 5,  # Small reward for participating in verification
+    KarmaReason.ACCURACY_CONSENSUS_CONTRIBUTOR: 10,  # Extra if vote matches final consensus
 }
 
 # Daily AI generation quotas by karma tier

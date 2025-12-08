@@ -17,6 +17,7 @@ if TYPE_CHECKING:  # pragma: no cover - type-checking only
     from .ai_job import AIJob
     from .credits import CreditBalance, CreditPurchase, CreditTransaction
     from .karma import KarmaLedger
+    from .map_accuracy import MapAccuracyVote, UserVerificationBonus
     from .map_edit import MapEditProposal, MapVerificationDecision
     from .map_vote import MapVote
     from .push_subscription import PushSubscription
@@ -120,4 +121,15 @@ class User(Base):
     # Achievement relationships
     achievements: Mapped[list["UserAchievement"]] = relationship(
         "UserAchievement", back_populates="user", cascade="all, delete-orphan"
+    )
+
+    # Map accuracy verification relationships
+    accuracy_votes: Mapped[list["MapAccuracyVote"]] = relationship(
+        "MapAccuracyVote", back_populates="verifier", cascade="all, delete-orphan"
+    )
+    verification_bonus: Mapped["UserVerificationBonus | None"] = relationship(
+        "UserVerificationBonus",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
     )

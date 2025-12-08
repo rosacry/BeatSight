@@ -38,6 +38,11 @@ class KarmaReason(str, enum.Enum):
     MAP_DOWNVOTED = "map_downvoted"  # Map creator receives downvote
     CONTRIBUTION_APPROVED = "contribution_approved"  # Training contribution approved
     CONTRIBUTION_REJECTED = "contribution_rejected"  # Training contribution rejected
+    # Email + phone verification bonus - one-time award for verified users
+    VERIFIED_USER_BONUS = "verified_user_bonus"
+    # Rewards for accuracy verification participation
+    ACCURACY_VOTE_CAST = "accuracy_vote_cast"  # Reward for voting on map accuracy
+    ACCURACY_CONSENSUS_CONTRIBUTOR = "accuracy_consensus_contributor"  # Extra if your vote matches consensus
 
 
 class KarmaLedger(Base):

@@ -788,12 +788,12 @@ async def modal_webhook(
                 )
 
                 awarded = await check_beatmap_generation_achievements(
-                    session, job.requester_id
+                    session, job.requested_by_id
                 )
                 if awarded:
                     await session.commit()
                     logger.info(
-                        f"Awarded achievements to user {job.requester_id}: {awarded}"
+                        f"Awarded achievements to user {job.requested_by_id}: {awarded}"
                     )
             except Exception as e:
                 logger.warning(f"Failed to check achievements for job {job_id}: {e}")

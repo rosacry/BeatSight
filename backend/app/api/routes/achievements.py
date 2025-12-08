@@ -150,7 +150,7 @@ async def get_progress(
     # Count completed beatmap generations
     jobs_result = await db.execute(
         select(func.count(AIJob.id))
-        .where(AIJob.requester_id == current_user.id)
+        .where(AIJob.requested_by_id == current_user.id)
         .where(AIJob.state == "complete")
     )
     beatmaps_generated = jobs_result.scalar() or 0

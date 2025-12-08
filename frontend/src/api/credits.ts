@@ -28,7 +28,8 @@ async function creditsRequest<T>(
         headers['Authorization'] = `Bearer ${token}`
     }
 
-    const response = await fetch(`${API_BASE}/credits${endpoint}`, {
+    // Note: API routes include /api prefix (e.g., /api/credits/balance)
+    const response = await fetch(`${API_BASE}/api/credits${endpoint}`, {
         ...options,
         headers: { ...headers, ...(options.headers as Record<string, string>) },
     })

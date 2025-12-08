@@ -1,7 +1,5 @@
 #!/bin/sh
 # Entrypoint script for BeatSight backend
-# This ensures $PORT is properly expanded
-
 set -e
 
 # Default port if not set

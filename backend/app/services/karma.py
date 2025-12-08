@@ -57,11 +57,24 @@ KARMA_REWARDS = {
     KarmaReason.MAP_DOWNVOTED: -3,  # Small penalty for receiving downvotes
     KarmaReason.CONTRIBUTION_APPROVED: 15,  # Reward for approved training contribution
     KarmaReason.CONTRIBUTION_REJECTED: -5,  # Penalty for rejected contribution
-    # Verification bonus: brings verified users to 200 karma (past fixer threshold)
-    KarmaReason.VERIFIED_USER_BONUS: 200,
+    
+    # Tiered verification bonuses
+    KarmaReason.EMAIL_VERIFIED_BONUS: 50,  # Email only verification
+    KarmaReason.PHONE_VERIFIED_BONUS: 50,  # Phone only verification
+    KarmaReason.FULL_VERIFICATION_BONUS: 100,  # Extra bonus for both (total: 50+50+100=200)
+    KarmaReason.VERIFIED_USER_BONUS: 200,  # Legacy: brings verified users to 200 karma
+    
     # Accuracy verification participation rewards
     KarmaReason.ACCURACY_VOTE_CAST: 5,  # Small reward for participating in verification
     KarmaReason.ACCURACY_CONSENSUS_CONTRIBUTOR: 10,  # Extra if vote matches final consensus
+    
+    # Forum karma rewards/penalties
+    KarmaReason.FORUM_POST_UPVOTED: 3,  # Smaller than map upvotes
+    KarmaReason.FORUM_POST_DOWNVOTED: -2,  # Smaller penalty
+    KarmaReason.FORUM_TOPIC_UPVOTED: 5,  # Topics get slightly more
+    KarmaReason.FORUM_TOPIC_DOWNVOTED: -3,
+    KarmaReason.FORUM_HELPFUL_ANSWER: 15,  # Significant reward for being helpful
+    KarmaReason.FORUM_SPAM_PENALTY: -25,  # Significant penalty for spam
 }
 
 # Daily AI generation quotas by karma tier

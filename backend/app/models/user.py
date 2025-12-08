@@ -20,6 +20,7 @@ if TYPE_CHECKING:  # pragma: no cover - type-checking only
     from .map_accuracy import MapAccuracyVote, UserVerificationBonus
     from .map_edit import MapEditProposal, MapVerificationDecision
     from .map_vote import MapVote
+    from .phone_verification import PhoneVerificationCode
     from .push_subscription import PushSubscription
     from .role import UserRole
     from .song import Song
@@ -132,4 +133,9 @@ class User(Base):
         back_populates="user",
         uselist=False,
         cascade="all, delete-orphan",
+    )
+
+    # Phone verification relationships
+    phone_verification_codes: Mapped[list["PhoneVerificationCode"]] = relationship(
+        "PhoneVerificationCode", back_populates="user", cascade="all, delete-orphan"
     )

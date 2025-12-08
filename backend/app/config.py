@@ -279,6 +279,19 @@ class Settings(BaseSettings):
     )
 
     # -------------------------------------------------------------------------
+    # SMS / Twilio (Phone Verification)
+    # -------------------------------------------------------------------------
+    twilio_account_sid: Optional[str] = Field(default=None, alias="TWILIO_ACCOUNT_SID")
+    twilio_auth_token: Optional[str] = Field(default=None, alias="TWILIO_AUTH_TOKEN")
+    twilio_phone_number: Optional[str] = Field(default=None, alias="TWILIO_PHONE_NUMBER")
+    phone_verification_code_ttl_minutes: int = Field(
+        default=10, alias="PHONE_VERIFICATION_CODE_TTL_MINUTES"
+    )
+    phone_verification_max_attempts: int = Field(
+        default=5, alias="PHONE_VERIFICATION_MAX_ATTEMPTS"
+    )
+
+    # -------------------------------------------------------------------------
     # Alerting (E6-003)
     # -------------------------------------------------------------------------
     slack_webhook_url: Optional[str] = Field(default=None, alias="SLACK_WEBHOOK_URL")

@@ -296,6 +296,10 @@ def upgrade() -> None:
             USING status::editstatus
         """)
     
+    # Rename created_at to submitted_at for map_edit_proposals
+    if column_exists("map_edit_proposals", "created_at") and not column_exists("map_edit_proposals", "submitted_at"):
+        op.alter_column("map_edit_proposals", "created_at", new_column_name="submitted_at")
+    
     # ============================================================
     # 5. UPDATE INDEXES FOR RENAMED COLUMNS
     # ============================================================

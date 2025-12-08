@@ -40,7 +40,7 @@ describe('billingApi', () => {
             const result = await billingApi.getConfig()
 
             expect(mockFetch).toHaveBeenCalledWith(
-                'https://api.test.com/billing/config',
+                'https://api.test.com/api/billing/config',
                 expect.objectContaining({
                     headers: expect.objectContaining({
                         'Content-Type': 'application/json',
@@ -63,7 +63,7 @@ describe('billingApi', () => {
             const result = await billingApi.getSubscription()
 
             expect(mockFetch).toHaveBeenCalledWith(
-                'https://api.test.com/billing/subscription',
+                'https://api.test.com/api/billing/subscription',
                 expect.objectContaining({
                     headers: expect.objectContaining({
                         'Authorization': 'Bearer test-token'
@@ -85,7 +85,7 @@ describe('billingApi', () => {
             const result = await billingApi.createCheckout('pro')
 
             expect(mockFetch).toHaveBeenCalledWith(
-                'https://api.test.com/billing/checkout',
+                'https://api.test.com/api/billing/checkout',
                 expect.objectContaining({
                     method: 'POST',
                     body: JSON.stringify({ plan: 'pro' })
@@ -106,7 +106,7 @@ describe('billingApi', () => {
             const result = await billingApi.createPortalSession()
 
             expect(mockFetch).toHaveBeenCalledWith(
-                'https://api.test.com/billing/portal',
+                'https://api.test.com/api/billing/portal',
                 expect.objectContaining({
                     method: 'POST'
                 })

@@ -23,7 +23,7 @@ describe('Config', () => {
             vi.unstubAllEnvs()
         })
 
-        it('returns /api for development environment', async () => {
+        it('returns empty string for development environment (API files add /api prefix)', async () => {
             vi.stubEnv('VITE_API_BASE_URL', '')
             // Mock window for non-production hostname
             Object.defineProperty(global, 'window', {
@@ -32,11 +32,11 @@ describe('Config', () => {
             })
 
             const { API_CONFIG } = await import('./config')
-            expect(API_CONFIG.baseUrl).toBe('/api')
+            expect(API_CONFIG.baseUrl).toBe('')
             vi.unstubAllEnvs()
         })
 
-        it('returns production API for beatsight.io', async () => {
+        it('returns production API base for beatsight.io (API files add /api prefix)', async () => {
             vi.stubEnv('VITE_API_BASE_URL', '')
             Object.defineProperty(global, 'window', {
                 value: { location: { hostname: 'beatsight.io' } },
@@ -44,11 +44,11 @@ describe('Config', () => {
             })
 
             const { API_CONFIG } = await import('./config')
-            expect(API_CONFIG.baseUrl).toBe('https://api.beatsight.io/api')
+            expect(API_CONFIG.baseUrl).toBe('https://api.beatsight.io')
             vi.unstubAllEnvs()
         })
 
-        it('returns production API for www.beatsight.io', async () => {
+        it('returns production API base for www.beatsight.io (API files add /api prefix)', async () => {
             vi.stubEnv('VITE_API_BASE_URL', '')
             Object.defineProperty(global, 'window', {
                 value: { location: { hostname: 'www.beatsight.io' } },
@@ -56,11 +56,11 @@ describe('Config', () => {
             })
 
             const { API_CONFIG } = await import('./config')
-            expect(API_CONFIG.baseUrl).toBe('https://api.beatsight.io/api')
+            expect(API_CONFIG.baseUrl).toBe('https://api.beatsight.io')
             vi.unstubAllEnvs()
         })
 
-        it('returns production API for pages.dev domains', async () => {
+        it('returns production API base for pages.dev domains (API files add /api prefix)', async () => {
             vi.stubEnv('VITE_API_BASE_URL', '')
             Object.defineProperty(global, 'window', {
                 value: { location: { hostname: 'beatsight.pages.dev' } },
@@ -68,7 +68,7 @@ describe('Config', () => {
             })
 
             const { API_CONFIG } = await import('./config')
-            expect(API_CONFIG.baseUrl).toBe('https://api.beatsight.io/api')
+            expect(API_CONFIG.baseUrl).toBe('https://api.beatsight.io')
             vi.unstubAllEnvs()
         })
     })

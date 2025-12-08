@@ -1,0 +1,354 @@
+/**
+ * Leaderboard Page - Community rankings for karma and verifiers
+ * 
+ * Shows:
+ * - Top karma earners
+ * - Top verifiers
+ * - Top contributors
+ * - Achievement holders
+ */
+
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { motion } from 'framer-motion'
+import { Link } from 'react-router-dom'
+import { useAuthStore } from '@/stores/authStore'
+import { API_CONFIG } from '@/lib/config'
+
+// Types
+interface LeaderboardUser {
+    id: string
+    display_name: string
+    avatar_url: string | null
+    karma_score: number
+    rank: number
+}
+
+interface VerifierStats {
+    verifier_id: string
+    username: string
+    avatar_url: string | null
+    total_reviews: number
+    approved: number
+    rejected: number
+    accuracy: number
+    rank: number
+}
+
+interface ContributorStats {
+    user_id: string
+    username: string
+    avatar_url: string | null
+    contribution_count: number
+    approved_count: number
+    rank: number
+}
+
+type LeaderboardTab = 'karma' | 'verifiers' | 'contributors'
+
+// Animation variants
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: { staggerChildren: 0.05, delayChildren: 0.1 }
+    }
+}
+
+const itemVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: {
+        opacity: 1,
+        x: 0,
+        transition: { duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }
+    }
+}
+
+export function LeaderboardPage() {
+    const [activeTab, setActiveTab] = useState<LeaderboardTab>('karma')
+    const { accessToken } = useAuthStore()
+    const user = useAuthStore((state) => state.user)
+
+    // Fetch karma leaderboard
+    const { data: karmaLeaderboard, isLoading: karmaLoading } = useQuery({
+        queryKey: ['leaderboard', 'karma'],
+        queryFn: async () => {
+            const response = await fetch(`${API_CONFIG.baseUrl}/api/users/leaderboard?limit=50`)
+            if (!response.ok) throw new Error('Failed to fetch karma leaderboard')
+            return response.json() as Promise<LeaderboardUser[]>
+        },
+        enabled: activeTab === 'karma',
+    })
+
+    // Fetch verifier leaderboard
+    const { data: verifierLeaderboard, isLoading: verifierLoading } = useQuery({
+        queryKey: ['leaderboard', 'verifiers'],
+        queryFn: async () => {
+            const response = await fetch(`${API_CONFIG.baseUrl}/api/verifier/leaderboard`)
+            if (!response.ok) throw new Error('Failed to fetch verifier leaderboard')
+            const data = await response.json()
+            return data.verifiers as VerifierStats[]
+        },
+        enabled: activeTab === 'verifiers',
+    })
+
+    // Fetch contributor leaderboard
+    const { data: contributorLeaderboard, isLoading: contributorLoading } = useQuery({
+        queryKey: ['leaderboard', 'contributors'],
+        queryFn: async () => {
+            const response = await fetch(`${API_CONFIG.baseUrl}/api/contributions/leaderboard`, {
+                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+            })
+            if (!response.ok) throw new Error('Failed to fetch contributor leaderboard')
+            return response.json() as Promise<ContributorStats[]>
+        },
+        enabled: activeTab === 'contributors',
+    })
+
+    const isLoading = (activeTab === 'karma' && karmaLoading) ||
+        (activeTab === 'verifiers' && verifierLoading) ||
+        (activeTab === 'contributors' && contributorLoading)
+
+    return (
+        <div className="max-w-4xl mx-auto px-4 py-8">
+            {/* Header */}
+            <div className="text-center mb-8">
+                <h1 className="text-3xl font-bold text-white mb-2">Leaderboards</h1>
+                <p className="text-slate-400">Top contributors in the BeatSight community</p>
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="flex justify-center mb-8">
+                <div className="inline-flex gap-1 p-1 bg-gray-800/50 rounded-xl">
+                    {[
+                        { id: 'karma', label: '🏆 Karma', description: 'Top karma earners' },
+                        { id: 'verifiers', label: '✓ Verifiers', description: 'Top beatmap verifiers' },
+                        { id: 'contributors', label: '📝 Contributors', description: 'Top beatmap contributors' },
+                    ].map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as LeaderboardTab)}
+                            className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+                                    ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/25'
+                                    : 'text-slate-400 hover:text-white hover:bg-gray-700/50'
+                                }`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Leaderboard Content */}
+            <div className="bg-gray-800/50 rounded-2xl border border-gray-700/50 overflow-hidden">
+                {isLoading ? (
+                    <div className="p-8 text-center">
+                        <div className="animate-spin h-8 w-8 border-4 border-cyan-500 border-t-transparent rounded-full mx-auto"></div>
+                        <p className="text-slate-400 mt-4">Loading leaderboard...</p>
+                    </div>
+                ) : (
+                    <motion.div
+                        initial="hidden"
+                        animate="visible"
+                        variants={containerVariants}
+                    >
+                        {/* Karma Leaderboard */}
+                        {activeTab === 'karma' && karmaLeaderboard && (
+                            <div className="divide-y divide-gray-700/50">
+                                {karmaLeaderboard.map((entry, index) => (
+                                    <motion.div
+                                        key={entry.id}
+                                        variants={itemVariants}
+                                        className={`flex items-center gap-4 p-4 hover:bg-gray-700/30 transition-colors ${entry.id === user?.id ? 'bg-cyan-500/10 border-l-4 border-cyan-500' : ''
+                                            }`}
+                                    >
+                                        {/* Rank */}
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-black' :
+                                                index === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-black' :
+                                                    index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-white' :
+                                                        'bg-gray-700 text-gray-400'
+                                            }`}>
+                                            {index + 1}
+                                        </div>
+
+                                        {/* Avatar & Name */}
+                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                            {entry.avatar_url ? (
+                                                <img
+                                                    src={entry.avatar_url}
+                                                    alt={entry.display_name}
+                                                    className="w-10 h-10 rounded-full"
+                                                />
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-fuchsia-500 flex items-center justify-center text-white font-medium">
+                                                    {entry.display_name?.[0]?.toUpperCase() || '?'}
+                                                </div>
+                                            )}
+                                            <div className="min-w-0">
+                                                <p className="font-medium text-white truncate">{entry.display_name}</p>
+                                                {entry.id === user?.id && (
+                                                    <p className="text-xs text-cyan-400">This is you!</p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Score */}
+                                        <div className="text-right">
+                                            <p className="text-lg font-bold text-cyan-400">{entry.karma_score.toLocaleString()}</p>
+                                            <p className="text-xs text-slate-400">karma</p>
+                                        </div>
+                                    </motion.div>
+                                ))}
+
+                                {karmaLeaderboard.length === 0 && (
+                                    <div className="p-8 text-center text-slate-400">
+                                        No karma data available yet.
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Verifier Leaderboard */}
+                        {activeTab === 'verifiers' && verifierLeaderboard && (
+                            <div className="divide-y divide-gray-700/50">
+                                {verifierLeaderboard.map((entry, index) => (
+                                    <motion.div
+                                        key={entry.verifier_id}
+                                        variants={itemVariants}
+                                        className="flex items-center gap-4 p-4 hover:bg-gray-700/30 transition-colors"
+                                    >
+                                        {/* Rank */}
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-black' :
+                                                index === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-black' :
+                                                    index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-white' :
+                                                        'bg-gray-700 text-gray-400'
+                                            }`}>
+                                            {index + 1}
+                                        </div>
+
+                                        {/* Avatar & Name */}
+                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                            {entry.avatar_url ? (
+                                                <img
+                                                    src={entry.avatar_url}
+                                                    alt={entry.username}
+                                                    className="w-10 h-10 rounded-full"
+                                                />
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-medium">
+                                                    {entry.username?.[0]?.toUpperCase() || '?'}
+                                                </div>
+                                            )}
+                                            <div className="min-w-0">
+                                                <p className="font-medium text-white truncate">{entry.username}</p>
+                                                <div className="flex gap-3 text-xs text-slate-400">
+                                                    <span className="text-green-400">{entry.approved} ✓</span>
+                                                    <span className="text-red-400">{entry.rejected} ✗</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Stats */}
+                                        <div className="text-right">
+                                            <p className="text-lg font-bold text-purple-400">{entry.total_reviews}</p>
+                                            <p className="text-xs text-slate-400">reviews</p>
+                                        </div>
+                                    </motion.div>
+                                ))}
+
+                                {verifierLeaderboard.length === 0 && (
+                                    <div className="p-8 text-center text-slate-400">
+                                        <p>No verifier data available yet.</p>
+                                        <Link to="/verifier" className="text-cyan-400 hover:text-cyan-300 mt-2 inline-block">
+                                            Become a verifier →
+                                        </Link>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Contributor Leaderboard */}
+                        {activeTab === 'contributors' && contributorLeaderboard && (
+                            <div className="divide-y divide-gray-700/50">
+                                {contributorLeaderboard.map((entry, index) => (
+                                    <motion.div
+                                        key={entry.user_id}
+                                        variants={itemVariants}
+                                        className="flex items-center gap-4 p-4 hover:bg-gray-700/30 transition-colors"
+                                    >
+                                        {/* Rank */}
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-black' :
+                                                index === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-black' :
+                                                    index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-white' :
+                                                        'bg-gray-700 text-gray-400'
+                                            }`}>
+                                            {index + 1}
+                                        </div>
+
+                                        {/* Avatar & Name */}
+                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                            {entry.avatar_url ? (
+                                                <img
+                                                    src={entry.avatar_url}
+                                                    alt={entry.username}
+                                                    className="w-10 h-10 rounded-full"
+                                                />
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white font-medium">
+                                                    {entry.username?.[0]?.toUpperCase() || '?'}
+                                                </div>
+                                            )}
+                                            <div className="min-w-0">
+                                                <p className="font-medium text-white truncate">{entry.username}</p>
+                                                <p className="text-xs text-slate-400">
+                                                    {entry.approved_count} approved
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Stats */}
+                                        <div className="text-right">
+                                            <p className="text-lg font-bold text-green-400">{entry.contribution_count}</p>
+                                            <p className="text-xs text-slate-400">contributions</p>
+                                        </div>
+                                    </motion.div>
+                                ))}
+
+                                {contributorLeaderboard.length === 0 && (
+                                    <div className="p-8 text-center text-slate-400">
+                                        <p>No contribution data available yet.</p>
+                                        <Link to="/upload" className="text-cyan-400 hover:text-cyan-300 mt-2 inline-block">
+                                            Start contributing →
+                                        </Link>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </motion.div>
+                )}
+            </div>
+
+            {/* Incentives Section */}
+            <div className="mt-8 grid sm:grid-cols-3 gap-4">
+                <div className="p-5 rounded-xl bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 border border-cyan-500/20">
+                    <h3 className="font-semibold text-cyan-400 mb-2">🏆 Earn Karma</h3>
+                    <p className="text-sm text-slate-400">
+                        Create beatmaps, help verify contributions, and participate in the community.
+                    </p>
+                </div>
+                <div className="p-5 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20">
+                    <h3 className="font-semibold text-purple-400 mb-2">✓ Become a Verifier</h3>
+                    <p className="text-sm text-slate-400">
+                        Help maintain quality by reviewing community beatmap contributions.
+                    </p>
+                </div>
+                <div className="p-5 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/5 border border-green-500/20">
+                    <h3 className="font-semibold text-green-400 mb-2">📝 Contribute</h3>
+                    <p className="text-sm text-slate-400">
+                        Improve AI training by submitting beatmap corrections and annotations.
+                    </p>
+                </div>
+            </div>
+        </div>
+    )
+}

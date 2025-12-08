@@ -7,10 +7,12 @@ import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
+import { ConfirmDialog } from './ConfirmDialog'
 
 export function UserMenu() {
     const { user, logout } = useAuthStore()
     const [isOpen, setIsOpen] = useState(false)
+    const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
     const menuRef = useRef<HTMLDivElement>(null)
 
     // Close menu when clicking outside
@@ -30,8 +32,13 @@ export function UserMenu() {
     }
 
     const handleLogout = () => {
-        logout()
+        setShowSignOutConfirm(true)
         setIsOpen(false)
+    }
+
+    const confirmLogout = () => {
+        logout()
+        setShowSignOutConfirm(false)
     }
 
     // Get initials for avatar
@@ -127,6 +134,18 @@ export function UserMenu() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Sign out confirmation dialog */}
+            <ConfirmDialog
+                isOpen={showSignOutConfirm}
+                onClose={() => setShowSignOutConfirm(false)}
+                onConfirm={confirmLogout}
+                title="Sign out?"
+                message="Are you sure you want to sign out of BeatSight?"
+                confirmLabel="Sign out"
+                cancelLabel="Stay signed in"
+                variant="warning"
+            />
         </div>
     )
 }

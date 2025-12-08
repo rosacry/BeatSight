@@ -111,6 +111,10 @@ export function AdminDashboardPage() {
     const [sortField, setSortField] = useState<SortField>('created_at')
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
+    // Filter state for users table
+    const [roleFilter, setRoleFilter] = useState<string>('all')
+    const [statusFilter, setStatusFilter] = useState<string>('all')
+
     // Moderation modal state
     const [moderationModalUser, setModerationModalUser] = useState<AdminUser | null>(null)
     const [moderationAction, setModerationAction] = useState<'silence' | 'restrict' | 'ban' | 'note' | null>(null)
@@ -261,11 +265,38 @@ export function AdminDashboardPage() {
         }
     }
 
-    // Sorted users
+    // Filtered and sorted users
     const sortedUsers = useMemo(() => {
         if (!users || users.length === 0) return []
 
-        return [...users].sort((a, b) => {
+        // Apply filters first
+        let filtered = [...users]
+
+        // Role filter
+        if (roleFilter !== 'all') {
+            filtered = filtered.filter(user => user.role === roleFilter)
+        }
+
+        // Status filter
+        if (statusFilter !== 'all') {
+            switch (statusFilter) {
+                case 'active':
+                    filtered = filtered.filter(user => user.restriction_level === 'none')
+                    break
+                case 'silenced':
+                    filtered = filtered.filter(user => user.restriction_level === 'silenced')
+                    break
+                case 'restricted':
+                    filtered = filtered.filter(user => user.restriction_level === 'restricted')
+                    break
+                case 'banned':
+                    filtered = filtered.filter(user => user.restriction_level === 'banned')
+                    break
+            }
+        }
+
+        // Then sort
+        return filtered.sort((a, b) => {
             let comparison = 0
 
             switch (sortField) {
@@ -296,7 +327,7 @@ export function AdminDashboardPage() {
 
             return sortDirection === 'asc' ? comparison : -comparison
         })
-    }, [users, sortField, sortDirection])
+    }, [users, sortField, sortDirection, roleFilter, statusFilter])
 
     // Handle sort column click
     const handleSort = (field: SortField) => {
@@ -558,9 +589,9 @@ export function AdminDashboardPage() {
             {/* Users Tab */}
             {activeTab === 'users' && (
                 <div className="space-y-6">
-                    {/* Search */}
-                    <div className="flex gap-4">
-                        <div className="flex-1 relative">
+                    {/* Search and Filters */}
+                    <div className="flex flex-wrap gap-4">
+                        <div className="flex-1 min-w-[250px] relative">
                             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
@@ -572,6 +603,33 @@ export function AdminDashboardPage() {
                                 className="w-full pl-10 pr-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
                             />
                         </div>
+
+                        {/* Role Filter */}
+                        <select
+                            value={roleFilter}
+                            onChange={(e) => setRoleFilter(e.target.value)}
+                            className="px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500 min-w-[140px]"
+                        >
+                            <option value="all">All Roles</option>
+                            <option value="user">User</option>
+                            <option value="verifier">Verifier</option>
+                            <option value="staff">Staff</option>
+                            <option value="admin">Admin</option>
+                        </select>
+
+                        {/* Status Filter */}
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500 min-w-[140px]"
+                        >
+                            <option value="all">All Statuses</option>
+                            <option value="active">Active</option>
+                            <option value="silenced">Silenced</option>
+                            <option value="restricted">Restricted</option>
+                            <option value="banned">Banned</option>
+                        </select>
+
                         <button
                             onClick={loadUsers}
                             className="px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors"
@@ -579,6 +637,26 @@ export function AdminDashboardPage() {
                             Search
                         </button>
                     </div>
+
+                    {/* Results count */}
+                    {users.length > 0 && (
+                        <div className="flex items-center justify-between text-sm text-gray-400">
+                            <span>
+                                Showing {sortedUsers.length} of {users.length} users
+                                {(roleFilter !== 'all' || statusFilter !== 'all') && (
+                                    <button
+                                        onClick={() => {
+                                            setRoleFilter('all')
+                                            setStatusFilter('all')
+                                        }}
+                                        className="ml-2 text-primary-400 hover:text-primary-300"
+                                    >
+                                        Clear filters
+                                    </button>
+                                )}
+                            </span>
+                        </div>
+                    )}
 
                     {/* Users Table */}
                     <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden overflow-x-auto">
@@ -635,12 +713,12 @@ export function AdminDashboardPage() {
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
                                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${user.is_banned ? 'bg-red-500/20' :
-                                                        user.is_restricted ? 'bg-yellow-500/20' :
-                                                            'bg-primary-500/20'
+                                                    user.is_restricted ? 'bg-yellow-500/20' :
+                                                        'bg-primary-500/20'
                                                     }`}>
                                                     <span className={`font-medium text-sm ${user.is_banned ? 'text-red-400' :
-                                                            user.is_restricted ? 'text-yellow-400' :
-                                                                'text-primary-400'
+                                                        user.is_restricted ? 'text-yellow-400' :
+                                                            'text-primary-400'
                                                         }`}>
                                                         {user.display_name.charAt(0).toUpperCase()}
                                                     </span>
@@ -651,12 +729,12 @@ export function AdminDashboardPage() {
                                                 </div>
                                                 <div className="flex gap-1 flex-shrink-0">
                                                     {user.email_verified && (
-                                                        <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20" title="Email Verified">
+                                                        <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20" aria-label="Email Verified">
                                                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                                         </svg>
                                                     )}
                                                     {user.phone_verified && (
-                                                        <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20" title="Phone Verified">
+                                                        <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20" aria-label="Phone Verified">
                                                             <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
                                                         </svg>
                                                     )}
@@ -669,8 +747,8 @@ export function AdminDashboardPage() {
                                                 onChange={(e) => handleUpdateRole(user.id, e.target.value)}
                                                 disabled={updatingRoleUserId === user.id}
                                                 className={`text-xs rounded-full px-2 py-1 border-0 cursor-pointer ${user.role === 'admin' ? 'bg-red-500/10 text-red-400' :
-                                                        user.role === 'verifier' ? 'bg-purple-500/10 text-purple-400' :
-                                                            'bg-gray-500/10 text-gray-400'
+                                                    user.role === 'verifier' ? 'bg-purple-500/10 text-purple-400' :
+                                                        'bg-gray-500/10 text-gray-400'
                                                     } disabled:opacity-50`}
                                             >
                                                 <option value="user">User</option>
@@ -680,8 +758,8 @@ export function AdminDashboardPage() {
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className={`inline-flex px-2 py-1 text-xs rounded-full ${user.subscription_plan?.includes('pro')
-                                                    ? 'bg-primary-500/10 text-primary-400'
-                                                    : 'bg-gray-500/10 text-gray-400'
+                                                ? 'bg-primary-500/10 text-primary-400'
+                                                : 'bg-gray-500/10 text-gray-400'
                                                 }`}>
                                                 {user.subscription_plan || 'free'}
                                             </span>
@@ -873,9 +951,9 @@ export function AdminDashboardPage() {
                                 onClick={handleModerationSubmit}
                                 disabled={!moderationReason.trim() || moderationSubmitting}
                                 className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 ${moderationAction === 'note' ? 'bg-blue-500 hover:bg-blue-600 text-white' :
-                                        moderationAction === 'silence' ? 'bg-yellow-500 hover:bg-yellow-600 text-black' :
-                                            moderationAction === 'restrict' ? 'bg-orange-500 hover:bg-orange-600 text-white' :
-                                                'bg-red-500 hover:bg-red-600 text-white'
+                                    moderationAction === 'silence' ? 'bg-yellow-500 hover:bg-yellow-600 text-black' :
+                                        moderationAction === 'restrict' ? 'bg-orange-500 hover:bg-orange-600 text-white' :
+                                            'bg-red-500 hover:bg-red-600 text-white'
                                     }`}
                             >
                                 {moderationSubmitting ? 'Submitting...' : 'Confirm'}

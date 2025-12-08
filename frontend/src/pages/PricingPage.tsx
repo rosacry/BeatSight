@@ -267,8 +267,11 @@ export function PricingPage() {
                                         <motion.div
                                             key={pack.type}
                                             initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: index * 0.1, duration: 0.3 }}
+                                            animate={{
+                                                opacity: 1,
+                                                y: 0,
+                                                transition: { delay: index * 0.1, duration: 0.3 }
+                                            }}
                                             className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-primary-500/50 transition-all duration-200 hover:scale-[1.02]"
                                         >
                                             <div className="flex justify-between items-start mb-3">

@@ -7,6 +7,7 @@ a new AI model version becomes available. Key features:
 2. **User Preferences**: Respects user's re_evaluation_policy setting
 3. **Batch Processing**: Efficiently processes multiple songs in batches
 4. **Version Tracking**: Tracks which model version generated each beatmap
+5. **Smart Re-evaluation**: Only re-processes low-confidence portions of songs
 """
 
 from __future__ import annotations
@@ -32,6 +33,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+class ReEvalMode:
+    """Re-evaluation processing modes."""
+    
+    FULL = "full"  # Re-process entire audio file
+    SMART = "smart"  # Only re-process low-confidence regions
+
+
 @dataclass
 class ReEvaluationCandidate:
     """A song that could benefit from re-evaluation."""
@@ -41,6 +49,10 @@ class ReEvaluationCandidate:
     current_model_version: str
     map_count: int
     unverified_map_count: int
+    
+    # Smart re-eval data (populated if original analysis available)
+    low_confidence_percentage: float = 0.0  # % of notes below confidence threshold
+    estimated_efficiency_gain: float = 1.0  # Expected speedup from smart re-eval
 
 
 @dataclass
@@ -49,6 +61,8 @@ class ReEvaluationResult:
     
     total_candidates: int
     jobs_created: int
+    smart_re_evals: int  # Jobs using smart (partial) re-evaluation
+    full_re_evals: int  # Jobs using full re-evaluation
     skipped_user_opt_out: int
     skipped_already_current: int
     errors: list[str]
@@ -62,6 +76,13 @@ class ReEvaluationService:
     1. Have unverified maps (verified maps are considered correct)
     2. Were processed by an older model version
     3. Are owned by users who haven't opted out of re-evaluation
+    
+    **Smart Re-evaluation**: Instead of re-processing entire songs, the service
+    analyzes confidence scores from the original transcription and only
+    re-processes regions where the old model was uncertain. This provides:
+    - 2-10x faster processing
+    - Stability for notes users may have already verified
+    - Focused compute on areas that need improvement
     
     **Credit Policy**: Re-evaluation is FREE because:
     - The user didn't request it - the system is improving

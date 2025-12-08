@@ -170,6 +170,30 @@ class Settings(BaseSettings):
         description="Current deployed AI model version for transcription",
     )
 
+    # Smart re-evaluation (only re-process uncertain sections)
+    use_smart_reevaluation: bool = Field(
+        default=True,
+        alias="USE_SMART_REEVALUATION",
+        description="Enable smart partial re-evaluation to save compute",
+    )
+
+    # Autonomous training pipeline
+    autonomous_training_enabled: bool = Field(
+        default=False,
+        alias="AUTONOMOUS_TRAINING_ENABLED",
+        description="Enable fully autonomous model training pipeline",
+    )
+    autonomous_training_min_contributions: int = Field(
+        default=100,
+        alias="AUTONOMOUS_TRAINING_MIN_CONTRIBUTIONS",
+        description="Minimum new contributions before auto-training triggers",
+    )
+    autonomous_training_auto_deploy: bool = Field(
+        default=False,
+        alias="AUTONOMOUS_TRAINING_AUTO_DEPLOY",
+        description="Enable auto-deployment after successful validation (canary -> full)",
+    )
+
     # Worker authentication secret (for internal AI job workers)
     worker_secret: str = Field(
         default="CHANGE_ME_IN_PRODUCTION_WORKER_SECRET",

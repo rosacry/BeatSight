@@ -6,7 +6,7 @@ nixPkgs = ["python312", "postgresql", "coreutils", "bash"]
 
 [phases.install]
 dependsOn = ["setup"]
-onlyIncludeFiles = ["pyproject.toml", "README.md", "app", "alembic", "alembic.ini"]
+onlyIncludeFiles = ["pyproject.toml", "README.md", "app", "alembic", "alembic.ini", "scripts"]
 cmds = [
     "python3 -m venv /opt/venv",
     ". /opt/venv/bin/activate && pip install --upgrade pip",
@@ -19,19 +19,4 @@ PORT = "8000"
 
 [start]
 # Fix old revision names in alembic_version table, then run migrations before starting the server
-cmd = """
-python -c "
-import os
-from sqlalchemy import create_engine, text
-db_url = os.environ.get('DATABASE_URL', '').replace('postgres://', 'postgresql://')
-if db_url:
-    engine = create_engine(db_url)
-    with engine.connect() as conn:
-        # Fix renamed migrations
-        conn.execute(text(\"UPDATE alembic_version SET version_num='012_add_song_map_cols' WHERE version_num='012_add_missing_song_map_columns'\"))
-        conn.execute(text(\"UPDATE alembic_version SET version_num='013_fix_credit_bal_cols' WHERE version_num='013_fix_credit_balances_columns'\"))
-        conn.execute(text(\"UPDATE alembic_version SET version_num='014_add_staff_role' WHERE version_num='014_add_staff_role_and_admin_user'\"))
-        conn.commit()
-        print('Alembic version table updated')
-" && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
-"""
+cmd = "python scripts/fix_alembic_versions.py && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT"

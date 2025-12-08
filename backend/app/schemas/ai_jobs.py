@@ -126,6 +126,8 @@ class AIJobRead(AIJobBase):
     # Retry tracking fields
     retry_count: int = 0
     max_retries: int = 3
+    # Model version tracking
+    model_version: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -163,3 +165,11 @@ class AIJobEnqueueResponse(BaseModel):
         description="Estimated wait time in minutes"
     )
     quota: QuotaStatusRead
+    is_duplicate: bool = Field(
+        default=False,
+        description="True if this is an existing duplicate job (no credit consumed)",
+    )
+    duplicate_message: str | None = Field(
+        default=None,
+        description="Explanation if this is a duplicate job",
+    )

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from enum import Enum
 
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,11 +15,126 @@ from app.models.ai_job import AIJob, AIJobState
 from app.schemas.ai_jobs import AIJobCreate
 
 
+class DuplicateType(str, Enum):
+    """Types of duplicate detection results."""
+    
+    NONE = "none"  # No duplicate found
+    QUEUED = "queued"  # Same song already has a job in queue
+    PROCESSING = "processing"  # Same song is currently being processed
+    COMPLETED = "completed"  # Same song has a completed job with same/newer model
+
+
+@dataclass
+class DuplicateCheckResult:
+    """Result of a duplicate detection check."""
+    
+    duplicate_type: DuplicateType
+    existing_job: AIJob | None = None
+    message: str | None = None
+
+
 class AIJobService:
     """Encapsulates persistence and state transitions for AI jobs."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
+
+    async def check_duplicate(
+        self,
+        song_id: uuid.UUID,
+        model_version: str | None = None,
+    ) -> DuplicateCheckResult:
+        """Check if a duplicate job exists for this song.
+        
+        Duplicate detection rules:
+        1. If a QUEUED job exists for this song → QUEUED duplicate
+        2. If a PROCESSING job exists for this song → PROCESSING duplicate
+        3. If a COMPLETED job exists with same or newer model version → COMPLETED duplicate
+        
+        Args:
+            song_id: The song ID to check for duplicates.
+            model_version: Current AI model version for comparison.
+            
+        Returns:
+            DuplicateCheckResult with duplicate type and existing job if found.
+        """
+        # Check for queued or processing job
+        stmt = (
+            select(AIJob)
+            .where(AIJob.song_id == song_id)
+            .where(AIJob.state.in_([AIJobState.QUEUED, AIJobState.PROCESSING]))
+            .order_by(AIJob.created_at.desc())
+            .limit(1)
+        )
+        result = await self._session.execute(stmt)
+        active_job = result.scalar_one_or_none()
+        
+        if active_job:
+            if active_job.state == AIJobState.QUEUED:
+                return DuplicateCheckResult(
+                    duplicate_type=DuplicateType.QUEUED,
+                    existing_job=active_job,
+                    message="A job for this song is already in the queue",
+                )
+            else:
+                return DuplicateCheckResult(
+                    duplicate_type=DuplicateType.PROCESSING,
+                    existing_job=active_job,
+                    message="A job for this song is currently processing",
+                )
+        
+        # Check for completed job with same/newer model version
+        if model_version:
+            stmt = (
+                select(AIJob)
+                .where(AIJob.song_id == song_id)
+                .where(AIJob.state == AIJobState.COMPLETE)
+                .where(AIJob.model_version.isnot(None))
+                .order_by(AIJob.finished_at.desc())
+                .limit(1)
+            )
+            result = await self._session.execute(stmt)
+            completed_job = result.scalar_one_or_none()
+            
+            if completed_job and completed_job.model_version:
+                # Simple version comparison (assumes semver-like: v5.0.0 < v5.1.0)
+                if self._compare_versions(completed_job.model_version, model_version) >= 0:
+                    return DuplicateCheckResult(
+                        duplicate_type=DuplicateType.COMPLETED,
+                        existing_job=completed_job,
+                        message=f"Song already has a beatmap from model {completed_job.model_version}",
+                    )
+        
+        return DuplicateCheckResult(duplicate_type=DuplicateType.NONE)
+
+    def _compare_versions(self, version_a: str, version_b: str) -> int:
+        """Compare two version strings.
+        
+        Returns:
+            -1 if a < b, 0 if a == b, 1 if a > b
+        """
+        def parse_version(v: str) -> tuple:
+            # Strip 'v' prefix if present
+            v = v.lstrip('vV')
+            parts = v.split('.')
+            return tuple(int(p) if p.isdigit() else 0 for p in parts)
+        
+        try:
+            a_parts = parse_version(version_a)
+            b_parts = parse_version(version_b)
+            
+            # Pad shorter version with zeros
+            max_len = max(len(a_parts), len(b_parts))
+            a_parts = a_parts + (0,) * (max_len - len(a_parts))
+            b_parts = b_parts + (0,) * (max_len - len(b_parts))
+            
+            if a_parts < b_parts:
+                return -1
+            elif a_parts > b_parts:
+                return 1
+            return 0
+        except (ValueError, AttributeError):
+            return 0  # Treat unparseable versions as equal
 
     async def enqueue(
         self, payload: AIJobCreate, requested_by: uuid.UUID | None
@@ -32,6 +149,109 @@ class AIJobService:
         await self._session.commit()
         await self._session.refresh(job)
         return job
+
+    async def enqueue_with_duplicate_check(
+        self,
+        payload: AIJobCreate,
+        requested_by: uuid.UUID | None,
+        model_version: str | None = None,
+        skip_queue_check: bool = False,
+    ) -> tuple[AIJob | None, DuplicateCheckResult]:
+        """Enqueue a job with duplicate detection.
+        
+        This method checks for duplicates before creating a new job:
+        - If a QUEUED or PROCESSING job exists, returns the existing job
+        - If a COMPLETED job exists with the same/newer model, returns it
+        - Otherwise creates a new job
+        
+        Args:
+            payload: Job creation data
+            requested_by: User ID requesting the job
+            model_version: Current AI model version
+            skip_queue_check: If True, skip queue duplicate check (for re-evaluation)
+            
+        Returns:
+            Tuple of (created job or None, duplicate check result)
+        """
+        # Check for duplicates first
+        duplicate_result = await self.check_duplicate(payload.song_id, model_version)
+        
+        if duplicate_result.duplicate_type == DuplicateType.NONE:
+            # No duplicate - create new job
+            job = AIJob(
+                song_id=payload.song_id,
+                priority=payload.priority,
+                requested_by_id=requested_by,
+                state=AIJobState.QUEUED,
+                model_version=model_version,  # Track which model version will process this
+            )
+            self._session.add(job)
+            await self._session.commit()
+            await self._session.refresh(job)
+            return job, duplicate_result
+        
+        if duplicate_result.duplicate_type in (DuplicateType.QUEUED, DuplicateType.PROCESSING):
+            if skip_queue_check:
+                # Re-evaluation case - create new job anyway
+                job = AIJob(
+                    song_id=payload.song_id,
+                    priority=payload.priority,
+                    requested_by_id=requested_by,
+                    state=AIJobState.QUEUED,
+                    model_version=model_version,
+                )
+                self._session.add(job)
+                await self._session.commit()
+                await self._session.refresh(job)
+                return job, DuplicateCheckResult(duplicate_type=DuplicateType.NONE)
+            # Return existing job - don't charge credit
+            return None, duplicate_result
+        
+        # COMPLETED duplicate - don't create new job
+        return None, duplicate_result
+
+    async def find_songs_for_re_evaluation(
+        self,
+        old_model_version: str,
+        new_model_version: str,
+        limit: int = 100,
+    ) -> list[uuid.UUID]:
+        """Find song IDs that could benefit from re-evaluation.
+        
+        Returns songs where:
+        - The most recent completed job used an older model version
+        - The song has at least one unverified map
+        
+        Args:
+            old_model_version: Previous model version to look for
+            new_model_version: New model version to upgrade to
+            limit: Maximum songs to return
+            
+        Returns:
+            List of song IDs eligible for re-evaluation
+        """
+        from app.models.song import Map, MapState
+        
+        # Find songs with completed jobs from older model
+        subquery = (
+            select(AIJob.song_id)
+            .where(AIJob.state == AIJobState.COMPLETE)
+            .where(AIJob.model_version.isnot(None))
+            .group_by(AIJob.song_id)
+        )
+        
+        # Get songs with unverified maps that were processed by old model
+        stmt = (
+            select(AIJob.song_id)
+            .where(AIJob.song_id.in_(subquery))
+            .where(AIJob.state == AIJobState.COMPLETE)
+            .where(AIJob.model_version == old_model_version)
+            .group_by(AIJob.song_id)
+            .limit(limit)
+        )
+        
+        result = await self._session.execute(stmt)
+        return [row[0] for row in result.all()]
 
     async def list_jobs(
         self,

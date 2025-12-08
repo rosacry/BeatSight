@@ -163,6 +163,13 @@ class Settings(BaseSettings):
     ai_job_timeout_seconds: int = Field(default=600, alias="AI_JOB_TIMEOUT_SECONDS")
     ai_max_concurrent_jobs: int = Field(default=2, alias="AI_MAX_CONCURRENT_JOBS")
 
+    # AI model version tracking for re-evaluation
+    ai_model_version: str = Field(
+        default="v5.0.0",
+        alias="AI_MODEL_VERSION",
+        description="Current deployed AI model version for transcription",
+    )
+
     # Worker authentication secret (for internal AI job workers)
     worker_secret: str = Field(
         default="CHANGE_ME_IN_PRODUCTION_WORKER_SECRET",

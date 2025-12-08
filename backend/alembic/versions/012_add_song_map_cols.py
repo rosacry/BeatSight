@@ -1,6 +1,6 @@
 """Add missing columns to songs, maps, and map_versions tables.
 
-Revision ID: 012_add_missing_song_map_columns
+Revision ID: 012_add_song_map_cols
 Revises: 011_two_factor_auth
 Create Date: 2025-12-08
 
@@ -25,7 +25,7 @@ from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
-revision = "012_add_missing_song_map_columns"
+revision = "012_add_song_map_cols"
 down_revision = "011_two_factor_auth"
 branch_labels = None
 depends_on = None

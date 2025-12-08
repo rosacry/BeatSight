@@ -1,7 +1,7 @@
 """Fix credit_balances column names to match model.
 
-Revision ID: 013_fix_credit_balances_columns
-Revises: 012_add_missing_song_map_columns
+Revision ID: 013_fix_credit_bal_cols
+Revises: 012_add_song_map_cols
 Create Date: 2025-12-08
 
 The migration 005 created columns with different names than the model expects:
@@ -16,8 +16,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = "013_fix_credit_balances_columns"
-down_revision = "012_add_missing_song_map_columns"
+revision = "013_fix_credit_bal_cols"
+down_revision = "012_add_song_map_cols"
 branch_labels = None
 depends_on = None
 

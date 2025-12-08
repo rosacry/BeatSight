@@ -291,6 +291,16 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
         exc_message=str(exc),
     )
 
+    # Build CORS headers for error responses
+    origin = request.headers.get("origin")
+    cors_headers = {}
+    if origin and origin in settings.cors_origins:
+        cors_headers = {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Vary": "Origin",
+        }
+
     if settings.is_production:
         # In production, don't leak internal details
         return JSONResponse(
@@ -299,6 +309,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
                 "detail": "An internal error occurred. Please try again later.",
                 "request_id": request_id,
             },
+            headers=cors_headers,
         )
     else:
         # In development, include exception details
@@ -309,6 +320,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
                 "type": type(exc).__name__,
                 "request_id": request_id,
             },
+            headers=cors_headers,
         )
 
 

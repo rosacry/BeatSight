@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.routes import (
+    accuracy,
     achievements,
     admin,
     ai_jobs,
@@ -183,6 +184,10 @@ Authorization: Bearer <access_token>
             "description": "User karma system: reputation, community contributions",
         },
         {
+            "name": "accuracy",
+            "description": "Beatmap accuracy verification: multi-verifier consensus system",
+        },
+        {
             "name": "votes",
             "description": "Map voting: upvote/downvote maps for community curation",
         },
@@ -249,6 +254,7 @@ if settings.environment != "test":
         logger.warning("rate_limiting_disabled", reason="dependencies not installed")
 
 app.include_router(health.router)
+app.include_router(accuracy.router, prefix=settings.api_prefix)
 app.include_router(achievements.router, prefix=settings.api_prefix)
 app.include_router(auth.router, prefix=settings.api_prefix)
 app.include_router(twofa.router, prefix=settings.api_prefix)

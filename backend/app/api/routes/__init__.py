@@ -3,6 +3,7 @@ Route package exports.
 """
 
 from . import (
+    accuracy,
     achievements,
     admin,
     ai_jobs,
@@ -27,6 +28,7 @@ from . import (
 )
 
 __all__ = [
+    "accuracy",
     "achievements",
     "admin",
     "ai_jobs",

@@ -166,18 +166,18 @@ export function VerifierDashboardPage() {
 
     const getStatusBadge = (status: string) => {
         const colors: Record<string, string> = {
-            pending: 'bg-yellow-100 text-yellow-800',
-            approved: 'bg-green-100 text-green-800',
-            rejected: 'bg-red-100 text-red-800',
-            withdrawn: 'bg-gray-100 text-gray-800',
+            pending: 'bg-yellow-500/20 text-yellow-400',
+            approved: 'bg-green-500/20 text-green-400',
+            rejected: 'bg-red-500/20 text-red-400',
+            withdrawn: 'bg-gray-500/20 text-gray-400',
         }
-        return colors[status] || 'bg-gray-100 text-gray-800'
+        return colors[status] || 'bg-gray-500/20 text-gray-400'
     }
 
     if (loading && !stats) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
             </div>
         )
     }
@@ -185,7 +185,7 @@ export function VerifierDashboardPage() {
     if (error) {
         return (
             <div className="max-w-6xl mx-auto p-6">
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg">
                     {error}
                 </div>
             </div>
@@ -194,87 +194,85 @@ export function VerifierDashboardPage() {
 
     return (
         <div className="max-w-6xl mx-auto p-6">
-            <h1 className="text-3xl font-bold mb-2">🔍 Verifier Dashboard</h1>
-            <p className="text-gray-600 mb-6">Review and approve map edit proposals</p>
+            <h1 className="text-3xl font-bold text-white mb-2">Verifier Dashboard</h1>
+            <p className="text-gray-400 mb-6">Review and approve map edit proposals</p>
 
             {/* Stats Cards */}
             {stats && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div className="bg-white rounded-lg shadow p-4">
-                        <p className="text-sm text-gray-500">Pending Queue</p>
-                        <p className="text-2xl font-bold text-yellow-600">{stats.pending_count}</p>
+                    <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
+                        <p className="text-sm text-gray-400">Pending Queue</p>
+                        <p className="text-2xl font-bold text-yellow-400">{stats.pending_count}</p>
                     </div>
-                    <div className="bg-white rounded-lg shadow p-4">
-                        <p className="text-sm text-gray-500">Approved Today</p>
-                        <p className="text-2xl font-bold text-green-600">{stats.approved_today}</p>
+                    <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
+                        <p className="text-sm text-gray-400">Approved Today</p>
+                        <p className="text-2xl font-bold text-green-400">{stats.approved_today}</p>
                     </div>
-                    <div className="bg-white rounded-lg shadow p-4">
-                        <p className="text-sm text-gray-500">Rejected Today</p>
-                        <p className="text-2xl font-bold text-red-600">{stats.rejected_today}</p>
+                    <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
+                        <p className="text-sm text-gray-400">Rejected Today</p>
+                        <p className="text-2xl font-bold text-red-400">{stats.rejected_today}</p>
                     </div>
-                    <div className="bg-white rounded-lg shadow p-4">
-                        <p className="text-sm text-gray-500">Your Total Reviews</p>
-                        <p className="text-2xl font-bold text-blue-600">{stats.total_reviewed_by_user}</p>
+                    <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
+                        <p className="text-sm text-gray-400">Your Total Reviews</p>
+                        <p className="text-2xl font-bold text-primary-400">{stats.total_reviewed_by_user}</p>
                     </div>
                 </div>
             )}
 
             {/* Tabs */}
-            <div className="border-b border-gray-200 mb-6">
-                <nav className="-mb-px flex space-x-8">
-                    <button
-                        onClick={() => setActiveTab('queue')}
-                        className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'queue'
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700'
-                            }`}
-                    >
-                        📋 Pending Queue ({stats?.pending_count || 0})
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('history')}
-                        className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'history'
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700'
-                            }`}
-                    >
-                        📜 My Decision History
-                    </button>
-                </nav>
+            <div className="flex gap-1 p-1 bg-gray-800 rounded-lg w-fit mb-6">
+                <button
+                    onClick={() => setActiveTab('queue')}
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'queue'
+                        ? 'bg-primary-500 text-white'
+                        : 'text-gray-400 hover:text-white'
+                        }`}
+                >
+                    Pending Queue ({stats?.pending_count || 0})
+                </button>
+                <button
+                    onClick={() => setActiveTab('history')}
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'history'
+                        ? 'bg-primary-500 text-white'
+                        : 'text-gray-400 hover:text-white'
+                        }`}
+                >
+                    My Decision History
+                </button>
             </div>
 
             {/* Queue Tab */}
             {activeTab === 'queue' && (
                 <div className="space-y-4">
                     {proposals.length === 0 ? (
-                        <div className="bg-white rounded-lg shadow p-8 text-center">
-                            <p className="text-gray-500">🎉 No pending proposals to review!</p>
-                            <p className="text-sm text-gray-400 mt-2">Check back later for new submissions</p>
+                        <div className="bg-gray-800 rounded-lg border border-gray-700 p-8 text-center">
+                            <p className="text-gray-300">No pending proposals to review!</p>
+                            <p className="text-sm text-gray-500 mt-2">Check back later for new submissions</p>
                         </div>
                     ) : (
                         proposals.map(proposal => (
-                            <div key={proposal.id} className="bg-white rounded-lg shadow p-4">
+                            <div key={proposal.id} className="bg-gray-800 rounded-lg border border-gray-700 p-4">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-2">
                                             <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(proposal.status)}`}>
                                                 {proposal.status}
                                             </span>
-                                            <span className="text-sm text-gray-500">
+                                            <span className="text-sm text-gray-400">
                                                 by @{proposal.proposer.username}
                                             </span>
                                         </div>
-                                        <h3 className="font-medium text-lg">{proposal.summary}</h3>
-                                        <p className="text-sm text-gray-500 mt-1">
+                                        <h3 className="font-medium text-lg text-white">{proposal.summary}</h3>
+                                        <p className="text-sm text-gray-400 mt-1">
                                             Submitted: {formatDate(proposal.submitted_at)}
                                         </p>
 
                                         {/* Diff Preview - User-friendly visualization */}
                                         <details className="mt-3">
-                                            <summary className="cursor-pointer text-sm text-blue-600 hover:underline">
+                                            <summary className="cursor-pointer text-sm text-primary-400 hover:text-primary-300">
                                                 View Changes ({(proposal.diff_payload as unknown as DiffPayload).edit_count || Object.keys(proposal.diff_payload).length} modifications)
                                             </summary>
-                                            <div className="mt-2 p-3 bg-gray-50 rounded">
+                                            <div className="mt-2 p-3 bg-gray-900 rounded border border-gray-700">
                                                 <ProposalDiffViewer diffPayload={proposal.diff_payload as unknown as DiffPayload} />
                                             </div>
                                         </details>
@@ -284,7 +282,7 @@ export function VerifierDashboardPage() {
                                         <div className="ml-4">
                                             <button
                                                 onClick={() => setSelectedProposal(proposal)}
-                                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                                className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
                                             >
                                                 Review
                                             </button>
@@ -298,7 +296,7 @@ export function VerifierDashboardPage() {
                     {hasMore && (
                         <button
                             onClick={() => setPage(p => p + 1)}
-                            className="w-full py-2 text-blue-600 hover:bg-blue-50 rounded"
+                            className="w-full py-2 text-primary-400 hover:bg-gray-700 rounded-lg transition-colors"
                         >
                             Load More
                         </button>
@@ -310,31 +308,31 @@ export function VerifierDashboardPage() {
             {activeTab === 'history' && (
                 <div className="space-y-4">
                     {myDecisions.length === 0 ? (
-                        <div className="bg-white rounded-lg shadow p-8 text-center">
-                            <p className="text-gray-500">No decisions yet</p>
-                            <p className="text-sm text-gray-400 mt-2">
+                        <div className="bg-gray-800 rounded-lg border border-gray-700 p-8 text-center">
+                            <p className="text-gray-300">No decisions yet</p>
+                            <p className="text-sm text-gray-500 mt-2">
                                 Your review history will appear here
                             </p>
                         </div>
                     ) : (
                         myDecisions.map(proposal => (
-                            <div key={proposal.id} className="bg-white rounded-lg shadow p-4">
+                            <div key={proposal.id} className="bg-gray-800 rounded-lg border border-gray-700 p-4">
                                 <div className="flex items-center gap-2 mb-2">
                                     <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(proposal.status)}`}>
                                         {proposal.status}
                                     </span>
                                     {proposal.decision && (
-                                        <span className="text-xs text-gray-500">
+                                        <span className="text-xs text-gray-400">
                                             Decision: {proposal.decision.decision}
                                         </span>
                                     )}
                                 </div>
-                                <h3 className="font-medium">{proposal.summary}</h3>
-                                <p className="text-sm text-gray-500 mt-1">
+                                <h3 className="font-medium text-white">{proposal.summary}</h3>
+                                <p className="text-sm text-gray-400 mt-1">
                                     by @{proposal.proposer.username} • {formatDate(proposal.submitted_at)}
                                 </p>
                                 {proposal.decision?.notes && (
-                                    <p className="text-sm text-gray-600 mt-2 italic">
+                                    <p className="text-sm text-gray-300 mt-2 italic">
                                         "{proposal.decision.notes}"
                                     </p>
                                 )}
@@ -346,65 +344,65 @@ export function VerifierDashboardPage() {
 
             {/* Review Modal */}
             {selectedProposal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+                    <div className="bg-gray-800 rounded-xl border border-gray-700 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
                         <div className="p-6">
                             <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-xl font-bold">Review Proposal</h2>
+                                <h2 className="text-xl font-bold text-white">Review Proposal</h2>
                                 <button
                                     onClick={() => {
                                         setSelectedProposal(null)
                                         setDecisionNotes('')
                                     }}
-                                    className="text-gray-400 hover:text-gray-600"
+                                    className="text-gray-400 hover:text-white transition-colors"
                                 >
                                     ✕
                                 </button>
                             </div>
 
                             <div className="mb-4">
-                                <h3 className="font-medium mb-2">{selectedProposal.summary}</h3>
-                                <p className="text-sm text-gray-500">
+                                <h3 className="font-medium text-white mb-2">{selectedProposal.summary}</h3>
+                                <p className="text-sm text-gray-400">
                                     Submitted by @{selectedProposal.proposer.username} on {formatDate(selectedProposal.submitted_at)}
                                 </p>
                             </div>
 
                             <div className="mb-4">
-                                <h4 className="font-medium mb-2">Changes</h4>
-                                <div className="border rounded-lg p-4 bg-gray-50 max-h-64 overflow-y-auto">
+                                <h4 className="font-medium text-gray-300 mb-2">Changes</h4>
+                                <div className="border border-gray-600 rounded-lg p-4 bg-gray-900 max-h-64 overflow-y-auto">
                                     <ProposalDiffViewer diffPayload={selectedProposal.diff_payload as unknown as DiffPayload} />
                                 </div>
                             </div>
 
                             {/* Karma Impact Preview */}
-                            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                <h4 className="font-medium text-blue-800 mb-2">⚡ Karma Impact</h4>
-                                <p className="text-sm text-blue-700">
+                            <div className="mb-4 bg-primary-500/10 border border-primary-500/30 rounded-lg p-4">
+                                <h4 className="font-medium text-primary-400 mb-2">Karma Impact</h4>
+                                <p className="text-sm text-gray-300">
                                     Your decision will affect @{selectedProposal.proposer.username}'s karma:
                                 </p>
                                 <div className="flex gap-4 mt-2">
-                                    <span className="text-green-600 font-medium">
+                                    <span className="text-green-400 font-medium">
                                         ✓ Approve: <span className="font-bold">+25</span> karma
                                     </span>
-                                    <span className="text-red-600 font-medium">
+                                    <span className="text-red-400 font-medium">
                                         ✗ Reject: <span className="font-bold">-10</span> karma
                                     </span>
                                 </div>
                             </div>
 
                             <div className="mb-4">
-                                <label className="block text-sm font-medium mb-2">
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
                                     Decision Notes (optional)
                                 </label>
                                 <textarea
                                     value={decisionNotes}
                                     onChange={e => setDecisionNotes(e.target.value)}
-                                    className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+                                    className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                                     rows={3}
                                     placeholder="Add feedback for the proposer..."
                                     maxLength={512}
                                 />
-                                <p className="text-xs text-gray-400 mt-1">
+                                <p className="text-xs text-gray-500 mt-1">
                                     {decisionNotes.length}/512 characters
                                 </p>
                             </div>
@@ -413,21 +411,21 @@ export function VerifierDashboardPage() {
                                 <button
                                     onClick={() => handleDecision(selectedProposal.id, 'approve')}
                                     disabled={submitting}
-                                    className="flex-1 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+                                    className="flex-1 py-2.5 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors font-medium"
                                 >
                                     ✓ Approve
                                 </button>
                                 <button
                                     onClick={() => handleDecision(selectedProposal.id, 'needs_changes')}
                                     disabled={submitting}
-                                    className="flex-1 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:opacity-50"
+                                    className="flex-1 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50 transition-colors font-medium"
                                 >
                                     ↻ Needs Changes
                                 </button>
                                 <button
                                     onClick={() => handleDecision(selectedProposal.id, 'reject')}
                                     disabled={submitting}
-                                    className="flex-1 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+                                    className="flex-1 py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors font-medium"
                                 >
                                     ✗ Reject
                                 </button>

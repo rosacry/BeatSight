@@ -209,24 +209,32 @@ export const useAuthStore = create<AuthStore>()(
                 const state = get()
                 if (!state.accessToken) return
 
-                // Check if token is expired
-                if (state.isTokenExpired()) {
-                    // Try to refresh
-                    const refreshed = await get().refreshTokens()
-                    if (!refreshed) {
-                        get().logout()
-                        return
-                    }
-                }
+                // Set loading to true so ProtectedRoute shows loading state
+                // instead of immediately redirecting to login
+                set({ isLoading: true })
 
-                // Fetch user if we have a valid token but no user
-                if (!state.user) {
-                    try {
-                        await get().fetchCurrentUser()
-                    } catch {
-                        // Token invalid, clear state
-                        get().logout()
+                try {
+                    // Check if token is expired
+                    if (state.isTokenExpired()) {
+                        // Try to refresh
+                        const refreshed = await get().refreshTokens()
+                        if (!refreshed) {
+                            get().logout()
+                            return
+                        }
                     }
+
+                    // Fetch user if we have a valid token but no user
+                    if (!state.user) {
+                        try {
+                            await get().fetchCurrentUser()
+                        } catch {
+                            // Token invalid, clear state
+                            get().logout()
+                        }
+                    }
+                } finally {
+                    set({ isLoading: false })
                 }
             },
 

@@ -110,6 +110,32 @@ except ImportError:
     FocalLossWithMixup = None  # type: ignore
     get_focal_loss = None  # type: ignore
 
+# Optional Class-Balanced Loss (CVPR 2019 - "Effective Number of Samples")
+try:
+    from training.losses.class_balanced_loss import (
+        ClassBalancedLoss,
+        ClassBalancedFocalLoss,
+        ClassBalancedCrossEntropy,
+        compute_class_balanced_weights,
+        get_class_balanced_loss,
+    )
+    HAS_CLASS_BALANCED_LOSS = True
+except ImportError:
+    HAS_CLASS_BALANCED_LOSS = False
+    ClassBalancedLoss = None  # type: ignore
+    ClassBalancedFocalLoss = None  # type: ignore
+    ClassBalancedCrossEntropy = None  # type: ignore
+    compute_class_balanced_weights = None  # type: ignore
+    get_class_balanced_loss = None  # type: ignore
+
+# Optional torchsampler (better imbalanced dataset sampling)
+try:
+    from torchsampler import ImbalancedDatasetSampler
+    HAS_TORCHSAMPLER = True
+except ImportError:
+    HAS_TORCHSAMPLER = False
+    ImbalancedDatasetSampler = None  # type: ignore
+
 # Optional EMA (Exponential Moving Average)
 try:
     from training.utils.ema import ModelEMA, get_ema_decay
@@ -423,8 +449,8 @@ except ImportError:
             output = io.StringIO()
             print(*args, file=output, **kwargs)
             text = output.getvalue()
-            replacements = {'⚠️': '[!]', '⚠': '[!]', '✓': '[OK]', '✗': '[X]', '❌': '[X]', 
-                          '✅': '[OK]', '→': '->', '🎉': '[SUCCESS]'}
+            replacements = {'[WARN]': '[!]', '[WARN]': '[!]', '✓': '[OK]', '✗': '[X]', '[X]': '[X]', 
+                          '[OK]': '[OK]', '→': '->', '🎉': '[SUCCESS]'}
             for emoji, ascii_rep in replacements.items():
                 text = text.replace(emoji, ascii_rep)
             if sys.stdout.encoding:
@@ -1720,7 +1746,7 @@ def train_epoch(
             except RuntimeError as e:
                 if "CUDA" in str(e) or "cuda" in str(e):
                     last_error = e
-                    print(f"\n⚠️ CUDA error during {description} (attempt {attempt + 1}/{cuda_error_retries}): {e}")
+                    print(f"\n[WARN] CUDA error during {description} (attempt {attempt + 1}/{cuda_error_retries}): {e}")
                     
                     # Aggressive memory cleanup
                     if device.type == "cuda":
@@ -1740,7 +1766,7 @@ def train_epoch(
             raise RuntimeError(f"CUDA stability issue: {consecutive_cuda_errors} consecutive batches failed. Last error: {last_error}")
         
         # Log but continue - skip this batch
-        print(f"⚠️ Skipping batch due to persistent CUDA error: {last_error}")
+        print(f"[WARN] Skipping batch due to persistent CUDA error: {last_error}")
         return None
 
     optimizer.zero_grad(set_to_none=True)
@@ -2307,14 +2333,14 @@ def log_class_health(health: dict, epoch: int, num_classes: int) -> None:
     
     # Show classes with issues
     if health['zero_acc_classes']:
-        print(f"\n❌ ZERO ACCURACY ({len(health['zero_acc_classes'])}/{num_classes} classes):")
+        print(f"\n[X] ZERO ACCURACY ({len(health['zero_acc_classes'])}/{num_classes} classes):")
         for cls in health['zero_acc_classes'][:10]:
             print(f"   - {cls}")
         if len(health['zero_acc_classes']) > 10:
             print(f"   ... and {len(health['zero_acc_classes']) - 10} more")
     
     if health['low_acc_classes']:
-        print(f"\n⚠️  LOW ACCURACY (<5%, {len(health['low_acc_classes'])} classes):")
+        print(f"\n[WARN]  LOW ACCURACY (<5%, {len(health['low_acc_classes'])} classes):")
         for cls, acc in health['low_acc_classes'][:5]:
             print(f"   - {cls}: {acc:.1f}%")
     
@@ -2323,20 +2349,20 @@ def log_class_health(health: dict, epoch: int, num_classes: int) -> None:
                     if v is not None and v >= 5]
     if good_classes:
         good_classes.sort(key=lambda x: x[1], reverse=True)
-        print(f"\n✅ LEARNING ({len(good_classes)}/{num_classes} classes):")
+        print(f"\n[OK] LEARNING ({len(good_classes)}/{num_classes} classes):")
         for cls, acc in good_classes[:5]:
             print(f"   - {cls}: {acc:.1f}%")
         if len(good_classes) > 5:
             print(f"   ... and {len(good_classes) - 5} more")
     
     # Overall stats
-    print(f"\n📊 Overall: {health['overall_acc']:.2f}% (random baseline: {health['random_baseline']:.2f}%)")
+    print(f"\n[STATS] Overall: {health['overall_acc']:.2f}% (random baseline: {health['random_baseline']:.2f}%)")
     
     # Critical warning
     if health['collapse_detected']:
-        print(f"\n{'🚨' * 10}")
-        print("🚨 CLASS COLLAPSE DETECTED!")
-        print(f"{'🚨' * 10}")
+        print(f"\n{'[ALERT]' * 10}")
+        print("[ALERT] CLASS COLLAPSE DETECTED!")
+        print(f"{'[ALERT]' * 10}")
         print(f"\n{len(health['zero_acc_classes'])}/{num_classes} classes have 0% accuracy.")
         print("The model is NOT learning all classes!")
         print("\nPOSSIBLE CAUSES:")
@@ -2349,10 +2375,381 @@ def log_class_health(health: dict, epoch: int, num_classes: int) -> None:
         print("  - Use --sampling-strategy sqrt instead of uniform")
         print("  - Reduce --focal-gamma to 1.5 or disable focal loss")
     elif health['overall_acc'] < health['random_baseline']:
-        print(f"\n⚠️  WARNING: Accuracy below random baseline!")
+        print(f"\n[WARN]  WARNING: Accuracy below random baseline!")
         print(f"   This suggests the model is struggling to learn.")
     
     print(f"{'=' * 60}\n")
+
+
+def diagnose_class_collapse(
+    model: nn.Module,
+    dataloader: DataLoader,
+    criterion: nn.Module,
+    optimizer: torch.optim.Optimizer,
+    device: torch.device,
+    num_classes: int,
+    class_names: Optional[List[str]] = None,
+    *,
+    amp_enabled: bool = False,
+    autocast_dtype: Optional[torch.dtype] = None,
+    epoch: int = 0,
+    samples_per_class_train: Optional[List[int]] = None,
+) -> dict:
+    """
+    COMPREHENSIVE DIAGNOSTIC for class collapse debugging.
+    
+    This function provides deep insights into WHY training might be failing:
+    1. Per-class loss values (are some classes getting ignored?)
+    2. Gradient flow to classifier head (are gradients reaching all class logits?)
+    3. Prediction distribution (what is the model actually predicting?)
+    4. Logit statistics (are some class logits always low/high?)
+    5. Sample balance in current batch (is sampling working?)
+    
+    Run this when you suspect class collapse to get actionable insights.
+    """
+    print("\n" + "[DIAG]" * 30)
+    print(f"  DEEP DIAGNOSTIC - EPOCH {epoch}")
+    print("[DIAG]" * 30 + "\n")
+    
+    model.eval()
+    
+    # Storage for diagnostics
+    per_class_loss = torch.zeros(num_classes)
+    per_class_samples = torch.zeros(num_classes)
+    per_class_predictions = torch.zeros(num_classes)
+    per_class_correct = torch.zeros(num_classes)
+    all_logits_by_class = {i: [] for i in range(num_classes)}
+    
+    batches_evaluated = 0
+    max_batches = 30  # Evaluate subset for speed
+    
+    total_samples_seen = 0
+    batch_class_counts = []
+    
+    # Gradient analysis storage
+    grad_per_class_logit = None
+    
+    # Phase 1: Forward pass analysis
+    print("Phase 1: Forward Pass Analysis...")
+    with torch.no_grad():
+        for batch_data in dataloader:
+            if batches_evaluated >= max_batches:
+                break
+            
+            features, labels = batch_data[:2]
+            features = features.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
+            
+            # Track samples per class in this batch
+            batch_counts = torch.bincount(labels, minlength=num_classes).cpu()
+            batch_class_counts.append(batch_counts)
+            total_samples_seen += labels.size(0)
+            
+            with autocast(device_type=device.type, dtype=autocast_dtype, enabled=amp_enabled):
+                outputs = model(features)
+                if isinstance(outputs, tuple):
+                    outputs = outputs[0]
+                
+                # Per-sample loss
+                ce_loss_per_sample = F.cross_entropy(outputs, labels, reduction='none')
+            
+            _, predicted = torch.max(outputs, 1)
+            
+            # Accumulate statistics
+            for i in range(labels.size(0)):
+                label_idx = labels[i].item()
+                pred_idx = predicted[i].item()
+                
+                if label_idx < num_classes:
+                    per_class_loss[label_idx] += ce_loss_per_sample[i].item()
+                    per_class_samples[label_idx] += 1
+                    all_logits_by_class[label_idx].append(outputs[i].cpu())
+                    
+                    if pred_idx == label_idx:
+                        per_class_correct[label_idx] += 1
+                
+                if pred_idx < num_classes:
+                    per_class_predictions[pred_idx] += 1
+            
+            batches_evaluated += 1
+    
+    # Phase 2: Gradient flow analysis (1 batch with gradients)
+    print("Phase 2: Gradient Flow Analysis...")
+    model.train()
+    for batch_data in dataloader:
+        features, labels = batch_data[:2]
+        features = features.to(device, non_blocking=True)
+        labels = labels.to(device, non_blocking=True)
+        
+        optimizer.zero_grad()
+        
+        with autocast(device_type=device.type, dtype=autocast_dtype, enabled=amp_enabled):
+            outputs = model(features)
+            if isinstance(outputs, tuple):
+                outputs = outputs[0]
+            loss = criterion(outputs, labels)
+        
+        loss.backward()
+        
+        # Check gradients on the final classifier layer
+        # Find the classifier layer (usually called 'fc', 'classifier', or 'head')
+        classifier_weight = None
+        classifier_grad = None
+        for name, param in model.named_parameters():
+            if param.grad is not None and 'classifier' in name.lower() or 'fc' in name.lower() or 'head' in name.lower():
+                if 'weight' in name and param.dim() == 2:
+                    # This is likely the final classification layer
+                    if param.shape[0] == num_classes:
+                        classifier_weight = param
+                        classifier_grad = param.grad
+                        break
+        
+        if classifier_grad is not None:
+            # Gradient magnitude per class (row of weight matrix)
+            grad_per_class_logit = classifier_grad.abs().mean(dim=1).cpu()
+        
+        optimizer.zero_grad()
+        break
+    
+    model.eval()
+    
+    # === ANALYSIS & REPORTING ===
+    names = class_names if class_names else [f"class_{i}" for i in range(num_classes)]
+    
+    # 1. Sample Balance in Batches
+    print("\n" + "=" * 70)
+    print("  1. SAMPLE BALANCE (Are batches class-balanced?)")
+    print("=" * 70)
+    
+    total_batch_samples = sum([bc.sum().item() for bc in batch_class_counts])
+    mean_batch_counts = torch.stack(batch_class_counts).float().mean(dim=0)
+    
+    classes_in_batches = (mean_batch_counts > 0).sum().item()
+    print(f"  Classes present in batches: {classes_in_batches}/{num_classes}")
+    print(f"  Total samples evaluated: {total_samples_seen}")
+    
+    # Show distribution
+    sorted_indices = torch.argsort(mean_batch_counts, descending=True)
+    print(f"\n  Per-class avg samples/batch (top 5):")
+    for idx in sorted_indices[:5]:
+        name = names[idx] if idx < len(names) else f"class_{idx}"
+        print(f"    {name}: {mean_batch_counts[idx]:.1f}")
+    
+    print(f"\n  Per-class avg samples/batch (bottom 5):")
+    for idx in sorted_indices[-5:]:
+        name = names[idx] if idx < len(names) else f"class_{idx}"
+        print(f"    {name}: {mean_batch_counts[idx]:.1f}")
+    
+    # Check if sampling is working
+    if classes_in_batches < num_classes:
+        print(f"\n  [WARN]  WARNING: {num_classes - classes_in_batches} classes NOT SEEN in {max_batches} batches!")
+        print("      This means balanced sampling may not be working!")
+    
+    # 2. Prediction Distribution
+    print("\n" + "=" * 70)
+    print("  2. PREDICTION DISTRIBUTION (What is the model predicting?)")
+    print("=" * 70)
+    
+    total_preds = per_class_predictions.sum().item()
+    pred_percentages = 100 * per_class_predictions / max(total_preds, 1)
+    
+    # Check for prediction collapse
+    classes_predicted = (per_class_predictions > 0).sum().item()
+    top_pred_class = torch.argmax(per_class_predictions).item()
+    top_pred_pct = pred_percentages[top_pred_class].item()
+    
+    print(f"  Classes with any predictions: {classes_predicted}/{num_classes}")
+    print(f"  Most predicted class: {names[top_pred_class]} ({top_pred_pct:.1f}%)")
+    
+    if classes_predicted < num_classes // 2:
+        print(f"\n  [ALERT] PREDICTION COLLAPSE: Model only predicting {classes_predicted} classes!")
+    
+    if top_pred_pct > 50:
+        print(f"\n  [ALERT] DOMINANT PREDICTION: {names[top_pred_class]} gets {top_pred_pct:.1f}% of predictions!")
+    
+    # Show prediction distribution
+    sorted_preds = torch.argsort(per_class_predictions, descending=True)
+    print(f"\n  Top 5 predicted classes:")
+    for idx in sorted_preds[:5]:
+        name = names[idx] if idx < len(names) else f"class_{idx}"
+        pct = pred_percentages[idx].item()
+        print(f"    {name}: {pct:.1f}% ({int(per_class_predictions[idx].item())} samples)")
+    
+    print(f"\n  Never predicted (0 predictions):")
+    never_predicted = [names[idx] for idx in range(num_classes) if per_class_predictions[idx] == 0]
+    for name in never_predicted[:10]:
+        print(f"    - {name}")
+    if len(never_predicted) > 10:
+        print(f"    ... and {len(never_predicted) - 10} more")
+    
+    # 3. Per-Class Loss
+    print("\n" + "=" * 70)
+    print("  3. PER-CLASS LOSS (Which classes are hard/easy?)")
+    print("=" * 70)
+    
+    avg_loss_per_class = torch.where(
+        per_class_samples > 0,
+        per_class_loss / per_class_samples,
+        torch.zeros_like(per_class_loss)
+    )
+    
+    valid_losses = avg_loss_per_class[per_class_samples > 0]
+    if len(valid_losses) > 0:
+        print(f"  Loss range: {valid_losses.min():.3f} - {valid_losses.max():.3f}")
+        print(f"  Mean loss: {valid_losses.mean():.3f}")
+        
+        # Highest loss classes (hardest)
+        sorted_loss = torch.argsort(avg_loss_per_class, descending=True)
+        print(f"\n  Highest loss (hardest) classes:")
+        shown = 0
+        for idx in sorted_loss:
+            if per_class_samples[idx] > 0 and shown < 5:
+                name = names[idx] if idx < len(names) else f"class_{idx}"
+                print(f"    {name}: loss={avg_loss_per_class[idx]:.3f} (n={int(per_class_samples[idx].item())})")
+                shown += 1
+    
+    # 4. Gradient Flow Analysis
+    print("\n" + "=" * 70)
+    print("  4. GRADIENT FLOW (Is the model learning all classes?)")
+    print("=" * 70)
+    
+    if grad_per_class_logit is not None:
+        print(f"  Gradient magnitude per class logit:")
+        
+        # Check for dead gradients
+        zero_grad_classes = (grad_per_class_logit < 1e-8).sum().item()
+        very_small_grad_classes = (grad_per_class_logit < 1e-6).sum().item()
+        
+        print(f"  Classes with ~zero gradient: {zero_grad_classes}/{num_classes}")
+        print(f"  Classes with very small gradient: {very_small_grad_classes}/{num_classes}")
+        
+        if zero_grad_classes > 0:
+            print(f"\n  [ALERT] GRADIENT STARVATION: {zero_grad_classes} class logits getting no gradient!")
+            print("      This means the model cannot learn these classes!")
+        
+        # Show gradient distribution
+        sorted_grads = torch.argsort(grad_per_class_logit, descending=True)
+        print(f"\n  Highest gradient classes:")
+        for idx in sorted_grads[:5]:
+            name = names[idx] if idx < len(names) else f"class_{idx}"
+            print(f"    {name}: grad_mag={grad_per_class_logit[idx]:.6f}")
+        
+        print(f"\n  Lowest gradient classes:")
+        for idx in sorted_grads[-5:]:
+            name = names[idx] if idx < len(names) else f"class_{idx}"
+            print(f"    {name}: grad_mag={grad_per_class_logit[idx]:.6f}")
+    else:
+        print("  Could not find classifier layer for gradient analysis")
+    
+    # 5. Logit Statistics
+    print("\n" + "=" * 70)
+    print("  5. LOGIT STATISTICS (Is the model confident?)")
+    print("=" * 70)
+    
+    # Compute mean logit per class (when that class is the label)
+    mean_logit_for_true_class = []
+    for i in range(num_classes):
+        if len(all_logits_by_class[i]) > 0:
+            logits_stack = torch.stack(all_logits_by_class[i])
+            # Mean logit value for the true class
+            mean_logit_for_true_class.append((i, logits_stack[:, i].mean().item()))
+    
+    if mean_logit_for_true_class:
+        sorted_logits = sorted(mean_logit_for_true_class, key=lambda x: x[1], reverse=True)
+        
+        print(f"  Mean logit for true class (should be high):")
+        print(f"\n  Highest (most confident):")
+        for idx, logit_val in sorted_logits[:5]:
+            name = names[idx] if idx < len(names) else f"class_{idx}"
+            print(f"    {name}: {logit_val:.3f}")
+        
+        print(f"\n  Lowest (least confident):")
+        for idx, logit_val in sorted_logits[-5:]:
+            name = names[idx] if idx < len(names) else f"class_{idx}"
+            print(f"    {name}: {logit_val:.3f}")
+    
+    # 6. Per-Class Accuracy Summary
+    print("\n" + "=" * 70)
+    print("  6. PER-CLASS ACCURACY SUMMARY")
+    print("=" * 70)
+    
+    per_class_acc = torch.where(
+        per_class_samples > 0,
+        100 * per_class_correct / per_class_samples,
+        torch.full_like(per_class_correct, -1)
+    )
+    
+    zero_acc_classes = []
+    learning_classes = []
+    
+    for i in range(num_classes):
+        name = names[i] if i < len(names) else f"class_{i}"
+        acc = per_class_acc[i].item()
+        n = int(per_class_samples[i].item())
+        
+        if n > 0:
+            if acc == 0:
+                zero_acc_classes.append(name)
+            elif acc > 0:
+                learning_classes.append((name, acc, n))
+    
+    print(f"\n  Classes learning (>0% acc): {len(learning_classes)}/{num_classes}")
+    print(f"  Classes collapsed (0% acc): {len(zero_acc_classes)}/{num_classes}")
+    
+    if learning_classes:
+        learning_classes.sort(key=lambda x: x[1], reverse=True)
+        print(f"\n  [OK] Learning classes:")
+        for name, acc, n in learning_classes[:10]:
+            print(f"    {name}: {acc:.1f}% (n={n})")
+    
+    if zero_acc_classes:
+        print(f"\n  [X] Zero accuracy classes:")
+        for name in zero_acc_classes[:10]:
+            print(f"    - {name}")
+        if len(zero_acc_classes) > 10:
+            print(f"    ... and {len(zero_acc_classes) - 10} more")
+    
+    # 7. RECOMMENDATIONS
+    print("\n" + "=" * 70)
+    print("  7. RECOMMENDATIONS")
+    print("=" * 70)
+    
+    issues = []
+    
+    if classes_predicted < num_classes // 2:
+        issues.append("PREDICTION COLLAPSE - Model only predicting few classes")
+    
+    if grad_per_class_logit is not None and (grad_per_class_logit < 1e-8).sum().item() > 0:
+        issues.append("GRADIENT STARVATION - Some class logits getting no gradient")
+    
+    if classes_in_batches < num_classes:
+        issues.append("SAMPLING ISSUE - Some classes not appearing in batches")
+    
+    if len(zero_acc_classes) > num_classes // 2:
+        issues.append("CLASS COLLAPSE - More than half of classes at 0% accuracy")
+    
+    if issues:
+        print(f"\n  [ALERT] ISSUES DETECTED:")
+        for issue in issues:
+            print(f"    - {issue}")
+        
+        print(f"\n  [TIP] SUGGESTED FIXES:")
+        print("    1. If GRADIENT STARVATION: Reduce focal gamma or disable focal loss")
+        print("    2. If SAMPLING ISSUE: Check --balanced-sampling is enabled")
+        print("    3. If PREDICTION COLLAPSE: Lower learning rate, reduce mixup")
+        print("    4. Try: --loss-type class-balanced --cb-beta 0.9999")
+    else:
+        print(f"\n  [OK] No critical issues detected. Training appears healthy.")
+    
+    print("\n" + "[DIAG]" * 30 + "\n")
+    
+    return {
+        'classes_in_batches': classes_in_batches,
+        'classes_predicted': classes_predicted,
+        'zero_acc_classes': zero_acc_classes,
+        'learning_classes': len(learning_classes),
+        'issues': issues,
+    }
 
 
 def validate_with_tta(
@@ -2814,6 +3211,29 @@ def main():
         type=float,
         default=0.0,
         help="Label smoothing factor for cross-entropy loss (0.0-0.2 typical)",
+    )
+    
+    # === ADVANCED LOSS AND SAMPLING OPTIONS ===
+    parser.add_argument(
+        "--loss-type",
+        choices=["ce", "focal", "class-balanced", "class-balanced-focal"],
+        default="ce",
+        help="Loss function type: ce (cross-entropy), focal (focal loss for hard examples), "
+             "class-balanced (CVPR 2019 Class-Balanced Loss - great for extreme imbalance), "
+             "class-balanced-focal (combines both). For 630:1 imbalance, try 'class-balanced'.",
+    )
+    parser.add_argument(
+        "--cb-beta",
+        type=float,
+        default=0.9999,
+        help="Beta for Class-Balanced Loss effective number calculation (0.9-0.9999). "
+             "Higher = more aggressive reweighting. Default 0.9999 for extreme imbalance.",
+    )
+    parser.add_argument(
+        "--use-torchsampler",
+        action="store_true",
+        help="Use torchsampler's ImbalancedDatasetSampler instead of our WeightedRandomSampler. "
+             "More robust sampling with automatic class balancing. Install: pip install torchsampler",
     )
     
     # === CUTTING-EDGE FEATURES ===
@@ -3910,11 +4330,37 @@ def main():
         epoch_samples = args.samples_per_epoch if args.samples_per_epoch else len(train_labels_arr)
         if args.samples_per_epoch:
             print(f"   Samples per epoch: {epoch_samples:,} (user-specified, {epoch_samples / len(train_labels_arr) * 100:.1f}% of full dataset)")
-        balanced_sampler = WeightedRandomSampler(
-            weights=sample_weights_tensor,
-            num_samples=epoch_samples,
-            replacement=True,  # Must be True for weighted sampling
-        )
+        
+        # === TORCHSAMPLER OPTION (pip install torchsampler) ===
+        # ImbalancedDatasetSampler automatically handles class imbalance
+        use_torchsampler = getattr(args, 'use_torchsampler', False) and HAS_TORCHSAMPLER
+        if use_torchsampler:
+            print(f"\n[TORCHSAMPLER] Using ImbalancedDatasetSampler (automatic class balancing)")
+            # Create a thin wrapper that provides labels for ImbalancedDatasetSampler
+            class LabelAccessWrapper:
+                """Thin wrapper to make ImbalancedDatasetSampler work with our dataset."""
+                def __init__(self, labels_arr):
+                    self.labels = labels_arr.tolist()
+                def __len__(self):
+                    return len(self.labels)
+                def get_labels(self):
+                    return self.labels
+            
+            label_wrapper = LabelAccessWrapper(train_labels_arr)
+            
+            # ImbalancedDatasetSampler handles callback_get_label automatically
+            balanced_sampler = ImbalancedDatasetSampler(
+                label_wrapper,
+                callback_get_label=lambda ds, idx: ds.labels[idx],
+                num_samples=epoch_samples if args.samples_per_epoch else None,
+            )
+            print(f"   ImbalancedDatasetSampler initialized with {len(label_wrapper)} samples")
+        else:
+            balanced_sampler = WeightedRandomSampler(
+                weights=sample_weights_tensor,
+                num_samples=epoch_samples,
+                replacement=True,  # Must be True for weighted sampling
+            )
         
         # Note: balanced_sampler is incompatible with shard-aware sampling
         if use_shard_aware:
@@ -4097,7 +4543,7 @@ def main():
     
     if aggressive_warnings:
         print("\n" + "=" * 70)
-        print("⚠️  AGGRESSIVE SETTINGS DETECTED")
+        print("[WARN]  AGGRESSIVE SETTINGS DETECTED")
         print("=" * 70)
         print("The following settings can cause training instability or class collapse:")
         print()
@@ -4370,7 +4816,7 @@ def main():
         # can cause over-correction and training instability
         if args.balanced_sampling:
             print("\n" + "=" * 70)
-            print("⚠️  WARNING: DOUBLE-WEIGHTING DETECTED")
+            print("[WARN]  WARNING: DOUBLE-WEIGHTING DETECTED")
             print("=" * 70)
             print("You are using BOTH --balanced-sampling AND --class-weights.")
             print("This applies class rebalancing TWICE:")
@@ -4395,8 +4841,9 @@ def main():
         ).to(torch_device)
         print(f"Class weighting enabled ({args.class_weights}): min={class_weights_tensor.min():.3f}, max={class_weights_tensor.max():.3f}")
     
-    # Initialize loss function (standard CrossEntropy or Focal Loss)
+    # Initialize loss function (standard CrossEntropy or Focal Loss or Class-Balanced Loss)
     use_focal = args.focal_loss and HAS_FOCAL_LOSS
+    use_class_balanced = getattr(args, 'loss_type', 'ce') in ['class-balanced', 'class-balanced-focal'] and HAS_CLASS_BALANCED_LOSS
     
     # AUTO-ADJUST FOCAL GAMMA: Reduce gamma when using balanced sampling
     # Balanced sampling already ensures rare classes are seen equally
@@ -4406,7 +4853,7 @@ def main():
         original_gamma = args.focal_gamma
         effective_focal_gamma = min(args.focal_gamma, 2.0)  # Cap at 2.0
         print("\n" + "=" * 70)
-        print("⚠️  AUTO-ADJUSTMENT: Focal Loss Gamma Reduced")
+        print("[WARN]  AUTO-ADJUSTMENT: Focal Loss Gamma Reduced")
         print("=" * 70)
         print(f"Original gamma: {original_gamma}")
         print(f"Adjusted gamma: {effective_focal_gamma}")
@@ -4419,7 +4866,54 @@ def main():
         print("To override: Use --focal-gamma 2.0 or lower explicitly.")
         print("=" * 70 + "\n")
     
-    if use_focal:
+    # === CLASS-BALANCED LOSS (CVPR 2019) ===
+    # This is superior for extreme class imbalance (>100x ratio)
+    if use_class_balanced:
+        # Get per-class sample counts for effective number calculation
+        if hasattr(train_dataset_full, '_use_numpy') and train_dataset_full._use_numpy:
+            labels_for_cb = train_dataset_full._numpy_labels
+        else:
+            labels_for_cb = train_dataset_full.labels
+        
+        from collections import Counter
+        label_counts = Counter(labels_for_cb)
+        samples_per_cls = [label_counts.get(i, 0) for i in range(num_classes)]
+        
+        cb_beta = getattr(args, 'cb_beta', 0.9999)
+        use_focal_in_cb = getattr(args, 'loss_type', 'ce') == 'class-balanced-focal'
+        
+        if use_focal_in_cb:
+            # Class-Balanced Focal Loss
+            from training.losses.class_balanced_loss import ClassBalancedFocalLoss
+            criterion = ClassBalancedFocalLoss(
+                samples_per_cls=samples_per_cls,
+                num_classes=num_classes,
+                beta=cb_beta,
+                gamma=effective_focal_gamma,
+                label_smoothing=args.label_smoothing,
+            ).to(torch_device)
+            print(f"Class-Balanced Focal Loss enabled: beta={cb_beta}, gamma={effective_focal_gamma}")
+        else:
+            # Class-Balanced CE Loss
+            from training.losses.class_balanced_loss import ClassBalancedCELoss
+            criterion = ClassBalancedCELoss(
+                samples_per_cls=samples_per_cls,
+                num_classes=num_classes,
+                beta=cb_beta,
+                label_smoothing=args.label_smoothing,
+            ).to(torch_device)
+            print(f"Class-Balanced CE Loss enabled: beta={cb_beta}")
+        
+        # Log effective number statistics
+        effective_nums = [(1 - cb_beta**n) / (1 - cb_beta) for n in samples_per_cls]
+        weights = [1.0 / e if e > 0 else 0 for e in effective_nums]
+        if weights:
+            # Normalize weights
+            total_w = sum(weights)
+            weights = [w * num_classes / total_w for w in weights]
+            print(f"  Effective number range: {min(effective_nums):.2f} - {max(effective_nums):.2f}")
+            print(f"  Weight range: {min(weights):.4f} - {max(weights):.4f}")
+    elif use_focal:
         if args.mixup_alpha > 0 or args.cutmix_alpha > 0:
             # Use mixup-compatible focal loss
             criterion = FocalLossWithMixup(
@@ -4593,7 +5087,7 @@ def main():
         args.use_curriculum and HAS_CURRICULUM,          # Curriculum (soft sampling)
     ])
     if regularization_count >= 3 and args.label_smoothing > 0.05:
-        _safe_print(f"⚠️  Warning: Using {regularization_count} regularization techniques with label_smoothing={args.label_smoothing}")
+        _safe_print(f"[WARN]  Warning: Using {regularization_count} regularization techniques with label_smoothing={args.label_smoothing}")
         _safe_print("   This may cause over-regularization. Consider reducing --label-smoothing to 0.05")
     
     # Initialize optimizer (SAM or standard Adam)
@@ -5049,7 +5543,7 @@ def main():
         ckpt_use_lookahead = checkpoint_args.get("use_lookahead", False)
         
         if ckpt_use_sam != use_sam or ckpt_use_gc != use_gc or ckpt_use_lookahead != use_lookahead:
-            _safe_print("\n⚠️  Warning: Optimizer configuration changed from checkpoint:")
+            _safe_print("\n[WARN]  Warning: Optimizer configuration changed from checkpoint:")
             _safe_print(f"    Checkpoint: SAM={ckpt_use_sam}, GC={ckpt_use_gc}, Lookahead={ckpt_use_lookahead}")
             _safe_print(f"    Current:    SAM={use_sam}, GC={use_gc}, Lookahead={use_lookahead}")
             _safe_print("    Optimizer momentum/state may be partially reset.\n")
@@ -5089,7 +5583,7 @@ def main():
         # Report architecture differences
         has_mismatch = bool(missing_keys or size_mismatch_keys)
         if has_mismatch or unexpected_keys:
-            _safe_print("\n⚠️  Architecture mismatch detected in checkpoint:")
+            _safe_print("\n[WARN]  Architecture mismatch detected in checkpoint:")
             if missing_keys:
                 _safe_print(f"    Missing keys (will be randomly initialized): {len(missing_keys)}")
                 for k in missing_keys[:5]:
@@ -5113,7 +5607,7 @@ def main():
             if has_mismatch:
                 _safe_print("    ℹ️  Remaining parameters initialized randomly - this is fine for architecture upgrades.\n")
         else:
-            _safe_print("    ⚠️  No compatible weights found - starting with fresh model.\n")
+            _safe_print("    [WARN]  No compatible weights found - starting with fresh model.\n")
         
         # Only load optimizer/scheduler state if architecture is fully compatible
         if not has_mismatch:
@@ -5321,6 +5815,68 @@ def main():
         print("[LABEL AUDIT] Updated training dataset and loader")
         print("=" * 60 + "\n")
     
+    # === PRE-TRAINING SAMPLING VERIFICATION ===
+    # Verify that balanced sampling is actually working before wasting hours on training
+    if args.balanced_sampling and start_epoch == 0:
+        print("\n" + "=" * 70)
+        print("  PRE-TRAINING SAMPLING VERIFICATION")
+        print("=" * 70)
+        print("Checking that balanced sampling is working correctly...")
+        
+        # Sample a few batches and verify class distribution
+        batch_class_counts = []
+        num_verify_batches = 10
+        verify_iter = iter(train_loader)
+        
+        for _ in range(min(num_verify_batches, len(train_loader))):
+            try:
+                batch_data = next(verify_iter)
+                labels = batch_data[1]
+                batch_counts = torch.bincount(labels, minlength=num_classes).cpu()
+                batch_class_counts.append(batch_counts)
+            except StopIteration:
+                break
+        
+        if batch_class_counts:
+            mean_counts = torch.stack(batch_class_counts).float().mean(dim=0)
+            classes_present = (mean_counts > 0).sum().item()
+            
+            print(f"\n  Sampled {len(batch_class_counts)} batches from train_loader")
+            print(f"  Classes appearing in batches: {classes_present}/{num_classes}")
+            
+            if classes_present < num_classes:
+                missing = num_classes - classes_present
+                print(f"\n  [WARNING] {missing} classes NOT appearing in sampled batches!")
+                print("      This may indicate a sampling issue.")
+                
+                # Show which classes are missing
+                zero_count_classes = (mean_counts == 0).nonzero(as_tuple=True)[0].tolist()
+                class_names = components_info.get('class_names', None)
+                names = class_names if class_names else [f"class_{i}" for i in range(num_classes)]
+                print(f"\n      Missing classes:")
+                for idx in zero_count_classes[:10]:
+                    print(f"        - {names[idx]}")
+                if len(zero_count_classes) > 10:
+                    print(f"        ... and {len(zero_count_classes) - 10} more")
+            else:
+                print(f"\n  [OK] All {num_classes} classes appearing in batches - sampling looks good!")
+            
+            # Show distribution
+            sorted_indices = torch.argsort(mean_counts, descending=True)
+            print(f"\n  Top 5 sampled classes (avg per batch):")
+            for idx in sorted_indices[:5]:
+                class_names = components_info.get('class_names', None)
+                names = class_names if class_names else [f"class_{i}" for i in range(num_classes)]
+                print(f"    {names[idx]}: {mean_counts[idx]:.1f}")
+            
+            print(f"\n  Bottom 5 sampled classes (avg per batch):")
+            for idx in sorted_indices[-5:]:
+                class_names = components_info.get('class_names', None)
+                names = class_names if class_names else [f"class_{i}" for i in range(num_classes)]
+                print(f"    {names[idx]}: {mean_counts[idx]:.1f}")
+        
+        print("=" * 70 + "\n")
+    
     try:
         for epoch in range(start_epoch, args.epochs):
             print(f"\nEpoch {epoch + 1}/{args.epochs}")
@@ -5515,16 +6071,47 @@ def main():
                 
                 # If class collapse detected in first 5 epochs, it's likely a config issue
                 if health['collapse_detected'] and (epoch + 1) <= 5:
-                    print("\n" + "🛑" * 20)
-                    print("🛑 CRITICAL: Class collapse detected in early training!")
-                    print("🛑 This is almost certainly a hyperparameter issue, not data issue.")
-                    print("🛑" * 20)
+                    print("\n" + "[STOP]" * 20)
+                    print("[STOP] CRITICAL: Class collapse detected in early training!")
+                    print("[STOP] This is almost certainly a hyperparameter issue, not data issue.")
+                    print("[STOP]" * 20)
                     print("\nSUGGESTED FIX:")
                     print("  Stop training and try:")
                     print("    --focal-gamma 1.5    (or remove --focal-loss entirely)")
                     print("    --sampling-strategy sqrt   (instead of uniform)")
                     print("    --class-weights none  (if using --balanced-sampling)")
                     print("\n")
+                    
+                    # Run DEEP DIAGNOSTIC to understand WHY collapse is happening
+                    print("Running deep diagnostic to find root cause...")
+                    diagnose_class_collapse(
+                        model=model,
+                        dataloader=val_loader,
+                        criterion=criterion,
+                        optimizer=optimizer,
+                        device=torch_device,
+                        num_classes=num_classes,
+                        class_names=class_names,
+                        amp_enabled=amp_enabled,
+                        autocast_dtype=autocast_dtype,
+                        epoch=epoch + 1,
+                    )
+                
+                # Also run deep diagnostic on epoch 1 for baseline visibility
+                if (epoch + 1) == 1:
+                    print("\n[STATS] Running epoch 1 baseline diagnostic...")
+                    diagnose_class_collapse(
+                        model=model,
+                        dataloader=val_loader,
+                        criterion=criterion,
+                        optimizer=optimizer,
+                        device=torch_device,
+                        num_classes=num_classes,
+                        class_names=class_names,
+                        amp_enabled=amp_enabled,
+                        autocast_dtype=autocast_dtype,
+                        epoch=epoch + 1,
+                    )
 
             # Use balanced accuracy for best model selection when training with balanced sampling
             val_metric_for_best = val_balanced_acc if val_balanced_acc is not None else val_acc
@@ -5596,7 +6183,7 @@ def main():
                 except OSError as e:
                     # Fallback: log artifact instead if save still fails
                     if "WinError 1314" in str(e) or "privilege" in str(e).lower():
-                        _safe_print("⚠ wandb.save() failed (Windows symlink issue), using artifact instead")
+                        _safe_print("[WARN] wandb.save() failed (Windows symlink issue), using artifact instead")
                         try:
                             artifact = wandb.Artifact(
                                 name=f"best_model_epoch_{best_epoch}",
@@ -5606,11 +6193,11 @@ def main():
                             artifact.add_file(str(model_path))
                             wandb_run.log_artifact(artifact)
                         except Exception as artifact_err:
-                            _safe_print(f"⚠ Artifact upload also failed: {artifact_err} (continuing anyway)")
+                            _safe_print(f"[WARN] Artifact upload also failed: {artifact_err} (continuing anyway)")
                     else:
-                        _safe_print(f"⚠ wandb.save() failed: {e} (continuing anyway)")
+                        _safe_print(f"[WARN] wandb.save() failed: {e} (continuing anyway)")
                 except Exception as e:
-                    _safe_print(f"⚠ wandb.save() failed: {e} (continuing anyway)")
+                    _safe_print(f"[WARN] wandb.save() failed: {e} (continuing anyway)")
 
     except KeyboardInterrupt:
         print("\n[STOP] Training interrupted by user (Ctrl+C). Saving checkpoint...")
@@ -5672,12 +6259,12 @@ def main():
             print(f"Calibration parameters saved to: {calib_path}")
             
         except Exception as e:
-            _safe_print(f"⚠ Calibration failed: {e} (continuing without calibration)")
+            _safe_print(f"[WARN] Calibration failed: {e} (continuing without calibration)")
     
     # Self-training with pseudo-labels (if enabled)
     if getattr(args, 'use_self_training', False) and args.unlabeled_dir:
         if not HAS_SELF_TRAINING or run_self_training is None:
-            _safe_print("⚠ Self-training requested but module not available (skipping)")
+            _safe_print("[WARN] Self-training requested but module not available (skipping)")
         else:
             print("\n" + "=" * 60)
             print("Running self-training with pseudo-labels...")
@@ -5717,7 +6304,7 @@ def main():
                     _safe_print("Self-training did not improve accuracy (keeping original model)")
                     
             except Exception as e:
-                _safe_print(f"⚠ Self-training failed: {e} (continuing with original model)")
+                _safe_print(f"[WARN] Self-training failed: {e} (continuing with original model)")
                 import traceback
                 traceback.print_exc()
     
@@ -5744,7 +6331,7 @@ def main():
             wandb_run.save(str(final_model_path), policy="now")  # type: ignore[arg-type]
         except OSError as e:
             if "WinError 1314" in str(e) or "privilege" in str(e).lower():
-                _safe_print("⚠ wandb.save() failed (Windows symlink issue), using artifact instead")
+                _safe_print("[WARN] wandb.save() failed (Windows symlink issue), using artifact instead")
                 artifact = wandb.Artifact(
                     name="final_model",
                     type="model",

@@ -86,6 +86,8 @@ export function AdminDashboardPage() {
     const [searchQuery, setSearchQuery] = useState('')
     const [updatingRoleUserId, setUpdatingRoleUserId] = useState<string | null>(null)
     const [successMessage, setSuccessMessage] = useState<string | null>(null)
+    const [contributionsLoading, setContributionsLoading] = useState(false)
+    const [contributionsError, setContributionsError] = useState<string | null>(null)
 
     const fetchWithAuth = async (endpoint: string) => {
         const response = await fetch(`${API_CONFIG.baseUrl}/api${endpoint}`, {
@@ -162,6 +164,8 @@ export function AdminDashboardPage() {
     }, [activeTab, accessToken, searchQuery])
 
     const loadContributions = async () => {
+        setContributionsLoading(true)
+        setContributionsError(null)
         try {
             const [statsData, leaderboardData] = await Promise.all([
                 fetchWithAuth('/contributions/export-stats'),
@@ -170,8 +174,10 @@ export function AdminDashboardPage() {
             setContributionStats(statsData)
             setVerifierLeaderboard(leaderboardData.verifiers || [])
         } catch (err) {
-            // Don't set error, just leave stats empty
             console.warn('Failed to load contribution stats:', err)
+            setContributionsError(err instanceof Error ? err.message : 'Failed to load contribution statistics')
+        } finally {
+            setContributionsLoading(false)
         }
     }
 
@@ -188,7 +194,7 @@ export function AdminDashboardPage() {
         setUpdatingRoleUserId(userId)
         setError(null)
         try {
-            const response = await fetch(`${API_CONFIG.baseUrl}/admin/users/${userId}/role`, {
+            const response = await fetch(`${API_CONFIG.baseUrl}/api/admin/users/${userId}/role`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -245,12 +251,6 @@ export function AdminDashboardPage() {
                 <div>
                     <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
                     <p className="text-gray-400 mt-1">System monitoring and management</p>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                    <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-sm font-medium text-yellow-500">Admin Mode</span>
                 </div>
             </div>
 
@@ -603,9 +603,30 @@ export function AdminDashboardPage() {
                         </div>
                     )}
 
-                    {!contributionStats && (
+                    {contributionsLoading && (
                         <div className="bg-gray-800 rounded-xl p-8 border border-gray-700 text-center">
-                            <p className="text-gray-400">Loading contribution statistics...</p>
+                            <div className="flex items-center justify-center gap-3">
+                                <div className="animate-spin h-5 w-5 border-2 border-primary-500 border-t-transparent rounded-full" />
+                                <p className="text-gray-400">Loading contribution statistics...</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {contributionsError && !contributionsLoading && (
+                        <div className="bg-red-500/10 rounded-xl p-6 border border-red-500/30 text-center">
+                            <p className="text-red-400">{contributionsError}</p>
+                            <button
+                                onClick={loadContributions}
+                                className="mt-4 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
+                            >
+                                Retry
+                            </button>
+                        </div>
+                    )}
+
+                    {!contributionStats && !contributionsLoading && !contributionsError && (
+                        <div className="bg-gray-800 rounded-xl p-8 border border-gray-700 text-center">
+                            <p className="text-gray-400">No contribution statistics available</p>
                         </div>
                     )}
                 </div>

@@ -6,6 +6,14 @@ from training.losses.deep_supervision import (
     DeepSupervision,
     AuxiliaryHead,
 )
+from training.losses.class_balanced_loss import (
+    ClassBalancedLoss,
+    ClassBalancedFocalLoss,
+    ClassBalancedCrossEntropy,
+    compute_class_balanced_weights,
+    compute_effective_number,
+    get_class_balanced_loss,
+)
 
 __all__ = [
     # Focal Loss
@@ -13,6 +21,13 @@ __all__ = [
     "FocalLossWithMixup",
     "AsymmetricFocalLoss",
     "get_focal_loss",
+    # Class-Balanced Loss (CVPR 2019)
+    "ClassBalancedLoss",
+    "ClassBalancedFocalLoss",
+    "ClassBalancedCrossEntropy",
+    "compute_class_balanced_weights",
+    "compute_effective_number",
+    "get_class_balanced_loss",
     # Deep Supervision
     "DeepSupervisionLoss",
     "DeepSupervision",

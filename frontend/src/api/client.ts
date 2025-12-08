@@ -152,7 +152,8 @@ export async function uploadFile(file: File, category: string): Promise<UploadRe
         headers['Authorization'] = `Bearer ${token}`
     }
 
-    const response = await fetch(`${API_BASE}/storage/upload/${category}`, {
+    // Note: API routes include /api prefix
+    const response = await fetch(`${API_BASE}/api/storage/upload/${category}`, {
         method: 'POST',
         body: formData,
         headers,
@@ -217,7 +218,8 @@ export function uploadFileWithProgress(
         })
 
         // Configure and send request
-        xhr.open('POST', `${API_BASE}/storage/upload/${category}`)
+        // Note: API routes include /api prefix
+        xhr.open('POST', `${API_BASE}/api/storage/upload/${category}`)
 
         const token = getAccessToken()
         if (token) {

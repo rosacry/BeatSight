@@ -27,7 +27,8 @@ async function billingRequest<T>(
         headers['Authorization'] = `Bearer ${token}`
     }
 
-    const response = await fetch(`${API_BASE}/billing${endpoint}`, {
+    // Note: API routes include /api prefix (e.g., /api/billing/config)
+    const response = await fetch(`${API_BASE}/api/billing${endpoint}`, {
         ...options,
         headers: { ...headers, ...options.headers as Record<string, string> },
     })

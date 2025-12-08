@@ -62,6 +62,9 @@ def mock_job() -> AIJob:
     job.progress_percent = 0
     job.progress_message = None
     job.error_message = None
+    job.retry_count = 0
+    job.max_retries = 3
+    job.model_version = None  # Added for new model version tracking
     # Required for the model to serialize properly
     job.song = MagicMock()
     job.song.id = job.song_id

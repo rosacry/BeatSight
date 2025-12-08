@@ -61,6 +61,9 @@ class TestEnqueueJobModalIntegration:
         job.progress_percent = 0
         job.progress_message = None
         job.error_message = None
+        job.retry_count = 0
+        job.max_retries = 3
+        job.model_version = None
         return job
 
     @pytest.fixture
@@ -159,6 +162,7 @@ class TestSSEStreamingEndpoint:
         job.progress_percent = 100
         job.progress_message = "Done"
         job.beatmap_id = uuid.uuid4()
+        job.model_version = None
         return job
 
     @pytest.fixture
@@ -170,6 +174,7 @@ class TestSSEStreamingEndpoint:
         job.progress_message = "Processing"
         job.error_message = "GPU out of memory"
         job.beatmap_id = None
+        job.model_version = None
         return job
 
     @pytest.fixture
@@ -180,6 +185,7 @@ class TestSSEStreamingEndpoint:
         job.progress_percent = 25
         job.progress_message = "Cancelled by user"
         job.beatmap_id = None
+        job.model_version = None
         return job
 
     @pytest.fixture
@@ -190,6 +196,7 @@ class TestSSEStreamingEndpoint:
         job.progress_percent = 50
         job.progress_message = "Separating stems..."
         job.beatmap_id = None
+        job.model_version = None
         return job
 
     @patch("app.api.routes.ai_jobs.AIJobService")

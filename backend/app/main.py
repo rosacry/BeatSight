@@ -236,7 +236,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 logger.info("security_headers_middleware_enabled")
 
 # Add request logging middleware (skip in test environment)
-if settings.environment != "test":
+if settings.environment not in ("test", "testing"):
     app.add_middleware(RequestLoggingMiddleware)
     logger.info("request_logging_middleware_enabled")
 
@@ -250,7 +250,7 @@ except ImportError:
     logger.warning("metrics_disabled", reason="prometheus_client not installed")
 
 # Set up rate limiting (conditionally based on Redis availability)
-if settings.environment != "test":
+if settings.environment not in ("test", "testing"):
     try:
         from app.services.rate_limit import setup_rate_limiting
         from app.api.deps import get_redis

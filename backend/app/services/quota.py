@@ -169,7 +169,7 @@ class QuotaService:
         """
         try:
             balance = await self.credit_service.get_or_create_balance(user_id)
-            return balance.balance
+            return balance.total_credits
         except Exception as e:
             # Log the error for monitoring - credit service failure is significant
             import logging

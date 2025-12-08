@@ -28,6 +28,7 @@ if TYPE_CHECKING:  # pragma: no cover - type-checking only
     from .song import Song
     from .subscription import Subscription
     from .training_contribution import ContributionConsent, TrainingContribution
+    from .user_settings import UserSettings
 
 
 class RestrictionLevel(str, enum.Enum):
@@ -168,6 +169,14 @@ class User(Base):
         foreign_keys="UserAccountHistory.user_id",
         cascade="all, delete-orphan",
         order_by="desc(UserAccountHistory.created_at)",
+    )
+
+    # User settings (privacy, preferences)
+    settings: Mapped["UserSettings | None"] = relationship(
+        "UserSettings",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
     )
 
     @property

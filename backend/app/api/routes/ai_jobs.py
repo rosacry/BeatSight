@@ -27,7 +27,7 @@ from app.schemas.ai_jobs import (
     QuotaStatusRead,
 )
 from app.schemas.pagination import PaginatedResponse
-from app.services.ai_jobs import AIJobService
+from app.services.ai_jobs import AIJobService, DuplicateType
 from app.services.modal_gpu import (
     ModalConnectionError,
     ModalJobError,
@@ -93,13 +93,77 @@ async def enqueue_job(
     Authentication is optional - anonymous users can enqueue jobs but have
     stricter rate limits and lower priority.
 
+    **Duplicate Detection:**
+    - If a job for this song is already queued or processing, returns the existing job
+    - If a completed job exists with the current AI model, returns a 409 Conflict
+    - No credits are consumed for duplicate requests
+
     When Modal GPU orchestration is enabled, the job is immediately dispatched
     to Modal's serverless GPU infrastructure. Otherwise, the job is queued
     for processing by local workers.
 
     Returns 429 Too Many Requests if the user has exceeded their quota.
+    Returns 409 Conflict if a duplicate job already exists.
     """
     user_id = current_user.id if current_user else None
+
+    # Get current AI model version from settings
+    from app.config import get_settings
+    settings = get_settings()
+    current_model_version = settings.ai_model_version
+
+    # Check for duplicate jobs first (before checking quota)
+    ai_service = AIJobService(session)
+    duplicate_result = await ai_service.check_duplicate(
+        payload.song_id, current_model_version
+    )
+
+    if duplicate_result.duplicate_type == DuplicateType.QUEUED:
+        # Return existing queued job without consuming quota
+        existing_job = duplicate_result.existing_job
+        if existing_job:
+            position = await ai_service.get_queue_position(existing_job.id)
+            estimated_wait = position * 3 if position is not None else None
+
+            # Get quota status for response (but don't consume)
+            quota_service = QuotaService(session)
+            quota_status = await quota_service.get_quota_status(user_id)
+
+            return AIJobEnqueueResponse(
+                job=AIJobRead.model_validate(existing_job),
+                queue_position=position,
+                estimated_wait_minutes=estimated_wait,
+                quota=_quota_to_read(quota_status),
+                is_duplicate=True,
+                duplicate_message="Job for this song is already in the queue",
+            )
+
+    if duplicate_result.duplicate_type == DuplicateType.PROCESSING:
+        # Return existing processing job without consuming quota
+        existing_job = duplicate_result.existing_job
+        if existing_job:
+            quota_service = QuotaService(session)
+            quota_status = await quota_service.get_quota_status(user_id)
+
+            return AIJobEnqueueResponse(
+                job=AIJobRead.model_validate(existing_job),
+                queue_position=None,
+                estimated_wait_minutes=None,
+                quota=_quota_to_read(quota_status),
+                is_duplicate=True,
+                duplicate_message="Job for this song is currently processing",
+            )
+
+    if duplicate_result.duplicate_type == DuplicateType.COMPLETED:
+        # Song already has a beatmap from current/newer model
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "message": duplicate_result.message or "Song already has a beatmap",
+                "existing_job_id": str(duplicate_result.existing_job.id) if duplicate_result.existing_job else None,
+                "model_version": duplicate_result.existing_job.model_version if duplicate_result.existing_job else None,
+            },
+        )
 
     # Check quota
     quota_service = QuotaService(session)
@@ -122,9 +186,33 @@ async def enqueue_job(
     # Override payload priority with subscription-based priority
     payload.priority = priority
 
-    # Enqueue the job
-    ai_service = AIJobService(session)
-    job = await ai_service.enqueue(payload, requested_by=user_id)
+    # Enqueue the job (with model version tracking)
+    job, enqueue_result = await ai_service.enqueue_with_duplicate_check(
+        payload,
+        requested_by=user_id,
+        model_version=current_model_version,
+    )
+
+    # Handle race condition where duplicate was detected during enqueue
+    if job is None:
+        # This is a rare case - duplicate detected between our check and enqueue
+        existing_job = enqueue_result.existing_job
+        if existing_job:
+            position = await ai_service.get_queue_position(existing_job.id)
+            estimated_wait = position * 3 if position is not None else None
+            return AIJobEnqueueResponse(
+                job=AIJobRead.model_validate(existing_job),
+                queue_position=position,
+                estimated_wait_minutes=estimated_wait,
+                quota=_quota_to_read(quota_status),
+                is_duplicate=True,
+                duplicate_message=enqueue_result.message,
+            )
+        # Shouldn't happen, but handle gracefully
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Duplicate job detected but unable to retrieve existing job",
+        )
 
     # Consume quota (only for authenticated users)
     used_credit = False

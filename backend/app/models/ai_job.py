@@ -89,6 +89,12 @@ class AIJob(Base):
     )
     last_error: Mapped[str | None] = mapped_column(String(1024), nullable=True)
 
+    # Model version tracking for re-evaluation
+    model_version: Mapped[str | None] = mapped_column(
+        String(64), nullable=True,
+        comment="AI model version that processed this job (e.g., 'v5.2.1')"
+    )
+
     song: Mapped["Song"] = relationship("Song", back_populates="ai_jobs")
     requester: Mapped["User | None"] = relationship("User", back_populates="ai_jobs")
     output_versions: Mapped[list["MapVersion"]] = relationship(

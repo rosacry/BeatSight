@@ -349,3 +349,68 @@ async def delete_account(
     logger.warning(f"User {user_id} ({user_email}) deleted their account")
 
     return MessageResponse(message="Account deleted successfully")
+
+
+# =============================================================================
+# User Settings Endpoints
+# =============================================================================
+
+from app.schemas.user_settings import UserSettingsRead, UserSettingsUpdate
+from app.services.user_settings import UserSettingsService
+
+
+@router.get("/me/settings", response_model=UserSettingsRead)
+async def get_user_settings(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+) -> UserSettingsRead:
+    """Get the current user's settings.
+    
+    Creates default settings if none exist yet.
+    """
+    service = UserSettingsService(session)
+    settings = await service.get_or_create_settings(current_user.id)
+    return UserSettingsRead.model_validate(settings)
+
+
+@router.patch("/me/settings", response_model=UserSettingsRead)
+async def update_user_settings(
+    request: UserSettingsUpdate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+) -> UserSettingsRead:
+    """Update the current user's settings.
+    
+    Only provided fields will be updated. Omitted fields remain unchanged.
+    
+    **Privacy Settings:**
+    - `default_upload_visibility`: public, anonymous, or private
+    - `show_activity_on_profile`: Show uploads/edits on public profile
+    - `show_statistics_on_profile`: Show stats on public profile
+    
+    **AI Re-evaluation Settings:**
+    - `re_evaluation_policy`: auto_free, opt_in, or opt_out
+      - auto_free: Automatically improve maps when model updates (free, recommended)
+      - opt_in: Only re-evaluate when you request it
+      - opt_out: Never re-evaluate, keep original maps
+    
+    **Notification Settings:**
+    - `notify_job_complete`: Notify when AI job finishes
+    - `notify_map_verified`: Notify when community verifies your map
+    - `notify_re_evaluation_available`: Notify about new model versions
+    - `notify_weekly_summary`: Receive weekly activity digest
+    """
+    service = UserSettingsService(session)
+    settings = await service.update_settings(
+        current_user.id,
+        default_upload_visibility=request.default_upload_visibility,
+        show_activity_on_profile=request.show_activity_on_profile,
+        show_statistics_on_profile=request.show_statistics_on_profile,
+        re_evaluation_policy=request.re_evaluation_policy,
+        notify_job_complete=request.notify_job_complete,
+        notify_map_verified=request.notify_map_verified,
+        notify_re_evaluation_available=request.notify_re_evaluation_available,
+        notify_weekly_summary=request.notify_weekly_summary,
+    )
+    return UserSettingsRead.model_validate(settings)
+

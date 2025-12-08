@@ -62,6 +62,7 @@ from .training_contribution import (
     TrainingContribution,
 )
 from .user import RestrictionLevel, User
+from .user_settings import ReEvaluationPolicy, UploadVisibility, UserSettings
 from .webhook_event import ProcessedWebhookEvent
 
 __all__ = [
@@ -126,6 +127,9 @@ __all__ = [
     "UserAchievement",
     "UserPreferences",
     "UserRole",
+    "UserSettings",
+    "UploadVisibility",
+    "ReEvaluationPolicy",
     "UserVerificationBonus",
     "VERIFIED_USER_KARMA_BONUS",
     "VoteType",

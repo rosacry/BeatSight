@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -12,6 +13,8 @@ from app.models.user import User
 from app.schemas.pagination import PaginatedResponse
 from app.schemas.songs import SongCreate, SongRead, SongUpdate
 from app.services.songs import SongAlreadyExistsError, SongNotFoundError, SongService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/songs", tags=["songs"])
 
@@ -51,17 +54,23 @@ async def list_songs(
     # Calculate offset
     offset = (page - 1) * page_size
 
-    # Fetch songs and total count in parallel
-    import asyncio
+    try:
+        # Fetch songs and total count in parallel
+        import asyncio
 
-    songs_task = service.list_songs(user_id=user_id, limit=page_size, offset=offset)
-    count_task = service.count_songs(user_id=user_id)
-    songs, total = await asyncio.gather(songs_task, count_task)
+        songs_task = service.list_songs(user_id=user_id, limit=page_size, offset=offset)
+        count_task = service.count_songs(user_id=user_id)
+        songs, total = await asyncio.gather(songs_task, count_task)
+        
+        logger.debug("list_songs_query_complete", extra={"count": len(songs), "total": total})
 
-    items = [SongRead.model_validate(song) for song in songs]
-    return PaginatedResponse.create(
-        items=items, total=total, page=page, page_size=page_size
-    )
+        items = [SongRead.model_validate(song) for song in songs]
+        return PaginatedResponse.create(
+            items=items, total=total, page=page, page_size=page_size
+        )
+    except Exception as e:
+        logger.exception("list_songs_error", extra={"error": str(e), "user_id": str(user_id) if user_id else None})
+        raise
 
 
 @router.get("/{song_id}", response_model=SongRead)

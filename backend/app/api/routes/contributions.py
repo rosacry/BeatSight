@@ -836,8 +836,8 @@ async def reject_contribution(
 @router.get("/export", response_model=ExportResponse)
 async def export_contributions(
     current_user: Annotated[User, Depends(get_current_user)],
-    _admin: Annotated[None, RequireAdmin],
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    _admin: Annotated[User, Depends(RequireAdmin)] = None,
     limit: int = Query(1000, ge=1, le=10000),
 ) -> ExportResponse:
     """Export approved contributions for model training.
@@ -902,8 +902,8 @@ async def export_contributions(
 @router.get("/manifest", response_model=ManifestResponse)
 async def generate_training_manifest(
     current_user: Annotated[User, Depends(get_current_user)],
-    _admin: Annotated[None, RequireAdmin],
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    _admin: Annotated[User, Depends(RequireAdmin)] = None,
     limit: int = Query(10000, ge=1, le=50000),
     include_metadata: bool = Query(True),
     weighted: bool = Query(True, description="Include karma-based weights"),
@@ -931,8 +931,8 @@ async def generate_training_manifest(
 @router.get("/export-stats", response_model=ExportStatisticsResponse)
 async def get_export_statistics(
     current_user: Annotated[User, Depends(get_current_user)],
-    _admin: Annotated[None, RequireAdmin],
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    _admin: Annotated[User, Depends(RequireAdmin)] = None,
 ) -> ExportStatisticsResponse:
     """Get statistics about export-ready contributions.
 
@@ -956,8 +956,8 @@ async def get_export_statistics(
 async def record_batch_impact(
     request: ImpactCreateRequest,
     current_user: Annotated[User, Depends(get_current_user)],
-    _admin: Annotated[None, RequireAdmin],
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    _admin: Annotated[User, Depends(RequireAdmin)] = None,
 ) -> ImpactResponse:
     """Record model accuracy impact after training on a contribution batch.
 
@@ -1021,8 +1021,8 @@ async def record_batch_impact(
 async def get_batch_impact(
     batch_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
-    _admin: Annotated[None, RequireAdmin],
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    _admin: Annotated[User, Depends(RequireAdmin)] = None,
 ) -> ImpactResponse:
     """Get impact metrics for a specific training batch.
 
@@ -1065,8 +1065,8 @@ async def get_batch_impact(
 @router.get("/impact/summary", response_model=ImpactSummaryResponse)
 async def get_impact_summary(
     current_user: Annotated[User, Depends(get_current_user)],
-    _admin: Annotated[None, RequireAdmin],
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    _admin: Annotated[User, Depends(RequireAdmin)] = None,
 ) -> ImpactSummaryResponse:
     """Get overall summary of contribution impact on model accuracy.
 

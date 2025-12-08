@@ -211,9 +211,15 @@ async def get_queue_length(
     Returns the number of jobs waiting to be processed.
     This is a public endpoint for displaying queue status.
     """
-    service = AIJobService(session)
-    queue_length = await service.get_queue_length()
-    return {"queue_length": queue_length}
+    try:
+        service = AIJobService(session)
+        queue_length = await service.get_queue_length()
+        return {"queue_length": queue_length}
+    except Exception as e:
+        # Log and return 0 if there's any issue (e.g., table doesn't exist)
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to get queue length: {e}")
+        return {"queue_length": 0}
 
 
 @router.get("/quota", response_model=QuotaStatusRead)

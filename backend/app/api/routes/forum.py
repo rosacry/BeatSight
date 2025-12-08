@@ -20,7 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db_session, optional_current_user
+from app.api.deps import get_current_user, get_db_session, get_current_user_optional
 from app.models.forum import ForumPostVoteType, ForumTopicStatus, ForumTopicType
 from app.models.user import User
 from app.services.forum import (
@@ -256,7 +256,7 @@ class VoteRequest(BaseModel):
 class CreatePollRequest(BaseModel):
     """Request to create a poll with a topic."""
     title: str = Field(..., min_length=1, max_length=255)
-    options: list[str] = Field(..., min_items=2, max_items=10)
+    options: list[str] = Field(..., min_length=2, max_length=10)
     max_options: int = Field(1, ge=1)
     allow_vote_change: bool = True
     hide_results: bool = False
@@ -512,7 +512,7 @@ async def create_topic(
 async def get_topic(
     topic_id: str,
     session: AsyncSession = Depends(get_db_session),
-    current_user: Optional[User] = Depends(optional_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ) -> TopicResponse:
     """Get a topic by ID."""
     service = ForumService(session)
@@ -642,12 +642,12 @@ async def update_topic(
     )
 
 
-@router.delete("/topics/{topic_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/topics/{topic_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def delete_topic(
     topic_id: str,
     session: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
-) -> None:
+):
     """Delete a topic (soft delete)."""
     service = ForumService(session)
     
@@ -676,7 +676,7 @@ async def get_topic_posts(
     limit: int = Query(25, ge=1, le=100),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db_session),
-    current_user: Optional[User] = Depends(optional_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ) -> PaginatedPostsResponse:
     """Get posts in a topic."""
     service = ForumService(session)
@@ -829,12 +829,12 @@ async def update_post(
     )
 
 
-@router.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def delete_post(
     post_id: str,
     session: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
-) -> None:
+):
     """Delete a post (soft delete)."""
     service = ForumService(session)
     
@@ -997,7 +997,7 @@ async def vote_on_poll(
 async def get_poll(
     poll_id: str,
     session: AsyncSession = Depends(get_db_session),
-    current_user: Optional[User] = Depends(optional_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ) -> PollResponse:
     """Get poll details and results."""
     service = ForumService(session)
@@ -1062,12 +1062,12 @@ async def watch_topic(
     )
 
 
-@router.delete("/topics/{topic_id}/watch", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/topics/{topic_id}/watch", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def unwatch_topic(
     topic_id: str,
     session: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
-) -> None:
+):
     """Stop watching a topic."""
     service = ForumService(session)
     

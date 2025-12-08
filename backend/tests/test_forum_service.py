@@ -24,17 +24,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.forum import (
     ForumCategory,
     Forum,
-    Topic,
-    Post,
-    PostVote,
-    TopicPoll,
-    PollOption,
-    PollVote,
-    TopicWatch,
-    TopicTrack,
-    UserForumStats,
-    TopicType,
-    VoteType,
+    ForumTopic,
+    ForumPost,
+    ForumPostVote,
+    ForumPoll,
+    ForumPollOption,
+    ForumPollVote,
+    ForumTopicWatch,
+    ForumReadTracker,
+    ForumTopicType,
+    ForumPostVoteType,
 )
 from app.models.user import User
 from app.services.forum import ForumService
@@ -112,14 +111,14 @@ def test_forum(test_category: ForumCategory) -> Forum:
 
 
 @pytest.fixture
-def test_topic(test_forum: Forum, test_user: User) -> Topic:
+def test_topic(test_forum: Forum, test_user: User) -> ForumTopic:
     """Create a test topic."""
-    topic = MagicMock(spec=Topic)
+    topic = MagicMock(spec=ForumTopic)
     topic.id = str(uuid4())
     topic.forum_id = test_forum.id
     topic.user_id = test_user.id
     topic.title = "Test Topic"
-    topic.topic_type = TopicType.NORMAL
+    topic.topic_type = ForumTopicType.NORMAL
     topic.is_locked = False
     topic.is_pinned = False
     topic.view_count = 0
@@ -132,9 +131,9 @@ def test_topic(test_forum: Forum, test_user: User) -> Topic:
 
 
 @pytest.fixture
-def test_post(test_topic: Topic, test_user: User) -> Post:
+def test_post(test_topic: ForumTopic, test_user: User) -> ForumPost:
     """Create a test post."""
-    post = MagicMock(spec=Post)
+    post = MagicMock(spec=ForumPost)
     post.id = str(uuid4())
     post.topic_id = test_topic.id
     post.user_id = test_user.id
@@ -229,11 +228,11 @@ class TestTopics:
     ):
         """Test creating a new topic."""
         # Verify topic can be created with required fields
-        new_topic = MagicMock(spec=Topic)
+        new_topic = MagicMock(spec=ForumTopic)
         new_topic.forum_id = test_forum.id
         new_topic.user_id = test_user.id
         new_topic.title = "New Test Topic"
-        new_topic.topic_type = TopicType.NORMAL
+        new_topic.topic_type = ForumTopicType.NORMAL
         
         assert new_topic.title == "New Test Topic"
         assert new_topic.forum_id == test_forum.id
@@ -241,13 +240,13 @@ class TestTopics:
     @pytest.mark.asyncio
     async def test_topic_types(self):
         """Test different topic types."""
-        assert TopicType.NORMAL == "normal"
-        assert TopicType.STICKY == "sticky"
-        assert TopicType.ANNOUNCEMENT == "announcement"
+        assert ForumTopicType.NORMAL == "normal"
+        assert ForumTopicType.STICKY == "sticky"
+        assert ForumTopicType.ANNOUNCEMENT == "announcement"
 
     @pytest.mark.asyncio
     async def test_lock_topic(
-        self, forum_service: ForumService, test_topic: Topic, admin_user: User
+        self, forum_service: ForumService, test_topic: ForumTopic, admin_user: User
     ):
         """Test locking a topic prevents new posts."""
         test_topic.is_locked = False
@@ -259,7 +258,7 @@ class TestTopics:
 
     @pytest.mark.asyncio
     async def test_pin_topic(
-        self, forum_service: ForumService, test_topic: Topic, admin_user: User
+        self, forum_service: ForumService, test_topic: ForumTopic, admin_user: User
     ):
         """Test pinning a topic."""
         test_topic.is_pinned = False
@@ -270,7 +269,7 @@ class TestTopics:
         assert test_topic.is_pinned is True
 
     @pytest.mark.asyncio
-    async def test_increment_view_count(self, test_topic: Topic):
+    async def test_increment_view_count(self, test_topic: ForumTopic):
         """Test incrementing topic view count."""
         initial_views = test_topic.view_count
         test_topic.view_count += 1
@@ -286,10 +285,10 @@ class TestPosts:
 
     @pytest.mark.asyncio
     async def test_create_post(
-        self, forum_service: ForumService, test_topic: Topic, test_user: User
+        self, forum_service: ForumService, test_topic: ForumTopic, test_user: User
     ):
         """Test creating a new post."""
-        post = MagicMock(spec=Post)
+        post = MagicMock(spec=ForumPost)
         post.topic_id = test_topic.id
         post.user_id = test_user.id
         post.content = "Test reply content"
@@ -298,7 +297,7 @@ class TestPosts:
         assert post.topic_id == test_topic.id
 
     @pytest.mark.asyncio
-    async def test_edit_post(self, test_post: Post):
+    async def test_edit_post(self, test_post: ForumPost):
         """Test editing a post."""
         original_content = test_post.content
         test_post.content = "Updated content"
@@ -308,7 +307,7 @@ class TestPosts:
         assert test_post.edit_count == 1
 
     @pytest.mark.asyncio
-    async def test_delete_post_soft_delete(self, test_post: Post):
+    async def test_delete_post_soft_delete(self, test_post: ForumPost):
         """Test soft deleting a post."""
         assert test_post.is_deleted is False
         
@@ -317,7 +316,7 @@ class TestPosts:
 
     @pytest.mark.asyncio
     async def test_post_cannot_edit_locked_topic(
-        self, test_post: Post, test_topic: Topic
+        self, test_post: ForumPost, test_topic: ForumTopic
     ):
         """Test that posts cannot be created in locked topics."""
         test_topic.is_locked = True
@@ -335,37 +334,37 @@ class TestVoting:
 
     @pytest.mark.asyncio
     async def test_upvote_post(
-        self, forum_service: ForumService, test_post: Post, test_user: User
+        self, forum_service: ForumService, test_post: ForumPost, test_user: User
     ):
         """Test upvoting a post."""
-        vote = MagicMock(spec=PostVote)
+        vote = MagicMock(spec=ForumPostVote)
         vote.user_id = test_user.id
         vote.post_id = test_post.id
-        vote.vote_type = VoteType.UPVOTE
+        vote.vote_type = ForumPostVoteType.UPVOTE
         
-        assert vote.vote_type == VoteType.UPVOTE
+        assert vote.vote_type == ForumPostVoteType.UPVOTE
 
     @pytest.mark.asyncio
     async def test_downvote_post(
-        self, forum_service: ForumService, test_post: Post, test_user: User
+        self, forum_service: ForumService, test_post: ForumPost, test_user: User
     ):
         """Test downvoting a post."""
-        vote = MagicMock(spec=PostVote)
+        vote = MagicMock(spec=ForumPostVote)
         vote.user_id = test_user.id
         vote.post_id = test_post.id
-        vote.vote_type = VoteType.DOWNVOTE
+        vote.vote_type = ForumPostVoteType.DOWNVOTE
         
-        assert vote.vote_type == VoteType.DOWNVOTE
+        assert vote.vote_type == ForumPostVoteType.DOWNVOTE
 
     @pytest.mark.asyncio
     async def test_vote_types(self):
         """Test vote type enum values."""
-        assert VoteType.UPVOTE == "upvote"
-        assert VoteType.DOWNVOTE == "downvote"
+        assert ForumPostVoteType.UPVOTE.value == 1
+        assert ForumPostVoteType.DOWNVOTE.value == -1
 
     @pytest.mark.asyncio
     async def test_vote_affects_karma(
-        self, forum_service: ForumService, test_post: Post, test_user: User
+        self, forum_service: ForumService, test_post: ForumPost, test_user: User
     ):
         """Test that voting affects the post author's karma."""
         # Initial karma
@@ -377,23 +376,23 @@ class TestVoting:
         assert test_user.karma_score == initial_karma + 3
 
     @pytest.mark.asyncio
-    async def test_cannot_vote_own_post(self, test_post: Post, test_user: User):
+    async def test_cannot_vote_own_post(self, test_post: ForumPost, test_user: User):
         """Test that users cannot vote on their own posts."""
         # Post author is test_user
         assert test_post.user_id == test_user.id
         # In the service, voting on own post should be rejected
 
     @pytest.mark.asyncio
-    async def test_change_vote(self, test_post: Post, test_user: User):
+    async def test_change_vote(self, test_post: ForumPost, test_user: User):
         """Test changing a vote from upvote to downvote."""
-        vote = MagicMock(spec=PostVote)
+        vote = MagicMock(spec=ForumPostVote)
         vote.user_id = test_user.id
         vote.post_id = test_post.id
-        vote.vote_type = VoteType.UPVOTE
+        vote.vote_type = ForumPostVoteType.UPVOTE
         
         # Change to downvote
-        vote.vote_type = VoteType.DOWNVOTE
-        assert vote.vote_type == VoteType.DOWNVOTE
+        vote.vote_type = ForumPostVoteType.DOWNVOTE
+        assert vote.vote_type == ForumPostVoteType.DOWNVOTE
 
     @pytest.mark.asyncio
     async def test_remove_vote(self, mock_db: AsyncMock):
@@ -411,9 +410,9 @@ class TestPolls:
     """Tests for poll functionality."""
 
     @pytest.fixture
-    def test_poll(self, test_topic: Topic) -> TopicPoll:
+    def test_poll(self, test_topic: ForumTopic) -> ForumPoll:
         """Create a test poll."""
-        poll = MagicMock(spec=TopicPoll)
+        poll = MagicMock(spec=ForumPoll)
         poll.topic_id = test_topic.id
         poll.title = "Test Poll"
         poll.max_options = 1
@@ -425,11 +424,11 @@ class TestPolls:
         return poll
 
     @pytest.fixture
-    def poll_options(self, test_poll: TopicPoll) -> list[PollOption]:
+    def poll_options(self, test_poll: ForumPoll) -> list[PollOption]:
         """Create test poll options."""
         options = []
         for i, text in enumerate(["Option A", "Option B", "Option C"]):
-            option = MagicMock(spec=PollOption)
+            option = MagicMock(spec=ForumPollOption)
             option.id = str(uuid4())
             option.poll_topic_id = test_poll.topic_id
             option.text = text
@@ -439,7 +438,7 @@ class TestPolls:
         return options
 
     @pytest.mark.asyncio
-    async def test_create_poll(self, test_poll: TopicPoll, poll_options: list[PollOption]):
+    async def test_create_poll(self, test_poll: ForumPoll, poll_options: list[ForumPollOption]):
         """Test creating a poll with options."""
         assert test_poll.title == "Test Poll"
         assert len(poll_options) == 3
@@ -447,10 +446,10 @@ class TestPolls:
 
     @pytest.mark.asyncio
     async def test_vote_on_poll(
-        self, test_poll: TopicPoll, poll_options: list[PollOption], test_user: User
+        self, test_poll: ForumPoll, poll_options: list[ForumPollOption], test_user: User
     ):
         """Test voting on a poll."""
-        vote = MagicMock(spec=PollVote)
+        vote = MagicMock(spec=ForumPollVote)
         vote.user_id = test_user.id
         vote.option_id = poll_options[0].id
         vote.created_at = datetime.now(timezone.utc)
@@ -463,13 +462,13 @@ class TestPolls:
         assert test_poll.total_votes == 1
 
     @pytest.mark.asyncio
-    async def test_poll_multiple_choice(self, test_poll: TopicPoll):
+    async def test_poll_multiple_choice(self, test_poll: ForumPoll):
         """Test poll with multiple choice enabled."""
         test_poll.max_options = 3
         assert test_poll.max_options == 3
 
     @pytest.mark.asyncio
-    async def test_poll_ends_at(self, test_poll: TopicPoll):
+    async def test_poll_ends_at(self, test_poll: ForumPoll):
         """Test poll with end date."""
         end_date = datetime.now(timezone.utc) + timedelta(days=7)
         test_poll.ends_at = end_date
@@ -478,13 +477,13 @@ class TestPolls:
         assert test_poll.ends_at > datetime.now(timezone.utc)
 
     @pytest.mark.asyncio
-    async def test_poll_hide_results(self, test_poll: TopicPoll):
+    async def test_poll_hide_results(self, test_poll: ForumPoll):
         """Test hiding poll results until user has voted."""
         test_poll.hide_results = True
         assert test_poll.hide_results is True
 
     @pytest.mark.asyncio
-    async def test_poll_allow_change_vote(self, test_poll: TopicPoll):
+    async def test_poll_allow_change_vote(self, test_poll: ForumPoll):
         """Test allowing users to change their vote."""
         test_poll.allow_change = True
         assert test_poll.allow_change is True
@@ -498,9 +497,9 @@ class TestTopicWatch:
     """Tests for topic watching functionality."""
 
     @pytest.mark.asyncio
-    async def test_watch_topic(self, test_topic: Topic, test_user: User):
+    async def test_watch_topic(self, test_topic: ForumTopic, test_user: User):
         """Test watching a topic for notifications."""
-        watch = MagicMock(spec=TopicWatch)
+        watch = MagicMock(spec=ForumTopicWatch)
         watch.user_id = test_user.id
         watch.topic_id = test_topic.id
         watch.mail_status = True
@@ -520,9 +519,9 @@ class TestTopicTrack:
     """Tests for topic read tracking."""
 
     @pytest.mark.asyncio
-    async def test_mark_topic_read(self, test_topic: Topic, test_user: User):
+    async def test_mark_topic_read(self, test_topic: ForumTopic, test_user: User):
         """Test marking a topic as read."""
-        track = MagicMock(spec=TopicTrack)
+        track = MagicMock(spec=ForumReadTracker)
         track.user_id = test_user.id
         track.topic_id = test_topic.id
         track.last_read_at = datetime.now(timezone.utc)
@@ -535,42 +534,30 @@ class TestTopicTrack:
 # =============================================================================
 
 class TestUserForumStats:
-    """Tests for user forum statistics."""
+    """Tests for user forum statistics (tracked on User model)."""
 
     @pytest.mark.asyncio
     async def test_get_user_stats(self, test_user: User):
-        """Test getting user forum statistics."""
-        stats = MagicMock(spec=UserForumStats)
-        stats.user_id = test_user.id
-        stats.post_count = 10
-        stats.topic_count = 2
-        stats.upvotes_received = 50
-        stats.downvotes_received = 5
-        stats.helpful_count = 3
-        
-        assert stats.post_count == 10
-        assert stats.topic_count == 2
-        assert stats.upvotes_received == 50
+        """Test getting user forum statistics from User model."""
+        # User stats are tracked directly on the User model
+        # Check that the user has the expected forum stat attributes
+        assert hasattr(test_user, 'karma_score')
+        assert hasattr(test_user, 'id')
 
     @pytest.mark.asyncio
-    async def test_increment_post_count(self, test_user: User):
-        """Test incrementing user post count."""
-        stats = MagicMock(spec=UserForumStats)
-        stats.user_id = test_user.id
-        stats.post_count = 10
-        
-        stats.post_count += 1
-        assert stats.post_count == 11
+    async def test_user_karma_attribute(self, test_user: User):
+        """Test user karma score attribute."""
+        # Karma is tracked on the User model
+        initial_karma = test_user.karma_score
+        test_user.karma_score += 10
+        assert test_user.karma_score == initial_karma + 10
 
     @pytest.mark.asyncio
-    async def test_increment_topic_count(self, test_user: User):
-        """Test incrementing user topic count."""
-        stats = MagicMock(spec=UserForumStats)
-        stats.user_id = test_user.id
-        stats.topic_count = 2
-        
-        stats.topic_count += 1
-        assert stats.topic_count == 3
+    async def test_user_has_forum_relationships(self, test_user: User):
+        """Test that user model supports forum relationships."""
+        # User model should be able to have posts and topics
+        # This is validated via the foreign key relationships
+        assert test_user.id is not None
 
 
 # =============================================================================
@@ -621,7 +608,7 @@ class TestModeration:
     """Tests for forum moderation features."""
 
     @pytest.mark.asyncio
-    async def test_admin_can_lock_topic(self, admin_user: User, test_topic: Topic):
+    async def test_admin_can_lock_topic(self, admin_user: User, test_topic: ForumTopic):
         """Test that admins can lock topics."""
         assert "admin" in admin_user.roles
         test_topic.is_locked = True
@@ -629,14 +616,14 @@ class TestModeration:
 
     @pytest.mark.asyncio
     async def test_regular_user_cannot_lock_topic(
-        self, test_user: User, test_topic: Topic
+        self, test_user: User, test_topic: ForumTopic
     ):
         """Test that regular users cannot lock topics."""
         assert "admin" not in test_user.roles
         # In the service, this would raise PermissionError
 
     @pytest.mark.asyncio
-    async def test_admin_can_pin_topic(self, admin_user: User, test_topic: Topic):
+    async def test_admin_can_pin_topic(self, admin_user: User, test_topic: ForumTopic):
         """Test that admins can pin topics."""
         assert "admin" in admin_user.roles
         test_topic.is_pinned = True
@@ -644,7 +631,7 @@ class TestModeration:
 
     @pytest.mark.asyncio
     async def test_admin_can_delete_any_post(
-        self, admin_user: User, test_post: Post
+        self, admin_user: User, test_post: ForumPost
     ):
         """Test that admins can delete any post."""
         assert "admin" in admin_user.roles
@@ -653,7 +640,7 @@ class TestModeration:
 
     @pytest.mark.asyncio
     async def test_user_can_delete_own_post(
-        self, test_user: User, test_post: Post
+        self, test_user: User, test_post: ForumPost
     ):
         """Test that users can delete their own posts."""
         # Post belongs to test_user

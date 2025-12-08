@@ -88,7 +88,7 @@ export function AdminDashboardPage() {
     const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
     const fetchWithAuth = async (endpoint: string) => {
-        const response = await fetch(`${API_CONFIG.baseUrl}${endpoint}`, {
+        const response = await fetch(`${API_CONFIG.baseUrl}/api${endpoint}`, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',

@@ -23,7 +23,7 @@ export const api = {
     async post<T = unknown>(endpoint: string, data: Record<string, unknown>): Promise<T> {
         const { APIError } = await import('@/api/client')
 
-        const response = await fetch(`${API_BASE}${endpoint}`, {
+        const response = await fetch(`${API_BASE}/api${endpoint}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -45,7 +45,7 @@ export const api = {
     async get<T = unknown>(endpoint: string): Promise<T> {
         const { APIError } = await import('@/api/client')
 
-        const response = await fetch(`${API_BASE}${endpoint}`, {
+        const response = await fetch(`${API_BASE}/api${endpoint}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',

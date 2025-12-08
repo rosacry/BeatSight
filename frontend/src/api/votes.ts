@@ -4,8 +4,9 @@
 
 import type { VoteAction, VoteCountsResponse, BulkVoteResponse } from '@/types/votes'
 import { getAccessToken } from '@/stores/authStore'
+import { API_CONFIG } from '@/lib/config'
 
-const API_BASE = '/api'
+const API_BASE = API_CONFIG.baseUrl
 
 class APIError extends Error {
     constructor(public status: number, message: string) {
@@ -19,7 +20,7 @@ async function request<T>(
     options: RequestInit = {},
     requireAuth: boolean = false
 ): Promise<T> {
-    const url = `${API_BASE}${endpoint}`
+    const url = `${API_BASE}/api${endpoint}`
 
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',

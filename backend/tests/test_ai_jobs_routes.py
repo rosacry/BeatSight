@@ -18,6 +18,7 @@ from app.api.routes.ai_jobs import verify_worker_secret
 from app.main import app
 from app.models.ai_job import AIJob, AIJobPriority, AIJobState
 from app.models.user import User
+from app.services.ai_jobs import DuplicateCheckResult, DuplicateType
 from app.services.quota import JobPriority, QuotaLimits, QuotaStatus
 
 
@@ -40,8 +41,16 @@ def mock_db_session() -> AsyncMock:
     session.refresh = AsyncMock()
     session.add = MagicMock()
     session.get = AsyncMock()
-    session.execute = AsyncMock()
     session.flush = AsyncMock()
+    
+    # Configure execute to return a mock result that has scalar_one_or_none
+    # returning None (no duplicate found) - this is needed for tests that
+    # don't explicitly mock AIJobService
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = None
+    mock_result.scalars.return_value.all.return_value = []
+    session.execute = AsyncMock(return_value=mock_result)
+    
     return session
 
 
@@ -147,12 +156,17 @@ class TestEnqueueJob:
         # Setup mocks
         mock_quota = AsyncMock()
         mock_quota.check_quota = AsyncMock(return_value=mock_quota_status)
+        mock_quota.get_priority = AsyncMock(return_value=AIJobPriority.STANDARD)
         # consume_quota returns (QuotaStatus, bool) tuple
         mock_quota.consume_quota = AsyncMock(return_value=(mock_quota_status, False))
         mock_quota_cls.return_value = mock_quota
 
+        # Create duplicate check result for no duplicate found
+        no_duplicate = DuplicateCheckResult(duplicate_type=DuplicateType.NONE)
+        
         mock_service = AsyncMock()
-        mock_service.enqueue = AsyncMock(return_value=mock_job)
+        mock_service.check_duplicate = AsyncMock(return_value=no_duplicate)
+        mock_service.enqueue_with_duplicate_check = AsyncMock(return_value=(mock_job, no_duplicate))
         mock_service.get_queue_position = AsyncMock(return_value=1)
         mock_service_cls.return_value = mock_service
 
@@ -212,12 +226,17 @@ class TestEnqueueJob:
         """Test enqueue when Modal is disabled - job is queued for local workers."""
         mock_quota = AsyncMock()
         mock_quota.check_quota = AsyncMock(return_value=mock_quota_status)
+        mock_quota.get_priority = AsyncMock(return_value=AIJobPriority.STANDARD)
         # consume_quota returns (QuotaStatus, bool) tuple
         mock_quota.consume_quota = AsyncMock(return_value=(mock_quota_status, False))
         mock_quota_cls.return_value = mock_quota
 
+        # Create duplicate check result for no duplicate found
+        no_duplicate = DuplicateCheckResult(duplicate_type=DuplicateType.NONE)
+        
         mock_service = AsyncMock()
-        mock_service.enqueue = AsyncMock(return_value=mock_job)
+        mock_service.check_duplicate = AsyncMock(return_value=no_duplicate)
+        mock_service.enqueue_with_duplicate_check = AsyncMock(return_value=(mock_job, no_duplicate))
         mock_service.get_queue_position = AsyncMock(return_value=5)
         mock_service_cls.return_value = mock_service
 

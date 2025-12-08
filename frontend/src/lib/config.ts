@@ -16,14 +16,16 @@ const getApiBaseUrl = () => {
         return import.meta.env.VITE_API_BASE_URL
     }
     // Production domains use the production API
+    // Note: API paths already include /api prefix (e.g., /api/auth/login)
+    // so we don't add /api to the base URL
     if (typeof window !== 'undefined' &&
         (window.location.hostname === 'beatsight.io' ||
             window.location.hostname === 'www.beatsight.io' ||
             window.location.hostname.endsWith('.pages.dev'))) {
-        return 'https://api.beatsight.io/api'
+        return 'https://api.beatsight.io'
     }
-    // Development fallback
-    return '/api'
+    // Development fallback - Vite proxy handles /api -> localhost:8000
+    return ''
 }
 
 export const API_CONFIG = {

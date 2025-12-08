@@ -57,6 +57,7 @@ async def fix_versions():
                     # Determine which is the latest version
                     # Priority order for our migrations
                     priority = [
+                        "019_add_missing_decision_columns",
                         "018_fix_remaining_schema",
                         "017_fix_enum_case", 
                         "016_fix_schema_mismatches",

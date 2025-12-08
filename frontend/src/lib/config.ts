@@ -20,7 +20,7 @@ const getApiBaseUrl = () => {
         (window.location.hostname === 'beatsight.io' ||
             window.location.hostname === 'www.beatsight.io' ||
             window.location.hostname.endsWith('.pages.dev'))) {
-        return 'https://api.beatsight.io'
+        return 'https://api.beatsight.io/api'
     }
     // Development fallback
     return '/api'

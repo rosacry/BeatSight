@@ -165,9 +165,16 @@ def upgrade() -> None:
             sa.Column(
                 "requested_by_id",
                 postgresql.UUID(as_uuid=True),
-                sa.ForeignKey("users.id"),
                 nullable=True,
             ),
+        )
+        # Add FK constraint separately
+        op.create_foreign_key(
+            "fk_ai_jobs_requested_by_id",
+            "ai_jobs",
+            "users",
+            ["requested_by_id"],
+            ["id"],
         )
     
     # Add state column if it doesn't exist (model uses 'state', not 'status')

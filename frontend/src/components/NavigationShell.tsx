@@ -28,9 +28,18 @@ const navItems: NavItem[] = [
     { path: '/', label: 'Home', icon: <HomeIcon /> },
     { path: '/queue', label: 'Job Queue', icon: <QueueIcon /> },
     { path: '/forum', label: 'Forum', icon: <ForumIcon /> },
+    { path: '/leaderboard', label: 'Leaderboard', icon: <LeaderboardIcon /> },
     { path: '/record', label: 'Record', requiresAuth: true, icon: <MicIcon /> },
     { path: '/library', label: 'My Library', requiresAuth: true, icon: <LibraryIcon /> },
 ]
+
+function LeaderboardIcon() {
+    return (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+    )
+}
 
 function HomeIcon() {
     return (
@@ -249,7 +258,7 @@ export function Layout({ children }: LayoutProps) {
                                             <UploadIcon />
                                             <span className="hidden lg:inline">Upload Song</span>
                                         </Link>
-                                        <CreditBalance />
+                                        <CreditBalance showWhenZero />
                                         <UserMenu />
                                     </>
                                 ) : (
@@ -409,7 +418,7 @@ export function Layout({ children }: LayoutProps) {
             </main>
 
             {/* Footer - Glass effect */}
-            <footer className="relative bg-slate-900/50 backdrop-blur-xl border-t border-white/10 mt-auto" role="contentinfo">
+            <footer className="relative z-20 bg-slate-900/50 backdrop-blur-xl border-t border-white/10 mt-auto" role="contentinfo">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
                         {/* Logo and copyright */}

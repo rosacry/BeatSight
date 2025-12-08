@@ -8,6 +8,8 @@ import { InstallPrompt, OfflineIndicator, UpdateNotification } from './component
 import { ToastProvider } from './components/Toast'
 import { AchievementNotificationProvider } from './components/AchievementToast'
 import { HomePage } from './pages/HomePage'
+import { DashboardPage } from './pages/DashboardPage'
+import { LeaderboardPage } from './pages/LeaderboardPage'
 import { JobQueuePage } from './pages/JobQueuePage'
 import { JobDetailPage } from './pages/JobDetailPage'
 import { UploadPage } from './pages/UploadPage'
@@ -55,6 +57,18 @@ function ScrollToTop() {
     return null
 }
 
+// Auth-aware home page - shows Dashboard for logged in users, HomePage for guests
+// Similar to osu!'s behavior where logged in users see their personalized dashboard
+function AuthAwareHome() {
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated())
+
+    if (isAuthenticated) {
+        return <DashboardPage />
+    }
+
+    return <HomePage />
+}
+
 function AnimatedRoutes() {
     const location = useLocation()
 
@@ -73,7 +87,7 @@ function AnimatedRoutes() {
                 >
                     <Routes location={location}>
                         {/* Public routes */}
-                        <Route path="/" element={<HomePage />} />
+                        <Route path="/" element={<AuthAwareHome />} />
                         <Route path="/queue" element={<JobQueuePage />} />
                         <Route path="/jobs/:jobId" element={<JobDetailPage />} />
                         <Route path="/login" element={<LoginPage />} />
@@ -83,6 +97,7 @@ function AnimatedRoutes() {
                         <Route path="/pricing" element={<PricingPage />} />
                         <Route path="/credits/success" element={<CreditSuccessPage />} />
                         <Route path="/credits/cancel" element={<CreditCancelPage />} />
+                        <Route path="/leaderboard" element={<LeaderboardPage />} />
 
                         {/* Forum routes (public, posting requires auth) */}
                         <Route path="/forum" element={<ForumPage />} />

@@ -18,4 +18,5 @@ export { DifficultyHeatmap } from './DifficultyHeatmap'
 export { LiveRecorder } from './LiveRecorder'
 export { CreditPurchaseModal } from './CreditPurchaseModal'
 export { CreditBalance, CreditBadge } from './CreditBalance'
+export { ConfirmDialog } from './ConfirmDialog'
 

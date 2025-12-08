@@ -309,7 +309,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def _get_limit(self, path: str, tier: str, method: str = "GET") -> int:
         """Get rate limit for path, tier, and HTTP method."""
         # Check method-specific endpoint limits first (e.g., "/api/ai-jobs:POST")
-        method_key = f"{path}:{method}"
         for endpoint, limits in ENDPOINT_LIMITS.items():
             if endpoint.endswith(f":{method}") and path.startswith(endpoint.rsplit(":", 1)[0]):
                 return limits.get(tier, RATE_LIMITS.get(tier, 30))

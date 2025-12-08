@@ -13,7 +13,6 @@ import secrets
 import string
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from uuid import UUID
 
 from app.config import get_settings
 

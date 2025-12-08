@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from unicodedata import normalize
 
-from sqlalchemy import and_, func, or_, select, update
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -31,7 +31,6 @@ from app.models.forum import (
     ForumPost,
     ForumPostVote,
     ForumPostVoteType,
-    ForumReadTracker,
     ForumTopic,
     ForumTopicStatus,
     ForumTopicType,
@@ -199,7 +198,7 @@ class ForumService:
         )
         
         if not include_hidden:
-            query = query.where(ForumCategory.is_visible == True)
+            query = query.where(ForumCategory.is_visible.is_(True))
         
         result = await self.session.execute(query)
         categories = list(result.scalars().all())
@@ -806,8 +805,6 @@ class ForumService:
         )
         existing_vote = result.scalar_one_or_none()
         
-        old_vote_value = 0
-        
         if existing_vote:
             if existing_vote.vote_type == vote_type:
                 # Same vote = remove it
@@ -830,7 +827,6 @@ class ForumService:
                 }
             else:
                 # Different vote = change it
-                old_vote_value = existing_vote.vote_type.value
                 await self._reverse_post_vote_karma(post, existing_vote.vote_type)
                 
                 # Update counters

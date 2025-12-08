@@ -20,10 +20,9 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-import numpy as np
 
 if TYPE_CHECKING:
-    from typing import Optional
+    pass
 
 logger = logging.getLogger(__name__)
 

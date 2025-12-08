@@ -413,7 +413,6 @@ async def get_verifier_stats(
     Includes pending count, today's activity, and user's review history.
     Optimized: runs all queries in parallel for faster response.
     """
-    import asyncio
     from datetime import timezone
     from sqlalchemy import extract
 

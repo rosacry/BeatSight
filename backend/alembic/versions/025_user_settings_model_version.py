@@ -24,13 +24,13 @@ depends_on = None
 def upgrade() -> None:
     """Add user_settings table and model_version to ai_jobs."""
     
-    # Create upload_visibility enum type
+    # Create upload_visibility enum type (with checkfirst to handle partial migrations)
     upload_visibility_enum = postgresql.ENUM(
         "public",
         "anonymous", 
         "private",
         name="uploadvisibility",
-        create_type=True,
+        create_type=False,  # We'll create manually with checkfirst
     )
     upload_visibility_enum.create(op.get_bind(), checkfirst=True)
     
@@ -40,117 +40,127 @@ def upgrade() -> None:
         "opt_in",
         "opt_out",
         name="reevaluationpolicy",
-        create_type=True,
+        create_type=False,  # We'll create manually with checkfirst
     )
     re_evaluation_policy_enum.create(op.get_bind(), checkfirst=True)
     
-    # Create user_settings table
-    op.create_table(
-        "user_settings",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column(
-            "user_id",
-            postgresql.UUID(as_uuid=True),
-            sa.ForeignKey("users.id", ondelete="CASCADE"),
-            unique=True,
-            nullable=False,
-        ),
-        # Privacy settings
-        sa.Column(
-            "default_upload_visibility",
-            upload_visibility_enum,
-            nullable=False,
-            server_default="public",
-        ),
-        sa.Column(
-            "show_activity_on_profile",
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.text("true"),
-        ),
-        sa.Column(
-            "show_statistics_on_profile",
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.text("true"),
-        ),
-        # AI re-evaluation settings
-        sa.Column(
-            "re_evaluation_policy",
-            re_evaluation_policy_enum,
-            nullable=False,
-            server_default="auto_free",
-        ),
-        sa.Column(
-            "last_acknowledged_model_version",
-            sa.String(64),
-            nullable=True,
-        ),
-        # Notification settings
-        sa.Column(
-            "notify_job_complete",
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.text("true"),
-        ),
-        sa.Column(
-            "notify_map_verified",
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.text("true"),
-        ),
-        sa.Column(
-            "notify_re_evaluation_available",
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.text("true"),
-        ),
-        sa.Column(
-            "notify_weekly_summary",
-            sa.Boolean(),
-            nullable=False,
-            server_default=sa.text("true"),
-        ),
-        # Timestamps
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.func.now(),
-            nullable=False,
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.func.now(),
-            onupdate=sa.func.now(),
-            nullable=False,
-        ),
-    )
+    # Check if user_settings table already exists (handle partial migration state)
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_tables = inspector.get_table_names()
     
-    # Create index on user_id for fast lookups
-    op.create_index(
-        "ix_user_settings_user_id",
-        "user_settings",
-        ["user_id"],
-    )
+    if "user_settings" not in existing_tables:
+        # Create user_settings table
+        op.create_table(
+            "user_settings",
+            sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+            sa.Column(
+                "user_id",
+                postgresql.UUID(as_uuid=True),
+                sa.ForeignKey("users.id", ondelete="CASCADE"),
+                unique=True,
+                nullable=False,
+            ),
+            # Privacy settings
+            sa.Column(
+                "default_upload_visibility",
+                upload_visibility_enum,
+                nullable=False,
+                server_default="public",
+            ),
+            sa.Column(
+                "show_activity_on_profile",
+                sa.Boolean(),
+                nullable=False,
+                server_default=sa.text("true"),
+            ),
+            sa.Column(
+                "show_statistics_on_profile",
+                sa.Boolean(),
+                nullable=False,
+                server_default=sa.text("true"),
+            ),
+            # AI re-evaluation settings
+            sa.Column(
+                "re_evaluation_policy",
+                re_evaluation_policy_enum,
+                nullable=False,
+                server_default="auto_free",
+            ),
+            sa.Column(
+                "last_acknowledged_model_version",
+                sa.String(64),
+                nullable=True,
+            ),
+            # Notification settings
+            sa.Column(
+                "notify_job_complete",
+                sa.Boolean(),
+                nullable=False,
+                server_default=sa.text("true"),
+            ),
+            sa.Column(
+                "notify_map_verified",
+                sa.Boolean(),
+                nullable=False,
+                server_default=sa.text("true"),
+            ),
+            sa.Column(
+                "notify_re_evaluation_available",
+                sa.Boolean(),
+                nullable=False,
+                server_default=sa.text("true"),
+            ),
+            sa.Column(
+                "notify_weekly_summary",
+                sa.Boolean(),
+                nullable=False,
+                server_default=sa.text("true"),
+            ),
+            # Timestamps
+            sa.Column(
+                "created_at",
+                sa.DateTime(timezone=True),
+                server_default=sa.func.now(),
+                nullable=False,
+            ),
+            sa.Column(
+                "updated_at",
+                sa.DateTime(timezone=True),
+                server_default=sa.func.now(),
+                onupdate=sa.func.now(),
+                nullable=False,
+            ),
+        )
+        
+        # Create index on user_id for fast lookups
+        op.create_index(
+            "ix_user_settings_user_id",
+            "user_settings",
+            ["user_id"],
+        )
     
-    # Add model_version column to ai_jobs table
-    op.add_column(
-        "ai_jobs",
-        sa.Column(
-            "model_version",
-            sa.String(64),
-            nullable=True,
-            comment="AI model version that processed this job (e.g., 'v5.2.1')",
-        ),
-    )
+    # Check if model_version column already exists on ai_jobs
+    existing_columns = [c["name"] for c in inspector.get_columns("ai_jobs")]
     
-    # Create index for finding jobs by model version (for re-evaluation queries)
-    op.create_index(
-        "ix_ai_jobs_model_version",
-        "ai_jobs",
-        ["model_version"],
-    )
+    if "model_version" not in existing_columns:
+        # Add model_version column to ai_jobs table
+        op.add_column(
+            "ai_jobs",
+            sa.Column(
+                "model_version",
+                sa.String(64),
+                nullable=True,
+                comment="AI model version that processed this job (e.g., 'v5.2.1')",
+            ),
+        )
+        
+        # Create index for finding jobs by model version (for re-evaluation queries)
+        op.create_index(
+            "ix_ai_jobs_model_version",
+            "ai_jobs",
+            ["model_version"],
+        )
 
 
 def downgrade() -> None:

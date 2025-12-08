@@ -113,7 +113,7 @@ class TestEligibilityEndpoint:
                 with patch("app.services.map_accuracy.MapAccuracyService.is_eligible_to_vote") as mock_check:
                     mock_check.return_value = (True, "")
                     
-                    with TestClient(app) as client:
+                    with TestClient(app) as _client:
                         # This test would need proper auth setup
                         # For now, just verify the endpoint exists
                         pass
@@ -307,7 +307,6 @@ class TestVoteWorkflow:
 
     def test_status_types_match_schema(self):
         """All status types are valid for API."""
-        from app.api.routes.accuracy import ConsensusResponse
         
         # Verify status field accepts MapAccuracyStatus
         for status in MapAccuracyStatus:
@@ -326,19 +325,19 @@ class TestErrorHandling:
 
     def test_not_eligible_returns_403(self):
         """NotEligibleError returns 403 Forbidden."""
-        from fastapi import HTTPException, status
+        from fastapi import status
         
         # Verify we use correct status code
         assert status.HTTP_403_FORBIDDEN == 403
 
     def test_already_voted_returns_409(self):
         """AlreadyVotedError returns 409 Conflict."""
-        from fastapi import HTTPException, status
+        from fastapi import status
         
         assert status.HTTP_409_CONFLICT == 409
 
     def test_map_not_found_returns_404(self):
         """MapVersionNotFoundError returns 404 Not Found."""
-        from fastapi import HTTPException, status
+        from fastapi import status
         
         assert status.HTTP_404_NOT_FOUND == 404

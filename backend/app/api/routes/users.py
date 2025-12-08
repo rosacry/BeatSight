@@ -15,7 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db_session
 from app.models.user import User
+from app.schemas.user_settings import UserSettingsRead, UserSettingsUpdate
 from app.services.storage import get_storage
+from app.services.user_settings import UserSettingsService
 
 logger = logging.getLogger(__name__)
 
@@ -354,9 +356,6 @@ async def delete_account(
 # =============================================================================
 # User Settings Endpoints
 # =============================================================================
-
-from app.schemas.user_settings import UserSettingsRead, UserSettingsUpdate
-from app.services.user_settings import UserSettingsService
 
 
 @router.get("/me/settings", response_model=UserSettingsRead)

@@ -294,7 +294,6 @@ async def get_queue_stats(
     Returns counts by state, average processing time, and recent activity.
     Optimized: single query for state counts + parallel execution.
     """
-    import asyncio
     from datetime import timedelta
 
     now = datetime.utcnow()
@@ -857,7 +856,6 @@ async def get_user_stats(
     admin: Annotated[User, Depends(RequireAdminDashboard)],
 ) -> UserStats:
     """Get aggregate user statistics. Optimized with parallel query execution."""
-    import asyncio
     from datetime import timedelta
 
     now = datetime.utcnow()
@@ -1382,7 +1380,7 @@ async def silence_user(
 ) -> ModerationActionResponse:
     """Silence a user, preventing them from posting or commenting."""
     from datetime import timedelta, timezone
-    from app.models.moderation import UserAccountHistory, ModerationAction
+    from app.models.moderation import UserAccountHistory
     from app.models.user import RestrictionLevel
 
     # Get the user
@@ -1459,7 +1457,7 @@ async def restrict_user(
 ) -> ModerationActionResponse:
     """Restrict a user, hiding them from leaderboards and limiting interactions."""
     from datetime import timedelta, timezone
-    from app.models.moderation import UserAccountHistory, ModerationAction
+    from app.models.moderation import UserAccountHistory
     from app.models.user import RestrictionLevel
 
     # Get the user
@@ -1541,7 +1539,7 @@ async def ban_user(
 ) -> ModerationActionResponse:
     """Ban a user, completely disabling their account."""
     from datetime import timedelta, timezone
-    from app.models.moderation import UserAccountHistory, ModerationAction
+    from app.models.moderation import UserAccountHistory
     from app.models.user import RestrictionLevel
 
     # Get the user
@@ -1621,7 +1619,6 @@ async def remove_restriction(
     admin: Annotated[User, Depends(require_permission(Permission.ROLE_ASSIGN))],
 ) -> ModerationActionResponse:
     """Remove all restrictions from a user."""
-    from datetime import timezone
     from app.models.moderation import UserAccountHistory, ModerationAction
     from app.models.user import RestrictionLevel
 

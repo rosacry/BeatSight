@@ -14,14 +14,13 @@ The goal is ZERO developer intervention for model improvements.
 from __future__ import annotations
 
 import logging
-import os
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -273,7 +272,7 @@ class AutonomousTrainingPipeline:
         training_data_path = await self._export_training_data()
         
         # Trigger Modal training job (async, will callback when done)
-        job_id = await self._dispatch_training_job(
+        _ = await self._dispatch_training_job(
             new_version=new_version,
             base_version=current_version,
             training_data_path=training_data_path,
@@ -295,7 +294,7 @@ class AutonomousTrainingPipeline:
         parts = version.split('.')
         
         try:
-            major, minor, patch = int(parts[0]), int(parts[1]), int(parts[2])
+            major, minor, _ = int(parts[0]), int(parts[1]), int(parts[2])
             # Auto-training bumps minor version
             return f"v{major}.{minor + 1}.0"
         except (IndexError, ValueError):
@@ -343,8 +342,8 @@ class AutonomousTrainingPipeline:
         
         modal_service = get_modal_service()
         
-        # Training job parameters
-        job_params = {
+        # Training job parameters (used by Modal service internally)
+        _ = {
             "type": "model_training",
             "new_version": new_version,
             "base_version": base_version,

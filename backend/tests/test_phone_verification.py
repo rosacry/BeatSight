@@ -15,9 +15,9 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 
-from app.models.phone_verification import PhoneVerificationAttempt, PhoneVerificationCode
+from app.models.phone_verification import PhoneVerificationCode
 from app.models.user import User
-from app.services.sms import SMSService, get_sms_service
+from app.services.sms import SMSService
 
 
 class TestSMSService:

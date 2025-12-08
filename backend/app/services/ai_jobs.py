@@ -230,7 +230,6 @@ class AIJobService:
         Returns:
             List of song IDs eligible for re-evaluation
         """
-        from app.models.song import Map, MapState
         
         # Find songs with completed jobs from older model
         subquery = (

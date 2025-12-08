@@ -160,10 +160,34 @@ class AutonomousTrainingPipeline:
        Re-evaluation jobs are queued for eligible songs.
     """
     
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, settings=None) -> None:
         self._session = session
-        self._settings = get_settings()
+        self._settings = settings or get_settings()
         self._config = AutoTrainingConfig()
+    
+    async def get_status(self) -> dict:
+        """Get current status of the training pipeline.
+        
+        Returns:
+            Dictionary with pipeline state information
+        """
+        contribution_count = await self._count_pending_contributions()
+        last_training = await self._get_last_training_time()
+        
+        # Determine current state
+        state = "collecting"
+        if contribution_count >= self._settings.autonomous_training_min_contributions:
+            state = "ready_to_train"
+        
+        return {
+            "state": state,
+            "contributions_since_last_train": contribution_count,
+            "last_training_started": None,  # TODO: Track in DB
+            "last_training_completed": last_training,
+            "staged_model_version": None,  # TODO: Track staged model
+            "validation_results": None,
+            "canary_status": None,
+        }
     
     async def check_training_trigger(self) -> tuple[bool, TrainingTrigger | None]:
         """Check if conditions are met to trigger a new training run.
@@ -213,18 +237,30 @@ class AutonomousTrainingPipeline:
     
     async def trigger_training(
         self,
-        reason: TrainingTrigger,
+        reason: TrainingTrigger = TrainingTrigger.MANUAL,
         force: bool = False,
     ) -> str:
         """Trigger an autonomous training run.
         
         Args:
-            reason: Why training was triggered
+            reason: Why training was triggered (defaults to MANUAL)
             force: Skip threshold checks
             
         Returns:
             New model version string (e.g., "v5.1.0")
+            
+        Raises:
+            ValueError: If not enough contributions and force=False
         """
+        if not force:
+            contribution_count = await self._count_pending_contributions()
+            if contribution_count < self._settings.autonomous_training_min_contributions:
+                raise ValueError(
+                    f"Only {contribution_count} contributions available. "
+                    f"Need {self._settings.autonomous_training_min_contributions}. "
+                    "Use force=True to override."
+                )
+        
         current_version = self._settings.ai_model_version
         new_version = self._bump_version(current_version)
         

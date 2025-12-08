@@ -33,7 +33,7 @@ async function request<T>(
     options: RequestInit = {},
     requireAuth: boolean = false
 ): Promise<T> {
-    const url = `${API_BASE}${endpoint}`
+    const url = `${API_BASE}/api${endpoint}`
 
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',

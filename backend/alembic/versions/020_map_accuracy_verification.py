@@ -75,22 +75,27 @@ def upgrade() -> None:
     """Add map accuracy verification tables and karma reason enum values."""
     
     # ==========================================================================
-    # 1. Add new KarmaReason enum values
+    # 1. Add new KarmaReason enum values (if enum exists)
     # ==========================================================================
-    print("Adding new KarmaReason enum values...")
-    
-    new_karma_reasons = [
-        "verified_user_bonus",
-        "accuracy_vote_cast", 
-        "accuracy_consensus_contributor",
-    ]
-    
-    for value in new_karma_reasons:
-        if not enum_value_exists("karmareason", value):
-            print(f"  Adding karmareason value: {value}")
-            op.execute(f"ALTER TYPE karmareason ADD VALUE IF NOT EXISTS '{value}'")
-        else:
-            print(f"  karmareason value already exists: {value}")
+    # Note: Some databases use String column for karma reason instead of enum.
+    # Only add enum values if the karmareason type actually exists.
+    if enum_type_exists("karmareason"):
+        print("Adding new KarmaReason enum values...")
+        
+        new_karma_reasons = [
+            "verified_user_bonus",
+            "accuracy_vote_cast", 
+            "accuracy_consensus_contributor",
+        ]
+        
+        for value in new_karma_reasons:
+            if not enum_value_exists("karmareason", value):
+                print(f"  Adding karmareason value: {value}")
+                op.execute(f"ALTER TYPE karmareason ADD VALUE IF NOT EXISTS '{value}'")
+            else:
+                print(f"  karmareason value already exists: {value}")
+    else:
+        print("Skipping KarmaReason enum values - karmareason type does not exist (using String column)")
 
     # ==========================================================================
     # 2. Create AccuracyVoteType enum

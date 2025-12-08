@@ -201,6 +201,21 @@ async def enqueue_job(
     )
 
 
+@router.get("/queue-length")
+async def get_queue_length(
+    session: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """
+    Get the current queue length for AI jobs.
+    
+    Returns the number of jobs waiting to be processed.
+    This is a public endpoint for displaying queue status.
+    """
+    service = AIJobService(session)
+    queue_length = await service.get_queue_length()
+    return {"queue_length": queue_length}
+
+
 @router.get("/quota", response_model=QuotaStatusRead)
 async def get_quota_status(
     session: AsyncSession = Depends(get_db_session),

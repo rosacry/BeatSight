@@ -28,20 +28,18 @@ import {
 
 // Mock data
 const mockCreditBalance = {
-    balance: 50,
-    lifetime_purchased: 100,
-    lifetime_consumed: 50,
+    purchased_credits: 40,
+    bonus_credits: 10,
+    total_credits: 50,
     auto_topup_enabled: false,
-    auto_topup_threshold: null,
     auto_topup_pack: null,
 }
 
 const mockCreditBalanceZero = {
-    balance: 0,
-    lifetime_purchased: 0,
-    lifetime_consumed: 0,
+    purchased_credits: 0,
+    bonus_credits: 0,
+    total_credits: 0,
     auto_topup_enabled: false,
-    auto_topup_threshold: null,
     auto_topup_pack: null,
 }
 
@@ -134,7 +132,7 @@ describe('useCreditBalance', () => {
 
         await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-        expect(result.current.data?.balance).toBe(50)
+        expect(result.current.data?.total_credits).toBe(50)
         expect(result.current.data?.auto_topup_enabled).toBe(false)
     })
 
@@ -151,7 +149,7 @@ describe('useCreditBalance', () => {
 
         await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-        expect(result.current.data?.balance).toBe(0)
+        expect(result.current.data?.total_credits).toBe(0)
     })
 
     it('should handle fetch error', async () => {

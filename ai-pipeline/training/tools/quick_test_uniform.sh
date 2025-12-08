@@ -45,7 +45,7 @@ echo "║   • UNIFORM sampling - TRUE class balance for 630x imbalance     ║
 echo "║   • NO focal loss - balanced sampling alone handles it           ║"
 echo "║   • LR 0.0003 (lower for stability with uniform sampling)        ║"
 echo "║   • Mixup 0.2 (lower - too much hides rare class examples)       ║"
-echo "║   • Longer warmup 5 epochs (let rare classes stabilize)          ║"
+echo "║   • Warmup 2 epochs (let rare classes stabilize)                 ║"
 echo "║   • Smaller batch 384 (more gradient updates for rare classes)   ║"
 echo "╠══════════════════════════════════════════════════════════════════╣"
 echo "║ SUCCESS CRITERIA:                                                ║"
@@ -85,7 +85,7 @@ PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
     --use-ema --ema-decay 0.9998 --ema-warmup-steps 5000 \
     --balanced-sampling --sampling-strategy uniform --class-weights none \
     --scheduler cosine_warm_restarts --warm-restart-t0 30 --warm-restart-mult 2 \
-    --warmup-epochs 5 --warmup-lr-factor 0.02 \
+    --warmup-epochs 2 --warmup-lr-factor 0.02 \
     --gradient-checkpointing \
     --grad-clip-norm 1.0 --weight-decay 0.02 \
     --channels-last \

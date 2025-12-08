@@ -70,10 +70,11 @@ def upgrade() -> None:
     # ============================================================
     
     # Create subscriptionplan enum if it doesn't exist
+    # NOTE: SQLAlchemy SAEnum sends the Python enum NAME (uppercase), not the value
     if not enum_type_exists("subscriptionplan"):
         op.execute("""
             CREATE TYPE subscriptionplan AS ENUM (
-                'free', 'basic_monthly', 'basic_yearly', 'pro_monthly', 'pro_yearly'
+                'FREE', 'BASIC_MONTHLY', 'BASIC_YEARLY', 'PRO_MONTHLY', 'PRO_YEARLY'
             )
         """)
     
@@ -81,7 +82,7 @@ def upgrade() -> None:
     if not enum_type_exists("subscriptionstatus"):
         op.execute("""
             CREATE TYPE subscriptionstatus AS ENUM (
-                'active', 'past_due', 'cancelled'
+                'ACTIVE', 'PAST_DUE', 'CANCELLED'
             )
         """)
     
@@ -112,6 +113,10 @@ def upgrade() -> None:
     """))
     row = result.fetchone()
     if row and row[0] in ('character varying', 'varchar', 'text'):
+        # Normalize to uppercase before cast
+        op.execute("""
+            UPDATE subscriptions SET plan_code = UPPER(plan_code)
+        """)
         # Convert string column to enum
         op.execute("""
             ALTER TABLE subscriptions 
@@ -126,10 +131,14 @@ def upgrade() -> None:
     """))
     row = result.fetchone()
     if row and row[0] in ('character varying', 'varchar', 'text'):
-        # Map old status values to new enum values
+        # Map old status values to new enum values (uppercase)
         op.execute("""
-            UPDATE subscriptions SET status = 'active' 
-            WHERE status NOT IN ('active', 'past_due', 'cancelled')
+            UPDATE subscriptions SET status = 'ACTIVE' 
+            WHERE UPPER(status) NOT IN ('ACTIVE', 'PAST_DUE', 'CANCELLED')
+        """)
+        # Normalize to uppercase before cast
+        op.execute("""
+            UPDATE subscriptions SET status = UPPER(status)
         """)
         op.execute("""
             ALTER TABLE subscriptions 
@@ -145,14 +154,14 @@ def upgrade() -> None:
     if not enum_type_exists("aijobstate"):
         op.execute("""
             CREATE TYPE aijobstate AS ENUM (
-                'queued', 'processing', 'complete', 'failed', 'cancelled'
+                'QUEUED', 'PROCESSING', 'COMPLETE', 'FAILED', 'CANCELLED'
             )
         """)
     
     # Create aijobpriority enum if it doesn't exist
     if not enum_type_exists("aijobpriority"):
         op.execute("""
-            CREATE TYPE aijobpriority AS ENUM ('standard', 'priority')
+            CREATE TYPE aijobpriority AS ENUM ('STANDARD', 'PRIORITY')
         """)
     
     # Rename requester_id to requested_by_id if needed
@@ -186,8 +195,8 @@ def upgrade() -> None:
                 "ai_jobs",
                 sa.Column("state", sa.String(20), nullable=True),
             )
-            # Copy data from status to state
-            op.execute("UPDATE ai_jobs SET state = status")
+            # Copy data from status to state (uppercase)
+            op.execute("UPDATE ai_jobs SET state = UPPER(status)")
             # Convert to enum
             op.execute("""
                 ALTER TABLE ai_jobs 
@@ -195,14 +204,14 @@ def upgrade() -> None:
                 USING state::aijobstate
             """)
             op.execute("ALTER TABLE ai_jobs ALTER COLUMN state SET NOT NULL")
-            op.execute("ALTER TABLE ai_jobs ALTER COLUMN state SET DEFAULT 'queued'")
+            op.execute("ALTER TABLE ai_jobs ALTER COLUMN state SET DEFAULT 'QUEUED'")
             # Drop old status column
             op.drop_column("ai_jobs", "status")
         else:
             # Just add state column with enum type
             op.execute("""
                 ALTER TABLE ai_jobs 
-                ADD COLUMN state aijobstate NOT NULL DEFAULT 'queued'
+                ADD COLUMN state aijobstate NOT NULL DEFAULT 'QUEUED'
             """)
     
     # Convert priority to enum if it's currently integer
@@ -215,12 +224,12 @@ def upgrade() -> None:
         # Add new priority_enum column
         op.execute("""
             ALTER TABLE ai_jobs 
-            ADD COLUMN priority_new aijobpriority NOT NULL DEFAULT 'standard'
+            ADD COLUMN priority_new aijobpriority NOT NULL DEFAULT 'STANDARD'
         """)
-        # Map 0 -> standard, anything else -> priority
+        # Map 0 -> STANDARD, anything else -> PRIORITY
         op.execute("""
             UPDATE ai_jobs SET priority_new = 
-            CASE WHEN priority > 0 THEN 'priority'::aijobpriority ELSE 'standard'::aijobpriority END
+            CASE WHEN priority > 0 THEN 'PRIORITY'::aijobpriority ELSE 'STANDARD'::aijobpriority END
         """)
         # Drop old column and rename new
         op.drop_column("ai_jobs", "priority")
@@ -238,7 +247,7 @@ def upgrade() -> None:
     if not enum_type_exists("editstatus"):
         op.execute("""
             CREATE TYPE editstatus AS ENUM (
-                'pending', 'approved', 'rejected', 'withdrawn'
+                'PENDING', 'APPROVED', 'REJECTED', 'WITHDRAWN'
             )
         """)
     
@@ -246,7 +255,7 @@ def upgrade() -> None:
     if not enum_type_exists("verificationdecision"):
         op.execute("""
             CREATE TYPE verificationdecision AS ENUM (
-                'approve', 'reject', 'needs_changes'
+                'APPROVE', 'REJECT', 'NEEDS_CHANGES'
             )
         """)
     
@@ -290,6 +299,10 @@ def upgrade() -> None:
     """))
     row = result.fetchone()
     if row and row[0] in ('character varying', 'varchar', 'text'):
+        # Normalize to uppercase before cast
+        op.execute("""
+            UPDATE map_edit_proposals SET status = UPPER(status)
+        """)
         op.execute("""
             ALTER TABLE map_edit_proposals 
             ALTER COLUMN status TYPE editstatus 

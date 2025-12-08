@@ -34,13 +34,21 @@ RATE_LIMITS = {
 # Endpoints with custom limits (more restrictive)
 # AI generation is the most expensive operation - strict limits to prevent abuse
 ENDPOINT_LIMITS = {
-    # AI Generation - CRITICAL: Protect model from extraction attacks
-    "/api/ai-jobs": {
+    # AI Job Creation (POST) - CRITICAL: Protect model from extraction attacks
+    "/api/ai-jobs:POST": {
         "anonymous": 0,  # Must be authenticated
         "authenticated": 5,  # Free tier: 5 per minute max
         "basic": 10,  # Basic tier: 10 per minute
         "premium": 30,  # Pro tier: 30 per minute
         "admin": 100,
+    },
+    # AI Job Listing/Viewing (GET) - more lenient
+    "/api/ai-jobs": {
+        "anonymous": 10,
+        "authenticated": 60,
+        "basic": 120,
+        "premium": 300,
+        "admin": 1000,
     },
     # Song uploads - moderate limits
     "/api/songs": {
@@ -151,6 +159,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if path in EXEMPT_ENDPOINTS or path.startswith("/ws"):
             return await call_next(request)
 
+        # Skip rate limiting for OPTIONS requests (CORS preflight)
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         # Get Redis client
         try:
             redis = await self._get_redis()
@@ -165,7 +177,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Determine rate limit key and limit
         user_id = await self._get_user_id(request)
         user_tier = await self._get_user_tier(request, user_id)
-        limit = self._get_limit(path, user_tier)
+        limit = self._get_limit(path, user_tier, request.method)
 
         if limit == 0:
             # Endpoint not allowed for this tier
@@ -175,9 +187,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 media_type="application/json",
             )
 
-        # Build rate limit key
+        # Build rate limit key - include method for POST-specific limits
         identifier = user_id or self._get_client_ip(request)
-        key = f"ratelimit:{identifier}:{path}"
+        key = f"ratelimit:{identifier}:{path}:{request.method}"
 
         # Check rate limit using sliding window
         try:
@@ -294,11 +306,17 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         return "authenticated"
 
-    def _get_limit(self, path: str, tier: str) -> int:
-        """Get rate limit for path and tier."""
-        # Check endpoint-specific limits
+    def _get_limit(self, path: str, tier: str, method: str = "GET") -> int:
+        """Get rate limit for path, tier, and HTTP method."""
+        # Check method-specific endpoint limits first (e.g., "/api/ai-jobs:POST")
+        method_key = f"{path}:{method}"
         for endpoint, limits in ENDPOINT_LIMITS.items():
-            if path.startswith(endpoint):
+            if endpoint.endswith(f":{method}") and path.startswith(endpoint.rsplit(":", 1)[0]):
+                return limits.get(tier, RATE_LIMITS.get(tier, 30))
+        
+        # Check general endpoint-specific limits (excluding method-specific ones)
+        for endpoint, limits in ENDPOINT_LIMITS.items():
+            if ":" not in endpoint and path.startswith(endpoint):
                 return limits.get(tier, RATE_LIMITS.get(tier, 30))
 
         # Fall back to default tier limits

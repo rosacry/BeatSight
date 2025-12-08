@@ -97,7 +97,11 @@ class TrainingContribution(Base):
     # Correction details
     onset_time_ms: Mapped[int] = mapped_column(Integer, nullable=False)
     correction_type: Mapped[CorrectionType] = mapped_column(
-        SAEnum(CorrectionType), nullable=False
+        SAEnum(
+            CorrectionType,
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=False,
     )
 
     # Original AI prediction
@@ -114,7 +118,10 @@ class TrainingContribution(Base):
 
     # Review status
     status: Mapped[ContributionStatus] = mapped_column(
-        SAEnum(ContributionStatus),
+        SAEnum(
+            ContributionStatus,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         default=ContributionStatus.PENDING,
         nullable=False,
         index=True,

@@ -32,6 +32,7 @@ sentry-sdk = { version = "^2.0.0", extras = ["fastapi"] }
 aiofiles = "^24.1.0"
 pyotp = "^2.9.0"  # TOTP for Two-Factor Authentication
 qrcode = { version = "^7.4.0", extras = ["pil"] }  # QR code generation for 2FA setup
+httpx = "^0.27.0"  # HTTP client for external API calls
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.1.1"
@@ -78,6 +79,7 @@ dependencies = [
     "sentry-sdk[fastapi]>=2.0.0",
     "pyotp>=2.9.0",
     "qrcode[pil]>=7.4.0",
+    "httpx>=0.27.0",
 ]
 
 [project.optional-dependencies]

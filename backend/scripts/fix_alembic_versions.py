@@ -76,7 +76,7 @@ async def fix_versions():
                         def get_num(v):
                             try:
                                 return int(v.split('_')[0])
-                            except:
+                            except (ValueError, IndexError):
                                 return 0
                         latest = max(current_versions, key=get_num)
                     

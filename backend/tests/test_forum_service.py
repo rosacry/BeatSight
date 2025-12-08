@@ -13,10 +13,8 @@ Tests cover:
 from __future__ import annotations
 
 import pytest
-import pytest_asyncio
 from datetime import datetime, timezone, timedelta
-from typing import AsyncGenerator
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock, AsyncMock
 from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -424,7 +422,7 @@ class TestPolls:
         return poll
 
     @pytest.fixture
-    def poll_options(self, test_poll: ForumPoll) -> list[PollOption]:
+    def poll_options(self, test_poll: ForumPoll) -> list[ForumPollOption]:
         """Create test poll options."""
         options = []
         for i, text in enumerate(["Option A", "Option B", "Option C"]):

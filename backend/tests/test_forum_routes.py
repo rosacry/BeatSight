@@ -9,14 +9,12 @@ Tests cover:
 from __future__ import annotations
 
 import pytest
-from unittest.mock import MagicMock
 from uuid import uuid4
 
 from fastapi import status
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.models.user import User
 
 
 # =============================================================================

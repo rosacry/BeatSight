@@ -15,10 +15,9 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select, and_
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -341,7 +340,7 @@ async def notify_model_upgrade_available(
         .where(AIJob.state == AIJobState.COMPLETE)
         .where(AIJob.model_version == old_version)
         .where(UserSettings.re_evaluation_policy == ReEvaluationPolicy.OPT_IN)
-        .where(UserSettings.notify_re_evaluation_available == True)
+        .where(UserSettings.notify_re_evaluation_available.is_(True))
         .distinct()
     )
     

@@ -11,7 +11,6 @@ from __future__ import annotations
 import hashlib
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field, field_validator
@@ -19,7 +18,6 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db_session
-from app.config import get_settings
 from app.models.phone_verification import PhoneVerificationAttempt, PhoneVerificationCode
 from app.models.user import User
 from app.services.sms import get_sms_service
@@ -179,7 +177,6 @@ async def send_verification_code(
     Rate limited to 3 attempts per hour per user.
     Each code is valid for 10 minutes.
     """
-    settings = get_settings()
     sms_service = get_sms_service()
     
     # Check if already verified with this number
@@ -272,7 +269,7 @@ async def verify_code(
     result = await session.execute(
         select(PhoneVerificationCode)
         .where(PhoneVerificationCode.user_id == current_user.id)
-        .where(PhoneVerificationCode.is_used == False)
+        .where(PhoneVerificationCode.is_used.is_(False))
         .order_by(PhoneVerificationCode.created_at.desc())
         .limit(1)
     )

@@ -23,7 +23,7 @@ from pathlib import Path
 # Add the app directory to the path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from sqlalchemy import select, delete
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 

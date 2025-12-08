@@ -10,7 +10,6 @@ This migration renames the column to match the model.
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.

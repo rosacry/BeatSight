@@ -14,7 +14,6 @@ The system tracks which bonuses have been awarded to prevent duplicate awards.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select

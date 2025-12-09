@@ -531,6 +531,9 @@ class TestTrainingExportService:
         contrib.original_confidence = 0.95  # High confidence error
         contrib.correction_type = CorrectionType.COMPONENT_CHANGE
         contrib.verifier_id = None  # No verifier
+        contrib.training_weight = 1.0  # Pre-calculated quality weight
+        contrib.has_conflicts = False
+        contrib.consensus_count = 1
 
         # Create service with mock db
         mock_db = MagicMock()
@@ -554,6 +557,9 @@ class TestTrainingExportService:
         contrib.original_confidence = 0.5  # Low confidence
         contrib.correction_type = CorrectionType.VELOCITY_CHANGE  # Minor change
         contrib.verifier_id = None  # No verifier
+        contrib.training_weight = 1.0  # Pre-calculated quality weight
+        contrib.has_conflicts = False
+        contrib.consensus_count = 1
 
         mock_db = MagicMock()
         service = TrainingExportService(mock_db)

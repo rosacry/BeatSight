@@ -26,11 +26,11 @@ interface NavItem {
 
 const navItems: NavItem[] = [
     { path: '/', label: 'Home', icon: <HomeIcon /> },
-    { path: '/queue', label: 'Job Queue', icon: <QueueIcon /> },
+    { path: '/queue', label: 'Queue', icon: <QueueIcon /> },
     { path: '/forum', label: 'Forum', icon: <ForumIcon /> },
     { path: '/leaderboard', label: 'Leaderboard', icon: <LeaderboardIcon /> },
     { path: '/record', label: 'Record', requiresAuth: true, icon: <MicIcon /> },
-    { path: '/library', label: 'My Library', requiresAuth: true, icon: <LibraryIcon /> },
+    { path: '/library', label: 'Library', requiresAuth: true, icon: <LibraryIcon /> },
 ]
 
 function LeaderboardIcon() {
@@ -149,7 +149,7 @@ export function Layout({ children }: LayoutProps) {
     ]
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-black flex flex-col">
+        <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-black flex flex-col relative">
             {/* Skip to main content link for screen readers */}
             <a
                 href={`#${SKIP_LINK_TARGETS.MAIN_CONTENT}`}
@@ -207,13 +207,13 @@ export function Layout({ children }: LayoutProps) {
                             </Link>
 
                             {/* Desktop nav links */}
-                            <div className="hidden md:flex ml-10 items-center gap-1">
+                            <div className="hidden md:flex ml-6 items-center gap-0.5">
                                 {visibleNavItems.map((item) => (
                                     <NavLink
                                         key={item.path}
                                         to={item.path}
                                         className={({ isActive }) =>
-                                            `relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
+                                            `relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${isActive
                                                 ? 'text-white'
                                                 : 'text-slate-400 hover:text-white'
                                             }`
@@ -228,9 +228,9 @@ export function Layout({ children }: LayoutProps) {
                                                         transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                                                     />
                                                 )}
-                                                <span className="relative flex items-center gap-2">
+                                                <span className="relative flex items-center gap-1.5">
                                                     {item.icon}
-                                                    {item.label}
+                                                    <span className="hidden lg:inline">{item.label}</span>
                                                 </span>
                                             </>
                                         )}
@@ -247,16 +247,16 @@ export function Layout({ children }: LayoutProps) {
                                     <>
                                         <Link
                                             to="/upload"
-                                            className="group relative flex items-center gap-2 px-5 py-2.5 
+                                            className="group relative flex items-center gap-2 px-4 py-2 
                                                      bg-gradient-to-r from-cyan-500 to-cyan-600 
                                                      hover:from-cyan-400 hover:to-cyan-500
                                                      text-white font-medium rounded-xl
                                                      shadow-[0_0_20px_rgba(0,212,255,0.3)]
                                                      hover:shadow-[0_0_30px_rgba(0,212,255,0.5)]
-                                                     transition-all duration-300"
+                                                     transition-all duration-300 whitespace-nowrap"
                                         >
                                             <UploadIcon />
-                                            <span className="hidden lg:inline">Upload Song</span>
+                                            <span className="hidden xl:inline">Upload</span>
                                         </Link>
                                         <CreditBalance showWhenZero />
                                         <UserMenu />
@@ -425,7 +425,7 @@ export function Layout({ children }: LayoutProps) {
                         <div className="flex items-center gap-3">
                             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-slate-800/90 to-slate-900/90 
                                           border border-white/10 flex items-center justify-center
-                                          shadow-lg shadow-black/20 overflow-hidden">
+                                          shadow-lg shadow-black/20 overflow-hidden relative">
                                 <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-fuchsia-500/5" />
                                 <img src="/icons/logo-navbar.png" alt="" className="w-4 h-4 relative z-10 brightness-105 contrast-110 drop-shadow-[0_0_4px_rgba(0,212,255,0.2)]" />
                             </div>
@@ -434,13 +434,13 @@ export function Layout({ children }: LayoutProps) {
                             </p>
                         </div>
 
-                        {/* Links */}
-                        <div className="flex items-center gap-8">
+                        {/* Links - ensure they're clickable */}
+                        <nav className="flex items-center gap-8" aria-label="Footer navigation">
                             <a
                                 href={getDocsLink()}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-slate-500 hover:text-cyan-400 text-sm transition-colors"
+                                className="text-slate-500 hover:text-cyan-400 text-sm transition-colors cursor-pointer"
                             >
                                 Documentation
                                 <span className="sr-only"> (opens in new tab)</span>
@@ -449,7 +449,7 @@ export function Layout({ children }: LayoutProps) {
                                 href={getCommunityLink()}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-slate-500 hover:text-cyan-400 text-sm transition-colors"
+                                className="text-slate-500 hover:text-cyan-400 text-sm transition-colors cursor-pointer"
                             >
                                 Support
                                 <span className="sr-only"> (opens in new tab)</span>
@@ -458,12 +458,12 @@ export function Layout({ children }: LayoutProps) {
                                 href={EXTERNAL_LINKS.github.org}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-slate-500 hover:text-cyan-400 text-sm transition-colors"
+                                className="text-slate-500 hover:text-cyan-400 text-sm transition-colors cursor-pointer"
                             >
                                 GitHub
                                 <span className="sr-only"> (opens in new tab)</span>
                             </a>
-                        </div>
+                        </nav>
                     </div>
                 </div>
             </footer>

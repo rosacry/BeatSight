@@ -135,16 +135,17 @@ export function UserMenu() {
                 )}
             </AnimatePresence>
 
-            {/* Sign out confirmation dialog */}
+            {/* Sign out confirmation dialog - osu-style popup */}
             <ConfirmDialog
                 isOpen={showSignOutConfirm}
                 onClose={() => setShowSignOutConfirm(false)}
                 onConfirm={confirmLogout}
-                title="Sign out?"
+                title="Sign out"
                 message="Are you sure you want to sign out of BeatSight?"
                 confirmLabel="Sign out"
                 cancelLabel="Stay signed in"
-                variant="warning"
+                variant="signout"
+                style="popup"
             />
         </div>
     )

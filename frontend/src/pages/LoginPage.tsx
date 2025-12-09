@@ -9,6 +9,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore, TwoFactorRequiredError } from '@/stores/authStore'
 import { ParticleBackground, GradientOrbs } from '@/components/ui/ParticleBackground'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 // Eye icons for password visibility toggle
 function EyeIcon() {
@@ -37,6 +38,7 @@ function ShieldIcon() {
 }
 
 export function LoginPage() {
+    useDocumentTitle('sign in')
     const navigate = useNavigate()
     const location = useLocation()
     const { login, isLoading, isAuthenticated } = useAuthStore()

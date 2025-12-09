@@ -463,3 +463,101 @@ async def reset_password(
     logger.info(f"Password reset completed for user {user_id}")
 
     return MessageResponse(message="Password has been reset successfully")
+
+
+class VerifyPasswordRequest(BaseModel):
+    """Request to verify user password for re-authentication."""
+    
+    password: str
+
+
+class VerifyCodeRequest(BaseModel):
+    """Request to verify a code for re-authentication."""
+    
+    code: str = Field(..., min_length=6, max_length=6)
+    type: str = "reauth"
+
+
+class SendVerificationCodeRequest(BaseModel):
+    """Request to send verification code for re-authentication."""
+    
+    type: str = "reauth"
+
+
+@router.post("/verify-password", response_model=MessageResponse)
+async def verify_password(
+    request: VerifyPasswordRequest,
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+) -> MessageResponse:
+    """
+    Verify user's current password for sensitive actions.
+    
+    This is used for re-authentication before performing sensitive 
+    operations like changing password, email, or deleting account.
+    Similar to osu!'s account verification system.
+    """
+    auth_service = AuthService(session)
+    
+    if not auth_service.verify_password(request.password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid password",
+        )
+    
+    logger.info(f"Password verified for user {current_user.id} (re-auth)")
+    return MessageResponse(message="Password verified successfully")
+
+
+@router.post("/send-verification-code", response_model=MessageResponse)
+async def send_verification_code(
+    request: SendVerificationCodeRequest,
+    background_tasks: BackgroundTasks,
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+) -> MessageResponse:
+    """
+    Send a verification code to user's email for re-authentication.
+    
+    This is used when additional verification is needed beyond
+    just password (similar to osu!'s email verification).
+    """
+    email_service = get_email_service()
+    
+    # Generate and send verification code
+    # The email service should handle code generation and caching
+    await email_service.send_reauth_verification_code(
+        user_id=str(current_user.id),
+        email=current_user.email,
+        background_tasks=background_tasks,
+    )
+    
+    logger.info(f"Verification code sent for user {current_user.id}")
+    return MessageResponse(message="Verification code sent to your email")
+
+
+@router.post("/verify-code", response_model=MessageResponse)
+async def verify_code(
+    request: VerifyCodeRequest,
+    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+) -> MessageResponse:
+    """
+    Verify a code sent to user's email for re-authentication.
+    """
+    email_service = get_email_service()
+    
+    # Verify the code
+    is_valid = await email_service.verify_reauth_code(
+        user_id=str(current_user.id),
+        code=request.code,
+    )
+    
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification code",
+        )
+    
+    logger.info(f"Email code verified for user {current_user.id} (re-auth)")
+    return MessageResponse(message="Code verified successfully")

@@ -13,6 +13,7 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { getQueueLength, getQuota } from '@/api/client'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import {
     AnimatedCounter,
     TiltCard,
@@ -93,6 +94,7 @@ const colorMap = {
 }
 
 export function HomePage() {
+    useDocumentTitle(undefined)
     const { data: queueData } = useQuery({
         queryKey: ['queueLength'],
         queryFn: getQueueLength,

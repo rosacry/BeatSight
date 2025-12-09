@@ -7,6 +7,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { API_CONFIG } from '@/lib/config'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 interface SystemOverview {
     total_users: number
@@ -85,6 +86,7 @@ const VALID_TABS = ['overview', 'users', 'jobs', 'contributions'] as const
 type TabType = typeof VALID_TABS[number]
 
 export function AdminDashboardPage() {
+    useDocumentTitle('admin')
     const { accessToken } = useAuthStore()
     const [searchParams, setSearchParams] = useSearchParams()
 

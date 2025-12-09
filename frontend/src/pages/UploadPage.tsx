@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { uploadFileWithProgress, createJob, getQuota } from '@/api/client'
 import { QuotaDisplay } from '@/components/QuotaDisplay'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 type UploadState = 'idle' | 'uploading' | 'processing' | 'complete' | 'error'
 
 export function UploadPage() {
+    useDocumentTitle('upload')
     const navigate = useNavigate()
     const queryClient = useQueryClient()
     const fileInputRef = useRef<HTMLInputElement>(null)

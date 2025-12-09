@@ -4,9 +4,11 @@
  */
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { ProposalDiffViewer, type DiffPayload } from '@/components/ProposalDiffViewer'
 import { API_CONFIG } from '@/lib/config'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 interface Proposer {
     id: string
@@ -43,9 +45,19 @@ interface VerifierStats {
     avg_review_time_hours: number | null
 }
 
+const VALID_TABS = ['queue', 'history'] as const
+type TabType = typeof VALID_TABS[number]
+
 export function VerifierDashboardPage() {
+    useDocumentTitle('verifier')
     const { accessToken } = useAuthStore()
-    const [activeTab, setActiveTab] = useState<'queue' | 'history'>('queue')
+    const [searchParams, setSearchParams] = useSearchParams()
+
+    // Get tab from URL or default to 'queue'
+    const tabFromUrl = searchParams.get('tab') as TabType | null
+    const initialTab: TabType = tabFromUrl && VALID_TABS.includes(tabFromUrl) ? tabFromUrl : 'queue'
+    const [activeTab, setActiveTab] = useState<TabType>(initialTab)
+
     const [stats, setStats] = useState<VerifierStats | null>(null)
     const [proposals, setProposals] = useState<Proposal[]>([])
     const [myDecisions, setMyDecisions] = useState<Proposal[]>([])
@@ -86,6 +98,20 @@ export function VerifierDashboardPage() {
         }
         return response.json()
     }
+
+    // Update URL when tab changes
+    const handleTabChange = (tab: TabType) => {
+        setActiveTab(tab)
+        setSearchParams({ tab })
+    }
+
+    // Sync tab state with URL on mount and URL changes
+    useEffect(() => {
+        const tabFromUrl = searchParams.get('tab') as TabType | null
+        if (tabFromUrl && VALID_TABS.includes(tabFromUrl) && tabFromUrl !== activeTab) {
+            setActiveTab(tabFromUrl)
+        }
+    }, [searchParams])
 
     const loadData = async () => {
         try {
@@ -222,7 +248,7 @@ export function VerifierDashboardPage() {
             {/* Tabs */}
             <div className="flex gap-1 p-1 bg-gray-800 rounded-lg w-fit mb-6">
                 <button
-                    onClick={() => setActiveTab('queue')}
+                    onClick={() => handleTabChange('queue')}
                     className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'queue'
                         ? 'bg-primary-500 text-white'
                         : 'text-gray-400 hover:text-white'
@@ -231,7 +257,7 @@ export function VerifierDashboardPage() {
                     Pending Queue ({stats?.pending_count || 0})
                 </button>
                 <button
-                    onClick={() => setActiveTab('history')}
+                    onClick={() => handleTabChange('history')}
                     className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'history'
                         ? 'bg-primary-500 text-white'
                         : 'text-gray-400 hover:text-white'

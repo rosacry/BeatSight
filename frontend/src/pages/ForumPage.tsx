@@ -13,6 +13,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { GradientOrbs, ParticleBackground } from '@/components/ui/ParticleBackground'
 import { AnimatedCounter } from '@/components/ui'
 import type { Forum } from '@/types/forum'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 // Animation variants
 const containerVariants = {
@@ -39,6 +40,7 @@ const modalVariants = {
 }
 
 export function ForumPage() {
+    useDocumentTitle('forum')
     const user = useAuthStore((state) => state.user)
     const navigate = useNavigate()
     const [showForumSelector, setShowForumSelector] = useState(false)

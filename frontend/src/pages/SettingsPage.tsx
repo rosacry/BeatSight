@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { createLogger, getDeveloperModeEnabled, enableDeveloperMode, disableDeveloperMode } from '@/lib/logger'
@@ -14,11 +15,13 @@ import { PhoneVerificationSettings } from '@/components/PhoneVerificationSetting
 import { API_CONFIG } from '@/lib/config'
 import type { UserPreferences } from '@/types/sync'
 import { DEFAULT_CUSTOM_SETTINGS } from '@/types/sync'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 const logger = createLogger('Settings')
 const API_BASE = API_CONFIG.baseUrl
 
-type SettingsTab = 'account' | 'preferences' | 'notifications' | 'privacy' | 'developer' | 'danger'
+const VALID_TABS = ['account', 'preferences', 'notifications', 'privacy', 'developer', 'danger'] as const
+type SettingsTab = typeof VALID_TABS[number]
 
 // Use the shared Preferences type but make it compatible with our local usage
 type Preferences = Omit<UserPreferences, 'version' | 'checksum' | 'last_modified'>
@@ -50,12 +53,17 @@ async function apiRequest<T>(
 }
 
 export function SettingsPage() {
+    useDocumentTitle('settings')
     const user = useAuthStore((state) => state.user)
     const accessToken = useAuthStore((state) => state.accessToken)
     const logout = useAuthStore((state) => state.logout)
     const fetchCurrentUser = useAuthStore((state) => state.fetchCurrentUser)
+    const [searchParams, setSearchParams] = useSearchParams()
 
-    const [activeTab, setActiveTab] = useState<SettingsTab>('account')
+    // Get tab from URL or default to 'account'
+    const tabFromUrl = searchParams.get('tab') as SettingsTab | null
+    const initialTab: SettingsTab = tabFromUrl && VALID_TABS.includes(tabFromUrl) ? tabFromUrl : 'account'
+    const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab)
     const [isSaving, setIsSaving] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -152,6 +160,20 @@ export function SettingsPage() {
         loadPreferences()
         loadContributionConsent()
     }, [loadPreferences, loadContributionConsent])
+
+    // Update URL when tab changes
+    const handleTabChange = (tab: SettingsTab) => {
+        setActiveTab(tab)
+        setSearchParams({ tab })
+    }
+
+    // Sync tab state with URL on mount and URL changes
+    useEffect(() => {
+        const tabFromUrl = searchParams.get('tab') as SettingsTab | null
+        if (tabFromUrl && VALID_TABS.includes(tabFromUrl) && tabFromUrl !== activeTab) {
+            setActiveTab(tabFromUrl)
+        }
+    }, [searchParams])
 
     // Sync developer mode with server preferences when they load
     useEffect(() => {
@@ -405,7 +427,7 @@ export function SettingsPage() {
                     {tabs.map((tab) => (
                         <motion.button
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
+                            onClick={() => handleTabChange(tab.id)}
                             className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors relative ${activeTab === tab.id
                                 ? 'text-white'
                                 : 'text-gray-400 hover:text-white hover:bg-gray-800'

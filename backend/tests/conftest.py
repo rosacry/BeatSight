@@ -118,6 +118,7 @@ def mock_user(test_user_id: str) -> User:
     user.created_at = datetime.now(timezone.utc)
     user.updated_at = datetime.now(timezone.utc)
     user.roles = ["user"]
+    user.karma_score = 500  # Default karma for testing
     return user
 
 
@@ -134,6 +135,7 @@ def mock_admin_user() -> User:
     user.created_at = datetime.now(timezone.utc)
     user.updated_at = datetime.now(timezone.utc)
     user.roles = ["user", "admin"]
+    user.karma_score = 1000  # Admin with high karma
     return user
 
 

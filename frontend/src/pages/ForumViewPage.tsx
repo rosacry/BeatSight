@@ -2,7 +2,7 @@
  * Forum view page showing topics in a specific forum.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { getForum, getForumTopics, createTopic } from '@/api/forum'
@@ -20,7 +20,19 @@ export function ForumViewPage() {
 
     const page = parseInt(searchParams.get('page') || '1', 10)
     const sort = (searchParams.get('sort') as SortOption) || 'newest'
-    const [showCreateForm, setShowCreateForm] = useState(false)
+    const showNew = searchParams.get('new') === 'true'
+    const [showCreateForm, setShowCreateForm] = useState(showNew)
+
+    // Auto-show create form when ?new=true is in URL
+    useEffect(() => {
+        if (showNew && user) {
+            setShowCreateForm(true)
+            // Remove the ?new param from URL without navigation
+            const newParams = new URLSearchParams(searchParams)
+            newParams.delete('new')
+            setSearchParams(newParams, { replace: true })
+        }
+    }, [showNew, user, searchParams, setSearchParams])
 
     const {
         data: forum,

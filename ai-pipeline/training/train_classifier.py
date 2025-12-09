@@ -4411,10 +4411,11 @@ def main():
             
             label_wrapper = LabelAccessWrapper(train_labels_arr)
             
-            # ImbalancedDatasetSampler handles callback_get_label automatically
+            # ImbalancedDatasetSampler's callback_get_label takes ONLY the dataset
+            # and must return ALL labels (not per-index lookup)
             balanced_sampler = ImbalancedDatasetSampler(
                 label_wrapper,
-                callback_get_label=lambda ds, idx: ds.labels[idx],
+                callback_get_label=lambda ds: ds.get_labels(),
                 num_samples=epoch_samples if args.samples_per_epoch else None,
             )
             print(f"   ImbalancedDatasetSampler initialized with {len(label_wrapper)} samples")

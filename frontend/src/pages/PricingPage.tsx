@@ -268,9 +268,9 @@ export function PricingPage() {
                                     opacity: 0,
                                     height: 0,
                                     transition: {
-                                        // First fade out children, then collapse height
-                                        opacity: { duration: 0.2 },
-                                        height: { duration: 0.35, ease: [0.4, 0, 0.2, 1], delay: 0.15 }
+                                        // Fade out first, then collapse - smooth unified animation
+                                        opacity: { duration: 0.15 },
+                                        height: { duration: 0.3, ease: [0.4, 0, 0.2, 1], delay: 0.1 }
                                     }
                                 }}
                                 className="overflow-hidden mt-6"
@@ -312,12 +312,12 @@ export function PricingPage() {
                                                     }
                                                 },
                                                 exit: {
+                                                    // Simply fade out without Y movement to prevent position glitch
                                                     opacity: 0,
-                                                    y: -10,
-                                                    scale: 0.95,
+                                                    scale: 0.98,
                                                     transition: {
-                                                        duration: 0.15,
-                                                        ease: [0.4, 0, 1, 1]
+                                                        duration: 0.1,
+                                                        ease: 'easeOut'
                                                     }
                                                 }
                                             }}

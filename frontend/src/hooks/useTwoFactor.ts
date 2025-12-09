@@ -67,6 +67,9 @@ export function useTwoFactorStatus() {
         queryFn: async () => {
             return twoFactorRequest<TwoFactorStatus>('/status')
         },
+        // Cache the status to avoid repeated fetches
+        staleTime: 1000 * 60 * 5, // 5 minutes
+        gcTime: 1000 * 60 * 10, // 10 minutes (formerly cacheTime)
     })
 }
 

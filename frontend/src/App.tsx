@@ -46,12 +46,18 @@ const pageTransition = {
     ease: [0.25, 0.46, 0.45, 0.94],
 }
 
-// Scroll restoration component - scrolls to top on route change
+// Scroll restoration and modal cleanup component - runs on route change
 function ScrollToTop() {
     const { pathname } = useLocation()
 
     useEffect(() => {
+        // Scroll to top
         window.scrollTo(0, 0)
+
+        // Reset any lingering modal/dialog body styles
+        // This prevents the "stuck" state after logout/navigation
+        document.body.style.overflow = ''
+        document.body.style.pointerEvents = ''
     }, [pathname])
 
     return null

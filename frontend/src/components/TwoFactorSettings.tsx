@@ -92,8 +92,20 @@ export function TwoFactorSettings() {
 
     if (statusLoading) {
         return (
-            <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-700/50 animate-pulse">
-                <div className="h-20 bg-slate-700/50 rounded-lg" />
+            <div className="space-y-4">
+                {/* Loading skeleton that matches the actual layout */}
+                <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-700/50">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-slate-700/50 animate-pulse" />
+                            <div className="space-y-2">
+                                <div className="h-4 w-40 bg-slate-700/50 rounded animate-pulse" />
+                                <div className="h-3 w-24 bg-slate-700/50 rounded animate-pulse" />
+                            </div>
+                        </div>
+                        <div className="h-9 w-20 bg-slate-700/50 rounded-lg animate-pulse" />
+                    </div>
+                </div>
             </div>
         )
     }

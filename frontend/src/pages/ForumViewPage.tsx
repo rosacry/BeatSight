@@ -48,16 +48,6 @@ export function ForumViewPage() {
     }, [showNew, user, searchParams, setSearchParams])
 
     const {
-        data: forum,
-        isLoading: forumLoading,
-        error: forumError,
-    } = useQuery({
-        queryKey: ['forum', forumId],
-        queryFn: () => getForum(forumId!),
-        enabled: !!forumId,
-    })
-
-    const {
         data: topicsData,
         isLoading: topicsLoading,
     } = useQuery({

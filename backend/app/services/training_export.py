@@ -241,11 +241,17 @@ class TrainingExportService:
         - Corrections to high-confidence misses (model was wrong but confident)
         - Component changes (more valuable than velocity tweaks)
         - Verified by high-karma verifiers (expert verification = more trust)
+        - Pre-calculated user quality weight (from ContributionQualityService)
+        
+        Lower weights for:
+        - Contributions with conflicts (multiple disagreeing corrections)
+        - Low consensus count (contentious corrections)
 
         Returns:
             Weight multiplier (1.0 = normal, >1.0 = more valuable, <1.0 = less)
         """
-        weight = 1.0
+        # Start with the pre-calculated quality weight from submission
+        weight = getattr(contribution, 'training_weight', 1.0)
 
         # Higher original confidence = model was wrongly confident
         # These samples are especially valuable for training
@@ -266,9 +272,18 @@ class TrainingExportService:
         # Apply verifier karma weight
         verifier_weight = self._get_verifier_weight(contribution.verifier_id)
         weight *= verifier_weight
+        
+        # Penalize contributions with conflicts
+        if getattr(contribution, 'has_conflicts', False):
+            consensus = getattr(contribution, 'consensus_count', 1)
+            if consensus < 3:
+                weight *= 0.5  # Significant penalty for unresolved conflicts
+            elif consensus < 5:
+                weight *= 0.75  # Moderate penalty for low consensus
+            # With high consensus, conflict is resolved - no penalty
 
         # Clamp weight to reasonable range
-        return round(min(max(weight, 0.5), 3.0), 3)
+        return round(min(max(weight, 0.1), 3.0), 3)
 
     def _create_empty_manifest(self) -> dict[str, Any]:
         """Create an empty manifest when no contributions available."""

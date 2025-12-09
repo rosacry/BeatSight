@@ -65,6 +65,8 @@ export NVIDIA_TF32_OVERRIDE=1
 export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True,garbage_collection_threshold:0.8"
 export CUDNN_BENCHMARK=1
 
+# NOTE: With 1% subset and min-samples-per-class=50, rare classes will be boosted
+# to ensure at least 50 samples each. This prevents class collapse from data scarcity.
 PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
     --dataset "${BEATSIGHT_DATASET_DIR}" \
     --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
@@ -78,6 +80,7 @@ PYTHONPATH=ai-pipeline python ai-pipeline/training/train_classifier.py \
     --persistent-workers --pin-memory \
     --amp-dtype bfloat16 \
     --train-fraction 0.01 --val-fraction 0.01 \
+    --subset-mode stratified --min-samples-per-class 50 \
     --model-version v5 --v5-size large --drop-path-rate 0.0 \
     --mixup-alpha 0.0 --cutmix-alpha 0.0 --mixup-prob 0.0 \
     --specaugment none \

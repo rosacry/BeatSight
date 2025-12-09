@@ -1,5 +1,6 @@
 /**
  * Topic list item component for displaying topics in a forum.
+ * Updated to match BeatSight's cyan/magenta design language.
  */
 
 import { Link } from 'react-router-dom'
@@ -54,9 +55,10 @@ export function TopicListItem({ topic, showForum = false }: TopicListItemProps) 
         <Link
             to={`/forum/topics/${topic.id}`}
             className={clsx(
-                'block p-4 border-b border-gray-700 hover:bg-gray-800/50 transition-colors',
-                isSticky && 'bg-purple-500/5',
-                isAnnouncement && 'bg-yellow-500/5'
+                'group block p-4 rounded-xl transition-all duration-200 border border-transparent',
+                'hover:bg-white/5 hover:border-cyan-500/30',
+                isSticky && 'bg-cyan-500/5 border-cyan-500/20',
+                isAnnouncement && 'bg-amber-500/5 border-amber-500/20'
             )}
         >
             <div className="flex items-start gap-4">
@@ -66,10 +68,11 @@ export function TopicListItem({ topic, showForum = false }: TopicListItemProps) 
                         <img
                             src={topic.author.avatar_url}
                             alt={topic.author.display_name}
-                            className="w-10 h-10 rounded-full"
+                            className="w-10 h-10 rounded-full ring-2 ring-white/10"
                         />
                     ) : (
-                        <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-medium">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-magenta-500 
+                                      flex items-center justify-center text-white font-medium ring-2 ring-white/10">
                             {topic.author?.display_name?.[0]?.toUpperCase() || '?'}
                         </div>
                     )}
@@ -80,25 +83,25 @@ export function TopicListItem({ topic, showForum = false }: TopicListItemProps) 
                     <div className="flex items-center gap-2 flex-wrap">
                         {/* Topic type indicators */}
                         {isAnnouncement && (
-                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
                                 <AnnouncementIcon className="w-3 h-3" />
                                 Announcement
                             </span>
                         )}
                         {isSticky && !isAnnouncement && (
-                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-400">
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
                                 <PinIcon className="w-3 h-3" />
                                 Pinned
                             </span>
                         )}
                         {topic.is_locked && (
-                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400">
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
                                 <LockIcon className="w-3 h-3" />
                                 Locked
                             </span>
                         )}
                         {topic.poll && (
-                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/30">
                                 <PollIcon className="w-3 h-3" />
                                 Poll
                             </span>
@@ -107,21 +110,22 @@ export function TopicListItem({ topic, showForum = false }: TopicListItemProps) 
 
                     <h3
                         className={clsx(
-                            'text-lg font-medium truncate mt-1',
-                            topic.is_read ? 'text-gray-300' : 'text-white'
+                            'text-lg font-medium truncate mt-1 transition-colors',
+                            topic.is_read ? 'text-slate-300' : 'text-white',
+                            'group-hover:text-cyan-400'
                         )}
                     >
                         {topic.title}
                     </h3>
 
-                    <div className="flex items-center gap-2 mt-1 text-sm text-gray-400">
+                    <div className="flex items-center gap-2 mt-1 text-sm text-slate-400">
                         <span>
                             by{' '}
-                            <span className="text-gray-300">
+                            <span className="text-slate-300">
                                 {topic.author?.display_name || 'Unknown'}
                             </span>
                         </span>
-                        <span>•</span>
+                        <span className="text-slate-600">•</span>
                         <span title={format(new Date(topic.created_at), 'PPpp')}>
                             {formatDistanceToNow(new Date(topic.created_at), {
                                 addSuffix: true,
@@ -129,8 +133,8 @@ export function TopicListItem({ topic, showForum = false }: TopicListItemProps) 
                         </span>
                         {showForum && topic.forum_id && (
                             <>
-                                <span>•</span>
-                                <span className="text-purple-400">in Forum</span>
+                                <span className="text-slate-600">•</span>
+                                <span className="text-cyan-400">in Forum</span>
                             </>
                         )}
                     </div>
@@ -140,16 +144,16 @@ export function TopicListItem({ topic, showForum = false }: TopicListItemProps) 
                 <div className="flex-shrink-0 text-right hidden md:block">
                     <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                            <div className="text-white font-medium">
+                            <div className="text-cyan-400 font-medium">
                                 {topic.post_count.toLocaleString()}
                             </div>
-                            <div className="text-gray-500">posts</div>
+                            <div className="text-slate-500">posts</div>
                         </div>
                         <div>
-                            <div className="text-white font-medium">
+                            <div className="text-magenta-400 font-medium">
                                 {topic.view_count.toLocaleString()}
                             </div>
-                            <div className="text-gray-500">views</div>
+                            <div className="text-slate-500">views</div>
                         </div>
                     </div>
                 </div>
@@ -158,14 +162,14 @@ export function TopicListItem({ topic, showForum = false }: TopicListItemProps) 
                 <div className="flex-shrink-0 hidden lg:block w-48">
                     {topic.last_post ? (
                         <div className="text-sm">
-                            <div className="text-gray-400 truncate">
+                            <div className="text-slate-400 truncate">
                                 Last reply by{' '}
-                                <span className="text-gray-300">
+                                <span className="text-slate-300">
                                     {topic.last_post.author?.display_name || 'Unknown'}
                                 </span>
                             </div>
                             <div
-                                className="text-gray-500"
+                                className="text-slate-500"
                                 title={format(
                                     new Date(topic.last_post.created_at),
                                     'PPpp'
@@ -178,7 +182,7 @@ export function TopicListItem({ topic, showForum = false }: TopicListItemProps) 
                             </div>
                         </div>
                     ) : (
-                        <div className="text-sm text-gray-500">No replies yet</div>
+                        <div className="text-sm text-slate-500">No replies yet</div>
                     )}
                 </div>
             </div>
@@ -199,7 +203,12 @@ export function TopicList({
 }: TopicListProps) {
     if (topics.length === 0) {
         return (
-            <div className="text-center py-12 text-gray-400">
+            <div className="text-center py-12 text-slate-400">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-white/5 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                    </svg>
+                </div>
                 <p>{emptyMessage}</p>
             </div>
         )
@@ -214,7 +223,7 @@ export function TopicList({
     )
 
     return (
-        <div className="divide-y divide-gray-700">
+        <div className="space-y-2">
             {pinnedTopics.map((topic) => (
                 <TopicListItem
                     key={topic.id}

@@ -23,13 +23,11 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Optional
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.models.ai_job import AIJob, AIJobState
 from app.models.map_edit import EditStatus, MapEditProposal
 from app.models.map_version import MapVersion
 from app.models.song import Map, MapState

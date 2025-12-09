@@ -960,6 +960,9 @@ class TestEnqueueJobModalDispatch:
         job.error_message = None
         job.worker_id = None
         job.requested_by_id = uuid.uuid4()
+        job.retry_count = 0
+        job.max_retries = 3
+        job.model_version = None
         return job
 
     @pytest.fixture

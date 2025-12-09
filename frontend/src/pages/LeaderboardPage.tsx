@@ -8,10 +8,10 @@
  * - Achievement holders
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { API_CONFIG } from '@/lib/config'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
@@ -47,6 +47,8 @@ interface ContributorStats {
 
 type LeaderboardTab = 'karma' | 'verifiers' | 'contributors'
 
+const VALID_TABS: LeaderboardTab[] = ['karma', 'verifiers', 'contributors']
+
 // Animation variants
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -67,9 +69,28 @@ const itemVariants = {
 
 export function LeaderboardPage() {
     useDocumentTitle('leaderboard')
-    const [activeTab, setActiveTab] = useState<LeaderboardTab>('karma')
+    const [searchParams, setSearchParams] = useSearchParams()
+
+    // Get tab from URL or default to 'karma'
+    const tabFromUrl = searchParams.get('tab') as LeaderboardTab | null
+    const initialTab: LeaderboardTab = tabFromUrl && VALID_TABS.includes(tabFromUrl) ? tabFromUrl : 'karma'
+    const [activeTab, setActiveTab] = useState<LeaderboardTab>(initialTab)
     const { accessToken } = useAuthStore()
     const user = useAuthStore((state) => state.user)
+
+    // Update URL when tab changes
+    const handleTabChange = (tab: LeaderboardTab) => {
+        setActiveTab(tab)
+        setSearchParams({ tab }, { replace: true })
+    }
+
+    // Sync tab state with URL on mount and URL changes
+    useEffect(() => {
+        const tabFromUrl = searchParams.get('tab')
+        if (tabFromUrl && VALID_TABS.includes(tabFromUrl as LeaderboardTab)) {
+            setActiveTab(tabFromUrl as LeaderboardTab)
+        }
+    }, [searchParams])
 
     // Fetch karma leaderboard
     const { data: karmaLeaderboard, isLoading: karmaLoading } = useQuery({
@@ -90,12 +111,23 @@ export function LeaderboardPage() {
         enabled: activeTab === 'karma',
     })
 
-    // Fetch verifier leaderboard
+    // Fetch verifier leaderboard (requires authentication)
     const { data: verifierLeaderboard, isLoading: verifierLoading } = useQuery({
         queryKey: ['leaderboard', 'verifiers'],
         queryFn: async () => {
-            const response = await fetch(`${API_CONFIG.baseUrl}/api/verifier/leaderboard`)
-            if (!response.ok) throw new Error('Failed to fetch verifier leaderboard')
+            if (!accessToken) {
+                // Return empty array for unauthenticated users
+                return [] as VerifierStats[]
+            }
+            const response = await fetch(`${API_CONFIG.baseUrl}/api/verifier/leaderboard`, {
+                headers: { Authorization: `Bearer ${accessToken}` },
+            })
+            if (!response.ok) {
+                if (response.status === 401) {
+                    return [] as VerifierStats[]
+                }
+                throw new Error('Failed to fetch verifier leaderboard')
+            }
             const data = await response.json()
             return data.verifiers as VerifierStats[]
         },
@@ -145,7 +177,7 @@ export function LeaderboardPage() {
                     ].map((tab) => (
                         <button
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id as LeaderboardTab)}
+                            onClick={() => handleTabChange(tab.id as LeaderboardTab)}
                             className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === tab.id
                                 ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/25'
                                 : 'text-slate-400 hover:text-white hover:bg-gray-700/50'
@@ -276,10 +308,21 @@ export function LeaderboardPage() {
 
                                 {verifierLeaderboard.length === 0 && (
                                     <div className="p-8 text-center text-slate-400">
-                                        <p>No verifier data available yet.</p>
-                                        <Link to="/verifier" className="text-cyan-400 hover:text-cyan-300 mt-2 inline-block">
-                                            Become a verifier →
-                                        </Link>
+                                        {!accessToken ? (
+                                            <>
+                                                <p>Sign in to view the verifier leaderboard.</p>
+                                                <Link to="/login" className="text-cyan-400 hover:text-cyan-300 mt-2 inline-block">
+                                                    Sign in →
+                                                </Link>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <p>No verifier data available yet.</p>
+                                                <Link to="/verifier" className="text-cyan-400 hover:text-cyan-300 mt-2 inline-block">
+                                                    Become a verifier →
+                                                </Link>
+                                            </>
+                                        )}
                                     </div>
                                 )}
                             </div>

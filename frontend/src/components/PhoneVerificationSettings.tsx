@@ -6,7 +6,7 @@
  * Users with both email and phone verified receive a 200 karma bonus.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { API_CONFIG } from '@/lib/config'
 import { createLogger } from '@/lib/logger'
@@ -52,11 +52,7 @@ export function PhoneVerificationSettings() {
     const [codeExpiresAt, setCodeExpiresAt] = useState<Date | null>(null)
 
     // Load phone status on mount
-    useEffect(() => {
-        loadPhoneStatus()
-    }, [accessToken])
-
-    const loadPhoneStatus = async () => {
+    const loadPhoneStatus = useCallback(async () => {
         if (!accessToken) return
         try {
             setIsLoading(true)
@@ -74,7 +70,11 @@ export function PhoneVerificationSettings() {
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [accessToken])
+
+    useEffect(() => {
+        loadPhoneStatus()
+    }, [loadPhoneStatus])
 
     const handleSendCode = async () => {
         if (!accessToken || !phoneNumber.trim()) return

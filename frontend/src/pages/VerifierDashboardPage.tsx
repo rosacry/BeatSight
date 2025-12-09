@@ -203,15 +203,15 @@ export function VerifierDashboardPage() {
     if (loading && !stats) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+                <div className="animate-spin h-10 w-10 border-4 border-cyan-500 border-t-transparent rounded-full"></div>
             </div>
         )
     }
 
     if (error) {
         return (
-            <div className="max-w-6xl mx-auto p-6">
-                <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg">
+            <div className="max-w-6xl mx-auto px-4 py-8">
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl">
                     {error}
                 </div>
             </div>
@@ -219,48 +219,48 @@ export function VerifierDashboardPage() {
     }
 
     return (
-        <div className="max-w-6xl mx-auto p-6">
+        <div className="max-w-6xl mx-auto px-4 py-8">
             <h1 className="text-3xl font-bold text-white mb-2">Verifier Dashboard</h1>
-            <p className="text-gray-400 mb-6">Review and approve map edit proposals</p>
+            <p className="text-slate-400 mb-6">Review and approve map edit proposals</p>
 
             {/* Stats Cards */}
             {stats && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
-                        <p className="text-sm text-gray-400">Pending Queue</p>
+                    <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-4">
+                        <p className="text-sm text-slate-400">Pending Queue</p>
                         <p className="text-2xl font-bold text-yellow-400">{stats.pending_count}</p>
                     </div>
-                    <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
-                        <p className="text-sm text-gray-400">Approved Today</p>
+                    <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-4">
+                        <p className="text-sm text-slate-400">Approved Today</p>
                         <p className="text-2xl font-bold text-green-400">{stats.approved_today}</p>
                     </div>
-                    <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
-                        <p className="text-sm text-gray-400">Rejected Today</p>
+                    <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-4">
+                        <p className="text-sm text-slate-400">Rejected Today</p>
                         <p className="text-2xl font-bold text-red-400">{stats.rejected_today}</p>
                     </div>
-                    <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
-                        <p className="text-sm text-gray-400">Your Total Reviews</p>
-                        <p className="text-2xl font-bold text-primary-400">{stats.total_reviewed_by_user}</p>
+                    <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-4">
+                        <p className="text-sm text-slate-400">Your Total Reviews</p>
+                        <p className="text-2xl font-bold text-cyan-400">{stats.total_reviewed_by_user}</p>
                     </div>
                 </div>
             )}
 
             {/* Tabs */}
-            <div className="flex gap-1 p-1 bg-gray-800 rounded-lg w-fit mb-6">
+            <div className="flex gap-1 p-1 bg-gray-800/50 rounded-xl w-fit mb-6">
                 <button
                     onClick={() => handleTabChange('queue')}
-                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'queue'
-                        ? 'bg-primary-500 text-white'
-                        : 'text-gray-400 hover:text-white'
+                    className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${activeTab === 'queue'
+                        ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/25'
+                        : 'text-slate-400 hover:text-white hover:bg-gray-700/50'
                         }`}
                 >
                     Pending Queue ({stats?.pending_count || 0})
                 </button>
                 <button
                     onClick={() => handleTabChange('history')}
-                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'history'
-                        ? 'bg-primary-500 text-white'
-                        : 'text-gray-400 hover:text-white'
+                    className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${activeTab === 'history'
+                        ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/25'
+                        : 'text-slate-400 hover:text-white hover:bg-gray-700/50'
                         }`}
                 >
                     My Decision History
@@ -271,13 +271,13 @@ export function VerifierDashboardPage() {
             {activeTab === 'queue' && (
                 <div className="space-y-4">
                     {proposals.length === 0 ? (
-                        <div className="bg-gray-800 rounded-lg border border-gray-700 p-8 text-center">
-                            <p className="text-gray-300">No pending proposals to review!</p>
-                            <p className="text-sm text-gray-500 mt-2">Check back later for new submissions</p>
+                        <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-8 text-center">
+                            <p className="text-slate-300">No pending proposals to review!</p>
+                            <p className="text-sm text-slate-500 mt-2">Check back later for new submissions</p>
                         </div>
                     ) : (
                         proposals.map(proposal => (
-                            <div key={proposal.id} className="bg-gray-800 rounded-lg border border-gray-700 p-4">
+                            <div key={proposal.id} className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-4">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-2">
@@ -322,7 +322,7 @@ export function VerifierDashboardPage() {
                     {hasMore && (
                         <button
                             onClick={() => setPage(p => p + 1)}
-                            className="w-full py-2 text-primary-400 hover:bg-gray-700 rounded-lg transition-colors"
+                            className="w-full py-2.5 text-cyan-400 hover:bg-gray-700/50 rounded-xl transition-colors"
                         >
                             Load More
                         </button>
@@ -334,31 +334,31 @@ export function VerifierDashboardPage() {
             {activeTab === 'history' && (
                 <div className="space-y-4">
                     {myDecisions.length === 0 ? (
-                        <div className="bg-gray-800 rounded-lg border border-gray-700 p-8 text-center">
-                            <p className="text-gray-300">No decisions yet</p>
-                            <p className="text-sm text-gray-500 mt-2">
+                        <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-8 text-center">
+                            <p className="text-slate-300">No decisions yet</p>
+                            <p className="text-sm text-slate-500 mt-2">
                                 Your review history will appear here
                             </p>
                         </div>
                     ) : (
                         myDecisions.map(proposal => (
-                            <div key={proposal.id} className="bg-gray-800 rounded-lg border border-gray-700 p-4">
+                            <div key={proposal.id} className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-4">
                                 <div className="flex items-center gap-2 mb-2">
                                     <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(proposal.status)}`}>
                                         {proposal.status}
                                     </span>
                                     {proposal.decision && (
-                                        <span className="text-xs text-gray-400">
+                                        <span className="text-xs text-slate-400">
                                             Decision: {proposal.decision.decision}
                                         </span>
                                     )}
                                 </div>
                                 <h3 className="font-medium text-white">{proposal.summary}</h3>
-                                <p className="text-sm text-gray-400 mt-1">
+                                <p className="text-sm text-slate-400 mt-1">
                                     by @{proposal.proposer.username} • {formatDate(proposal.submitted_at)}
                                 </p>
                                 {proposal.decision?.notes && (
-                                    <p className="text-sm text-gray-300 mt-2 italic">
+                                    <p className="text-sm text-slate-300 mt-2 italic">
                                         "{proposal.decision.notes}"
                                     </p>
                                 )}
@@ -370,8 +370,8 @@ export function VerifierDashboardPage() {
 
             {/* Review Modal */}
             {selectedProposal && (
-                <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-                    <div className="bg-gray-800 rounded-xl border border-gray-700 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-gray-800/95 backdrop-blur-xl rounded-2xl border border-gray-700/50 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
                         <div className="p-6">
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-xl font-bold text-white">Review Proposal</h2>
@@ -417,18 +417,18 @@ export function VerifierDashboardPage() {
                             </div>
 
                             <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                <label className="block text-sm font-medium text-slate-300 mb-2">
                                     Decision Notes (optional)
                                 </label>
                                 <textarea
                                     value={decisionNotes}
                                     onChange={e => setDecisionNotes(e.target.value)}
-                                    className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                                    className="w-full p-3 bg-slate-800/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all"
                                     rows={3}
                                     placeholder="Add feedback for the proposer..."
                                     maxLength={512}
                                 />
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-slate-500 mt-1">
                                     {decisionNotes.length}/512 characters
                                 </p>
                             </div>
@@ -437,21 +437,21 @@ export function VerifierDashboardPage() {
                                 <button
                                     onClick={() => handleDecision(selectedProposal.id, 'approve')}
                                     disabled={submitting}
-                                    className="flex-1 py-2.5 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors font-medium"
+                                    className="flex-1 py-2.5 bg-green-500 text-white rounded-xl hover:bg-green-600 disabled:opacity-50 transition-all font-medium"
                                 >
                                     ✓ Approve
                                 </button>
                                 <button
                                     onClick={() => handleDecision(selectedProposal.id, 'needs_changes')}
                                     disabled={submitting}
-                                    className="flex-1 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50 transition-colors font-medium"
+                                    className="flex-1 py-2.5 bg-yellow-500 text-white rounded-xl hover:bg-yellow-600 disabled:opacity-50 transition-all font-medium"
                                 >
                                     ↻ Needs Changes
                                 </button>
                                 <button
                                     onClick={() => handleDecision(selectedProposal.id, 'reject')}
                                     disabled={submitting}
-                                    className="flex-1 py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors font-medium"
+                                    className="flex-1 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 disabled:opacity-50 transition-all font-medium"
                                 >
                                     ✗ Reject
                                 </button>

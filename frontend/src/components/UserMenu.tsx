@@ -38,9 +38,12 @@ export function UserMenu() {
     }
 
     const confirmLogout = () => {
-        // Close dialog first and reset body overflow
-        setShowSignOutConfirm(false)
+        // Ensure body scroll is restored FIRST before any state changes
         document.body.style.overflow = ''
+        document.body.style.pointerEvents = ''
+
+        // Close dialog
+        setShowSignOutConfirm(false)
 
         // Logout and navigate to home
         logout()

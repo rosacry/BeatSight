@@ -94,7 +94,8 @@ const colorMap = {
 }
 
 export function HomePage() {
-    useDocumentTitle(undefined)
+    // Homepage title - similar to osu!'s "osu!" being the home title
+    useDocumentTitle('See the Music Before You Play It')
     const { data: queueData } = useQuery({
         queryKey: ['queueLength'],
         queryFn: getQueueLength,

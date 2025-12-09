@@ -154,39 +154,37 @@ export function ConfirmDialog({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
+                        transition={{ duration: 0.15 }}
                         className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-20"
                         onClick={onClose}
                     >
                         {/* Light backdrop - osu uses semi-transparent */}
                         <motion.div
-                            className="absolute inset-0 bg-black/50 backdrop-blur-[3px]"
+                            className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            transition={{ duration: 0.25 }}
+                            transition={{ duration: 0.15 }}
                         />
 
                         {/* Popup Dialog - osu-style compact design */}
                         <motion.div
                             ref={dialogRef}
-                            initial={{ opacity: 0, scale: 0.95, y: -30 }}
+                            initial={{ opacity: 0, scale: 0.96, y: -20 }}
                             animate={{
                                 opacity: 1,
                                 scale: 1,
                                 y: 0,
                                 transition: {
-                                    type: 'spring',
-                                    damping: 25,
-                                    stiffness: 300,
-                                    delay: 0.05
+                                    duration: 0.2,
+                                    ease: [0.25, 0.46, 0.45, 0.94]
                                 }
                             }}
                             exit={{
                                 opacity: 0,
-                                scale: 0.97,
-                                y: -15,
-                                transition: { duration: 0.15, ease: 'easeIn' }
+                                scale: 0.98,
+                                y: -10,
+                                transition: { duration: 0.12, ease: 'easeOut' }
                             }}
                             onClick={(e) => e.stopPropagation()}
                             tabIndex={-1}

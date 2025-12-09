@@ -3,7 +3,8 @@
  * Shows user info, stats, achievements, and account details.
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useQuery } from '@tanstack/react-query'
 import { listJobs, listSongs, listAchievements } from '@/api/client'
@@ -11,10 +12,32 @@ import { format } from 'date-fns'
 import { AchievementGrid } from '@/components/AchievementBadge'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
+const VALID_TABS = ['overview', 'achievements', 'activity'] as const
+type ProfileTab = typeof VALID_TABS[number]
+
 export function ProfilePage() {
     useDocumentTitle('profile')
     const user = useAuthStore((state) => state.user)
-    const [activeTab, setActiveTab] = useState<'overview' | 'achievements' | 'activity'>('overview')
+    const [searchParams, setSearchParams] = useSearchParams()
+
+    // Get tab from URL or default to 'overview'
+    const tabFromUrl = searchParams.get('tab') as ProfileTab | null
+    const initialTab: ProfileTab = tabFromUrl && VALID_TABS.includes(tabFromUrl) ? tabFromUrl : 'overview'
+    const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab)
+
+    // Update URL when tab changes
+    const handleTabChange = (tab: ProfileTab) => {
+        setActiveTab(tab)
+        setSearchParams({ tab }, { replace: true })
+    }
+
+    // Sync tab state with URL on mount and URL changes
+    useEffect(() => {
+        const tabFromUrl = searchParams.get('tab')
+        if (tabFromUrl && (VALID_TABS as readonly string[]).includes(tabFromUrl)) {
+            setActiveTab(tabFromUrl as ProfileTab)
+        }
+    }, [searchParams])
 
     const { data: jobs, isLoading: jobsLoading } = useQuery({
         queryKey: ['jobs'],
@@ -182,7 +205,7 @@ export function ProfilePage() {
             <div className="border-b border-gray-700">
                 <nav className="flex gap-8">
                     <button
-                        onClick={() => setActiveTab('overview')}
+                        onClick={() => handleTabChange('overview')}
                         className={`pb-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'overview'
                             ? 'border-primary-500 text-primary-400'
                             : 'border-transparent text-gray-400 hover:text-white'
@@ -191,7 +214,7 @@ export function ProfilePage() {
                         Overview
                     </button>
                     <button
-                        onClick={() => setActiveTab('achievements')}
+                        onClick={() => handleTabChange('achievements')}
                         className={`pb-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'achievements'
                             ? 'border-primary-500 text-primary-400'
                             : 'border-transparent text-gray-400 hover:text-white'
@@ -205,7 +228,7 @@ export function ProfilePage() {
                         )}
                     </button>
                     <button
-                        onClick={() => setActiveTab('activity')}
+                        onClick={() => handleTabChange('activity')}
                         className={`pb-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'activity'
                             ? 'border-primary-500 text-primary-400'
                             : 'border-transparent text-gray-400 hover:text-white'

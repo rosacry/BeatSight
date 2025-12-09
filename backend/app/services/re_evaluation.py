@@ -8,13 +8,14 @@ a new AI model version becomes available. Key features:
 3. **Batch Processing**: Efficiently processes multiple songs in batches
 4. **Version Tracking**: Tracks which model version generated each beatmap
 5. **Smart Re-evaluation**: Only re-processes low-confidence portions of songs
+6. **Conflict Detection**: Skips re-evaluation when user has pending edits
 """
 
 from __future__ import annotations
 
 import logging
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from sqlalchemy import select
@@ -60,11 +61,13 @@ class ReEvaluationResult:
     
     total_candidates: int
     jobs_created: int
-    smart_re_evals: int  # Jobs using smart (partial) re-evaluation
-    full_re_evals: int  # Jobs using full re-evaluation
-    skipped_user_opt_out: int
-    skipped_already_current: int
-    errors: list[str]
+    smart_re_evals: int = 0  # Jobs using smart (partial) re-evaluation
+    full_re_evals: int = 0  # Jobs using full re-evaluation
+    skipped_user_opt_out: int = 0
+    skipped_already_current: int = 0
+    skipped_pending_edits: int = 0  # New: skipped due to pending user edits
+    skipped_recent_activity: int = 0  # New: skipped due to recent user activity
+    errors: list[str] = field(default_factory=list)
 
 
 class ReEvaluationService:
@@ -193,6 +196,7 @@ class ReEvaluationService:
         self,
         song_id: uuid.UUID,
         reason: str = "model_upgrade",
+        skip_conflict_check: bool = False,
     ) -> AIJob | None:
         """Queue a re-evaluation job for a specific song.
         
@@ -204,11 +208,25 @@ class ReEvaluationService:
         Args:
             song_id: The song to re-evaluate.
             reason: Why re-evaluation is needed (for logging).
+            skip_conflict_check: If True, skip checking for pending edits.
             
         Returns:
             The created AIJob, or None if re-evaluation was skipped.
         """
         current_version = self._settings.ai_model_version
+        
+        # Check for conflicts (pending edits, recent user activity)
+        if not skip_conflict_check:
+            from app.services.contribution_quality import should_re_evaluate_song
+            
+            decision = await should_re_evaluate_song(self._session, song_id)
+            if not decision.should_proceed:
+                logger.info(
+                    f"Skipping re-evaluation for song {song_id}: "
+                    f"{decision.skip_reason.value if decision.skip_reason else 'unknown'} - "
+                    f"{decision.message}"
+                )
+                return None
         
         # Check if there's already an active job for this song
         active_job = await self._session.execute(

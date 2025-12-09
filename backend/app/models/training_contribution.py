@@ -145,6 +145,20 @@ class TrainingContribution(Base):
     )
     export_batch_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
 
+    # Quality weighting for training (0.1 = low confidence, 1.0 = normal, 2.0 = high confidence)
+    # Calculated based on user karma, approval rate, and conflict status
+    training_weight: Mapped[float] = mapped_column(
+        Float, default=1.0, nullable=False
+    )
+    
+    # Quality flags for contentious contributions
+    has_conflicts: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    consensus_count: Mapped[int] = mapped_column(
+        Integer, default=1, nullable=False
+    )  # Number of agreeing contributors
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

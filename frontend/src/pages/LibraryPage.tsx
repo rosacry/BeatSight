@@ -9,11 +9,13 @@ import { useQuery } from '@tanstack/react-query'
 import { listSongs, listJobs } from '@/api/client'
 import { JobStatusBadge } from '@/components/JobStatusBadge'
 import type { Song, AIJob } from '@/types/api'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 type SortOption = 'recent' | 'title' | 'artist' | 'status'
 type FilterOption = 'all' | 'complete' | 'processing' | 'failed'
 
 export function LibraryPage() {
+    useDocumentTitle('library')
     const [sortBy, setSortBy] = useState<SortOption>('recent')
     const [filterBy, setFilterBy] = useState<FilterOption>('all')
     const [searchQuery, setSearchQuery] = useState('')

@@ -2,7 +2,7 @@
  * ConfirmDialog - A reusable confirmation dialog component
  * Used for sign-out confirmation, destructive actions, etc.
  * 
- * Similar to osu!'s confirmation popups
+ * Styled similar to osu!'s confirmation popups with clean overlay design
  */
 
 import { useState, useEffect, useRef } from 'react'
@@ -16,8 +16,10 @@ interface ConfirmDialogProps {
     message: string
     confirmLabel?: string
     cancelLabel?: string
-    variant?: 'default' | 'danger' | 'warning'
+    variant?: 'default' | 'danger' | 'warning' | 'signout'
     isLoading?: boolean
+    /** Show as a centered popup overlay (osu-style) vs modal dialog */
+    style?: 'modal' | 'popup'
 }
 
 const overlayVariants = {
@@ -51,6 +53,7 @@ export function ConfirmDialog({
     cancelLabel = 'Cancel',
     variant = 'default',
     isLoading = false,
+    style = 'modal',
 }: ConfirmDialogProps) {
     const dialogRef = useRef<HTMLDivElement>(null)
 
@@ -106,6 +109,12 @@ export function ConfirmDialog({
                         </svg>
                     ),
                 }
+            case 'signout':
+                return {
+                    confirmButton: 'bg-fuchsia-500 hover:bg-fuchsia-600 focus:ring-fuchsia-500/50',
+                    cancelButton: 'bg-slate-600 hover:bg-slate-500 text-white border-0',
+                    icon: null, // No icon for osu-style signout popup
+                }
             default:
                 return {
                     confirmButton: 'bg-cyan-500 hover:bg-cyan-600 focus:ring-cyan-500/50',
@@ -120,6 +129,82 @@ export function ConfirmDialog({
 
     const styles = getVariantStyles()
 
+    // osu-style popup for signout variant
+    if (style === 'popup' || variant === 'signout') {
+        return (
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial="hidden"
+                        animate="visible"
+                        exit="hidden"
+                        variants={overlayVariants}
+                        className="fixed inset-0 z-50 flex items-start justify-center pt-20"
+                        onClick={onClose}
+                    >
+                        {/* Light backdrop - osu uses semi-transparent */}
+                        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+
+                        {/* Popup Dialog - osu-style compact design */}
+                        <motion.div
+                            ref={dialogRef}
+                            variants={dialogVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            onClick={(e) => e.stopPropagation()}
+                            tabIndex={-1}
+                            className="relative bg-slate-800/95 backdrop-blur-xl rounded-xl border border-slate-600/50 shadow-2xl shadow-black/50 max-w-md w-full overflow-hidden focus:outline-none"
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="dialog-title"
+                        >
+                            {/* Simple centered content - osu style */}
+                            <div className="px-6 py-5 text-center">
+                                <h2 id="dialog-title" className="text-base text-slate-200 mb-4">
+                                    {message}
+                                </h2>
+
+                                {/* Buttons side by side - osu style */}
+                                <div className="flex gap-2 justify-center">
+                                    <button
+                                        onClick={onClose}
+                                        disabled={isLoading}
+                                        className="px-5 py-2 text-sm font-medium text-white 
+                                                 bg-slate-600 hover:bg-slate-500 rounded-lg transition-all
+                                                 focus:outline-none focus:ring-2 focus:ring-slate-500/50
+                                                 disabled:opacity-50 min-w-[100px]"
+                                    >
+                                        {cancelLabel}
+                                    </button>
+                                    <button
+                                        onClick={onConfirm}
+                                        disabled={isLoading}
+                                        className={`px-5 py-2 text-sm font-medium text-white rounded-lg transition-all
+                                                  focus:outline-none focus:ring-2 disabled:opacity-50 min-w-[100px]
+                                                  ${styles.confirmButton}`}
+                                    >
+                                        {isLoading ? (
+                                            <span className="flex items-center justify-center gap-2">
+                                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                                </svg>
+                                            </span>
+                                        ) : (
+                                            confirmLabel
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        )
+    }
+
+    // Standard modal dialog
     return (
         <AnimatePresence>
             {isOpen && (
@@ -151,9 +236,11 @@ export function ConfirmDialog({
                         {/* Header */}
                         <div className="px-6 py-5 border-b border-gray-700">
                             <div className="flex items-center gap-3">
-                                <div className="flex-shrink-0">
-                                    {styles.icon}
-                                </div>
+                                {styles.icon && (
+                                    <div className="flex-shrink-0">
+                                        {styles.icon}
+                                    </div>
+                                )}
                                 <h2 id="dialog-title" className="text-lg font-semibold text-white">
                                     {title}
                                 </h2>

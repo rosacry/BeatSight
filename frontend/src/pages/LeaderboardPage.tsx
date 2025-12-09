@@ -14,6 +14,7 @@ import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { API_CONFIG } from '@/lib/config'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 // Types
 interface LeaderboardUser {
@@ -65,6 +66,7 @@ const itemVariants = {
 }
 
 export function LeaderboardPage() {
+    useDocumentTitle('leaderboard')
     const [activeTab, setActiveTab] = useState<LeaderboardTab>('karma')
     const { accessToken } = useAuthStore()
     const user = useAuthStore((state) => state.user)
@@ -129,8 +131,8 @@ export function LeaderboardPage() {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as LeaderboardTab)}
                             className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === tab.id
-                                    ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/25'
-                                    : 'text-slate-400 hover:text-white hover:bg-gray-700/50'
+                                ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/25'
+                                : 'text-slate-400 hover:text-white hover:bg-gray-700/50'
                                 }`}
                         >
                             {tab.label}
@@ -164,9 +166,9 @@ export function LeaderboardPage() {
                                     >
                                         {/* Rank */}
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-black' :
-                                                index === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-black' :
-                                                    index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-white' :
-                                                        'bg-gray-700 text-gray-400'
+                                            index === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-black' :
+                                                index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-white' :
+                                                    'bg-gray-700 text-gray-400'
                                             }`}>
                                             {index + 1}
                                         </div>
@@ -219,9 +221,9 @@ export function LeaderboardPage() {
                                     >
                                         {/* Rank */}
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-black' :
-                                                index === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-black' :
-                                                    index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-white' :
-                                                        'bg-gray-700 text-gray-400'
+                                            index === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-black' :
+                                                index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-white' :
+                                                    'bg-gray-700 text-gray-400'
                                             }`}>
                                             {index + 1}
                                         </div>
@@ -278,9 +280,9 @@ export function LeaderboardPage() {
                                     >
                                         {/* Rank */}
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-black' :
-                                                index === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-black' :
-                                                    index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-white' :
-                                                        'bg-gray-700 text-gray-400'
+                                            index === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-black' :
+                                                index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-white' :
+                                                    'bg-gray-700 text-gray-400'
                                             }`}>
                                             {index + 1}
                                         </div>
@@ -332,21 +334,66 @@ export function LeaderboardPage() {
             <div className="mt-8 grid sm:grid-cols-3 gap-4">
                 <div className="p-5 rounded-xl bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 border border-cyan-500/20">
                     <h3 className="font-semibold text-cyan-400 mb-2">🏆 Earn Karma</h3>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-slate-400 mb-3">
                         Create beatmaps, help verify contributions, and participate in the community.
                     </p>
+                    <ul className="text-xs text-slate-500 space-y-1">
+                        <li>• +10 karma per approved beatmap</li>
+                        <li>• +5 karma per helpful review</li>
+                        <li>• +2 karma per verified contribution</li>
+                    </ul>
                 </div>
                 <div className="p-5 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20">
                     <h3 className="font-semibold text-purple-400 mb-2">✓ Become a Verifier</h3>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-slate-400 mb-3">
                         Help maintain quality by reviewing community beatmap contributions.
                     </p>
+                    <ul className="text-xs text-slate-500 space-y-1">
+                        <li>• Requires 100+ karma</li>
+                        <li>• Phone verification needed</li>
+                        <li>• Exclusive verifier badge</li>
+                    </ul>
                 </div>
                 <div className="p-5 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/5 border border-green-500/20">
                     <h3 className="font-semibold text-green-400 mb-2">📝 Contribute</h3>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-slate-400 mb-3">
                         Improve AI training by submitting beatmap corrections and annotations.
                     </p>
+                    <ul className="text-xs text-slate-500 space-y-1">
+                        <li>• Credit in published beatmaps</li>
+                        <li>• Contribution badges</li>
+                        <li>• Early access to new features</li>
+                    </ul>
+                </div>
+            </div>
+
+            {/* Role Tiers Section */}
+            <div className="mt-8 p-6 rounded-xl bg-gray-800/50 border border-gray-700/50">
+                <h3 className="text-lg font-semibold text-white mb-4">🎖️ Role Progression</h3>
+                <p className="text-sm text-slate-400 mb-4">
+                    Earn karma to unlock new roles and abilities within the BeatSight community.
+                </p>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="p-3 rounded-lg bg-slate-700/30 border border-slate-600/30">
+                        <div className="text-sm font-medium text-slate-300">Fixer</div>
+                        <div className="text-xs text-slate-500">50+ karma</div>
+                        <div className="text-xs text-slate-400 mt-1">Submit beatmap corrections</div>
+                    </div>
+                    <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/30">
+                        <div className="text-sm font-medium text-purple-400">Verifier</div>
+                        <div className="text-xs text-slate-500">100+ karma + phone</div>
+                        <div className="text-xs text-slate-400 mt-1">Review & approve contributions</div>
+                    </div>
+                    <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                        <div className="text-sm font-medium text-amber-400">Curator</div>
+                        <div className="text-xs text-slate-500">500+ karma + phone</div>
+                        <div className="text-xs text-slate-400 mt-1">Manage featured content</div>
+                    </div>
+                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+                        <div className="text-sm font-medium text-red-400">Admin</div>
+                        <div className="text-xs text-slate-500">By invitation</div>
+                        <div className="text-xs text-slate-400 mt-1">Full platform access</div>
+                    </div>
                 </div>
             </div>
         </div>

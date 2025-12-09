@@ -18,6 +18,7 @@ import type { AIJob } from '@/types/api'
 import { getRecentTopics } from '@/api/forum'
 import { AnimatedCounter, TiltCard } from '@/components/ui'
 import { ParticleBackground, GradientOrbs } from '@/components/ui/ParticleBackground'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 // Animation variants
 const containerVariants = {
@@ -39,6 +40,9 @@ const itemVariants = {
 
 export function DashboardPage() {
     const user = useAuthStore((state) => state.user)
+
+    // Set page title
+    useDocumentTitle('dashboard')
 
     // Fetch recent jobs (user's own jobs)
     const { data: recentJobs } = useQuery({
@@ -212,9 +216,9 @@ export function DashboardPage() {
                                                         </p>
                                                     </div>
                                                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${job.state === 'complete' ? 'bg-green-500/20 text-green-400' :
-                                                            job.state === 'processing' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                                job.state === 'failed' ? 'bg-red-500/20 text-red-400' :
-                                                                    'bg-blue-500/20 text-blue-400'
+                                                        job.state === 'processing' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                            job.state === 'failed' ? 'bg-red-500/20 text-red-400' :
+                                                                'bg-blue-500/20 text-blue-400'
                                                         }`}>
                                                         {job.state}
                                                     </span>

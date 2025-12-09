@@ -8,6 +8,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { ParticleBackground, GradientOrbs } from '@/components/ui/ParticleBackground'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 // Eye icons for password visibility toggle
 function EyeIcon() {
@@ -37,6 +38,7 @@ function CheckIcon({ filled }: { filled: boolean }) {
 }
 
 export function RegisterPage() {
+    useDocumentTitle('sign up')
     const navigate = useNavigate()
     const { register, isLoading } = useAuthStore()
 

@@ -13,8 +13,10 @@ import { useSubscription, useUpgradeSubscription, useStripeConfig } from '@/hook
 import { usePurchaseCredits, useCreditBalance } from '@/hooks/useCredits'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/components/Toast'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export function PricingPage() {
+    useDocumentTitle('pricing')
     const navigate = useNavigate()
     const [searchParams] = useSearchParams()
     const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
@@ -252,25 +254,56 @@ export function PricingPage() {
                     <AnimatePresence mode="wait">
                         {showCredits && (
                             <motion.div
-                                initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                                animate={{ opacity: 1, height: 'auto', marginTop: 24 }}
-                                exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                                transition={{
-                                    duration: 0.3,
-                                    ease: [0.4, 0, 0.2, 1],
-                                    opacity: { duration: 0.15 }
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{
+                                    opacity: 1,
+                                    height: 'auto',
+                                    transition: {
+                                        height: { duration: 0.35, ease: [0.4, 0, 0.2, 1] },
+                                        opacity: { duration: 0.2, delay: 0.1 }
+                                    }
                                 }}
-                                className="overflow-hidden"
+                                exit={{
+                                    opacity: 0,
+                                    height: 0,
+                                    transition: {
+                                        height: { duration: 0.3, ease: [0.4, 0, 0.2, 1], delay: 0.05 },
+                                        opacity: { duration: 0.15 }
+                                    }
+                                }}
+                                className="overflow-hidden mt-6"
                             >
-                                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl mx-auto">
-                                    {CREDIT_PACKS.map((pack, index) => (
+                                <motion.div
+                                    className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl mx-auto pb-2"
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="hidden"
+                                    variants={{
+                                        visible: {
+                                            transition: {
+                                                staggerChildren: 0.08,
+                                                delayChildren: 0.1
+                                            }
+                                        },
+                                        hidden: {
+                                            transition: {
+                                                staggerChildren: 0.03,
+                                                staggerDirection: -1
+                                            }
+                                        }
+                                    }}
+                                >
+                                    {CREDIT_PACKS.map((pack) => (
                                         <motion.div
                                             key={pack.type}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{
-                                                opacity: 1,
-                                                y: 0,
-                                                transition: { delay: index * 0.1, duration: 0.3 }
+                                            variants={{
+                                                hidden: { opacity: 0, y: 15, scale: 0.95 },
+                                                visible: {
+                                                    opacity: 1,
+                                                    y: 0,
+                                                    scale: 1,
+                                                    transition: { duration: 0.25, ease: [0.4, 0, 0.2, 1] }
+                                                }
                                             }}
                                             className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-primary-500/50 transition-all duration-200 hover:scale-[1.02]"
                                         >
@@ -297,7 +330,7 @@ export function PricingPage() {
                                             </button>
                                         </motion.div>
                                     ))}
-                                </div>
+                                </motion.div>
                             </motion.div>
                         )}
                     </AnimatePresence>

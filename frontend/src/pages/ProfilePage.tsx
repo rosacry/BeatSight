@@ -9,8 +9,10 @@ import { useQuery } from '@tanstack/react-query'
 import { listJobs, listSongs, listAchievements } from '@/api/client'
 import { format } from 'date-fns'
 import { AchievementGrid } from '@/components/AchievementBadge'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export function ProfilePage() {
+    useDocumentTitle('profile')
     const user = useAuthStore((state) => state.user)
     const [activeTab, setActiveTab] = useState<'overview' | 'achievements' | 'activity'>('overview')
 

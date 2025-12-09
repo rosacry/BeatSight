@@ -4,10 +4,12 @@ import { listJobs, getQuota } from '@/api/client'
 import { JobCard } from '@/components/JobCard'
 import { QuotaDisplay } from '@/components/QuotaDisplay'
 import type { AIJobState } from '@/types/api'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 type FilterState = 'all' | AIJobState
 
 export function JobQueuePage() {
+    useDocumentTitle('queue')
     const [filter, setFilter] = useState<FilterState>('all')
 
     const { data: jobs, isLoading, error } = useQuery({

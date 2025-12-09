@@ -216,9 +216,11 @@ class TestQuotaEnforcement:
 
         quota_service = QuotaService(mock_session)
         # Mock the credit balance lookup to return 0
+        mock_balance = MagicMock()
+        mock_balance.total_credits = 0
         quota_service._credit_service = MagicMock()
         quota_service._credit_service.get_or_create_balance = AsyncMock(
-            return_value=MagicMock(balance=0)
+            return_value=mock_balance
         )
 
         status = await quota_service.get_quota_status(mock_user.id)
@@ -252,9 +254,11 @@ class TestQuotaEnforcement:
 
         quota_service = QuotaService(mock_session)
         # Mock the credit balance lookup
+        mock_balance = MagicMock()
+        mock_balance.total_credits = 0
         quota_service._credit_service = MagicMock()
         quota_service._credit_service.get_or_create_balance = AsyncMock(
-            return_value=MagicMock(balance=0)
+            return_value=mock_balance
         )
 
         status = await quota_service.get_quota_status(mock_user.id)
@@ -431,9 +435,11 @@ class TestFullUserJourney:
             mock_usage.side_effect = [0, 0]  # No usage this month or today
 
             quota_service = QuotaService(mock_session)
+            mock_balance = MagicMock()
+            mock_balance.total_credits = 0
             quota_service._credit_service = MagicMock()
             quota_service._credit_service.get_or_create_balance = AsyncMock(
-                return_value=MagicMock(balance=0)
+                return_value=mock_balance
             )
 
             status = await quota_service.get_quota_status(mock_user.id)
@@ -468,9 +474,11 @@ class TestFullUserJourney:
 
             quota_service = QuotaService(mock_session)
             # User has no credits
+            mock_balance = MagicMock()
+            mock_balance.total_credits = 0
             quota_service._credit_service = MagicMock()
             quota_service._credit_service.get_or_create_balance = AsyncMock(
-                return_value=MagicMock(balance=0)
+                return_value=mock_balance
             )
 
             status = await quota_service.get_quota_status(mock_user.id)
@@ -504,9 +512,11 @@ class TestFullUserJourney:
 
             quota_service = QuotaService(mock_session)
             # User has 5 credits
+            mock_balance = MagicMock()
+            mock_balance.total_credits = 5
             quota_service._credit_service = MagicMock()
             quota_service._credit_service.get_or_create_balance = AsyncMock(
-                return_value=MagicMock(balance=5)
+                return_value=mock_balance
             )
 
             status = await quota_service.get_quota_status(mock_user.id)

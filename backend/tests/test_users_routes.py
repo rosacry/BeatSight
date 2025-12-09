@@ -26,6 +26,8 @@ def create_mock_user(
     avatar_url: str | None = None,
     karma_score: int = 100,
     hashed_password: str | None = "hashed_password_123",
+    phone_number: str | None = None,
+    phone_verified: bool = False,
 ) -> MagicMock:
     """Create a mock user object."""
     user = MagicMock(spec=User)
@@ -36,6 +38,8 @@ def create_mock_user(
     user.avatar_url = avatar_url
     user.karma_score = karma_score
     user.hashed_password = hashed_password
+    user.phone_number = phone_number
+    user.phone_verified = phone_verified
     user.created_at = datetime.utcnow()
     return user
 

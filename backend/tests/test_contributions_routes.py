@@ -82,6 +82,30 @@ def create_mock_session() -> AsyncMock:
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = None
     mock_result.scalars.return_value.all.return_value = []
+    mock_result.fetchall.return_value = []
+    session.execute = AsyncMock(return_value=mock_result)
+    
+    return session
+
+
+def create_mock_admin_session() -> AsyncMock:
+    """Create a mock database session that returns admin role for RBAC checks.
+    
+    This is used for tests where we need the admin user to pass RBAC checks
+    so we can test validation logic (422 responses) rather than authorization.
+    """
+    session = AsyncMock()
+    session.add = MagicMock()
+    session.commit = AsyncMock()
+    session.refresh = AsyncMock()
+    session.flush = AsyncMock()
+    
+    # Configure execute to return admin role for RBAC role queries
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = None
+    mock_result.scalars.return_value.all.return_value = []
+    # Return admin role code for fetchall (used by RBAC get_user_roles)
+    mock_result.fetchall.return_value = [("admin",)]
     session.execute = AsyncMock(return_value=mock_result)
     
     return session
@@ -722,7 +746,7 @@ class TestImpactEndpoints:
     def test_record_impact_validates_accuracy_range(self):
         """Test POST /impact validates accuracy is between 0 and 1."""
         admin_user = create_mock_admin()
-        mock_session = create_mock_session()
+        mock_session = create_mock_admin_session()
 
         app.dependency_overrides[get_current_user] = lambda: admin_user
         app.dependency_overrides[get_db_session] = lambda: mock_session
@@ -807,7 +831,7 @@ class TestImpactEndpoints:
     def test_record_impact_required_fields(self):
         """Test POST /impact validates required fields."""
         admin_user = create_mock_admin()
-        mock_session = create_mock_session()
+        mock_session = create_mock_admin_session()
 
         app.dependency_overrides[get_current_user] = lambda: admin_user
         app.dependency_overrides[get_db_session] = lambda: mock_session

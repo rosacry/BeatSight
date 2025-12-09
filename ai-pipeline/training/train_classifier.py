@@ -4325,6 +4325,35 @@ def main():
         expected_samples_per_class = len(train_labels_arr) * class_weights_sampling / class_weights_sampling.sum()
         print(f"   Expected samples/class/epoch: min={expected_samples_per_class.min():.0f}, max={expected_samples_per_class.max():.0f}")
         
+        # CRITICAL WARNING: Small class sizes can cause collapse even with balanced sampling!
+        # If a class has too few unique samples, oversampling just picks the same samples repeatedly.
+        MIN_SAMPLES_WARNING_THRESHOLD = 50
+        MIN_SAMPLES_CRITICAL_THRESHOLD = 20
+        small_class_counts = class_counts[class_counts > 0]
+        classes_below_warning = np.sum(small_class_counts < MIN_SAMPLES_WARNING_THRESHOLD)
+        classes_below_critical = np.sum(small_class_counts < MIN_SAMPLES_CRITICAL_THRESHOLD)
+        
+        if classes_below_critical > 0:
+            print("\n" + "=" * 70)
+            print("[CRITICAL]  CRITICAL WARNING: EXTREMELY SMALL CLASS SIZES DETECTED")
+            print("=" * 70)
+            print(f"  {classes_below_critical} classes have fewer than {MIN_SAMPLES_CRITICAL_THRESHOLD} samples!")
+            print(f"  Minimum class size: {min_count} samples")
+            print("")
+            print("  With so few samples, balanced sampling will:")
+            print("    1. Pick the SAME few samples over and over")
+            print("    2. Cause severe overfitting to those specific samples")
+            print("    3. Lead to poor generalization (class collapse on validation)")
+            print("")
+            print("  RECOMMENDATIONS:")
+            print("    • Use --train-fraction 0.5 or higher (more data = more rare samples)")
+            print("    • Use stratified subset (--subset-mode stratified) to ensure minimum samples")
+            print("    • Consider removing classes with <20 samples from training")
+            print("=" * 70 + "\n")
+        elif classes_below_warning > 0:
+            print(f"\n[WARN] WARNING: {classes_below_warning} classes have <{MIN_SAMPLES_WARNING_THRESHOLD} samples.")
+            print(f"       This may limit balanced sampling effectiveness. Consider increasing --train-fraction.\n")
+        
         from torch.utils.data import WeightedRandomSampler
         # Allow configurable samples per epoch for faster iteration
         epoch_samples = args.samples_per_epoch if args.samples_per_epoch else len(train_labels_arr)
@@ -6112,10 +6141,12 @@ def main():
                     print("\n")
                     
                     # Run DEEP DIAGNOSTIC to understand WHY collapse is happening
+                    # IMPORTANT: Use train_loader to diagnose training sampling, not val_loader!
                     print("Running deep diagnostic to find root cause...")
+                    print("  [NOTE] Diagnosing TRAIN loader (to verify balanced sampling)...")
                     diagnose_class_collapse(
                         model=model,
-                        dataloader=val_loader,
+                        dataloader=train_loader,  # Use train_loader to see if balanced sampling is working!
                         criterion=criterion,
                         optimizer=optimizer,
                         device=torch_device,
@@ -6128,10 +6159,10 @@ def main():
                 
                 # Also run deep diagnostic on epoch 1 for baseline visibility
                 if (epoch + 1) == 1:
-                    print("\n[STATS] Running epoch 1 baseline diagnostic...")
+                    print("\n[STATS] Running epoch 1 baseline diagnostic (TRAIN loader)...")
                     diagnose_class_collapse(
                         model=model,
-                        dataloader=val_loader,
+                        dataloader=train_loader,  # Use train_loader to verify balanced sampling!
                         criterion=criterion,
                         optimizer=optimizer,
                         device=torch_device,

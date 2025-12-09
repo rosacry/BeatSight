@@ -3,8 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getJob, cancelJob, retryJob } from '@/api/client'
 import { JobStatusBadge } from '@/components/JobStatusBadge'
 import { JobProgressTracker } from '@/components/JobProgressTracker'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export function JobDetailPage() {
+    useDocumentTitle('job details')
     const { jobId } = useParams<{ jobId: string }>()
     const navigate = useNavigate()
     const queryClient = useQueryClient()

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { TimelineEditor } from '../components/timeline'
 import { Layout } from '../components/NavigationShell'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import type { Beatmap, NoteEdit } from '../types/beatmap'
 import { api } from '../lib/api'
 
@@ -24,6 +25,7 @@ type SubmitState = 'idle' | 'submitting' | 'success' | 'error'
 export function MapEditPage() {
     const { mapId } = useParams<keyof MapEditPageParams>()
     const navigate = useNavigate()
+    useDocumentTitle('edit beatmap')
 
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)

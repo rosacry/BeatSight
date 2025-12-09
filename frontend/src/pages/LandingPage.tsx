@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { PRICING_PLANS } from '@/types/billing'
 import { LandingDemo } from '@/components/LandingDemo'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import {
     EXTERNAL_LINKS,
     getCommunityLink,
@@ -16,6 +17,7 @@ import {
 } from '@/lib/externalLinks'
 
 export function LandingPage() {
+    useDocumentTitle(undefined) // Just "BeatSight"
     const { isAuthenticated } = useAuthStore()
 
     return (

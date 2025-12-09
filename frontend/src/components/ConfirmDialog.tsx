@@ -24,22 +24,37 @@ interface ConfirmDialogProps {
 
 const overlayVariants = {
     hidden: { opacity: 0 },
-    visible: { opacity: 1 },
+    visible: {
+        opacity: 1,
+        transition: { duration: 0.2, ease: 'easeOut' }
+    },
 }
 
 const dialogVariants = {
-    hidden: { opacity: 0, scale: 0.95, y: 10 },
+    hidden: {
+        opacity: 0,
+        scale: 0.96,
+        y: -20
+    },
     visible: {
         opacity: 1,
         scale: 1,
         y: 0,
-        transition: { type: 'spring', duration: 0.3, bounce: 0.2 }
+        transition: {
+            type: 'spring',
+            duration: 0.4,
+            bounce: 0.15,
+            delay: 0.05
+        }
     },
     exit: {
         opacity: 0,
-        scale: 0.95,
-        y: 10,
-        transition: { duration: 0.15 }
+        scale: 0.96,
+        y: -10,
+        transition: {
+            duration: 0.2,
+            ease: [0.4, 0, 1, 1]
+        }
     },
 }
 
@@ -132,36 +147,57 @@ export function ConfirmDialog({
     // osu-style popup for signout variant
     if (style === 'popup' || variant === 'signout') {
         return (
-            <AnimatePresence>
+            <AnimatePresence mode="wait">
                 {isOpen && (
                     <motion.div
-                        initial="hidden"
-                        animate="visible"
-                        exit="hidden"
-                        variants={overlayVariants}
-                        className="fixed inset-0 z-50 flex items-start justify-center pt-20"
+                        key="popup-overlay"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-20"
                         onClick={onClose}
                     >
                         {/* Light backdrop - osu uses semi-transparent */}
-                        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+                        <motion.div
+                            className="absolute inset-0 bg-black/50 backdrop-blur-[3px]"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.25 }}
+                        />
 
                         {/* Popup Dialog - osu-style compact design */}
                         <motion.div
                             ref={dialogRef}
-                            variants={dialogVariants}
-                            initial="hidden"
-                            animate="visible"
-                            exit="exit"
+                            initial={{ opacity: 0, scale: 0.95, y: -30 }}
+                            animate={{
+                                opacity: 1,
+                                scale: 1,
+                                y: 0,
+                                transition: {
+                                    type: 'spring',
+                                    damping: 25,
+                                    stiffness: 300,
+                                    delay: 0.05
+                                }
+                            }}
+                            exit={{
+                                opacity: 0,
+                                scale: 0.97,
+                                y: -15,
+                                transition: { duration: 0.15, ease: 'easeIn' }
+                            }}
                             onClick={(e) => e.stopPropagation()}
                             tabIndex={-1}
-                            className="relative bg-slate-800/95 backdrop-blur-xl rounded-xl border border-slate-600/50 shadow-2xl shadow-black/50 max-w-md w-full overflow-hidden focus:outline-none"
+                            className="relative bg-slate-800/98 backdrop-blur-xl rounded-xl border border-slate-600/50 shadow-2xl shadow-black/60 max-w-md w-[calc(100%-2rem)] sm:w-full mx-4 overflow-hidden focus:outline-none"
                             role="dialog"
                             aria-modal="true"
                             aria-labelledby="dialog-title"
                         >
                             {/* Simple centered content - osu style */}
                             <div className="px-6 py-5 text-center">
-                                <h2 id="dialog-title" className="text-base text-slate-200 mb-4">
+                                <h2 id="dialog-title" className="text-base text-slate-200 mb-4 leading-relaxed">
                                     {message}
                                 </h2>
 

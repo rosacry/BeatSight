@@ -283,6 +283,25 @@ class ImpactSummaryResponse(BaseModel):
     recent_impacts: list[dict[str, Any]]
 
 
+class ContributorLeaderboardEntry(BaseModel):
+    """Single entry in the contributor leaderboard."""
+
+    user_id: uuid.UUID
+    username: str
+    avatar_url: Optional[str] = None
+    contribution_count: int
+    approved_count: int
+    rank: int
+
+
+class ContributorLeaderboardResponse(BaseModel):
+    """Contributor leaderboard response."""
+
+    contributors: list[ContributorLeaderboardEntry]
+    limit: int
+    offset: int
+
+
 # =============================================================================
 # Consent Endpoints
 # =============================================================================
@@ -694,6 +713,73 @@ async def get_contribution_stats(
         exported=exported,
         approval_rate=approval_rate,
         karma_earned=karma_earned,
+    )
+
+
+@router.get("/leaderboard", response_model=ContributorLeaderboardResponse)
+async def get_contributor_leaderboard(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+) -> ContributorLeaderboardResponse:
+    """Get the top contributors leaderboard.
+    
+    This endpoint does not require authentication.
+    Shows users ranked by approved contribution count.
+    """
+    # Get approved/exported contribution counts per user
+    approved_statuses = [ContributionStatus.APPROVED, ContributionStatus.EXPORTED]
+    
+    # Query to get total and approved counts grouped by user
+    subquery = (
+        select(
+            TrainingContribution.user_id,
+            func.count().label("total_count"),
+            func.sum(
+                func.cast(
+                    TrainingContribution.status.in_(approved_statuses),
+                    type_=func.count().type
+                )
+            ).label("approved_count"),
+        )
+        .group_by(TrainingContribution.user_id)
+        .subquery()
+    )
+    
+    # Join with users to get display names and order by approved count
+    query = (
+        select(
+            User.id,
+            User.display_name,
+            User.avatar_url,
+            subquery.c.total_count,
+            subquery.c.approved_count,
+        )
+        .join(subquery, User.id == subquery.c.user_id)
+        .order_by(subquery.c.approved_count.desc(), subquery.c.total_count.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    
+    result = await db.execute(query)
+    rows = result.all()
+    
+    contributors = [
+        ContributorLeaderboardEntry(
+            user_id=row.id,
+            username=row.display_name,
+            avatar_url=row.avatar_url,
+            contribution_count=row.total_count or 0,
+            approved_count=row.approved_count or 0,
+            rank=offset + i + 1,
+        )
+        for i, row in enumerate(rows)
+    ]
+    
+    return ContributorLeaderboardResponse(
+        contributors=contributors,
+        limit=limit,
+        offset=offset,
     )
 
 

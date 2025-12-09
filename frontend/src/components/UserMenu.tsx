@@ -4,13 +4,14 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { ConfirmDialog } from './ConfirmDialog'
 
 export function UserMenu() {
     const { user, logout } = useAuthStore()
+    const navigate = useNavigate()
     const [isOpen, setIsOpen] = useState(false)
     const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
     const menuRef = useRef<HTMLDivElement>(null)
@@ -37,8 +38,13 @@ export function UserMenu() {
     }
 
     const confirmLogout = () => {
-        logout()
+        // Close dialog first and reset body overflow
         setShowSignOutConfirm(false)
+        document.body.style.overflow = ''
+
+        // Logout and navigate to home
+        logout()
+        navigate('/', { replace: true })
     }
 
     // Get initials for avatar

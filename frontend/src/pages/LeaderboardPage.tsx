@@ -75,9 +75,17 @@ export function LeaderboardPage() {
     const { data: karmaLeaderboard, isLoading: karmaLoading } = useQuery({
         queryKey: ['leaderboard', 'karma'],
         queryFn: async () => {
-            const response = await fetch(`${API_CONFIG.baseUrl}/api/users/leaderboard?limit=50`)
+            const response = await fetch(`${API_CONFIG.baseUrl}/api/karma/leaderboard?limit=50`)
             if (!response.ok) throw new Error('Failed to fetch karma leaderboard')
-            return response.json() as Promise<LeaderboardUser[]>
+            const data = await response.json()
+            // Transform the response to match our LeaderboardUser interface
+            return data.entries.map((entry: { user_id: string; display_name: string; karma_score: number; rank: number }) => ({
+                id: entry.user_id,
+                display_name: entry.display_name,
+                avatar_url: null, // API doesn't return avatar_url
+                karma_score: entry.karma_score,
+                rank: entry.rank,
+            })) as LeaderboardUser[]
         },
         enabled: activeTab === 'karma',
     })
@@ -98,11 +106,19 @@ export function LeaderboardPage() {
     const { data: contributorLeaderboard, isLoading: contributorLoading } = useQuery({
         queryKey: ['leaderboard', 'contributors'],
         queryFn: async () => {
-            const response = await fetch(`${API_CONFIG.baseUrl}/api/contributions/leaderboard`, {
+            const response = await fetch(`${API_CONFIG.baseUrl}/api/contributions/leaderboard?limit=50`, {
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
             })
             if (!response.ok) throw new Error('Failed to fetch contributor leaderboard')
-            return response.json() as Promise<ContributorStats[]>
+            const data = await response.json()
+            return data.contributors.map((entry: { user_id: string; username: string; avatar_url: string | null; contribution_count: number; approved_count: number; rank: number }) => ({
+                user_id: entry.user_id,
+                username: entry.username,
+                avatar_url: entry.avatar_url,
+                contribution_count: entry.contribution_count,
+                approved_count: entry.approved_count,
+                rank: entry.rank,
+            })) as ContributorStats[]
         },
         enabled: activeTab === 'contributors',
     })

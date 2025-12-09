@@ -7,8 +7,10 @@ import { useEffect, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useRefreshCreditBalance, useCreditBalance } from '@/hooks/useCredits'
 import { useToast } from '@/components/Toast'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export function CreditSuccessPage() {
+    useDocumentTitle('credits added')
     const [searchParams] = useSearchParams()
     const refreshBalance = useRefreshCreditBalance()
     const { data: balance, isLoading } = useCreditBalance()

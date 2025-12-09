@@ -102,14 +102,14 @@ export function VerifierDashboardPage() {
     // Update URL when tab changes
     const handleTabChange = (tab: TabType) => {
         setActiveTab(tab)
-        setSearchParams({ tab })
+        setSearchParams({ tab }, { replace: true })
     }
 
     // Sync tab state with URL on mount and URL changes
     useEffect(() => {
-        const tabFromUrl = searchParams.get('tab') as TabType | null
-        if (tabFromUrl && VALID_TABS.includes(tabFromUrl) && tabFromUrl !== activeTab) {
-            setActiveTab(tabFromUrl)
+        const tabFromUrl = searchParams.get('tab')
+        if (tabFromUrl && (VALID_TABS as readonly string[]).includes(tabFromUrl)) {
+            setActiveTab(tabFromUrl as TabType)
         }
     }, [searchParams])
 

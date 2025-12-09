@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom'
 import { LiveRecorder } from '@/components'
 import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/components/Toast'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { createLogger } from '@/lib/logger'
 
 const logger = createLogger('RecordPage')
@@ -67,6 +68,7 @@ interface RecordingMetadata {
 type PermissionState = 'prompt' | 'granted' | 'denied' | 'checking'
 
 export function RecordPage() {
+    useDocumentTitle('record')
     const navigate = useNavigate()
     const user = useAuthStore((state) => state.user)
     const accessToken = useAuthStore((state) => state.accessToken)

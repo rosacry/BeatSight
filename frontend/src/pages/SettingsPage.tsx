@@ -164,14 +164,14 @@ export function SettingsPage() {
     // Update URL when tab changes
     const handleTabChange = (tab: SettingsTab) => {
         setActiveTab(tab)
-        setSearchParams({ tab })
+        setSearchParams({ tab }, { replace: true })
     }
 
     // Sync tab state with URL on mount and URL changes
     useEffect(() => {
-        const tabFromUrl = searchParams.get('tab') as SettingsTab | null
-        if (tabFromUrl && VALID_TABS.includes(tabFromUrl) && tabFromUrl !== activeTab) {
-            setActiveTab(tabFromUrl)
+        const tabFromUrl = searchParams.get('tab')
+        if (tabFromUrl && (VALID_TABS as readonly string[]).includes(tabFromUrl)) {
+            setActiveTab(tabFromUrl as SettingsTab)
         }
     }, [searchParams])
 

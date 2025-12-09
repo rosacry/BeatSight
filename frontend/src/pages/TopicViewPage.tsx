@@ -17,6 +17,7 @@ import {
 } from '@/api/forum'
 import { ForumPostCard, ForumPoll, PostEditor } from '@/components/forum'
 import { useAuthStore } from '@/stores/authStore'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import clsx from 'clsx'
 
 export function TopicViewPage() {
@@ -36,6 +37,8 @@ export function TopicViewPage() {
         queryFn: () => getTopic(topicId!),
         enabled: !!topicId,
     })
+
+    useDocumentTitle(topic?.title || 'topic')
 
     const {
         data: postsData,

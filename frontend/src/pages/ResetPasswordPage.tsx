@@ -6,8 +6,10 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '@/lib/api'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export function ResetPasswordPage() {
+    useDocumentTitle('reset password')
     const navigate = useNavigate()
     const [searchParams] = useSearchParams()
     const token = searchParams.get('token')
@@ -154,12 +156,12 @@ export function ResetPasswordPage() {
                                         <div
                                             key={level}
                                             className={`h-1 flex-1 rounded-full ${password.length >= level * 3
-                                                    ? level <= 2
-                                                        ? 'bg-red-500'
-                                                        : level === 3
-                                                            ? 'bg-yellow-500'
-                                                            : 'bg-green-500'
-                                                    : 'bg-gray-600'
+                                                ? level <= 2
+                                                    ? 'bg-red-500'
+                                                    : level === 3
+                                                        ? 'bg-yellow-500'
+                                                        : 'bg-green-500'
+                                                : 'bg-gray-600'
                                                 }`}
                                         />
                                     ))}

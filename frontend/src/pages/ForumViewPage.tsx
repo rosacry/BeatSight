@@ -8,6 +8,7 @@ import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { getForum, getForumTopics, createTopic } from '@/api/forum'
 import { TopicList, CreateTopicForm } from '@/components/forum'
 import { useAuthStore } from '@/stores/authStore'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import clsx from 'clsx'
 
 type SortOption = 'newest' | 'oldest' | 'most_posts' | 'most_views'
@@ -22,6 +23,18 @@ export function ForumViewPage() {
     const sort = (searchParams.get('sort') as SortOption) || 'newest'
     const showNew = searchParams.get('new') === 'true'
     const [showCreateForm, setShowCreateForm] = useState(showNew)
+
+    const {
+        data: forum,
+        isLoading: forumLoading,
+        error: forumError,
+    } = useQuery({
+        queryKey: ['forum', forumId],
+        queryFn: () => getForum(forumId!),
+        enabled: !!forumId,
+    })
+
+    useDocumentTitle(forum?.name || 'forum')
 
     // Auto-show create form when ?new=true is in URL
     useEffect(() => {

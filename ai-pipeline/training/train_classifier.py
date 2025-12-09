@@ -1524,13 +1524,21 @@ def compute_class_weights(
     return weights
 
 
-def stratified_sample_indices(labels_or_dataset, fraction: float, seed: int) -> List[int]:
+def stratified_sample_indices(
+    labels_or_dataset,
+    fraction: float,
+    seed: int,
+    min_samples_per_class: int = 50,  # NEW: Enforce minimum samples per class
+) -> List[int]:
     """Create stratified subset indices retaining class balance.
     
     Args:
         labels_or_dataset: Either a list of label dicts or a DrumSampleDataset
         fraction: Fraction of samples to keep (0-1)
         seed: Random seed for reproducibility
+        min_samples_per_class: Minimum samples to keep per class (default: 50).
+            This prevents class collapse from too few samples when using balanced sampling.
+            If a class has fewer samples than this, ALL samples from that class are kept.
     """
     # Handle DrumSampleDataset with numpy labels
     if hasattr(labels_or_dataset, '_use_numpy') and labels_or_dataset._use_numpy:
@@ -1575,14 +1583,24 @@ def stratified_sample_indices(labels_or_dataset, fraction: float, seed: int) -> 
 
     rng = random.Random(seed)
     sampled: List[int] = []
-    for indices in by_class.values():
+    classes_boosted = 0
+    for class_idx, indices in by_class.items():
         if not indices:
             continue
-        take = max(1, int(round(len(indices) * fraction)))
+        # Compute target samples based on fraction
+        take_by_fraction = max(1, int(round(len(indices) * fraction)))
+        # Apply minimum samples per class floor
+        take = max(take_by_fraction, min(min_samples_per_class, len(indices)))
+        if take > take_by_fraction:
+            classes_boosted += 1
         if take >= len(indices):
             sampled.extend(indices)
         else:
             sampled.extend(rng.sample(indices, take))
+    
+    # Log if any classes were boosted to minimum
+    if classes_boosted > 0:
+        print(f"[STRATIFIED] {classes_boosted} classes boosted to min {min_samples_per_class} samples (prevents class collapse)")
 
     rng.shuffle(sampled)
     # Keep indices sorted so Subset preserves the dataset's original order.
@@ -3093,6 +3111,14 @@ def main():
         help="Subset sampling mode: stratified retains class balance, contiguous keeps cache shard locality",
     )
     parser.add_argument(
+        "--min-samples-per-class",
+        type=int,
+        default=50,
+        help="Minimum samples to keep per class in stratified subset (default: 50). "
+             "Prevents class collapse when using balanced sampling with small subsets. "
+             "Set to 0 to disable and use pure fraction-based sampling.",
+    )
+    parser.add_argument(
         "--subset-debug",
         action="store_true",
         help="Log shard-level subset coverage diagnostics (useful when tuning contiguous mode)",
@@ -4153,7 +4179,7 @@ def main():
         # NOTE: No ghost/accent-tap augmentation for validation - we want to measure true accuracy
     )
 
-    def create_subset(dataset_full, fraction: float) -> Tuple[Optional[List[int]], Dataset]:
+    def create_subset(dataset_full, fraction: float, is_train: bool = True) -> Tuple[Optional[List[int]], Dataset]:
         if fraction >= 1.0:
             return None, dataset_full
         if args.subset_mode == "contiguous":
@@ -4164,11 +4190,19 @@ def main():
                 args.subset_seed,
             )
         else:
-            indices = stratified_sample_indices(dataset_full, fraction, args.subset_seed)
+            # Use min_samples_per_class for training set to prevent class collapse
+            # Validation set uses 0 (pure fraction) since we want natural distribution
+            min_samples = args.min_samples_per_class if is_train else 0
+            indices = stratified_sample_indices(
+                dataset_full, 
+                fraction, 
+                args.subset_seed,
+                min_samples_per_class=min_samples,
+            )
         return indices, Subset(dataset_full, indices)
 
-    train_subset_indices, train_dataset = create_subset(train_dataset_full, args.train_fraction)
-    val_subset_indices, val_dataset = create_subset(val_dataset_full, args.val_fraction)
+    train_subset_indices, train_dataset = create_subset(train_dataset_full, args.train_fraction, is_train=True)
+    val_subset_indices, val_dataset = create_subset(val_dataset_full, args.val_fraction, is_train=False)
 
     if args.subset_debug:
         def _format_range(r: tuple[int, int]) -> str:

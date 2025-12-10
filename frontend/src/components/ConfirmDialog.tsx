@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { lockBodyScroll, unlockBodyScroll } from '@/lib/bodyScrollLock'
 
@@ -142,9 +143,9 @@ export function ConfirmDialog({
 
     const styles = getVariantStyles()
 
-    // osu-style popup for signout variant
+    // osu-style popup for signout variant - rendered via portal for proper centering
     if (style === 'popup' || variant === 'signout') {
-        return (
+        const dialogContent = (
             <AnimatePresence mode="wait">
                 {isOpen && (
                     <motion.div
@@ -152,86 +153,140 @@ export function ConfirmDialog({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        transition={{ duration: 0.25 }}
+                        className="fixed inset-0 z-[9999] flex items-center justify-center"
                         onClick={onClose}
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                        }}
                     >
-                        {/* Backdrop with gradient */}
+                        {/* Full-screen backdrop with blur and dark overlay */}
                         <motion.div
-                            className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/70 to-black/60 backdrop-blur-sm"
+                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            transition={{ duration: 0.2 }}
+                            transition={{ duration: 0.3 }}
                         />
 
-                        {/* Dialog Card */}
+                        {/* Subtle animated gradient overlay for depth */}
+                        <motion.div
+                            className="absolute inset-0 bg-gradient-to-br from-fuchsia-900/20 via-transparent to-cyan-900/20 pointer-events-none"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.4 }}
+                        />
+
+                        {/* Dialog Card - Centered */}
                         <motion.div
                             ref={dialogRef}
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            initial={{ opacity: 0, scale: 0.85, y: 30 }}
                             animate={{
                                 opacity: 1,
                                 scale: 1,
                                 y: 0,
                                 transition: {
                                     type: 'spring',
-                                    duration: 0.4,
-                                    bounce: 0.2
+                                    duration: 0.5,
+                                    bounce: 0.25
                                 }
                             }}
                             exit={{
                                 opacity: 0,
-                                scale: 0.95,
-                                y: -10,
-                                transition: { duration: 0.15, ease: 'easeOut' }
+                                scale: 0.9,
+                                y: 20,
+                                transition: { duration: 0.2, ease: 'easeIn' }
                             }}
                             onClick={(e) => e.stopPropagation()}
                             tabIndex={-1}
-                            className="relative bg-gradient-to-b from-slate-800 to-slate-900 rounded-2xl border border-white/10 shadow-2xl shadow-black/50 max-w-sm w-full overflow-hidden focus:outline-none"
+                            className="relative bg-gradient-to-b from-slate-800/95 to-slate-900/95 rounded-3xl border border-white/10 shadow-2xl shadow-black/60 max-w-md w-full mx-4 overflow-hidden focus:outline-none backdrop-blur-xl"
                             role="dialog"
                             aria-modal="true"
                             aria-labelledby="dialog-title"
                         >
                             {/* Decorative top gradient line */}
-                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-pink-500" />
+                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-pink-500" />
+
+                            {/* Subtle glow effect */}
+                            <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-32 bg-fuchsia-500/20 rounded-full blur-3xl pointer-events-none" />
 
                             {/* Content */}
-                            <div className="px-6 pt-8 pb-6 text-center">
-                                {/* Icon */}
-                                <div className="mx-auto w-14 h-14 rounded-full bg-gradient-to-br from-fuchsia-500/20 to-pink-500/20 border border-fuchsia-500/30 flex items-center justify-center mb-4">
-                                    <svg className="w-7 h-7 text-fuchsia-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <div className="relative px-8 pt-10 pb-8 text-center">
+                                {/* Icon with animated ring */}
+                                <motion.div
+                                    className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-fuchsia-500/20 to-pink-500/20 border border-fuchsia-500/40 flex items-center justify-center mb-5 relative"
+                                    initial={{ scale: 0.8 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ delay: 0.1, type: 'spring', bounce: 0.4 }}
+                                >
+                                    {/* Animated ring */}
+                                    <motion.div
+                                        className="absolute inset-0 rounded-full border-2 border-fuchsia-400/30"
+                                        initial={{ scale: 1, opacity: 0.5 }}
+                                        animate={{
+                                            scale: [1, 1.3, 1.3],
+                                            opacity: [0.5, 0, 0]
+                                        }}
+                                        transition={{
+                                            duration: 2,
+                                            repeat: Infinity,
+                                            ease: 'easeOut'
+                                        }}
+                                    />
+                                    <svg className="w-8 h-8 text-fuchsia-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                                     </svg>
-                                </div>
+                                </motion.div>
 
                                 {/* Title */}
-                                <h2 id="dialog-title" className="text-xl font-semibold text-white mb-2">
+                                <motion.h2
+                                    id="dialog-title"
+                                    className="text-2xl font-bold text-white mb-3"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.15 }}
+                                >
                                     {title}
-                                </h2>
+                                </motion.h2>
 
                                 {/* Message */}
-                                <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+                                <motion.p
+                                    className="text-slate-400 text-base mb-8 leading-relaxed"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.2 }}
+                                >
                                     {message}
-                                </p>
+                                </motion.p>
 
                                 {/* Buttons */}
-                                <div className="flex gap-3 justify-center">
+                                <motion.div
+                                    className="flex gap-4 justify-center"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.25 }}
+                                >
                                     <button
                                         onClick={onClose}
                                         disabled={isLoading}
-                                        className={`px-6 py-2.5 text-sm font-medium rounded-xl transition-all duration-200
+                                        className={`px-8 py-3 text-sm font-semibold rounded-xl transition-all duration-200
                                                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900
-                                                 disabled:opacity-50 min-w-[120px]
-                                                 ${styles.cancelButton || 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 hover:border-cyan-400/50 focus:ring-cyan-500/50'}`}
+                                                 disabled:opacity-50 min-w-[140px] hover:scale-105 active:scale-95
+                                                 ${styles.cancelButton || 'bg-slate-700/60 hover:bg-slate-600/60 text-slate-200 border border-slate-600/50 hover:border-slate-500/50 focus:ring-slate-500/50'}`}
                                     >
                                         {cancelLabel}
                                     </button>
                                     <button
                                         onClick={onConfirm}
                                         disabled={isLoading}
-                                        className={`px-6 py-2.5 text-sm font-medium text-white rounded-xl transition-all duration-200
+                                        className={`px-8 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200
                                                   focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900
-                                                  disabled:opacity-50 min-w-[120px]
+                                                  disabled:opacity-50 min-w-[140px] hover:scale-105 active:scale-95
                                                   ${styles.confirmButton}`}
                                     >
                                         {isLoading ? (
@@ -245,13 +300,16 @@ export function ConfirmDialog({
                                             confirmLabel
                                         )}
                                     </button>
-                                </div>
+                                </motion.div>
                             </div>
                         </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
         )
+
+        // Use portal to render at document root, escaping any parent positioning
+        return createPortal(dialogContent, document.body)
     }
 
     // Standard modal dialog

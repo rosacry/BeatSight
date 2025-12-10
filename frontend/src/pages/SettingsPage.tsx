@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { createLogger, getDeveloperModeEnabled, enableDeveloperMode, disableDeveloperMode } from '@/lib/logger'
 import { AvatarUpload } from '@/components/AvatarUpload'
@@ -464,36 +464,26 @@ export function SettingsPage() {
 
             <div className="flex flex-col md:flex-row gap-8">
                 {/* Sidebar */}
-                <LayoutGroup id="settings-page">
-                    <nav className="md:w-48 space-y-1">
-                        {tabs.map((tab) => (
-                            <motion.button
-                                key={tab.id}
-                                onClick={() => handleTabChange(tab.id)}
-                                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors relative ${activeTab === tab.id
-                                    ? 'text-white'
-                                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
-                                    }`}
-                                whileHover={{ x: 4 }}
-                                whileTap={{ scale: 0.98 }}
-                                transition={{ duration: 0.15 }}
-                            >
-                                {activeTab === tab.id && (
-                                    <motion.div
-                                        layoutId="activeTab"
-                                        className="absolute inset-0 bg-gray-700 rounded-lg"
-                                        initial={false}
-                                        transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-                                    />
-                                )}
-                                <span className="relative z-10 flex items-center gap-3">
-                                    {tab.icon}
-                                    {tab.label}
-                                </span>
-                            </motion.button>
-                        ))}
-                    </nav>
-                </LayoutGroup>
+                <nav className="md:w-48 space-y-1">
+                    {tabs.map((tab) => (
+                        <motion.button
+                            key={tab.id}
+                            onClick={() => handleTabChange(tab.id)}
+                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all relative ${activeTab === tab.id
+                                ? 'text-white bg-gray-700'
+                                : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                                }`}
+                            whileHover={{ x: 4 }}
+                            whileTap={{ scale: 0.98 }}
+                            transition={{ duration: 0.15 }}
+                        >
+                            <span className="relative z-10 flex items-center gap-3">
+                                {tab.icon}
+                                {tab.label}
+                            </span>
+                        </motion.button>
+                    ))}
+                </nav>
 
                 {/* Content */}
                 <div className="flex-1">

@@ -37,14 +37,14 @@ import { forceUnlockBodyScroll } from './lib/bodyScrollLock'
 
 // Page transition animation variants
 const pageVariants = {
-    initial: { opacity: 0, y: 8 },
-    animate: { opacity: 1, y: 0 },
-    exit: { opacity: 0, y: -8 },
+    initial: { opacity: 0 },
+    animate: { opacity: 1 },
+    exit: { opacity: 0 },
 }
 
 const pageTransition = {
-    duration: 0.2,
-    ease: [0.25, 0.46, 0.45, 0.94],
+    duration: 0.15,
+    ease: 'easeOut',
 }
 
 // Scroll restoration and modal cleanup component - runs on route change
@@ -98,7 +98,7 @@ function AnimatedRoutes() {
     return (
         <>
             <ScrollToTop />
-            <AnimatePresence mode="sync">
+            <AnimatePresence mode="wait" initial={false}>
                 <motion.div
                     key={location.pathname}
                     initial="initial"

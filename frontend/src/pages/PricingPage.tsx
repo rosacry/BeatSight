@@ -251,28 +251,15 @@ export function PricingPage() {
                         )}
                     </div>
 
-                    <AnimatePresence mode="wait">
+                    <AnimatePresence>
                         {showCredits && (
                             <motion.div
                                 key="credits-container"
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{
-                                    opacity: 1,
-                                    height: 'auto',
-                                    transition: {
-                                        height: { duration: 0.35, ease: [0.4, 0, 0.2, 1] },
-                                        opacity: { duration: 0.2, delay: 0.1 }
-                                    }
-                                }}
-                                exit={{
-                                    opacity: 0,
-                                    height: 0,
-                                    transition: {
-                                        opacity: { duration: 0.15 },
-                                        height: { duration: 0.25, ease: [0.4, 0, 0.2, 1] }
-                                    }
-                                }}
-                                className="overflow-hidden mt-6"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="mt-6"
                             >
                                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl mx-auto pb-4 pt-2">
                                     {CREDIT_PACKS.map((pack) => (

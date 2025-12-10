@@ -74,28 +74,28 @@ export function DashboardPage() {
             />
 
             {/* Content */}
-            <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
+            <div className="relative z-10 max-w-7xl mx-auto px-4 py-6 sm:py-8">
                 <motion.div
                     initial="hidden"
                     animate="visible"
                     variants={containerVariants}
                 >
                     {/* Welcome Header */}
-                    <motion.div variants={itemVariants} className="mb-8">
-                        <h1 className="text-3xl font-bold text-white">
-                            Welcome back, <span className="text-cyan-400">{user.display_name}</span>
+                    <motion.div variants={itemVariants} className="mb-6 sm:mb-8">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-white">
+                            Welcome back, <span className="text-cyan-400 break-all sm:break-normal">{user.display_name}</span>
                         </h1>
-                        <p className="text-slate-400 mt-2">
+                        <p className="text-slate-400 mt-2 text-sm sm:text-base">
                             Here's what's happening in your BeatSight world
                         </p>
                     </motion.div>
 
-                    <div className="grid lg:grid-cols-3 gap-6">
+                    <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
                         {/* Main Content - Left Column (2 cols) */}
                         <div className="lg:col-span-2 space-y-6">
                             {/* Quick Actions */}
                             <motion.div variants={itemVariants}>
-                                <div className="grid sm:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                                     <Link
                                         to="/upload"
                                         className="group relative p-5 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-cyan-600/10

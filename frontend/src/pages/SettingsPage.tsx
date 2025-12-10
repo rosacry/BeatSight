@@ -462,9 +462,9 @@ export function SettingsPage() {
                 </div>
             )}
 
-            <div className="flex flex-col md:flex-row gap-8">
-                {/* Sidebar */}
-                <nav className="md:w-48 space-y-1">
+            <div className="flex flex-col md:flex-row gap-6 md:gap-8">
+                {/* Sidebar - horizontal scroll on mobile, vertical on desktop */}
+                <nav className="flex md:flex-col gap-1 md:w-48 overflow-x-auto pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 md:space-y-1 flex-shrink-0">
                     {tabs.map((tab) => (
                         <motion.button
                             key={tab.id}

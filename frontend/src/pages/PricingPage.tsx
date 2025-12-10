@@ -80,27 +80,27 @@ export function PricingPage() {
     const currentPlan = subscription?.plan || 'free'
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 py-16 px-4">
+        <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 py-8 sm:py-16 px-4">
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl font-bold text-white mb-4">
+                <div className="text-center mb-8 sm:mb-12">
+                    <h1 className="text-2xl sm:text-4xl font-bold text-white mb-3 sm:mb-4">
                         Simple, Transparent Pricing
                     </h1>
-                    <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+                    <p className="text-base sm:text-xl text-gray-400 max-w-2xl mx-auto">
                         Choose Pro for regular use, or pay-per-song with credits.
                     </p>
-                    <p className="text-sm text-cyan-400 mt-4">
+                    <p className="text-xs sm:text-sm text-cyan-400 mt-3 sm:mt-4">
                         Playing beatmaps, creating manual maps, and verifying community maps is always free.
                     </p>
                 </div>
 
                 {/* Billing Toggle */}
-                <div className="flex justify-center mb-12">
+                <div className="flex justify-center mb-8 sm:mb-12">
                     <div className="bg-gray-800 p-1 rounded-lg flex">
                         <button
                             onClick={() => setBillingCycle('monthly')}
-                            className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${billingCycle === 'monthly'
+                            className={`px-4 sm:px-6 py-2 rounded-md text-sm font-medium transition-colors ${billingCycle === 'monthly'
                                 ? 'bg-purple-600 text-white'
                                 : 'text-gray-400 hover:text-white'
                                 }`}
@@ -109,19 +109,19 @@ export function PricingPage() {
                         </button>
                         <button
                             onClick={() => setBillingCycle('yearly')}
-                            className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${billingCycle === 'yearly'
+                            className={`px-4 sm:px-6 py-2 rounded-md text-sm font-medium transition-colors ${billingCycle === 'yearly'
                                 ? 'bg-purple-600 text-white'
                                 : 'text-gray-400 hover:text-white'
                                 }`}
                         >
                             Yearly
-                            <span className="ml-2 text-xs text-green-400">Save 33%</span>
+                            <span className="ml-1 sm:ml-2 text-xs text-green-400">Save 33%</span>
                         </button>
                     </div>
                 </div>
 
                 {/* Pricing Cards */}
-                <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-16">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto mb-12 sm:mb-16">
                     {PRICING_PLANS.map((plan) => {
                         const isCurrentPlan = currentPlan === plan.id ||
                             (currentPlan === 'pro_yearly' && plan.id === 'pro_monthly')

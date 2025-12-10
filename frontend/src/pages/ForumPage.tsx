@@ -147,7 +147,7 @@ export function ForumPage() {
 
                     {/* Quick stats */}
                     <motion.div variants={itemVariants}>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                             {user && (
                                 <div className="group p-5 rounded-2xl bg-gradient-to-br from-magenta-500/20 to-magenta-600/10
                                               border border-magenta-500/30 hover:border-magenta-400/50 transition-all duration-300">

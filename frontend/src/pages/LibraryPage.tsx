@@ -113,16 +113,16 @@ export function LibraryPage() {
     }
 
     return (
-        <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+        <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 space-y-4 sm:space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-white">My Library</h1>
-                    <p className="text-gray-400 mt-1">
+                    <h1 className="text-xl sm:text-2xl font-bold text-white">My Library</h1>
+                    <p className="text-gray-400 text-sm mt-1">
                         {filteredSongs.length} {filteredSongs.length === 1 ? 'song' : 'songs'}
                     </p>
                 </div>
-                <Link to="/upload" className="btn btn-primary flex items-center gap-2 w-fit whitespace-nowrap">
+                <Link to="/upload" className="btn btn-primary flex items-center justify-center gap-2 w-full sm:w-fit whitespace-nowrap">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>

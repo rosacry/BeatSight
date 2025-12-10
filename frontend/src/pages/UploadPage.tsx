@@ -120,13 +120,13 @@ export function UploadPage() {
     )
 
     return (
-        <div className="max-w-3xl mx-auto space-y-6">
-            <h1 className="text-2xl font-bold text-white">Generate Beatmap</h1>
+        <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+            <h1 className="text-xl sm:text-2xl font-bold text-white">Generate Beatmap</h1>
 
             {/* Quota warning */}
             {isQuotaExceeded && (
                 <div className="card bg-red-500/10 border border-red-500/20">
-                    <p className="text-red-400">
+                    <p className="text-red-400 text-sm sm:text-base">
                         You've reached your generation quota. Please wait until your quota resets or upgrade your plan.
                     </p>
                 </div>
@@ -134,7 +134,7 @@ export function UploadPage() {
 
             {/* Upload area */}
             <div className="card">
-                <h2 className="text-lg font-medium text-white mb-4">Upload Audio File</h2>
+                <h2 className="text-base sm:text-lg font-medium text-white mb-4">Upload Audio File</h2>
 
                 {uploadState === 'idle' && (
                     <>
@@ -144,7 +144,7 @@ export function UploadPage() {
                             onDragLeave={handleDragLeave}
                             onClick={() => fileInputRef.current?.click()}
                             className={`
-                border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
+                border-2 border-dashed rounded-xl p-4 sm:p-8 text-center cursor-pointer
                 transition-colors
                 ${dragOver
                                     ? 'border-primary-500 bg-primary-500/10'

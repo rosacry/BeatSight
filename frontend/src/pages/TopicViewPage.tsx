@@ -143,26 +143,26 @@ export function TopicViewPage() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
             {/* Breadcrumb */}
             <nav className="flex items-center gap-2 text-sm text-gray-400 flex-wrap">
-                <Link to="/forum" className="hover:text-white transition-colors">
+                <Link to="/forum" className="hover:text-white transition-colors whitespace-nowrap">
                     Forums
                 </Link>
                 <span>›</span>
                 <Link
                     to={`/forum/${topic.forum_id}`}
-                    className="hover:text-white transition-colors"
+                    className="hover:text-white transition-colors whitespace-nowrap"
                 >
                     Forum
                 </Link>
                 <span>›</span>
-                <span className="text-white truncate max-w-md">{topic.title}</span>
+                <span className="text-white truncate max-w-[150px] sm:max-w-md">{topic.title}</span>
             </nav>
 
             {/* Topic header */}
             <div className="card bg-gray-800/50 border border-gray-700">
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-2">
                             {topic.topic_type === 'announcement' && (
@@ -181,23 +181,23 @@ export function TopicViewPage() {
                                 </span>
                             )}
                         </div>
-                        <h1 className="text-2xl font-bold text-white break-words">
+                        <h1 className="text-xl sm:text-2xl font-bold text-white break-words">
                             {topic.title}
                         </h1>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm text-gray-400">
                             <span>
                                 by{' '}
-                                <span className="text-gray-300">
+                                <span className="text-gray-300 truncate max-w-[100px] sm:max-w-none inline-block align-bottom">
                                     {topic.author?.display_name || 'Unknown'}
                                 </span>
                             </span>
-                            <span>{topic.view_count.toLocaleString()} views</span>
-                            <span>{topic.post_count.toLocaleString()} posts</span>
+                            <span className="whitespace-nowrap">{topic.view_count.toLocaleString()} views</span>
+                            <span className="whitespace-nowrap">{topic.post_count.toLocaleString()} posts</span>
                         </div>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                         {user && (
                             <button
                                 onClick={() => watchMutation.mutate()}

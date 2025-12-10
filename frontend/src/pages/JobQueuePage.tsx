@@ -45,28 +45,28 @@ export function JobQueuePage() {
     }, [jobs])
 
     return (
-        <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+        <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-white">Job Queue</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-white">Job Queue</h1>
                 <p className="text-slate-400 text-sm mt-1">Track your AI beatmap generation jobs</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
                 {/* Main content */}
                 <div className="lg:col-span-3 space-y-4">
                     {/* Filters */}
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
                         {(['all', 'queued', 'processing', 'complete', 'failed'] as const).map((state) => (
                             <button
                                 key={state}
                                 onClick={() => setFilter(state)}
-                                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${filter === state
+                                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium transition-all ${filter === state
                                     ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/25'
                                     : 'bg-gray-800/50 text-slate-400 hover:bg-gray-700/50 hover:text-white'
                                     }`}
                             >
                                 {state.charAt(0).toUpperCase() + state.slice(1)}
-                                <span className="ml-1.5 text-xs opacity-75">
+                                <span className="ml-1 sm:ml-1.5 text-xs opacity-75">
                                     ({filterCounts[state]})
                                 </span>
                             </button>

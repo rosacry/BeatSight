@@ -255,10 +255,10 @@ export function PricingPage() {
                         {showCredits && (
                             <motion.div
                                 key="credits-container"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.2 }}
+                                initial={{ opacity: 0, y: -20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
                                 className="mt-6"
                             >
                                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl mx-auto pb-4 pt-2">

@@ -165,13 +165,13 @@ export function LeaderboardPage() {
         <div className="max-w-4xl mx-auto px-4 py-8">
             {/* Header */}
             <div className="text-center mb-8">
-                <h1 className="text-3xl font-bold text-white mb-2">Leaderboards</h1>
-                <p className="text-slate-400">Top contributors in the BeatSight community</p>
+                <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Leaderboards</h1>
+                <p className="text-slate-400 text-sm sm:text-base">Top contributors in the BeatSight community</p>
             </div>
 
             {/* Tab Navigation */}
-            <div className="flex justify-center mb-8">
-                <div className="inline-flex gap-1 p-1 bg-gray-800/50 rounded-xl">
+            <div className="flex justify-center mb-8 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+                <div className="inline-flex gap-1 p-1 bg-gray-800/50 rounded-xl flex-nowrap">
                     {[
                         { id: 'karma', label: '🏆 Karma', description: 'Top karma earners' },
                         { id: 'verifiers', label: '✓ Verifiers', description: 'Top beatmap verifiers' },
@@ -180,7 +180,7 @@ export function LeaderboardPage() {
                         <button
                             key={tab.id}
                             onClick={() => handleTabChange(tab.id as LeaderboardTab)}
-                            className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+                            className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap ${activeTab === tab.id
                                 ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/25'
                                 : 'text-slate-400 hover:text-white hover:bg-gray-700/50'
                                 }`}
@@ -404,7 +404,7 @@ export function LeaderboardPage() {
             </div>
 
             {/* Incentives Section */}
-            <div className="mt-8 grid sm:grid-cols-3 gap-4">
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="p-5 rounded-xl bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 border border-cyan-500/20">
                     <h3 className="font-semibold text-cyan-400 mb-2">🏆 Earn Karma</h3>
                     <p className="text-sm text-slate-400 mb-3">
@@ -446,7 +446,7 @@ export function LeaderboardPage() {
                 <p className="text-sm text-slate-400 mb-4">
                     Earn karma to unlock new roles and abilities within the BeatSight community.
                 </p>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
                     <div className="p-3 rounded-lg bg-slate-700/30 border border-slate-600/30">
                         <div className="text-sm font-medium text-slate-300">Fixer</div>
                         <div className="text-xs text-slate-500">50+ karma</div>

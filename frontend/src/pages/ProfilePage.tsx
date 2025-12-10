@@ -134,12 +134,12 @@ export function ProfilePage() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8">
+        <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 sm:space-y-8">
             {/* Profile Header */}
             <div className="card">
-                <div className="flex flex-col sm:flex-row items-center gap-6">
+                <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
                     {/* Avatar */}
-                    <div className="w-24 h-24 bg-primary-600 rounded-full flex items-center justify-center overflow-hidden">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-primary-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
                         {user.avatar_url ? (
                             <img
                                 src={user.avatar_url}
@@ -147,17 +147,17 @@ export function ProfilePage() {
                                 className="w-full h-full object-cover"
                             />
                         ) : (
-                            <span className="text-white text-3xl font-bold">{initials}</span>
+                            <span className="text-white text-2xl sm:text-3xl font-bold">{initials}</span>
                         )}
                     </div>
 
                     {/* User Info */}
-                    <div className="flex-1 text-center sm:text-left">
-                        <h1 className="text-2xl font-bold text-white">{user.display_name}</h1>
-                        <p className="text-gray-400">{user.email}</p>
-                        <div className="flex items-center justify-center sm:justify-start gap-4 mt-3">
-                            <span className="text-sm text-gray-500">
-                                Joined {format(new Date(user.created_at), 'MMMM yyyy')}
+                    <div className="flex-1 text-center sm:text-left min-w-0">
+                        <h1 className="text-xl sm:text-2xl font-bold text-white truncate">{user.display_name}</h1>
+                        <p className="text-gray-400 text-sm sm:text-base truncate">{user.email}</p>
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-4 mt-3 text-xs sm:text-sm">
+                            <span className="text-gray-500 whitespace-nowrap">
+                                Joined {format(new Date(user.created_at), 'MMM yyyy')}
                             </span>
                             {user.email_verified ? (
                                 <span className="flex items-center gap-1 text-sm text-green-400">
@@ -181,33 +181,33 @@ export function ProfilePage() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <div className="card text-center">
-                    <div className="text-3xl font-bold text-white">{totalSongs}</div>
-                    <div className="text-gray-400 text-sm">Songs Uploaded</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                <div className="card text-center p-3 sm:p-4">
+                    <div className="text-2xl sm:text-3xl font-bold text-white">{totalSongs}</div>
+                    <div className="text-gray-400 text-xs sm:text-sm">Songs Uploaded</div>
                 </div>
-                <div className="card text-center">
-                    <div className="text-3xl font-bold text-white">{completedJobs}</div>
-                    <div className="text-gray-400 text-sm">Beatmaps Generated</div>
+                <div className="card text-center p-3 sm:p-4">
+                    <div className="text-2xl sm:text-3xl font-bold text-white">{completedJobs}</div>
+                    <div className="text-gray-400 text-xs sm:text-sm">Maps Generated</div>
                 </div>
-                <div className="card text-center">
-                    <div className="text-3xl font-bold text-green-400">{verificationStats?.consensus_matches || 0}</div>
-                    <div className="text-gray-400 text-sm">Maps Verified</div>
+                <div className="card text-center p-3 sm:p-4">
+                    <div className="text-2xl sm:text-3xl font-bold text-green-400">{verificationStats?.consensus_matches || 0}</div>
+                    <div className="text-gray-400 text-xs sm:text-sm">Maps Verified</div>
                 </div>
-                <div className="card text-center">
-                    <div className="text-3xl font-bold text-primary-400">
+                <div className="card text-center p-3 sm:p-4">
+                    <div className="text-2xl sm:text-3xl font-bold text-primary-400">
                         {achievementsData?.total_earned || 0}
                     </div>
-                    <div className="text-gray-400 text-sm">Achievements</div>
+                    <div className="text-gray-400 text-xs sm:text-sm">Achievements</div>
                 </div>
             </div>
 
             {/* Tabs */}
-            <div className="border-b border-gray-700">
-                <nav className="flex gap-8">
+            <div className="border-b border-gray-700 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                <nav className="flex gap-4 sm:gap-8 min-w-max">
                     <button
                         onClick={() => handleTabChange('overview')}
-                        className={`pb-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'overview'
+                        className={`pb-3 sm:pb-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'overview'
                             ? 'border-primary-500 text-primary-400'
                             : 'border-transparent text-gray-400 hover:text-white'
                             }`}
@@ -216,7 +216,7 @@ export function ProfilePage() {
                     </button>
                     <button
                         onClick={() => handleTabChange('achievements')}
-                        className={`pb-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'achievements'
+                        className={`pb-3 sm:pb-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'achievements'
                             ? 'border-primary-500 text-primary-400'
                             : 'border-transparent text-gray-400 hover:text-white'
                             }`}

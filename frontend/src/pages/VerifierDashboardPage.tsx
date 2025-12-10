@@ -218,19 +218,19 @@ export function VerifierDashboardPage() {
     }
 
     return (
-        <div className="max-w-6xl mx-auto px-4 py-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Verifier Dashboard</h1>
-            <p className="text-slate-400 mb-4">Review and approve map edit proposals</p>
+        <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Verifier Dashboard</h1>
+            <p className="text-slate-400 text-sm sm:text-base mb-4">Review and approve map edit proposals</p>
 
             {/* Community Impact Banner */}
-            <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-cyan-500/10 to-fuchsia-500/10 border border-cyan-500/20">
+            <div className="mb-6 p-3 sm:p-4 rounded-xl bg-gradient-to-r from-cyan-500/10 to-fuchsia-500/10 border border-cyan-500/20">
                 <div className="flex items-start gap-3">
-                    <svg className="w-6 h-6 text-cyan-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <div>
-                        <p className="text-white font-medium">You're building the global index</p>
-                        <p className="text-sm text-slate-400 mt-1">
+                        <p className="text-white font-medium text-sm sm:text-base">You're building the global index</p>
+                        <p className="text-xs sm:text-sm text-slate-400 mt-1">
                             Every map you verify helps create the <span className="text-cyan-400">first universal repository for drum transcriptions</span>.
                             Your reviews ensure quality and improve AI accuracy for drummers worldwide.
                         </p>
@@ -240,40 +240,40 @@ export function VerifierDashboardPage() {
 
             {/* Stats Cards */}
             {stats && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-4">
-                        <p className="text-sm text-slate-400">Pending Queue</p>
-                        <p className="text-2xl font-bold text-yellow-400">{stats.pending_count}</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
+                    <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-3 sm:p-4">
+                        <p className="text-xs sm:text-sm text-slate-400">Pending Queue</p>
+                        <p className="text-xl sm:text-2xl font-bold text-yellow-400">{stats.pending_count}</p>
                     </div>
-                    <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-4">
-                        <p className="text-sm text-slate-400">Approved Today</p>
-                        <p className="text-2xl font-bold text-green-400">{stats.approved_today}</p>
+                    <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-3 sm:p-4">
+                        <p className="text-xs sm:text-sm text-slate-400">Approved Today</p>
+                        <p className="text-xl sm:text-2xl font-bold text-green-400">{stats.approved_today}</p>
                     </div>
-                    <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-4">
-                        <p className="text-sm text-slate-400">Rejected Today</p>
-                        <p className="text-2xl font-bold text-red-400">{stats.rejected_today}</p>
+                    <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-3 sm:p-4">
+                        <p className="text-xs sm:text-sm text-slate-400">Rejected Today</p>
+                        <p className="text-xl sm:text-2xl font-bold text-red-400">{stats.rejected_today}</p>
                     </div>
-                    <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-4">
-                        <p className="text-sm text-slate-400">Your Total Reviews</p>
-                        <p className="text-2xl font-bold text-cyan-400">{stats.total_reviewed_by_user}</p>
+                    <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-3 sm:p-4">
+                        <p className="text-xs sm:text-sm text-slate-400">Your Total Reviews</p>
+                        <p className="text-xl sm:text-2xl font-bold text-cyan-400">{stats.total_reviewed_by_user}</p>
                     </div>
                 </div>
             )}
 
             {/* Tabs */}
-            <div className="flex gap-1 p-1 bg-gray-800/50 rounded-xl w-fit mb-6">
+            <div className="flex gap-1 p-1 bg-gray-800/50 rounded-xl w-fit mb-6 overflow-x-auto">
                 <button
                     onClick={() => handleTabChange('queue')}
-                    className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${activeTab === 'queue'
+                    className={`px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${activeTab === 'queue'
                         ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/25'
                         : 'text-slate-400 hover:text-white hover:bg-gray-700/50'
                         }`}
                 >
-                    Pending Queue ({stats?.pending_count || 0})
+                    Pending ({stats?.pending_count || 0})
                 </button>
                 <button
                     onClick={() => handleTabChange('history')}
-                    className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${activeTab === 'history'
+                    className={`px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${activeTab === 'history'
                         ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/25'
                         : 'text-slate-400 hover:text-white hover:bg-gray-700/50'
                         }`}

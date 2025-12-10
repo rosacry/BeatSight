@@ -413,9 +413,6 @@ export function Layout({ children }: LayoutProps) {
             {/* Spacer for fixed nav */}
             <div className="h-16" />
 
-            {/* Breadcrumb (for nested pages) */}
-            <Breadcrumb />
-
             {/* Main content */}
             <main
                 id={SKIP_LINK_TARGETS.MAIN_CONTENT}
@@ -500,84 +497,5 @@ export function Layout({ children }: LayoutProps) {
                 style="popup"
             />
         </div>
-    )
-}
-
-/**
- * Breadcrumb component for nested routes.
- */
-function Breadcrumb() {
-    const location = useLocation()
-
-    // Don't show breadcrumb on home page
-    if (location.pathname === '/') {
-        return null
-    }
-
-    // Define breadcrumb mappings for dynamic routes
-    const getBreadcrumbs = (): { path: string; label: string }[] => {
-        const path = location.pathname
-        const crumbs: { path: string; label: string }[] = [
-            { path: '/', label: 'Home' },
-        ]
-
-        if (path.startsWith('/jobs/')) {
-            crumbs.push({ path: '/queue', label: 'Job Queue' })
-            crumbs.push({ path: path, label: 'Job Details' })
-        } else if (path === '/queue') {
-            crumbs.push({ path: '/queue', label: 'Job Queue' })
-        } else if (path === '/upload') {
-            crumbs.push({ path: '/upload', label: 'Upload Song' })
-        } else if (path === '/library') {
-            crumbs.push({ path: '/library', label: 'My Library' })
-        } else if (path === '/login') {
-            crumbs.push({ path: '/login', label: 'Sign In' })
-        } else if (path === '/register') {
-            crumbs.push({ path: '/register', label: 'Sign Up' })
-        } else if (path === '/profile') {
-            crumbs.push({ path: '/profile', label: 'Profile' })
-        } else if (path === '/settings') {
-            crumbs.push({ path: '/settings', label: 'Settings' })
-        }
-
-        return crumbs
-    }
-
-    const breadcrumbs = getBreadcrumbs()
-
-    if (breadcrumbs.length <= 1) {
-        return null
-    }
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-slate-900/30 backdrop-blur-sm border-b border-white/5"
-        >
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-                <nav className="flex items-center gap-2 text-sm">
-                    {breadcrumbs.map((crumb, index) => (
-                        <span key={crumb.path} className="flex items-center gap-2">
-                            {index > 0 && (
-                                <svg className="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
-                            )}
-                            {index === breadcrumbs.length - 1 ? (
-                                <span className="text-slate-400">{crumb.label}</span>
-                            ) : (
-                                <Link
-                                    to={crumb.path}
-                                    className="text-slate-500 hover:text-cyan-400 transition-colors"
-                                >
-                                    {crumb.label}
-                                </Link>
-                            )}
-                        </span>
-                    ))}
-                </nav>
-            </div>
-        </motion.div>
     )
 }

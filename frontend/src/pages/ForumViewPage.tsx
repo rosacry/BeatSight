@@ -133,26 +133,26 @@ export function ForumViewPage() {
     }
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6">
+        <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
             {/* Breadcrumb */}
-            <nav className="flex items-center gap-2 text-sm text-gray-400">
+            <nav className="flex items-center gap-2 text-sm text-gray-400 flex-wrap">
                 <Link to="/forum" className="hover:text-white transition-colors">
                     Forums
                 </Link>
                 <span>›</span>
-                <span className="text-white">{forum.name}</span>
+                <span className="text-white truncate max-w-[200px] sm:max-w-none">{forum.name}</span>
             </nav>
 
             {/* Forum header */}
-            <div className="flex items-start justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold text-white">{forum.name}</h1>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-white break-words">{forum.name}</h1>
                     {forum.description && (
-                        <p className="text-gray-400 mt-1">{forum.description}</p>
+                        <p className="text-gray-400 mt-1 text-sm sm:text-base">{forum.description}</p>
                     )}
                     <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                        <span>{forum.topic_count.toLocaleString()} topics</span>
-                        <span>{forum.post_count.toLocaleString()} posts</span>
+                        <span className="whitespace-nowrap">{forum.topic_count.toLocaleString()} topics</span>
+                        <span className="whitespace-nowrap">{forum.post_count.toLocaleString()} posts</span>
                     </div>
                 </div>
 
@@ -160,7 +160,7 @@ export function ForumViewPage() {
                 {user && forum.allow_topics && (
                     <button
                         onClick={() => setShowCreateForm(!showCreateForm)}
-                        className="btn btn-primary"
+                        className="btn btn-primary w-full sm:w-auto"
                     >
                         {showCreateForm ? 'Cancel' : 'New Topic'}
                     </button>
@@ -180,21 +180,21 @@ export function ForumViewPage() {
             )}
 
             {/* Sort and filter controls */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                     <span className="text-sm text-gray-400">Sort by:</span>
-                    <div className="flex gap-1">
+                    <div className="flex flex-wrap gap-1">
                         {[
                             { value: 'newest', label: 'Newest' },
                             { value: 'oldest', label: 'Oldest' },
-                            { value: 'most_posts', label: 'Most Replies' },
-                            { value: 'most_views', label: 'Most Views' },
+                            { value: 'most_posts', label: 'Replies' },
+                            { value: 'most_views', label: 'Views' },
                         ].map((option) => (
                             <button
                                 key={option.value}
                                 onClick={() => handleSortChange(option.value as SortOption)}
                                 className={clsx(
-                                    'px-3 py-1 text-sm rounded transition-colors',
+                                    'px-3 py-1.5 text-xs sm:text-sm rounded transition-colors',
                                     sort === option.value
                                         ? 'bg-purple-600 text-white'
                                         : 'bg-gray-800 text-gray-400 hover:text-white'
@@ -207,9 +207,9 @@ export function ForumViewPage() {
                 </div>
 
                 {topicsData && (
-                    <div className="text-sm text-gray-400">
-                        Showing {topicsData.items.length} of {topicsData.total.toLocaleString()}{' '}
-                        topics
+                    <div className="text-sm text-gray-400 whitespace-nowrap">
+                        <span className="hidden sm:inline">Showing {topicsData.items.length} of </span>
+                        {topicsData.total.toLocaleString()} topics
                     </div>
                 )}
             </div>

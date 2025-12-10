@@ -98,7 +98,7 @@ function AnimatedRoutes() {
     return (
         <>
             <ScrollToTop />
-            <AnimatePresence mode="popLayout">
+            <AnimatePresence mode="sync">
                 <motion.div
                     key={location.pathname}
                     initial="initial"

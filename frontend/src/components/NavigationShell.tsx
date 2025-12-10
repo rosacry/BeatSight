@@ -154,7 +154,7 @@ export function Layout({ children }: LayoutProps) {
     ]
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-black flex flex-col relative">
+        <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-black flex flex-col relative overflow-x-hidden">
             {/* Skip to main content link for screen readers */}
             <a
                 href={`#${SKIP_LINK_TARGETS.MAIN_CONTENT}`}
@@ -419,7 +419,7 @@ export function Layout({ children }: LayoutProps) {
             {/* Main content */}
             <main
                 id={SKIP_LINK_TARGETS.MAIN_CONTENT}
-                className="flex-1 w-full"
+                className="flex-1 w-full overflow-x-hidden"
                 tabIndex={-1}
             >
                 {children}

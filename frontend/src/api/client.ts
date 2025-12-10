@@ -435,4 +435,17 @@ export async function getAchievementProgress(): Promise<AchievementProgress> {
     return request<AchievementProgress>('/achievements/progress', {}, true)
 }
 
+// --- Accuracy Verification Stats API ---
+
+export interface VerificationStats {
+    total_votes: number
+    consensus_matches: number
+    accuracy_rate: number
+    by_vote_type: Record<string, number>
+}
+
+export async function getMyVerificationStats(): Promise<VerificationStats> {
+    return request<VerificationStats>('/accuracy/my-stats', {}, true)
+}
+
 export { APIError }

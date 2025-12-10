@@ -3,8 +3,17 @@
 @tailwind utilities;
 
 @layer base {
+
+    /* Force scrollbar to always show space to prevent layout shift during page transitions */
+    /* Hide horizontal scrollbar to prevent flash during animations */
+    html {
+        overflow-y: scroll;
+        overflow-x: hidden;
+    }
+
     body {
         @apply antialiased;
+        overflow-x: hidden;
     }
 }
 

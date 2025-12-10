@@ -109,7 +109,7 @@ export function ForumPage() {
                                 </div>
 
                                 {/* Action buttons */}
-                                <div className="flex items-center gap-3">
+                                <div className="flex flex-wrap items-center gap-3">
                                     {/* New Topic Button */}
                                     {user && (
                                         <button

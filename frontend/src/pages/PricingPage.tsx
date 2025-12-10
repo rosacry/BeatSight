@@ -189,7 +189,7 @@ export function PricingPage() {
                                                     d="M5 13l4 4L19 7"
                                                 />
                                             </svg>
-                                            <span className="text-gray-300">{feature}</span>
+                                            <span className="text-gray-300 break-words">{feature}</span>
                                         </li>
                                     ))}
                                 </ul>

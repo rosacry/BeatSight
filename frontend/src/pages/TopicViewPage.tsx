@@ -144,22 +144,6 @@ export function TopicViewPage() {
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-            {/* Breadcrumb */}
-            <nav className="flex items-center gap-2 text-sm text-gray-400 flex-wrap">
-                <Link to="/forum" className="hover:text-white transition-colors whitespace-nowrap">
-                    Forums
-                </Link>
-                <span>›</span>
-                <Link
-                    to={`/forum/${topic.forum_id}`}
-                    className="hover:text-white transition-colors whitespace-nowrap"
-                >
-                    Forum
-                </Link>
-                <span>›</span>
-                <span className="text-white truncate max-w-[150px] sm:max-w-md">{topic.title}</span>
-            </nav>
-
             {/* Topic header */}
             <div className="card bg-gray-800/50 border border-gray-700">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">

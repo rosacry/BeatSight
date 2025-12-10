@@ -62,9 +62,8 @@ export function JobCard({ job, showProgress = true }: JobCardProps) {
             )}
 
             {job.state === 'failed' && job.error_message && (
-                <div className="mt-3 p-2 bg-red-500/10 border border-red-500/20 rounded text-sm text-red-400">
-                    {job.error_message.slice(0, 100)}
-                    {job.error_message.length > 100 && '...'}
+                <div className="mt-3 p-2 bg-red-500/10 border border-red-500/20 rounded text-sm text-red-400 break-words line-clamp-2">
+                    {job.error_message}
                 </div>
             )}
         </Link>

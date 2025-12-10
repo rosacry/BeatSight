@@ -702,7 +702,7 @@ export function AdminDashboardPage() {
                     )}
 
                     {/* Users Table */}
-                    <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-x-auto overflow-visible">
+                    <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-x-auto">
                         <table className="w-full min-w-[900px]">
                             <thead className="bg-gray-900">
                                 <tr>

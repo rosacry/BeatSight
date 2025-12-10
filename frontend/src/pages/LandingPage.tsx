@@ -81,7 +81,7 @@ export function LandingPage() {
                         </div>
 
                         {/* Stats */}
-                        <div className="mt-16 grid grid-cols-3 gap-8 max-w-lg mx-auto">
+                        <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 max-w-lg mx-auto">
                             <StatItem value="21" label="Drum Classes" />
                             <StatItem value="85%" label="Accuracy" />
                             <StatItem value="<2min" label="Processing" />

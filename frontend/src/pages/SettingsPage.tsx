@@ -447,7 +447,7 @@ export function SettingsPage() {
     ]
 
     return (
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto px-4 overflow-x-hidden">
             <h1 className="text-2xl font-bold text-white mb-8">Settings</h1>
 
             {/* Feedback Messages */}
@@ -464,7 +464,7 @@ export function SettingsPage() {
 
             <div className="flex flex-col md:flex-row gap-6 md:gap-8">
                 {/* Sidebar - horizontal scroll on mobile, vertical on desktop */}
-                <nav className="flex md:flex-col gap-1 md:w-48 overflow-x-auto pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 md:space-y-1 flex-shrink-0 flex-nowrap">
+                <nav className="flex md:flex-col gap-1 md:w-48 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 md:space-y-1 flex-shrink-0 flex-nowrap">
                     {tabs.map((tab) => (
                         <motion.button
                             key={tab.id}
@@ -473,7 +473,6 @@ export function SettingsPage() {
                                 ? 'text-white bg-gray-700'
                                 : 'text-gray-400 hover:text-white hover:bg-gray-800'
                                 }`}
-                            whileHover={{ x: 4 }}
                             whileTap={{ scale: 0.98 }}
                             transition={{ duration: 0.15 }}
                         >

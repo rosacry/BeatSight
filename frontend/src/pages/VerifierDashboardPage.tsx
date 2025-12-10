@@ -218,7 +218,7 @@ export function VerifierDashboardPage() {
     }
 
     return (
-        <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
+        <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 min-h-[calc(100vh-10rem)]">
             <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Verifier Dashboard</h1>
             <p className="text-slate-400 text-sm sm:text-base mb-4">Review and approve map edit proposals</p>
 

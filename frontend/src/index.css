@@ -18,6 +18,35 @@
         @apply antialiased;
         overflow-x: hidden;
     }
+
+    /* Custom scrollbar styling - always visible with consistent appearance */
+    /* This prevents the jarring flash when scrollbar appears/disappears */
+    ::-webkit-scrollbar {
+        width: 12px;
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: rgba(15, 23, 42, 0.3);
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: rgba(71, 85, 105, 0.5);
+        border-radius: 6px;
+        border: 3px solid transparent;
+        background-clip: content-box;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: rgba(100, 116, 139, 0.7);
+        background-clip: content-box;
+    }
+
+    /* Firefox scrollbar styling */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(71, 85, 105, 0.5) rgba(15, 23, 42, 0.3);
+    }
 }
 
 @layer components {

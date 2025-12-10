@@ -15,7 +15,7 @@ interface ForumCardProps {
 function ForumCard({ forum }: ForumCardProps) {
     return (
         <Link
-            to={`/forum/${forum.id}`}
+            to={`/forum/${forum.slug || forum.id}`}
             className="group flex items-start gap-4 p-4 bg-white/5 rounded-xl hover:bg-white/10 
                      transition-all duration-200 border border-white/10 hover:border-cyan-500/30"
         >

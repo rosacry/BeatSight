@@ -67,7 +67,9 @@ class Song(Base):
     artist: Mapped[str] = mapped_column(String(255), nullable=False)
     bpm: Mapped[int | None] = mapped_column(Integer)
     status: Mapped[SongStatus] = mapped_column(
-        SAEnum(SongStatus), default=SongStatus.PENDING, nullable=False
+        SAEnum(SongStatus, values_callable=lambda x: [e.value for e in x]),
+        default=SongStatus.PENDING,
+        nullable=False,
     )
     canonical_map_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("maps.id")
@@ -110,7 +112,9 @@ class Map(Base):
     difficulty_label: Mapped[str] = mapped_column(String(64), nullable=False)
     is_canonical: Mapped[bool] = mapped_column(default=False)
     state: Mapped[MapState] = mapped_column(
-        SAEnum(MapState), default=MapState.UNVERIFIED, nullable=False
+        SAEnum(MapState, values_callable=lambda x: [e.value for e in x]),
+        default=MapState.UNVERIFIED,
+        nullable=False,
     )
     current_version_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("map_versions.id")

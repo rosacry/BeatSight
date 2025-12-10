@@ -94,7 +94,8 @@ class CreditBalance(Base):
     # Auto top-up settings
     auto_topup_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     auto_topup_pack: Mapped[CreditPackType | None] = mapped_column(
-        SAEnum(CreditPackType), nullable=True
+        SAEnum(CreditPackType, values_callable=lambda x: [e.value for e in x]),
+        nullable=True,
     )
     auto_topup_threshold: Mapped[int] = mapped_column(
         Integer, default=0
@@ -148,7 +149,8 @@ class CreditPurchase(Base):
 
     # Purchase details
     pack_type: Mapped[CreditPackType] = mapped_column(
-        SAEnum(CreditPackType), nullable=False
+        SAEnum(CreditPackType, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
     )
     credits_amount: Mapped[int] = mapped_column(Integer, nullable=False)
     price_cents: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -203,7 +205,8 @@ class CreditTransaction(Base):
 
     # Transaction details
     transaction_type: Mapped[CreditTransactionType] = mapped_column(
-        SAEnum(CreditTransactionType), nullable=False
+        SAEnum(CreditTransactionType, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
     )
     amount: Mapped[int] = mapped_column(
         Integer, nullable=False

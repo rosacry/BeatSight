@@ -100,7 +100,8 @@ class MapAccuracyVote(Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
     )
     vote: Mapped[AccuracyVoteType] = mapped_column(
-        SAEnum(AccuracyVoteType), nullable=False
+        SAEnum(AccuracyVoteType, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
     )
     confidence_level: Mapped[int] = mapped_column(
         Integer, default=3, nullable=False
@@ -146,7 +147,9 @@ class MapAccuracyConsensus(Base):
         unique=True,
     )
     status: Mapped[MapAccuracyStatus] = mapped_column(
-        SAEnum(MapAccuracyStatus), default=MapAccuracyStatus.PENDING, nullable=False
+        SAEnum(MapAccuracyStatus, values_callable=lambda x: [e.value for e in x]),
+        default=MapAccuracyStatus.PENDING,
+        nullable=False,
     )
     
     # Vote counts

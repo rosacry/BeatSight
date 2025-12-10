@@ -60,7 +60,9 @@ class MapVersion(Base):
     )
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
     source_type: Mapped[MapSource] = mapped_column(
-        SAEnum(MapSource), default=MapSource.AI, nullable=False
+        SAEnum(MapSource, values_callable=lambda x: [e.value for e in x]),
+        default=MapSource.AI,
+        nullable=False,
     )
     generation_job_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("ai_jobs.id", ondelete="SET NULL")

@@ -4,11 +4,14 @@
 
 @layer base {
 
-    /* Force scrollbar to always show space to prevent layout shift during page transitions */
-    /* Hide horizontal scrollbar to prevent flash during animations */
+    /* Force scrollbar gutter to always be reserved to prevent layout shift during page transitions */
+    /* This reserves space for the scrollbar even when content doesn't overflow */
     html {
-        overflow-y: scroll;
         overflow-x: hidden;
+        overflow-y: scroll;
+        /* Fallback for browsers without scrollbar-gutter support */
+        scrollbar-gutter: stable;
+        /* Modern browsers: reserve space without showing scrollbar */
     }
 
     body {

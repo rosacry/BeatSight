@@ -23,6 +23,17 @@ While competitors detect 6-8 basic drum classes, BeatSight distinguishes **21 cl
 
 Our AI is trained on **14.6 million samples** — 30x more than competitors.
 
+### Why BeatSight vs. Learning Platforms (Melodics, Beatlii)
+
+| Aspect | BeatSight | Learning Platforms |
+|--------|-----------|-------------------|
+| **Song Access** | **Any song** via AI or community | Curated lessons only |
+| **Acoustic Drums** | ✅ Visual lookahead works for all | ❌ Requires MIDI kit |
+| **AI Transcription** | ✅ 21 class detection | ❌ No AI — manual curation |
+| **Community Contributions** | ✅ Anyone can add songs | ❌ Closed content |
+
+Learning platforms like Melodics are great for beginners with structured curricula, but limit you to their song library. BeatSight lets you practice **any song** with professional-grade transcription.
+
 ### Community-Built Global Library
 
 - 🎵 **Discover** - Find beatmaps created and refined by the community
@@ -88,6 +99,8 @@ graph LR
 | **21 Drum Classes** | The most detailed detection: kick, snare (3 articulations), hi-hat (5 types), ride (bow/bell), toms, cymbals, and more |
 | **Technique Detection** | Flams, rolls, ghost notes, accents — not just what notes, but *how* they're played |
 | **Multi-Hit Detection** | Simultaneous hits (kick+hi-hat, snare+crash) unlike competitors |
+| **Any Song Access** | AI transcription + community library — not limited to curated content |
+| **Acoustic Drum Support** | Visual lookahead works for all drummers — no MIDI required |
 | **14.6M Training Samples** | Trained on the largest drum transcription dataset ever assembled |
 | **Speed Control** | 50% to 200% without pitch change |
 | **Multiple Views** | 2D lanes, 3D highway, traditional notation |

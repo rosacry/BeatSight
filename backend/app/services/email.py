@@ -267,7 +267,7 @@ If you didn't request this, you can safely ignore this email.
                     <div class="feature-icon">🤖</div>
                     <div class="feature-text">
                         <h3>AI Transcription</h3>
-                        <p>19 drum classes detected with 85% accuracy</p>
+                        <p>21 drum classes detected with 85% accuracy</p>
                     </div>
                 </div>
                 
@@ -301,7 +301,7 @@ You're now ready to transform any song into playable drum beatmaps using our AI.
 
 What you can do:
 - Upload any song (MP3, WAV, FLAC)
-- AI transcribes drums with 19 classes and 85% accuracy
+- AI transcribes drums with 21 classes and 85% accuracy
 - Export to osu! or play in our desktop app
 
 Get started: {self.frontend_url}/upload

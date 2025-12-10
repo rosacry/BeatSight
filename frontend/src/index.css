@@ -19,33 +19,41 @@
         overflow-x: hidden;
     }
 
-    /* Custom scrollbar styling - always visible with consistent appearance */
-    /* This prevents the jarring flash when scrollbar appears/disappears */
+    /* Custom scrollbar styling - make thumb invisible/subtle to prevent flash during page transitions */
+    /* The track remains to reserve space, but the thumb won't cause visual jarring */
     ::-webkit-scrollbar {
-        width: 12px;
+        width: 8px;
         background: transparent;
     }
 
     ::-webkit-scrollbar-track {
-        background: rgba(15, 23, 42, 0.3);
+        background: transparent;
     }
 
     ::-webkit-scrollbar-thumb {
-        background: rgba(71, 85, 105, 0.5);
-        border-radius: 6px;
-        border: 3px solid transparent;
-        background-clip: content-box;
+        background: rgba(71, 85, 105, 0);
+        border-radius: 4px;
+        transition: background 0.3s ease;
+    }
+
+    /* Only show scrollbar thumb on hover over the scrollbar area or when actively scrolling */
+    html:hover::-webkit-scrollbar-thumb,
+    html:active::-webkit-scrollbar-thumb {
+        background: rgba(71, 85, 105, 0.4);
     }
 
     ::-webkit-scrollbar-thumb:hover {
-        background: rgba(100, 116, 139, 0.7);
-        background-clip: content-box;
+        background: rgba(100, 116, 139, 0.6);
     }
 
-    /* Firefox scrollbar styling */
-    * {
+    /* Firefox - use overlay scrollbars that auto-hide */
+    html {
         scrollbar-width: thin;
-        scrollbar-color: rgba(71, 85, 105, 0.5) rgba(15, 23, 42, 0.3);
+        scrollbar-color: transparent transparent;
+    }
+
+    html:hover {
+        scrollbar-color: rgba(71, 85, 105, 0.4) transparent;
     }
 }
 

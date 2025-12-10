@@ -218,7 +218,7 @@ jobs:
             type=raw,value=latest
       
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./backend
           file: ./backend/Dockerfile.local
@@ -261,7 +261,7 @@ jobs:
             type=raw,value=latest
       
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./frontend
           push: true
@@ -304,7 +304,7 @@ jobs:
             type=raw,value=latest
       
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./docs-site
           push: true

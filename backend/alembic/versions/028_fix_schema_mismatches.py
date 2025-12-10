@@ -1,6 +1,6 @@
 """Fix schema mismatches causing 500 errors.
 
-Revision ID: 028_fix_user_achievements_earned_at
+Revision ID: 028_fix_schema_mismatches
 Revises: 027_anonymous_mode
 Create Date: 2025-12-10
 
@@ -17,7 +17,7 @@ import sqlalchemy as sa
 from sqlalchemy import inspect, text
 
 # revision identifiers, used by Alembic.
-revision = "028_fix_user_achievements_earned_at"
+revision = "028_fix_schema_mismatches"
 down_revision = "027_anonymous_mode"
 branch_labels = None
 depends_on = None

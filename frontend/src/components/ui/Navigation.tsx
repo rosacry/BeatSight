@@ -7,9 +7,12 @@ import {
     createContext,
     useContext,
     useState,
+    useRef,
+    useEffect,
     type HTMLAttributes,
     type ReactNode,
 } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { clsx } from 'clsx'
 
@@ -354,6 +357,14 @@ export interface SidebarSectionProps extends HTMLAttributes<HTMLDivElement> {
 export const SidebarSection = forwardRef<HTMLDivElement, SidebarSectionProps>(
     ({ className, title, collapsible = false, defaultCollapsed = false, children, ...props }, ref) => {
         const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed)
+        const contentRef = useRef<HTMLDivElement>(null)
+        const [contentHeight, setContentHeight] = useState<number | 'auto'>('auto')
+
+        useEffect(() => {
+            if (contentRef.current) {
+                setContentHeight(contentRef.current.scrollHeight)
+            }
+        }, [children])
 
         return (
             <div ref={ref} className={clsx('py-2', className)} {...props}>
@@ -367,20 +378,32 @@ export const SidebarSection = forwardRef<HTMLDivElement, SidebarSectionProps>(
                     >
                         {title}
                         {collapsible && (
-                            <svg
-                                className={clsx('w-4 h-4 transition-transform', isCollapsed && '-rotate-90')}
+                            <motion.svg
+                                animate={{ rotate: isCollapsed ? -90 : 0 }}
+                                transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                                className="w-4 h-4"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
                             >
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
+                            </motion.svg>
                         )}
                     </div>
                 )}
-                {(!collapsible || !isCollapsed) && (
-                    <div className="space-y-0.5 px-2">{children}</div>
-                )}
+                <AnimatePresence initial={false}>
+                    {(!collapsible || !isCollapsed) && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: contentHeight, opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                            className="overflow-hidden"
+                        >
+                            <div ref={contentRef} className="space-y-0.5 px-2">{children}</div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         )
     }

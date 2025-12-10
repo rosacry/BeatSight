@@ -10,10 +10,13 @@ import {
     useState,
     useCallback,
     useId,
+    useRef,
+    useEffect,
     type HTMLAttributes,
     type ReactNode,
     type FormEvent,
 } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 // CVA used for future variants
 import { cn } from '../../lib/utils'
 
@@ -269,6 +272,14 @@ export const FormGroup = forwardRef<HTMLDivElement, FormGroupProps>(
         ref
     ) => {
         const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed)
+        const contentRef = useRef<HTMLDivElement>(null)
+        const [contentHeight, setContentHeight] = useState<number | 'auto'>('auto')
+
+        useEffect(() => {
+            if (contentRef.current) {
+                setContentHeight(contentRef.current.scrollHeight)
+            }
+        }, [children])
 
         return (
             <div
@@ -298,26 +309,35 @@ export const FormGroup = forwardRef<HTMLDivElement, FormGroupProps>(
                         </div>
 
                         {collapsible && (
-                            <svg
-                                className={cn(
-                                    'w-5 h-5 text-gray-400 transition-transform',
-                                    isCollapsed && '-rotate-90'
-                                )}
+                            <motion.svg
+                                animate={{ rotate: isCollapsed ? -90 : 0 }}
+                                transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                                className="w-5 h-5 text-gray-400"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
                             >
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
+                            </motion.svg>
                         )}
                     </div>
                 )}
 
-                {!isCollapsed && (
-                    <div className="p-4 space-y-4">
-                        {children}
-                    </div>
-                )}
+                <AnimatePresence initial={false}>
+                    {!isCollapsed && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: contentHeight, opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                            className="overflow-hidden"
+                        >
+                            <div ref={contentRef} className="p-4 space-y-4">
+                                {children}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         )
     }

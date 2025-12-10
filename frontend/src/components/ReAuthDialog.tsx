@@ -12,6 +12,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { API_CONFIG } from '@/lib/config'
+import { lockBodyScroll, unlockBodyScroll } from '@/lib/bodyScrollLock'
 
 interface ReAuthDialogProps {
     isOpen: boolean
@@ -89,12 +90,10 @@ export function ReAuthDialog({
     // Prevent body scroll when dialog is open
     useEffect(() => {
         if (isOpen) {
-            document.body.style.overflow = 'hidden'
-        } else {
-            document.body.style.overflow = ''
-        }
-        return () => {
-            document.body.style.overflow = ''
+            lockBodyScroll()
+            return () => {
+                unlockBodyScroll()
+            }
         }
     }, [isOpen])
 

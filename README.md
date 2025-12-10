@@ -30,11 +30,29 @@ Rhythm games like Guitar Hero, Rock Band, Dance Dance Revolution, and osu! all s
 
 **This matters more than you might think.** Research on rhythm and motor learning ([Rhythm and Music-Based Interventions in Motor Rehabilitation](https://www.frontiersin.org/articles/10.3389/fnhum.2021.789467/full)) demonstrates that visual anticipation dramatically accelerates motor skill acquisition. When you can *see* what's coming, your brain pre-plans the movement instead of reacting after the fact. Drummers have never had this advantage—until now.
 
+### The Problem We're Solving
+
+**There's no universal place where drummers can find, create, share, and refine drum transcriptions for any song.** BeatSight is building that — the first global repository and community hub for drummers, similar to what osu! built for rhythm gaming.
+
+### Why We're Different
+
+| Capability | BeatSight | Competitors |
+|-----------|-----------|-------------|
+| **Drum Classes** | **21 classes** (snare center, rimshot, cross-stick, 5 hi-hat types, ride bow/bell, etc.) | 6-8 basic classes |
+| **Training Data** | **14.6 million samples** | Limited datasets |
+| **Technique Detection** | Ghost notes, flams, drags, rolls, velocity | Limited or none |
+| **Multi-hit Detection** | Simultaneous hits (kick+hi-hat, snare+crash) | Single hit per frame |
+| **Cymbal Chokes** | ✅ Detected | ❌ Not detected |
+| **Snare Articulations** | ✅ Center, rimshot, cross-stick | ❌ Not distinguished |
+| **Hi-Hat Variations** | ✅ Closed, open, pedal, splash, foot splash | ❌ Only open/closed |
+| **Community-Driven** | ✅ Training code open, corrections improve AI | ❌ No community feedback loop |
+
 BeatSight brings the rhythm game paradigm to drum practice:
 
 - **Visual lookahead** — Notes scroll toward a timing line, giving you time to prepare each hit
-- **Community library** — Discover, share, and refine beatmaps for any song—the global index for drum transcriptions
+- **Community library** — The first universal index for drum transcriptions: discover, share, and refine beatmaps for any song
 - **Multiple creation paths** — Build maps from scratch, use AI-assisted transcription, or polish existing community maps
+- **Professional-grade detection** — 21 drum classes including articulations, techniques, and dynamics
 - **Tempo control** — Slow sections down to 50% without pitch shift, then gradually speed up as you learn
 - **Stem isolation** — Practice with just the drum track, or hear how your part fits the full mix
 
@@ -42,11 +60,16 @@ The goal isn't gamification for its own sake—it's giving drummers the same vis
 
 ## Features
 
+### AI-Powered Transcription (Industry-Leading)
+- **21 drum classes** — The most detailed detection anywhere: kick, snare (center/rimshot/cross-stick), hi-hat (5 types), ride (bow/bell), 3 toms, crash, china, splash, cymbal choke, and aux percussion
+- **Technique detection** — Identifies flams, ghost notes, rolls, accents, and dynamics
+- **Multi-hit detection** — Detects simultaneous hits (kick+hi-hat, snare+crash) unlike competitors
+- **14.6M training samples** — Trained on the largest drum transcription dataset ever assembled
+
 ### Beatmap Creation
 - **Manual editor** — Build beatmaps from scratch with a full-featured timeline editor
 - **AI-assisted transcription** — Use machine learning to generate a starting point, then refine it
 - **Community refinement** — Polish existing maps; your corrections feed back to improve the model
-- **Technique detection** — Flams, ghost notes, rolls, accents, rimshots, and more
 - **Automatic analysis** — Tempo, time signature, and velocity detection
 
 ### Multiple Practice Views
@@ -140,10 +163,10 @@ Opens at `http://localhost:5173` with hot module replacement.
 | Tier | Price | AI Transcriptions | Best For |
 |------|-------|-------------------|----------|
 | **Free** | $0 | 3/month | Getting started |
-| **Pro** | $12/mo | 50/month | Regular creators |
-| **Credits** | $0.35/song | Pay-as-you-go | Occasional AI use |
+| **Pro** | $12/mo ($8/mo yearly) | 50/month | Regular creators |
+| **Credits** | ~$0.33/song | Pay-as-you-go | Extra songs beyond quota |
 
-Community maps, manual creation, and all practice features are always free. Credits are only for AI-assisted transcription.
+Community maps, manual creation, verification, and all practice features are always free. Credits are only for AI-assisted transcription beyond your monthly quota.
 
 ## Architecture
 
@@ -221,6 +244,18 @@ See [`docs/BEATMAP_FORMAT.md`](docs/BEATMAP_FORMAT.md) for the full specificatio
 ## Contributing
 
 Contributions are welcome! Please read [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) before submitting a PR.
+
+### Why Contribute?
+
+**You're helping build the first universal index for drum transcriptions.** Before BeatSight, there was no central place where drummers could find, create, share, and refine transcriptions for any song. By contributing beatmaps, verifying transcriptions, or improving the codebase, you're participating in building something that benefits drummers worldwide — similar to what osu! built for rhythm gaming.
+
+**Every contribution matters:**
+- 🥁 **Beatmap creators** — Add songs to the global index
+- ✅ **Verifiers** — Ensure quality and earn karma
+- 💻 **Developers** — Improve the platform for everyone
+- 🔬 **AI corrections** — Your feedback trains better models
+
+### Getting Started
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`

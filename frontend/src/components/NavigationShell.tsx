@@ -6,13 +6,14 @@
 
 import { useState, useEffect } from 'react'
 import { Link, useLocation, NavLink, useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { UserMenu } from './UserMenu'
 import { CreditBalance } from './CreditBalance'
 import { ConfirmDialog } from './ConfirmDialog'
 import { EXTERNAL_LINKS, getDocsLink, getCommunityLink } from '@/lib/externalLinks'
 import { SKIP_LINK_TARGETS, ARIA_LABELS } from '@/lib/accessibility'
+import { forceUnlockBodyScroll } from '@/lib/bodyScrollLock'
 
 interface LayoutProps {
     children: React.ReactNode
@@ -211,36 +212,38 @@ export function Layout({ children }: LayoutProps) {
                             </Link>
 
                             {/* Desktop nav links */}
-                            <div className="hidden md:flex ml-6 items-center gap-0.5">
-                                {visibleNavItems.map((item) => (
-                                    <NavLink
-                                        key={item.path}
-                                        to={item.path}
-                                        className={({ isActive }) =>
-                                            `relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${isActive
-                                                ? 'text-white'
-                                                : 'text-slate-400 hover:text-white'
-                                            }`
-                                        }
-                                    >
-                                        {({ isActive }) => (
-                                            <>
-                                                {isActive && (
-                                                    <motion.span
-                                                        layoutId="activeNavBg"
-                                                        className="absolute inset-0 bg-white/10 rounded-lg"
-                                                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                                                    />
-                                                )}
-                                                <span className="relative flex items-center gap-1.5">
-                                                    {item.icon}
-                                                    <span className="hidden lg:inline">{item.label}</span>
-                                                </span>
-                                            </>
-                                        )}
-                                    </NavLink>
-                                ))}
-                            </div>
+                            <LayoutGroup id="desktop-nav">
+                                <div className="hidden md:flex ml-6 items-center gap-0.5">
+                                    {visibleNavItems.map((item) => (
+                                        <NavLink
+                                            key={item.path}
+                                            to={item.path}
+                                            className={({ isActive }) =>
+                                                `relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${isActive
+                                                    ? 'text-white'
+                                                    : 'text-slate-400 hover:text-white'
+                                                }`
+                                            }
+                                        >
+                                            {({ isActive }) => (
+                                                <>
+                                                    {isActive && (
+                                                        <motion.span
+                                                            layoutId="activeNavBg"
+                                                            className="absolute inset-0 bg-white/10 rounded-lg"
+                                                            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                                                        />
+                                                    )}
+                                                    <span className="relative flex items-center gap-1.5">
+                                                        {item.icon}
+                                                        <span className="hidden lg:inline">{item.label}</span>
+                                                    </span>
+                                                </>
+                                            )}
+                                        </NavLink>
+                                    ))}
+                                </div>
+                            </LayoutGroup>
                         </div>
 
                         {/* Right side actions */}
@@ -426,15 +429,21 @@ export function Layout({ children }: LayoutProps) {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
                         {/* Logo and copyright */}
-                        <div className="flex items-center gap-3">
-                            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-slate-800/90 to-slate-900/90 
-                                          border border-white/10 flex items-center justify-center
-                                          shadow-lg shadow-black/20 overflow-hidden relative">
-                                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-fuchsia-500/5" />
-                                <img src="/icons/logo-navbar.png" alt="" className="w-4 h-4 relative z-10 brightness-105 contrast-110 drop-shadow-[0_0_4px_rgba(0,212,255,0.2)]" />
+                        <div className="flex flex-col sm:flex-row items-center gap-3">
+                            <div className="flex items-center gap-3">
+                                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-slate-800/90 to-slate-900/90 
+                                              border border-white/10 flex items-center justify-center
+                                              shadow-lg shadow-black/20 overflow-hidden relative">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-fuchsia-500/5" />
+                                    <img src="/icons/logo-navbar.png" alt="" className="w-4 h-4 relative z-10 brightness-105 contrast-110 drop-shadow-[0_0_4px_rgba(0,212,255,0.2)]" />
+                                </div>
+                                <p className="text-slate-500 text-sm">
+                                    © 2025 BeatSight
+                                </p>
                             </div>
-                            <p className="text-slate-500 text-sm">
-                                © 2025 BeatSight. See the music before you play it.
+                            <span className="hidden sm:inline text-slate-600">•</span>
+                            <p className="text-slate-600 text-xs text-center sm:text-left">
+                                The global index for drum transcriptions
                             </p>
                         </div>
 
@@ -477,13 +486,10 @@ export function Layout({ children }: LayoutProps) {
                 isOpen={showMobileSignOutConfirm}
                 onClose={() => setShowMobileSignOutConfirm(false)}
                 onConfirm={() => {
-                    document.body.style.overflow = ''
-                    document.body.style.pointerEvents = ''
+                    forceUnlockBodyScroll()
                     setShowMobileSignOutConfirm(false)
-                    setTimeout(() => {
-                        logout()
-                        navigate('/', { replace: true })
-                    }, 150)
+                    logout()
+                    navigate('/', { replace: true })
                 }}
                 title="Sign out"
                 message="Are you sure you want to sign out of BeatSight?"

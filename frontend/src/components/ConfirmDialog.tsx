@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { lockBodyScroll, unlockBodyScroll } from '@/lib/bodyScrollLock'
 
 interface ConfirmDialogProps {
     isOpen: boolean
@@ -94,13 +95,10 @@ export function ConfirmDialog({
     // Prevent body scroll when dialog is open
     useEffect(() => {
         if (isOpen) {
-            document.body.style.overflow = 'hidden'
-        } else {
-            document.body.style.overflow = ''
-        }
-
-        return () => {
-            document.body.style.overflow = ''
+            lockBodyScroll()
+            return () => {
+                unlockBodyScroll()
+            }
         }
     }, [isOpen])
 
@@ -126,8 +124,8 @@ export function ConfirmDialog({
                 }
             case 'signout':
                 return {
-                    confirmButton: 'bg-fuchsia-500 hover:bg-fuchsia-600 focus:ring-fuchsia-500/50',
-                    cancelButton: 'bg-slate-600 hover:bg-slate-500 text-white border-0',
+                    confirmButton: 'bg-gradient-to-r from-fuchsia-500 to-pink-500 hover:from-fuchsia-400 hover:to-pink-400 focus:ring-fuchsia-500/50 shadow-lg shadow-fuchsia-500/25',
+                    cancelButton: 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 hover:border-cyan-400/50',
                     icon: null, // No icon for osu-style signout popup
                 }
             default:
@@ -154,68 +152,86 @@ export function ConfirmDialog({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.15 }}
-                        className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-20"
+                        transition={{ duration: 0.2 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4"
                         onClick={onClose}
                     >
-                        {/* Light backdrop - osu uses semi-transparent */}
+                        {/* Backdrop with gradient */}
                         <motion.div
-                            className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
+                            className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/70 to-black/60 backdrop-blur-sm"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            transition={{ duration: 0.15 }}
+                            transition={{ duration: 0.2 }}
                         />
 
-                        {/* Popup Dialog - osu-style compact design */}
+                        {/* Dialog Card */}
                         <motion.div
                             ref={dialogRef}
-                            initial={{ opacity: 0, scale: 0.96, y: -20 }}
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{
                                 opacity: 1,
                                 scale: 1,
                                 y: 0,
                                 transition: {
-                                    duration: 0.2,
-                                    ease: [0.25, 0.46, 0.45, 0.94]
+                                    type: 'spring',
+                                    duration: 0.4,
+                                    bounce: 0.2
                                 }
                             }}
                             exit={{
                                 opacity: 0,
-                                scale: 0.98,
+                                scale: 0.95,
                                 y: -10,
-                                transition: { duration: 0.12, ease: 'easeOut' }
+                                transition: { duration: 0.15, ease: 'easeOut' }
                             }}
                             onClick={(e) => e.stopPropagation()}
                             tabIndex={-1}
-                            className="relative bg-slate-800/98 backdrop-blur-xl rounded-xl border border-slate-600/50 shadow-2xl shadow-black/60 max-w-md w-[calc(100%-2rem)] sm:w-full mx-4 overflow-hidden focus:outline-none"
+                            className="relative bg-gradient-to-b from-slate-800 to-slate-900 rounded-2xl border border-white/10 shadow-2xl shadow-black/50 max-w-sm w-full overflow-hidden focus:outline-none"
                             role="dialog"
                             aria-modal="true"
                             aria-labelledby="dialog-title"
                         >
-                            {/* Simple centered content - osu style */}
-                            <div className="px-6 py-5 text-center">
-                                <h2 id="dialog-title" className="text-base text-slate-200 mb-4 leading-relaxed">
-                                    {message}
+                            {/* Decorative top gradient line */}
+                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-pink-500" />
+
+                            {/* Content */}
+                            <div className="px-6 pt-8 pb-6 text-center">
+                                {/* Icon */}
+                                <div className="mx-auto w-14 h-14 rounded-full bg-gradient-to-br from-fuchsia-500/20 to-pink-500/20 border border-fuchsia-500/30 flex items-center justify-center mb-4">
+                                    <svg className="w-7 h-7 text-fuchsia-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                    </svg>
+                                </div>
+
+                                {/* Title */}
+                                <h2 id="dialog-title" className="text-xl font-semibold text-white mb-2">
+                                    {title}
                                 </h2>
 
-                                {/* Buttons side by side - osu style */}
-                                <div className="flex gap-2 justify-center">
+                                {/* Message */}
+                                <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+                                    {message}
+                                </p>
+
+                                {/* Buttons */}
+                                <div className="flex gap-3 justify-center">
                                     <button
                                         onClick={onClose}
                                         disabled={isLoading}
-                                        className="px-5 py-2 text-sm font-medium text-white 
-                                                 bg-slate-600 hover:bg-slate-500 rounded-lg transition-all
-                                                 focus:outline-none focus:ring-2 focus:ring-slate-500/50
-                                                 disabled:opacity-50 min-w-[100px]"
+                                        className={`px-6 py-2.5 text-sm font-medium rounded-xl transition-all duration-200
+                                                 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900
+                                                 disabled:opacity-50 min-w-[120px]
+                                                 ${styles.cancelButton || 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 hover:border-cyan-400/50 focus:ring-cyan-500/50'}`}
                                     >
                                         {cancelLabel}
                                     </button>
                                     <button
                                         onClick={onConfirm}
                                         disabled={isLoading}
-                                        className={`px-5 py-2 text-sm font-medium text-white rounded-lg transition-all
-                                                  focus:outline-none focus:ring-2 disabled:opacity-50 min-w-[100px]
+                                        className={`px-6 py-2.5 text-sm font-medium text-white rounded-xl transition-all duration-200
+                                                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900
+                                                  disabled:opacity-50 min-w-[120px]
                                                   ${styles.confirmButton}`}
                                     >
                                         {isLoading ? (

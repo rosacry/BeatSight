@@ -278,7 +278,7 @@ export function PricingPage() {
                                     {CREDIT_PACKS.map((pack) => (
                                         <div
                                             key={pack.type}
-                                            className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-primary-500/50 transition-all duration-200 hover:scale-[1.02]"
+                                            className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-primary-500/50 transition-colors duration-200"
                                         >
                                             <div className="flex justify-between items-start mb-3">
                                                 <h4 className="font-semibold text-white">{pack.name}</h4>
@@ -297,7 +297,7 @@ export function PricingPage() {
                                             <button
                                                 onClick={() => handleBuyCredits(pack.type)}
                                                 disabled={purchaseCreditsMutation.isPending}
-                                                className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-all duration-200 disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
+                                                className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors duration-200 disabled:opacity-50"
                                             >
                                                 {purchaseCreditsMutation.isPending ? 'Processing...' : 'Buy Now'}
                                             </button>

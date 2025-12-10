@@ -6,6 +6,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // ============================================================================
 // Types
@@ -350,39 +351,50 @@ export function FeatureFlagsDebugPanel() {
                 🚩 Flags ({flags.size})
             </button>
 
-            {isOpen && (
-                <div className="absolute bottom-12 right-0 w-80 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl overflow-hidden">
-                    <div className="p-3 border-b border-gray-700 flex items-center justify-between">
-                        <span className="font-medium text-white">Feature Flags</span>
-                        <button
-                            onClick={refresh}
-                            disabled={isLoading}
-                            className="text-xs text-cyan-400 hover:text-cyan-300 disabled:opacity-50"
-                        >
-                            {isLoading ? 'Loading...' : 'Refresh'}
-                        </button>
-                    </div>
-
-                    <div className="max-h-80 overflow-y-auto">
-                        {Array.from(flags.values()).map(flag => (
-                            <div
-                                key={flag.key}
-                                className="px-3 py-2 border-b border-gray-800 last:border-0 flex items-center justify-between"
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                        transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                        className="absolute bottom-12 right-0 w-80 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl overflow-hidden"
+                    >
+                        <div className="p-3 border-b border-gray-700 flex items-center justify-between">
+                            <span className="font-medium text-white">Feature Flags</span>
+                            <button
+                                onClick={refresh}
+                                disabled={isLoading}
+                                className="text-xs text-cyan-400 hover:text-cyan-300 disabled:opacity-50"
                             >
-                                <div>
-                                    <div className="text-sm text-white font-mono">{flag.key}</div>
-                                    {flag.variant && (
-                                        <div className="text-xs text-gray-400">variant: {flag.variant}</div>
-                                    )}
-                                </div>
-                                <div className={`text-xs font-medium ${flag.enabled ? 'text-green-400' : 'text-red-400'}`}>
-                                    {flag.enabled ? 'ON' : 'OFF'}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
+                                {isLoading ? 'Loading...' : 'Refresh'}
+                            </button>
+                        </div>
+
+                        <div className="max-h-80 overflow-y-auto">
+                            {Array.from(flags.values()).map((flag, index) => (
+                                <motion.div
+                                    key={flag.key}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: index * 0.03, duration: 0.15 }}
+                                    className="px-3 py-2 border-b border-gray-800 last:border-0 flex items-center justify-between"
+                                >
+                                    <div>
+                                        <div className="text-sm text-white font-mono">{flag.key}</div>
+                                        {flag.variant && (
+                                            <div className="text-xs text-gray-400">variant: {flag.variant}</div>
+                                        )}
+                                    </div>
+                                    <div className={`text-xs font-medium ${flag.enabled ? 'text-green-400' : 'text-red-400'}`}>
+                                        {flag.enabled ? 'ON' : 'OFF'}
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

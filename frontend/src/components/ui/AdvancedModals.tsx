@@ -25,6 +25,7 @@ import {
     ARIA_LABELS,
 } from '@/lib/accessibility'
 import { usePrefersReducedMotion } from '@/lib/animations'
+import { lockBodyScroll, unlockBodyScroll } from '@/lib/bodyScrollLock'
 
 // ============================================================================
 // TYPES
@@ -133,10 +134,9 @@ export function Sheet({
     // Prevent body scroll
     useEffect(() => {
         if (isOpen) {
-            const originalOverflow = document.body.style.overflow
-            document.body.style.overflow = 'hidden'
+            lockBodyScroll()
             return () => {
-                document.body.style.overflow = originalOverflow
+                unlockBodyScroll()
             }
         }
     }, [isOpen])
@@ -467,10 +467,9 @@ export function Drawer({
     // Prevent body scroll
     useEffect(() => {
         if (isOpen) {
-            const originalOverflow = document.body.style.overflow
-            document.body.style.overflow = 'hidden'
+            lockBodyScroll()
             return () => {
-                document.body.style.overflow = originalOverflow
+                unlockBodyScroll()
             }
         }
     }, [isOpen])
@@ -564,10 +563,9 @@ export function FullscreenOverlay({
     // Prevent body scroll
     useEffect(() => {
         if (isOpen) {
-            const originalOverflow = document.body.style.overflow
-            document.body.style.overflow = 'hidden'
+            lockBodyScroll()
             return () => {
-                document.body.style.overflow = originalOverflow
+                unlockBodyScroll()
             }
         }
     }, [isOpen])

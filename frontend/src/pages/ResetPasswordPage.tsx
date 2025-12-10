@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { forceUnlockBodyScroll } from '@/lib/bodyScrollLock'
 
 export function ResetPasswordPage() {
     useDocumentTitle('reset password')
@@ -19,6 +20,11 @@ export function ResetPasswordPage() {
     const [isLoading, setIsLoading] = useState(false)
     const [success, setSuccess] = useState(false)
     const [error, setError] = useState<string | null>(null)
+
+    // Reset any stuck body styles on mount
+    useEffect(() => {
+        forceUnlockBodyScroll()
+    }, [])
 
     // Check for token on mount
     useEffect(() => {

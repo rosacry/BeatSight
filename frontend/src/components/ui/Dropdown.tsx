@@ -501,61 +501,67 @@ export function MultiSelect({
                 </svg>
             </button>
 
-            {isOpen && (
-                <div
-                    className={cn(
-                        dropdownMenuVariants({ position: 'bottom', align: 'start' }),
-                        'w-full animate-in fade-in-0 zoom-in-95'
-                    )}
-                >
-                    <div className="py-1 max-h-60 overflow-auto">
-                        {options.map((option) => {
-                            const isSelected = value.includes(option.value)
-                            return (
-                                <div
-                                    key={option.value}
-                                    onClick={() => !option.disabled && toggleOption(option.value)}
-                                    className={cn(
-                                        'relative flex items-center gap-2 px-3 py-2 text-sm cursor-pointer',
-                                        'transition-colors duration-150',
-                                        isSelected
-                                            ? 'bg-cyan-500/10 text-cyan-400'
-                                            : 'text-slate-300 hover:bg-slate-800/50',
-                                        option.disabled && 'opacity-50 cursor-not-allowed'
-                                    )}
-                                >
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        variants={dropdownAnimationVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                        className={cn(
+                            dropdownMenuVariants({ position: 'bottom', align: 'start' }),
+                            'w-full'
+                        )}
+                    >
+                        <div className="py-1 max-h-60 overflow-auto">
+                            {options.map((option) => {
+                                const isSelected = value.includes(option.value)
+                                return (
                                     <div
+                                        key={option.value}
+                                        onClick={() => !option.disabled && toggleOption(option.value)}
                                         className={cn(
-                                            'h-4 w-4 rounded border flex items-center justify-center',
+                                            'relative flex items-center gap-2 px-3 py-2 text-sm cursor-pointer',
                                             'transition-colors duration-150',
                                             isSelected
-                                                ? 'bg-cyan-500 border-cyan-500'
-                                                : 'border-slate-600 bg-slate-800/50'
+                                                ? 'bg-cyan-500/10 text-cyan-400'
+                                                : 'text-slate-300 hover:bg-slate-800/50',
+                                            option.disabled && 'opacity-50 cursor-not-allowed'
                                         )}
                                     >
-                                        {isSelected && (
-                                            <svg
-                                                className="h-3 w-3 text-white"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    strokeWidth={3}
-                                                    d="M5 13l4 4L19 7"
-                                                />
-                                            </svg>
-                                        )}
+                                        <div
+                                            className={cn(
+                                                'h-4 w-4 rounded border flex items-center justify-center',
+                                                'transition-colors duration-150',
+                                                isSelected
+                                                    ? 'bg-cyan-500 border-cyan-500'
+                                                    : 'border-slate-600 bg-slate-800/50'
+                                            )}
+                                        >
+                                            {isSelected && (
+                                                <svg
+                                                    className="h-3 w-3 text-white"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth={3}
+                                                        d="M5 13l4 4L19 7"
+                                                    />
+                                                </svg>
+                                            )}
+                                        </div>
+                                        {option.label}
                                     </div>
-                                    {option.label}
-                                </div>
-                            )
-                        })}
-                    </div>
-                </div>
-            )}
+                                )
+                            })}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {error && <p className="mt-1.5 text-xs text-red-400">{error}</p>}
         </div>

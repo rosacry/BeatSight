@@ -3,12 +3,13 @@
  * Enhanced with modern glassmorphism design and improved UX.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { ParticleBackground, GradientOrbs } from '@/components/ui/ParticleBackground'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { forceUnlockBodyScroll } from '@/lib/bodyScrollLock'
 
 // Eye icons for password visibility toggle
 function EyeIcon() {
@@ -41,6 +42,11 @@ export function RegisterPage() {
     useDocumentTitle('sign up')
     const navigate = useNavigate()
     const { register, isLoading } = useAuthStore()
+
+    // Reset any stuck body styles on mount (e.g., from modals that didn't clean up)
+    useEffect(() => {
+        forceUnlockBodyScroll()
+    }, [])
 
     const [displayName, setDisplayName] = useState('')
     const [email, setEmail] = useState('')
@@ -150,7 +156,7 @@ export function RegisterPage() {
                             transition={{ delay: 0.3 }}
                             className="text-slate-400"
                         >
-                            Join BeatSight and start creating beatmaps
+                            Join the global community building the first universal drum transcription index
                         </motion.p>
                     </div>
 

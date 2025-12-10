@@ -33,6 +33,7 @@ import { TopicViewPage } from './pages/TopicViewPage'
 import { useAuthStore } from './stores/authStore'
 import { useServiceWorkerUpdate } from './hooks/usePWA'
 import { KeyboardShortcutsProvider } from './hooks/useKeyboardShortcuts'
+import { forceUnlockBodyScroll } from './lib/bodyScrollLock'
 
 // Page transition animation variants
 const pageVariants = {
@@ -54,10 +55,9 @@ function ScrollToTop() {
         // Scroll to top
         window.scrollTo(0, 0)
 
-        // Reset any lingering modal/dialog body styles
-        // This prevents the "stuck" state after logout/navigation
-        document.body.style.overflow = ''
-        document.body.style.pointerEvents = ''
+        // Force unlock all body scroll locks on navigation
+        // This is a safety net that catches any dialogs/modals that didn't clean up properly
+        forceUnlockBodyScroll()
     }, [pathname])
 
     return null

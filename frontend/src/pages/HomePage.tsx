@@ -46,8 +46,8 @@ const features = [
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
             </svg>
         ),
-        title: 'Any Audio Source',
-        description: 'Upload any audio with drums: published songs, band practices, original compositions, or isolated drum tracks.',
+        title: '21 Drum Classes',
+        description: 'The most detailed drum detection anywhere: rimshots, ghost notes, hi-hat variations, ride bell vs bow, cymbal chokes, and more.',
         color: 'cyan',
     },
     {
@@ -56,18 +56,18 @@ const features = [
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
         ),
-        title: 'Fast Processing',
-        description: 'Most songs are processed in 2-5 minutes using our optimized GPU pipeline with Demucs separation.',
+        title: 'Technique Detection',
+        description: 'Goes beyond what notes are played — detects how: flams, drags, rolls, ghost notes, and dynamic velocity.',
         color: 'green',
     },
     {
         icon: (
             <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
         ),
-        title: 'Customizable',
-        description: 'Edit and customize generated beatmaps in our built-in editor. Adjust timing, add notes, and fine-tune.',
+        title: 'Community-Driven',
+        description: 'Building the first universal index for drum transcriptions. Every map you create, share, and verify contributes to the global library.',
         color: 'magenta',
     },
 ]
@@ -287,10 +287,18 @@ export function HomePage() {
                     >
                         <motion.h2
                             variants={itemVariants}
-                            className="text-2xl sm:text-3xl font-bold text-white text-center mb-12"
+                            className="text-2xl sm:text-3xl font-bold text-white text-center mb-4"
                         >
-                            Why Choose <span className="text-cyan-400">BeatSight</span>?
+                            Why <span className="text-cyan-400">BeatSight</span> is Different
                         </motion.h2>
+
+                        <motion.p
+                            variants={itemVariants}
+                            className="text-slate-400 text-center max-w-2xl mx-auto mb-12"
+                        >
+                            While competitors detect 6-8 basic drum classes, BeatSight distinguishes <span className="text-white font-medium">21 classes</span> including
+                            articulations, techniques, and dynamics. Trained on <span className="text-white font-medium">14+ million samples</span>.
+                        </motion.p>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             {features.map((feature, index) => {
@@ -425,6 +433,112 @@ export function HomePage() {
                     </motion.div>
                 </section>
 
+                {/* Technical Superiority Section */}
+                <section className="relative py-16 px-4 bg-gradient-to-b from-transparent via-cyan-950/10 to-transparent">
+                    <motion.div
+                        className="max-w-5xl mx-auto"
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true, margin: '-100px' }}
+                        variants={containerVariants}
+                    >
+                        <motion.div variants={itemVariants} className="text-center mb-12">
+                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/30 mb-6">
+                                <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span className="text-sm font-medium text-green-400">Technical Comparison</span>
+                            </div>
+                            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
+                                Why BeatSight Leads the Industry
+                            </h2>
+                            <p className="text-slate-400 max-w-2xl mx-auto">
+                                See how our AI compares to other drum transcription tools
+                            </p>
+                        </motion.div>
+
+                        <motion.div variants={itemVariants}>
+                            <div className="rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 overflow-hidden">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b border-white/10">
+                                                <th className="px-6 py-4 text-left text-slate-400 font-medium">Feature</th>
+                                                <th className="px-6 py-4 text-center">
+                                                    <span className="bg-gradient-to-r from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent font-bold">BeatSight</span>
+                                                </th>
+                                                <th className="px-6 py-4 text-center text-slate-400 font-medium">Others</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-white/5">
+                                            <tr className="hover:bg-white/5 transition-colors">
+                                                <td className="px-6 py-4 text-white">Drum Classes</td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className="text-cyan-400 font-bold">21 classes</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center text-slate-500">6-8 classes</td>
+                                            </tr>
+                                            <tr className="hover:bg-white/5 transition-colors">
+                                                <td className="px-6 py-4 text-white">Training Data</td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className="text-cyan-400 font-bold">14.6M samples</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center text-slate-500">Limited datasets</td>
+                                            </tr>
+                                            <tr className="hover:bg-white/5 transition-colors">
+                                                <td className="px-6 py-4 text-white">Snare Articulations</td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className="text-green-400">✓ Center, rimshot, cross-stick</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center text-slate-500">✗ Not distinguished</td>
+                                            </tr>
+                                            <tr className="hover:bg-white/5 transition-colors">
+                                                <td className="px-6 py-4 text-white">Hi-Hat Variations</td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className="text-green-400">✓ 5 types (closed, open, pedal, splash, foot)</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center text-slate-500">✗ 2 types</td>
+                                            </tr>
+                                            <tr className="hover:bg-white/5 transition-colors">
+                                                <td className="px-6 py-4 text-white">Cymbal Choke Detection</td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className="text-green-400">✓ Yes</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center text-slate-500">✗ No</td>
+                                            </tr>
+                                            <tr className="hover:bg-white/5 transition-colors">
+                                                <td className="px-6 py-4 text-white">Technique Detection</td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className="text-green-400">✓ Flams, ghost notes, rolls</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center text-slate-500">✗ Limited</td>
+                                            </tr>
+                                            <tr className="hover:bg-white/5 transition-colors">
+                                                <td className="px-6 py-4 text-white">Multi-Hit Detection</td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className="text-green-400">✓ Simultaneous hits</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center text-slate-500">✗ Single hit per frame</td>
+                                            </tr>
+                                            <tr className="hover:bg-white/5 transition-colors">
+                                                <td className="px-6 py-4 text-white">Community-Driven</td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className="text-green-400">✓ Corrections improve AI</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center text-slate-500">✗ No feedback loop</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        <motion.p variants={itemVariants} className="text-center text-slate-500 text-sm mt-6">
+                            Based on publicly available information from competitors. BeatSight's AI is trained on the largest drum transcription dataset ever assembled.
+                        </motion.p>
+                    </motion.div>
+                </section>
+
                 {/* Community Vision Section */}
                 <section className="relative py-16 px-4">
                     <motion.div
@@ -438,56 +552,57 @@ export function HomePage() {
                             variants={itemVariants}
                             className="text-center mb-10"
                         >
-                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/30 mb-6">
+                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-cyan-500/10 to-fuchsia-500/10 border border-cyan-500/30 mb-6">
                                 <svg className="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                <span className="text-sm font-medium text-cyan-400">Community Vision</span>
+                                <span className="text-sm font-medium bg-gradient-to-r from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent">Be Part of Something Bigger</span>
                             </div>
                             <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
-                                Building the Universal Drum Transcription Index
+                                The First Universal Index for Drum Transcriptions
                             </h2>
-                            <p className="text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                                BeatSight is more than a tool — it's the first <span className="text-white font-medium">global repository and community hub for drummers</span>,
-                                similar to what <span className="text-fuchsia-400">osu!</span> built for rhythm gaming. Every beatmap you create and share contributes to a growing
-                                universal index that helps drummers worldwide.
+                            <p className="text-slate-400 max-w-3xl mx-auto leading-relaxed">
+                                <span className="text-white font-medium">There's no universal place where drummers can find, create, share, and refine transcriptions for any song.</span>
+                                {' '}BeatSight is changing that — building the global repository and community hub for drummers,
+                                similar to what <span className="text-fuchsia-400 font-medium">osu!</span> built for rhythm gaming.
+                                Every beatmap you contribute helps build something that benefits drummers worldwide.
                             </p>
                         </motion.div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <motion.div variants={itemVariants}>
-                                <div className="h-full p-6 rounded-2xl bg-white/[0.02] backdrop-blur-xl border border-white/10 hover:border-cyan-500/30 transition-all">
-                                    <div className="w-12 h-12 bg-cyan-500/10 rounded-xl flex items-center justify-center mb-4 text-cyan-400">
+                                <div className="h-full p-6 rounded-2xl bg-white/[0.02] backdrop-blur-xl border border-white/10 hover:border-cyan-500/30 transition-all group">
+                                    <div className="w-12 h-12 bg-cyan-500/10 rounded-xl flex items-center justify-center mb-4 text-cyan-400 group-hover:scale-110 transition-transform">
                                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                                         </svg>
                                     </div>
-                                    <h3 className="text-lg font-semibold text-white mb-2">Contribute</h3>
-                                    <p className="text-slate-400 text-sm">Generate and verify beatmaps to earn karma and help build the index.</p>
+                                    <h3 className="text-lg font-semibold text-white mb-2">Create & Share</h3>
+                                    <p className="text-slate-400 text-sm leading-relaxed">Generate AI-assisted maps or create from scratch. Every contribution adds to the global index that drummers everywhere can access.</p>
                                 </div>
                             </motion.div>
 
                             <motion.div variants={itemVariants}>
-                                <div className="h-full p-6 rounded-2xl bg-white/[0.02] backdrop-blur-xl border border-white/10 hover:border-fuchsia-500/30 transition-all">
-                                    <div className="w-12 h-12 bg-fuchsia-500/10 rounded-xl flex items-center justify-center mb-4 text-fuchsia-400">
+                                <div className="h-full p-6 rounded-2xl bg-white/[0.02] backdrop-blur-xl border border-white/10 hover:border-fuchsia-500/30 transition-all group">
+                                    <div className="w-12 h-12 bg-fuchsia-500/10 rounded-xl flex items-center justify-center mb-4 text-fuchsia-400 group-hover:scale-110 transition-transform">
+                                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-white mb-2">Verify & Refine</h3>
+                                    <p className="text-slate-400 text-sm leading-relaxed">Your corrections improve maps for everyone and help train better AI models. Earn karma and recognition for your expertise.</p>
+                                </div>
+                            </motion.div>
+
+                            <motion.div variants={itemVariants}>
+                                <div className="h-full p-6 rounded-2xl bg-white/[0.02] backdrop-blur-xl border border-white/10 hover:border-amber-500/30 transition-all group">
+                                    <div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center mb-4 text-amber-400 group-hover:scale-110 transition-transform">
                                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                         </svg>
                                     </div>
-                                    <h3 className="text-lg font-semibold text-white mb-2">Community</h3>
-                                    <p className="text-slate-400 text-sm">Join forums, climb leaderboards, and connect with drummers globally.</p>
-                                </div>
-                            </motion.div>
-
-                            <motion.div variants={itemVariants}>
-                                <div className="h-full p-6 rounded-2xl bg-white/[0.02] backdrop-blur-xl border border-white/10 hover:border-amber-500/30 transition-all">
-                                    <div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center mb-4 text-amber-400">
-                                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                                        </svg>
-                                    </div>
-                                    <h3 className="text-lg font-semibold text-white mb-2">Recognition</h3>
-                                    <p className="text-slate-400 text-sm">Earn achievements and recognition as the index grows with your help.</p>
+                                    <h3 className="text-lg font-semibold text-white mb-2">Grow Together</h3>
+                                    <p className="text-slate-400 text-sm leading-relaxed">Join forums, climb leaderboards, and connect with drummers globally. Together we're building something that didn't exist before.</p>
                                 </div>
                             </motion.div>
                         </div>

@@ -90,6 +90,9 @@ export function PricingPage() {
                     <p className="text-xl text-gray-400 max-w-2xl mx-auto">
                         Choose Pro for regular use, or pay-per-song with credits.
                     </p>
+                    <p className="text-sm text-cyan-400 mt-4">
+                        Playing beatmaps, creating manual maps, and verifying community maps is always free.
+                    </p>
                 </div>
 
                 {/* Billing Toggle */}

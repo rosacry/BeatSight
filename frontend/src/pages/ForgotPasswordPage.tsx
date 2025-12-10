@@ -3,13 +3,20 @@
  * Allows users to request a password reset email.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { forceUnlockBodyScroll } from '@/lib/bodyScrollLock'
 
 export function ForgotPasswordPage() {
     useDocumentTitle('forgot password')
+
+    // Reset any stuck body styles on mount
+    useEffect(() => {
+        forceUnlockBodyScroll()
+    }, [])
+
     const [email, setEmail] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [submitted, setSubmitted] = useState(false)

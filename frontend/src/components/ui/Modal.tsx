@@ -13,6 +13,7 @@ import {
 import { createPortal } from 'react-dom'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { clsx } from 'clsx'
+import { lockBodyScroll, unlockBodyScroll } from '@/lib/bodyScrollLock'
 
 const modalVariants = cva(
     // Base styles
@@ -93,7 +94,7 @@ export function Modal({
     // Lock body scroll and add event listeners
     useEffect(() => {
         if (open) {
-            document.body.style.overflow = 'hidden'
+            lockBodyScroll()
             document.addEventListener('keydown', handleKeyDown)
 
             // Focus trap - focus first focusable element
@@ -104,7 +105,7 @@ export function Modal({
             firstFocusable?.focus()
 
             return () => {
-                document.body.style.overflow = ''
+                unlockBodyScroll()
                 document.removeEventListener('keydown', handleKeyDown)
             }
         }

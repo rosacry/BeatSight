@@ -317,9 +317,30 @@ export function DashboardPage() {
 
                             {/* Support BeatSight */}
                             <motion.div variants={itemVariants}>
+                                <div className="p-5 rounded-2xl bg-gradient-to-br from-cyan-500/20 via-fuchsia-500/10 to-amber-500/20 border border-white/10">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <svg className="w-6 h-6 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <span className="font-semibold text-white">Build the Index</span>
+                                    </div>
+                                    <p className="text-sm text-slate-300 mb-4">
+                                        You're helping create the <span className="text-white font-medium">first universal repository for drum transcriptions</span>. Every map you create or verify adds to a global resource for drummers everywhere.
+                                    </p>
+                                    <Link
+                                        to="/verify"
+                                        className="block text-center py-2 px-4 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 text-sm font-medium transition-colors"
+                                    >
+                                        Start Contributing
+                                    </Link>
+                                </div>
+                            </motion.div>
+
+                            {/* Support BeatSight Pro */}
+                            <motion.div variants={itemVariants}>
                                 <Link
                                     to="/pricing"
-                                    className="block p-5 rounded-2xl bg-gradient-to-br from-cyan-500/20 via-fuchsia-500/10 to-amber-500/20 border border-white/10 hover:border-cyan-500/30 transition-colors"
+                                    className="block p-5 rounded-2xl bg-gradient-to-br from-fuchsia-500/20 via-pink-500/10 to-transparent border border-white/10 hover:border-fuchsia-500/30 transition-colors"
                                 >
                                     <div className="flex items-center gap-3 mb-3">
                                         <svg className="w-6 h-6 text-pink-400" fill="currentColor" viewBox="0 0 20 20">

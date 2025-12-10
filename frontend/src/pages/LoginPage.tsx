@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore, TwoFactorRequiredError } from '@/stores/authStore'
 import { ParticleBackground, GradientOrbs } from '@/components/ui/ParticleBackground'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { forceUnlockBodyScroll } from '@/lib/bodyScrollLock'
 
 // Eye icons for password visibility toggle
 function EyeIcon() {
@@ -48,9 +49,9 @@ export function LoginPage() {
     const from = (location.state as { from?: string })?.from || '/'
 
     // Reset any stuck body styles on mount (e.g., from modals that didn't clean up)
+    // This is the primary safety net for the login page stuck issue
     useEffect(() => {
-        document.body.style.overflow = ''
-        document.body.style.pointerEvents = ''
+        forceUnlockBodyScroll()
     }, [])
 
     // Redirect if already authenticated (e.g., after page refresh restored session)

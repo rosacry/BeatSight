@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { listSongs, listJobs } from '@/api/client'
 import { JobStatusBadge } from '@/components/JobStatusBadge'
+import { Select } from '@/components/ui/Dropdown'
 import type { Song, AIJob } from '@/types/api'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
@@ -143,28 +144,30 @@ export function LibraryPage() {
                 </div>
 
                 {/* Sort */}
-                <select
+                <Select
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as SortOption)}
-                    className="input w-full md:w-40 flex-shrink-0"
-                >
-                    <option value="recent">Most Recent</option>
-                    <option value="title">Title</option>
-                    <option value="artist">Artist</option>
-                    <option value="status">Status</option>
-                </select>
+                    onValueChange={(value) => setSortBy(value as SortOption)}
+                    className="w-full md:w-40 flex-shrink-0"
+                    options={[
+                        { value: 'recent', label: 'Most Recent' },
+                        { value: 'title', label: 'Title' },
+                        { value: 'artist', label: 'Artist' },
+                        { value: 'status', label: 'Status' },
+                    ]}
+                />
 
                 {/* Filter */}
-                <select
+                <Select
                     value={filterBy}
-                    onChange={(e) => setFilterBy(e.target.value as FilterOption)}
-                    className="input w-full md:w-40 flex-shrink-0"
-                >
-                    <option value="all">All Songs</option>
-                    <option value="complete">Complete</option>
-                    <option value="processing">Processing</option>
-                    <option value="failed">Failed</option>
-                </select>
+                    onValueChange={(value) => setFilterBy(value as FilterOption)}
+                    className="w-full md:w-40 flex-shrink-0"
+                    options={[
+                        { value: 'all', label: 'All Songs' },
+                        { value: 'complete', label: 'Complete' },
+                        { value: 'processing', label: 'Processing' },
+                        { value: 'failed', label: 'Failed' },
+                    ]}
+                />
             </div>
 
             {/* Song List */}

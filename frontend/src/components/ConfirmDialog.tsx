@@ -125,8 +125,8 @@ export function ConfirmDialog({
                 }
             case 'signout':
                 return {
-                    confirmButton: 'bg-gradient-to-r from-fuchsia-500 to-pink-500 hover:from-fuchsia-400 hover:to-pink-400 focus:ring-fuchsia-500/50 shadow-lg shadow-fuchsia-500/25',
-                    cancelButton: 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 hover:border-cyan-400/50',
+                    confirmButton: 'bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 focus:ring-cyan-500/50 shadow-lg shadow-cyan-500/25',
+                    cancelButton: 'bg-slate-700/60 hover:bg-slate-600/60 text-slate-200 border border-slate-600/50 hover:border-slate-500/50',
                     icon: null, // No icon for osu-style signout popup
                 }
             default:
@@ -175,7 +175,7 @@ export function ConfirmDialog({
 
                         {/* Subtle animated gradient overlay for depth */}
                         <motion.div
-                            className="absolute inset-0 bg-gradient-to-br from-fuchsia-900/20 via-transparent to-cyan-900/20 pointer-events-none"
+                            className="absolute inset-0 bg-gradient-to-br from-cyan-900/15 via-transparent to-slate-900/20 pointer-events-none"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -210,23 +210,23 @@ export function ConfirmDialog({
                             aria-labelledby="dialog-title"
                         >
                             {/* Decorative top gradient line */}
-                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-pink-500" />
+                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-400 via-cyan-500 to-teal-500" />
 
                             {/* Subtle glow effect */}
-                            <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-32 bg-fuchsia-500/20 rounded-full blur-3xl pointer-events-none" />
+                            <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-32 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
 
                             {/* Content */}
                             <div className="relative px-8 pt-10 pb-8 text-center">
                                 {/* Icon with animated ring */}
                                 <motion.div
-                                    className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-fuchsia-500/20 to-pink-500/20 border border-fuchsia-500/40 flex items-center justify-center mb-5 relative"
+                                    className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500/20 to-teal-500/20 border border-cyan-500/40 flex items-center justify-center mb-5 relative"
                                     initial={{ scale: 0.8 }}
                                     animate={{ scale: 1 }}
                                     transition={{ delay: 0.1, type: 'spring', bounce: 0.4 }}
                                 >
                                     {/* Animated ring */}
                                     <motion.div
-                                        className="absolute inset-0 rounded-full border-2 border-fuchsia-400/30"
+                                        className="absolute inset-0 rounded-full border-2 border-cyan-400/30"
                                         initial={{ scale: 1, opacity: 0.5 }}
                                         animate={{
                                             scale: [1, 1.3, 1.3],
@@ -238,7 +238,7 @@ export function ConfirmDialog({
                                             ease: 'easeOut'
                                         }}
                                     />
-                                    <svg className="w-8 h-8 text-fuchsia-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg className="w-8 h-8 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                                     </svg>
                                 </motion.div>

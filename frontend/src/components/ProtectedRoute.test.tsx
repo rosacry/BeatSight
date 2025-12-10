@@ -18,6 +18,7 @@ function LocationTracker() {
 const mockAuthState = {
     isAuthenticated: true,
     isLoading: false,
+    _hasHydrated: true,
 }
 
 vi.mock('@/stores/authStore', () => ({
@@ -25,6 +26,7 @@ vi.mock('@/stores/authStore', () => ({
         const state = {
             isAuthenticated: () => mockAuthState.isAuthenticated,
             isLoading: mockAuthState.isLoading,
+            _hasHydrated: mockAuthState._hasHydrated,
         }
         return selector(state)
     }),
@@ -33,6 +35,7 @@ vi.mock('@/stores/authStore', () => ({
 beforeEach(() => {
     mockAuthState.isAuthenticated = true
     mockAuthState.isLoading = false
+    mockAuthState._hasHydrated = true
     testLocation = null
 })
 
@@ -78,6 +81,18 @@ describe('ProtectedRoute', () => {
     it('shows loading state while checking auth', () => {
         mockAuthState.isAuthenticated = false
         mockAuthState.isLoading = true
+
+        renderWithRouter()
+
+        expect(screen.getByText('Loading...')).toBeInTheDocument()
+        expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument()
+        expect(screen.queryByTestId('login-page')).not.toBeInTheDocument()
+    })
+
+    it('shows loading state while waiting for hydration', () => {
+        mockAuthState.isAuthenticated = true
+        mockAuthState.isLoading = false
+        mockAuthState._hasHydrated = false
 
         renderWithRouter()
 

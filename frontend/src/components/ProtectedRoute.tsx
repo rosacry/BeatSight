@@ -17,14 +17,16 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps) {
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated())
     const isLoading = useAuthStore((state) => state.isLoading)
+    const hasHydrated = useAuthStore((state) => state._hasHydrated)
     const hasRole = useAuthStore((state) => state.hasRole)
     const location = useLocation()
 
     // Build full path including search params for redirect-back functionality
     const fullPath = location.pathname + location.search
 
-    // Show loading state while checking auth
-    if (isLoading) {
+    // Show loading state while checking auth or waiting for hydration
+    // This prevents the redirect flash to /login on page refresh
+    if (isLoading || !hasHydrated) {
         return (
             <div className="min-h-[60vh] flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">

@@ -42,7 +42,7 @@ export function LoginPage() {
     useDocumentTitle('sign in')
     const navigate = useNavigate()
     const location = useLocation()
-    const { login, isLoading, isAuthenticated } = useAuthStore()
+    const { login, isLoading, isAuthenticated, _hasHydrated: hasHydrated } = useAuthStore()
     const authenticated = isAuthenticated()
 
     // Get redirect path from location state or default to home
@@ -55,11 +55,12 @@ export function LoginPage() {
     }, [])
 
     // Redirect if already authenticated (e.g., after page refresh restored session)
+    // Wait for hydration to complete before redirecting to prevent flash
     useEffect(() => {
-        if (authenticated && !isLoading) {
+        if (authenticated && !isLoading && hasHydrated) {
             navigate(from, { replace: true })
         }
-    }, [authenticated, isLoading, navigate, from])
+    }, [authenticated, isLoading, hasHydrated, navigate, from])
 
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
@@ -72,8 +73,8 @@ export function LoginPage() {
     const [totpCode, setTotpCode] = useState(['', '', '', '', '', ''])
     const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
-    // Show loading state while checking auth (prevents flash of login form)
-    if (isLoading) {
+    // Show loading state while checking auth or waiting for hydration (prevents flash of login form)
+    if (isLoading || !hasHydrated) {
         return (
             <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
                 <ParticleBackground />

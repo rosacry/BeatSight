@@ -19,6 +19,8 @@ interface AuthStore {
     accessToken: string | null
     refreshToken: string | null
     isLoading: boolean
+    /** Tracks whether the store has been hydrated from localStorage */
+    _hasHydrated: boolean
 
     // Computed
     isAuthenticated: () => boolean
@@ -37,6 +39,7 @@ interface AuthStore {
     fetchCurrentUser: () => Promise<void>
     setLoading: (loading: boolean) => void
     initialize: () => Promise<void>
+    setHasHydrated: (state: boolean) => void
 }
 
 export class AuthError extends Error {
@@ -150,6 +153,7 @@ export const useAuthStore = create<AuthStore>()(
             accessToken: null,
             refreshToken: null,
             isLoading: true,
+            _hasHydrated: false,
 
             // Computed property
             isAuthenticated: () => {
@@ -332,14 +336,23 @@ export const useAuthStore = create<AuthStore>()(
             setLoading: (loading: boolean) => {
                 set({ isLoading: loading })
             },
+
+            // Set hydration state (called by onRehydrateStorage)
+            setHasHydrated: (state: boolean) => {
+                set({ _hasHydrated: state })
+            },
         }),
         {
             name: 'beatsight-auth',
-            // Only persist tokens, not loading state
+            // Only persist tokens, not loading state or hydration state
             partialize: (state) => ({
                 accessToken: state.accessToken,
                 refreshToken: state.refreshToken,
             }),
+            // Track hydration completion to prevent redirect flash
+            onRehydrateStorage: () => (state) => {
+                state?.setHasHydrated(true)
+            },
         }
     )
 )

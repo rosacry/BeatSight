@@ -25,6 +25,7 @@ describe('authStore', () => {
             accessToken: null,
             refreshToken: null,
             isLoading: false,
+            _hasHydrated: true, // Assume hydrated in tests
         })
     })
 

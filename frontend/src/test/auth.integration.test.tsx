@@ -37,6 +37,7 @@ describe('Authentication Integration Tests', () => {
             accessToken: null,
             refreshToken: null,
             isLoading: false,
+            _hasHydrated: true, // Assume hydrated in tests
         });
         mockNavigate.mockClear();
         localStorage.clear();

@@ -231,6 +231,7 @@ export function Layout({ children }: LayoutProps) {
                                                         <motion.span
                                                             layoutId="activeNavBg"
                                                             className="absolute inset-0 bg-white/10 rounded-lg"
+                                                            initial={false}
                                                             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                                                         />
                                                     )}

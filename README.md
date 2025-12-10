@@ -36,16 +36,17 @@ Rhythm games like Guitar Hero, Rock Band, Dance Dance Revolution, and osu! all s
 
 ### Why We're Different
 
-| Capability | BeatSight | Competitors |
-|-----------|-----------|-------------|
-| **Drum Classes** | **21 classes** (snare center, rimshot, cross-stick, 5 hi-hat types, ride bow/bell, etc.) | 6-8 basic classes |
-| **Training Data** | **14.6 million samples** | Limited datasets |
-| **Technique Detection** | Ghost notes, flams, drags, rolls, velocity | Limited or none |
-| **Multi-hit Detection** | Simultaneous hits (kick+hi-hat, snare+crash) | Single hit per frame |
-| **Cymbal Chokes** | ✅ Detected | ❌ Not detected |
-| **Snare Articulations** | ✅ Center, rimshot, cross-stick | ❌ Not distinguished |
-| **Hi-Hat Variations** | ✅ Closed, open, pedal, splash, foot splash | ❌ Only open/closed |
-| **Community-Driven** | ✅ Training code open, corrections improve AI | ❌ No community feedback loop |
+| Capability | BeatSight | Learning Platforms (Melodics, Beatlii) | AI Transcribers (Klangio, etc.) |
+|-----------|-----------|---------------------------------------|--------------------------------|
+| **Drum Classes** | **21 classes** (snare center, rimshot, cross-stick, 5 hi-hat types, ride bow/bell, etc.) | Basic kit detection | 6-8 basic classes |
+| **Training Data** | **14.6 million samples** | N/A (no AI) | Limited datasets |
+| **Song Access** | **Any song** — AI transcription + community library | Curated lessons only | Any audio |
+| **Technique Detection** | Ghost notes, flams, drags, rolls, velocity | Structured lessons | Limited or none |
+| **Multi-hit Detection** | Simultaneous hits (kick+hi-hat, snare+crash) | N/A | Single hit per frame |
+| **Cymbal Chokes** | ✅ Detected | ❌ Not detected | ❌ Not detected |
+| **Acoustic Drum Support** | ✅ Visual lookahead works for all | ❌ Requires MIDI kit | N/A |
+| **Community Library** | ✅ Anyone can contribute | ❌ Closed content | ❌ No community |
+| **Community-Driven AI** | ✅ Training code open, corrections improve AI | ❌ Proprietary | ❌ No feedback loop |
 
 BeatSight brings the rhythm game paradigm to drum practice:
 

@@ -82,7 +82,7 @@ export function LandingPage() {
 
                         {/* Stats */}
                         <div className="mt-16 grid grid-cols-3 gap-8 max-w-lg mx-auto">
-                            <StatItem value="19" label="Drum Classes" />
+                            <StatItem value="21" label="Drum Classes" />
                             <StatItem value="85%" label="Accuracy" />
                             <StatItem value="<2min" label="Processing" />
                         </div>

@@ -453,7 +453,7 @@ export function HomePage() {
                                 Why BeatSight Leads the Industry
                             </h2>
                             <p className="text-slate-400 max-w-2xl mx-auto">
-                                See how our AI compares to other drum transcription tools
+                                See how BeatSight compares to lesson platforms and other transcription tools
                             </p>
                         </motion.div>
 
@@ -467,15 +467,25 @@ export function HomePage() {
                                                 <th className="px-6 py-4 text-center">
                                                     <span className="bg-gradient-to-r from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent font-bold">BeatSight</span>
                                                 </th>
-                                                <th className="px-6 py-4 text-center text-slate-400 font-medium">Others</th>
+                                                <th className="px-6 py-4 text-center text-slate-400 font-medium">Lesson Platforms</th>
+                                                <th className="px-6 py-4 text-center text-slate-400 font-medium">AI Transcribers</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-white/5">
+                                            <tr className="hover:bg-white/5 transition-colors">
+                                                <td className="px-6 py-4 text-white">Song Access</td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className="text-cyan-400 font-bold">Any song</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center text-slate-500">Curated only</td>
+                                                <td className="px-6 py-4 text-center text-slate-500">Any audio</td>
+                                            </tr>
                                             <tr className="hover:bg-white/5 transition-colors">
                                                 <td className="px-6 py-4 text-white">Drum Classes</td>
                                                 <td className="px-6 py-4 text-center">
                                                     <span className="text-cyan-400 font-bold">21 classes</span>
                                                 </td>
+                                                <td className="px-6 py-4 text-center text-slate-500">Basic kit</td>
                                                 <td className="px-6 py-4 text-center text-slate-500">6-8 classes</td>
                                             </tr>
                                             <tr className="hover:bg-white/5 transition-colors">
@@ -483,20 +493,31 @@ export function HomePage() {
                                                 <td className="px-6 py-4 text-center">
                                                     <span className="text-cyan-400 font-bold">14.6M samples</span>
                                                 </td>
-                                                <td className="px-6 py-4 text-center text-slate-500">Limited datasets</td>
+                                                <td className="px-6 py-4 text-center text-slate-500">N/A (no AI)</td>
+                                                <td className="px-6 py-4 text-center text-slate-500">Limited</td>
+                                            </tr>
+                                            <tr className="hover:bg-white/5 transition-colors">
+                                                <td className="px-6 py-4 text-white">Acoustic Drum Support</td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className="text-green-400">✓ Visual lookahead</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center text-slate-500">✗ Requires MIDI</td>
+                                                <td className="px-6 py-4 text-center text-slate-500">N/A</td>
                                             </tr>
                                             <tr className="hover:bg-white/5 transition-colors">
                                                 <td className="px-6 py-4 text-white">Snare Articulations</td>
                                                 <td className="px-6 py-4 text-center">
                                                     <span className="text-green-400">✓ Center, rimshot, cross-stick</span>
                                                 </td>
+                                                <td className="px-6 py-4 text-center text-slate-500">✗ Not detected</td>
                                                 <td className="px-6 py-4 text-center text-slate-500">✗ Not distinguished</td>
                                             </tr>
                                             <tr className="hover:bg-white/5 transition-colors">
                                                 <td className="px-6 py-4 text-white">Hi-Hat Variations</td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <span className="text-green-400">✓ 5 types (closed, open, pedal, splash, foot)</span>
+                                                    <span className="text-green-400">✓ 5 types</span>
                                                 </td>
+                                                <td className="px-6 py-4 text-center text-slate-500">✗ Basic</td>
                                                 <td className="px-6 py-4 text-center text-slate-500">✗ 2 types</td>
                                             </tr>
                                             <tr className="hover:bg-white/5 transition-colors">
@@ -505,27 +526,23 @@ export function HomePage() {
                                                     <span className="text-green-400">✓ Yes</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center text-slate-500">✗ No</td>
+                                                <td className="px-6 py-4 text-center text-slate-500">✗ No</td>
                                             </tr>
                                             <tr className="hover:bg-white/5 transition-colors">
                                                 <td className="px-6 py-4 text-white">Technique Detection</td>
                                                 <td className="px-6 py-4 text-center">
                                                     <span className="text-green-400">✓ Flams, ghost notes, rolls</span>
                                                 </td>
+                                                <td className="px-6 py-4 text-center text-slate-500">Structured lessons</td>
                                                 <td className="px-6 py-4 text-center text-slate-500">✗ Limited</td>
                                             </tr>
                                             <tr className="hover:bg-white/5 transition-colors">
-                                                <td className="px-6 py-4 text-white">Multi-Hit Detection</td>
+                                                <td className="px-6 py-4 text-white">Community Library</td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <span className="text-green-400">✓ Simultaneous hits</span>
+                                                    <span className="text-green-400">✓ Anyone can contribute</span>
                                                 </td>
-                                                <td className="px-6 py-4 text-center text-slate-500">✗ Single hit per frame</td>
-                                            </tr>
-                                            <tr className="hover:bg-white/5 transition-colors">
-                                                <td className="px-6 py-4 text-white">Community-Driven</td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <span className="text-green-400">✓ Corrections improve AI</span>
-                                                </td>
-                                                <td className="px-6 py-4 text-center text-slate-500">✗ No feedback loop</td>
+                                                <td className="px-6 py-4 text-center text-slate-500">✗ Closed content</td>
+                                                <td className="px-6 py-4 text-center text-slate-500">✗ No community</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -534,7 +551,7 @@ export function HomePage() {
                         </motion.div>
 
                         <motion.p variants={itemVariants} className="text-center text-slate-500 text-sm mt-6">
-                            Based on publicly available information from competitors. BeatSight's AI is trained on the largest drum transcription dataset ever assembled.
+                            Compared to lesson platforms (Melodics, Beatlii) and AI transcription tools (Klangio, etc.). BeatSight combines AI transcription with community-driven library building.
                         </motion.p>
                     </motion.div>
                 </section>

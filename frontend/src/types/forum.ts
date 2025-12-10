@@ -23,27 +23,34 @@ export interface ForumCategory {
     id: string
     name: string
     description: string | null
-    position: number
-    is_visible: boolean
+    display_order?: number
+    position?: number
+    icon?: string | null
+    color?: string | null
+    is_visible?: boolean
     forums: Forum[]
-    created_at: string
-    updated_at: string
+    created_at?: string
+    updated_at?: string
 }
 
-// Forum (within a category)
+// Forum (within a category) - matches ForumSummaryResponse from backend
 export interface Forum {
     id: string
-    category_id: string
+    category_id?: string
     name: string
+    slug?: string
     description: string | null
-    position: number
+    icon?: string | null
+    color?: string | null
+    position?: number
     is_visible: boolean
     allow_topics: boolean
     topic_count: number
     post_count: number
-    last_post: ForumPost | null
-    created_at: string
-    updated_at: string
+    last_post?: ForumPost | null
+    last_post_at?: string | null
+    created_at?: string
+    updated_at?: string
 }
 
 // Topic (thread within a forum)

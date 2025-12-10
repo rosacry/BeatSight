@@ -59,14 +59,15 @@ export function ForumPage() {
         queryFn: () => getRecentTopics({ pageSize: 5 }),
     })
 
-    // Get all forums that allow topics
+    // Get all forums that allow topics (default to true if field is missing)
     const allForums: Forum[] = categories?.flatMap(c =>
-        c.forums.filter(f => f.is_visible && f.allow_topics)
+        c.forums.filter(f => (f.is_visible !== false) && (f.allow_topics !== false))
     ) || []
 
     const handleForumSelect = (forum: Forum) => {
         setShowForumSelector(false)
-        navigate(`/forum/${forum.id}?new=true`)
+        // Use slug for URL if available, fallback to id
+        navigate(`/forum/${forum.slug || forum.id}?new=true`)
     }
 
     // Calculate stats
@@ -277,8 +278,8 @@ export function ForumPage() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => setShowForumSelector(false)}
                             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+                            onClick={() => setShowForumSelector(false)}
                         />
 
                         {/* Modal */}
@@ -287,9 +288,12 @@ export function ForumPage() {
                             animate="visible"
                             exit="exit"
                             variants={modalVariants}
-                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
                         >
-                            <div className="w-full max-w-lg bg-slate-900 rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
+                            <div
+                                className="w-full max-w-lg bg-slate-900 rounded-2xl border border-white/10 shadow-2xl overflow-hidden pointer-events-auto"
+                                onClick={(e) => e.stopPropagation()}
+                            >
                                 {/* Modal Header */}
                                 <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
                                     <h2 className="text-xl font-bold text-white">Select a Forum</h2>
@@ -305,13 +309,32 @@ export function ForumPage() {
 
                                 {/* Forum List */}
                                 <div className="max-h-96 overflow-y-auto p-4 space-y-2">
-                                    {categories?.map(category => (
+                                    {/* Loading state */}
+                                    {categoriesLoading && (
+                                        <div className="text-center py-8">
+                                            <div className="inline-block w-6 h-6 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin" />
+                                            <p className="text-slate-400 mt-2">Loading forums...</p>
+                                        </div>
+                                    )}
+
+                                    {/* Error state */}
+                                    {categoriesError && !categoriesLoading && (
+                                        <div className="text-center py-8 text-red-400">
+                                            <svg className="w-8 h-8 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                            </svg>
+                                            Failed to load forums. Please try again.
+                                        </div>
+                                    )}
+
+                                    {/* Forum list */}
+                                    {!categoriesLoading && !categoriesError && categories?.map(category => (
                                         <div key={category.id}>
                                             <div className="px-3 py-2 text-sm font-medium text-slate-500 uppercase tracking-wider">
                                                 {category.name}
                                             </div>
                                             {category.forums
-                                                .filter(f => f.is_visible && f.allow_topics)
+                                                .filter(f => (f.is_visible !== false) && (f.allow_topics !== false))
                                                 .map(forum => (
                                                     <button
                                                         key={forum.id}
@@ -346,7 +369,8 @@ export function ForumPage() {
                                         </div>
                                     ))}
 
-                                    {allForums.length === 0 && (
+                                    {/* Empty state - only show when not loading and data loaded but empty */}
+                                    {!categoriesLoading && !categoriesError && allForums.length === 0 && (
                                         <div className="text-center py-8 text-slate-400">
                                             No forums available for posting
                                         </div>

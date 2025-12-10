@@ -249,16 +249,32 @@ class ForumService:
         return forum
     
     async def get_forum_by_slug(self, slug: str) -> Forum:
-        """Get a forum by its slug."""
+        """Get a forum by its slug, or by ID if slug is a valid UUID."""
+        # First try by slug
         result = await self.session.execute(
             select(Forum)
             .options(selectinload(Forum.category))
             .where(Forum.slug == slug)
         )
         forum = result.scalar_one_or_none()
-        if forum is None:
-            raise ForumNotFoundError(f"Forum '{slug}' not found")
-        return forum
+        if forum is not None:
+            return forum
+        
+        # If not found and looks like a UUID, try by ID
+        try:
+            forum_uuid = uuid.UUID(slug)
+            result = await self.session.execute(
+                select(Forum)
+                .options(selectinload(Forum.category))
+                .where(Forum.id == forum_uuid)
+            )
+            forum = result.scalar_one_or_none()
+            if forum is not None:
+                return forum
+        except (ValueError, AttributeError):
+            pass  # Not a valid UUID, skip ID lookup
+        
+        raise ForumNotFoundError(f"Forum '{slug}' not found")
     
     async def create_forum(
         self,

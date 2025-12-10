@@ -75,10 +75,10 @@ export async function getForumCategories(): Promise<ForumCategory[]> {
 }
 
 /**
- * Get a single forum by ID.
+ * Get a single forum by ID or slug.
  */
-export async function getForum(forumId: string): Promise<Forum> {
-    return request<Forum>(`/forum/${forumId}`)
+export async function getForum(forumIdOrSlug: string): Promise<Forum> {
+    return request<Forum>(`/forum/forums/${forumIdOrSlug}`)
 }
 
 // ============================================================================
@@ -95,16 +95,17 @@ export interface GetTopicsParams {
  * Get topics in a forum.
  */
 export async function getForumTopics(
-    forumId: string,
+    forumIdOrSlug: string,
     params: GetTopicsParams = {}
 ): Promise<TopicListResponse> {
     const searchParams = new URLSearchParams()
-    if (params.page) searchParams.set('page', params.page.toString())
-    if (params.pageSize) searchParams.set('page_size', params.pageSize.toString())
-    if (params.sort) searchParams.set('sort', params.sort)
+    if (params.page) searchParams.set('offset', ((params.page - 1) * (params.pageSize || 25)).toString())
+    if (params.pageSize) searchParams.set('limit', params.pageSize.toString())
+    // Backend uses different sorting - map frontend sort options to backend
+    // Backend sorts by: created_at, views, posts (no direction control from API)
 
     const query = searchParams.toString()
-    return request<TopicListResponse>(`/forum/${forumId}/topics${query ? `?${query}` : ''}`)
+    return request<TopicListResponse>(`/forum/forums/${forumIdOrSlug}/topics${query ? `?${query}` : ''}`)
 }
 
 /**
@@ -118,11 +119,11 @@ export async function getTopic(topicId: string): Promise<Topic> {
  * Create a new topic in a forum.
  */
 export async function createTopic(
-    forumId: string,
+    forumIdOrSlug: string,
     data: CreateTopicRequest
 ): Promise<Topic> {
     return request<Topic>(
-        `/forum/${forumId}/topics`,
+        `/forum/forums/${forumIdOrSlug}/topics`,
         {
             method: 'POST',
             body: JSON.stringify(data),

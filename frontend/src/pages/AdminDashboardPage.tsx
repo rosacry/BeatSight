@@ -611,7 +611,7 @@ export function AdminDashboardPage() {
             {activeTab === 'users' && (
                 <div className="space-y-6">
                     {/* Search and Filters */}
-                    <div className="flex flex-wrap gap-4">
+                    <div className="flex flex-wrap items-center gap-4">
                         <div className="flex-1 min-w-[250px] relative">
                             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -629,7 +629,8 @@ export function AdminDashboardPage() {
                         <Select
                             value={roleFilter}
                             onValueChange={(value) => setRoleFilter(value)}
-                            className="min-w-[140px]"
+                            className="w-[140px] flex-shrink-0"
+                            size="md"
                             options={[
                                 { value: 'all', label: 'All Roles' },
                                 { value: 'user', label: 'User' },
@@ -643,7 +644,8 @@ export function AdminDashboardPage() {
                         <Select
                             value={statusFilter}
                             onValueChange={(value) => setStatusFilter(value)}
-                            className="min-w-[140px]"
+                            className="w-[140px] flex-shrink-0"
+                            size="md"
                             options={[
                                 { value: 'all', label: 'All Statuses' },
                                 { value: 'active', label: 'Active' },
@@ -655,7 +657,7 @@ export function AdminDashboardPage() {
 
                         <button
                             onClick={loadUsers}
-                            className="px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors"
+                            className="px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors flex-shrink-0"
                         >
                             Search
                         </button>
@@ -830,11 +832,11 @@ export function AdminDashboardPage() {
                                                     <AnimatePresence>
                                                         {openActionsUserId === user.id && (
                                                             <motion.div
-                                                                initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                                                                initial={{ opacity: 0, scale: 0.95, y: 10 }}
                                                                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                                                                exit={{ opacity: 0, scale: 0.96, y: -4 }}
-                                                                transition={{ type: 'spring', stiffness: 500, damping: 30, mass: 0.8 }}
-                                                                className="absolute right-0 top-full mt-1 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50"
+                                                                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                                                                transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                                                                className="absolute right-0 bottom-full mb-1 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50"
                                                             >
                                                                 <div className="p-1">
                                                                     <button

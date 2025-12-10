@@ -8,31 +8,29 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '../../lib/utils'
 
-// Animation variants for dropdown menu - smoother spring-based animation
+// Animation variants for dropdown menu - matching UserMenu animation
 const dropdownAnimationVariants = {
     hidden: {
         opacity: 0,
-        scale: 0.96,
-        y: -4,
+        scale: 0.95,
+        y: -10,
     },
     visible: {
         opacity: 1,
         scale: 1,
         y: 0,
         transition: {
-            type: 'spring',
-            stiffness: 500,
-            damping: 30,
-            mass: 0.8,
+            duration: 0.15,
+            ease: [0.4, 0, 0.2, 1],
         },
     },
     exit: {
         opacity: 0,
-        scale: 0.96,
-        y: -4,
+        scale: 0.95,
+        y: -10,
         transition: {
             duration: 0.15,
-            ease: [0.4, 0, 1, 1],
+            ease: [0.4, 0, 0.2, 1],
         },
     },
 }

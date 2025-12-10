@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
@@ -137,13 +138,25 @@ export function AdminDashboardPage() {
 
     // Actions dropdown state
     const [openActionsUserId, setOpenActionsUserId] = useState<string | null>(null)
+    const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null)
     const actionsDropdownRef = useRef<HTMLDivElement>(null)
+    const actionButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
 
     // Close actions dropdown when clicking outside
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
-            if (actionsDropdownRef.current && !actionsDropdownRef.current.contains(event.target as Node)) {
-                setOpenActionsUserId(null)
+            const target = event.target as Node
+            // Check if click is outside dropdown
+            if (actionsDropdownRef.current && !actionsDropdownRef.current.contains(target)) {
+                // Also check if click is on any action button (handled separately)
+                let isActionButton = false
+                actionButtonRefs.current.forEach((btn) => {
+                    if (btn && btn.contains(target)) isActionButton = true
+                })
+                if (!isActionButton) {
+                    setOpenActionsUserId(null)
+                    setDropdownPosition(null)
+                }
             }
         }
 
@@ -736,7 +749,7 @@ export function AdminDashboardPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-700">
-                                {sortedUsers.map((user, userIndex) => (
+                                {sortedUsers.map((user) => (
                                     <tr key={user.id} className="hover:bg-gray-700/50">
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
@@ -822,90 +835,34 @@ export function AdminDashboardPage() {
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-1">
-                                                {/* Moderation dropdown */}
-                                                <div className="relative" ref={openActionsUserId === user.id ? actionsDropdownRef : undefined}>
-                                                    <button
-                                                        onClick={() => setOpenActionsUserId(openActionsUserId === user.id ? null : user.id)}
-                                                        className="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-white"
-                                                    >
-                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                                                        </svg>
-                                                    </button>
-                                                    <AnimatePresence>
-                                                        {openActionsUserId === user.id && (
-                                                            <motion.div
-                                                                initial={{ opacity: 0, scale: 0.95, y: userIndex >= sortedUsers.length - 3 ? 10 : -10 }}
-                                                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                                                exit={{ opacity: 0, scale: 0.95, y: userIndex >= sortedUsers.length - 3 ? 10 : -10 }}
-                                                                transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
-                                                                className={`absolute right-0 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-[100] ${userIndex >= sortedUsers.length - 3 ? 'bottom-full mb-1' : 'top-full mt-1'}`}
-                                                            >
-                                                                <div className="p-1">
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            setModerationModalUser(user)
-                                                                            setModerationAction('note')
-                                                                            setOpenActionsUserId(null)
-                                                                        }}
-                                                                        className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded"
-                                                                    >
-                                                                        📝 Add Note
-                                                                    </button>
-                                                                    {!user.is_restricted && (
-                                                                        <>
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    setModerationModalUser(user)
-                                                                                    setModerationAction('silence')
-                                                                                    setModerationDuration(24)
-                                                                                    setOpenActionsUserId(null)
-                                                                                }}
-                                                                                className="w-full text-left px-3 py-2 text-sm text-yellow-400 hover:bg-gray-700 rounded"
-                                                                            >
-                                                                                🔇 Silence
-                                                                            </button>
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    setModerationModalUser(user)
-                                                                                    setModerationAction('restrict')
-                                                                                    setModerationDuration(168)
-                                                                                    setOpenActionsUserId(null)
-                                                                                }}
-                                                                                className="w-full text-left px-3 py-2 text-sm text-orange-400 hover:bg-gray-700 rounded"
-                                                                            >
-                                                                                ⚠️ Restrict
-                                                                            </button>
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    setModerationModalUser(user)
-                                                                                    setModerationAction('ban')
-                                                                                    setModerationPermanent(false)
-                                                                                    setModerationDuration(720)
-                                                                                    setOpenActionsUserId(null)
-                                                                                }}
-                                                                                className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-gray-700 rounded"
-                                                                            >
-                                                                                🚫 Ban
-                                                                            </button>
-                                                                        </>
-                                                                    )}
-                                                                    {user.is_restricted && (
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                handleRemoveRestriction(user.id)
-                                                                                setOpenActionsUserId(null)
-                                                                            }}
-                                                                            className="w-full text-left px-3 py-2 text-sm text-green-400 hover:bg-gray-700 rounded"
-                                                                        >
-                                                                            ✅ Remove Restriction
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            </motion.div>
-                                                        )}
-                                                    </AnimatePresence>
-                                                </div>
+                                                {/* Moderation dropdown trigger */}
+                                                <button
+                                                    ref={(el) => {
+                                                        if (el) actionButtonRefs.current.set(user.id, el)
+                                                        else actionButtonRefs.current.delete(user.id)
+                                                    }}
+                                                    onClick={() => {
+                                                        if (openActionsUserId === user.id) {
+                                                            setOpenActionsUserId(null)
+                                                            setDropdownPosition(null)
+                                                        } else {
+                                                            const btn = actionButtonRefs.current.get(user.id)
+                                                            if (btn) {
+                                                                const rect = btn.getBoundingClientRect()
+                                                                setDropdownPosition({
+                                                                    top: rect.bottom + 4,
+                                                                    left: rect.right - 192, // 192px = w-48
+                                                                })
+                                                            }
+                                                            setOpenActionsUserId(user.id)
+                                                        }
+                                                    }}
+                                                    className="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                                                    </svg>
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -921,6 +878,101 @@ export function AdminDashboardPage() {
                         </table>
                     </div>
                 </div>
+            )}
+
+            {/* Actions Dropdown Portal */}
+            {openActionsUserId && dropdownPosition && createPortal(
+                <AnimatePresence>
+                    <motion.div
+                        ref={actionsDropdownRef}
+                        initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                        transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                        style={{
+                            position: 'fixed',
+                            top: dropdownPosition.top,
+                            left: dropdownPosition.left,
+                        }}
+                        className="w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-[9999]"
+                    >
+                        <div className="p-1">
+                            {(() => {
+                                const user = users.find(u => u.id === openActionsUserId)
+                                if (!user) return null
+                                return (
+                                    <>
+                                        <button
+                                            onClick={() => {
+                                                setModerationModalUser(user)
+                                                setModerationAction('note')
+                                                setOpenActionsUserId(null)
+                                                setDropdownPosition(null)
+                                            }}
+                                            className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded"
+                                        >
+                                            📝 Add Note
+                                        </button>
+                                        {!user.is_restricted && (
+                                            <>
+                                                <button
+                                                    onClick={() => {
+                                                        setModerationModalUser(user)
+                                                        setModerationAction('silence')
+                                                        setModerationDuration(24)
+                                                        setOpenActionsUserId(null)
+                                                        setDropdownPosition(null)
+                                                    }}
+                                                    className="w-full text-left px-3 py-2 text-sm text-yellow-400 hover:bg-gray-700 rounded"
+                                                >
+                                                    🔇 Silence
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setModerationModalUser(user)
+                                                        setModerationAction('restrict')
+                                                        setModerationDuration(168)
+                                                        setOpenActionsUserId(null)
+                                                        setDropdownPosition(null)
+                                                    }}
+                                                    className="w-full text-left px-3 py-2 text-sm text-orange-400 hover:bg-gray-700 rounded"
+                                                >
+                                                    ⚠️ Restrict
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setModerationModalUser(user)
+                                                        setModerationAction('ban')
+                                                        setModerationPermanent(false)
+                                                        setModerationDuration(720)
+                                                        setOpenActionsUserId(null)
+                                                        setDropdownPosition(null)
+                                                    }}
+                                                    className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-gray-700 rounded"
+                                                >
+                                                    🚫 Ban
+                                                </button>
+                                            </>
+                                        )}
+                                        {user.is_restricted && (
+                                            <button
+                                                onClick={() => {
+                                                    handleRemoveRestriction(user.id)
+                                                    setOpenActionsUserId(null)
+                                                    setDropdownPosition(null)
+                                                }}
+                                                className="w-full text-left px-3 py-2 text-sm text-green-400 hover:bg-gray-700 rounded"
+                                            >
+                                                ✅ Remove Restriction
+                                            </button>
+                                        )}
+                                    </>
+                                )
+                            })()}
+                        </div>
+                    </motion.div>
+                </AnimatePresence>,
+                document.body
             )}
 
             {/* Moderation Modal */}

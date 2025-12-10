@@ -145,11 +145,11 @@ async function loginRequest(credentials: LoginCredentials): Promise<TokenRespons
 export const useAuthStore = create<AuthStore>()(
     persist(
         (set, get) => ({
-            // Initial state
+            // Initial state - start with isLoading true to prevent flash redirect
             user: null,
             accessToken: null,
             refreshToken: null,
-            isLoading: false,
+            isLoading: true,
 
             // Computed property
             isAuthenticated: () => {
@@ -207,11 +207,12 @@ export const useAuthStore = create<AuthStore>()(
             // Initialize auth state on app load
             initialize: async () => {
                 const state = get()
-                if (!state.accessToken) return
 
-                // Set loading to true so ProtectedRoute shows loading state
-                // instead of immediately redirecting to login
-                set({ isLoading: true })
+                // No token means user is not logged in - stop loading immediately
+                if (!state.accessToken) {
+                    set({ isLoading: false })
+                    return
+                }
 
                 try {
                     // Check if token is expired

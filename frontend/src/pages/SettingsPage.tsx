@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { createLogger, getDeveloperModeEnabled, enableDeveloperMode, disableDeveloperMode } from '@/lib/logger'
@@ -54,11 +55,30 @@ async function apiRequest<T>(
 
 export function SettingsPage() {
     useDocumentTitle('settings')
+    const queryClient = useQueryClient()
     const user = useAuthStore((state) => state.user)
     const accessToken = useAuthStore((state) => state.accessToken)
     const logout = useAuthStore((state) => state.logout)
     const fetchCurrentUser = useAuthStore((state) => state.fetchCurrentUser)
     const [searchParams, setSearchParams] = useSearchParams()
+
+    // Prefetch 2FA status immediately when settings page loads
+    // This eliminates the 3-5 second delay before 2FA settings appear
+    useEffect(() => {
+        if (accessToken) {
+            queryClient.prefetchQuery({
+                queryKey: ['twoFactorStatus'],
+                queryFn: async () => {
+                    const response = await fetch(`${API_BASE}/auth/2fa/status`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` },
+                    })
+                    if (!response.ok) throw new Error('Failed to fetch 2FA status')
+                    return response.json()
+                },
+                staleTime: 1000 * 60 * 5, // 5 minutes
+            })
+        }
+    }, [accessToken, queryClient])
 
     // Get tab from URL or default to 'account'
     const tabFromUrl = searchParams.get('tab') as SettingsTab | null
@@ -846,90 +866,164 @@ export function SettingsPage() {
                                 )}
 
                                 {activeTab === 'privacy' && (
-                                    <div className="card space-y-6">
-                                        <h2 className="text-lg font-semibold text-white">Privacy & Training Data</h2>
-                                        <p className="text-gray-400 text-sm">
-                                            Control how your beatmap corrections contribute to improving our AI model.
-                                            Your corrections help make BeatSight better for everyone.
-                                        </p>
+                                    <div className="space-y-6">
+                                        {/* Anonymous Mode Section */}
+                                        <div className="card bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-white/5">
+                                            <div className="flex items-center gap-3 mb-6">
+                                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 flex items-center justify-center">
+                                                    <svg className="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <h2 className="text-lg font-semibold text-white">Anonymous Mode</h2>
+                                                    <p className="text-sm text-gray-400">Control your visibility on public pages</p>
+                                                </div>
+                                            </div>
 
-                                        {isLoadingConsent ? (
-                                            <div className="text-gray-400">Loading...</div>
-                                        ) : (
                                             <div className="space-y-4">
-                                                <label className="flex items-center justify-between">
-                                                    <div>
-                                                        <span className="text-white">Contribute to model training</span>
-                                                        <p className="text-sm text-gray-500">
-                                                            Allow your beatmap corrections to be used for improving the AI.
-                                                            Earn karma when your contributions are approved.
-                                                        </p>
+                                                <label className="flex items-center justify-between p-4 rounded-xl bg-slate-800/30 border border-slate-700/50 cursor-pointer hover:bg-slate-800/50 transition-colors">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                                                            <svg className="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                                            </svg>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-white font-medium">Hide from leaderboards</p>
+                                                            <p className="text-sm text-gray-400">Your name won't appear on karma, verifier, or contributor rankings</p>
+                                                        </div>
                                                     </div>
                                                     <input
                                                         type="checkbox"
-                                                        checked={contributionConsent.consent_given}
-                                                        onChange={(e) => setContributionConsent(prev => ({
-                                                            ...prev,
-                                                            consent_given: e.target.checked
-                                                        }))}
-                                                        className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-primary-500 focus:ring-primary-500"
+                                                        checked={preferences?.custom_settings?.hideFromLeaderboards ?? false}
+                                                        onChange={(e) => updateCustomSetting('hideFromLeaderboards', e.target.checked)}
+                                                        className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-purple-500 focus:ring-purple-500"
                                                     />
                                                 </label>
 
-                                                {contributionConsent.consent_given && (
-                                                    <>
-                                                        <label className="flex items-center justify-between">
-                                                            <div>
-                                                                <span className="text-white">Anonymous export</span>
-                                                                <p className="text-sm text-gray-500">
-                                                                    Export corrections without your username attached
-                                                                </p>
-                                                            </div>
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={contributionConsent.allow_anonymous_export}
-                                                                onChange={(e) => setContributionConsent(prev => ({
-                                                                    ...prev,
-                                                                    allow_anonymous_export: e.target.checked
-                                                                }))}
-                                                                className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-primary-500 focus:ring-primary-500"
-                                                            />
-                                                        </label>
+                                                <label className="flex items-center justify-between p-4 rounded-xl bg-slate-800/30 border border-slate-700/50 cursor-pointer hover:bg-slate-800/50 transition-colors">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                                                            <svg className="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                                            </svg>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-white font-medium">Hide from public queues</p>
+                                                            <p className="text-sm text-gray-400">Your jobs won't appear in the public queue view</p>
+                                                        </div>
+                                                    </div>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={preferences?.custom_settings?.hideFromPublicQueues ?? false}
+                                                        onChange={(e) => updateCustomSetting('hideFromPublicQueues', e.target.checked)}
+                                                        className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-purple-500 focus:ring-purple-500"
+                                                    />
+                                                </label>
+                                            </div>
 
-                                                        <label className="flex items-center justify-between">
-                                                            <div>
-                                                                <span className="text-white">Public credit</span>
-                                                                <p className="text-sm text-gray-500">
-                                                                    Show your name in public contributor lists
-                                                                </p>
-                                                            </div>
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={contributionConsent.allow_public_credit}
-                                                                onChange={(e) => setContributionConsent(prev => ({
-                                                                    ...prev,
-                                                                    allow_public_credit: e.target.checked
-                                                                }))}
-                                                                className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-primary-500 focus:ring-primary-500"
-                                                            />
-                                                        </label>
-                                                    </>
-                                                )}
+                                            <div className="mt-4 p-3 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                                                <p className="text-purple-400 text-sm">
+                                                    <strong>Note:</strong> Anonymous mode hides your presence from public pages while keeping all your features intact. Your contributions still count toward community improvements.
+                                                </p>
+                                            </div>
+                                        </div>
 
-                                                <div className="pt-4 border-t border-gray-700">
-                                                    <h3 className="text-white font-medium mb-2">Why contribute?</h3>
-                                                    <ul className="text-sm text-gray-400 space-y-1 list-disc list-inside">
-                                                        <li>Earn +15 karma for each approved correction</li>
-                                                        <li>Help improve accuracy for everyone</li>
-                                                        <li>Build reputation as a trusted contributor</li>
-                                                    </ul>
+                                        {/* Training Data Section */}
+                                        <div className="card bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-white/5">
+                                            <div className="flex items-center gap-3 mb-6">
+                                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 flex items-center justify-center">
+                                                    <svg className="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <h2 className="text-lg font-semibold text-white">Privacy & Training Data</h2>
+                                                    <p className="text-sm text-gray-400">Control how your beatmap corrections contribute to improving our AI model. Your corrections help make BeatSight better for everyone.</p>
                                                 </div>
                                             </div>
-                                        )}
 
-                                        <button onClick={handleSaveContributionConsent} disabled={isSaving || isLoadingConsent} className="btn btn-primary">
-                                            {isSaving ? 'Saving...' : 'Save Privacy Settings'}
-                                        </button>
+                                            {isLoadingConsent ? (
+                                                <div className="text-gray-400">Loading...</div>
+                                            ) : (
+                                                <div className="space-y-4">
+                                                    <label className="flex items-center justify-between">
+                                                        <div>
+                                                            <span className="text-white">Contribute to model training</span>
+                                                            <p className="text-sm text-gray-500">
+                                                                Allow your beatmap corrections to be used for improving the AI.
+                                                                Earn karma when your contributions are approved.
+                                                            </p>
+                                                        </div>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={contributionConsent.consent_given}
+                                                            onChange={(e) => setContributionConsent(prev => ({
+                                                                ...prev,
+                                                                consent_given: e.target.checked
+                                                            }))}
+                                                            className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-primary-500 focus:ring-primary-500"
+                                                        />
+                                                    </label>
+
+                                                    {contributionConsent.consent_given && (
+                                                        <>
+                                                            <label className="flex items-center justify-between">
+                                                                <div>
+                                                                    <span className="text-white">Anonymous export</span>
+                                                                    <p className="text-sm text-gray-500">
+                                                                        Export corrections without your username attached
+                                                                    </p>
+                                                                </div>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={contributionConsent.allow_anonymous_export}
+                                                                    onChange={(e) => setContributionConsent(prev => ({
+                                                                        ...prev,
+                                                                        allow_anonymous_export: e.target.checked
+                                                                    }))}
+                                                                    className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-primary-500 focus:ring-primary-500"
+                                                                />
+                                                            </label>
+
+                                                            <label className="flex items-center justify-between">
+                                                                <div>
+                                                                    <span className="text-white">Public credit</span>
+                                                                    <p className="text-sm text-gray-500">
+                                                                        Show your name in public contributor lists
+                                                                    </p>
+                                                                </div>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={contributionConsent.allow_public_credit}
+                                                                    onChange={(e) => setContributionConsent(prev => ({
+                                                                        ...prev,
+                                                                        allow_public_credit: e.target.checked
+                                                                    }))}
+                                                                    className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-primary-500 focus:ring-primary-500"
+                                                                />
+                                                            </label>
+                                                        </>
+                                                    )}
+
+                                                    <div className="pt-4 border-t border-gray-700">
+                                                        <h3 className="text-white font-medium mb-2">Why contribute?</h3>
+                                                        <ul className="text-sm text-gray-400 space-y-1 list-disc list-inside">
+                                                            <li>Earn +15 karma for each approved correction</li>
+                                                            <li>Help improve accuracy for everyone</li>
+                                                            <li>Build reputation as a trusted contributor</li>
+                                                            <li>Help create the first universal index for drum transcriptions</li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <button onClick={handleSaveContributionConsent} disabled={isSaving || isLoadingConsent} className="btn btn-primary">
+                                                {isSaving ? 'Saving...' : 'Save Privacy Settings'}
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
 

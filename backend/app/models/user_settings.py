@@ -86,6 +86,16 @@ class UserSettings(Base):
         comment="Show statistics (total maps, accuracy score) on public profile",
     )
 
+    # Anonymous mode settings
+    hide_from_leaderboards: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False,
+        comment="Hide user from public leaderboards (karma, verifiers, contributors)",
+    )
+    hide_from_public_queues: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False,
+        comment="Hide user's jobs from public queue view",
+    )
+
     # -------------------------------------------------------------------------
     # AI Re-evaluation Settings
     # -------------------------------------------------------------------------

@@ -45,9 +45,12 @@ export function UserMenu() {
         // Close dialog
         setShowSignOutConfirm(false)
 
-        // Logout and navigate to home
-        logout()
-        navigate('/', { replace: true })
+        // Logout and navigate to home with a slight delay for smoother transition
+        // This allows the dialog to close gracefully before the page changes
+        setTimeout(() => {
+            logout()
+            navigate('/', { replace: true })
+        }, 150)
     }
 
     // Get initials for avatar

@@ -6,12 +6,13 @@ import uuid
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.karma import KarmaLedger, KarmaReason
 from app.models.role import Role, UserRole
 from app.models.user import User
+from app.models.user_settings import UserSettings
 
 
 class KarmaError(Exception):
@@ -348,11 +349,22 @@ class KarmaService:
         """
         Get the karma leaderboard.
 
+        Excludes users who have enabled anonymous mode (hide_from_leaderboards).
+
         Returns:
             List of tuples: (user_id, display_name, karma_score)
         """
+        # Left join with user_settings to filter out users with hide_from_leaderboards=True
+        # Users without settings (None) are included (default behavior is visible)
         result = await self.session.execute(
             select(User.id, User.display_name, User.karma_score)
+            .outerjoin(UserSettings, User.id == UserSettings.user_id)
+            .where(
+                or_(
+                    UserSettings.hide_from_leaderboards == False,  # noqa: E712
+                    UserSettings.hide_from_leaderboards.is_(None),  # No settings = visible
+                )
+            )
             .order_by(User.karma_score.desc())
             .limit(limit)
             .offset(offset)

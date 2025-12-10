@@ -47,10 +47,22 @@ export function JobQueuePage() {
     return (
         <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-white">Job Queue</h1>
-                <button className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-xl font-medium shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all">
-                    New Generation
-                </button>
+                <div>
+                    <h1 className="text-2xl font-bold text-white">Job Queue</h1>
+                    <p className="text-slate-400 text-sm mt-1">Track your AI beatmap generation jobs</p>
+                </div>
+                <a
+                    href="/upload"
+                    className="group relative px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-xl font-medium shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all"
+                    title="Upload a song to generate a beatmap with AI"
+                >
+                    <span className="flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        New Generation
+                    </span>
+                </a>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -115,8 +127,11 @@ export function JobQueuePage() {
                                     View All Jobs
                                 </button>
                             ) : (
-                                <a href="/upload" className="inline-block px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-xl font-medium shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all">
-                                    Upload Song
+                                <a href="/upload" className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-xl font-medium shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    Start New Generation
                                 </a>
                             )}
                         </div>

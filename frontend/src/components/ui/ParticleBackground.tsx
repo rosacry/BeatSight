@@ -189,7 +189,7 @@ function ParticleBackgroundBase({
 
         ctx.globalAlpha = 1
         animationRef.current = requestAnimationFrame(animate)
-    }, [colors, enableInteractive, enableGlow, enableConnections, frameInterval])
+    }, [colors, enableInteractive, enableGlow, enableConnections])
 
     useEffect(() => {
         // Skip entirely if reduced motion is preferred and no particles

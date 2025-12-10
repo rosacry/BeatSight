@@ -7,7 +7,7 @@ import { useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useQuery } from '@tanstack/react-query'
-import { listJobs, listSongs, listAchievements } from '@/api/client'
+import { listJobs, listSongs, listAchievements, getMyVerificationStats } from '@/api/client'
 import { format } from 'date-fns'
 import { AchievementGrid } from '@/components/AchievementBadge'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
@@ -54,13 +54,18 @@ export function ProfilePage() {
         enabled: !!user,
     })
 
+    const { data: verificationStats } = useQuery({
+        queryKey: ['verification-stats'],
+        queryFn: getMyVerificationStats,
+        enabled: !!user,
+    })
+
     const isLoading = jobsLoading || songsLoading
 
     // PERF: Memoize computed stats to avoid re-calculation on every render
-    const { totalSongs, completedJobs, totalJobs, initials } = useMemo(() => {
+    const { totalSongs, completedJobs, initials } = useMemo(() => {
         const total = songs?.length || 0
         const completed = jobs?.filter((j) => j.state === 'complete').length || 0
-        const jobCount = jobs?.length || 0
         const userInitials = user?.display_name
             ?.split(' ')
             .map((n) => n[0])
@@ -71,7 +76,6 @@ export function ProfilePage() {
         return {
             totalSongs: total,
             completedJobs: completed,
-            totalJobs: jobCount,
             initials: userInitials,
         }
     }, [songs, jobs, user?.display_name])
@@ -187,12 +191,12 @@ export function ProfilePage() {
                     <div className="text-gray-400 text-sm">Beatmaps Generated</div>
                 </div>
                 <div className="card text-center">
-                    <div className="text-3xl font-bold text-white">{totalJobs}</div>
+                    <div className="text-3xl font-bold text-green-400">{verificationStats?.consensus_matches || 0}</div>
                     <div className="text-gray-400 text-sm flex items-center justify-center gap-1">
-                        Total Generations
-                        <span className="cursor-help" title="Total number of beatmap generation jobs requested">
+                        Maps Verified
+                        <span className="cursor-help" title="Number of maps where your vote contributed to verification consensus">
                             <svg className="w-3.5 h-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </span>
                     </div>

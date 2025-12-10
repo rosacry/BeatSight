@@ -192,14 +192,7 @@ export function ProfilePage() {
                 </div>
                 <div className="card text-center">
                     <div className="text-3xl font-bold text-green-400">{verificationStats?.consensus_matches || 0}</div>
-                    <div className="text-gray-400 text-sm flex items-center justify-center gap-1">
-                        Maps Verified
-                        <span className="cursor-help" title="Number of maps where your vote contributed to verification consensus">
-                            <svg className="w-3.5 h-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </span>
-                    </div>
+                    <div className="text-gray-400 text-sm">Maps Verified</div>
                 </div>
                 <div className="card text-center">
                     <div className="text-3xl font-bold text-primary-400">

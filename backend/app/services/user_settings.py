@@ -64,6 +64,8 @@ class UserSettingsService:
         default_upload_visibility: Optional[UploadVisibility] = None,
         show_activity_on_profile: Optional[bool] = None,
         show_statistics_on_profile: Optional[bool] = None,
+        hide_from_leaderboards: Optional[bool] = None,
+        hide_from_public_queues: Optional[bool] = None,
         re_evaluation_policy: Optional[ReEvaluationPolicy] = None,
         notify_job_complete: Optional[bool] = None,
         notify_map_verified: Optional[bool] = None,
@@ -89,6 +91,10 @@ class UserSettingsService:
             settings.show_activity_on_profile = show_activity_on_profile
         if show_statistics_on_profile is not None:
             settings.show_statistics_on_profile = show_statistics_on_profile
+        if hide_from_leaderboards is not None:
+            settings.hide_from_leaderboards = hide_from_leaderboards
+        if hide_from_public_queues is not None:
+            settings.hide_from_public_queues = hide_from_public_queues
         if re_evaluation_policy is not None:
             settings.re_evaluation_policy = re_evaluation_policy
         if notify_job_complete is not None:

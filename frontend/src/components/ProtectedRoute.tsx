@@ -20,6 +20,9 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
     const hasRole = useAuthStore((state) => state.hasRole)
     const location = useLocation()
 
+    // Build full path including search params for redirect-back functionality
+    const fullPath = location.pathname + location.search
+
     // Show loading state while checking auth
     if (isLoading) {
         return (
@@ -37,7 +40,7 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
 
     // Redirect to login if not authenticated
     if (!isAuthenticated) {
-        return <Navigate to="/login" state={{ from: location.pathname }} replace />
+        return <Navigate to="/login" state={{ from: fullPath }} replace />
     }
 
     // Check role requirements if specified

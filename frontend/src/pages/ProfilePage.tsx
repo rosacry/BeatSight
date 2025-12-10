@@ -187,11 +187,21 @@ export function ProfilePage() {
                     <div className="text-3xl font-bold text-white">{completedJobs}</div>
                     <div className="text-gray-400 text-sm">Beatmaps Generated</div>
                 </div>
-                <div className="card text-center">
+                <div className="card text-center group relative">
                     <div className="text-3xl font-bold text-white">
                         {totalJobs > 0 ? Math.round((completedJobs / totalJobs) * 100) : 0}%
                     </div>
-                    <div className="text-gray-400 text-sm">Success Rate</div>
+                    <div className="text-gray-400 text-sm flex items-center justify-center gap-1">
+                        Success Rate
+                        <span className="cursor-help" title="Percentage of AI generation jobs that completed successfully">
+                            <svg className="w-3.5 h-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </span>
+                    </div>
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                        {completedJobs} of {totalJobs} generations succeeded
+                    </div>
                 </div>
                 <div className="card text-center">
                     <div className="text-3xl font-bold text-primary-400">

@@ -21,6 +21,8 @@ class UserSettingsRead(BaseModel):
     default_upload_visibility: UploadVisibility
     show_activity_on_profile: bool
     show_statistics_on_profile: bool
+    hide_from_leaderboards: bool
+    hide_from_public_queues: bool
 
     # AI re-evaluation settings
     re_evaluation_policy: ReEvaluationPolicy
@@ -57,6 +59,14 @@ class UserSettingsUpdate(BaseModel):
     show_statistics_on_profile: Optional[bool] = Field(
         default=None,
         description="Show statistics on public profile",
+    )
+    hide_from_leaderboards: Optional[bool] = Field(
+        default=None,
+        description="Hide from public leaderboards (anonymous mode)",
+    )
+    hide_from_public_queues: Optional[bool] = Field(
+        default=None,
+        description="Hide jobs from public queue view (anonymous mode)",
     )
 
     # AI re-evaluation settings

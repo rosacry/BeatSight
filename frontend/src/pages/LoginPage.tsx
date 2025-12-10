@@ -47,6 +47,12 @@ export function LoginPage() {
     // Get redirect path from location state or default to home
     const from = (location.state as { from?: string })?.from || '/'
 
+    // Reset any stuck body styles on mount (e.g., from modals that didn't clean up)
+    useEffect(() => {
+        document.body.style.overflow = ''
+        document.body.style.pointerEvents = ''
+    }, [])
+
     // Redirect if already authenticated (e.g., after page refresh restored session)
     useEffect(() => {
         if (authenticated && !isLoading) {

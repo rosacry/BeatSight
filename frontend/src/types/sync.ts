@@ -23,6 +23,10 @@ export interface CustomSettings {
 
     // Developer settings
     developerModeEnabled: boolean
+
+    // Anonymous mode settings
+    hideFromLeaderboards: boolean
+    hideFromPublicQueues: boolean
 }
 
 /**
@@ -92,6 +96,8 @@ export const DEFAULT_CUSTOM_SETTINGS: CustomSettings = {
     pushNotifications: true,
     marketingEmails: false,
     developerModeEnabled: false,
+    hideFromLeaderboards: false,
+    hideFromPublicQueues: false,
 }
 
 /**

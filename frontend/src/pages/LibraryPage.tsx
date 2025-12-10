@@ -112,7 +112,7 @@ export function LibraryPage() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
@@ -121,7 +121,7 @@ export function LibraryPage() {
                         {filteredSongs.length} {filteredSongs.length === 1 ? 'song' : 'songs'}
                     </p>
                 </div>
-                <Link to="/upload" className="btn btn-primary flex items-center gap-2 w-fit">
+                <Link to="/upload" className="btn btn-primary flex items-center gap-2 w-fit whitespace-nowrap">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
@@ -130,15 +130,15 @@ export function LibraryPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col md:flex-row gap-4">
                 {/* Search */}
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                     <input
                         type="text"
                         placeholder="Search by title or artist..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="input"
+                        className="input w-full"
                     />
                 </div>
 
@@ -146,7 +146,7 @@ export function LibraryPage() {
                 <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as SortOption)}
-                    className="input w-full sm:w-40"
+                    className="input w-full md:w-40 flex-shrink-0"
                 >
                     <option value="recent">Most Recent</option>
                     <option value="title">Title</option>
@@ -158,7 +158,7 @@ export function LibraryPage() {
                 <select
                     value={filterBy}
                     onChange={(e) => setFilterBy(e.target.value as FilterOption)}
-                    className="input w-full sm:w-40"
+                    className="input w-full md:w-40 flex-shrink-0"
                 >
                     <option value="all">All Songs</option>
                     <option value="complete">Complete</option>

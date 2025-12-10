@@ -6148,6 +6148,8 @@ def main():
             # CLASS HEALTH CHECK: Run every 3 epochs (or first 5 epochs) to detect collapse early
             # This catches class collapse MUCH earlier than waiting until training ends
             should_check_health = (epoch + 1) <= 5 or (epoch + 1) % 3 == 0
+            health = None  # Track health for best checkpoint gating
+            num_collapsed_classes = 0
             if should_check_health and args.balanced_sampling:
                 class_names = components_info.get('class_names', None)
                 health = check_class_health(
@@ -6161,6 +6163,7 @@ def main():
                     max_batches=50,  # Fast check, ~50 batches
                 )
                 log_class_health(health, epoch + 1, num_classes)
+                num_collapsed_classes = len(health.get('zero_acc_classes', []))
                 
                 # If class collapse detected in first 5 epochs, it's likely a config issue
                 if health['collapse_detected'] and (epoch + 1) <= 5:
@@ -6224,7 +6227,14 @@ def main():
                     log_dict["val/balanced_accuracy"] = val_balanced_acc
                 wandb_run.log(log_dict, step=epoch + 1)
 
-            if val_metric_for_best > best_val_acc:
+            # SAFEGUARD: Don't save as "best" if classes have collapsed
+            # A high balanced_acc with collapsed classes is misleading
+            has_collapsed_classes = num_collapsed_classes > 0
+            if has_collapsed_classes and val_metric_for_best > best_val_acc:
+                print(f"⚠️  Skipping best checkpoint save: {num_collapsed_classes} classes at 0% accuracy")
+                print(f"    (balanced_acc={val_metric_for_best:.2f}% is misleading with collapsed classes)")
+            
+            if val_metric_for_best > best_val_acc and not has_collapsed_classes:
                 best_val_acc = val_metric_for_best
                 best_epoch = epoch + 1
                 model_path = output_dir / "best_drum_classifier.pth"

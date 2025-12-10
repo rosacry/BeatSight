@@ -386,6 +386,8 @@ async def update_user_settings(
     - `default_upload_visibility`: public, anonymous, or private
     - `show_activity_on_profile`: Show uploads/edits on public profile
     - `show_statistics_on_profile`: Show stats on public profile
+    - `hide_from_leaderboards`: Hide from all public leaderboards (anonymous mode)
+    - `hide_from_public_queues`: Hide jobs from public queue view (anonymous mode)
     
     **AI Re-evaluation Settings:**
     - `re_evaluation_policy`: auto_free, opt_in, or opt_out
@@ -405,6 +407,8 @@ async def update_user_settings(
         default_upload_visibility=request.default_upload_visibility,
         show_activity_on_profile=request.show_activity_on_profile,
         show_statistics_on_profile=request.show_statistics_on_profile,
+        hide_from_leaderboards=request.hide_from_leaderboards,
+        hide_from_public_queues=request.hide_from_public_queues,
         re_evaluation_policy=request.re_evaluation_policy,
         notify_job_complete=request.notify_job_complete,
         notify_map_verified=request.notify_map_verified,

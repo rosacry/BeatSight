@@ -1,24 +1,36 @@
 #!/bin/bash
 # =============================================================================
-# BeatSight Auto-Training Script (Simplified)
+# BeatSight Auto-Training Script
 # =============================================================================
-# Streamlined training script with only essential production modes.
-# For legacy/experimental modes, see auto_train_legacy.sh
+# Production training pipeline for the world's best drum transcription AI.
 #
-# RECOMMENDED TRAINING PATH (Local GPU):
-#   14 → 17a → 17d-balanced → 17e-local → 19c
+# RECOMMENDED TRAINING PATH (December 2025):
+# ─────────────────────────────────────────────────────────────────────────────
+#   1. train_production_final.sh     # Base classifier (100 epochs, ~35-40 hrs)
+#   2. ./auto_train.sh v5-distill    # 17e - Self-distillation (optional, +1-2%)
+#   3. ./auto_train.sh multilabel    # 19c - Simultaneous hits (REQUIRED)
+#
+# The production_final script uses optimized settings from ablation study:
+#   • LR = 0.0002 (not 0.0001)
+#   • Effective batch = 512 (not 1024)
+#   • Uniform balanced sampling
+#   • NO focal loss (caused class collapse)
+#
+# ABLATION RESULTS (for reference):
+#   V7 baseline: 54.27% → A2 (LR 0.0002): 58.74% (+4.47%)
+#   V7 baseline: 54.27% → B1 (batch 512): 56.60% (+2.33%)
+#   V7 baseline: 54.27% → E1 (10% data):  61.69% (+7.42%)
 #
 # Usage:
-#   ./auto_train.sh label-audit      # 14  - Find mislabeled samples
-#   ./auto_train.sh v5-warmup        # 17a - Quick validation (~2hr)
-#   ./auto_train.sh v5-local-balanced # 17d-balanced - Full training (~4-7 days) ⭐
-#   ./auto_train.sh v5-distill       # 17e-local - Self-distillation (~4-7 days)
-#   ./auto_train.sh multilabel       # 19c - Simultaneous drum detection (~6-12hr)
-#   ./auto_train.sh evaluate         # 21  - Holdout test evaluation
+#   ./train_production_final.sh      # Step 1: Base training (START HERE)
+#   ./auto_train.sh v5-distill       # Step 2: Optional self-distillation
+#   ./auto_train.sh multilabel       # Step 3: Multi-hit detection (REQUIRED)
+#   ./auto_train.sh evaluate         # Step 4: Final evaluation
 #
-# Cloud GPU Path (Lambda H100):
-#   ./auto_train.sh v5-cloud         # 17d - Full cached training (~24hr)
-#   ./auto_train.sh v5-cloud-distill # 17f - Cloud self-distillation (~24hr)
+# Legacy/Debug modes (still available):
+#   ./auto_train.sh label-audit      # Find mislabeled samples
+#   ./auto_train.sh v5-warmup        # Quick validation run
+#   ./auto_train.sh v5-local-balanced # Old full training (superseded)
 #
 # =============================================================================
 
@@ -123,6 +135,18 @@ TRAIN_MODE="${1:-help}"
 shift 2>/dev/null || true
 
 case "$TRAIN_MODE" in
+    # =========================================================================
+    # V5 PRODUCTION (PRIMARY) - Full optimized training
+    # =========================================================================
+    # This is the main training command - runs train_production_final.sh
+    # Usage: ./auto_train.sh v5
+    # =========================================================================
+    v5|v5-production|production|prod)
+        log "🚀 Starting V5 PRODUCTION training (optimized config)..."
+        log "   Delegating to train_production_final.sh"
+        exec "$SCRIPT_DIR/train_production_final.sh"
+        ;;
+    
     # =========================================================================
     # LABEL AUDIT (14) - Find mislabeled samples
     # =========================================================================
@@ -229,20 +253,44 @@ case "$TRAIN_MODE" in
         ;;
     
     # =========================================================================
-    # V5 DISTILL (17e-local) - Self-distillation from balanced model
+    # V5 DISTILL (17e-local) - Self-distillation from production model
+    # =========================================================================
+    # UPDATED Dec 2025: Uses optimized settings from ablation study
+    # - LR: 0.0001 (lower than base training for fine-tuning)
+    # - Effective batch: 512 (batch 256, grad_accum 2)
+    # - Uniform balanced sampling
+    # - No focal loss
     # =========================================================================
     v5-distill|distill|17e-local|17e)
         log "🔄 Starting V5 SELF-DISTILLATION (Born-Again Networks)..."
-        RUN_DIR="${BEATSIGHT_RUN_ROOT}/v5/local-balanced-distill"
-        TEACHER_DIR="${BEATSIGHT_RUN_ROOT}/v5/local-balanced"
+        RUN_DIR="${BEATSIGHT_RUN_ROOT}/v5/production-distill"
         
-        # Find teacher model
-        TEACHER="${TEACHER_DIR}/best_drum_classifier_ema.pth"
-        [[ ! -f "$TEACHER" ]] && TEACHER="${TEACHER_DIR}/best_drum_classifier.pth"
+        # Find teacher model from production training
+        TEACHER_DIRS=(
+            "${BEATSIGHT_REPO_ROOT}/ai-pipeline/training/runs/production_final"*
+            "${BEATSIGHT_RUN_ROOT}/v5/local-balanced"
+        )
         
-        if [[ ! -f "$TEACHER" ]]; then
+        TEACHER=""
+        for dir in "${TEACHER_DIRS[@]}"; do
+            if [[ -d "$dir" ]]; then
+                if [[ -f "${dir}/best_drum_classifier_ema.pth" ]]; then
+                    TEACHER="${dir}/best_drum_classifier_ema.pth"
+                    break
+                elif [[ -f "${dir}/best_drum_classifier.pth" ]]; then
+                    TEACHER="${dir}/best_drum_classifier.pth"
+                    break
+                fi
+            fi
+        done
+        
+        if [[ -z "$TEACHER" || ! -f "$TEACHER" ]]; then
             log "❌ ERROR: Teacher model not found!"
-            log "   Run v5-local-balanced first, then run distillation."
+            log "   Run train_production_final.sh first, then run distillation."
+            log "   Searched in:"
+            for dir in "${TEACHER_DIRS[@]}"; do
+                log "     - $dir"
+            done
             exit 1
         fi
         log "   Teacher model: $TEACHER"
@@ -261,25 +309,28 @@ case "$TRAIN_MODE" in
             --labels-cache-dir "${BEATSIGHT_DATA_ROOT}/dataset_index" \
             --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
             --device cuda \
-            --epochs 100 \
-            --batch-size 512 \
-            --grad-accum-steps 3 \
-            --lr 0.001 \
-            --num-workers 4 --val-num-workers 2 --prefetch-factor 4 \
+            --epochs 50 \
+            --batch-size 256 \
+            --grad-accum-steps 2 \
+            --lr 0.0001 \
+            --num-workers 4 --val-num-workers 2 --prefetch-factor 2 \
             --persistent-workers --pin-memory \
             --amp-dtype bfloat16 \
-            --cache-warmup --cache-warmup-samples 500000 \
-            $V5_MODEL $V5_MIXUP $V5_AUGMENT $V5_LOSS $V5_EMA \
-            $V5_BALANCED $V5_EARLY_STOP $V5_GRAD_CKPT \
-            $V5_SCHEDULER \
+            --model-version v5 --v5-size large --drop-path-rate 0.0 \
+            --mixup-alpha 0.0 --cutmix-alpha 0.0 --mixup-prob 0.0 \
+            --specaugment none \
+            --label-smoothing 0.0 \
+            --balanced-sampling --sampling-strategy uniform --class-weights none \
+            --scheduler cosine_warm_restarts --warm-restart-t0 20 --warm-restart-mult 2 \
+            --warmup-epochs 2 --warmup-lr-factor 0.1 \
+            --gradient-checkpointing \
             --distill-from "$TEACHER" --distill-alpha 0.7 --distill-temperature 4.0 \
-            --grad-clip-norm 1.0 --weight-decay 0.01 \
+            --grad-clip-norm 1.0 --weight-decay 0.0 \
             --channels-last \
             --output "$RUN_DIR" \
             --seed 42 \
-            --checkpoint-every 5 --checkpoint-every-batches 5000 \
-            --val-fraction 0.2 \
-            --wandb-project beatsight-v5 \
+            --checkpoint-every 5 \
+            --early-stopping --early-stopping-patience 15 --early-stopping-min-delta 0.001 \
             $RESUME_FLAG
         
         log "✅ V5 DISTILL training complete!"
@@ -289,17 +340,40 @@ case "$TRAIN_MODE" in
     # =========================================================================
     # MULTILABEL (19c) - Simultaneous drum detection
     # =========================================================================
+    # PURPOSE: Detect multiple drums hit at the same time (e.g., kick + hi-hat)
+    # This is CRITICAL for real drum transcription where simultaneous hits
+    # are the norm, not the exception.
+    #
+    # UPDATED Dec 2025: Uses optimized settings from ablation study
+    # =========================================================================
     multilabel|multi|19c|19)
-        log "🥁 Starting MULTILABEL fine-tuning..."
+        log "🥁 Starting MULTILABEL fine-tuning (simultaneous drum detection)..."
         RUN_DIR="${BEATSIGHT_RUN_ROOT}/multilabel/finetune"
         MULTILABEL_DATA="${BEATSIGHT_OUTPUT_ROOT:-E:/data}/multilabel_dataset"
         
-        # Find pretrained model
-        PRETRAINED="${BEATSIGHT_RUN_ROOT}/v5/local-balanced-distill/best_drum_classifier_ema.pth"
-        [[ ! -f "$PRETRAINED" ]] && PRETRAINED="${BEATSIGHT_RUN_ROOT}/v5/local-balanced/best_drum_classifier.pth"
+        # Find pretrained model from production training or distillation
+        PRETRAINED_DIRS=(
+            "${BEATSIGHT_RUN_ROOT}/v5/production-distill"
+            "${BEATSIGHT_REPO_ROOT}/ai-pipeline/training/runs/production_final"*
+            "${BEATSIGHT_RUN_ROOT}/v5/local-balanced"
+        )
         
-        if [[ ! -f "$PRETRAINED" ]]; then
-            log "⚠️  No pretrained model found. Training from scratch..."
+        PRETRAINED=""
+        for dir in "${PRETRAINED_DIRS[@]}"; do
+            if [[ -d "$dir" ]]; then
+                if [[ -f "${dir}/best_drum_classifier_ema.pth" ]]; then
+                    PRETRAINED="${dir}/best_drum_classifier_ema.pth"
+                    break
+                elif [[ -f "${dir}/best_drum_classifier.pth" ]]; then
+                    PRETRAINED="${dir}/best_drum_classifier.pth"
+                    break
+                fi
+            fi
+        done
+        
+        if [[ -z "$PRETRAINED" || ! -f "$PRETRAINED" ]]; then
+            log "⚠️  No pretrained model found. Training from scratch (not recommended)..."
+            log "   For best results, run train_production_final.sh first."
             PRETRAINED_FLAG=""
         else
             log "   Pretrained model: $PRETRAINED"
@@ -307,30 +381,49 @@ case "$TRAIN_MODE" in
         fi
         
         # Check for multilabel dataset
-        if [[ ! -f "${MULTILABEL_DATA}/multilabel_events.jsonl" ]]; then
-            log "❌ ERROR: Multilabel dataset not found!"
-            log "   Run: bash post_export_commands.sh  # Select option 19"
-            exit 1
+        if [[ ! -d "${MULTILABEL_DATA}" ]] || [[ ! -f "${MULTILABEL_DATA}/multilabel_events.jsonl" ]]; then
+            log "⚠️  Multilabel dataset not found at: ${MULTILABEL_DATA}"
+            log "   Generating multilabel dataset from training data..."
+            
+            PYTHONPATH=ai-pipeline python ai-pipeline/training/tools/generate_multilabel_dataset.py \
+                --input-dir "${BEATSIGHT_DATASET_DIR}" \
+                --output-dir "${MULTILABEL_DATA}" \
+                --window-ms 30 \
+                --min-overlap 2
+            
+            if [[ ! -f "${MULTILABEL_DATA}/multilabel_events.jsonl" ]]; then
+                log "❌ ERROR: Failed to generate multilabel dataset!"
+                exit 1
+            fi
+            log "✅ Multilabel dataset generated!"
         fi
         
         mkdir -p "$RUN_DIR"
+        export NVIDIA_TF32_OVERRIDE=1
+        export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True,garbage_collection_threshold:0.8"
         
         cd "$BEATSIGHT_REPO_ROOT"
         PYTHONPATH=ai-pipeline python ai-pipeline/training/multilabel/train_multilabel.py \
-            --dataset-dir "$MULTILABEL_DATA" \
+            --dataset "$MULTILABEL_DATA" \
             --events-file "multilabel_events.jsonl" \
-            --feature-cache-dir "${BEATSIGHT_CACHE_DIR}" \
-            --device cuda \
+            --cache-dir "${BEATSIGHT_CACHE_DIR}" \
             --epochs 50 \
             --batch-size 256 \
-            --lr 0.0005 \
-            --num-workers 4 \
+            --lr 0.0002 \
+            --model-version v5 \
+            --v5-size large \
+            --drop-path-rate 0.0 \
+            --loss-type bce \
+            --label-smoothing 0.0 \
+            --use-amp \
             $PRETRAINED_FLAG \
-            --output-dir "$RUN_DIR" \
-            --wandb-project beatsight-v5
+            --output-dir "$RUN_DIR"
         
         log "✅ MULTILABEL training complete!"
         log "📁 Model: $RUN_DIR/best_multilabel_model.pt"
+        log ""
+        log "🎯 Your drum transcription pipeline is now complete!"
+        log "   Single-hit classifier + Multi-hit detector = Full transcription"
         ;;
     
     # =========================================================================
@@ -484,12 +577,16 @@ case "$TRAIN_MODE" in
         echo "🎯 RECOMMENDED PATH (Local GPU - RTX 3080 Ti / 4080 / 4090):"
         echo ""
         echo "   1. ./auto_train.sh label-audit      # 14  - Find bad labels (~30min)"
-        echo "   2. ./auto_train.sh v5-warmup        # 17a - Validate setup (~2hr)"
-        echo "   3. ./auto_train.sh v5-local-balanced # 17d - Full training (~4-7 days) ⭐"
-        echo "   4. ./auto_train.sh v5-distill       # 17e - Self-distillation (~4-7 days)"
-        echo "   5. ./post_export_commands.sh        # 19  - Generate multilabel data"
-        echo "   6. ./auto_train.sh multilabel       # 19c - Multilabel finetune (~6-12hr)"
-        echo "   7. ./auto_train.sh evaluate         # 21  - Test on holdout set"
+        echo "   2. ./auto_train.sh v5               # PRODUCTION - Full 100% (~35-40hr) ⭐⭐"
+        echo "   3. ./auto_train.sh v5-distill       # 17e - Self-distillation (~35-40hr)"
+        echo "   4. ./post_export_commands.sh        # 19  - Generate multilabel data"
+        echo "   5. ./auto_train.sh multilabel       # 19c - Multilabel finetune (~6-12hr)"
+        echo "   6. ./auto_train.sh evaluate         # 21  - Test on holdout set"
+        echo ""
+        echo "   Aliases:"
+        echo "   ./auto_train.sh v5-production       # Same as v5"
+        echo "   ./auto_train.sh v5-warmup           # Quick validation (~2hr, 5% data)"
+        echo "   ./auto_train.sh v5-local-balanced   # Legacy alias for v5"
         echo ""
         echo "☁️  CLOUD PATH (Lambda H100 / A100):"
         echo ""
@@ -499,7 +596,7 @@ case "$TRAIN_MODE" in
         echo "📦 Legacy modes (v1-v4, experimental): ./auto_train_legacy.sh"
         echo ""
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "📍 Current Status: v5-local-balanced is the active training mode"
+        echo "📍 Current: v5 runs train_production_final.sh (100% data, optimized)"
         echo "📖 Full docs: docs/PATH_TO_90_PERCENT.md"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo ""

@@ -687,7 +687,7 @@ export function AdminDashboardPage() {
                     )}
 
                     {/* Users Table */}
-                    <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-x-auto overflow-y-visible">
+                    <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-x-auto overflow-visible">
                         <table className="w-full min-w-[900px]">
                             <thead className="bg-gray-900">
                                 <tr>
@@ -736,7 +736,7 @@ export function AdminDashboardPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-700">
-                                {sortedUsers.map((user) => (
+                                {sortedUsers.map((user, userIndex) => (
                                     <tr key={user.id} className="hover:bg-gray-700/50">
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
@@ -835,11 +835,11 @@ export function AdminDashboardPage() {
                                                     <AnimatePresence>
                                                         {openActionsUserId === user.id && (
                                                             <motion.div
-                                                                initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                                                                initial={{ opacity: 0, scale: 0.95, y: userIndex >= sortedUsers.length - 3 ? 10 : -10 }}
                                                                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                                                                exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                                                                exit={{ opacity: 0, scale: 0.95, y: userIndex >= sortedUsers.length - 3 ? 10 : -10 }}
                                                                 transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
-                                                                className="absolute right-0 top-full mt-1 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-[100]"
+                                                                className={`absolute right-0 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-[100] ${userIndex >= sortedUsers.length - 3 ? 'bottom-full mb-1' : 'top-full mt-1'}`}
                                                             >
                                                                 <div className="p-1">
                                                                     <button
@@ -920,8 +920,6 @@ export function AdminDashboardPage() {
                             </tbody>
                         </table>
                     </div>
-                    {/* Spacer for dropdown overflow from last row */}
-                    <div className="h-4" aria-hidden="true" />
                 </div>
             )}
 

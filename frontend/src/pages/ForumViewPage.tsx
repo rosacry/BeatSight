@@ -134,15 +134,6 @@ export function ForumViewPage() {
 
     return (
         <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-            {/* Breadcrumb */}
-            <nav className="flex items-center gap-2 text-sm text-gray-400 flex-wrap">
-                <Link to="/forum" className="hover:text-white transition-colors">
-                    Forums
-                </Link>
-                <span>›</span>
-                <span className="text-white truncate max-w-[200px] sm:max-w-none">{forum.name}</span>
-            </nav>
-
             {/* Forum header */}
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                 <div className="min-w-0 flex-1">

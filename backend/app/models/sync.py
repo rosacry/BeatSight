@@ -148,7 +148,9 @@ class SyncManifestEntry(Base):
     cloud_version: Mapped[int] = mapped_column(Integer, default=0)
     checksum: Mapped[str] = mapped_column(String(128), nullable=False)
     sync_state: Mapped[SyncState] = mapped_column(
-        SAEnum(SyncState), default=SyncState.SYNCED, nullable=False
+        SAEnum(SyncState, values_callable=lambda x: [e.value for e in x]),
+        default=SyncState.SYNCED,
+        nullable=False,
     )
     last_modified: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -182,7 +184,7 @@ class SyncConflict(Base):
     cloud_checksum: Mapped[str] = mapped_column(String(128), nullable=False)
     differences: Mapped[dict | None] = mapped_column(JSON)  # Detailed diff info
     resolution: Mapped[ConflictResolution | None] = mapped_column(
-        SAEnum(ConflictResolution)
+        SAEnum(ConflictResolution, values_callable=lambda x: [e.value for e in x]),
     )
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(

@@ -201,10 +201,12 @@ class ForumTopic(Base):
     
     # Type and status
     topic_type: Mapped[ForumTopicType] = mapped_column(
-        SAEnum(ForumTopicType), default=ForumTopicType.NORMAL
+        SAEnum(ForumTopicType, values_callable=lambda x: [e.value for e in x]),
+        default=ForumTopicType.NORMAL,
     )
     status: Mapped[ForumTopicStatus] = mapped_column(
-        SAEnum(ForumTopicStatus), default=ForumTopicStatus.OPEN
+        SAEnum(ForumTopicStatus, values_callable=lambda x: [e.value for e in x]),
+        default=ForumTopicStatus.OPEN,
     )
     
     # Tags for categorization
@@ -339,7 +341,8 @@ class ForumPostVote(Base):
         nullable=False
     )
     vote_type: Mapped[ForumPostVoteType] = mapped_column(
-        SAEnum(ForumPostVoteType), nullable=False
+        SAEnum(ForumPostVoteType, values_callable=lambda x: [str(e.value) for e in x]),
+        nullable=False,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -372,7 +375,8 @@ class ForumTopicVote(Base):
         nullable=False
     )
     vote_type: Mapped[ForumPostVoteType] = mapped_column(
-        SAEnum(ForumPostVoteType), nullable=False
+        SAEnum(ForumPostVoteType, values_callable=lambda x: [str(e.value) for e in x]),
+        nullable=False,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

@@ -80,7 +80,8 @@ class KarmaLedger(Base):
     )
     delta: Mapped[int] = mapped_column(Integer, nullable=False)
     reason_code: Mapped[KarmaReason] = mapped_column(
-        SAEnum(KarmaReason), nullable=False
+        SAEnum(KarmaReason, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
     )
     related_entity_type: Mapped[str | None] = mapped_column(String(64))
     related_entity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))

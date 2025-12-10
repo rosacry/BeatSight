@@ -70,7 +70,7 @@ class UserSettings(Base):
 
     # Default visibility for new uploads
     default_upload_visibility: Mapped[UploadVisibility] = mapped_column(
-        SAEnum(UploadVisibility),
+        SAEnum(UploadVisibility, values_callable=lambda x: [e.value for e in x]),
         default=UploadVisibility.PUBLIC,
         nullable=False,
         comment="Default visibility for new song uploads",
@@ -102,7 +102,7 @@ class UserSettings(Base):
 
     # How to handle AI model improvements for user's unverified maps
     re_evaluation_policy: Mapped[ReEvaluationPolicy] = mapped_column(
-        SAEnum(ReEvaluationPolicy),
+        SAEnum(ReEvaluationPolicy, values_callable=lambda x: [e.value for e in x]),
         default=ReEvaluationPolicy.AUTO_FREE,
         nullable=False,
         comment="User preference for AI re-evaluation of unverified maps",

@@ -201,8 +201,26 @@ export function VerifierDashboardPage() {
 
     if (loading && !stats) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin h-10 w-10 border-4 border-cyan-500 border-t-transparent rounded-full"></div>
+            <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
+                {/* Skeleton loading state - matches actual content layout to prevent layout shift */}
+                <div className="h-8 w-64 bg-gray-800/50 rounded-lg mb-2 animate-pulse"></div>
+                <div className="h-5 w-80 bg-gray-800/30 rounded mb-4 animate-pulse"></div>
+
+                {/* Banner skeleton */}
+                <div className="mb-6 p-4 rounded-xl bg-gray-800/30 border border-gray-700/30 h-20 animate-pulse"></div>
+
+                {/* Stats cards skeleton */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
+                    {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-4 h-20 animate-pulse"></div>
+                    ))}
+                </div>
+
+                {/* Tabs skeleton */}
+                <div className="flex gap-1 p-1 bg-gray-800/50 rounded-xl w-64 mb-6 h-12 animate-pulse"></div>
+
+                {/* Content skeleton */}
+                <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-8 h-32 animate-pulse"></div>
             </div>
         )
     }

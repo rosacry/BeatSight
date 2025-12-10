@@ -14,12 +14,26 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.status import HTTP_429_TOO_MANY_REQUESTS
 
+from app.config import get_settings
 from app.logging import get_logger
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
 
 logger = get_logger(__name__)
+
+
+def _build_cors_headers(request: Request) -> dict[str, str]:
+    """Build CORS headers for error responses based on request origin."""
+    settings = get_settings()
+    origin = request.headers.get("origin")
+    if origin and origin in settings.cors_origins:
+        return {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Vary": "Origin",
+        }
+    return {}
 
 
 # Rate limit configurations (requests per minute)
@@ -97,7 +111,22 @@ ENDPOINT_LIMITS = {
         "premium": 30,
         "admin": 100,
     },
-    # Billing - prevent abuse
+    # Billing public endpoints - allow anonymous for config/pricing
+    "/api/billing/config": {
+        "anonymous": 30,
+        "authenticated": 60,
+        "basic": 60,
+        "premium": 120,
+        "admin": 300,
+    },
+    "/api/billing/pricing": {
+        "anonymous": 30,
+        "authenticated": 60,
+        "basic": 60,
+        "premium": 120,
+        "admin": 300,
+    },
+    # Billing protected endpoints - prevent abuse
     "/api/billing": {
         "anonymous": 0,
         "authenticated": 10,
@@ -185,6 +214,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 content='{"detail": "This endpoint requires authentication"}',
                 status_code=HTTP_429_TOO_MANY_REQUESTS,
                 media_type="application/json",
+                headers=_build_cors_headers(request),
             )
 
         # Build rate limit key - include method for POST-specific limits
@@ -210,6 +240,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 tier=user_tier,
                 limit=limit,
             )
+            cors_headers = _build_cors_headers(request)
             return Response(
                 content='{"detail": "Rate limit exceeded. Please try again later."}',
                 status_code=HTTP_429_TOO_MANY_REQUESTS,
@@ -219,6 +250,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     "X-RateLimit-Limit": str(limit),
                     "X-RateLimit-Remaining": "0",
                     "X-RateLimit-Reset": str(int(reset_at)),
+                    **cors_headers,
                 },
             )
 
@@ -308,15 +340,20 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def _get_limit(self, path: str, tier: str, method: str = "GET") -> int:
         """Get rate limit for path, tier, and HTTP method."""
+        # Sort endpoints by length (longest first) to match most specific path first
+        sorted_endpoints = sorted(ENDPOINT_LIMITS.keys(), key=len, reverse=True)
+        
         # Check method-specific endpoint limits first (e.g., "/api/ai-jobs:POST")
-        for endpoint, limits in ENDPOINT_LIMITS.items():
-            if endpoint.endswith(f":{method}") and path.startswith(endpoint.rsplit(":", 1)[0]):
-                return limits.get(tier, RATE_LIMITS.get(tier, 30))
+        for endpoint in sorted_endpoints:
+            if endpoint.endswith(f":{method}"):
+                base_path = endpoint.rsplit(":", 1)[0]
+                if path.startswith(base_path):
+                    return ENDPOINT_LIMITS[endpoint].get(tier, RATE_LIMITS.get(tier, 30))
         
         # Check general endpoint-specific limits (excluding method-specific ones)
-        for endpoint, limits in ENDPOINT_LIMITS.items():
+        for endpoint in sorted_endpoints:
             if ":" not in endpoint and path.startswith(endpoint):
-                return limits.get(tier, RATE_LIMITS.get(tier, 30))
+                return ENDPOINT_LIMITS[endpoint].get(tier, RATE_LIMITS.get(tier, 30))
 
         # Fall back to default tier limits
         return RATE_LIMITS.get(tier, 30)

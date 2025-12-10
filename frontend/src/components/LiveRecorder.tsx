@@ -15,6 +15,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { createLogger } from '@/lib/logger'
+import { Select } from '@/components/ui/Dropdown'
 
 const logger = createLogger('LiveRecorder')
 
@@ -401,16 +402,17 @@ export function LiveRecorder({
                 </h2>
 
                 {/* Quality selector */}
-                <select
+                <Select
                     value={quality}
-                    onChange={(e) => setQuality(e.target.value as AudioQuality)}
+                    onValueChange={(value) => setQuality(value as AudioQuality)}
                     disabled={state !== 'idle'}
-                    className="bg-gray-800 text-white text-sm rounded-lg px-3 py-1.5 border border-gray-700 disabled:opacity-50"
-                >
-                    {Object.entries(QUALITY_SETTINGS).map(([key, { label }]) => (
-                        <option key={key} value={key}>{label}</option>
-                    ))}
-                </select>
+                    className="w-40"
+                    size="sm"
+                    options={Object.entries(QUALITY_SETTINGS).map(([key, { label }]) => ({
+                        value: key,
+                        label: label,
+                    }))}
+                />
             </div>
 
             {/* Waveform Visualization */}

@@ -3,11 +3,13 @@
  * Provides system overview, user management, moderation, and job monitoring.
  */
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { API_CONFIG } from '@/lib/config'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { Select } from '@/components/ui/Dropdown'
 
 interface SystemOverview {
     total_users: number
@@ -132,6 +134,24 @@ export function AdminDashboardPage() {
     const [moderationDuration, setModerationDuration] = useState(24)
     const [moderationPermanent, setModerationPermanent] = useState(false)
     const [moderationSubmitting, setModerationSubmitting] = useState(false)
+
+    // Actions dropdown state
+    const [openActionsUserId, setOpenActionsUserId] = useState<string | null>(null)
+    const actionsDropdownRef = useRef<HTMLDivElement>(null)
+
+    // Close actions dropdown when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (actionsDropdownRef.current && !actionsDropdownRef.current.contains(event.target as Node)) {
+                setOpenActionsUserId(null)
+            }
+        }
+
+        if (openActionsUserId) {
+            document.addEventListener('mousedown', handleClickOutside)
+            return () => document.removeEventListener('mousedown', handleClickOutside)
+        }
+    }, [openActionsUserId])
 
     // Update URL when tab changes (URL is source of truth, so just update URL)
     const handleTabChange = (tab: TabType) => {
@@ -606,30 +626,32 @@ export function AdminDashboardPage() {
                         </div>
 
                         {/* Role Filter */}
-                        <select
+                        <Select
                             value={roleFilter}
-                            onChange={(e) => setRoleFilter(e.target.value)}
-                            className="px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500 min-w-[140px]"
-                        >
-                            <option value="all">All Roles</option>
-                            <option value="user">User</option>
-                            <option value="verifier">Verifier</option>
-                            <option value="staff">Staff</option>
-                            <option value="admin">Admin</option>
-                        </select>
+                            onValueChange={(value) => setRoleFilter(value)}
+                            className="min-w-[140px]"
+                            options={[
+                                { value: 'all', label: 'All Roles' },
+                                { value: 'user', label: 'User' },
+                                { value: 'verifier', label: 'Verifier' },
+                                { value: 'staff', label: 'Staff' },
+                                { value: 'admin', label: 'Admin' },
+                            ]}
+                        />
 
                         {/* Status Filter */}
-                        <select
+                        <Select
                             value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500 min-w-[140px]"
-                        >
-                            <option value="all">All Statuses</option>
-                            <option value="active">Active</option>
-                            <option value="silenced">Silenced</option>
-                            <option value="restricted">Restricted</option>
-                            <option value="banned">Banned</option>
-                        </select>
+                            onValueChange={(value) => setStatusFilter(value)}
+                            className="min-w-[140px]"
+                            options={[
+                                { value: 'all', label: 'All Statuses' },
+                                { value: 'active', label: 'Active' },
+                                { value: 'silenced', label: 'Silenced' },
+                                { value: 'restricted', label: 'Restricted' },
+                                { value: 'banned', label: 'Banned' },
+                            ]}
+                        />
 
                         <button
                             onClick={loadUsers}
@@ -796,68 +818,88 @@ export function AdminDashboardPage() {
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-1">
                                                 {/* Moderation dropdown */}
-                                                <div className="relative group">
-                                                    <button className="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-white">
+                                                <div className="relative" ref={openActionsUserId === user.id ? actionsDropdownRef : undefined}>
+                                                    <button
+                                                        onClick={() => setOpenActionsUserId(openActionsUserId === user.id ? null : user.id)}
+                                                        className="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+                                                    >
                                                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                                                         </svg>
                                                     </button>
-                                                    <div className="absolute right-0 top-full mt-1 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                                                        <div className="p-1">
-                                                            <button
-                                                                onClick={() => {
-                                                                    setModerationModalUser(user)
-                                                                    setModerationAction('note')
-                                                                }}
-                                                                className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded"
+                                                    <AnimatePresence>
+                                                        {openActionsUserId === user.id && (
+                                                            <motion.div
+                                                                initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                                                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                                exit={{ opacity: 0, scale: 0.96, y: -4 }}
+                                                                transition={{ type: 'spring', stiffness: 500, damping: 30, mass: 0.8 }}
+                                                                className="absolute right-0 top-full mt-1 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50"
                                                             >
-                                                                📝 Add Note
-                                                            </button>
-                                                            {!user.is_restricted && (
-                                                                <>
+                                                                <div className="p-1">
                                                                     <button
                                                                         onClick={() => {
                                                                             setModerationModalUser(user)
-                                                                            setModerationAction('silence')
-                                                                            setModerationDuration(24)
+                                                                            setModerationAction('note')
+                                                                            setOpenActionsUserId(null)
                                                                         }}
-                                                                        className="w-full text-left px-3 py-2 text-sm text-yellow-400 hover:bg-gray-700 rounded"
+                                                                        className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded"
                                                                     >
-                                                                        🔇 Silence
+                                                                        📝 Add Note
                                                                     </button>
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            setModerationModalUser(user)
-                                                                            setModerationAction('restrict')
-                                                                            setModerationDuration(168)
-                                                                        }}
-                                                                        className="w-full text-left px-3 py-2 text-sm text-orange-400 hover:bg-gray-700 rounded"
-                                                                    >
-                                                                        ⚠️ Restrict
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            setModerationModalUser(user)
-                                                                            setModerationAction('ban')
-                                                                            setModerationPermanent(false)
-                                                                            setModerationDuration(720)
-                                                                        }}
-                                                                        className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-gray-700 rounded"
-                                                                    >
-                                                                        🚫 Ban
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                            {user.is_restricted && (
-                                                                <button
-                                                                    onClick={() => handleRemoveRestriction(user.id)}
-                                                                    className="w-full text-left px-3 py-2 text-sm text-green-400 hover:bg-gray-700 rounded"
-                                                                >
-                                                                    ✅ Remove Restriction
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </div>
+                                                                    {!user.is_restricted && (
+                                                                        <>
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setModerationModalUser(user)
+                                                                                    setModerationAction('silence')
+                                                                                    setModerationDuration(24)
+                                                                                    setOpenActionsUserId(null)
+                                                                                }}
+                                                                                className="w-full text-left px-3 py-2 text-sm text-yellow-400 hover:bg-gray-700 rounded"
+                                                                            >
+                                                                                🔇 Silence
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setModerationModalUser(user)
+                                                                                    setModerationAction('restrict')
+                                                                                    setModerationDuration(168)
+                                                                                    setOpenActionsUserId(null)
+                                                                                }}
+                                                                                className="w-full text-left px-3 py-2 text-sm text-orange-400 hover:bg-gray-700 rounded"
+                                                                            >
+                                                                                ⚠️ Restrict
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setModerationModalUser(user)
+                                                                                    setModerationAction('ban')
+                                                                                    setModerationPermanent(false)
+                                                                                    setModerationDuration(720)
+                                                                                    setOpenActionsUserId(null)
+                                                                                }}
+                                                                                className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-gray-700 rounded"
+                                                                            >
+                                                                                🚫 Ban
+                                                                            </button>
+                                                                        </>
+                                                                    )}
+                                                                    {user.is_restricted && (
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                handleRemoveRestriction(user.id)
+                                                                                setOpenActionsUserId(null)
+                                                                            }}
+                                                                            className="w-full text-left px-3 py-2 text-sm text-green-400 hover:bg-gray-700 rounded"
+                                                                        >
+                                                                            ✅ Remove Restriction
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
                                                 </div>
                                             </div>
                                         </td>

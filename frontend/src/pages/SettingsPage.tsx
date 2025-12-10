@@ -14,6 +14,7 @@ import { AvatarUpload } from '@/components/AvatarUpload'
 import { TwoFactorSettings } from '@/components/TwoFactorSettings'
 import { PhoneVerificationSettings } from '@/components/PhoneVerificationSettings'
 import { API_CONFIG } from '@/lib/config'
+import { Select } from '@/components/ui/Dropdown'
 import type { UserPreferences } from '@/types/sync'
 import { DEFAULT_CUSTOM_SETTINGS } from '@/types/sync'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
@@ -751,16 +752,16 @@ export function SettingsPage() {
                                                 <label className="block text-sm font-medium text-gray-300 mb-2">
                                                     Default Quantization
                                                 </label>
-                                                <select
+                                                <Select
                                                     value={preferences.custom_settings.defaultQuantization}
-                                                    onChange={(e) => updateCustomSetting('defaultQuantization', e.target.value)}
-                                                    className="input"
-                                                >
-                                                    <option value="8th">8th Notes</option>
-                                                    <option value="16th">16th Notes</option>
-                                                    <option value="32nd">32nd Notes</option>
-                                                    <option value="none">No Quantization</option>
-                                                </select>
+                                                    onValueChange={(value) => updateCustomSetting('defaultQuantization', value)}
+                                                    options={[
+                                                        { value: '8th', label: '8th Notes' },
+                                                        { value: '16th', label: '16th Notes' },
+                                                        { value: '32nd', label: '32nd Notes' },
+                                                        { value: 'none', label: 'No Quantization' },
+                                                    ]}
+                                                />
                                             </div>
 
                                             <div>

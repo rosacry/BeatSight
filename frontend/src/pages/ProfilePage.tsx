@@ -3,7 +3,7 @@
  * Shows user info, stats, achievements, and account details.
  */
 
-import { useState, useMemo, useEffect } from 'react'
+import { useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useQuery } from '@tanstack/react-query'
@@ -15,29 +15,28 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 const VALID_TABS = ['overview', 'achievements', 'activity'] as const
 type ProfileTab = typeof VALID_TABS[number]
 
+// Helper to get valid tab from URL
+function getTabFromUrl(searchParams: URLSearchParams): ProfileTab {
+    const tab = searchParams.get('tab')
+    if (tab && (VALID_TABS as readonly string[]).includes(tab)) {
+        return tab as ProfileTab
+    }
+    return 'overview'
+}
+
 export function ProfilePage() {
     useDocumentTitle('profile')
     const user = useAuthStore((state) => state.user)
     const [searchParams, setSearchParams] = useSearchParams()
 
-    // Get tab from URL or default to 'overview'
-    const tabFromUrl = searchParams.get('tab') as ProfileTab | null
-    const initialTab: ProfileTab = tabFromUrl && VALID_TABS.includes(tabFromUrl) ? tabFromUrl : 'overview'
-    const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab)
+    // Use URL as source of truth - derive tab from URL on every render
+    // This ensures tab persists on refresh and browser navigation
+    const activeTab = getTabFromUrl(searchParams)
 
-    // Update URL when tab changes
+    // Update URL when tab changes (URL is source of truth, so just update URL)
     const handleTabChange = (tab: ProfileTab) => {
-        setActiveTab(tab)
         setSearchParams({ tab }, { replace: true })
     }
-
-    // Sync tab state with URL on mount and URL changes
-    useEffect(() => {
-        const tabFromUrl = searchParams.get('tab')
-        if (tabFromUrl && (VALID_TABS as readonly string[]).includes(tabFromUrl)) {
-            setActiveTab(tabFromUrl as ProfileTab)
-        }
-    }, [searchParams])
 
     const { data: jobs, isLoading: jobsLoading } = useQuery({
         queryKey: ['jobs'],
@@ -187,20 +186,15 @@ export function ProfilePage() {
                     <div className="text-3xl font-bold text-white">{completedJobs}</div>
                     <div className="text-gray-400 text-sm">Beatmaps Generated</div>
                 </div>
-                <div className="card text-center group relative">
-                    <div className="text-3xl font-bold text-white">
-                        {totalJobs > 0 ? Math.round((completedJobs / totalJobs) * 100) : 0}%
-                    </div>
+                <div className="card text-center">
+                    <div className="text-3xl font-bold text-white">{totalJobs}</div>
                     <div className="text-gray-400 text-sm flex items-center justify-center gap-1">
-                        Success Rate
-                        <span className="cursor-help" title="Percentage of AI generation jobs that completed successfully">
+                        Total Generations
+                        <span className="cursor-help" title="Total number of beatmap generation jobs requested">
                             <svg className="w-3.5 h-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </span>
-                    </div>
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                        {completedJobs} of {totalJobs} generations succeeded
                     </div>
                 </div>
                 <div className="card text-center">

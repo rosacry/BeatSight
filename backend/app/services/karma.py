@@ -345,31 +345,46 @@ class KarmaService:
         self,
         limit: int = 100,
         offset: int = 0,
-    ) -> list[tuple[uuid.UUID, str, int]]:
+    ) -> list[dict]:
         """
         Get the karma leaderboard.
 
-        Excludes users who have enabled anonymous mode (hide_from_leaderboards).
+        Users with anonymous mode enabled are shown as "Secret Agent" instead of being hidden.
 
         Returns:
-            List of tuples: (user_id, display_name, karma_score)
+            List of dicts: {user_id, display_name, karma_score, is_anonymous}
         """
-        # Left join with user_settings to filter out users with hide_from_leaderboards=True
-        # Users without settings (None) are included (default behavior is visible)
+        from sqlalchemy import case, literal
+        
+        # Select all users, but mask display_name for anonymous users
+        # Use CASE to conditionally show "Secret Agent" for users with hide_from_leaderboards=True
         result = await self.session.execute(
-            select(User.id, User.display_name, User.karma_score)
-            .outerjoin(UserSettings, User.id == UserSettings.user_id)
-            .where(
-                or_(
-                    UserSettings.hide_from_leaderboards == False,  # noqa: E712
-                    UserSettings.hide_from_leaderboards.is_(None),  # No settings = visible
-                )
+            select(
+                User.id,
+                case(
+                    (UserSettings.hide_from_leaderboards == True, literal("Secret Agent")),  # noqa: E712
+                    else_=User.display_name
+                ).label("display_name"),
+                User.karma_score,
+                case(
+                    (UserSettings.hide_from_leaderboards == True, literal(True)),  # noqa: E712
+                    else_=literal(False)
+                ).label("is_anonymous")
             )
+            .outerjoin(UserSettings, User.id == UserSettings.user_id)
             .order_by(User.karma_score.desc())
             .limit(limit)
             .offset(offset)
         )
-        return list(result.all())
+        return [
+            {
+                "user_id": row.id,
+                "display_name": row.display_name,
+                "karma_score": row.karma_score,
+                "is_anonymous": row.is_anonymous,
+            }
+            for row in result.all()
+        ]
 
     async def get_karma_stats(self, user_id: uuid.UUID) -> dict:
         """

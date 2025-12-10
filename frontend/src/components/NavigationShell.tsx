@@ -5,11 +5,12 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Link, useLocation, NavLink } from 'react-router-dom'
+import { Link, useLocation, NavLink, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { UserMenu } from './UserMenu'
 import { CreditBalance } from './CreditBalance'
+import { ConfirmDialog } from './ConfirmDialog'
 import { EXTERNAL_LINKS, getDocsLink, getCommunityLink } from '@/lib/externalLinks'
 import { SKIP_LINK_TARGETS, ARIA_LABELS } from '@/lib/accessibility'
 
@@ -127,8 +128,11 @@ export function Layout({ children }: LayoutProps) {
     const isAdmin = useAuthStore((state) => state.isAdmin())
     const isStaff = useAuthStore((state) => state.isStaff())
     const isVerifier = useAuthStore((state) => state.isVerifier())
+    const logout = useAuthStore((state) => state.logout)
+    const navigate = useNavigate()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [isScrolled, setIsScrolled] = useState(false)
+    const [showMobileSignOutConfirm, setShowMobileSignOutConfirm] = useState(false)
 
     // Track scroll for header effects
     useEffect(() => {
@@ -369,7 +373,7 @@ export function Layout({ children }: LayoutProps) {
                                         </Link>
                                         <button
                                             onClick={() => {
-                                                useAuthStore.getState().logout()
+                                                setShowMobileSignOutConfirm(true)
                                                 setIsMobileMenuOpen(false)
                                             }}
                                             className="block w-full text-left px-4 py-3 rounded-xl text-base font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all"
@@ -467,6 +471,27 @@ export function Layout({ children }: LayoutProps) {
                     </div>
                 </div>
             </footer>
+
+            {/* Mobile sign out confirmation dialog */}
+            <ConfirmDialog
+                isOpen={showMobileSignOutConfirm}
+                onClose={() => setShowMobileSignOutConfirm(false)}
+                onConfirm={() => {
+                    document.body.style.overflow = ''
+                    document.body.style.pointerEvents = ''
+                    setShowMobileSignOutConfirm(false)
+                    setTimeout(() => {
+                        logout()
+                        navigate('/', { replace: true })
+                    }, 150)
+                }}
+                title="Sign out"
+                message="Are you sure you want to sign out of BeatSight?"
+                confirmLabel="Sign out"
+                cancelLabel="Stay signed in"
+                variant="signout"
+                style="popup"
+            />
         </div>
     )
 }

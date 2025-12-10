@@ -64,17 +64,34 @@ export function LoginPage() {
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     // 2FA state
     const [requires2FA, setRequires2FA] = useState(false)
     const [totpCode, setTotpCode] = useState(['', '', '', '', '', ''])
     const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
-
+    // Show loading state while checking auth (prevents flash of login form)
+    if (isLoading) {
+        return (
+            <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+                <ParticleBackground />
+                <GradientOrbs />
+                <div className="relative z-10 flex flex-col items-center gap-4">
+                    <svg className="animate-spin h-10 w-10 text-cyan-400" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <p className="text-gray-400">Checking authentication...</p>
+                </div>
+            </div>
+        )
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setError(null)
+        setIsSubmitting(true)
 
         try {
             await login({ email, password })
@@ -89,16 +106,20 @@ export function LoginPage() {
             } else {
                 setError('An unexpected error occurred')
             }
+        } finally {
+            setIsSubmitting(false)
         }
     }
 
     const handle2FASubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setError(null)
+        setIsSubmitting(true)
 
         const code = totpCode.join('')
         if (code.length !== 6) {
             setError('Please enter a 6-digit code')
+            setIsSubmitting(false)
             return
         }
 
@@ -114,6 +135,8 @@ export function LoginPage() {
             // Clear the code on error
             setTotpCode(['', '', '', '', '', ''])
             inputRefs.current[0]?.focus()
+        } finally {
+            setIsSubmitting(false)
         }
     }
 
@@ -303,7 +326,7 @@ export function LoginPage() {
 
                                     <motion.button
                                         type="submit"
-                                        disabled={isLoading}
+                                        disabled={isSubmitting}
                                         whileHover={{ scale: 1.01 }}
                                         whileTap={{ scale: 0.99 }}
                                         className="w-full py-3.5 px-4 bg-gradient-to-r from-cyan-500 to-cyan-600 
@@ -313,7 +336,7 @@ export function LoginPage() {
                                                  shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40
                                                  transition-all duration-300"
                                     >
-                                        {isLoading ? (
+                                        {isSubmitting ? (
                                             <span className="flex items-center justify-center gap-2">
                                                 <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -425,7 +448,7 @@ export function LoginPage() {
 
                                     <motion.button
                                         type="submit"
-                                        disabled={isLoading || totpCode.join('').length !== 6}
+                                        disabled={isSubmitting || totpCode.join('').length !== 6}
                                         whileHover={{ scale: 1.01 }}
                                         whileTap={{ scale: 0.99 }}
                                         className="w-full py-3.5 px-4 bg-gradient-to-r from-cyan-500 to-cyan-600 
@@ -435,7 +458,7 @@ export function LoginPage() {
                                                  shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40
                                                  transition-all duration-300"
                                     >
-                                        {isLoading ? (
+                                        {isSubmitting ? (
                                             <span className="flex items-center justify-center gap-2">
                                                 <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />

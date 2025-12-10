@@ -147,8 +147,8 @@ export function HomePage() {
                             variants={itemVariants}
                             className="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed"
                         >
-                            Practice drums to any song with visual lookahead. Discover community beatmaps, create your own from scratch, or use AI-assisted transcription.
-                            <span className="text-white font-medium"> The rhythm game advantage for real drummers.</span>
+                            The global repository and community hub for drummers. Discover community beatmaps, create your own from scratch, or use AI-assisted transcription.
+                            <span className="text-white font-medium"> Practice any song with visual lookahead.</span>
                         </motion.p>
 
                         {/* CTA Buttons */}

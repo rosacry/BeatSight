@@ -102,8 +102,8 @@ export function ForumPage() {
                                     <h1 className="text-4xl font-bold text-white mb-2">
                                         Community <span className="text-cyan-400">Forums</span>
                                     </h1>
-                                    <p className="text-slate-300 text-lg">
-                                        Discuss beatmaps, strategies, and connect with other drummers
+                                    <p className="text-slate-300 text-lg max-w-xl">
+                                        The global hub for drummers – share transcriptions, discuss techniques, and build the world's largest community-verified drum sheet repository
                                     </p>
                                 </div>
 

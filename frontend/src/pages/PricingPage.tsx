@@ -260,65 +260,24 @@ export function PricingPage() {
                                     opacity: 1,
                                     height: 'auto',
                                     transition: {
-                                        height: { duration: 0.4, ease: [0.4, 0, 0.2, 1] },
-                                        opacity: { duration: 0.25, delay: 0.05 }
+                                        height: { duration: 0.35, ease: [0.4, 0, 0.2, 1] },
+                                        opacity: { duration: 0.2, delay: 0.1 }
                                     }
                                 }}
                                 exit={{
                                     opacity: 0,
                                     height: 0,
                                     transition: {
-                                        // Collapse smoothly - all children fade together, then height collapses
-                                        opacity: { duration: 0.2, ease: 'easeOut' },
-                                        height: { duration: 0.25, ease: [0.4, 0, 0.2, 1], delay: 0.05 }
+                                        opacity: { duration: 0.15 },
+                                        height: { duration: 0.25, ease: [0.4, 0, 0.2, 1] }
                                     }
                                 }}
                                 className="overflow-hidden mt-6"
-                                style={{ originY: 0 }}
                             >
-                                <motion.div
-                                    className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl mx-auto pb-4 pt-2"
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="exit"
-                                    variants={{
-                                        visible: {
-                                            transition: {
-                                                staggerChildren: 0.06,
-                                                delayChildren: 0.1
-                                            }
-                                        },
-                                        hidden: {},
-                                        exit: {
-                                            // No stagger on exit - all children exit together for smooth collapse
-                                            transition: {
-                                                duration: 0.15
-                                            }
-                                        }
-                                    }}
-                                >
+                                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl mx-auto pb-4 pt-2">
                                     {CREDIT_PACKS.map((pack) => (
-                                        <motion.div
+                                        <div
                                             key={pack.type}
-                                            variants={{
-                                                hidden: { opacity: 0, y: 20, scale: 0.95 },
-                                                visible: {
-                                                    opacity: 1,
-                                                    y: 0,
-                                                    scale: 1,
-                                                    transition: {
-                                                        duration: 0.3,
-                                                        ease: [0.25, 0.46, 0.45, 0.94]
-                                                    }
-                                                },
-                                                exit: {
-                                                    // Instant exit - parent handles the animation
-                                                    opacity: 0,
-                                                    transition: {
-                                                        duration: 0.1
-                                                    }
-                                                }
-                                            }}
                                             className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-primary-500/50 transition-all duration-200 hover:scale-[1.02]"
                                         >
                                             <div className="flex justify-between items-start mb-3">
@@ -342,9 +301,9 @@ export function PricingPage() {
                                             >
                                                 {purchaseCreditsMutation.isPending ? 'Processing...' : 'Buy Now'}
                                             </button>
-                                        </motion.div>
+                                        </div>
                                     ))}
-                                </motion.div>
+                                </div>
                             </motion.div>
                         )}
                     </AnimatePresence>

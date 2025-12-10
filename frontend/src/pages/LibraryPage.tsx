@@ -204,7 +204,7 @@ interface SongCardProps {
 function SongCard({ song, job }: SongCardProps) {
     return (
         <div className="card hover:bg-gray-750 transition-colors">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 {/* Album art placeholder */}
                 <div className="w-16 h-16 bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
                     <svg className="w-8 h-8 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -213,7 +213,7 @@ function SongCard({ song, job }: SongCardProps) {
                 </div>
 
                 {/* Song info */}
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 overflow-hidden">
                     <h3 className="text-white font-medium truncate">{song.title}</h3>
                     <p className="text-gray-400 text-sm truncate">{song.artist}</p>
                     {song.bpm && (
@@ -221,28 +221,28 @@ function SongCard({ song, job }: SongCardProps) {
                     )}
                 </div>
 
-                {/* Status and actions */}
-                <div className="flex items-center gap-4">
+                {/* Status and actions - wrap on small screens */}
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4 sm:flex-nowrap">
                     {job && <JobStatusBadge state={job.state} />}
 
                     {job?.state === 'complete' ? (
                         <Link
                             to={`/jobs/${job.id}`}
-                            className="btn btn-secondary text-sm"
+                            className="btn btn-secondary text-sm whitespace-nowrap"
                         >
                             View Beatmap
                         </Link>
                     ) : job?.state === 'processing' || job?.state === 'queued' ? (
                         <Link
                             to={`/jobs/${job.id}`}
-                            className="btn btn-secondary text-sm"
+                            className="btn btn-secondary text-sm whitespace-nowrap"
                         >
                             View Progress
                         </Link>
                     ) : (
                         <Link
                             to={`/upload?song=${song.id}`}
-                            className="btn btn-primary text-sm"
+                            className="btn btn-primary text-sm whitespace-nowrap"
                         >
                             Generate
                         </Link>

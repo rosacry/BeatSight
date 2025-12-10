@@ -75,6 +75,8 @@ class ForumSummaryResponse(BaseModel):
     color: Optional[str] = None
     topic_count: int
     post_count: int
+    is_visible: bool = True
+    allow_topics: bool = True  # Inverse of is_locked
     last_post_at: Optional[datetime] = None
 
 
@@ -327,6 +329,8 @@ async def get_categories(
                     color=f.color,
                     topic_count=f.topic_count,
                     post_count=f.post_count,
+                    is_visible=f.is_visible,
+                    allow_topics=not f.is_locked,  # Allow topics if not locked
                     last_post_at=f.last_post_at,
                 )
                 for f in cat.forums

@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { createLogger, getDeveloperModeEnabled, enableDeveloperMode, disableDeveloperMode } from '@/lib/logger'
@@ -23,6 +23,15 @@ const API_BASE = API_CONFIG.baseUrl
 
 const VALID_TABS = ['account', 'preferences', 'notifications', 'privacy', 'developer', 'danger'] as const
 type SettingsTab = typeof VALID_TABS[number]
+
+// Helper to get valid tab from URL
+function getTabFromUrl(searchParams: URLSearchParams): SettingsTab {
+    const tab = searchParams.get('tab')
+    if (tab && (VALID_TABS as readonly string[]).includes(tab)) {
+        return tab as SettingsTab
+    }
+    return 'account'
+}
 
 // Use the shared Preferences type but make it compatible with our local usage
 type Preferences = Omit<UserPreferences, 'version' | 'checksum' | 'last_modified'>
@@ -53,11 +62,32 @@ async function apiRequest<T>(
     return response.json()
 }
 
+// Prefetch 2FA status to avoid loading delay
+async function fetch2FAStatus(token: string | null) {
+    if (!token) return null
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+    }
+    const response = await fetch(`${API_CONFIG.baseUrl}/auth/2fa/status`, { headers })
+    if (!response.ok) return null
+    return response.json()
+}
+
 export function SettingsPage() {
     useDocumentTitle('settings')
     const queryClient = useQueryClient()
     const user = useAuthStore((state) => state.user)
     const accessToken = useAuthStore((state) => state.accessToken)
+
+    // Prefetch 2FA status immediately when settings page loads
+    // This eliminates the 3-5 second delay for the TwoFactorSettings component
+    useQuery({
+        queryKey: ['twoFactorStatus'],
+        queryFn: () => fetch2FAStatus(accessToken),
+        enabled: !!accessToken,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    })
     const logout = useAuthStore((state) => state.logout)
     const fetchCurrentUser = useAuthStore((state) => state.fetchCurrentUser)
     const [searchParams, setSearchParams] = useSearchParams()
@@ -80,10 +110,9 @@ export function SettingsPage() {
         }
     }, [accessToken, queryClient])
 
-    // Get tab from URL or default to 'account'
-    const tabFromUrl = searchParams.get('tab') as SettingsTab | null
-    const initialTab: SettingsTab = tabFromUrl && VALID_TABS.includes(tabFromUrl) ? tabFromUrl : 'account'
-    const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab)
+    // Use URL as source of truth - derive tab from URL on every render
+    // This ensures tab persists on refresh and browser navigation
+    const activeTab = getTabFromUrl(searchParams)
     const [isSaving, setIsSaving] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -181,19 +210,10 @@ export function SettingsPage() {
         loadContributionConsent()
     }, [loadPreferences, loadContributionConsent])
 
-    // Update URL when tab changes
+    // Update URL when tab changes (URL is source of truth, so just update URL)
     const handleTabChange = (tab: SettingsTab) => {
-        setActiveTab(tab)
         setSearchParams({ tab }, { replace: true })
     }
-
-    // Sync tab state with URL on mount and URL changes
-    useEffect(() => {
-        const tabFromUrl = searchParams.get('tab')
-        if (tabFromUrl && (VALID_TABS as readonly string[]).includes(tabFromUrl)) {
-            setActiveTab(tabFromUrl as SettingsTab)
-        }
-    }, [searchParams])
 
     // Sync developer mode with server preferences when they load
     useEffect(() => {
@@ -892,7 +912,7 @@ export function SettingsPage() {
                                                         </div>
                                                         <div>
                                                             <p className="text-white font-medium">Hide from leaderboards</p>
-                                                            <p className="text-sm text-gray-400">Your name won't appear on karma, verifier, or contributor rankings</p>
+                                                            <p className="text-sm text-gray-400">Your name appears as "Secret Agent" 🕵️ on karma, verifier, and contributor rankings</p>
                                                         </div>
                                                     </div>
                                                     <input
@@ -912,7 +932,7 @@ export function SettingsPage() {
                                                         </div>
                                                         <div>
                                                             <p className="text-white font-medium">Hide from public queues</p>
-                                                            <p className="text-sm text-gray-400">Your jobs won't appear in the public queue view</p>
+                                                            <p className="text-sm text-gray-400">Your jobs appear as "Secret Agent" 🕵️ in the public queue view</p>
                                                         </div>
                                                     </div>
                                                     <input
@@ -926,7 +946,7 @@ export function SettingsPage() {
 
                                             <div className="mt-4 p-3 bg-purple-500/10 border border-purple-500/30 rounded-lg">
                                                 <p className="text-purple-400 text-sm">
-                                                    <strong>Note:</strong> Anonymous mode hides your presence from public pages while keeping all your features intact. Your contributions still count toward community improvements.
+                                                    <strong>Note:</strong> Anonymous mode displays your name as "Secret Agent" on public pages while keeping all your features intact. Your contributions still count toward community improvements.
                                                 </p>
                                             </div>
                                         </div>

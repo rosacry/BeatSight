@@ -89,6 +89,7 @@ class LeaderboardEntry(BaseModel):
     user_id: uuid.UUID
     display_name: str
     karma_score: int
+    is_anonymous: bool = False
 
 
 class LeaderboardResponse(BaseModel):
@@ -244,6 +245,7 @@ async def get_leaderboard(
     Get the karma leaderboard.
 
     This endpoint does not require authentication.
+    Users with anonymous mode enabled appear as "Secret Agent".
     """
     service = KarmaService(session)
     entries = await service.get_karma_leaderboard(limit=limit, offset=offset)
@@ -251,11 +253,12 @@ async def get_leaderboard(
     leaderboard = [
         LeaderboardEntry(
             rank=offset + i + 1,
-            user_id=user_id,
-            display_name=display_name,
-            karma_score=karma_score,
+            user_id=entry["user_id"],
+            display_name=entry["display_name"],
+            karma_score=entry["karma_score"],
+            is_anonymous=entry["is_anonymous"],
         )
-        for i, (user_id, display_name, karma_score) in enumerate(entries)
+        for i, entry in enumerate(entries)
     ]
 
     return LeaderboardResponse(

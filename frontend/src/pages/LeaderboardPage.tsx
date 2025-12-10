@@ -23,6 +23,7 @@ interface LeaderboardUser {
     avatar_url: string | null
     karma_score: number
     rank: number
+    is_anonymous?: boolean
 }
 
 interface VerifierStats {
@@ -100,12 +101,13 @@ export function LeaderboardPage() {
             if (!response.ok) throw new Error('Failed to fetch karma leaderboard')
             const data = await response.json()
             // Transform the response to match our LeaderboardUser interface
-            return data.entries.map((entry: { user_id: string; display_name: string; karma_score: number; rank: number }) => ({
+            return data.entries.map((entry: { user_id: string; display_name: string; karma_score: number; rank: number; is_anonymous?: boolean }) => ({
                 id: entry.user_id,
                 display_name: entry.display_name,
                 avatar_url: null, // API doesn't return avatar_url
                 karma_score: entry.karma_score,
                 rank: entry.rank,
+                is_anonymous: entry.is_anonymous || false,
             })) as LeaderboardUser[]
         },
         enabled: activeTab === 'karma',
@@ -223,7 +225,14 @@ export function LeaderboardPage() {
 
                                         {/* Avatar & Name */}
                                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                                            {entry.avatar_url ? (
+                                            {entry.is_anonymous ? (
+                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white">
+                                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l-2-2m0 0l-2-2m2 2l2-2m-2 2l2 2" />
+                                                    </svg>
+                                                </div>
+                                            ) : entry.avatar_url ? (
                                                 <img
                                                     src={entry.avatar_url}
                                                     alt={entry.display_name}
@@ -235,7 +244,12 @@ export function LeaderboardPage() {
                                                 </div>
                                             )}
                                             <div className="min-w-0">
-                                                <p className="font-medium text-white truncate">{entry.display_name}</p>
+                                                <p className={`font-medium truncate ${entry.is_anonymous ? 'text-purple-300 italic' : 'text-white'}`}>
+                                                    {entry.display_name}
+                                                    {entry.is_anonymous && (
+                                                        <span className="ml-2 text-xs text-purple-400">🕵️</span>
+                                                    )}
+                                                </p>
                                                 {entry.id === user?.id && (
                                                     <p className="text-xs text-cyan-400">This is you!</p>
                                                 )}

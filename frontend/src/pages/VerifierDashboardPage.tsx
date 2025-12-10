@@ -48,15 +48,23 @@ interface VerifierStats {
 const VALID_TABS = ['queue', 'history'] as const
 type TabType = typeof VALID_TABS[number]
 
+// Helper to get valid tab from URL
+function getTabFromUrl(searchParams: URLSearchParams): TabType {
+    const tab = searchParams.get('tab')
+    if (tab && (VALID_TABS as readonly string[]).includes(tab)) {
+        return tab as TabType
+    }
+    return 'queue'
+}
+
 export function VerifierDashboardPage() {
     useDocumentTitle('verifier')
     const { accessToken } = useAuthStore()
     const [searchParams, setSearchParams] = useSearchParams()
 
-    // Get tab from URL or default to 'queue'
-    const tabFromUrl = searchParams.get('tab') as TabType | null
-    const initialTab: TabType = tabFromUrl && VALID_TABS.includes(tabFromUrl) ? tabFromUrl : 'queue'
-    const [activeTab, setActiveTab] = useState<TabType>(initialTab)
+    // Use URL as source of truth - derive tab from URL on every render
+    // This ensures tab persists on refresh and browser navigation
+    const activeTab = getTabFromUrl(searchParams)
 
     const [stats, setStats] = useState<VerifierStats | null>(null)
     const [proposals, setProposals] = useState<Proposal[]>([])
@@ -99,19 +107,10 @@ export function VerifierDashboardPage() {
         return response.json()
     }
 
-    // Update URL when tab changes
+    // Update URL when tab changes (URL is source of truth, so just update URL)
     const handleTabChange = (tab: TabType) => {
-        setActiveTab(tab)
         setSearchParams({ tab }, { replace: true })
     }
-
-    // Sync tab state with URL on mount and URL changes
-    useEffect(() => {
-        const tabFromUrl = searchParams.get('tab')
-        if (tabFromUrl && (VALID_TABS as readonly string[]).includes(tabFromUrl)) {
-            setActiveTab(tabFromUrl as TabType)
-        }
-    }, [searchParams])
 
     const loadData = async () => {
         try {

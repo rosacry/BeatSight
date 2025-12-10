@@ -98,7 +98,9 @@ const dropdownMenuVariants = cva(
         'absolute z-50 min-w-[160px] overflow-hidden',
         'rounded-lg border border-slate-700 bg-slate-900/95 backdrop-blur-xl',
         'shadow-xl shadow-black/30',
-        'origin-top transition-all duration-200',
+        // Note: Removed 'transition-all duration-200' to prevent CSS transitions
+        // from conflicting with Framer Motion animations, which caused a delayed
+        // enlarging animation effect after the dropdown opened
     ],
     {
         variants: {

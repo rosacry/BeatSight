@@ -498,8 +498,7 @@ async def get_public_user_profile(
     # Get song count
     songs_result = await session.execute(
         select(func.count()).select_from(Song).where(
-            Song.owner_id == user_id,
-            Song.deleted_at.is_(None)
+            Song.created_by_id == user_id
         )
     )
     songs_count = songs_result.scalar() or 0
@@ -575,8 +574,7 @@ async def get_user_maps(
     songs_result = await session.execute(
         select(Song)
         .where(
-            Song.owner_id == user_id,
-            Song.deleted_at.is_(None)
+            Song.created_by_id == user_id
         )
         .order_by(Song.created_at.desc())
         .limit(50)

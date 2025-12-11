@@ -17,7 +17,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user_optional, get_db_session
 from app.models.user import User
-from app.models.song import Song
+from app.models.song import Song, SongStatus
 from app.models.forum import ForumTopic, ForumPost
 
 logger = logging.getLogger(__name__)
@@ -133,14 +133,11 @@ async def global_search(
     # Search Songs/Maps
     map_query = (
         select(Song)
-        .options(selectinload(Song.owner))
+        .options(selectinload(Song.creator))
         .where(
-            and_(
-                Song.deleted_at.is_(None),
-                or_(
-                    func.lower(Song.title).like(search_term),
-                    func.lower(Song.artist).like(search_term)
-                )
+            or_(
+                func.lower(Song.title).like(search_term),
+                func.lower(Song.artist).like(search_term)
             )
         )
         .order_by(Song.created_at.desc())
@@ -150,12 +147,9 @@ async def global_search(
         select(func.count())
         .select_from(Song)
         .where(
-            and_(
-                Song.deleted_at.is_(None),
-                or_(
-                    func.lower(Song.title).like(search_term),
-                    func.lower(Song.artist).like(search_term)
-                )
+            or_(
+                func.lower(Song.title).like(search_term),
+                func.lower(Song.artist).like(search_term)
             )
         )
     )
@@ -343,7 +337,6 @@ async def search_maps_extended(
     offset = (page - 1) * page_size
     
     base_conditions = [
-        Song.deleted_at.is_(None),
         or_(
             func.lower(Song.title).like(search_term),
             func.lower(Song.artist).like(search_term)
@@ -352,11 +345,11 @@ async def search_maps_extended(
     
     # Add verified filter if requested
     if verified_only:
-        base_conditions.append(Song.is_verified == True)
+        base_conditions.append(Song.status == SongStatus.VERIFIED)
     
     query = (
         select(Song)
-        .options(selectinload(Song.owner))
+        .options(selectinload(Song.creator))
         .where(and_(*base_conditions))
         .order_by(Song.created_at.desc())
         .offset(offset)

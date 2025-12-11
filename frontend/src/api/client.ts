@@ -322,7 +322,7 @@ export function subscribeToJobProgress(
     onComplete: (event?: JobCompleteEvent) => void,
     onError: (error: Error) => void
 ): () => void {
-    const url = `${API_BASE}/ai-jobs/${jobId}/progress/stream`
+    const url = `${API_BASE}/api/ai-jobs/${jobId}/progress/stream`
     const eventSource = new EventSource(url)
 
     // Handle initial status event

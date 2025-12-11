@@ -521,12 +521,12 @@ async def get_public_user_profile(
     # Determine role
     role = "user"
     if user.roles:
-        role_names = [r.name for r in user.roles]
-        if "admin" in role_names:
+        role_codes = [r.role.code for r in user.roles if r.role]
+        if "admin" in role_codes:
             role = "admin"
-        elif "staff" in role_names:
+        elif "staff" in role_codes:
             role = "staff"
-        elif "verifier" in role_names:
+        elif "verifier" in role_codes:
             role = "verifier"
     
     return PublicUserProfile(

@@ -4,7 +4,7 @@
  * See docs/MONETIZATION_STRATEGY.md for pricing rationale.
  */
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { PRICING_PLANS, type SubscriptionPlan } from '@/types/billing'
@@ -22,12 +22,29 @@ export function PricingPage() {
     const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
     const [showCredits, setShowCredits] = useState(false)
 
+    // Track if we're collapsing (vs expanding) for scroll preservation
+    const isCollapsingRef = useRef<boolean>(false)
+    const savedScrollRef = useRef<number>(0)
+    const creditsSectionRef = useRef<HTMLDivElement>(null)
+
     const { isAuthenticated } = useAuthStore()
     const { data: subscription } = useSubscription()
     const { data: creditBalance } = useCreditBalance()
     const { data: stripeConfig } = useStripeConfig()
     const upgradeMutation = useUpgradeSubscription()
     const purchaseCreditsMutation = usePurchaseCredits()
+
+    // Handle credits toggle with scroll preservation
+    const handleCreditsToggle = useCallback(() => {
+        if (showCredits) {
+            // About to collapse - mark it and save scroll position
+            isCollapsingRef.current = true
+            savedScrollRef.current = window.scrollY
+        } else {
+            isCollapsingRef.current = false
+        }
+        setShowCredits(prev => !prev)
+    }, [showCredits])
 
     // Show message if cancelled checkout
     const cancelled = searchParams.get('cancelled')
@@ -219,7 +236,7 @@ export function PricingPage() {
                 <div className="max-w-4xl mx-auto mt-16">
                     <div className="text-center mb-8">
                         <motion.button
-                            onClick={() => setShowCredits(!showCredits)}
+                            onClick={handleCreditsToggle}
                             className="group inline-flex items-center gap-2 px-6 py-3 rounded-xl
                                      bg-dark-400 hover:bg-dark-300
                                      border border-dark-300 hover:border-primary-500/50
@@ -252,49 +269,91 @@ export function PricingPage() {
                         )}
                     </div>
 
-                    <AnimatePresence initial={false}>
-                        {showCredits && (
-                            <motion.div
-                                key="credits-container"
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-                                className="overflow-hidden"
-                            >
-                                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl mx-auto pb-4 pt-6">
-                                    {CREDIT_PACKS.map((pack) => (
-                                        <div
-                                            key={pack.type}
-                                            className="bg-dark-400 border border-dark-300 rounded-xl p-6 hover:border-primary-500/50 transition-colors duration-200"
-                                        >
-                                            <div className="flex justify-between items-start mb-3">
-                                                <h4 className="font-semibold text-white">{pack.name}</h4>
-                                                {pack.savings_percent > 0 && (
-                                                    <span className="px-2 py-0.5 text-xs font-medium bg-green-500/20 text-green-400 rounded-full">
-                                                        -{pack.savings_percent}%
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p className="text-3xl font-bold text-white mb-1">
-                                                {pack.price_display}
-                                            </p>
-                                            <p className="text-sm text-gray-400 mb-4">
-                                                {formatCredits(pack.credits)} • ${(pack.per_credit_cents / 100).toFixed(2)}/song
-                                            </p>
-                                            <button
-                                                onClick={() => handleBuyCredits(pack.type)}
-                                                disabled={purchaseCreditsMutation.isPending}
-                                                className="w-full py-2 bg-dark-500 hover:bg-dark-300 text-white text-sm font-medium rounded-lg transition-colors duration-200 disabled:opacity-50"
+                    <div ref={creditsSectionRef} style={{ overflowAnchor: 'none' }}>
+                        <AnimatePresence initial={false}>
+                            {showCredits && (
+                                <motion.div
+                                    key="credits-container"
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{
+                                        height: 'auto',
+                                        opacity: 1,
+                                        transition: {
+                                            height: { duration: 0.35, ease: [0.33, 1, 0.68, 1] },
+                                            opacity: { duration: 0.25, delay: 0.08 }
+                                        }
+                                    }}
+                                    exit={{
+                                        height: 0,
+                                        opacity: 0,
+                                        transition: {
+                                            opacity: { duration: 0.12, ease: 'easeOut' },
+                                            height: { duration: 0.25, ease: [0.33, 1, 0.68, 1] }
+                                        }
+                                    }}
+                                    className="overflow-hidden"
+                                    style={{
+                                        willChange: 'height',
+                                        overflowAnchor: 'none'
+                                    }}
+                                    onAnimationStart={() => {
+                                        // When collapsing, we need to preserve scroll position
+                                        if (isCollapsingRef.current) {
+                                            // Temporarily disable smooth scrolling to prevent browser interference
+                                            document.documentElement.style.scrollBehavior = 'auto';
+                                        }
+                                    }}
+                                    onUpdate={() => {
+                                        // During collapse animation, actively maintain scroll position
+                                        if (isCollapsingRef.current) {
+                                            const currentScroll = window.scrollY;
+                                            const targetScroll = savedScrollRef.current;
+                                            // Only correct if there's a significant jump
+                                            if (Math.abs(currentScroll - targetScroll) > 5) {
+                                                window.scrollTo({ top: targetScroll, behavior: 'instant' });
+                                            }
+                                        }
+                                    }}
+                                    onAnimationComplete={() => {
+                                        // Reset after animation
+                                        isCollapsingRef.current = false;
+                                        document.documentElement.style.scrollBehavior = '';
+                                    }}
+                                >
+                                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl mx-auto pb-4 pt-6">
+                                        {CREDIT_PACKS.map((pack) => (
+                                            <div
+                                                key={pack.type}
+                                                className="bg-dark-400 border border-dark-300 rounded-xl p-6 hover:border-primary-500/50 transition-colors duration-200"
                                             >
-                                                {purchaseCreditsMutation.isPending ? 'Processing...' : 'Buy Now'}
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <h4 className="font-semibold text-white">{pack.name}</h4>
+                                                    {pack.savings_percent > 0 && (
+                                                        <span className="px-2 py-0.5 text-xs font-medium bg-green-500/20 text-green-400 rounded-full">
+                                                            -{pack.savings_percent}%
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-3xl font-bold text-white mb-1">
+                                                    {pack.price_display}
+                                                </p>
+                                                <p className="text-sm text-gray-400 mb-4">
+                                                    {formatCredits(pack.credits)} • ${(pack.per_credit_cents / 100).toFixed(2)}/song
+                                                </p>
+                                                <button
+                                                    onClick={() => handleBuyCredits(pack.type)}
+                                                    disabled={purchaseCreditsMutation.isPending}
+                                                    className="w-full py-2 bg-dark-500 hover:bg-dark-300 text-white text-sm font-medium rounded-lg transition-colors duration-200 disabled:opacity-50"
+                                                >
+                                                    {purchaseCreditsMutation.isPending ? 'Processing...' : 'Buy Now'}
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
                 </div>
 
                 {/* FAQ Section */}

@@ -584,7 +584,7 @@ async def get_public_user_profile(
     Returns public information about a user including their stats and activity.
     """
     from app.models.user_settings import UserSettings
-    from app.models.training import TrainingContribution
+    from app.models.training_contribution import TrainingContribution
     
     user = await _get_user_for_profile(user_id, session)
     

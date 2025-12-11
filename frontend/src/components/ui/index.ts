@@ -723,6 +723,11 @@ export {
     AnimatedList,
     AnimatedSection,
     FadeTransition,
+    PageWrapper,
+    AnimatedTabContent,
+    AnimatedTabButton,
+    StaggerPageContent,
+    StaggerSection,
     // Hook
     usePreparedContent,
     // Types
@@ -734,4 +739,8 @@ export {
     type AnimatedListProps,
     type AnimatedSectionProps,
     type FadeTransitionProps,
+    type PageWrapperProps,
+    type AnimatedTabContentProps,
+    type AnimatedTabButtonProps,
+    type StaggerPageContentProps,
 } from './UnifiedTransitions'

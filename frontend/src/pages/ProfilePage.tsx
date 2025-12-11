@@ -5,7 +5,7 @@
 
 import { useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { useQuery } from '@tanstack/react-query'
 import { listJobs, listSongs, listAchievements, getMyVerificationStats } from '@/api/client'
@@ -13,7 +13,10 @@ import { format } from 'date-fns'
 import { AchievementGrid } from '@/components/AchievementBadge'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import {
-    tabContentVariants as unifiedTabContentVariants
+    AnimatedTabContent,
+    AnimatedTabButton,
+    StaggerPageContent,
+    StaggerSection
 } from '@/components/ui/UnifiedTransitions'
 
 const VALID_TABS = ['overview', 'achievements', 'activity'] as const
@@ -209,53 +212,38 @@ export function ProfilePage() {
             {/* Tabs */}
             <div className="border-b border-white/10 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
                 <nav className="flex gap-4 sm:gap-8 min-w-max">
-                    <button
+                    <AnimatedTabButton
+                        isActive={activeTab === 'overview'}
                         onClick={() => handleTabChange('overview')}
-                        className={`pb-3 sm:pb-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'overview'
-                            ? 'border-primary-500 text-primary-400'
-                            : 'border-transparent text-gray-400 hover:text-white'
-                            }`}
-                    >
-                        Overview
-                    </button>
-                    <button
+                        label="Overview"
+                        variant="underline"
+                    />
+                    <AnimatedTabButton
+                        isActive={activeTab === 'achievements'}
                         onClick={() => handleTabChange('achievements')}
-                        className={`pb-3 sm:pb-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'achievements'
-                            ? 'border-primary-500 text-primary-400'
-                            : 'border-transparent text-gray-400 hover:text-white'
-                            }`}
-                    >
-                        Achievements
-                        {achievementsData && (
+                        label="Achievements"
+                        variant="underline"
+                        badge={achievementsData ? (
                             <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-primary-500/20 text-primary-400">
                                 {achievementsData.total_earned}
                             </span>
-                        )}
-                    </button>
-                    <button
+                        ) : undefined}
+                    />
+                    <AnimatedTabButton
+                        isActive={activeTab === 'activity'}
                         onClick={() => handleTabChange('activity')}
-                        className={`pb-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'activity'
-                            ? 'border-primary-500 text-primary-400'
-                            : 'border-transparent text-gray-400 hover:text-white'
-                            }`}
-                    >
-                        Recent Activity
-                    </button>
+                        label="Recent Activity"
+                        variant="underline"
+                    />
                 </nav>
             </div>
 
             {/* Tab Content */}
-            <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                    key={activeTab}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    variants={unifiedTabContentVariants}
-                >
-                    {activeTab === 'overview' ? (
-                        <div className="space-y-6">
-                            {/* Account Info */}
+            <AnimatedTabContent activeTab={activeTab}>
+                {activeTab === 'overview' ? (
+                    <StaggerPageContent className="space-y-6">
+                        {/* Account Info */}
+                        <StaggerSection>
                             <div className="card">
                                 <h2 className="text-lg font-semibold text-white mb-4">Account Information</h2>
                                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -279,8 +267,10 @@ export function ProfilePage() {
                                     </div>
                                 </dl>
                             </div>
+                        </StaggerSection>
 
-                            {/* Quick Actions */}
+                        {/* Quick Actions */}
+                        <StaggerSection>
                             <div className="card">
                                 <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
                                 <div className="flex flex-wrap gap-3">
@@ -295,11 +285,13 @@ export function ProfilePage() {
                                     </a>
                                 </div>
                             </div>
-                        </div>
-                    ) : activeTab === 'achievements' ? (
-                        <div className="space-y-6">
-                            {/* Achievement Points Summary */}
-                            {achievementsData && (
+                        </StaggerSection>
+                    </StaggerPageContent>
+                ) : activeTab === 'achievements' ? (
+                    <StaggerPageContent className="space-y-6">
+                        {/* Achievement Points Summary */}
+                        {achievementsData && (
+                            <StaggerSection>
                                 <div className="card">
                                     <div className="flex items-center justify-between mb-4">
                                         <h2 className="text-lg font-semibold text-white">Your Achievements</h2>
@@ -322,13 +314,15 @@ export function ProfilePage() {
                                         <AchievementGrid achievements={achievementsData.achievements} />
                                     )}
                                 </div>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {jobs && jobs.length > 0 ? (
-                                jobs.slice(0, 10).map((job) => (
-                                    <div key={job.id} className="card">
+                            </StaggerSection>
+                        )}
+                    </StaggerPageContent>
+                ) : (
+                    <StaggerPageContent className="space-y-4">
+                        {jobs && jobs.length > 0 ? (
+                            jobs.slice(0, 10).map((job, index) => (
+                                <StaggerSection key={job.id}>
+                                    <div className="card">
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <p className="text-white font-medium">
@@ -354,16 +348,18 @@ export function ProfilePage() {
                                             </a>
                                         </div>
                                     </div>
-                                ))
-                            ) : (
+                                </StaggerSection>
+                            ))
+                        ) : (
+                            <StaggerSection>
                                 <div className="card text-center py-8">
                                     <p className="text-gray-400">No recent activity</p>
                                 </div>
-                            )}
-                        </div>
-                    )}
-                </motion.div>
-            </AnimatePresence>
+                            </StaggerSection>
+                        )}
+                    </StaggerPageContent>
+                )}
+            </AnimatedTabContent>
         </div>
     )
 }

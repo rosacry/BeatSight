@@ -12,7 +12,10 @@ import { API_CONFIG } from '@/lib/config'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { Select } from '@/components/ui/Dropdown'
 import {
-    tabContentVariants as unifiedTabContentVariants,
+    AnimatedTabContent,
+    AnimatedTabButton,
+    StaggerPageContent,
+    StaggerSection,
     TRANSITION_DURATION,
     EASE_CURVE
 } from '@/components/ui/UnifiedTransitions'
@@ -517,16 +520,13 @@ export function AdminDashboardPage() {
             <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-2 mb-8">
                 <div className="flex gap-1 p-1 bg-dark-400 rounded-lg w-fit">
                     {(['overview', 'users', 'jobs', 'contributions'] as const).map((tab) => (
-                        <button
+                        <AnimatedTabButton
                             key={tab}
+                            isActive={activeTab === tab}
                             onClick={() => handleTabChange(tab)}
-                            className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === tab
-                                ? 'bg-primary-500 text-white'
-                                : 'text-gray-400 hover:text-white'
-                                }`}
-                        >
-                            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                        </button>
+                            label={tab.charAt(0).toUpperCase() + tab.slice(1)}
+                            variant="pills"
+                        />
                     ))}
                 </div>
             </div>
@@ -555,18 +555,12 @@ export function AdminDashboardPage() {
             )}
 
             {/* Tab Content with Unified Transitions */}
-            <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                    key={activeTab}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    variants={unifiedTabContentVariants}
-                >
-                    {/* Overview Tab */}
-                    {activeTab === 'overview' && overview && userStats && queueStats && (
-                        <div className="space-y-8">
-                            {/* Key Metrics Grid */}
+            <AnimatedTabContent activeTab={activeTab}>
+                {/* Overview Tab */}
+                {activeTab === 'overview' && overview && userStats && queueStats && (
+                    <StaggerPageContent className="space-y-8">
+                        {/* Key Metrics Grid */}
+                        <StaggerSection>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <StatCard
                                     title="Total Users"
@@ -592,8 +586,10 @@ export function AdminDashboardPage() {
                                     trend={`${queueStats.processing} processing`}
                                 />
                             </div>
+                        </StaggerSection>
 
-                            {/* Queue Status */}
+                        {/* Queue Status */}
+                        <StaggerSection>
                             <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
                                 <h3 className="text-lg font-semibold text-white mb-4">Job Queue Status</h3>
                                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -609,8 +605,10 @@ export function AdminDashboardPage() {
                                     </p>
                                 )}
                             </div>
+                        </StaggerSection>
 
-                            {/* User Stats */}
+                        {/* User Stats */}
+                        <StaggerSection>
                             <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
                                 <h3 className="text-lg font-semibold text-white mb-4">User Growth</h3>
                                 <div className="grid grid-cols-3 gap-6">
@@ -633,13 +631,15 @@ export function AdminDashboardPage() {
                                     </p>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        </StaggerSection>
+                    </StaggerPageContent>
+                )}
 
-                    {/* Users Tab */}
-                    {activeTab === 'users' && (
-                        <div className="space-y-6">
-                            {/* Search and Filters */}
+                {/* Users Tab */}
+                {activeTab === 'users' && (
+                    <StaggerPageContent className="space-y-6">
+                        {/* Search and Filters */}
+                        <StaggerSection>
                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                                 <div className="flex-1 min-w-0 relative">
                                     <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -697,6 +697,11 @@ export function AdminDashboardPage() {
 
                             {/* Results count */}
                             {users.length > 0 && (
+                        </StaggerSection>
+
+                        {/* Results count */}
+                        {users.length > 0 && (
+                            <StaggerSection>
                                 <div className="flex items-center justify-between text-sm text-gray-400">
                                     <span>
                                         Showing {sortedUsers.length} of {users.length} users
@@ -713,9 +718,11 @@ export function AdminDashboardPage() {
                                         )}
                                     </span>
                                 </div>
-                            )}
+                            </StaggerSection>
+                        )}
 
-                            {/* Users Table */}
+                        {/* Users Table */}
+                        <StaggerSection>
                             <div className="bg-dark-400 rounded-xl border border-white/10 overflow-x-auto">
                                 <table className="w-full min-w-[900px]">
                                     <thead className="bg-dark-500">
@@ -896,193 +903,196 @@ export function AdminDashboardPage() {
                         </div>
                     )}
 
-                    {/* Actions Dropdown Portal */}
-                    {openActionsUserId && dropdownPosition && createPortal(
-                        <AnimatePresence>
-                            <motion.div
-                                ref={actionsDropdownRef}
-                                initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                                transition={{ duration: TRANSITION_DURATION, ease: EASE_CURVE }}
-                                style={{
-                                    position: 'fixed',
-                                    top: dropdownPosition.top,
-                                    left: dropdownPosition.left,
-                                }}
-                                className="w-48 bg-dark-400 border border-white/10 rounded-lg shadow-xl z-[9999]"
-                            >
-                                <div className="p-1">
-                                    {(() => {
-                                        const user = users.find(u => u.id === openActionsUserId)
-                                        if (!user) return null
-                                        return (
-                                            <>
-                                                <button
-                                                    onClick={() => {
-                                                        setModerationModalUser(user)
-                                                        setModerationAction('note')
-                                                        setOpenActionsUserId(null)
-                                                        setDropdownPosition(null)
-                                                    }}
-                                                    className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-dark-300 rounded"
-                                                >
-                                                    📝 Add Note
-                                                </button>
-                                                {!user.is_restricted && (
-                                                    <>
-                                                        <button
-                                                            onClick={() => {
-                                                                setModerationModalUser(user)
-                                                                setModerationAction('silence')
-                                                                setModerationDuration(24)
-                                                                setOpenActionsUserId(null)
-                                                                setDropdownPosition(null)
-                                                            }}
-                                                            className="w-full text-left px-3 py-2 text-sm text-yellow-400 hover:bg-dark-300 rounded"
-                                                        >
-                                                            🔇 Silence
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                setModerationModalUser(user)
-                                                                setModerationAction('restrict')
-                                                                setModerationDuration(168)
-                                                                setOpenActionsUserId(null)
-                                                                setDropdownPosition(null)
-                                                            }}
-                                                            className="w-full text-left px-3 py-2 text-sm text-orange-400 hover:bg-dark-300 rounded"
-                                                        >
-                                                            ⚠️ Restrict
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                setModerationModalUser(user)
-                                                                setModerationAction('ban')
-                                                                setModerationPermanent(false)
-                                                                setModerationDuration(720)
-                                                                setOpenActionsUserId(null)
-                                                                setDropdownPosition(null)
-                                                            }}
-                                                            className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-dark-300 rounded"
-                                                        >
-                                                            🚫 Ban
-                                                        </button>
-                                                    </>
-                                                )}
-                                                {user.is_restricted && (
+                        {/* Actions Dropdown Portal */}
+                        {openActionsUserId && dropdownPosition && createPortal(
+                            <AnimatePresence>
+                                <motion.div
+                                    ref={actionsDropdownRef}
+                                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                                    transition={{ duration: TRANSITION_DURATION, ease: EASE_CURVE }}
+                                    style={{
+                                        position: 'fixed',
+                                        top: dropdownPosition.top,
+                                        left: dropdownPosition.left,
+                                    }}
+                                    className="w-48 bg-dark-400 border border-white/10 rounded-lg shadow-xl z-[9999]"
+                                >
+                                    <div className="p-1">
+                                        {(() => {
+                                            const user = users.find(u => u.id === openActionsUserId)
+                                            if (!user) return null
+                                            return (
+                                                <>
                                                     <button
                                                         onClick={() => {
-                                                            handleRemoveRestriction(user.id)
+                                                            setModerationModalUser(user)
+                                                            setModerationAction('note')
                                                             setOpenActionsUserId(null)
                                                             setDropdownPosition(null)
                                                         }}
-                                                        className="w-full text-left px-3 py-2 text-sm text-green-400 hover:bg-dark-300 rounded"
+                                                        className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-dark-300 rounded"
                                                     >
-                                                        ✅ Remove Restriction
+                                                        📝 Add Note
                                                     </button>
-                                                )}
-                                            </>
-                                        )
-                                    })()}
-                                </div>
-                            </motion.div>
-                        </AnimatePresence>,
-                        document.body
-                    )}
-
-                    {/* Moderation Modal */}
-                    {moderationModalUser && moderationAction && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                            <div className="bg-dark-400 rounded-xl border border-white/10 p-6 w-full max-w-md mx-4">
-                                <h3 className="text-lg font-semibold text-white mb-4">
-                                    {moderationAction === 'note' && '📝 Add Note'}
-                                    {moderationAction === 'silence' && '🔇 Silence User'}
-                                    {moderationAction === 'restrict' && '⚠️ Restrict User'}
-                                    {moderationAction === 'ban' && '🚫 Ban User'}
-                                </h3>
-
-                                <p className="text-gray-400 text-sm mb-4">
-                                    User: <span className="text-white">{moderationModalUser.display_name}</span> ({moderationModalUser.email})
-                                </p>
-
-                                {moderationAction !== 'note' && (
-                                    <div className="mb-4">
-                                        <label className="block text-sm text-gray-400 mb-1">Duration</label>
-                                        {moderationAction === 'ban' && (
-                                            <label className="flex items-center gap-2 mb-2 text-sm text-gray-300">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={moderationPermanent}
-                                                    onChange={(e) => setModerationPermanent(e.target.checked)}
-                                                    className="rounded"
-                                                />
-                                                Permanent
-                                            </label>
-                                        )}
-                                        {!moderationPermanent && (
-                                            <select
-                                                value={moderationDuration}
-                                                onChange={(e) => setModerationDuration(Number(e.target.value))}
-                                                className="w-full bg-dark-300 border border-gray-600 text-white rounded-lg px-3 py-2"
-                                            >
-                                                <option value={1}>1 hour</option>
-                                                <option value={6}>6 hours</option>
-                                                <option value={24}>24 hours</option>
-                                                <option value={72}>3 days</option>
-                                                <option value={168}>1 week</option>
-                                                <option value={336}>2 weeks</option>
-                                                <option value={720}>1 month</option>
-                                                <option value={2160}>3 months</option>
-                                            </select>
-                                        )}
+                                                    {!user.is_restricted && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setModerationModalUser(user)
+                                                                    setModerationAction('silence')
+                                                                    setModerationDuration(24)
+                                                                    setOpenActionsUserId(null)
+                                                                    setDropdownPosition(null)
+                                                                }}
+                                                                className="w-full text-left px-3 py-2 text-sm text-yellow-400 hover:bg-dark-300 rounded"
+                                                            >
+                                                                🔇 Silence
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setModerationModalUser(user)
+                                                                    setModerationAction('restrict')
+                                                                    setModerationDuration(168)
+                                                                    setOpenActionsUserId(null)
+                                                                    setDropdownPosition(null)
+                                                                }}
+                                                                className="w-full text-left px-3 py-2 text-sm text-orange-400 hover:bg-dark-300 rounded"
+                                                            >
+                                                                ⚠️ Restrict
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setModerationModalUser(user)
+                                                                    setModerationAction('ban')
+                                                                    setModerationPermanent(false)
+                                                                    setModerationDuration(720)
+                                                                    setOpenActionsUserId(null)
+                                                                    setDropdownPosition(null)
+                                                                }}
+                                                                className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-dark-300 rounded"
+                                                            >
+                                                                🚫 Ban
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    {user.is_restricted && (
+                                                        <button
+                                                            onClick={() => {
+                                                                handleRemoveRestriction(user.id)
+                                                                setOpenActionsUserId(null)
+                                                                setDropdownPosition(null)
+                                                            }}
+                                                            className="w-full text-left px-3 py-2 text-sm text-green-400 hover:bg-dark-300 rounded"
+                                                        >
+                                                            ✅ Remove Restriction
+                                                        </button>
+                                                    )}
+                                                </>
+                                            )
+                                        })()}
                                     </div>
-                                )}
+                                </motion.div>
+                            </AnimatePresence>,
+                            document.body
+                        )}
 
-                                <div className="mb-4">
-                                    <label className="block text-sm text-gray-400 mb-1">
-                                        {moderationAction === 'note' ? 'Note' : 'Reason'}
-                                    </label>
-                                    <textarea
-                                        value={moderationReason}
-                                        onChange={(e) => setModerationReason(e.target.value)}
-                                        placeholder={moderationAction === 'note' ? 'Enter administrative note...' : 'Enter reason for this action...'}
-                                        className="w-full bg-dark-300 border border-gray-600 text-white rounded-lg px-3 py-2 h-24 resize-none"
-                                        required
-                                    />
-                                </div>
+                        {/* Moderation Modal */}
+                        {moderationModalUser && moderationAction && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                                <div className="bg-dark-400 rounded-xl border border-white/10 p-6 w-full max-w-md mx-4">
+                                    <h3 className="text-lg font-semibold text-white mb-4">
+                                        {moderationAction === 'note' && '📝 Add Note'}
+                                        {moderationAction === 'silence' && '🔇 Silence User'}
+                                        {moderationAction === 'restrict' && '⚠️ Restrict User'}
+                                        {moderationAction === 'ban' && '🚫 Ban User'}
+                                    </h3>
 
-                                <div className="flex gap-3 justify-end">
-                                    <button
-                                        onClick={() => {
-                                            setModerationModalUser(null)
-                                            setModerationAction(null)
-                                            setModerationReason('')
-                                        }}
-                                        className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleModerationSubmit}
-                                        disabled={!moderationReason.trim() || moderationSubmitting}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 ${moderationAction === 'note' ? 'bg-blue-500 hover:bg-blue-600 text-white' :
-                                            moderationAction === 'silence' ? 'bg-yellow-500 hover:bg-yellow-600 text-black' :
-                                                moderationAction === 'restrict' ? 'bg-orange-500 hover:bg-orange-600 text-white' :
-                                                    'bg-red-500 hover:bg-red-600 text-white'
-                                            }`}
-                                    >
-                                        {moderationSubmitting ? 'Submitting...' : 'Confirm'}
-                                    </button>
+                                    <p className="text-gray-400 text-sm mb-4">
+                                        User: <span className="text-white">{moderationModalUser.display_name}</span> ({moderationModalUser.email})
+                                    </p>
+
+                                    {moderationAction !== 'note' && (
+                                        <div className="mb-4">
+                                            <label className="block text-sm text-gray-400 mb-1">Duration</label>
+                                            {moderationAction === 'ban' && (
+                                                <label className="flex items-center gap-2 mb-2 text-sm text-gray-300">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={moderationPermanent}
+                                                        onChange={(e) => setModerationPermanent(e.target.checked)}
+                                                        className="rounded"
+                                                    />
+                                                    Permanent
+                                                </label>
+                                            )}
+                                            {!moderationPermanent && (
+                                                <select
+                                                    value={moderationDuration}
+                                                    onChange={(e) => setModerationDuration(Number(e.target.value))}
+                                                    className="w-full bg-dark-300 border border-gray-600 text-white rounded-lg px-3 py-2"
+                                                >
+                                                    <option value={1}>1 hour</option>
+                                                    <option value={6}>6 hours</option>
+                                                    <option value={24}>24 hours</option>
+                                                    <option value={72}>3 days</option>
+                                                    <option value={168}>1 week</option>
+                                                    <option value={336}>2 weeks</option>
+                                                    <option value={720}>1 month</option>
+                                                    <option value={2160}>3 months</option>
+                                                </select>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <div className="mb-4">
+                                        <label className="block text-sm text-gray-400 mb-1">
+                                            {moderationAction === 'note' ? 'Note' : 'Reason'}
+                                        </label>
+                                        <textarea
+                                            value={moderationReason}
+                                            onChange={(e) => setModerationReason(e.target.value)}
+                                            placeholder={moderationAction === 'note' ? 'Enter administrative note...' : 'Enter reason for this action...'}
+                                            className="w-full bg-dark-300 border border-gray-600 text-white rounded-lg px-3 py-2 h-24 resize-none"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="flex gap-3 justify-end">
+                                        <button
+                                            onClick={() => {
+                                                setModerationModalUser(null)
+                                                setModerationAction(null)
+                                                setModerationReason('')
+                                            }}
+                                            className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleModerationSubmit}
+                                            disabled={!moderationReason.trim() || moderationSubmitting}
+                                            className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 ${moderationAction === 'note' ? 'bg-blue-500 hover:bg-blue-600 text-white' :
+                                                moderationAction === 'silence' ? 'bg-yellow-500 hover:bg-yellow-600 text-black' :
+                                                    moderationAction === 'restrict' ? 'bg-orange-500 hover:bg-orange-600 text-white' :
+                                                        'bg-red-500 hover:bg-red-600 text-white'
+                                                }`}
+                                        >
+                                            {moderationSubmitting ? 'Submitting...' : 'Confirm'}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </StaggerPageContent>
+                )}
 
-                    {/* Jobs Tab */}
-                    {activeTab === 'jobs' && queueStats && (
-                        <div className="space-y-6">
-                            {/* Job Stats Overview */}
+                {/* Jobs Tab */}
+                {activeTab === 'jobs' && queueStats && (
+                    <StaggerPageContent className="space-y-6">
+                        {/* Job Stats Overview */}
+                        <StaggerSection>
                             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                                 <div className="bg-blue-500/10 rounded-xl p-4 border border-blue-500/30">
                                     <p className="text-3xl font-bold text-blue-400">{queueStats.queued}</p>
@@ -1151,14 +1161,16 @@ export function AdminDashboardPage() {
                                     </Link>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        </StaggerSection>
+                    </StaggerPageContent>
+                )}
 
-                    {/* Contributions Tab */}
-                    {activeTab === 'contributions' && (
-                        <div className="space-y-6">
-                            {/* Contribution Stats Cards */}
-                            {contributionStats && (
+                {/* Contributions Tab */}
+                {activeTab === 'contributions' && (
+                    <StaggerPageContent className="space-y-6">
+                        {/* Contribution Stats Cards */}
+                        {contributionStats && (
+                            <StaggerSection>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <StatCard
                                         title="Total Contributions"
@@ -1181,10 +1193,12 @@ export function AdminDashboardPage() {
                                         icon="🚀"
                                     />
                                 </div>
-                            )}
+                            </StaggerSection>
+                        )}
 
-                            {/* Approval Metrics */}
-                            {contributionStats && (
+                        {/* Approval Metrics */}
+                        {contributionStats && (
+                            <StaggerSection>
                                 <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
                                     <h3 className="text-lg font-semibold text-white mb-4">Approval Metrics</h3>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1212,10 +1226,12 @@ export function AdminDashboardPage() {
                                         </div>
                                     </div>
                                 </div>
-                            )}
+                            </StaggerSection>
+                        )}
 
-                            {/* Correction Types Breakdown */}
-                            {contributionStats && Object.keys(contributionStats.correction_types_approved).length > 0 && (
+                        {/* Correction Types Breakdown */}
+                        {contributionStats && Object.keys(contributionStats.correction_types_approved).length > 0 && (
+                            <StaggerSection>
                                 <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
                                     <h3 className="text-lg font-semibold text-white mb-4">Correction Types (Approved)</h3>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -1227,10 +1243,12 @@ export function AdminDashboardPage() {
                                         ))}
                                     </div>
                                 </div>
-                            )}
+                            </StaggerSection>
+                        )}
 
-                            {/* Verifier Leaderboard */}
-                            {verifierLeaderboard.length > 0 && (
+                        {/* Verifier Leaderboard */}
+                        {verifierLeaderboard.length > 0 && (
+                            <StaggerSection>
                                 <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
                                     <h3 className="text-lg font-semibold text-white mb-4">Top Verifiers</h3>
                                     <div className="space-y-3">
@@ -1260,18 +1278,22 @@ export function AdminDashboardPage() {
                                         ))}
                                     </div>
                                 </div>
-                            )}
+                            </StaggerSection>
+                        )}
 
-                            {contributionsLoading && (
+                        {contributionsLoading && (
+                            <StaggerSection>
                                 <div className="bg-dark-400 rounded-xl p-8 border border-white/10 text-center">
                                     <div className="flex items-center justify-center gap-3">
                                         <div className="animate-spin h-5 w-5 border-2 border-primary-500 border-t-transparent rounded-full" />
                                         <p className="text-gray-400">Loading contribution statistics...</p>
                                     </div>
                                 </div>
-                            )}
+                            </StaggerSection>
+                        )}
 
-                            {contributionsError && !contributionsLoading && (
+                        {contributionsError && !contributionsLoading && (
+                            <StaggerSection>
                                 <div className="bg-red-500/10 rounded-xl p-6 border border-red-500/30 text-center">
                                     <p className="text-red-400">{contributionsError}</p>
                                     <button
@@ -1281,17 +1303,19 @@ export function AdminDashboardPage() {
                                         Retry
                                     </button>
                                 </div>
-                            )}
+                            </StaggerSection>
+                        )}
 
-                            {!contributionStats && !contributionsLoading && !contributionsError && (
+                        {!contributionStats && !contributionsLoading && !contributionsError && (
+                            <StaggerSection>
                                 <div className="bg-dark-400 rounded-xl p-8 border border-white/10 text-center">
                                     <p className="text-gray-400">No contribution statistics available</p>
                                 </div>
-                            )}
-                        </div>
-                    )}
-                </motion.div>
-            </AnimatePresence>
+                            </StaggerSection>
+                        )}
+                    </StaggerPageContent>
+                )}
+            </AnimatedTabContent>
         </div>
     )
 }

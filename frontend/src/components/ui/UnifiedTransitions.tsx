@@ -544,6 +544,227 @@ export function usePreparedContent(key: string | number): {
 }
 
 // ============================================================================
+// PAGE WRAPPER - Consistent page-level animations
+// ============================================================================
+
+interface PageWrapperProps {
+    /** Page content to animate */
+    children: ReactNode
+    /** Additional CSS classes */
+    className?: string
+    /** Whether to use stagger animation for children */
+    stagger?: boolean
+}
+
+/**
+ * Wraps page content with consistent enter animations.
+ * Use this at the top level of each page component to ensure
+ * smooth, consistent transitions when navigating between pages.
+ */
+export function PageWrapper({ children, className, stagger = false }: PageWrapperProps) {
+    return (
+        <motion.div
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            variants={stagger ? staggerContainerVariants : pageVariants}
+            className={className}
+        >
+            {children}
+        </motion.div>
+    )
+}
+
+// ============================================================================
+// ANIMATED TAB CONTENT - Standard tab transition wrapper
+// ============================================================================
+
+interface AnimatedTabContentProps<T extends string> {
+    /** Current active tab key */
+    activeTab: T
+    /** Tab content to render */
+    children: ReactNode
+    /** Additional CSS classes */
+    className?: string
+    /** Whether page is still loading */
+    isLoading?: boolean
+    /** Custom loading component */
+    loadingComponent?: ReactNode
+}
+
+/**
+ * Standard animated container for tab content.
+ * Handles loading states and provides consistent animations.
+ * Use this to wrap the content area of any tabbed interface.
+ */
+export function AnimatedTabContent<T extends string>({
+    activeTab,
+    children,
+    className,
+    isLoading = false,
+    loadingComponent,
+}: AnimatedTabContentProps<T>) {
+    const defaultLoader = (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: TRANSITION_DURATION }}
+            className="flex items-center justify-center py-12"
+        >
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
+        </motion.div>
+    )
+
+    return (
+        <AnimatePresence mode="wait" initial={false}>
+            {isLoading ? (
+                <motion.div
+                    key="loading"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: TRANSITION_DURATION }}
+                >
+                    {loadingComponent || defaultLoader}
+                </motion.div>
+            ) : (
+                <motion.div
+                    key={activeTab}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    variants={tabContentVariants}
+                    className={cn('w-full', className)}
+                >
+                    {children}
+                </motion.div>
+            )}
+        </AnimatePresence>
+    )
+}
+
+// ============================================================================
+// ANIMATED TAB BUTTON - Consistent tab button with animations
+// ============================================================================
+
+interface AnimatedTabButtonProps {
+    /** Whether this tab is currently active */
+    isActive: boolean
+    /** Click handler */
+    onClick: () => void
+    /** Tab icon (optional) */
+    icon?: ReactNode
+    /** Tab label */
+    label: string
+    /** Badge content (optional) */
+    badge?: ReactNode
+    /** Button variant style */
+    variant?: 'default' | 'pills' | 'underline'
+    /** Additional CSS classes */
+    className?: string
+}
+
+/**
+ * Consistent animated tab button with hover and press effects.
+ */
+export function AnimatedTabButton({
+    isActive,
+    onClick,
+    icon,
+    label,
+    badge,
+    variant = 'default',
+    className,
+}: AnimatedTabButtonProps) {
+    const getVariantClasses = () => {
+        if (variant === 'underline') {
+            return cn(
+                'pb-3 sm:pb-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
+                isActive
+                    ? 'border-primary-500 text-primary-400'
+                    : 'border-transparent text-gray-400 hover:text-white'
+            )
+        }
+
+        if (variant === 'pills') {
+            return cn(
+                'px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all whitespace-nowrap',
+                isActive
+                    ? 'bg-primary-500 text-white'
+                    : 'text-gray-400 hover:text-white hover:bg-dark-400'
+            )
+        }
+
+        // Default variant (sidebar style like settings)
+        return cn(
+            'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all relative whitespace-nowrap',
+            isActive
+                ? 'text-white bg-dark-300'
+                : 'text-gray-400 hover:text-white hover:bg-dark-400'
+        )
+    }
+
+    return (
+        <motion.button
+            onClick={onClick}
+            className={cn(getVariantClasses(), className)}
+            whileTap={{ scale: 0.98 }}
+            transition={{ duration: 0.1 }}
+        >
+            <span className="relative z-10 flex items-center gap-3">
+                {icon}
+                {label}
+                {badge}
+            </span>
+        </motion.button>
+    )
+}
+
+// ============================================================================
+// STAGGER PAGE CONTENT - For animating page sections
+// ============================================================================
+
+interface StaggerPageContentProps {
+    /** Page sections to animate */
+    children: ReactNode
+    /** Additional CSS classes */
+    className?: string
+    /** Animation key - changes trigger re-animation */
+    animationKey?: string
+}
+
+/**
+ * Wraps page content sections for staggered animation.
+ * Each direct child will animate in sequence.
+ */
+export function StaggerPageContent({ children, className, animationKey }: StaggerPageContentProps) {
+    return (
+        <motion.div
+            key={animationKey}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            variants={staggerContainerVariants}
+            className={className}
+        >
+            {children}
+        </motion.div>
+    )
+}
+
+/**
+ * Individual stagger section - use as direct children of StaggerPageContent.
+ */
+export function StaggerSection({ children, className }: StaggerItemProps) {
+    return (
+        <motion.div variants={staggerItemVariants} className={className}>
+            {children}
+        </motion.div>
+    )
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -556,4 +777,8 @@ export {
     type AnimatedListProps,
     type AnimatedSectionProps,
     type FadeTransitionProps,
+    type PageWrapperProps,
+    type AnimatedTabContentProps,
+    type AnimatedTabButtonProps,
+    type StaggerPageContentProps,
 }

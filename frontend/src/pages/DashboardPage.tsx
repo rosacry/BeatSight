@@ -306,7 +306,7 @@ export function DashboardPage() {
                                     Every map you create adds to the global drum transcription library.
                                 </p>
                                 <Link
-                                    to="/verify"
+                                    to="/upload"
                                     className="block text-center py-2 px-3 rounded-lg bg-primary-400/10 hover:bg-primary-400/20 
                                              border border-primary-400/30 text-primary-400 text-sm font-medium transition-colors"
                                 >

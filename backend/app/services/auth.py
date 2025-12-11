@@ -18,9 +18,11 @@ with warnings.catch_warnings():
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.config import get_settings
 from app.models.user import User
+from app.models.role import UserRole
 
 settings = get_settings()
 
@@ -97,13 +99,21 @@ class AuthService:
             return None
 
     async def get_user_by_id(self, user_id: uuid.UUID) -> User | None:
-        """Retrieve a user by their ID."""
-        result = await self.session.execute(select(User).where(User.id == user_id))
+        """Retrieve a user by their ID with roles eagerly loaded."""
+        result = await self.session.execute(
+            select(User)
+            .options(selectinload(User.roles).selectinload(UserRole.role))
+            .where(User.id == user_id)
+        )
         return result.scalar_one_or_none()
 
     async def get_user_by_email(self, email: str) -> User | None:
-        """Retrieve a user by their email address."""
-        result = await self.session.execute(select(User).where(User.email == email))
+        """Retrieve a user by their email address with roles eagerly loaded."""
+        result = await self.session.execute(
+            select(User)
+            .options(selectinload(User.roles).selectinload(UserRole.role))
+            .where(User.email == email)
+        )
         return result.scalar_one_or_none()
 
     async def authenticate_user(self, email: str, password: str) -> User | None:

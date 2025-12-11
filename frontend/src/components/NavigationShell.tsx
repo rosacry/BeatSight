@@ -11,6 +11,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { UserMenu } from './UserMenu'
 import { CreditBalance } from './CreditBalance'
 import { ConfirmDialog } from './ConfirmDialog'
+import { GlobalSearchModal, SearchTrigger } from './GlobalSearch'
 import { EXTERNAL_LINKS, getDocsLink, getCommunityLink } from '@/lib/externalLinks'
 import { SKIP_LINK_TARGETS, ARIA_LABELS } from '@/lib/accessibility'
 import { TRANSITION_DURATION, EASE_CURVE } from '@/components/ui/UnifiedTransitions'
@@ -143,6 +144,19 @@ export function Layout({ children }: LayoutProps) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [isScrolled, setIsScrolled] = useState(false)
     const [showMobileSignOutConfirm, setShowMobileSignOutConfirm] = useState(false)
+    const [isSearchOpen, setIsSearchOpen] = useState(false)
+
+    // Keyboard shortcut to open search with / key
+    useEffect(() => {
+        function handleKeyDown(e: KeyboardEvent) {
+            if (e.key === '/' && !isSearchOpen && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
+                e.preventDefault()
+                setIsSearchOpen(true)
+            }
+        }
+        document.addEventListener('keydown', handleKeyDown)
+        return () => document.removeEventListener('keydown', handleKeyDown)
+    }, [isSearchOpen])
 
     // Track scroll for header effects
     useEffect(() => {
@@ -249,6 +263,9 @@ export function Layout({ children }: LayoutProps) {
 
                         {/* Right side actions */}
                         <div className="flex items-center gap-3">
+                            {/* Search Button */}
+                            <SearchTrigger onClick={() => setIsSearchOpen(true)} />
+
                             {/* Desktop auth section */}
                             <div className="hidden md:flex items-center gap-3">
                                 {isAuthenticated ? (
@@ -494,6 +511,12 @@ export function Layout({ children }: LayoutProps) {
                 cancelLabel="Stay signed in"
                 variant="signout"
                 style="popup"
+            />
+
+            {/* Global Search Modal */}
+            <GlobalSearchModal
+                isOpen={isSearchOpen}
+                onClose={() => setIsSearchOpen(false)}
             />
         </div>
     )

@@ -9,6 +9,7 @@ import { format, formatDistanceToNow } from 'date-fns'
 import { editPost, deletePost } from '@/api/forum'
 import type { ForumPost } from '@/types/forum'
 import { PostVoteButtons } from './PostVoteButtons'
+import { UsernameLink } from '@/components/social'
 import { useAuthStore } from '@/stores/authStore'
 
 interface ForumPostCardProps {
@@ -138,9 +139,20 @@ export function ForumPostCard({
 
                             <div>
                                 <div className="flex items-center gap-2">
-                                    <span className="font-medium text-white">
-                                        {post.author?.display_name || 'Unknown'}
-                                    </span>
+                                    {post.author ? (
+                                        <UsernameLink
+                                            user={{
+                                                id: post.author.id || post.user_id,
+                                                username: post.author.display_name,
+                                                display_name: post.author.display_name,
+                                            }}
+                                            className="font-medium text-white"
+                                        />
+                                    ) : (
+                                        <span className="font-medium text-white">
+                                            Unknown
+                                        </span>
+                                    )}
                                     {post.author?.role && post.author.role !== 'user' && (
                                         <span
                                             className={clsx(

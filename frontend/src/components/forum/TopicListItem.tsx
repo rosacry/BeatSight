@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom'
 import clsx from 'clsx'
 import { format, formatDistanceToNow } from 'date-fns'
 import type { Topic } from '@/types/forum'
+import { UsernameLink } from '@/components/social'
 
 // Icons
 function PinIcon({ className }: { className?: string }) {
@@ -119,11 +120,20 @@ export function TopicListItem({ topic, showForum = false }: TopicListItemProps) 
                     </h3>
 
                     <div className="flex items-center gap-2 mt-1 text-sm text-gray-400">
-                        <span>
+                        <span className="inline-flex items-center gap-1">
                             by{' '}
-                            <span className="text-gray-300">
-                                {topic.author?.display_name || 'Unknown'}
-                            </span>
+                            {topic.author ? (
+                                <UsernameLink
+                                    user={{
+                                        id: topic.author.id,
+                                        username: topic.author.display_name,
+                                        display_name: topic.author.display_name,
+                                    }}
+                                    className="text-gray-300"
+                                />
+                            ) : (
+                                <span className="text-gray-300">Unknown</span>
+                            )}
                         </span>
                         <span className="text-slate-600">•</span>
                         <span title={format(new Date(topic.created_at), 'PPpp')}>
@@ -162,11 +172,20 @@ export function TopicListItem({ topic, showForum = false }: TopicListItemProps) 
                 <div className="flex-shrink-0 hidden lg:block w-48">
                     {topic.last_post ? (
                         <div className="text-sm">
-                            <div className="text-gray-400 truncate">
+                            <div className="text-gray-400 truncate inline-flex items-center gap-1">
                                 Last reply by{' '}
-                                <span className="text-gray-300">
-                                    {topic.last_post.author?.display_name || 'Unknown'}
-                                </span>
+                                {topic.last_post.author ? (
+                                    <UsernameLink
+                                        user={{
+                                            id: topic.last_post.author.id,
+                                            username: topic.last_post.author.display_name,
+                                            display_name: topic.last_post.author.display_name,
+                                        }}
+                                        className="text-gray-300"
+                                    />
+                                ) : (
+                                    <span className="text-gray-300">Unknown</span>
+                                )}
                             </div>
                             <div
                                 className="text-gray-500"

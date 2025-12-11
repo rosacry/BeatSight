@@ -19,7 +19,8 @@ import { AnimatedCounter } from '@/components/ui'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import {
     staggerContainerVariants,
-    staggerItemVariants
+    staggerItemVariants,
+    PageContentWrapper
 } from '@/components/ui/UnifiedTransitions'
 
 // Animation variants - use unified system
@@ -51,7 +52,7 @@ export function DashboardPage() {
     }
 
     return (
-        <div className="max-w-6xl mx-auto px-4 py-6">
+        <PageContentWrapper className="max-w-6xl mx-auto px-4 py-6">
             <motion.div
                 initial="hidden"
                 animate="visible"
@@ -327,6 +328,6 @@ export function DashboardPage() {
                     </div>
                 </div>
             </motion.div>
-        </div>
+        </PageContentWrapper>
     )
 }

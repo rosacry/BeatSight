@@ -16,7 +16,8 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import {
     staggerContainerVariants,
     staggerItemVariants,
-    overlayContentVariants
+    overlayContentVariants,
+    PageContentWrapper
 } from '@/components/ui/UnifiedTransitions'
 
 // Animation variants - use unified system
@@ -63,7 +64,7 @@ export function ForumPage() {
     const totalForums = categories?.reduce((acc, c) => acc + c.forums.length, 0) || 0
 
     return (
-        <div className="min-h-screen bg-dark-500">
+        <PageContentWrapper className="min-h-screen bg-dark-500">
             {/* Content */}
             <div className="max-w-6xl mx-auto px-4 py-8">
                 <motion.div
@@ -348,6 +349,6 @@ export function ForumPage() {
                     </>
                 )}
             </AnimatePresence>
-        </div>
+        </PageContentWrapper>
     )
 }

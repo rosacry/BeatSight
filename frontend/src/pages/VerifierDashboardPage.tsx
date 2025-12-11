@@ -14,7 +14,8 @@ import {
     AnimatedTabContent,
     AnimatedTabButton,
     StaggerPageContent,
-    StaggerSection
+    StaggerSection,
+    PageContentWrapper
 } from '@/components/ui/UnifiedTransitions'
 
 interface Proposer {
@@ -214,311 +215,313 @@ export function VerifierDashboardPage() {
     }
 
     return (
-        <AnimatePresence mode="wait">
-            {loading && !stats ? (
-                <motion.div
-                    key="loading"
-                    variants={pageTransitionVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    className="flex items-center justify-center min-h-[60vh]"
-                >
-                    <div className="flex flex-col items-center gap-4">
-                        <svg className="animate-spin h-8 w-8 text-primary-500" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        <p className="text-gray-400">Loading verifier dashboard...</p>
-                    </div>
-                </motion.div>
-            ) : error ? (
-                <motion.div
-                    key="error"
-                    variants={pageTransitionVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    className="max-w-6xl mx-auto px-4 py-8"
-                >
-                    <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl">
-                        {error}
-                    </div>
-                </motion.div>
-            ) : (
-                <motion.div
-                    key="content"
-                    variants={pageTransitionVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    className="max-w-6xl mx-auto px-4 py-6 sm:py-8 min-h-[calc(100vh-10rem)]"
-                >
-                    <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Verifier Dashboard</h1>
-                    <p className="text-gray-400 text-sm sm:text-base mb-4">Review and approve map edit proposals</p>
-
-                    {/* Community Impact Banner */}
-                    <div className="mb-6 p-3 sm:p-4 rounded-xl bg-dark-400 border border-primary-500/20">
-                        <div className="flex items-start gap-3">
-                            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-primary-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <PageContentWrapper>
+            <AnimatePresence mode="wait">
+                {loading && !stats ? (
+                    <motion.div
+                        key="loading"
+                        variants={pageTransitionVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        className="flex items-center justify-center min-h-[60vh]"
+                    >
+                        <div className="flex flex-col items-center gap-4">
+                            <svg className="animate-spin h-8 w-8 text-primary-500" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                             </svg>
-                            <div>
-                                <p className="text-white font-medium text-sm sm:text-base">You're building the global index</p>
-                                <p className="text-xs sm:text-sm text-gray-400 mt-1">
-                                    Every map you verify helps create the <span className="text-primary-400">first universal repository for drum transcriptions</span>.
-                                    Your reviews ensure quality and improve AI accuracy for drummers worldwide.
-                                </p>
-                            </div>
+                            <p className="text-gray-400">Loading verifier dashboard...</p>
                         </div>
-                    </div>
-
-                    {/* Stats Cards */}
-                    {stats && (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
-                            <div className="bg-dark-400 rounded-xl border border-dark-300 p-3 sm:p-4">
-                                <p className="text-xs sm:text-sm text-gray-400">Pending Queue</p>
-                                <p className="text-xl sm:text-2xl font-bold text-yellow-400">{stats.pending_count}</p>
-                            </div>
-                            <div className="bg-dark-400 rounded-xl border border-dark-300 p-3 sm:p-4">
-                                <p className="text-xs sm:text-sm text-gray-400">Approved Today</p>
-                                <p className="text-xl sm:text-2xl font-bold text-green-400">{stats.approved_today}</p>
-                            </div>
-                            <div className="bg-dark-400 rounded-xl border border-dark-300 p-3 sm:p-4">
-                                <p className="text-xs sm:text-sm text-gray-400">Rejected Today</p>
-                                <p className="text-xl sm:text-2xl font-bold text-red-400">{stats.rejected_today}</p>
-                            </div>
-                            <div className="bg-dark-400 rounded-xl border border-dark-300 p-3 sm:p-4">
-                                <p className="text-xs sm:text-sm text-gray-400">Your Total Reviews</p>
-                                <p className="text-xl sm:text-2xl font-bold text-primary-400">{stats.total_reviewed_by_user}</p>
-                            </div>
+                    </motion.div>
+                ) : error ? (
+                    <motion.div
+                        key="error"
+                        variants={pageTransitionVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        className="max-w-6xl mx-auto px-4 py-8"
+                    >
+                        <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl">
+                            {error}
                         </div>
-                    )}
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        key="content"
+                        variants={pageTransitionVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        className="max-w-6xl mx-auto px-4 py-6 sm:py-8 min-h-[calc(100vh-10rem)]"
+                    >
+                        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Verifier Dashboard</h1>
+                        <p className="text-gray-400 text-sm sm:text-base mb-4">Review and approve map edit proposals</p>
 
-                    {/* Tabs */}
-                    <div className="flex gap-1 p-1 bg-dark-400 rounded-xl w-fit mb-6 overflow-x-auto">
-                        <AnimatedTabButton
-                            isActive={activeTab === 'queue'}
-                            onClick={() => handleTabChange('queue')}
-                            label={`Pending (${stats?.pending_count || 0})`}
-                            variant="pills"
-                        />
-                        <AnimatedTabButton
-                            isActive={activeTab === 'history'}
-                            onClick={() => handleTabChange('history')}
-                            label="My Decision History"
-                            variant="pills"
-                        />
-                    </div>
-
-                    {/* Tab Content with Unified Transitions */}
-                    <AnimatedTabContent activeTab={activeTab}>
-                        {/* Queue Tab */}
-                        {activeTab === 'queue' && (
-                            <StaggerPageContent className="space-y-4">
-                                {proposals.length === 0 ? (
-                                    <StaggerSection>
-                                        <div className="bg-dark-400 rounded-xl border border-dark-300 p-8 text-center">
-                                            <p className="text-gray-300">No pending proposals to review!</p>
-                                            <p className="text-sm text-gray-500 mt-2">Check back later for new submissions</p>
-                                        </div>
-                                    </StaggerSection>
-                                ) : (
-                                    proposals.map(proposal => (
-                                        <StaggerSection key={proposal.id}>
-                                            <div className="bg-dark-400 rounded-xl border border-dark-300 p-4">
-                                                <div className="flex items-start justify-between">
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(proposal.status)}`}>
-                                                                {proposal.status}
-                                                            </span>
-                                                            <span className="text-sm text-gray-400">
-                                                                by @{proposal.proposer.username}
-                                                            </span>
-                                                        </div>
-                                                        <h3 className="font-medium text-lg text-white">{proposal.summary}</h3>
-                                                        <p className="text-sm text-gray-400 mt-1">
-                                                            Submitted: {formatDate(proposal.submitted_at)}
-                                                        </p>
-
-                                                        {/* Diff Preview - User-friendly visualization */}
-                                                        <details className="mt-3">
-                                                            <summary className="cursor-pointer text-sm text-primary-400 hover:text-primary-300">
-                                                                View Changes ({(proposal.diff_payload as unknown as DiffPayload).edit_count || Object.keys(proposal.diff_payload).length} modifications)
-                                                            </summary>
-                                                            <div className="mt-2 p-3 bg-dark-500 rounded border border-white/10">
-                                                                <ProposalDiffViewer diffPayload={proposal.diff_payload as unknown as DiffPayload} />
-                                                            </div>
-                                                        </details>
-                                                    </div>
-
-                                                    {proposal.status === 'pending' && (
-                                                        <div className="ml-4">
-                                                            <button
-                                                                onClick={() => setSelectedProposal(proposal)}
-                                                                className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
-                                                            >
-                                                                Review
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </StaggerSection>
-                                    ))
-                                )}
-
-                                {hasMore && (
-                                    <StaggerSection>
-                                        <button
-                                            onClick={() => setPage(p => p + 1)}
-                                            className="w-full py-2.5 text-primary-400 hover:bg-dark-300 rounded-xl transition-colors"
-                                        >
-                                            Load More
-                                        </button>
-                                    </StaggerSection>
-                                )}
-                            </StaggerPageContent>
-                        )}
-
-                        {/* History Tab */}
-                        {activeTab === 'history' && (
-                            <StaggerPageContent className="space-y-4">
-                                {myDecisions.length === 0 ? (
-                                    <StaggerSection>
-                                        <div className="bg-dark-400 rounded-xl border border-white/10 p-8 text-center">
-                                            <p className="text-gray-300">No decisions yet</p>
-                                            <p className="text-sm text-gray-500 mt-2">
-                                                Your review history will appear here
-                                            </p>
-                                        </div>
-                                    </StaggerSection>
-                                ) : (
-                                    myDecisions.map(proposal => (
-                                        <StaggerSection key={proposal.id}>
-                                            <div className="bg-dark-400 rounded-xl border border-white/10 p-4">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(proposal.status)}`}>
-                                                        {proposal.status}
-                                                    </span>
-                                                    {proposal.decision && (
-                                                        <span className="text-xs text-gray-400">
-                                                            Decision: {proposal.decision.decision}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <h3 className="font-medium text-white">{proposal.summary}</h3>
-                                                <p className="text-sm text-gray-400 mt-1">
-                                                    by @{proposal.proposer.username} • {formatDate(proposal.submitted_at)}
-                                                </p>
-                                                {proposal.decision?.notes && (
-                                                    <p className="text-sm text-gray-300 mt-2 italic">
-                                                        "{proposal.decision.notes}"
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </StaggerSection>
-                                    ))
-                                )}
-                            </StaggerPageContent>
-                        )}
-                    </AnimatedTabContent>
-
-                    {/* Review Modal */}
-                    {selectedProposal && (
-                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-                            <div className="bg-dark-400 rounded-2xl border border-white/10 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-                                <div className="p-6">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h2 className="text-xl font-bold text-white">Review Proposal</h2>
-                                        <button
-                                            onClick={() => {
-                                                setSelectedProposal(null)
-                                                setDecisionNotes('')
-                                            }}
-                                            className="text-gray-400 hover:text-white transition-colors"
-                                        >
-                                            ✕
-                                        </button>
-                                    </div>
-
-                                    <div className="mb-4">
-                                        <h3 className="font-medium text-white mb-2">{selectedProposal.summary}</h3>
-                                        <p className="text-sm text-gray-400">
-                                            Submitted by @{selectedProposal.proposer.username} on {formatDate(selectedProposal.submitted_at)}
-                                        </p>
-                                    </div>
-
-                                    <div className="mb-4">
-                                        <h4 className="font-medium text-gray-300 mb-2">Changes</h4>
-                                        <div className="border border-gray-600 rounded-lg p-4 bg-dark-500 max-h-64 overflow-y-auto">
-                                            <ProposalDiffViewer diffPayload={selectedProposal.diff_payload as unknown as DiffPayload} />
-                                        </div>
-                                    </div>
-
-                                    {/* Karma Impact Preview */}
-                                    <div className="mb-4 bg-primary-500/10 border border-primary-500/30 rounded-lg p-4">
-                                        <h4 className="font-medium text-primary-400 mb-2">Karma Impact</h4>
-                                        <p className="text-sm text-gray-300">
-                                            Your decision will affect @{selectedProposal.proposer.username}'s karma:
-                                        </p>
-                                        <div className="flex gap-4 mt-2">
-                                            <span className="text-green-400 font-medium">
-                                                ✓ Approve: <span className="font-bold">+25</span> karma
-                                            </span>
-                                            <span className="text-red-400 font-medium">
-                                                ✗ Reject: <span className="font-bold">-10</span> karma
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                                            Decision Notes (optional)
-                                        </label>
-                                        <textarea
-                                            value={decisionNotes}
-                                            onChange={e => setDecisionNotes(e.target.value)}
-                                            className="w-full p-3 bg-dark-300 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all"
-                                            rows={3}
-                                            placeholder="Add feedback for the proposer..."
-                                            maxLength={512}
-                                        />
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            {decisionNotes.length}/512 characters
-                                        </p>
-                                    </div>
-
-                                    <div className="flex gap-3">
-                                        <button
-                                            onClick={() => handleDecision(selectedProposal.id, 'approve')}
-                                            disabled={submitting}
-                                            className="flex-1 py-2.5 bg-green-500 text-white rounded-xl hover:bg-green-600 disabled:opacity-50 transition-all font-medium"
-                                        >
-                                            ✓ Approve
-                                        </button>
-                                        <button
-                                            onClick={() => handleDecision(selectedProposal.id, 'needs_changes')}
-                                            disabled={submitting}
-                                            className="flex-1 py-2.5 bg-yellow-500 text-white rounded-xl hover:bg-yellow-600 disabled:opacity-50 transition-all font-medium"
-                                        >
-                                            ↻ Needs Changes
-                                        </button>
-                                        <button
-                                            onClick={() => handleDecision(selectedProposal.id, 'reject')}
-                                            disabled={submitting}
-                                            className="flex-1 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 disabled:opacity-50 transition-all font-medium"
-                                        >
-                                            ✗ Reject
-                                        </button>
-                                    </div>
+                        {/* Community Impact Banner */}
+                        <div className="mb-6 p-3 sm:p-4 rounded-xl bg-dark-400 border border-primary-500/20">
+                            <div className="flex items-start gap-3">
+                                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-primary-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <div>
+                                    <p className="text-white font-medium text-sm sm:text-base">You're building the global index</p>
+                                    <p className="text-xs sm:text-sm text-gray-400 mt-1">
+                                        Every map you verify helps create the <span className="text-primary-400">first universal repository for drum transcriptions</span>.
+                                        Your reviews ensure quality and improve AI accuracy for drummers worldwide.
+                                    </p>
                                 </div>
                             </div>
                         </div>
-                    )}
-                </motion.div>
-            )}
-        </AnimatePresence>
+
+                        {/* Stats Cards */}
+                        {stats && (
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
+                                <div className="bg-dark-400 rounded-xl border border-dark-300 p-3 sm:p-4">
+                                    <p className="text-xs sm:text-sm text-gray-400">Pending Queue</p>
+                                    <p className="text-xl sm:text-2xl font-bold text-yellow-400">{stats.pending_count}</p>
+                                </div>
+                                <div className="bg-dark-400 rounded-xl border border-dark-300 p-3 sm:p-4">
+                                    <p className="text-xs sm:text-sm text-gray-400">Approved Today</p>
+                                    <p className="text-xl sm:text-2xl font-bold text-green-400">{stats.approved_today}</p>
+                                </div>
+                                <div className="bg-dark-400 rounded-xl border border-dark-300 p-3 sm:p-4">
+                                    <p className="text-xs sm:text-sm text-gray-400">Rejected Today</p>
+                                    <p className="text-xl sm:text-2xl font-bold text-red-400">{stats.rejected_today}</p>
+                                </div>
+                                <div className="bg-dark-400 rounded-xl border border-dark-300 p-3 sm:p-4">
+                                    <p className="text-xs sm:text-sm text-gray-400">Your Total Reviews</p>
+                                    <p className="text-xl sm:text-2xl font-bold text-primary-400">{stats.total_reviewed_by_user}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Tabs */}
+                        <div className="flex gap-1 p-1 bg-dark-400 rounded-xl w-fit mb-6 overflow-x-auto">
+                            <AnimatedTabButton
+                                isActive={activeTab === 'queue'}
+                                onClick={() => handleTabChange('queue')}
+                                label={`Pending (${stats?.pending_count || 0})`}
+                                variant="pills"
+                            />
+                            <AnimatedTabButton
+                                isActive={activeTab === 'history'}
+                                onClick={() => handleTabChange('history')}
+                                label="My Decision History"
+                                variant="pills"
+                            />
+                        </div>
+
+                        {/* Tab Content with Unified Transitions */}
+                        <AnimatedTabContent activeTab={activeTab}>
+                            {/* Queue Tab */}
+                            {activeTab === 'queue' && (
+                                <StaggerPageContent className="space-y-4">
+                                    {proposals.length === 0 ? (
+                                        <StaggerSection>
+                                            <div className="bg-dark-400 rounded-xl border border-dark-300 p-8 text-center">
+                                                <p className="text-gray-300">No pending proposals to review!</p>
+                                                <p className="text-sm text-gray-500 mt-2">Check back later for new submissions</p>
+                                            </div>
+                                        </StaggerSection>
+                                    ) : (
+                                        proposals.map(proposal => (
+                                            <StaggerSection key={proposal.id}>
+                                                <div className="bg-dark-400 rounded-xl border border-dark-300 p-4">
+                                                    <div className="flex items-start justify-between">
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(proposal.status)}`}>
+                                                                    {proposal.status}
+                                                                </span>
+                                                                <span className="text-sm text-gray-400">
+                                                                    by @{proposal.proposer.username}
+                                                                </span>
+                                                            </div>
+                                                            <h3 className="font-medium text-lg text-white">{proposal.summary}</h3>
+                                                            <p className="text-sm text-gray-400 mt-1">
+                                                                Submitted: {formatDate(proposal.submitted_at)}
+                                                            </p>
+
+                                                            {/* Diff Preview - User-friendly visualization */}
+                                                            <details className="mt-3">
+                                                                <summary className="cursor-pointer text-sm text-primary-400 hover:text-primary-300">
+                                                                    View Changes ({(proposal.diff_payload as unknown as DiffPayload).edit_count || Object.keys(proposal.diff_payload).length} modifications)
+                                                                </summary>
+                                                                <div className="mt-2 p-3 bg-dark-500 rounded border border-white/10">
+                                                                    <ProposalDiffViewer diffPayload={proposal.diff_payload as unknown as DiffPayload} />
+                                                                </div>
+                                                            </details>
+                                                        </div>
+
+                                                        {proposal.status === 'pending' && (
+                                                            <div className="ml-4">
+                                                                <button
+                                                                    onClick={() => setSelectedProposal(proposal)}
+                                                                    className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+                                                                >
+                                                                    Review
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </StaggerSection>
+                                        ))
+                                    )}
+
+                                    {hasMore && (
+                                        <StaggerSection>
+                                            <button
+                                                onClick={() => setPage(p => p + 1)}
+                                                className="w-full py-2.5 text-primary-400 hover:bg-dark-300 rounded-xl transition-colors"
+                                            >
+                                                Load More
+                                            </button>
+                                        </StaggerSection>
+                                    )}
+                                </StaggerPageContent>
+                            )}
+
+                            {/* History Tab */}
+                            {activeTab === 'history' && (
+                                <StaggerPageContent className="space-y-4">
+                                    {myDecisions.length === 0 ? (
+                                        <StaggerSection>
+                                            <div className="bg-dark-400 rounded-xl border border-white/10 p-8 text-center">
+                                                <p className="text-gray-300">No decisions yet</p>
+                                                <p className="text-sm text-gray-500 mt-2">
+                                                    Your review history will appear here
+                                                </p>
+                                            </div>
+                                        </StaggerSection>
+                                    ) : (
+                                        myDecisions.map(proposal => (
+                                            <StaggerSection key={proposal.id}>
+                                                <div className="bg-dark-400 rounded-xl border border-white/10 p-4">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(proposal.status)}`}>
+                                                            {proposal.status}
+                                                        </span>
+                                                        {proposal.decision && (
+                                                            <span className="text-xs text-gray-400">
+                                                                Decision: {proposal.decision.decision}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <h3 className="font-medium text-white">{proposal.summary}</h3>
+                                                    <p className="text-sm text-gray-400 mt-1">
+                                                        by @{proposal.proposer.username} • {formatDate(proposal.submitted_at)}
+                                                    </p>
+                                                    {proposal.decision?.notes && (
+                                                        <p className="text-sm text-gray-300 mt-2 italic">
+                                                            "{proposal.decision.notes}"
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </StaggerSection>
+                                        ))
+                                    )}
+                                </StaggerPageContent>
+                            )}
+                        </AnimatedTabContent>
+
+                        {/* Review Modal */}
+                        {selectedProposal && (
+                            <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+                                <div className="bg-dark-400 rounded-2xl border border-white/10 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                                    <div className="p-6">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h2 className="text-xl font-bold text-white">Review Proposal</h2>
+                                            <button
+                                                onClick={() => {
+                                                    setSelectedProposal(null)
+                                                    setDecisionNotes('')
+                                                }}
+                                                className="text-gray-400 hover:text-white transition-colors"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+
+                                        <div className="mb-4">
+                                            <h3 className="font-medium text-white mb-2">{selectedProposal.summary}</h3>
+                                            <p className="text-sm text-gray-400">
+                                                Submitted by @{selectedProposal.proposer.username} on {formatDate(selectedProposal.submitted_at)}
+                                            </p>
+                                        </div>
+
+                                        <div className="mb-4">
+                                            <h4 className="font-medium text-gray-300 mb-2">Changes</h4>
+                                            <div className="border border-gray-600 rounded-lg p-4 bg-dark-500 max-h-64 overflow-y-auto">
+                                                <ProposalDiffViewer diffPayload={selectedProposal.diff_payload as unknown as DiffPayload} />
+                                            </div>
+                                        </div>
+
+                                        {/* Karma Impact Preview */}
+                                        <div className="mb-4 bg-primary-500/10 border border-primary-500/30 rounded-lg p-4">
+                                            <h4 className="font-medium text-primary-400 mb-2">Karma Impact</h4>
+                                            <p className="text-sm text-gray-300">
+                                                Your decision will affect @{selectedProposal.proposer.username}'s karma:
+                                            </p>
+                                            <div className="flex gap-4 mt-2">
+                                                <span className="text-green-400 font-medium">
+                                                    ✓ Approve: <span className="font-bold">+25</span> karma
+                                                </span>
+                                                <span className="text-red-400 font-medium">
+                                                    ✗ Reject: <span className="font-bold">-10</span> karma
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                                                Decision Notes (optional)
+                                            </label>
+                                            <textarea
+                                                value={decisionNotes}
+                                                onChange={e => setDecisionNotes(e.target.value)}
+                                                className="w-full p-3 bg-dark-300 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all"
+                                                rows={3}
+                                                placeholder="Add feedback for the proposer..."
+                                                maxLength={512}
+                                            />
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                {decisionNotes.length}/512 characters
+                                            </p>
+                                        </div>
+
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={() => handleDecision(selectedProposal.id, 'approve')}
+                                                disabled={submitting}
+                                                className="flex-1 py-2.5 bg-green-500 text-white rounded-xl hover:bg-green-600 disabled:opacity-50 transition-all font-medium"
+                                            >
+                                                ✓ Approve
+                                            </button>
+                                            <button
+                                                onClick={() => handleDecision(selectedProposal.id, 'needs_changes')}
+                                                disabled={submitting}
+                                                className="flex-1 py-2.5 bg-yellow-500 text-white rounded-xl hover:bg-yellow-600 disabled:opacity-50 transition-all font-medium"
+                                            >
+                                                ↻ Needs Changes
+                                            </button>
+                                            <button
+                                                onClick={() => handleDecision(selectedProposal.id, 'reject')}
+                                                disabled={submitting}
+                                                className="flex-1 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 disabled:opacity-50 transition-all font-medium"
+                                            >
+                                                ✗ Reject
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </PageContentWrapper>
     )
 }

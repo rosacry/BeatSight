@@ -9,7 +9,7 @@ import { motion } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { forceUnlockBodyScroll, removeStaleOverlays } from '@/lib/bodyScrollLock'
-import { TRANSITION_DURATION, EASE_CURVE } from '@/components/ui/UnifiedTransitions'
+import { TRANSITION_DURATION, EASE_CURVE, PageContentWrapper } from '@/components/ui/UnifiedTransitions'
 
 // Eye icons for password visibility toggle
 function EyeIcon() {
@@ -108,7 +108,7 @@ export function RegisterPage() {
     }
 
     return (
-        <div className="min-h-[80vh] flex items-center justify-center py-8">
+        <PageContentWrapper className="min-h-[80vh] flex items-center justify-center py-8">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -306,6 +306,6 @@ export function RegisterPage() {
                     </div>
                 </div>
             </motion.div>
-        </div>
+        </PageContentWrapper>
     )
 }

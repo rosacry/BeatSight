@@ -9,6 +9,7 @@ import { getForum, getForumTopics, createTopic } from '@/api/forum'
 import { TopicList, CreateTopicForm } from '@/components/forum'
 import { useAuthStore } from '@/stores/authStore'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { PageContentWrapper } from '@/components/ui/UnifiedTransitions'
 import clsx from 'clsx'
 
 type SortOption = 'newest' | 'oldest' | 'most_posts' | 'most_views'
@@ -102,7 +103,7 @@ export function ForumViewPage() {
 
     if (forumLoading) {
         return (
-            <div className="max-w-6xl mx-auto">
+            <PageContentWrapper isLoading={true} className="max-w-6xl mx-auto">
                 <div className="animate-pulse space-y-6">
                     <div className="h-8 bg-dark-300 rounded w-64" />
                     <div className="h-4 bg-dark-300 rounded w-96" />
@@ -114,13 +115,13 @@ export function ForumViewPage() {
                         </div>
                     </div>
                 </div>
-            </div>
+            </PageContentWrapper>
         )
     }
 
     if (forumError || !forum) {
         return (
-            <div className="max-w-6xl mx-auto">
+            <PageContentWrapper className="max-w-6xl mx-auto">
                 <div className="card bg-red-500/10 border border-red-500/30 text-red-400 text-center py-12">
                     <h2 className="text-xl font-bold mb-2">Forum Not Found</h2>
                     <p>The forum you're looking for doesn't exist or has been removed.</p>
@@ -128,12 +129,12 @@ export function ForumViewPage() {
                         Back to Forums
                     </Link>
                 </div>
-            </div>
+            </PageContentWrapper>
         )
     }
 
     return (
-        <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+        <PageContentWrapper className="max-w-6xl mx-auto px-4 py-6 space-y-6">
             {/* Forum header */}
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                 <div className="min-w-0 flex-1">
@@ -281,6 +282,6 @@ export function ForumViewPage() {
                     </button>
                 </div>
             )}
-        </div>
+        </PageContentWrapper>
     )
 }

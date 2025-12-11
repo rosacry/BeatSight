@@ -4,10 +4,16 @@
  * Provides consistent, smooth animations for all tab content, page transitions,
  * and sub-navigation throughout the application. Designed to eliminate visual
  * glitches and provide a polished, cohesive experience.
+ * 
+ * USAGE GUIDE:
+ * - Use PageContentWrapper for entire page content (ensures consistent page entry animation)
+ * - Use AnimatedTabContent for tab switching animations
+ * - Use StaggerPageContent + StaggerSection for staggered item animations
+ * - Use AnimatedTabButton for consistent tab button styling and animation
  */
 
-import { ReactNode, useRef, useEffect, useState } from 'react'
-import { motion, AnimatePresence, Variants } from 'framer-motion'
+import { ReactNode, useRef, useEffect, useState, useCallback } from 'react'
+import { motion, AnimatePresence, Variants, useReducedMotion } from 'framer-motion'
 import { cn } from '../../lib/utils'
 
 // ============================================================================
@@ -17,6 +23,7 @@ import { cn } from '../../lib/utils'
 export const TRANSITION_DURATION = 0.2
 export const STAGGER_DELAY = 0.05
 export const EASE_CURVE = [0.25, 0.46, 0.45, 0.94] as const
+export const CONTENT_ANIMATION_DELAY = 0.02 // Slight delay for content readiness
 
 // ============================================================================
 // SHARED ANIMATION VARIANTS
@@ -765,6 +772,284 @@ export function StaggerSection({ children, className }: StaggerItemProps) {
 }
 
 // ============================================================================
+// PAGE CONTENT WRAPPER - Consistent page-level entry animation
+// ============================================================================
+
+interface PageContentWrapperProps {
+    /** Page content to animate */
+    children: ReactNode
+    /** Additional CSS classes */
+    className?: string
+    /** Whether to use stagger animation for direct children */
+    stagger?: boolean
+    /** Loading state - shows loading indicator when true */
+    isLoading?: boolean
+    /** Custom loading component */
+    loadingComponent?: ReactNode
+}
+
+/**
+ * Wraps entire page content with consistent entry animation.
+ * Use this as the outermost wrapper for all page content to ensure
+ * consistent animations across the application.
+ * 
+ * Features:
+ * - Smooth fade + slide animation on page entry
+ * - Optional loading state handling
+ * - Respects reduced motion preferences
+ * - Prevents content flash with proper animation timing
+ */
+export function PageContentWrapper({
+    children,
+    className,
+    stagger = false,
+    isLoading = false,
+    loadingComponent,
+}: PageContentWrapperProps) {
+    const prefersReducedMotion = useReducedMotion()
+    const [isContentReady, setIsContentReady] = useState(false)
+
+    // Ensure content is ready before animating to prevent flash
+    useEffect(() => {
+        const timer = requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                setIsContentReady(true)
+            })
+        })
+        return () => cancelAnimationFrame(timer)
+    }, [])
+
+    const defaultLoader = (
+        <div className="flex items-center justify-center min-h-[40vh]">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
+        </div>
+    )
+
+    // For reduced motion, just render content without animation
+    if (prefersReducedMotion) {
+        return (
+            <div className={className}>
+                {isLoading ? (loadingComponent || defaultLoader) : children}
+            </div>
+        )
+    }
+
+    return (
+        <AnimatePresence mode="wait">
+            {isLoading ? (
+                <motion.div
+                    key="loading"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: TRANSITION_DURATION }}
+                >
+                    {loadingComponent || defaultLoader}
+                </motion.div>
+            ) : (
+                <motion.div
+                    key="content"
+                    initial="initial"
+                    animate={isContentReady ? "animate" : "initial"}
+                    exit="exit"
+                    variants={stagger ? staggerContainerVariants : tabContentVariants}
+                    className={className}
+                >
+                    {children}
+                </motion.div>
+            )}
+        </AnimatePresence>
+    )
+}
+
+// ============================================================================
+// FILTER BUTTON GROUP - For filter/tab lists with animations
+// ============================================================================
+
+interface FilterButtonProps {
+    /** Whether this filter is active */
+    isActive: boolean
+    /** Click handler */
+    onClick: () => void
+    /** Button label */
+    label: string
+    /** Optional count badge */
+    count?: number
+    /** Additional CSS classes */
+    className?: string
+}
+
+/**
+ * Consistent animated filter button.
+ * Use for filter pills, state filters, etc.
+ */
+export function FilterButton({
+    isActive,
+    onClick,
+    label,
+    count,
+    className,
+}: FilterButtonProps) {
+    return (
+        <motion.button
+            onClick={onClick}
+            className={cn(
+                'px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap',
+                isActive
+                    ? 'bg-primary-500 text-white'
+                    : 'bg-dark-400 text-gray-400 hover:bg-dark-300 hover:text-white',
+                className
+            )}
+            whileTap={{ scale: 0.98 }}
+            transition={{ duration: 0.1 }}
+        >
+            {label}
+            {count !== undefined && (
+                <span className="ml-1 sm:ml-1.5 text-xs opacity-75">
+                    ({count})
+                </span>
+            )}
+        </motion.button>
+    )
+}
+
+// ============================================================================
+// CARD ANIMATION WRAPPER - For lists of cards
+// ============================================================================
+
+interface AnimatedCardProps {
+    /** Card content */
+    children: ReactNode
+    /** Additional CSS classes */
+    className?: string
+    /** Delay for staggered animations */
+    delay?: number
+    /** Whether this card is part of a stagger group (use StaggerSection instead if true) */
+    standalone?: boolean
+}
+
+/**
+ * Wraps card content with subtle hover and enter animations.
+ * Use for list items, cards, and similar repeating elements.
+ */
+export function AnimatedCard({
+    children,
+    className,
+    delay = 0,
+    standalone = true,
+}: AnimatedCardProps) {
+    if (!standalone) {
+        // When part of a stagger group, just apply hover
+        return (
+            <motion.div
+                className={className}
+                whileHover={{ y: -2 }}
+                transition={{ duration: 0.2, ease: EASE_CURVE }}
+            >
+                {children}
+            </motion.div>
+        )
+    }
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{
+                opacity: 1,
+                y: 0,
+                transition: {
+                    duration: 0.3,
+                    delay,
+                    ease: EASE_CURVE,
+                },
+            }}
+            whileHover={{ y: -2 }}
+            transition={{ duration: 0.2, ease: EASE_CURVE }}
+            className={className}
+        >
+            {children}
+        </motion.div>
+    )
+}
+
+// ============================================================================
+// LOADING SKELETON WITH FADE
+// ============================================================================
+
+interface LoadingSkeletonProps {
+    /** Type of skeleton to show */
+    variant?: 'card' | 'list' | 'text' | 'custom'
+    /** Number of items for list variant */
+    count?: number
+    /** Custom content for custom variant */
+    children?: ReactNode
+    /** Additional CSS classes */
+    className?: string
+}
+
+/**
+ * Animated loading skeleton that fades in smoothly.
+ * Provides consistent loading states across the app.
+ */
+export function LoadingSkeleton({
+    variant = 'card',
+    count = 3,
+    children,
+    className,
+}: LoadingSkeletonProps) {
+    const content = () => {
+        if (variant === 'custom' && children) {
+            return children
+        }
+
+        if (variant === 'list') {
+            return (
+                <div className="space-y-4">
+                    {Array.from({ length: count }).map((_, i) => (
+                        <div key={i} className="bg-dark-400 rounded-xl border border-dark-300 p-4 animate-pulse">
+                            <div className="h-4 bg-dark-300 rounded w-1/4 mb-3" />
+                            <div className="h-3 bg-dark-300 rounded w-1/2 mb-2" />
+                            <div className="h-3 bg-dark-300 rounded w-1/3" />
+                        </div>
+                    ))}
+                </div>
+            )
+        }
+
+        if (variant === 'text') {
+            return (
+                <div className="space-y-3 animate-pulse">
+                    <div className="h-4 bg-dark-300 rounded w-3/4" />
+                    <div className="h-4 bg-dark-300 rounded w-1/2" />
+                    <div className="h-4 bg-dark-300 rounded w-2/3" />
+                </div>
+            )
+        }
+
+        // Default card variant
+        return (
+            <div className="bg-dark-400 rounded-xl border border-dark-300 p-6 animate-pulse">
+                <div className="h-6 bg-dark-300 rounded w-1/3 mb-4" />
+                <div className="h-4 bg-dark-300 rounded w-2/3 mb-2" />
+                <div className="h-4 bg-dark-300 rounded w-1/2" />
+            </div>
+        )
+    }
+
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: TRANSITION_DURATION }}
+            className={className}
+        >
+            {content()}
+        </motion.div>
+    )
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -781,4 +1066,8 @@ export {
     type AnimatedTabContentProps,
     type AnimatedTabButtonProps,
     type StaggerPageContentProps,
+    type PageContentWrapperProps,
+    type FilterButtonProps,
+    type AnimatedCardProps,
+    type LoadingSkeletonProps,
 }

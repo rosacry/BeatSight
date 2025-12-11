@@ -15,7 +15,8 @@ import {
     AnimatedTabContent,
     AnimatedTabButton,
     StaggerPageContent,
-    StaggerSection
+    StaggerSection,
+    PageContentWrapper
 } from '@/components/ui/UnifiedTransitions'
 
 const VALID_TABS = ['overview', 'achievements', 'activity'] as const
@@ -88,15 +89,15 @@ export function ProfilePage() {
 
     if (!user) {
         return (
-            <div className="flex items-center justify-center min-h-[60vh]">
+            <PageContentWrapper className="flex items-center justify-center min-h-[60vh]">
                 <p className="text-gray-400">Please log in to view your profile.</p>
-            </div>
+            </PageContentWrapper>
         )
     }
 
     if (isLoading) {
         return (
-            <div className="max-w-4xl mx-auto space-y-8">
+            <PageContentWrapper isLoading={true} className="max-w-4xl mx-auto space-y-8">
                 {/* Profile Header Skeleton */}
                 <div className="card animate-pulse">
                     <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -135,12 +136,12 @@ export function ProfilePage() {
                         ))}
                     </div>
                 </div>
-            </div>
+            </PageContentWrapper>
         )
     }
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 sm:space-y-8">
+        <PageContentWrapper className="max-w-4xl mx-auto px-4 py-6 space-y-6 sm:space-y-8">
             {/* Profile Header */}
             <div className="card">
                 <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
@@ -359,6 +360,6 @@ export function ProfilePage() {
                     </StaggerPageContent>
                 )}
             </AnimatedTabContent>
-        </div>
+        </PageContentWrapper>
     )
 }

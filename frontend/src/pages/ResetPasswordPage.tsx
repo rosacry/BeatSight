@@ -8,6 +8,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { forceUnlockBodyScroll, removeStaleOverlays } from '@/lib/bodyScrollLock'
+import { PageContentWrapper } from '@/components/ui/UnifiedTransitions'
 
 export function ResetPasswordPage() {
     useDocumentTitle('reset password')
@@ -80,7 +81,7 @@ export function ResetPasswordPage() {
 
     if (success) {
         return (
-            <div className="min-h-[80vh] flex items-center justify-center">
+            <PageContentWrapper className="min-h-[80vh] flex items-center justify-center">
                 <div className="w-full max-w-md">
                     <div className="bg-dark-400 rounded-xl p-8 shadow-xl border border-white/10 text-center">
                         <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -101,12 +102,12 @@ export function ResetPasswordPage() {
                         </Link>
                     </div>
                 </div>
-            </div>
+            </PageContentWrapper>
         )
     }
 
     return (
-        <div className="min-h-[80vh] flex items-center justify-center">
+        <PageContentWrapper className="min-h-[80vh] flex items-center justify-center">
             <div className="w-full max-w-md">
                 <div className="bg-dark-400 rounded-xl p-8 shadow-xl border border-white/10">
                     <div className="text-center mb-8">
@@ -222,6 +223,6 @@ export function ResetPasswordPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        </PageContentWrapper>
     )
 }

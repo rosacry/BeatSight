@@ -13,6 +13,7 @@ import { LiveRecorder } from '@/components'
 import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/components/Toast'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { PageContentWrapper } from '@/components/ui/UnifiedTransitions'
 import { createLogger } from '@/lib/logger'
 
 const logger = createLogger('RecordPage')
@@ -273,7 +274,7 @@ export function RecordPage() {
     // Browser not supported
     if (!browserSupport.supported) {
         return (
-            <div className="max-w-2xl mx-auto px-4 py-6">
+            <PageContentWrapper className="max-w-2xl mx-auto px-4 py-6">
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold text-white">Record Drums</h1>
                     <p className="text-gray-400 mt-1">
@@ -305,14 +306,14 @@ export function RecordPage() {
                         </button>
                     </div>
                 </div>
-            </div>
+            </PageContentWrapper>
         )
     }
 
     // Microphone permission denied
     if (permissionState === 'denied') {
         return (
-            <div className="max-w-2xl mx-auto px-4 py-6">
+            <PageContentWrapper className="max-w-2xl mx-auto px-4 py-6">
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold text-white">Record Drums</h1>
                     <p className="text-gray-400 mt-1">
@@ -356,14 +357,14 @@ export function RecordPage() {
                         </button>
                     </div>
                 </div>
-            </div>
+            </PageContentWrapper>
         )
     }
 
     // Microphone permission not yet granted - show request UI
     if (permissionState === 'prompt' || permissionState === 'checking') {
         return (
-            <div className="max-w-2xl mx-auto px-4 py-6">
+            <PageContentWrapper className="max-w-2xl mx-auto px-4 py-6">
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold text-white">Record Drums</h1>
                     <p className="text-gray-400 mt-1">
@@ -451,13 +452,13 @@ export function RecordPage() {
                         </div>
                     </div>
                 </div>
-            </div>
+            </PageContentWrapper>
         )
     }
 
     // Permission granted - show recording UI
     return (
-        <div className="max-w-2xl mx-auto px-4 py-6">
+        <PageContentWrapper className="max-w-2xl mx-auto px-4 py-6">
             {/* Header */}
             <div className="mb-6">
                 <h1 className="text-2xl font-bold text-white">Record Drums</h1>
@@ -601,7 +602,7 @@ export function RecordPage() {
                     </li>
                 </ul>
             </div>
-        </div>
+        </PageContentWrapper>
     )
 }
 

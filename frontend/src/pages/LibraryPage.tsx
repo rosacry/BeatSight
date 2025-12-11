@@ -11,6 +11,11 @@ import { JobStatusBadge } from '@/components/JobStatusBadge'
 import { Select } from '@/components/ui/Dropdown'
 import type { Song, AIJob } from '@/types/api'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import {
+    PageContentWrapper,
+    StaggerPageContent,
+    StaggerSection
+} from '@/components/ui/UnifiedTransitions'
 
 type SortOption = 'recent' | 'title' | 'artist' | 'status'
 type FilterOption = 'all' | 'complete' | 'processing' | 'failed'
@@ -100,102 +105,104 @@ export function LibraryPage() {
 
     if (songsLoading) {
         return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <div className="flex flex-col items-center gap-4">
-                    <svg className="animate-spin h-8 w-8 text-primary-500" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    <p className="text-gray-400">Loading your library...</p>
-                </div>
-            </div>
+            <PageContentWrapper isLoading={true} className="max-w-6xl mx-auto px-4 py-6 sm:py-8" />
         )
     }
 
     return (
-        <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 space-y-4 sm:space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-                <div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-white">My Library</h1>
-                    <p className="text-gray-400 text-sm mt-1">
-                        {filteredSongs.length} {filteredSongs.length === 1 ? 'song' : 'songs'}
-                    </p>
-                </div>
-                <Link to="/upload" className="btn btn-primary flex items-center justify-center gap-2 w-full sm:w-fit whitespace-nowrap">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Upload Song
-                </Link>
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-col md:flex-row gap-4">
-                {/* Search */}
-                <div className="flex-1 min-w-0">
-                    <input
-                        type="text"
-                        placeholder="Search by title or artist..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="input w-full"
-                    />
-                </div>
-
-                {/* Sort */}
-                <Select
-                    value={sortBy}
-                    onValueChange={(value) => setSortBy(value as SortOption)}
-                    className="w-full md:w-40 flex-shrink-0"
-                    options={[
-                        { value: 'recent', label: 'Most Recent' },
-                        { value: 'title', label: 'Title' },
-                        { value: 'artist', label: 'Artist' },
-                        { value: 'status', label: 'Status' },
-                    ]}
-                />
-
-                {/* Filter */}
-                <Select
-                    value={filterBy}
-                    onValueChange={(value) => setFilterBy(value as FilterOption)}
-                    className="w-full md:w-40 flex-shrink-0"
-                    options={[
-                        { value: 'all', label: 'All Songs' },
-                        { value: 'complete', label: 'Complete' },
-                        { value: 'processing', label: 'Processing' },
-                        { value: 'failed', label: 'Failed' },
-                    ]}
-                />
-            </div>
-
-            {/* Song List */}
-            {filteredSongs.length === 0 ? (
-                <div className="card text-center py-12">
-                    <svg className="w-16 h-16 mx-auto text-gray-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                    </svg>
-                    <h3 className="text-lg font-medium text-white mb-2">No songs found</h3>
-                    <p className="text-gray-400 mb-6">
-                        {searchQuery || filterBy !== 'all'
-                            ? 'Try adjusting your search or filters'
-                            : 'Upload your first song to get started'}
-                    </p>
-                    {!searchQuery && filterBy === 'all' && (
-                        <Link to="/upload" className="btn btn-primary">
+        <PageContentWrapper className="max-w-6xl mx-auto px-4 py-6 sm:py-8 space-y-4 sm:space-y-6">
+            <StaggerPageContent className="space-y-4 sm:space-y-6">
+                {/* Header */}
+                <StaggerSection>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                        <div>
+                            <h1 className="text-xl sm:text-2xl font-bold text-white">My Library</h1>
+                            <p className="text-gray-400 text-sm mt-1">
+                                {filteredSongs.length} {filteredSongs.length === 1 ? 'song' : 'songs'}
+                            </p>
+                        </div>
+                        <Link to="/upload" className="btn btn-primary flex items-center justify-center gap-2 w-full sm:w-fit whitespace-nowrap">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
                             Upload Song
                         </Link>
+                    </div>
+                </StaggerSection>
+
+                {/* Filters */}
+                <StaggerSection>
+                    <div className="flex flex-col md:flex-row gap-4">
+                        {/* Search */}
+                        <div className="flex-1 min-w-0">
+                            <input
+                                type="text"
+                                placeholder="Search by title or artist..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="input w-full"
+                            />
+                        </div>
+
+                        {/* Sort */}
+                        <Select
+                            value={sortBy}
+                            onValueChange={(value) => setSortBy(value as SortOption)}
+                            className="w-full md:w-40 flex-shrink-0"
+                            options={[
+                                { value: 'recent', label: 'Most Recent' },
+                                { value: 'title', label: 'Title' },
+                                { value: 'artist', label: 'Artist' },
+                                { value: 'status', label: 'Status' },
+                            ]}
+                        />
+
+                        {/* Filter */}
+                        <Select
+                            value={filterBy}
+                            onValueChange={(value) => setFilterBy(value as FilterOption)}
+                            className="w-full md:w-40 flex-shrink-0"
+                            options={[
+                                { value: 'all', label: 'All Songs' },
+                                { value: 'complete', label: 'Complete' },
+                                { value: 'processing', label: 'Processing' },
+                                { value: 'failed', label: 'Failed' },
+                            ]}
+                        />
+                    </div>
+                </StaggerSection>
+
+                {/* Song List */}
+                <StaggerSection>
+                    {filteredSongs.length === 0 ? (
+                        <div className="card text-center py-12">
+                            <svg className="w-16 h-16 mx-auto text-gray-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                            </svg>
+                            <h3 className="text-lg font-medium text-white mb-2">No songs found</h3>
+                            <p className="text-gray-400 mb-6">
+                                {searchQuery || filterBy !== 'all'
+                                    ? 'Try adjusting your search or filters'
+                                    : 'Upload your first song to get started'}
+                            </p>
+                            {!searchQuery && filterBy === 'all' && (
+                                <Link to="/upload" className="btn btn-primary">
+                                    Upload Song
+                                </Link>
+                            )}
+                        </div>
+                    ) : (
+                        <StaggerPageContent className="grid gap-4" animationKey={`${sortBy}-${filterBy}-${searchQuery}`}>
+                            {filteredSongs.map((song) => (
+                                <StaggerSection key={song.id}>
+                                    <SongCard song={song} job={songJobMap.get(song.id)} />
+                                </StaggerSection>
+                            ))}
+                        </StaggerPageContent>
                     )}
-                </div>
-            ) : (
-                <div className="grid gap-4">
-                    {filteredSongs.map((song) => (
-                        <SongCard key={song.id} song={song} job={songJobMap.get(song.id)} />
-                    ))}
-                </div>
-            )}
-        </div>
+                </StaggerSection>
+            </StaggerPageContent>
+        </PageContentWrapper>
     )
 }
 

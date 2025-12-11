@@ -8,6 +8,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useRefreshCreditBalance, useCreditBalance } from '@/hooks/useCredits'
 import { useToast } from '@/components/Toast'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { PageContentWrapper } from '@/components/ui/UnifiedTransitions'
 
 export function CreditSuccessPage() {
     useDocumentTitle('credits added')
@@ -33,7 +34,7 @@ export function CreditSuccessPage() {
     const sessionId = searchParams.get('session_id')
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 flex items-center justify-center px-4">
+        <PageContentWrapper className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 flex items-center justify-center px-4">
             <div className="max-w-md w-full text-center">
                 {/* Success icon */}
                 <div className="mx-auto w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mb-6">
@@ -99,7 +100,7 @@ export function CreditSuccessPage() {
                     )}
                 </p>
             </div>
-        </div>
+        </PageContentWrapper>
     )
 }
 

@@ -16,7 +16,8 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { AnimatedCounter } from '@/components/ui'
 import {
     staggerContainerVariants,
-    staggerItemVariants
+    staggerItemVariants,
+    PageContentWrapper
 } from '@/components/ui/UnifiedTransitions'
 
 // Animation variants - use unified system
@@ -69,7 +70,7 @@ export function HomePage() {
     })
 
     return (
-        <div className="min-h-screen bg-dark-500">
+        <PageContentWrapper className="min-h-screen bg-dark-500">
             {/* Hero Section */}
             <section className="relative pt-16 pb-20 px-4">
                 {/* Subtle gradient overlay */}
@@ -459,6 +460,6 @@ export function HomePage() {
                     </motion.div>
                 </motion.div>
             </section>
-        </div>
+        </PageContentWrapper>
     )
 }

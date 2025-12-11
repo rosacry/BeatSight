@@ -153,39 +153,39 @@ export function PhoneVerificationSettings() {
 
     const handleRemovePhone = async () => {
         if (!accessToken) return
-        if (!confirm('Remove phone number? You\\'ll lose accuracy voting access.')) {
+        if (!confirm('Remove phone number? You\'ll lose accuracy voting access.')) {
             return
-    }
-
-    setError(null)
-    setIsLoading(true)
-
-    try {
-        const response = await fetch(`${API_BASE}/api/phone/remove`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-            },
-        })
-
-        if (!response.ok) {
-            const data = await response.json()
-            throw new Error(data.detail || 'Failed to remove phone number')
         }
 
-        setSuccessMessage('Phone number removed successfully')
-        setCodeSent(false)
-        await loadPhoneStatus()
-        await fetchCurrentUser()
-    } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to remove phone')
-    } finally {
-        setIsLoading(false)
-    }
-}
+        setError(null)
+        setIsLoading(true)
 
-// Format phone number as user types
-const formatPhoneInput = (value: string) => {
+        try {
+            const response = await fetch(`${API_BASE}/api/phone/remove`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+            })
+
+            if (!response.ok) {
+                const data = await response.json()
+                throw new Error(data.detail || 'Failed to remove phone number')
+            }
+
+            setSuccessMessage('Phone number removed successfully')
+            setCodeSent(false)
+            await loadPhoneStatus()
+            await fetchCurrentUser()
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to remove phone')
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    // Format phone number as user types
+    const formatPhoneInput = (value: string) => {
     // Keep only digits and + at the start
     const cleaned = value.replace(/[^\d+]/g, '')
     // Ensure + is only at the start

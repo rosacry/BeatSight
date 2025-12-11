@@ -224,7 +224,7 @@ export function HomePage() {
                     </motion.p>
 
                     <div className="grid md:grid-cols-3 gap-6">
-                        {features.map((feature, index) => (
+                        {features.map((feature) => (
                             <motion.div
                                 key={feature.title}
                                 variants={itemVariants}

@@ -45,13 +45,13 @@ export function InstallPrompt() {
 
     return (
         <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-sm z-50">
-            <div className="bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10 p-4 overflow-hidden relative">
+            <div className="bg-dark-500/95 rounded-2xl shadow-2xl border border-white/10 p-4 overflow-hidden relative">
                 {/* Gradient accent */}
-                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-transparent to-fuchsia-500/10 pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-transparent to-accent-500/10 pointer-events-none" />
 
                 <div className="flex items-start gap-3 relative">
                     {/* App icon */}
-                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex items-center justify-center shadow-lg">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-dark-400 border border-white/10 flex items-center justify-center shadow-lg">
                         <img
                             src="/icon.svg"
                             alt="BeatSight"
@@ -59,7 +59,7 @@ export function InstallPrompt() {
                             onError={(e) => {
                                 // Fallback to text if image fails
                                 e.currentTarget.style.display = 'none';
-                                e.currentTarget.parentElement!.innerHTML = '<span class="text-cyan-400 font-bold text-xl">B</span>';
+                                e.currentTarget.parentElement!.innerHTML = '<span class="text-primary-400 font-bold text-xl">B</span>';
                             }}
                         />
                     </div>
@@ -68,7 +68,7 @@ export function InstallPrompt() {
                     <div className="flex-1 min-w-0">
                         <h3 className="text-white font-semibold text-sm">Install BeatSight</h3>
                         <p className="text-gray-400 text-xs mt-0.5 leading-relaxed">
-                            Get offline support and quick access from your home screen.
+                            Offline support & quick access.
                         </p>
 
                         {/* Actions */}
@@ -76,7 +76,7 @@ export function InstallPrompt() {
                             <button
                                 onClick={handleInstall}
                                 disabled={isInstalling}
-                                className="px-4 py-1.5 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-all shadow-lg shadow-cyan-500/25"
+                                className="px-4 py-1.5 bg-primary-500 hover:bg-primary-400 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-all shadow-lg shadow-primary-500/25"
                             >
                                 {isInstalling ? 'Installing...' : 'Install'}
                             </button>

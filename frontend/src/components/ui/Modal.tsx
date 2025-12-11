@@ -18,8 +18,8 @@ import { lockBodyScroll, unlockBodyScroll } from '@/lib/bodyScrollLock'
 const modalVariants = cva(
     // Base styles
     [
-        'relative bg-gray-800 rounded-xl shadow-2xl',
-        'border border-gray-700/50',
+        'relative bg-dark-400 rounded-xl shadow-2xl',
+        'border border-white/10',
         'transform transition-all duration-300',
     ],
     {
@@ -110,6 +110,14 @@ export function Modal({
             }
         }
     }, [open, handleKeyDown])
+
+    // Additional safety: ensure body scroll is unlocked when component unmounts
+    // This catches cases where the modal is removed during navigation
+    useEffect(() => {
+        return () => {
+            unlockBodyScroll()
+        }
+    }, [])
 
     if (!open) return null
 

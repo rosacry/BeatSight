@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
-import { forceUnlockBodyScroll } from '@/lib/bodyScrollLock'
+import { forceUnlockBodyScroll, removeStaleOverlays } from '@/lib/bodyScrollLock'
 
 export function ForgotPasswordPage() {
     useDocumentTitle('forgot password')
@@ -15,6 +15,14 @@ export function ForgotPasswordPage() {
     // Reset any stuck body styles on mount
     useEffect(() => {
         forceUnlockBodyScroll()
+        removeStaleOverlays()
+
+        const timeoutId = setTimeout(() => {
+            forceUnlockBodyScroll()
+            removeStaleOverlays()
+        }, 100)
+
+        return () => clearTimeout(timeoutId)
     }, [])
 
     const [email, setEmail] = useState('')

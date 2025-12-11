@@ -55,7 +55,7 @@ export function PostEditor({
             await onSubmit(content.trim())
             setContent('')
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to post. Please try again.')
+            setError(err instanceof Error ? err.message : 'Failed to post.')
         } finally {
             setIsSubmitting(false)
         }
@@ -65,7 +65,7 @@ export function PostEditor({
     if (!user) {
         return (
             <div className="card bg-gray-800/50 border border-gray-700 text-center py-8">
-                <p className="text-gray-400 mb-4">You must be logged in to post a reply.</p>
+                <p className="text-gray-400 mb-4">Log in to reply.</p>
                 <Link to="/login" className="btn btn-primary">
                     Log In
                 </Link>
@@ -287,7 +287,7 @@ export function CreateTopicForm({ onSubmit, onCancel }: CreateTopicFormProps) {
 
             await onSubmit(data)
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to create topic. Please try again.')
+            setError(err instanceof Error ? err.message : 'Failed to create topic.')
         } finally {
             setIsSubmitting(false)
         }
@@ -296,7 +296,7 @@ export function CreateTopicForm({ onSubmit, onCancel }: CreateTopicFormProps) {
     if (!user) {
         return (
             <div className="card bg-gray-800/50 border border-gray-700 text-center py-8">
-                <p className="text-gray-400 mb-4">You must be logged in to create a topic.</p>
+                <p className="text-gray-400 mb-4">Log in to create a topic.</p>
                 <Link to="/login" className="btn btn-primary">
                     Log In
                 </Link>

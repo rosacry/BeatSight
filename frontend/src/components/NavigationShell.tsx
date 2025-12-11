@@ -154,74 +154,65 @@ export function Layout({ children }: LayoutProps) {
     ]
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-black flex flex-col relative overflow-x-hidden">
+        <div className="min-h-screen bg-dark-500 flex flex-col relative overflow-x-hidden">
             {/* Skip to main content link for screen readers */}
             <a
                 href={`#${SKIP_LINK_TARGETS.MAIN_CONTENT}`}
-                className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-cyan-500 focus:text-white focus:px-4 focus:py-2 focus:rounded-md focus:outline-none focus:ring-2 focus:ring-white"
+                className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-primary-400 focus:text-white focus:px-4 focus:py-2 focus:rounded-md focus:outline-none focus:ring-2 focus:ring-white"
             >
                 Skip to main content
             </a>
 
-            {/* Desktop Navigation - Glass effect with scroll awareness */}
+            {/* Navigation - osu! inspired clean header */}
             <motion.nav
                 initial={{ y: -100 }}
                 animate={{ y: 0 }}
                 transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
-                    ? 'bg-slate-900/95 backdrop-blur-xl shadow-lg shadow-black/50'
-                    : 'bg-slate-900/80 backdrop-blur-md'
+                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${isScrolled
+                    ? 'bg-dark-600/95 backdrop-blur-md shadow-lg border-b border-white/5'
+                    : 'bg-dark-600/80 backdrop-blur-sm'
                     }`}
                 id={SKIP_LINK_TARGETS.NAVIGATION}
                 aria-label="Main navigation"
             >
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between h-16">
+                    <div className="flex items-center justify-between h-14">
                         {/* Logo and main nav */}
                         <div className="flex items-center">
-                            <Link to="/" className="flex items-center gap-2.5 group">
-                                {/* Logo with enhanced blend effect */}
+                            <Link to="/" className="flex items-center gap-2 group">
+                                {/* Logo - clean, no excessive effects */}
                                 <motion.div
                                     className="relative"
-                                    whileHover={{ scale: 1.05 }}
+                                    whileHover={{ scale: 1.02 }}
                                     transition={{ type: 'spring', stiffness: 400 }}
                                 >
-                                    <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/30 to-fuchsia-500/20 rounded-xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    <div className="relative w-9 h-9 rounded-xl 
-                                                  bg-slate-900/95
-                                                  border border-white/10 flex items-center justify-center
-                                                  group-hover:border-cyan-500/40 transition-all
-                                                  shadow-lg shadow-black/30 group-hover:shadow-cyan-500/20
-                                                  overflow-hidden">
-                                        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-transparent to-fuchsia-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <div className="w-8 h-8 rounded-lg bg-dark-400 border border-white/10 
+                                                  flex items-center justify-center overflow-hidden
+                                                  group-hover:border-primary-400/40 transition-colors">
                                         <img
                                             src="/icons/logo-navbar.png"
                                             alt="BeatSight"
-                                            className="w-6 h-6 relative z-10 
-                                                     [mix-blend-mode:screen] brightness-[1.4] saturate-[1.2]
-                                                     drop-shadow-[0_0_6px_rgba(0,212,255,0.3)] 
-                                                     group-hover:drop-shadow-[0_0_10px_rgba(0,212,255,0.5)] 
-                                                     transition-all"
+                                            className="w-5 h-5"
                                         />
                                     </div>
                                 </motion.div>
-                                <span className="text-xl font-bold text-white hidden sm:block 
-                                               group-hover:text-cyan-400 transition-colors">
+                                <span className="text-lg font-bold text-white hidden sm:block 
+                                               group-hover:text-primary-400 transition-colors">
                                     BeatSight
                                 </span>
                             </Link>
 
-                            {/* Desktop nav links */}
+                            {/* Desktop nav links - clean, minimal */}
                             <LayoutGroup id="desktop-nav">
-                                <div className="hidden md:flex ml-6 items-center gap-0.5">
+                                <div className="hidden md:flex ml-8 items-center gap-1">
                                     {visibleNavItems.map((item) => (
                                         <NavLink
                                             key={item.path}
                                             to={item.path}
                                             className={({ isActive }) =>
-                                                `relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${isActive
-                                                    ? 'text-white'
-                                                    : 'text-slate-400 hover:text-white'
+                                                `relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
+                                                    ? 'text-white bg-white/10'
+                                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                                                 }`
                                             }
                                         >
@@ -255,13 +246,11 @@ export function Layout({ children }: LayoutProps) {
                                     <>
                                         <Link
                                             to="/upload"
-                                            className="group relative flex items-center gap-2 px-4 py-2 
-                                                     bg-gradient-to-r from-cyan-500 to-cyan-600 
-                                                     hover:from-cyan-400 hover:to-cyan-500
-                                                     text-white font-medium rounded-xl
-                                                     shadow-[0_0_20px_rgba(0,212,255,0.3)]
-                                                     hover:shadow-[0_0_30px_rgba(0,212,255,0.5)]
-                                                     transition-all duration-300 whitespace-nowrap"
+                                            className="flex items-center gap-2 px-4 py-2 
+                                                     bg-primary-400 hover:bg-primary-500
+                                                     text-white font-medium rounded-lg
+                                                     shadow-sm hover:shadow-glow-sm
+                                                     transition-all duration-200"
                                         >
                                             <UploadIcon />
                                             <span className="hidden xl:inline">Upload</span>
@@ -273,18 +262,16 @@ export function Layout({ children }: LayoutProps) {
                                     <>
                                         <Link
                                             to="/login"
-                                            className="text-slate-400 hover:text-white px-4 py-2 rounded-lg 
+                                            className="text-gray-400 hover:text-white px-3 py-2 rounded-lg 
                                                      text-sm font-medium transition-colors"
                                         >
                                             Sign in
                                         </Link>
                                         <Link
                                             to="/register"
-                                            className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-fuchsia-500 
-                                                     text-white font-medium rounded-xl
-                                                     shadow-[0_0_20px_rgba(0,212,255,0.3)]
-                                                     hover:shadow-[0_0_30px_rgba(0,212,255,0.5)]
-                                                     transition-all duration-300"
+                                            className="px-4 py-2 bg-primary-400 hover:bg-primary-500 
+                                                     text-white font-medium rounded-lg
+                                                     transition-all duration-200"
                                         >
                                             Sign up
                                         </Link>
@@ -295,8 +282,8 @@ export function Layout({ children }: LayoutProps) {
                             {/* Mobile menu button */}
                             <button
                                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                                className="md:hidden p-2 rounded-lg text-slate-400 hover:text-white 
-                                         hover:bg-white/10 transition-all duration-200"
+                                className="md:hidden p-2 rounded-lg text-gray-400 hover:text-white 
+                                         hover:bg-white/10 transition-colors"
                                 aria-expanded={isMobileMenuOpen}
                                 aria-controls="mobile-menu"
                                 aria-label={isMobileMenuOpen ? ARIA_LABELS.MENU_CLOSE : ARIA_LABELS.MENU}
@@ -307,7 +294,7 @@ export function Layout({ children }: LayoutProps) {
                     </div>
                 </div>
 
-                {/* Mobile menu - Animated slide down */}
+                {/* Mobile menu - osu! style slide down */}
                 <AnimatePresence>
                     {isMobileMenuOpen && (
                         <motion.div
@@ -315,12 +302,12 @@ export function Layout({ children }: LayoutProps) {
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
                             transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-                            className="md:hidden border-t border-white/10 bg-slate-900/95 backdrop-blur-xl"
+                            className="md:hidden border-t border-white/10 bg-dark-600"
                             id="mobile-menu"
                             role="menu"
                             aria-label="Mobile navigation menu"
                         >
-                            <div className="px-2 pt-2 pb-3 space-y-1">
+                            <div className="px-3 pt-3 pb-4 space-y-1">
                                 {visibleNavItems.map((item, index) => (
                                     <motion.div
                                         key={item.path}
@@ -332,9 +319,9 @@ export function Layout({ children }: LayoutProps) {
                                             to={item.path}
                                             onClick={() => setIsMobileMenuOpen(false)}
                                             className={({ isActive }) =>
-                                                `flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 ${isActive
+                                                `flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-colors ${isActive
                                                     ? 'bg-white/10 text-white'
-                                                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                                                 }`
                                             }
                                         >
@@ -346,14 +333,14 @@ export function Layout({ children }: LayoutProps) {
                             </div>
 
                             {/* Mobile auth section */}
-                            <div className="px-2 pt-2 pb-4 border-t border-white/10">
+                            <div className="px-3 pt-3 pb-4 border-t border-white/10">
                                 {isAuthenticated ? (
                                     <div className="space-y-2">
                                         <Link
                                             to="/upload"
                                             onClick={() => setIsMobileMenuOpen(false)}
-                                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium 
-                                                 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white"
+                                            className="flex items-center gap-3 px-4 py-3 rounded-lg 
+                                                     bg-primary-400 text-white font-medium"
                                         >
                                             <UploadIcon />
                                             Upload Song
@@ -364,14 +351,14 @@ export function Layout({ children }: LayoutProps) {
                                         <Link
                                             to="/profile"
                                             onClick={() => setIsMobileMenuOpen(false)}
-                                            className="block px-4 py-3 rounded-xl text-base font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                                            className="block px-4 py-3 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
                                         >
                                             Profile
                                         </Link>
                                         <Link
                                             to="/settings"
                                             onClick={() => setIsMobileMenuOpen(false)}
-                                            className="block px-4 py-3 rounded-xl text-base font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                                            className="block px-4 py-3 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
                                         >
                                             Settings
                                         </Link>
@@ -380,7 +367,7 @@ export function Layout({ children }: LayoutProps) {
                                                 setShowMobileSignOutConfirm(true)
                                                 setIsMobileMenuOpen(false)
                                             }}
-                                            className="block w-full text-left px-4 py-3 rounded-xl text-base font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all"
+                                            className="block w-full text-left px-4 py-3 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
                                         >
                                             Sign out
                                         </button>
@@ -390,15 +377,14 @@ export function Layout({ children }: LayoutProps) {
                                         <Link
                                             to="/login"
                                             onClick={() => setIsMobileMenuOpen(false)}
-                                            className="block px-4 py-3 rounded-xl text-base font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                                            className="block px-4 py-3 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
                                         >
                                             Sign in
                                         </Link>
                                         <Link
                                             to="/register"
                                             onClick={() => setIsMobileMenuOpen(false)}
-                                            className="block px-4 py-3 rounded-xl text-base font-medium 
-                                                 bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white text-center"
+                                            className="block px-4 py-3 rounded-lg bg-primary-400 text-white text-center font-medium"
                                         >
                                             Sign up
                                         </Link>
@@ -411,7 +397,7 @@ export function Layout({ children }: LayoutProps) {
             </motion.nav>
 
             {/* Spacer for fixed nav */}
-            <div className="h-16" />
+            <div className="h-14" />
 
             {/* Main content */}
             <main
@@ -422,57 +408,52 @@ export function Layout({ children }: LayoutProps) {
                 {children}
             </main>
 
-            {/* Footer - Glass effect */}
-            <footer className="relative z-20 bg-slate-900/50 backdrop-blur-xl border-t border-white/10 mt-auto" role="contentinfo">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+            {/* Footer - osu! inspired clean footer */}
+            <footer className="relative z-20 bg-dark-600 border-t border-white/5 mt-auto" role="contentinfo">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                         {/* Logo and copyright */}
                         <div className="flex flex-col sm:flex-row items-center gap-3">
-                            <div className="flex items-center gap-3">
-                                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-slate-800/90 to-slate-900/90 
-                                              border border-white/10 flex items-center justify-center
-                                              shadow-lg shadow-black/20 overflow-hidden relative">
-                                    <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-fuchsia-500/5" />
-                                    <img src="/icons/logo-navbar.png" alt="" className="w-4 h-4 relative z-10 brightness-105 contrast-110 drop-shadow-[0_0_4px_rgba(0,212,255,0.2)]" />
+                            <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded bg-dark-400 border border-white/10 
+                                              flex items-center justify-center overflow-hidden">
+                                    <img src="/icons/logo-navbar.png" alt="" className="w-4 h-4" />
                                 </div>
-                                <p className="text-slate-500 text-sm">
+                                <span className="text-gray-500 text-sm">
                                     © 2025 BeatSight
-                                </p>
+                                </span>
                             </div>
-                            <span className="hidden sm:inline text-slate-600">•</span>
-                            <p className="text-slate-600 text-xs text-center sm:text-left">
+                            <span className="hidden sm:inline text-gray-600">•</span>
+                            <span className="text-gray-600 text-xs">
                                 The global index for drum transcriptions
-                            </p>
+                            </span>
                         </div>
 
-                        {/* Links - ensure they're clickable */}
-                        <nav className="flex items-center gap-8" aria-label="Footer navigation">
+                        {/* Links */}
+                        <nav className="flex items-center gap-6" aria-label="Footer navigation">
                             <a
                                 href={getDocsLink()}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-slate-500 hover:text-cyan-400 text-sm transition-colors cursor-pointer"
+                                className="text-gray-500 hover:text-primary-400 text-sm transition-colors"
                             >
-                                Documentation
-                                <span className="sr-only"> (opens in new tab)</span>
+                                Docs
                             </a>
                             <a
                                 href={getCommunityLink()}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-slate-500 hover:text-cyan-400 text-sm transition-colors cursor-pointer"
+                                className="text-gray-500 hover:text-primary-400 text-sm transition-colors"
                             >
                                 Support
-                                <span className="sr-only"> (opens in new tab)</span>
                             </a>
                             <a
                                 href={EXTERNAL_LINKS.github.org}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-slate-500 hover:text-cyan-400 text-sm transition-colors cursor-pointer"
+                                className="text-gray-500 hover:text-primary-400 text-sm transition-colors"
                             >
                                 GitHub
-                                <span className="sr-only"> (opens in new tab)</span>
                             </a>
                         </nav>
                     </div>

@@ -1,15 +1,14 @@
 /**
  * Registration page component.
- * Enhanced with modern glassmorphism design and improved UX.
+ * Clean minimal design following osu! design language.
  */
 
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
-import { ParticleBackground, GradientOrbs } from '@/components/ui/ParticleBackground'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
-import { forceUnlockBodyScroll } from '@/lib/bodyScrollLock'
+import { forceUnlockBodyScroll, removeStaleOverlays } from '@/lib/bodyScrollLock'
 
 // Eye icons for password visibility toggle
 function EyeIcon() {
@@ -32,7 +31,7 @@ function EyeOffIcon() {
 // Check icon for password requirements
 function CheckIcon({ filled }: { filled: boolean }) {
     return (
-        <svg className={`w-4 h-4 ${filled ? 'text-green-400' : 'text-slate-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className={`w-4 h-4 ${filled ? 'text-green-400' : 'text-gray-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
     )
@@ -44,8 +43,19 @@ export function RegisterPage() {
     const { register, isLoading } = useAuthStore()
 
     // Reset any stuck body styles on mount (e.g., from modals that didn't clean up)
+    // Run immediately and again after a short delay to catch any race conditions
     useEffect(() => {
+        // Immediate cleanup
         forceUnlockBodyScroll()
+        removeStaleOverlays()
+
+        // Delayed cleanup to catch any race conditions with modal animations
+        const timeoutId = setTimeout(() => {
+            forceUnlockBodyScroll()
+            removeStaleOverlays()
+        }, 100)
+
+        return () => clearTimeout(timeoutId)
     }, [])
 
     const [displayName, setDisplayName] = useState('')
@@ -97,87 +107,46 @@ export function RegisterPage() {
     }
 
     return (
-        <div className="min-h-[80vh] flex items-center justify-center py-8 relative overflow-hidden">
-            {/* Background effects */}
-            <ParticleBackground particleCount={30} />
-            <GradientOrbs />
-
+        <div className="min-h-[80vh] flex items-center justify-center py-8">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="w-full max-w-md relative z-10"
+                transition={{ duration: 0.4 }}
+                className="w-full max-w-md"
             >
-                <div className="relative bg-slate-900/60 backdrop-blur-xl rounded-2xl p-8 
-                              border border-white/10 shadow-2xl shadow-black/50">
-                    {/* Subtle gradient border effect */}
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-transparent to-fuchsia-500/10 pointer-events-none" />
+                <div className="bg-dark-400 rounded-xl p-8 border border-dark-300">
+                    <div className="text-center mb-6">
+                        {/* Logo */}
+                        <div className="w-20 h-20 mx-auto mb-6 rounded-xl bg-dark-500 border border-dark-300 flex items-center justify-center">
+                            <img
+                                src="/icons/logo-navbar.png"
+                                alt="BeatSight"
+                                className="w-12 h-12"
+                            />
+                        </div>
 
-                    <div className="relative text-center mb-6">
-                        {/* Logo with enhanced glow and blend effect */}
-                        <motion.div
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
-                            className="w-24 h-24 mx-auto mb-6 relative"
-                        >
-                            {/* Outer glow */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/40 to-fuchsia-500/40 rounded-3xl blur-2xl" />
-                            {/* Inner container with solid dark background for better blend */}
-                            <div className="relative w-full h-full rounded-2xl 
-                                          bg-slate-900
-                                          border border-white/10
-                                          flex items-center justify-center
-                                          shadow-2xl shadow-fuchsia-500/20
-                                          overflow-hidden">
-                                {/* Subtle inner gradient overlay for blend */}
-                                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-transparent to-fuchsia-500/10" />
-                                <img
-                                    src="/icons/logo-navbar.png"
-                                    alt="BeatSight"
-                                    className="w-14 h-14 relative z-10 
-                                             [mix-blend-mode:screen] brightness-[1.4] saturate-[1.2]
-                                             drop-shadow-[0_0_12px_rgba(217,70,239,0.4)]"
-                                />
-                            </div>
-                        </motion.div>
-
-                        <motion.h1
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.2 }}
-                            className="text-3xl font-bold text-white mb-2"
-                        >
+                        <h1 className="text-2xl font-bold text-white mb-2">
                             Create account
-                        </motion.h1>
-                        <motion.p
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.3 }}
-                            className="text-slate-400"
-                        >
-                            Join the global community building the first universal drum transcription index
-                        </motion.p>
+                        </h1>
+                        <p className="text-gray-400">
+                            Join the community
+                        </p>
                     </div>
 
                     {error && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl backdrop-blur-sm"
-                        >
+                        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
                             <p className="text-red-400 text-sm flex items-center gap-2">
                                 <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                                 {error}
                             </p>
-                        </motion.div>
+                        </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-4 relative">
+                    <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
-                            <label htmlFor="displayName" className="block text-sm font-medium text-slate-300 mb-2">
+                            <label htmlFor="displayName" className="block text-sm font-medium text-gray-300 mb-2">
                                 Display name
                             </label>
                             <input
@@ -187,16 +156,16 @@ export function RegisterPage() {
                                 onChange={(e) => setDisplayName(e.target.value)}
                                 required
                                 autoComplete="name"
-                                className="w-full px-4 py-3.5 bg-slate-800/50 border border-white/10 rounded-xl 
-                                         text-white placeholder-slate-500 
-                                         focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50
+                                className="w-full px-4 py-3 bg-dark-500 border border-dark-300 rounded-lg 
+                                         text-white placeholder-gray-500 
+                                         focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400
                                          transition-all duration-200"
                                 placeholder="DrumMaster2000"
                             />
                         </div>
 
                         <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
                                 Email address
                             </label>
                             <input
@@ -206,16 +175,16 @@ export function RegisterPage() {
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
                                 autoComplete="email"
-                                className="w-full px-4 py-3.5 bg-slate-800/50 border border-white/10 rounded-xl 
-                                         text-white placeholder-slate-500 
-                                         focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50
+                                className="w-full px-4 py-3 bg-dark-500 border border-dark-300 rounded-lg 
+                                         text-white placeholder-gray-500 
+                                         focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400
                                          transition-all duration-200"
                                 placeholder="you@example.com"
                             />
                         </div>
 
                         <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
+                            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
                                 Password
                             </label>
                             <div className="relative">
@@ -227,9 +196,9 @@ export function RegisterPage() {
                                     required
                                     autoComplete="new-password"
                                     minLength={8}
-                                    className="w-full px-4 py-3.5 pr-12 bg-slate-800/50 border border-white/10 rounded-xl 
-                                             text-white placeholder-slate-500 
-                                             focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50
+                                    className="w-full px-4 py-3 pr-12 bg-dark-500 border border-dark-300 rounded-lg 
+                                             text-white placeholder-gray-500 
+                                             focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400
                                              transition-all duration-200"
                                     placeholder="••••••••"
                                 />
@@ -237,7 +206,7 @@ export function RegisterPage() {
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 
-                                             text-slate-400 hover:text-white transition-colors"
+                                             text-gray-400 hover:text-white transition-colors"
                                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                                 >
                                     {showPassword ? <EyeOffIcon /> : <EyeIcon />}
@@ -246,7 +215,7 @@ export function RegisterPage() {
                         </div>
 
                         <div>
-                            <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-300 mb-2">
+                            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
                                 Confirm password
                             </label>
                             <div className="relative">
@@ -257,9 +226,9 @@ export function RegisterPage() {
                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                     required
                                     autoComplete="new-password"
-                                    className="w-full px-4 py-3.5 pr-12 bg-slate-800/50 border border-white/10 rounded-xl 
-                                             text-white placeholder-slate-500 
-                                             focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50
+                                    className="w-full px-4 py-3 pr-12 bg-dark-500 border border-dark-300 rounded-lg 
+                                             text-white placeholder-gray-500 
+                                             focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400
                                              transition-all duration-200"
                                     placeholder="••••••••"
                                 />
@@ -267,7 +236,7 @@ export function RegisterPage() {
                                     type="button"
                                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 
-                                             text-slate-400 hover:text-white transition-colors"
+                                             text-gray-400 hover:text-white transition-colors"
                                     aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                                 >
                                     {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
@@ -277,39 +246,31 @@ export function RegisterPage() {
 
                         {/* Password requirements indicator */}
                         {password.length > 0 && (
-                            <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                className="flex flex-col gap-1 text-sm"
-                            >
+                            <div className="flex flex-col gap-1 text-sm">
                                 <div className="flex items-center gap-2">
                                     <CheckIcon filled={passwordRequirements.length} />
-                                    <span className={passwordRequirements.length ? 'text-green-400' : 'text-slate-500'}>
+                                    <span className={passwordRequirements.length ? 'text-green-400' : 'text-gray-500'}>
                                         At least 8 characters
                                     </span>
                                 </div>
                                 {confirmPassword.length > 0 && (
                                     <div className="flex items-center gap-2">
                                         <CheckIcon filled={passwordRequirements.match} />
-                                        <span className={passwordRequirements.match ? 'text-green-400' : 'text-slate-500'}>
+                                        <span className={passwordRequirements.match ? 'text-green-400' : 'text-gray-500'}>
                                             Passwords match
                                         </span>
                                     </div>
                                 )}
-                            </motion.div>
+                            </div>
                         )}
 
-                        <motion.button
+                        <button
                             type="submit"
                             disabled={isLoading}
-                            whileHover={{ scale: 1.01 }}
-                            whileTap={{ scale: 0.99 }}
-                            className="w-full py-3.5 px-4 mt-2 bg-gradient-to-r from-cyan-500 to-fuchsia-500 
-                                     hover:from-cyan-400 hover:to-fuchsia-400
-                                     disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed
-                                     text-white font-semibold rounded-xl 
-                                     shadow-lg shadow-fuchsia-500/25 hover:shadow-fuchsia-500/40
-                                     transition-all duration-300"
+                            className="w-full py-3 px-4 mt-2 bg-primary-500 hover:bg-primary-600
+                                     disabled:bg-dark-300 disabled:cursor-not-allowed
+                                     text-white font-semibold rounded-lg 
+                                     transition-all duration-200"
                         >
                             {isLoading ? (
                                 <span className="flex items-center justify-center gap-2">
@@ -322,24 +283,24 @@ export function RegisterPage() {
                             ) : (
                                 'Create account'
                             )}
-                        </motion.button>
+                        </button>
                     </form>
 
                     <div className="mt-6 text-center">
-                        <p className="text-slate-400">
+                        <p className="text-gray-400">
                             Already have an account?{' '}
-                            <Link to="/login" className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors">
+                            <Link to="/login" className="text-primary-400 hover:text-primary-300 font-medium transition-colors">
                                 Sign in
                             </Link>
                         </p>
                     </div>
 
-                    <div className="mt-6 pt-6 border-t border-white/10">
-                        <p className="text-xs text-slate-500 text-center">
+                    <div className="mt-6 pt-6 border-t border-dark-300">
+                        <p className="text-xs text-gray-500 text-center">
                             By creating an account, you agree to our{' '}
-                            <Link to="/terms" className="text-slate-400 hover:text-white underline">Terms of Service</Link>
+                            <Link to="/terms" className="text-gray-400 hover:text-white underline">Terms of Service</Link>
                             {' '}and{' '}
-                            <Link to="/privacy" className="text-slate-400 hover:text-white underline">Privacy Policy</Link>.
+                            <Link to="/privacy" className="text-gray-400 hover:text-white underline">Privacy Policy</Link>.
                         </p>
                     </div>
                 </div>

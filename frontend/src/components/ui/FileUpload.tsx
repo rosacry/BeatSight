@@ -385,7 +385,7 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
                         )}
                     >
                         {uploadVariant === 'success'
-                            ? 'Files uploaded successfully!'
+                            ? 'Upload complete!'
                             : uploadVariant === 'error'
                                 ? 'Upload failed'
                                 : label}

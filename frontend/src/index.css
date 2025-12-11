@@ -4,86 +4,177 @@
 
 @layer base {
 
-    /* Scrollbar styling that blends with the dark theme */
+    /* osu!-inspired root variables */
+    :root {
+        --beat-pink: #ff66ab;
+        --beat-purple: #aa92ff;
+        --beat-blue: #66ccff;
+        --beat-bg: #1a1a1a;
+        --beat-bg-light: #222222;
+        --beat-bg-dark: #121212;
+        --beat-text: #ffffff;
+        --beat-text-muted: #888888;
+    }
+
+    /* Scrollbar styling - osu! inspired, clean and subtle */
     html {
         overflow-x: hidden;
         overflow-y: scroll;
         scrollbar-gutter: stable;
+        background-color: var(--beat-bg);
     }
 
     body {
         @apply antialiased;
         overflow-x: hidden;
+        background-color: var(--beat-bg);
+        color: var(--beat-text);
     }
 
-    /* Custom scrollbar styling - matches the dark slate theme */
+    /* Custom scrollbar - osu! style, thin and subtle */
     ::-webkit-scrollbar {
-        width: 10px;
+        width: 8px;
         background: transparent;
     }
 
     ::-webkit-scrollbar-track {
-        background: rgba(15, 23, 42, 0.5);
-        border-radius: 5px;
+        background: var(--beat-bg-dark);
     }
 
     ::-webkit-scrollbar-thumb {
-        background: linear-gradient(180deg, rgba(71, 85, 105, 0.6) 0%, rgba(51, 65, 85, 0.6) 100%);
-        border-radius: 5px;
-        border: 2px solid transparent;
-        background-clip: padding-box;
+        background: #333333;
+        border-radius: 4px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(180deg, rgba(100, 116, 139, 0.8) 0%, rgba(71, 85, 105, 0.8) 100%);
-        background-clip: padding-box;
+        background: #444444;
     }
 
     ::-webkit-scrollbar-thumb:active {
-        background: linear-gradient(180deg, rgba(0, 212, 255, 0.6) 0%, rgba(168, 85, 247, 0.4) 100%);
-        background-clip: padding-box;
+        background: var(--beat-pink);
     }
 
     /* Firefox scrollbar styling */
     * {
         scrollbar-width: thin;
-        scrollbar-color: rgba(71, 85, 105, 0.6) rgba(15, 23, 42, 0.5);
+        scrollbar-color: #333333 var(--beat-bg-dark);
+    }
+
+    /* Selection color - osu! pink */
+    ::selection {
+        background-color: rgba(255, 102, 171, 0.3);
+        color: white;
     }
 }
 
 @layer components {
+
+    /* osu!-inspired button base */
     .btn {
-        @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+        @apply px-4 py-2 rounded-lg font-semibold transition-all duration-200;
+        @apply focus:outline-none focus:ring-2 focus:ring-primary-400/50;
     }
 
     .btn-primary {
-        @apply bg-primary-600 hover:bg-primary-700 text-white;
+        background: linear-gradient(135deg, #ff66ab 0%, #e91e8c 100%);
+        @apply text-white shadow-md;
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #ff7ab8 0%, #ff66ab 100%);
+        @apply shadow-glow-pink;
     }
 
     .btn-secondary {
-        @apply bg-gray-700 hover:bg-gray-600 text-white;
+        @apply bg-dark-200 hover:bg-dark-100 text-white border border-white/10;
     }
 
+    .btn-secondary:hover {
+        @apply border-primary-400/30;
+    }
+
+    /* osu!-inspired card styling */
     .card {
-        @apply bg-gray-800 rounded-xl p-6 shadow-lg;
+        @apply bg-dark-300 rounded-xl p-6;
+        @apply border border-white/5;
     }
 
+    .card-elevated {
+        @apply card shadow-lg;
+    }
+
+    .card-interactive {
+        @apply card cursor-pointer transition-all duration-200;
+    }
+
+    .card-interactive:hover {
+        @apply bg-dark-200 border-primary-400/20;
+    }
+
+    /* osu!-inspired input styling */
     .input {
-        @apply w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-200;
+        @apply w-full px-4 py-3 bg-dark-400 border border-white/10 rounded-lg;
+        @apply text-white placeholder-gray-500;
+        @apply focus:outline-none focus:border-primary-400/50 focus:ring-1 focus:ring-primary-400/30;
+        @apply transition-all duration-200;
     }
 
-    /* Enhanced select styling with smooth animations */
+    .input:hover:not(:focus) {
+        @apply border-white/20;
+    }
+
+    /* Enhanced select styling */
     select.input {
-        @apply cursor-pointer hover:border-primary-500/50 hover:bg-gray-700/80;
+        @apply cursor-pointer;
         appearance: none;
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-        background-position: right 0.5rem center;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23888888' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 0.75rem center;
         background-repeat: no-repeat;
-        background-size: 1.5em 1.5em;
+        background-size: 1.25em 1.25em;
         padding-right: 2.5rem;
     }
 
-    select.input:focus {
-        @apply ring-cyan-500/50 border-cyan-500/50;
+    /* Badge styles - clean and readable */
+    .badge {
+        @apply inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium;
+    }
+
+    .badge-pink {
+        @apply bg-primary-400/20 text-primary-400 border border-primary-400/30;
+    }
+
+    .badge-purple {
+        @apply bg-accent-400/20 text-accent-400 border border-accent-400/30;
+    }
+
+    .badge-success {
+        @apply bg-green-500/20 text-green-400 border border-green-500/30;
+    }
+
+    .badge-warning {
+        @apply bg-yellow-500/20 text-yellow-400 border border-yellow-500/30;
+    }
+
+    .badge-error {
+        @apply bg-red-500/20 text-red-400 border border-red-500/30;
+    }
+
+    /* Subtle divider */
+    .divider {
+        @apply border-t border-white/10 my-4;
+    }
+
+    /* Link styling */
+    .link {
+        @apply text-primary-400 hover:text-primary-300 transition-colors;
+    }
+
+    /* Section headers */
+    .section-title {
+        @apply text-xl font-bold text-white mb-4;
+    }
+
+    .section-subtitle {
+        @apply text-sm text-gray-400 mb-6;
     }
 }

@@ -33,7 +33,7 @@ export function CreditCancelPage() {
                 </h1>
 
                 <p className="text-gray-400 mb-8">
-                    No worries! Your card was not charged. You can try again anytime.
+                    No charge applied. Try again anytime.
                 </p>
 
                 {/* Info box */}

@@ -1,6 +1,6 @@
 /**
  * Main forum page showing all categories and forums.
- * Redesigned to match BeatSight's cyan/magenta design language.
+ * Clean design following osu! design language.
  */
 
 import { useState } from 'react'
@@ -10,7 +10,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { getForumCategories, getRecentTopics } from '@/api/forum'
 import { ForumCategoryList, TopicList } from '@/components/forum'
 import { useAuthStore } from '@/stores/authStore'
-import { GradientOrbs, ParticleBackground } from '@/components/ui/ParticleBackground'
 import { AnimatedCounter } from '@/components/ui'
 import type { Forum } from '@/types/forum'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
@@ -76,19 +75,9 @@ export function ForumPage() {
     const totalForums = categories?.reduce((acc, c) => acc + c.forums.length, 0) || 0
 
     return (
-        <div className="relative min-h-screen overflow-hidden">
-            {/* Background Effects */}
-            <div className="fixed inset-0 bg-gradient-to-b from-slate-900 via-slate-950 to-black pointer-events-none" />
-            <GradientOrbs />
-            <ParticleBackground
-                particleCount={30}
-                colors={['#00d4ff', '#ff3296', '#f59e0b']}
-                speed={0.15}
-                interactive={false}
-            />
-
+        <div className="min-h-screen bg-dark-500">
             {/* Content */}
-            <div className="relative z-10 max-w-6xl mx-auto px-4 py-8">
+            <div className="max-w-6xl mx-auto px-4 py-8">
                 <motion.div
                     initial="hidden"
                     animate="visible"
@@ -97,13 +86,13 @@ export function ForumPage() {
                 >
                     {/* Header */}
                     <motion.div variants={itemVariants}>
-                        <div className="relative overflow-hidden rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 p-8">
-                            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                        <div className="rounded-xl bg-dark-400 border border-dark-300 p-8">
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                                 <div>
-                                    <h1 className="text-4xl font-bold text-white mb-2">
-                                        Community <span className="text-cyan-400">Forums</span>
+                                    <h1 className="text-3xl font-bold text-white mb-2">
+                                        Community <span className="text-primary-400">Forums</span>
                                     </h1>
-                                    <p className="text-slate-300 text-lg max-w-xl">
+                                    <p className="text-gray-400 text-lg max-w-xl">
                                         The global hub for drummers – share transcriptions, discuss techniques, and build the world's largest community-verified drum sheet repository
                                     </p>
                                 </div>
@@ -114,9 +103,8 @@ export function ForumPage() {
                                     {user && (
                                         <button
                                             onClick={() => setShowForumSelector(true)}
-                                            className="group flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-600 
-                                                     hover:from-cyan-400 hover:to-cyan-500 rounded-xl text-white font-medium
-                                                     transition-all duration-200 hover:scale-[1.02] shadow-lg shadow-cyan-500/25"
+                                            className="flex items-center gap-2 px-5 py-2.5 bg-primary-500 hover:bg-primary-600
+                                                     rounded-lg text-white font-medium transition-all duration-200"
                                         >
                                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -128,8 +116,8 @@ export function ForumPage() {
                                     {/* Search */}
                                     <Link
                                         to="/forum/search"
-                                        className="flex items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 
-                                                 rounded-xl text-white transition-all duration-200 backdrop-blur-sm border border-white/10"
+                                        className="flex items-center gap-2 px-5 py-2.5 bg-dark-300 hover:bg-dark-200 
+                                                 rounded-lg text-white transition-all duration-200 border border-dark-200"
                                     >
                                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -138,10 +126,6 @@ export function ForumPage() {
                                     </Link>
                                 </div>
                             </div>
-
-                            {/* Background decoration */}
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl" />
-                            <div className="absolute bottom-0 left-0 w-48 h-48 bg-magenta-500/10 rounded-full blur-3xl" />
                         </div>
                     </motion.div>
 
@@ -149,34 +133,30 @@ export function ForumPage() {
                     <motion.div variants={itemVariants}>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                             {user && (
-                                <div className="group p-5 rounded-2xl bg-gradient-to-br from-magenta-500/20 to-magenta-600/10
-                                              border border-magenta-500/30 hover:border-magenta-400/50 transition-all duration-300">
-                                    <div className="text-3xl font-bold text-magenta-400">
+                                <div className="p-5 rounded-xl bg-dark-400 border border-primary-500/30 transition-all duration-200">
+                                    <div className="text-3xl font-bold text-primary-400">
                                         <AnimatedCounter value={user.karma_score || 0} />
                                     </div>
-                                    <div className="text-sm text-slate-400 mt-1">Your Karma</div>
+                                    <div className="text-sm text-gray-400 mt-1">Your Karma</div>
                                 </div>
                             )}
-                            <div className="group p-5 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-cyan-600/10
-                                          border border-cyan-500/30 hover:border-cyan-400/50 transition-all duration-300">
-                                <div className="text-3xl font-bold text-cyan-400">
+                            <div className="p-5 rounded-xl bg-dark-400 border border-accent-500/30 transition-all duration-200">
+                                <div className="text-3xl font-bold text-accent-400">
                                     <AnimatedCounter value={totalTopics} />
                                 </div>
-                                <div className="text-sm text-slate-400 mt-1">Total Topics</div>
+                                <div className="text-sm text-gray-400 mt-1">Total Topics</div>
                             </div>
-                            <div className="group p-5 rounded-2xl bg-gradient-to-br from-fuchsia-500/20 to-fuchsia-600/10
-                                          border border-fuchsia-500/30 hover:border-fuchsia-400/50 transition-all duration-300">
-                                <div className="text-3xl font-bold text-fuchsia-400">
+                            <div className="p-5 rounded-xl bg-dark-400 border border-blue-500/30 transition-all duration-200">
+                                <div className="text-3xl font-bold text-blue-400">
                                     <AnimatedCounter value={totalPosts} />
                                 </div>
-                                <div className="text-sm text-slate-400 mt-1">Total Posts</div>
+                                <div className="text-sm text-gray-400 mt-1">Total Posts</div>
                             </div>
-                            <div className="group p-5 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-600/10
-                                          border border-amber-500/30 hover:border-amber-400/50 transition-all duration-300">
-                                <div className="text-3xl font-bold text-amber-400">
+                            <div className="p-5 rounded-xl bg-dark-400 border border-yellow-500/30 transition-all duration-200">
+                                <div className="text-3xl font-bold text-yellow-400">
                                     <AnimatedCounter value={totalForums} />
                                 </div>
-                                <div className="text-sm text-slate-400 mt-1">Forums</div>
+                                <div className="text-sm text-gray-400 mt-1">Forums</div>
                             </div>
                         </div>
                     </motion.div>
@@ -184,11 +164,11 @@ export function ForumPage() {
                     {/* Recent Topics */}
                     {recentTopics && recentTopics.items.length > 0 && (
                         <motion.div variants={itemVariants}>
-                            <div className="rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 overflow-hidden">
+                            <div className="rounded-2xl bg-dark-400 border border-white/10 overflow-hidden">
                                 <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-magenta-500 flex items-center justify-center">
-                                            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <div className="w-10 h-10 rounded-xl bg-primary-500/20 flex items-center justify-center">
+                                            <svg className="w-5 h-5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
                                         </div>
@@ -196,7 +176,7 @@ export function ForumPage() {
                                     </div>
                                     <Link
                                         to="/forum/recent"
-                                        className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors font-medium"
+                                        className="text-sm text-primary-400 hover:text-primary-300 transition-colors font-medium"
                                     >
                                         View all →
                                     </Link>
@@ -220,7 +200,7 @@ export function ForumPage() {
                                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                     </svg>
-                                    <span>Failed to load forums. Please try again later.</span>
+                                    <span>Failed to load forums.</span>
                                 </div>
                             </div>
                         </motion.div>
@@ -237,28 +217,27 @@ export function ForumPage() {
                     {/* Login prompt for non-logged in users */}
                     {!user && (
                         <motion.div variants={itemVariants}>
-                            <div className="rounded-2xl bg-gradient-to-r from-cyan-500/10 to-magenta-500/10 
-                                          border border-cyan-500/30 p-8 text-center">
-                                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-cyan-500 to-magenta-500 
+                            <div className="rounded-xl bg-dark-400 border border-primary-500/30 p-8 text-center">
+                                <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-primary-500 
                                               flex items-center justify-center">
                                     <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
                                     </svg>
                                 </div>
                                 <h3 className="text-xl font-bold text-white mb-2">Join the Conversation</h3>
-                                <p className="text-slate-400 mb-6">Sign in to create topics, reply to discussions, and earn karma</p>
+                                <p className="text-gray-400 mb-6">Sign in to post and earn karma</p>
                                 <div className="flex items-center justify-center gap-4">
                                     <Link
                                         to="/login"
-                                        className="px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500
-                                                 rounded-xl text-white font-medium transition-all duration-200"
+                                        className="px-6 py-2.5 bg-primary-500 hover:bg-primary-600
+                                                 rounded-lg text-white font-medium transition-all duration-200"
                                     >
                                         Sign In
                                     </Link>
                                     <Link
                                         to="/register"
-                                        className="px-6 py-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-white font-medium
-                                                 transition-all duration-200 border border-white/10"
+                                        className="px-6 py-2.5 bg-dark-300 hover:bg-dark-200 rounded-lg text-white font-medium
+                                                 transition-all duration-200 border border-dark-200"
                                     >
                                         Create Account
                                     </Link>
@@ -278,7 +257,7 @@ export function ForumPage() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+                            className="fixed inset-0 bg-black/60 z-50"
                             onClick={() => setShowForumSelector(false)}
                         />
 
@@ -291,17 +270,17 @@ export function ForumPage() {
                             className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
                         >
                             <div
-                                className="w-full max-w-lg bg-slate-900 rounded-2xl border border-white/10 shadow-2xl overflow-hidden pointer-events-auto"
+                                className="w-full max-w-lg bg-dark-400 rounded-xl border border-dark-300 shadow-2xl overflow-hidden pointer-events-auto"
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 {/* Modal Header */}
-                                <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+                                <div className="px-6 py-4 border-b border-dark-300 flex items-center justify-between">
                                     <h2 className="text-xl font-bold text-white">Select a Forum</h2>
                                     <button
                                         onClick={() => setShowForumSelector(false)}
-                                        className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                                        className="p-2 rounded-lg hover:bg-dark-300 transition-colors"
                                     >
-                                        <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                                         </svg>
                                     </button>
@@ -312,8 +291,8 @@ export function ForumPage() {
                                     {/* Loading state */}
                                     {categoriesLoading && (
                                         <div className="text-center py-8">
-                                            <div className="inline-block w-6 h-6 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin" />
-                                            <p className="text-slate-400 mt-2">Loading forums...</p>
+                                            <div className="inline-block w-6 h-6 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+                                            <p className="text-gray-400 mt-2">Loading forums...</p>
                                         </div>
                                     )}
 
@@ -323,14 +302,14 @@ export function ForumPage() {
                                             <svg className="w-8 h-8 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                             </svg>
-                                            Failed to load forums. Please try again.
+                                            Failed to load forums.
                                         </div>
                                     )}
 
                                     {/* Forum list */}
                                     {!categoriesLoading && !categoriesError && categories?.map(category => (
                                         <div key={category.id}>
-                                            <div className="px-3 py-2 text-sm font-medium text-slate-500 uppercase tracking-wider">
+                                            <div className="px-3 py-2 text-sm font-medium text-gray-500 uppercase tracking-wider">
                                                 {category.name}
                                             </div>
                                             {category.forums
@@ -339,28 +318,28 @@ export function ForumPage() {
                                                     <button
                                                         key={forum.id}
                                                         onClick={() => handleForumSelect(forum)}
-                                                        className="w-full p-4 rounded-xl bg-white/5 hover:bg-white/10 
-                                                                 border border-transparent hover:border-cyan-500/30
+                                                        className="w-full p-4 rounded-lg bg-dark-500 hover:bg-dark-300 
+                                                                 border border-transparent hover:border-primary-500/30
                                                                  text-left transition-all duration-200 group"
                                                     >
                                                         <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/30 to-magenta-500/20 
-                                                                          flex items-center justify-center group-hover:from-cyan-500/40 group-hover:to-magenta-500/30">
-                                                                <svg className="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                            <div className="w-10 h-10 rounded-lg bg-primary-500/20 
+                                                                          flex items-center justify-center">
+                                                                <svg className="w-5 h-5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
                                                                 </svg>
                                                             </div>
                                                             <div className="flex-1 min-w-0">
-                                                                <div className="font-medium text-white group-hover:text-cyan-400 transition-colors">
+                                                                <div className="font-medium text-white group-hover:text-primary-400 transition-colors">
                                                                     {forum.name}
                                                                 </div>
                                                                 {forum.description && (
-                                                                    <div className="text-sm text-slate-400 truncate">
+                                                                    <div className="text-sm text-gray-400 truncate">
                                                                         {forum.description}
                                                                     </div>
                                                                 )}
                                                             </div>
-                                                            <svg className="w-5 h-5 text-slate-500 group-hover:text-cyan-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                            <svg className="w-5 h-5 text-gray-500 group-hover:text-primary-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                                                             </svg>
                                                         </div>
@@ -371,7 +350,7 @@ export function ForumPage() {
 
                                     {/* Empty state - only show when not loading and data loaded but empty */}
                                     {!categoriesLoading && !categoriesError && allForums.length === 0 && (
-                                        <div className="text-center py-8 text-slate-400">
+                                        <div className="text-center py-8 text-gray-400">
                                             No forums available for posting
                                         </div>
                                     )}

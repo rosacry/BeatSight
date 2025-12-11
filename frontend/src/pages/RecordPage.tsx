@@ -228,7 +228,7 @@ export function RecordPage() {
             const song = await songResponse.json()
 
             // Optionally start AI job
-            showSuccess('Recording uploaded successfully!')
+            showSuccess('Recording uploaded!')
 
             // Navigate to the song or job page
             navigate(`/library/${song.id}`)

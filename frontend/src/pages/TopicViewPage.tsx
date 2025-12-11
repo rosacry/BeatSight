@@ -189,8 +189,8 @@ export function TopicViewPage() {
                                 className={clsx(
                                     'flex items-center gap-1 px-3 py-2 rounded transition-colors text-sm',
                                     topic.is_watched
-                                        ? 'bg-purple-600 text-white'
-                                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                        ? 'bg-primary-500 text-white'
+                                        : 'bg-dark-400 text-gray-300 hover:bg-dark-300'
                                 )}
                             >
                                 <svg
@@ -323,8 +323,8 @@ export function TopicViewPage() {
                                         className={clsx(
                                             'w-10 h-10 rounded transition-colors',
                                             page === pageNum
-                                                ? 'bg-purple-600 text-white'
-                                                : 'bg-gray-800 text-gray-400 hover:text-white'
+                                                ? 'bg-primary-500 text-white'
+                                                : 'bg-dark-400 text-gray-400 hover:text-white'
                                         )}
                                     >
                                         {pageNum}

@@ -46,7 +46,7 @@ export function SubscriptionSettings() {
                                     {currentPlan.name}
                                 </h4>
                                 {isPro && (
-                                    <span className="px-2 py-0.5 bg-purple-600/20 text-purple-400 text-xs font-medium rounded">
+                                    <span className="px-2 py-0.5 bg-primary-500/20 text-primary-400 text-xs font-medium rounded">
                                         PRO
                                     </span>
                                 )}
@@ -104,7 +104,7 @@ export function SubscriptionSettings() {
                     </div>
                     <div className="w-full bg-gray-700 rounded-full h-2">
                         <div
-                            className="bg-purple-600 h-2 rounded-full transition-all"
+                            className="bg-primary-500 h-2 rounded-full transition-all"
                             style={{
                                 width: `${Math.min(100, ((subscription?.ai_quota_remaining ?? 3) / (isPro ? 100 : 3)) * 100)}%`
                             }}
@@ -131,7 +131,7 @@ export function SubscriptionSettings() {
                 {!isPro && (
                     <Link
                         to="/pricing"
-                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                        className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors"
                     >
                         Upgrade to Pro
                     </Link>

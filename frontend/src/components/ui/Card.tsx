@@ -9,19 +9,19 @@ import { clsx } from 'clsx'
 const cardVariants = cva(
     // Base styles
     [
-        'rounded-xl transition-all duration-300',
-        'bg-gray-800/80 backdrop-blur-sm',
+        'rounded-xl transition-all duration-200',
+        'bg-dark-400',
     ],
     {
         variants: {
             variant: {
-                default: 'border border-gray-700/50',
+                default: 'border border-dark-300',
                 elevated: [
-                    'border border-gray-700/50',
+                    'border border-dark-300',
                     'shadow-xl shadow-black/20',
                     'hover:shadow-2xl hover:shadow-black/30',
                 ],
-                outlined: 'border-2 border-gray-600',
+                outlined: 'border-2 border-dark-300',
                 ghost: 'bg-transparent border-none',
                 glow: [
                     'border border-primary-500/30',
@@ -31,13 +31,13 @@ const cardVariants = cva(
                 ],
                 gradient: [
                     'border border-transparent',
-                    'bg-gradient-to-br from-gray-800 to-gray-900',
+                    'bg-dark-400',
                     'shadow-lg',
                 ],
                 interactive: [
-                    'border border-gray-700/50',
-                    'hover:bg-gray-700/50',
-                    'hover:border-gray-600',
+                    'border border-dark-300',
+                    'hover:bg-dark-300',
+                    'hover:border-dark-200',
                     'cursor-pointer',
                 ],
             },

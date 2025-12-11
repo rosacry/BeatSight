@@ -238,18 +238,18 @@ export function VerifierDashboardPage() {
     return (
         <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 min-h-[calc(100vh-10rem)]">
             <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Verifier Dashboard</h1>
-            <p className="text-slate-400 text-sm sm:text-base mb-4">Review and approve map edit proposals</p>
+            <p className="text-gray-400 text-sm sm:text-base mb-4">Review and approve map edit proposals</p>
 
             {/* Community Impact Banner */}
-            <div className="mb-6 p-3 sm:p-4 rounded-xl bg-gradient-to-r from-cyan-500/10 to-fuchsia-500/10 border border-cyan-500/20">
+            <div className="mb-6 p-3 sm:p-4 rounded-xl bg-dark-400 border border-primary-500/20">
                 <div className="flex items-start gap-3">
-                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-primary-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <div>
                         <p className="text-white font-medium text-sm sm:text-base">You're building the global index</p>
-                        <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                            Every map you verify helps create the <span className="text-cyan-400">first universal repository for drum transcriptions</span>.
+                        <p className="text-xs sm:text-sm text-gray-400 mt-1">
+                            Every map you verify helps create the <span className="text-primary-400">first universal repository for drum transcriptions</span>.
                             Your reviews ensure quality and improve AI accuracy for drummers worldwide.
                         </p>
                     </div>
@@ -259,32 +259,32 @@ export function VerifierDashboardPage() {
             {/* Stats Cards */}
             {stats && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
-                    <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-3 sm:p-4">
-                        <p className="text-xs sm:text-sm text-slate-400">Pending Queue</p>
+                    <div className="bg-dark-400 rounded-xl border border-dark-300 p-3 sm:p-4">
+                        <p className="text-xs sm:text-sm text-gray-400">Pending Queue</p>
                         <p className="text-xl sm:text-2xl font-bold text-yellow-400">{stats.pending_count}</p>
                     </div>
-                    <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-3 sm:p-4">
-                        <p className="text-xs sm:text-sm text-slate-400">Approved Today</p>
+                    <div className="bg-dark-400 rounded-xl border border-dark-300 p-3 sm:p-4">
+                        <p className="text-xs sm:text-sm text-gray-400">Approved Today</p>
                         <p className="text-xl sm:text-2xl font-bold text-green-400">{stats.approved_today}</p>
                     </div>
-                    <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-3 sm:p-4">
-                        <p className="text-xs sm:text-sm text-slate-400">Rejected Today</p>
+                    <div className="bg-dark-400 rounded-xl border border-dark-300 p-3 sm:p-4">
+                        <p className="text-xs sm:text-sm text-gray-400">Rejected Today</p>
                         <p className="text-xl sm:text-2xl font-bold text-red-400">{stats.rejected_today}</p>
                     </div>
-                    <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-3 sm:p-4">
-                        <p className="text-xs sm:text-sm text-slate-400">Your Total Reviews</p>
-                        <p className="text-xl sm:text-2xl font-bold text-cyan-400">{stats.total_reviewed_by_user}</p>
+                    <div className="bg-dark-400 rounded-xl border border-dark-300 p-3 sm:p-4">
+                        <p className="text-xs sm:text-sm text-gray-400">Your Total Reviews</p>
+                        <p className="text-xl sm:text-2xl font-bold text-primary-400">{stats.total_reviewed_by_user}</p>
                     </div>
                 </div>
             )}
 
             {/* Tabs */}
-            <div className="flex gap-1 p-1 bg-gray-800/50 rounded-xl w-fit mb-6 overflow-x-auto">
+            <div className="flex gap-1 p-1 bg-dark-400 rounded-xl w-fit mb-6 overflow-x-auto">
                 <button
                     onClick={() => handleTabChange('queue')}
                     className={`px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${activeTab === 'queue'
-                        ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/25'
-                        : 'text-slate-400 hover:text-white hover:bg-gray-700/50'
+                        ? 'bg-primary-500 text-white'
+                        : 'text-gray-400 hover:text-white hover:bg-dark-300'
                         }`}
                 >
                     Pending ({stats?.pending_count || 0})
@@ -292,8 +292,8 @@ export function VerifierDashboardPage() {
                 <button
                     onClick={() => handleTabChange('history')}
                     className={`px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${activeTab === 'history'
-                        ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/25'
-                        : 'text-slate-400 hover:text-white hover:bg-gray-700/50'
+                        ? 'bg-primary-500 text-white'
+                        : 'text-gray-400 hover:text-white hover:bg-dark-300'
                         }`}
                 >
                     My Decision History
@@ -304,13 +304,13 @@ export function VerifierDashboardPage() {
             {activeTab === 'queue' && (
                 <div className="space-y-4">
                     {proposals.length === 0 ? (
-                        <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-8 text-center">
-                            <p className="text-slate-300">No pending proposals to review!</p>
-                            <p className="text-sm text-slate-500 mt-2">Check back later for new submissions</p>
+                        <div className="bg-dark-400 rounded-xl border border-dark-300 p-8 text-center">
+                            <p className="text-gray-300">No pending proposals to review!</p>
+                            <p className="text-sm text-gray-500 mt-2">Check back later for new submissions</p>
                         </div>
                     ) : (
                         proposals.map(proposal => (
-                            <div key={proposal.id} className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-4">
+                            <div key={proposal.id} className="bg-dark-400 rounded-xl border border-dark-300 p-4">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-2">
@@ -355,7 +355,7 @@ export function VerifierDashboardPage() {
                     {hasMore && (
                         <button
                             onClick={() => setPage(p => p + 1)}
-                            className="w-full py-2.5 text-cyan-400 hover:bg-gray-700/50 rounded-xl transition-colors"
+                            className="w-full py-2.5 text-primary-400 hover:bg-dark-300 rounded-xl transition-colors"
                         >
                             Load More
                         </button>
@@ -367,31 +367,31 @@ export function VerifierDashboardPage() {
             {activeTab === 'history' && (
                 <div className="space-y-4">
                     {myDecisions.length === 0 ? (
-                        <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-8 text-center">
-                            <p className="text-slate-300">No decisions yet</p>
-                            <p className="text-sm text-slate-500 mt-2">
+                        <div className="bg-dark-400 rounded-xl border border-white/10 p-8 text-center">
+                            <p className="text-gray-300">No decisions yet</p>
+                            <p className="text-sm text-gray-500 mt-2">
                                 Your review history will appear here
                             </p>
                         </div>
                     ) : (
                         myDecisions.map(proposal => (
-                            <div key={proposal.id} className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-4">
+                            <div key={proposal.id} className="bg-dark-400 rounded-xl border border-white/10 p-4">
                                 <div className="flex items-center gap-2 mb-2">
                                     <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(proposal.status)}`}>
                                         {proposal.status}
                                     </span>
                                     {proposal.decision && (
-                                        <span className="text-xs text-slate-400">
+                                        <span className="text-xs text-gray-400">
                                             Decision: {proposal.decision.decision}
                                         </span>
                                     )}
                                 </div>
                                 <h3 className="font-medium text-white">{proposal.summary}</h3>
-                                <p className="text-sm text-slate-400 mt-1">
+                                <p className="text-sm text-gray-400 mt-1">
                                     by @{proposal.proposer.username} • {formatDate(proposal.submitted_at)}
                                 </p>
                                 {proposal.decision?.notes && (
-                                    <p className="text-sm text-slate-300 mt-2 italic">
+                                    <p className="text-sm text-gray-300 mt-2 italic">
                                         "{proposal.decision.notes}"
                                     </p>
                                 )}
@@ -403,8 +403,8 @@ export function VerifierDashboardPage() {
 
             {/* Review Modal */}
             {selectedProposal && (
-                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-gray-800/95 backdrop-blur-xl rounded-2xl border border-gray-700/50 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+                    <div className="bg-dark-400 rounded-2xl border border-white/10 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
                         <div className="p-6">
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-xl font-bold text-white">Review Proposal</h2>
@@ -450,18 +450,18 @@ export function VerifierDashboardPage() {
                             </div>
 
                             <div className="mb-4">
-                                <label className="block text-sm font-medium text-slate-300 mb-2">
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
                                     Decision Notes (optional)
                                 </label>
                                 <textarea
                                     value={decisionNotes}
                                     onChange={e => setDecisionNotes(e.target.value)}
-                                    className="w-full p-3 bg-slate-800/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all"
+                                    className="w-full p-3 bg-dark-300 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all"
                                     rows={3}
                                     placeholder="Add feedback for the proposer..."
                                     maxLength={512}
                                 />
-                                <p className="text-xs text-slate-500 mt-1">
+                                <p className="text-xs text-gray-500 mt-1">
                                     {decisionNotes.length}/512 characters
                                 </p>
                             </div>

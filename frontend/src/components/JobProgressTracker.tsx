@@ -91,7 +91,7 @@ export function JobProgressTracker({ job, onComplete }: JobProgressTrackerProps)
 
                 {job.state === 'complete' && (
                     <p className="text-green-400">
-                        Generation completed successfully! Your beatmap is ready.
+                        Generation complete! Beatmap ready.
                     </p>
                 )}
 

@@ -127,7 +127,7 @@ export function UploadPage() {
             {isQuotaExceeded && (
                 <div className="card bg-red-500/10 border border-red-500/20">
                     <p className="text-red-400 text-sm sm:text-base">
-                        You've reached your generation quota. Please wait until your quota resets or upgrade your plan.
+                        Quota reached. Wait for reset or upgrade plan.
                     </p>
                 </div>
             )}
@@ -167,10 +167,10 @@ export function UploadPage() {
                             </div>
 
                             <p className="text-white font-medium mb-1">
-                                Drop your audio file here, or click to browse
+                                Drop audio here or click to browse
                             </p>
                             <p className="text-gray-400 text-sm">
-                                Supports MP3, WAV, OGG, FLAC up to 100MB
+                                MP3, WAV, OGG, FLAC • Max 100MB
                             </p>
                         </div>
 
@@ -236,8 +236,7 @@ export function UploadPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                             </svg>
                         </div>
-                        <p className="text-white font-medium mb-2">Creating generation job...</p>
-                        <p className="text-gray-400 text-sm">This will only take a moment</p>
+                        <p className="text-white font-medium mb-2">Creating job...</p>
                     </div>
                 )}
 
@@ -248,8 +247,8 @@ export function UploadPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
-                        <p className="text-white font-medium mb-2">Job created successfully!</p>
-                        <p className="text-gray-400 text-sm">Redirecting to job details...</p>
+                        <p className="text-white font-medium mb-2">Job created!</p>
+                        <p className="text-gray-400 text-sm">Redirecting...</p>
                     </div>
                 )}
 

@@ -58,6 +58,14 @@ function ScrollToTop() {
         // Force unlock all body scroll locks on navigation
         // This is a safety net that catches any dialogs/modals that didn't clean up properly
         forceUnlockBodyScroll()
+
+        // Additional delayed cleanup to catch race conditions with exit animations
+        // Some modals use AnimatePresence which can delay cleanup
+        const timeoutId = setTimeout(() => {
+            forceUnlockBodyScroll()
+        }, 150)
+
+        return () => clearTimeout(timeoutId)
     }, [pathname])
 
     return null

@@ -67,7 +67,7 @@ export function AvatarUpload({
             const formData = new FormData()
             formData.append('file', file)
 
-            const response = await fetch(`${API_BASE}/users/me/avatar`, {
+            const response = await fetch(`${API_BASE}/api/users/me/avatar`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -133,7 +133,7 @@ export function AvatarUpload({
         setError(null)
 
         try {
-            const response = await fetch(`${API_BASE}/users/me/avatar`, {
+            const response = await fetch(`${API_BASE}/api/users/me/avatar`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,

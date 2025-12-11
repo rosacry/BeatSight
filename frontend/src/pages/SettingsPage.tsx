@@ -74,7 +74,7 @@ async function fetch2FAStatus(token: string | null) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
     }
-    const response = await fetch(`${API_CONFIG.baseUrl}/auth/2fa/status`, { headers })
+    const response = await fetch(`${API_CONFIG.baseUrl}/api/auth/2fa/status`, { headers })
     if (!response.ok) return null
     return response.json()
 }
@@ -104,7 +104,7 @@ export function SettingsPage() {
             queryClient.prefetchQuery({
                 queryKey: ['twoFactorStatus'],
                 queryFn: async () => {
-                    const response = await fetch(`${API_BASE}/auth/2fa/status`, {
+                    const response = await fetch(`${API_BASE}/api/auth/2fa/status`, {
                         headers: { 'Authorization': `Bearer ${accessToken}` },
                     })
                     if (!response.ok) throw new Error('Failed to fetch 2FA status')
@@ -155,7 +155,11 @@ export function SettingsPage() {
             )
             setContributionConsent(consent)
         } catch (err) {
-            logger.error('Failed to load contribution consent:', err)
+            // Silently handle 404 (user hasn't set consent yet)
+            const errorMessage = err instanceof Error ? err.message : String(err)
+            if (!errorMessage.includes('404') && !errorMessage.includes('not found')) {
+                logger.error('Failed to load contribution consent:', err)
+            }
             // Use defaults on error
         } finally {
             setIsLoadingConsent(false)
@@ -172,9 +176,47 @@ export function SettingsPage() {
                 method: 'POST',
                 body: JSON.stringify(contributionConsent),
             }, accessToken)
-            setSuccessMessage('Privacy settings saved!')
+            setSuccessMessage('Training data settings saved!')
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to save privacy settings')
+            setError(err instanceof Error ? err.message : 'Failed to save training data settings')
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    // Save anonymous mode settings to the database (user_settings table)
+    // This is separate from cloud sync preferences - these settings control
+    // whether the user appears anonymously on leaderboards and public queues
+    const handleSaveAnonymousSettings = async () => {
+        if (!accessToken || !preferences) return
+        setIsSaving(true)
+        setError(null)
+        try {
+            // Save to user_settings table via /users/me/settings endpoint
+            await apiRequest('/users/me/settings', {
+                method: 'PATCH',
+                body: JSON.stringify({
+                    hide_from_leaderboards: preferences.custom_settings?.hideFromLeaderboards ?? false,
+                    hide_from_public_queues: preferences.custom_settings?.hideFromPublicQueues ?? false,
+                }),
+            }, accessToken)
+            
+            // Also save to cloud sync preferences for cross-device consistency
+            try {
+                await apiRequest('/sync/preferences', {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        custom_settings: preferences.custom_settings,
+                    }),
+                }, accessToken)
+            } catch {
+                // Cloud sync might be disabled, that's okay
+                logger.debug('Cloud sync preferences update skipped (might be disabled)')
+            }
+            
+            setSuccessMessage('Anonymous mode settings saved!')
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to save anonymous mode settings')
         } finally {
             setIsSaving(false)
         }
@@ -189,8 +231,15 @@ export function SettingsPage() {
             setPreferences(prefs)
             setError(null)
         } catch (err) {
-            logger.error('Failed to load preferences:', err)
-            // Initialize with defaults if not found
+            // Cloud sync might be disabled, handle gracefully without spamming console
+            const errorMessage = err instanceof Error ? err.message : String(err)
+            if (errorMessage.includes('Cloud sync is not currently available') || 
+                errorMessage.includes('404')) {
+                logger.debug('Cloud sync disabled, using local preferences')
+            } else {
+                logger.error('Failed to load preferences:', err)
+            }
+            // Initialize with defaults if cloud sync unavailable
             setPreferences({
                 scroll_speed: 1.0,
                 note_skin: 'default',
@@ -352,7 +401,7 @@ export function SettingsPage() {
         setIsSaving(true)
         setError(null)
         try {
-            await fetch(`${API_BASE}/auth/forgot-password`, {
+            await fetch(`${API_BASE}/api/auth/forgot-password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: user.email }),
@@ -932,6 +981,10 @@ export function SettingsPage() {
                                                     <strong>Note:</strong> Your contributions still count toward community improvements.
                                                 </p>
                                             </div>
+
+                                            <button onClick={handleSaveAnonymousSettings} disabled={isSaving} className="btn btn-primary mt-4">
+                                                {isSaving ? 'Saving...' : 'Save Anonymous Mode'}
+                                            </button>
                                         </div>
 
                                         {/* Training Data Section */}
@@ -1019,7 +1072,7 @@ export function SettingsPage() {
                                             )}
 
                                             <button onClick={handleSaveContributionConsent} disabled={isSaving || isLoadingConsent} className="btn btn-primary">
-                                                {isSaving ? 'Saving...' : 'Save Privacy Settings'}
+                                                {isSaving ? 'Saving...' : 'Save Training Data Settings'}
                                             </button>
                                         </div>
                                     </div>

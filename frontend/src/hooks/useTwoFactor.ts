@@ -45,7 +45,7 @@ async function twoFactorRequest<T>(
         headers['Authorization'] = `Bearer ${token}`
     }
 
-    const response = await fetch(`${API_BASE}/auth/2fa${endpoint}`, {
+    const response = await fetch(`${API_BASE}/api/auth/2fa${endpoint}`, {
         ...options,
         headers: { ...headers, ...options.headers as Record<string, string> },
     })

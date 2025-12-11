@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore, TwoFactorRequiredError } from '@/stores/authStore'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { forceUnlockBodyScroll, removeStaleOverlays } from '@/lib/bodyScrollLock'
-import { TRANSITION_DURATION, EASE_CURVE } from '@/components/ui/UnifiedTransitions'
+import { TRANSITION_DURATION, EASE_CURVE, PageContentWrapper } from '@/components/ui/UnifiedTransitions'
 
 // Eye icons for password visibility toggle
 function EyeIcon() {
@@ -78,7 +78,7 @@ export function LoginPage() {
     // Show loading state while checking auth
     if (isLoading || !hasHydrated) {
         return (
-            <div className="min-h-[80vh] flex items-center justify-center">
+            <PageContentWrapper isLoading={true} className="min-h-[80vh] flex items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
                     <svg className="animate-spin h-8 w-8 text-primary-400" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -86,7 +86,7 @@ export function LoginPage() {
                     </svg>
                     <p className="text-gray-500 text-sm">Checking authentication...</p>
                 </div>
-            </div>
+            </PageContentWrapper>
         )
     }
 
@@ -177,7 +177,7 @@ export function LoginPage() {
     }
 
     return (
-        <div className="min-h-[80vh] flex items-center justify-center px-4">
+        <PageContentWrapper className="min-h-[80vh] flex items-center justify-center px-4">
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -403,6 +403,6 @@ export function LoginPage() {
                     </AnimatePresence>
                 </div>
             </motion.div>
-        </div>
+        </PageContentWrapper>
     )
 }

@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { PRICING_PLANS } from '@/types/billing'
 import { LandingDemo } from '@/components/LandingDemo'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { PageContentWrapper } from '@/components/ui/UnifiedTransitions'
 import {
     EXTERNAL_LINKS,
     getCommunityLink,
@@ -21,7 +22,7 @@ export function LandingPage() {
     const { isAuthenticated } = useAuthStore()
 
     return (
-        <div className="min-h-screen bg-dark-500">
+        <PageContentWrapper className="min-h-screen bg-dark-500">
             {/* Hero Section */}
             <section className="relative overflow-hidden">
                 <div className="relative max-w-5xl mx-auto px-4 py-20 sm:py-28">
@@ -271,7 +272,7 @@ export function LandingPage() {
                     </div>
                 </div>
             </footer>
-        </div>
+        </PageContentWrapper>
     )
 }
 

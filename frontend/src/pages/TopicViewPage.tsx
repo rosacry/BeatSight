@@ -18,6 +18,7 @@ import {
 import { ForumPostCard, ForumPoll, PostEditor } from '@/components/forum'
 import { useAuthStore } from '@/stores/authStore'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { PageContentWrapper } from '@/components/ui/UnifiedTransitions'
 import clsx from 'clsx'
 
 export function TopicViewPage() {
@@ -112,7 +113,7 @@ export function TopicViewPage() {
 
     if (topicLoading) {
         return (
-            <div className="max-w-4xl mx-auto">
+            <PageContentWrapper isLoading={true} className="max-w-4xl mx-auto">
                 <div className="animate-pulse space-y-6">
                     <div className="h-8 bg-dark-300 rounded w-3/4" />
                     <div className="h-4 bg-dark-300 rounded w-48" />
@@ -124,13 +125,13 @@ export function TopicViewPage() {
                         ))}
                     </div>
                 </div>
-            </div>
+            </PageContentWrapper>
         )
     }
 
     if (topicError || !topic) {
         return (
-            <div className="max-w-4xl mx-auto">
+            <PageContentWrapper className="max-w-4xl mx-auto">
                 <div className="card bg-red-500/10 border border-red-500/30 text-red-400 text-center py-12">
                     <h2 className="text-xl font-bold mb-2">Topic Not Found</h2>
                     <p>The topic you're looking for doesn't exist or has been removed.</p>
@@ -138,12 +139,12 @@ export function TopicViewPage() {
                         Back to Forums
                     </Link>
                 </div>
-            </div>
+            </PageContentWrapper>
         )
     }
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        <PageContentWrapper className="max-w-4xl mx-auto px-4 py-6 space-y-6">
             {/* Topic header */}
             <div className="card bg-dark-400/50 border border-white/10">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -356,6 +357,6 @@ export function TopicViewPage() {
                 placeholder="Write your reply..."
                 submitText="Post Reply"
             />
-        </div>
+        </PageContentWrapper>
     )
 }

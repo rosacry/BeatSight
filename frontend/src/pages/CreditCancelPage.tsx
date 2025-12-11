@@ -5,11 +5,12 @@
 
 import { Link } from 'react-router-dom'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { PageContentWrapper } from '@/components/ui/UnifiedTransitions'
 
 export function CreditCancelPage() {
     useDocumentTitle('purchase cancelled')
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 flex items-center justify-center px-4">
+        <PageContentWrapper className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 flex items-center justify-center px-4">
             <div className="max-w-md w-full text-center">
                 {/* Cancel icon */}
                 <div className="mx-auto w-20 h-20 bg-dark-300/50 rounded-full flex items-center justify-center mb-6">
@@ -82,7 +83,7 @@ export function CreditCancelPage() {
                     Having trouble? <a href="mailto:support@beatsight.io" className="text-primary-400 hover:underline">Contact support</a>
                 </p>
             </div>
-        </div>
+        </PageContentWrapper>
     )
 }
 

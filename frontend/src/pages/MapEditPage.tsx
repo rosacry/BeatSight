@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { TimelineEditor } from '../components/timeline'
 import { Layout } from '../components/NavigationShell'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { PageContentWrapper } from '@/components/ui/UnifiedTransitions'
 import type { Beatmap, NoteEdit } from '../types/beatmap'
 import { api } from '../lib/api'
 
@@ -111,12 +112,14 @@ export function MapEditPage() {
     if (loading) {
         return (
             <Layout>
-                <div className="flex h-96 items-center justify-center">
-                    <div className="text-center">
-                        <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-orange-500 border-t-transparent" />
-                        <p className="text-gray-400">Loading map...</p>
+                <PageContentWrapper isLoading={true}>
+                    <div className="flex h-96 items-center justify-center">
+                        <div className="text-center">
+                            <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-orange-500 border-t-transparent" />
+                            <p className="text-gray-400">Loading map...</p>
+                        </div>
                     </div>
-                </div>
+                </PageContentWrapper>
             </Layout>
         )
     }
@@ -124,25 +127,27 @@ export function MapEditPage() {
     if (error || !mapVersion || !editedBeatmap) {
         return (
             <Layout>
-                <div className="flex h-96 flex-col items-center justify-center gap-4">
-                    <div className="text-center">
-                        <h2 className="mb-2 text-xl font-semibold text-red-400">Failed to Load Map</h2>
-                        <p className="text-gray-400">{error || 'Map not found'}</p>
+                <PageContentWrapper>
+                    <div className="flex h-96 flex-col items-center justify-center gap-4">
+                        <div className="text-center">
+                            <h2 className="mb-2 text-xl font-semibold text-red-400">Failed to Load Map</h2>
+                            <p className="text-gray-400">{error || 'Map not found'}</p>
+                        </div>
+                        <Link
+                            to="/library"
+                            className="rounded bg-dark-300 px-4 py-2 text-sm hover:bg-gray-600"
+                        >
+                            Back to Library
+                        </Link>
                     </div>
-                    <Link
-                        to="/library"
-                        className="rounded bg-dark-300 px-4 py-2 text-sm hover:bg-gray-600"
-                    >
-                        Back to Library
-                    </Link>
-                </div>
+                </PageContentWrapper>
             </Layout>
         )
     }
 
     return (
         <Layout>
-            <div className="space-y-6">
+            <PageContentWrapper>
                 {/* Header */}
                 <div className="flex items-start justify-between">
                     <div>
@@ -231,7 +236,7 @@ export function MapEditPage() {
                         <li>Click "Submit Edits" when done to create a proposal for verifier review</li>
                     </ul>
                 </div>
-            </div>
+            </PageContentWrapper>
         </Layout>
     )
 }

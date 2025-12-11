@@ -14,6 +14,7 @@ import { usePurchaseCredits, useCreditBalance } from '@/hooks/useCredits'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/components/Toast'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { PageContentWrapper } from '@/components/ui/UnifiedTransitions'
 
 export function PricingPage() {
     useDocumentTitle('pricing')
@@ -116,7 +117,7 @@ export function PricingPage() {
     const currentPlan = subscription?.plan || 'free'
 
     return (
-        <div className="min-h-screen bg-dark-500 py-8 sm:py-16 px-4">
+        <PageContentWrapper className="min-h-screen bg-dark-500 py-8 sm:py-16 px-4">
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <div className="text-center mb-8 sm:mb-12">
@@ -418,7 +419,7 @@ export function PricingPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        </PageContentWrapper>
     )
 }
 

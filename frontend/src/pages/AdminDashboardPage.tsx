@@ -16,6 +16,7 @@ import {
     AnimatedTabButton,
     StaggerPageContent,
     StaggerSection,
+    PageContentWrapper,
     TRANSITION_DURATION,
     EASE_CURVE
 } from '@/components/ui/UnifiedTransitions'
@@ -481,15 +482,15 @@ export function AdminDashboardPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[60vh]">
+            <PageContentWrapper isLoading={true} className="flex items-center justify-center min-h-[60vh]">
                 <div className="animate-spin h-10 w-10 border-4 border-primary-500 border-t-transparent rounded-full" />
-            </div>
+            </PageContentWrapper>
         )
     }
 
     if (error && !overview) {
         return (
-            <div className="flex items-center justify-center min-h-[60vh]">
+            <PageContentWrapper className="flex items-center justify-center min-h-[60vh]">
                 <div className="text-center">
                     <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
                         <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -502,12 +503,12 @@ export function AdminDashboardPage() {
                         Return to home
                     </Link>
                 </div>
-            </div>
+            </PageContentWrapper>
         )
     }
 
     return (
-        <div className="max-w-7xl mx-auto px-4 py-8">
+        <PageContentWrapper className="max-w-7xl mx-auto px-4 py-8">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
                 <div>
@@ -1312,7 +1313,7 @@ export function AdminDashboardPage() {
                     </StaggerPageContent>
                 )}
             </AnimatedTabContent>
-        </div>
+        </PageContentWrapper>
     )
 }
 

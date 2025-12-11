@@ -18,7 +18,8 @@ import {
     AnimatedTabContent,
     AnimatedTabButton,
     StaggerPageContent,
-    StaggerSection
+    StaggerSection,
+    PageContentWrapper
 } from '@/components/ui/UnifiedTransitions'
 
 // Types
@@ -149,7 +150,7 @@ export function LeaderboardPage() {
         (activeTab === 'contributors' && contributorLoading)
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-8">
+        <PageContentWrapper className="max-w-4xl mx-auto px-4 py-8">
             {/* Header */}
             <div className="text-center mb-8">
                 <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Leaderboards</h1>
@@ -462,6 +463,6 @@ export function LeaderboardPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        </PageContentWrapper>
     )
 }

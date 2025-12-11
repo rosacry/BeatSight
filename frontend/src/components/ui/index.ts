@@ -702,3 +702,36 @@ export {
     GradientOrbs,
     AudioBars,
 } from './ParticleBackground'
+
+// Unified Transitions System
+export {
+    // Animation constants
+    TRANSITION_DURATION,
+    STAGGER_DELAY,
+    EASE_CURVE,
+    // Animation variants
+    tabContentVariants as unifiedTabContentVariants,
+    staggerContainerVariants,
+    staggerItemVariants,
+    pageVariants as unifiedPageVariants,
+    overlayContentVariants,
+    // Components
+    TabContentWrapper,
+    StaggerItem,
+    PreRenderedTabs,
+    SmoothTabContent,
+    AnimatedList,
+    AnimatedSection,
+    FadeTransition,
+    // Hook
+    usePreparedContent,
+    // Types
+    type Tab as UnifiedTab,
+    type TabContentWrapperProps,
+    type StaggerItemProps,
+    type PreRenderedTabsProps,
+    type SmoothTabContentProps,
+    type AnimatedListProps,
+    type AnimatedSectionProps,
+    type FadeTransitionProps,
+} from './UnifiedTransitions'

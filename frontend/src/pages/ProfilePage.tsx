@@ -5,12 +5,16 @@
 
 import { useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { useQuery } from '@tanstack/react-query'
 import { listJobs, listSongs, listAchievements, getMyVerificationStats } from '@/api/client'
 import { format } from 'date-fns'
 import { AchievementGrid } from '@/components/AchievementBadge'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import {
+    tabContentVariants as unifiedTabContentVariants
+} from '@/components/ui/UnifiedTransitions'
 
 const VALID_TABS = ['overview', 'achievements', 'activity'] as const
 type ProfileTab = typeof VALID_TABS[number]
@@ -241,115 +245,125 @@ export function ProfilePage() {
             </div>
 
             {/* Tab Content */}
-            {activeTab === 'overview' ? (
-                <div className="space-y-6">
-                    {/* Account Info */}
-                    <div className="card">
-                        <h2 className="text-lg font-semibold text-white mb-4">Account Information</h2>
-                        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <dt className="text-sm text-gray-500">Display Name</dt>
-                                <dd className="text-white">{user.display_name}</dd>
-                            </div>
-                            <div>
-                                <dt className="text-sm text-gray-500">Email</dt>
-                                <dd className="text-white">{user.email}</dd>
-                            </div>
-                            <div>
-                                <dt className="text-sm text-gray-500">User ID</dt>
-                                <dd className="text-white font-mono text-sm">{user.id}</dd>
-                            </div>
-                            <div>
-                                <dt className="text-sm text-gray-500">Member Since</dt>
-                                <dd className="text-white">
-                                    {format(new Date(user.created_at), 'MMMM d, yyyy')}
-                                </dd>
-                            </div>
-                        </dl>
-                    </div>
-
-                    {/* Quick Actions */}
-                    <div className="card">
-                        <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
-                        <div className="flex flex-wrap gap-3">
-                            <a href="/upload" className="btn btn-primary">
-                                Upload New Song
-                            </a>
-                            <a href="/library" className="btn btn-secondary">
-                                View Library
-                            </a>
-                            <a href="/settings" className="btn btn-secondary">
-                                Edit Settings
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            ) : activeTab === 'achievements' ? (
-                <div className="space-y-6">
-                    {/* Achievement Points Summary */}
-                    {achievementsData && (
-                        <div className="card">
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-lg font-semibold text-white">Your Achievements</h2>
-                                <div className="text-right">
-                                    <div className="text-2xl font-bold text-primary-400">
-                                        {achievementsData.total_points} pts
-                                    </div>
-                                    <div className="text-sm text-gray-400">
-                                        {achievementsData.total_earned} of {achievementsData.achievements.length} earned
-                                    </div>
-                                </div>
-                            </div>
-                            {achievementsLoading ? (
-                                <div className="space-y-3">
-                                    {[1, 2, 3].map((i) => (
-                                        <div key={i} className="h-16 bg-dark-300 rounded animate-pulse" />
-                                    ))}
-                                </div>
-                            ) : (
-                                <AchievementGrid achievements={achievementsData.achievements} />
-                            )}
-                        </div>
-                    )}
-                </div>
-            ) : (
-                <div className="space-y-4">
-                    {jobs && jobs.length > 0 ? (
-                        jobs.slice(0, 10).map((job) => (
-                            <div key={job.id} className="card">
-                                <div className="flex items-center justify-between">
+            <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                    key={activeTab}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    variants={unifiedTabContentVariants}
+                >
+                    {activeTab === 'overview' ? (
+                        <div className="space-y-6">
+                            {/* Account Info */}
+                            <div className="card">
+                                <h2 className="text-lg font-semibold text-white mb-4">Account Information</h2>
+                                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
-                                        <p className="text-white font-medium">
-                                            {job.state === 'complete'
-                                                ? 'Beatmap generated'
-                                                : job.state === 'processing'
-                                                    ? 'Processing...'
-                                                    : job.state === 'queued'
-                                                        ? 'Queued for processing'
-                                                        : job.state === 'failed'
-                                                            ? 'Generation failed'
-                                                            : 'Job created'}
-                                        </p>
-                                        <p className="text-gray-500 text-sm">
-                                            {format(new Date(job.created_at), 'MMM d, yyyy h:mm a')}
-                                        </p>
+                                        <dt className="text-sm text-gray-500">Display Name</dt>
+                                        <dd className="text-white">{user.display_name}</dd>
                                     </div>
-                                    <a
-                                        href={`/jobs/${job.id}`}
-                                        className="text-primary-400 hover:text-primary-300 text-sm"
-                                    >
-                                        View Details →
+                                    <div>
+                                        <dt className="text-sm text-gray-500">Email</dt>
+                                        <dd className="text-white">{user.email}</dd>
+                                    </div>
+                                    <div>
+                                        <dt className="text-sm text-gray-500">User ID</dt>
+                                        <dd className="text-white font-mono text-sm">{user.id}</dd>
+                                    </div>
+                                    <div>
+                                        <dt className="text-sm text-gray-500">Member Since</dt>
+                                        <dd className="text-white">
+                                            {format(new Date(user.created_at), 'MMMM d, yyyy')}
+                                        </dd>
+                                    </div>
+                                </dl>
+                            </div>
+
+                            {/* Quick Actions */}
+                            <div className="card">
+                                <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
+                                <div className="flex flex-wrap gap-3">
+                                    <a href="/upload" className="btn btn-primary">
+                                        Upload New Song
+                                    </a>
+                                    <a href="/library" className="btn btn-secondary">
+                                        View Library
+                                    </a>
+                                    <a href="/settings" className="btn btn-secondary">
+                                        Edit Settings
                                     </a>
                                 </div>
                             </div>
-                        ))
+                        </div>
+                    ) : activeTab === 'achievements' ? (
+                        <div className="space-y-6">
+                            {/* Achievement Points Summary */}
+                            {achievementsData && (
+                                <div className="card">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h2 className="text-lg font-semibold text-white">Your Achievements</h2>
+                                        <div className="text-right">
+                                            <div className="text-2xl font-bold text-primary-400">
+                                                {achievementsData.total_points} pts
+                                            </div>
+                                            <div className="text-sm text-gray-400">
+                                                {achievementsData.total_earned} of {achievementsData.achievements.length} earned
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {achievementsLoading ? (
+                                        <div className="space-y-3">
+                                            {[1, 2, 3].map((i) => (
+                                                <div key={i} className="h-16 bg-dark-300 rounded animate-pulse" />
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <AchievementGrid achievements={achievementsData.achievements} />
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     ) : (
-                        <div className="card text-center py-8">
-                            <p className="text-gray-400">No recent activity</p>
+                        <div className="space-y-4">
+                            {jobs && jobs.length > 0 ? (
+                                jobs.slice(0, 10).map((job) => (
+                                    <div key={job.id} className="card">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-white font-medium">
+                                                    {job.state === 'complete'
+                                                        ? 'Beatmap generated'
+                                                        : job.state === 'processing'
+                                                            ? 'Processing...'
+                                                            : job.state === 'queued'
+                                                                ? 'Queued for processing'
+                                                                : job.state === 'failed'
+                                                                    ? 'Generation failed'
+                                                                    : 'Job created'}
+                                                </p>
+                                                <p className="text-gray-500 text-sm">
+                                                    {format(new Date(job.created_at), 'MMM d, yyyy h:mm a')}
+                                                </p>
+                                            </div>
+                                            <a
+                                                href={`/jobs/${job.id}`}
+                                                className="text-primary-400 hover:text-primary-300 text-sm"
+                                            >
+                                                View Details →
+                                            </a>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="card text-center py-8">
+                                    <p className="text-gray-400">No recent activity</p>
+                                </div>
+                            )}
                         </div>
                     )}
-                </div>
-            )}
+                </motion.div>
+            </AnimatePresence>
         </div>
     )
 }

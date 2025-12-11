@@ -15,6 +15,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { clsx } from 'clsx'
+import { TRANSITION_DURATION, EASE_CURVE } from './UnifiedTransitions'
 
 // ============================================================================
 // BREADCRUMB
@@ -380,7 +381,7 @@ export const SidebarSection = forwardRef<HTMLDivElement, SidebarSectionProps>(
                         {collapsible && (
                             <motion.svg
                                 animate={{ rotate: isCollapsed ? -90 : 0 }}
-                                transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                                transition={{ duration: TRANSITION_DURATION, ease: EASE_CURVE }}
                                 className="w-4 h-4"
                                 fill="none"
                                 viewBox="0 0 24 24"
@@ -397,7 +398,7 @@ export const SidebarSection = forwardRef<HTMLDivElement, SidebarSectionProps>(
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: contentHeight, opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                            transition={{ duration: TRANSITION_DURATION, ease: EASE_CURVE }}
                             className="overflow-hidden"
                         >
                             <div ref={contentRef} className="space-y-0.5 px-2">{children}</div>

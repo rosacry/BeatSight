@@ -9,6 +9,7 @@ import { motion } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { forceUnlockBodyScroll, removeStaleOverlays } from '@/lib/bodyScrollLock'
+import { TRANSITION_DURATION, EASE_CURVE } from '@/components/ui/UnifiedTransitions'
 
 // Eye icons for password visibility toggle
 function EyeIcon() {
@@ -111,7 +112,7 @@ export function RegisterPage() {
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
+                transition={{ duration: TRANSITION_DURATION, ease: EASE_CURVE }}
                 className="w-full max-w-md"
             >
                 <div className="bg-dark-400 rounded-xl p-8 border border-dark-300">

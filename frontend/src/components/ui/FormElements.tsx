@@ -19,6 +19,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 // CVA used for future variants
 import { cn } from '../../lib/utils'
+import { TRANSITION_DURATION, EASE_CURVE } from './UnifiedTransitions'
 
 // ============================================================================
 // FORM CONTEXT
@@ -311,7 +312,7 @@ export const FormGroup = forwardRef<HTMLDivElement, FormGroupProps>(
                         {collapsible && (
                             <motion.svg
                                 animate={{ rotate: isCollapsed ? -90 : 0 }}
-                                transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                                transition={{ duration: TRANSITION_DURATION, ease: EASE_CURVE }}
                                 className="w-5 h-5 text-gray-400"
                                 fill="none"
                                 viewBox="0 0 24 24"
@@ -329,7 +330,7 @@ export const FormGroup = forwardRef<HTMLDivElement, FormGroupProps>(
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: contentHeight, opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                            transition={{ duration: TRANSITION_DURATION, ease: EASE_CURVE }}
                             className="overflow-hidden"
                         >
                             <div ref={contentRef} className="p-4 space-y-4">

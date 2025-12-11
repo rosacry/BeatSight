@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { API_CONFIG } from '@/lib/config'
 import { lockBodyScroll, unlockBodyScroll } from '@/lib/bodyScrollLock'
+import { TRANSITION_DURATION, EASE_CURVE } from '@/components/ui/UnifiedTransitions'
 
 interface ReAuthDialogProps {
     isOpen: boolean
@@ -24,9 +25,13 @@ interface ReAuthDialogProps {
     verificationType?: 'password' | 'email' | '2fa'
 }
 
+// Using unified transition constants for consistency
 const overlayVariants = {
     hidden: { opacity: 0 },
-    visible: { opacity: 1 },
+    visible: {
+        opacity: 1,
+        transition: { duration: TRANSITION_DURATION, ease: EASE_CURVE }
+    },
 }
 
 const dialogVariants = {
@@ -35,13 +40,13 @@ const dialogVariants = {
         opacity: 1,
         scale: 1,
         y: 0,
-        transition: { type: 'spring', duration: 0.3, bounce: 0.2 }
+        transition: { duration: TRANSITION_DURATION, ease: EASE_CURVE }
     },
     exit: {
         opacity: 0,
         scale: 0.95,
         y: 10,
-        transition: { duration: 0.15 }
+        transition: { duration: TRANSITION_DURATION, ease: EASE_CURVE }
     },
 }
 

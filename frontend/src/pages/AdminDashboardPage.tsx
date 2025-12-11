@@ -11,6 +11,9 @@ import { useAuthStore } from '@/stores/authStore'
 import { API_CONFIG } from '@/lib/config'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { Select } from '@/components/ui/Dropdown'
+import {
+    tabContentVariants as unifiedTabContentVariants
+} from '@/components/ui/UnifiedTransitions'
 
 interface SystemOverview {
     total_users: number
@@ -549,733 +552,744 @@ export function AdminDashboardPage() {
                 </div>
             )}
 
-            {/* Overview Tab */}
-            {activeTab === 'overview' && overview && userStats && queueStats && (
-                <div className="space-y-8">
-                    {/* Key Metrics Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <StatCard
-                            title="Total Users"
-                            value={overview.total_users}
-                            icon="👥"
-                            trend={`+${userStats.users_today} today`}
-                        />
-                        <StatCard
-                            title="Active (24h)"
-                            value={overview.active_users_24h}
-                            icon="📈"
-                        />
-                        <StatCard
-                            title="Pro Subscribers"
-                            value={overview.pro_subscribers}
-                            icon="⭐"
-                            trend={`${((overview.pro_subscribers / overview.total_users) * 100).toFixed(1)}%`}
-                        />
-                        <StatCard
-                            title="Jobs Today"
-                            value={overview.jobs_today}
-                            icon="🎵"
-                            trend={`${queueStats.processing} processing`}
-                        />
-                    </div>
-
-                    {/* Queue Status */}
-                    <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
-                        <h3 className="text-lg font-semibold text-white mb-4">Job Queue Status</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                            <QueueItem label="Queued" value={queueStats.queued} color="blue" />
-                            <QueueItem label="Processing" value={queueStats.processing} color="yellow" />
-                            <QueueItem label="Complete" value={queueStats.complete} color="green" />
-                            <QueueItem label="Failed" value={queueStats.failed} color="red" />
-                            <QueueItem label="Cancelled" value={queueStats.cancelled} color="gray" />
-                        </div>
-                        {queueStats.avg_processing_time_seconds && (
-                            <p className="text-gray-400 text-sm mt-4">
-                                Avg processing time: {Math.round(queueStats.avg_processing_time_seconds)}s
-                            </p>
-                        )}
-                    </div>
-
-                    {/* User Stats */}
-                    <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
-                        <h3 className="text-lg font-semibold text-white mb-4">User Growth</h3>
-                        <div className="grid grid-cols-3 gap-6">
-                            <div>
-                                <p className="text-3xl font-bold text-white">{userStats.users_today}</p>
-                                <p className="text-gray-400">Today</p>
+            {/* Tab Content with Unified Transitions */}
+            <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                    key={activeTab}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    variants={unifiedTabContentVariants}
+                >
+                    {/* Overview Tab */}
+                    {activeTab === 'overview' && overview && userStats && queueStats && (
+                        <div className="space-y-8">
+                            {/* Key Metrics Grid */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <StatCard
+                                    title="Total Users"
+                                    value={overview.total_users}
+                                    icon="👥"
+                                    trend={`+${userStats.users_today} today`}
+                                />
+                                <StatCard
+                                    title="Active (24h)"
+                                    value={overview.active_users_24h}
+                                    icon="📈"
+                                />
+                                <StatCard
+                                    title="Pro Subscribers"
+                                    value={overview.pro_subscribers}
+                                    icon="⭐"
+                                    trend={`${((overview.pro_subscribers / overview.total_users) * 100).toFixed(1)}%`}
+                                />
+                                <StatCard
+                                    title="Jobs Today"
+                                    value={overview.jobs_today}
+                                    icon="🎵"
+                                    trend={`${queueStats.processing} processing`}
+                                />
                             </div>
-                            <div>
-                                <p className="text-3xl font-bold text-white">{userStats.users_this_week}</p>
-                                <p className="text-gray-400">This Week</p>
-                            </div>
-                            <div>
-                                <p className="text-3xl font-bold text-white">{userStats.users_this_month}</p>
-                                <p className="text-gray-400">This Month</p>
-                            </div>
-                        </div>
-                        <div className="mt-4 pt-4 border-t border-white/10">
-                            <p className="text-gray-400 text-sm">
-                                {userStats.verified_users} verified ({((userStats.verified_users / userStats.total_users) * 100).toFixed(0)}%)
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
 
-            {/* Users Tab */}
-            {activeTab === 'users' && (
-                <div className="space-y-6">
-                    {/* Search and Filters */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                        <div className="flex-1 min-w-0 relative">
-                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <input
-                                type="text"
-                                placeholder="Search by email or name..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 bg-dark-400 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                            />
-                        </div>
-
-                        {/* Filters row - wraps properly on mobile */}
-                        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
-                            {/* Role Filter */}
-                            <Select
-                                value={roleFilter}
-                                onValueChange={(value) => setRoleFilter(value)}
-                                className="w-full sm:w-[150px] flex-shrink-0"
-                                size="md"
-                                options={[
-                                    { value: 'all', label: 'All Roles' },
-                                    { value: 'user', label: 'User' },
-                                    { value: 'verifier', label: 'Verifier' },
-                                    { value: 'staff', label: 'Staff' },
-                                    { value: 'admin', label: 'Admin' },
-                                ]}
-                            />
-
-                            {/* Status Filter */}
-                            <Select
-                                value={statusFilter}
-                                onValueChange={(value) => setStatusFilter(value)}
-                                className="w-full sm:w-[160px] flex-shrink-0"
-                                size="md"
-                                options={[
-                                    { value: 'all', label: 'All Statuses' },
-                                    { value: 'active', label: 'Active' },
-                                    { value: 'silenced', label: 'Silenced' },
-                                    { value: 'restricted', label: 'Restricted' },
-                                    { value: 'banned', label: 'Banned' },
-                                ]}
-                            />
-
-                            <button
-                                onClick={loadUsers}
-                                className="w-full sm:w-auto px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors flex-shrink-0"
-                            >
-                                Search
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Results count */}
-                    {users.length > 0 && (
-                        <div className="flex items-center justify-between text-sm text-gray-400">
-                            <span>
-                                Showing {sortedUsers.length} of {users.length} users
-                                {(roleFilter !== 'all' || statusFilter !== 'all') && (
-                                    <button
-                                        onClick={() => {
-                                            setRoleFilter('all')
-                                            setStatusFilter('all')
-                                        }}
-                                        className="ml-2 text-primary-400 hover:text-primary-300"
-                                    >
-                                        Clear filters
-                                    </button>
+                            {/* Queue Status */}
+                            <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
+                                <h3 className="text-lg font-semibold text-white mb-4">Job Queue Status</h3>
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                    <QueueItem label="Queued" value={queueStats.queued} color="blue" />
+                                    <QueueItem label="Processing" value={queueStats.processing} color="yellow" />
+                                    <QueueItem label="Complete" value={queueStats.complete} color="green" />
+                                    <QueueItem label="Failed" value={queueStats.failed} color="red" />
+                                    <QueueItem label="Cancelled" value={queueStats.cancelled} color="gray" />
+                                </div>
+                                {queueStats.avg_processing_time_seconds && (
+                                    <p className="text-gray-400 text-sm mt-4">
+                                        Avg processing time: {Math.round(queueStats.avg_processing_time_seconds)}s
+                                    </p>
                                 )}
-                            </span>
+                            </div>
+
+                            {/* User Stats */}
+                            <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
+                                <h3 className="text-lg font-semibold text-white mb-4">User Growth</h3>
+                                <div className="grid grid-cols-3 gap-6">
+                                    <div>
+                                        <p className="text-3xl font-bold text-white">{userStats.users_today}</p>
+                                        <p className="text-gray-400">Today</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-3xl font-bold text-white">{userStats.users_this_week}</p>
+                                        <p className="text-gray-400">This Week</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-3xl font-bold text-white">{userStats.users_this_month}</p>
+                                        <p className="text-gray-400">This Month</p>
+                                    </div>
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-white/10">
+                                    <p className="text-gray-400 text-sm">
+                                        {userStats.verified_users} verified ({((userStats.verified_users / userStats.total_users) * 100).toFixed(0)}%)
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     )}
 
-                    {/* Users Table */}
-                    <div className="bg-dark-400 rounded-xl border border-white/10 overflow-x-auto">
-                        <table className="w-full min-w-[900px]">
-                            <thead className="bg-dark-500">
-                                <tr>
-                                    <th
-                                        onClick={() => handleSort('display_name')}
-                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
-                                    >
-                                        User <SortIndicator field="display_name" />
-                                    </th>
-                                    <th
-                                        onClick={() => handleSort('role')}
-                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
-                                    >
-                                        Role <SortIndicator field="role" />
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                        Plan
-                                    </th>
-                                    <th
-                                        onClick={() => handleSort('karma_score')}
-                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
-                                    >
-                                        Karma <SortIndicator field="karma_score" />
-                                    </th>
-                                    <th
-                                        onClick={() => handleSort('job_count')}
-                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
-                                    >
-                                        Jobs <SortIndicator field="job_count" />
-                                    </th>
-                                    <th
-                                        onClick={() => handleSort('created_at')}
-                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
-                                    >
-                                        Joined <SortIndicator field="created_at" />
-                                    </th>
-                                    <th
-                                        onClick={() => handleSort('restriction_level')}
-                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
-                                    >
-                                        Status <SortIndicator field="restriction_level" />
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                        Actions
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-700">
-                                {sortedUsers.map((user) => (
-                                    <tr key={user.id} className="hover:bg-dark-300/50">
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-2">
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${user.is_banned ? 'bg-red-500/20' :
-                                                    user.is_restricted ? 'bg-yellow-500/20' :
-                                                        'bg-primary-500/20'
-                                                    }`}>
-                                                    <span className={`font-medium text-sm ${user.is_banned ? 'text-red-400' :
-                                                        user.is_restricted ? 'text-yellow-400' :
-                                                            'text-primary-400'
-                                                        }`}>
-                                                        {user.display_name.charAt(0).toUpperCase()}
-                                                    </span>
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-white font-medium truncate">{user.display_name}</p>
-                                                    <p className="text-gray-400 text-xs truncate">{user.email}</p>
-                                                </div>
-                                                <div className="flex gap-1 flex-shrink-0">
-                                                    {user.email_verified && (
-                                                        <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20" aria-label="Email Verified">
-                                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                                        </svg>
-                                                    )}
-                                                    {user.phone_verified && (
-                                                        <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20" aria-label="Phone Verified">
-                                                            <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-                                                        </svg>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <select
-                                                value={user.role}
-                                                onChange={(e) => handleUpdateRole(user.id, e.target.value)}
-                                                disabled={updatingRoleUserId === user.id}
-                                                className={`text-xs rounded-full px-2 py-1 border-0 cursor-pointer ${user.role === 'admin' ? 'bg-red-500/10 text-red-400' :
-                                                    user.role === 'verifier' ? 'bg-purple-500/10 text-purple-400' :
-                                                        'bg-gray-500/10 text-gray-400'
-                                                    } disabled:opacity-50`}
-                                            >
-                                                <option value="user">User</option>
-                                                <option value="verifier">Verifier</option>
-                                                <option value="admin">Admin</option>
-                                            </select>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className={`inline-flex px-2 py-1 text-xs rounded-full ${user.subscription_plan?.includes('pro')
-                                                ? 'bg-primary-500/10 text-primary-400'
-                                                : 'bg-gray-500/10 text-gray-400'
-                                                }`}>
-                                                {user.subscription_plan || 'free'}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-300 text-sm">{user.karma_score}</td>
-                                        <td className="px-4 py-3 text-gray-300 text-sm">{user.job_count}</td>
-                                        <td className="px-4 py-3 text-gray-400 text-xs">
-                                            {new Date(user.created_at).toLocaleDateString()}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {user.is_banned ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-red-500/20 text-red-400">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
-                                                    Banned
-                                                </span>
-                                            ) : user.is_restricted ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-yellow-500/20 text-yellow-400">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-400"></span>
-                                                    {user.restriction_level}
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-green-500/20 text-green-400">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
-                                                    Active
-                                                </span>
-                                            )}
-                                            {user.user_warnings > 0 && (
-                                                <span className="ml-1 text-xs text-yellow-500" title={`${user.user_warnings} warning(s)`}>
-                                                    ⚠️{user.user_warnings}
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-1">
-                                                {/* Moderation dropdown trigger */}
-                                                <button
-                                                    ref={(el) => {
-                                                        if (el) actionButtonRefs.current.set(user.id, el)
-                                                        else actionButtonRefs.current.delete(user.id)
-                                                    }}
-                                                    onClick={() => {
-                                                        if (openActionsUserId === user.id) {
-                                                            setOpenActionsUserId(null)
-                                                            setDropdownPosition(null)
-                                                        } else {
-                                                            const btn = actionButtonRefs.current.get(user.id)
-                                                            if (btn) {
-                                                                const rect = btn.getBoundingClientRect()
-                                                                setDropdownPosition({
-                                                                    top: rect.bottom + 4,
-                                                                    left: rect.right - 192, // 192px = w-48
-                                                                })
-                                                            }
-                                                            setOpenActionsUserId(user.id)
-                                                        }
-                                                    }}
-                                                    className="p-1.5 rounded hover:bg-dark-300 text-gray-400 hover:text-white"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {sortedUsers.length === 0 && (
-                                    <tr>
-                                        <td colSpan={8} className="px-6 py-8 text-center text-gray-400">
-                                            No users found
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
+                    {/* Users Tab */}
+                    {activeTab === 'users' && (
+                        <div className="space-y-6">
+                            {/* Search and Filters */}
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                                <div className="flex-1 min-w-0 relative">
+                                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                    <input
+                                        type="text"
+                                        placeholder="Search by email or name..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-2.5 bg-dark-400 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    />
+                                </div>
 
-            {/* Actions Dropdown Portal */}
-            {openActionsUserId && dropdownPosition && createPortal(
-                <AnimatePresence>
-                    <motion.div
-                        ref={actionsDropdownRef}
-                        initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                        transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
-                        style={{
-                            position: 'fixed',
-                            top: dropdownPosition.top,
-                            left: dropdownPosition.left,
-                        }}
-                        className="w-48 bg-dark-400 border border-white/10 rounded-lg shadow-xl z-[9999]"
-                    >
-                        <div className="p-1">
-                            {(() => {
-                                const user = users.find(u => u.id === openActionsUserId)
-                                if (!user) return null
-                                return (
-                                    <>
-                                        <button
-                                            onClick={() => {
-                                                setModerationModalUser(user)
-                                                setModerationAction('note')
-                                                setOpenActionsUserId(null)
-                                                setDropdownPosition(null)
-                                            }}
-                                            className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-dark-300 rounded"
-                                        >
-                                            📝 Add Note
-                                        </button>
-                                        {!user.is_restricted && (
+                                {/* Filters row - wraps properly on mobile */}
+                                <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
+                                    {/* Role Filter */}
+                                    <Select
+                                        value={roleFilter}
+                                        onValueChange={(value) => setRoleFilter(value)}
+                                        className="w-full sm:w-[150px] flex-shrink-0"
+                                        size="md"
+                                        options={[
+                                            { value: 'all', label: 'All Roles' },
+                                            { value: 'user', label: 'User' },
+                                            { value: 'verifier', label: 'Verifier' },
+                                            { value: 'staff', label: 'Staff' },
+                                            { value: 'admin', label: 'Admin' },
+                                        ]}
+                                    />
+
+                                    {/* Status Filter */}
+                                    <Select
+                                        value={statusFilter}
+                                        onValueChange={(value) => setStatusFilter(value)}
+                                        className="w-full sm:w-[160px] flex-shrink-0"
+                                        size="md"
+                                        options={[
+                                            { value: 'all', label: 'All Statuses' },
+                                            { value: 'active', label: 'Active' },
+                                            { value: 'silenced', label: 'Silenced' },
+                                            { value: 'restricted', label: 'Restricted' },
+                                            { value: 'banned', label: 'Banned' },
+                                        ]}
+                                    />
+
+                                    <button
+                                        onClick={loadUsers}
+                                        className="w-full sm:w-auto px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors flex-shrink-0"
+                                    >
+                                        Search
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Results count */}
+                            {users.length > 0 && (
+                                <div className="flex items-center justify-between text-sm text-gray-400">
+                                    <span>
+                                        Showing {sortedUsers.length} of {users.length} users
+                                        {(roleFilter !== 'all' || statusFilter !== 'all') && (
+                                            <button
+                                                onClick={() => {
+                                                    setRoleFilter('all')
+                                                    setStatusFilter('all')
+                                                }}
+                                                className="ml-2 text-primary-400 hover:text-primary-300"
+                                            >
+                                                Clear filters
+                                            </button>
+                                        )}
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* Users Table */}
+                            <div className="bg-dark-400 rounded-xl border border-white/10 overflow-x-auto">
+                                <table className="w-full min-w-[900px]">
+                                    <thead className="bg-dark-500">
+                                        <tr>
+                                            <th
+                                                onClick={() => handleSort('display_name')}
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
+                                            >
+                                                User <SortIndicator field="display_name" />
+                                            </th>
+                                            <th
+                                                onClick={() => handleSort('role')}
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
+                                            >
+                                                Role <SortIndicator field="role" />
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                                Plan
+                                            </th>
+                                            <th
+                                                onClick={() => handleSort('karma_score')}
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
+                                            >
+                                                Karma <SortIndicator field="karma_score" />
+                                            </th>
+                                            <th
+                                                onClick={() => handleSort('job_count')}
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
+                                            >
+                                                Jobs <SortIndicator field="job_count" />
+                                            </th>
+                                            <th
+                                                onClick={() => handleSort('created_at')}
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
+                                            >
+                                                Joined <SortIndicator field="created_at" />
+                                            </th>
+                                            <th
+                                                onClick={() => handleSort('restriction_level')}
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white"
+                                            >
+                                                Status <SortIndicator field="restriction_level" />
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                                Actions
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-700">
+                                        {sortedUsers.map((user) => (
+                                            <tr key={user.id} className="hover:bg-dark-300/50">
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${user.is_banned ? 'bg-red-500/20' :
+                                                            user.is_restricted ? 'bg-yellow-500/20' :
+                                                                'bg-primary-500/20'
+                                                            }`}>
+                                                            <span className={`font-medium text-sm ${user.is_banned ? 'text-red-400' :
+                                                                user.is_restricted ? 'text-yellow-400' :
+                                                                    'text-primary-400'
+                                                                }`}>
+                                                                {user.display_name.charAt(0).toUpperCase()}
+                                                            </span>
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="text-white font-medium truncate">{user.display_name}</p>
+                                                            <p className="text-gray-400 text-xs truncate">{user.email}</p>
+                                                        </div>
+                                                        <div className="flex gap-1 flex-shrink-0">
+                                                            {user.email_verified && (
+                                                                <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20" aria-label="Email Verified">
+                                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                                </svg>
+                                                            )}
+                                                            {user.phone_verified && (
+                                                                <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20" aria-label="Phone Verified">
+                                                                    <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                                                                </svg>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <select
+                                                        value={user.role}
+                                                        onChange={(e) => handleUpdateRole(user.id, e.target.value)}
+                                                        disabled={updatingRoleUserId === user.id}
+                                                        className={`text-xs rounded-full px-2 py-1 border-0 cursor-pointer ${user.role === 'admin' ? 'bg-red-500/10 text-red-400' :
+                                                            user.role === 'verifier' ? 'bg-purple-500/10 text-purple-400' :
+                                                                'bg-gray-500/10 text-gray-400'
+                                                            } disabled:opacity-50`}
+                                                    >
+                                                        <option value="user">User</option>
+                                                        <option value="verifier">Verifier</option>
+                                                        <option value="admin">Admin</option>
+                                                    </select>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`inline-flex px-2 py-1 text-xs rounded-full ${user.subscription_plan?.includes('pro')
+                                                        ? 'bg-primary-500/10 text-primary-400'
+                                                        : 'bg-gray-500/10 text-gray-400'
+                                                        }`}>
+                                                        {user.subscription_plan || 'free'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-300 text-sm">{user.karma_score}</td>
+                                                <td className="px-4 py-3 text-gray-300 text-sm">{user.job_count}</td>
+                                                <td className="px-4 py-3 text-gray-400 text-xs">
+                                                    {new Date(user.created_at).toLocaleDateString()}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    {user.is_banned ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-red-500/20 text-red-400">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                                                            Banned
+                                                        </span>
+                                                    ) : user.is_restricted ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-yellow-500/20 text-yellow-400">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-yellow-400"></span>
+                                                            {user.restriction_level}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-green-500/20 text-green-400">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
+                                                            Active
+                                                        </span>
+                                                    )}
+                                                    {user.user_warnings > 0 && (
+                                                        <span className="ml-1 text-xs text-yellow-500" title={`${user.user_warnings} warning(s)`}>
+                                                            ⚠️{user.user_warnings}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-1">
+                                                        {/* Moderation dropdown trigger */}
+                                                        <button
+                                                            ref={(el) => {
+                                                                if (el) actionButtonRefs.current.set(user.id, el)
+                                                                else actionButtonRefs.current.delete(user.id)
+                                                            }}
+                                                            onClick={() => {
+                                                                if (openActionsUserId === user.id) {
+                                                                    setOpenActionsUserId(null)
+                                                                    setDropdownPosition(null)
+                                                                } else {
+                                                                    const btn = actionButtonRefs.current.get(user.id)
+                                                                    if (btn) {
+                                                                        const rect = btn.getBoundingClientRect()
+                                                                        setDropdownPosition({
+                                                                            top: rect.bottom + 4,
+                                                                            left: rect.right - 192, // 192px = w-48
+                                                                        })
+                                                                    }
+                                                                    setOpenActionsUserId(user.id)
+                                                                }
+                                                            }}
+                                                            className="p-1.5 rounded hover:bg-dark-300 text-gray-400 hover:text-white"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {sortedUsers.length === 0 && (
+                                            <tr>
+                                                <td colSpan={8} className="px-6 py-8 text-center text-gray-400">
+                                                    No users found
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Actions Dropdown Portal */}
+                    {openActionsUserId && dropdownPosition && createPortal(
+                        <AnimatePresence>
+                            <motion.div
+                                ref={actionsDropdownRef}
+                                initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                                transition={{ duration: TRANSITION_DURATION, ease: EASE_CURVE }}
+                                style={{
+                                    position: 'fixed',
+                                    top: dropdownPosition.top,
+                                    left: dropdownPosition.left,
+                                }}
+                                className="w-48 bg-dark-400 border border-white/10 rounded-lg shadow-xl z-[9999]"
+                            >
+                                <div className="p-1">
+                                    {(() => {
+                                        const user = users.find(u => u.id === openActionsUserId)
+                                        if (!user) return null
+                                        return (
                                             <>
                                                 <button
                                                     onClick={() => {
                                                         setModerationModalUser(user)
-                                                        setModerationAction('silence')
-                                                        setModerationDuration(24)
+                                                        setModerationAction('note')
                                                         setOpenActionsUserId(null)
                                                         setDropdownPosition(null)
                                                     }}
-                                                    className="w-full text-left px-3 py-2 text-sm text-yellow-400 hover:bg-dark-300 rounded"
+                                                    className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-dark-300 rounded"
                                                 >
-                                                    🔇 Silence
+                                                    📝 Add Note
                                                 </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setModerationModalUser(user)
-                                                        setModerationAction('restrict')
-                                                        setModerationDuration(168)
-                                                        setOpenActionsUserId(null)
-                                                        setDropdownPosition(null)
-                                                    }}
-                                                    className="w-full text-left px-3 py-2 text-sm text-orange-400 hover:bg-dark-300 rounded"
-                                                >
-                                                    ⚠️ Restrict
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setModerationModalUser(user)
-                                                        setModerationAction('ban')
-                                                        setModerationPermanent(false)
-                                                        setModerationDuration(720)
-                                                        setOpenActionsUserId(null)
-                                                        setDropdownPosition(null)
-                                                    }}
-                                                    className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-dark-300 rounded"
-                                                >
-                                                    🚫 Ban
-                                                </button>
+                                                {!user.is_restricted && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => {
+                                                                setModerationModalUser(user)
+                                                                setModerationAction('silence')
+                                                                setModerationDuration(24)
+                                                                setOpenActionsUserId(null)
+                                                                setDropdownPosition(null)
+                                                            }}
+                                                            className="w-full text-left px-3 py-2 text-sm text-yellow-400 hover:bg-dark-300 rounded"
+                                                        >
+                                                            🔇 Silence
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setModerationModalUser(user)
+                                                                setModerationAction('restrict')
+                                                                setModerationDuration(168)
+                                                                setOpenActionsUserId(null)
+                                                                setDropdownPosition(null)
+                                                            }}
+                                                            className="w-full text-left px-3 py-2 text-sm text-orange-400 hover:bg-dark-300 rounded"
+                                                        >
+                                                            ⚠️ Restrict
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setModerationModalUser(user)
+                                                                setModerationAction('ban')
+                                                                setModerationPermanent(false)
+                                                                setModerationDuration(720)
+                                                                setOpenActionsUserId(null)
+                                                                setDropdownPosition(null)
+                                                            }}
+                                                            className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-dark-300 rounded"
+                                                        >
+                                                            🚫 Ban
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {user.is_restricted && (
+                                                    <button
+                                                        onClick={() => {
+                                                            handleRemoveRestriction(user.id)
+                                                            setOpenActionsUserId(null)
+                                                            setDropdownPosition(null)
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 text-sm text-green-400 hover:bg-dark-300 rounded"
+                                                    >
+                                                        ✅ Remove Restriction
+                                                    </button>
+                                                )}
                                             </>
+                                        )
+                                    })()}
+                                </div>
+                            </motion.div>
+                        </AnimatePresence>,
+                        document.body
+                    )}
+
+                    {/* Moderation Modal */}
+                    {moderationModalUser && moderationAction && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                            <div className="bg-dark-400 rounded-xl border border-white/10 p-6 w-full max-w-md mx-4">
+                                <h3 className="text-lg font-semibold text-white mb-4">
+                                    {moderationAction === 'note' && '📝 Add Note'}
+                                    {moderationAction === 'silence' && '🔇 Silence User'}
+                                    {moderationAction === 'restrict' && '⚠️ Restrict User'}
+                                    {moderationAction === 'ban' && '🚫 Ban User'}
+                                </h3>
+
+                                <p className="text-gray-400 text-sm mb-4">
+                                    User: <span className="text-white">{moderationModalUser.display_name}</span> ({moderationModalUser.email})
+                                </p>
+
+                                {moderationAction !== 'note' && (
+                                    <div className="mb-4">
+                                        <label className="block text-sm text-gray-400 mb-1">Duration</label>
+                                        {moderationAction === 'ban' && (
+                                            <label className="flex items-center gap-2 mb-2 text-sm text-gray-300">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={moderationPermanent}
+                                                    onChange={(e) => setModerationPermanent(e.target.checked)}
+                                                    className="rounded"
+                                                />
+                                                Permanent
+                                            </label>
                                         )}
-                                        {user.is_restricted && (
-                                            <button
-                                                onClick={() => {
-                                                    handleRemoveRestriction(user.id)
-                                                    setOpenActionsUserId(null)
-                                                    setDropdownPosition(null)
-                                                }}
-                                                className="w-full text-left px-3 py-2 text-sm text-green-400 hover:bg-dark-300 rounded"
+                                        {!moderationPermanent && (
+                                            <select
+                                                value={moderationDuration}
+                                                onChange={(e) => setModerationDuration(Number(e.target.value))}
+                                                className="w-full bg-dark-300 border border-gray-600 text-white rounded-lg px-3 py-2"
                                             >
-                                                ✅ Remove Restriction
-                                            </button>
+                                                <option value={1}>1 hour</option>
+                                                <option value={6}>6 hours</option>
+                                                <option value={24}>24 hours</option>
+                                                <option value={72}>3 days</option>
+                                                <option value={168}>1 week</option>
+                                                <option value={336}>2 weeks</option>
+                                                <option value={720}>1 month</option>
+                                                <option value={2160}>3 months</option>
+                                            </select>
                                         )}
-                                    </>
-                                )
-                            })()}
-                        </div>
-                    </motion.div>
-                </AnimatePresence>,
-                document.body
-            )}
+                                    </div>
+                                )}
 
-            {/* Moderation Modal */}
-            {moderationModalUser && moderationAction && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                    <div className="bg-dark-400 rounded-xl border border-white/10 p-6 w-full max-w-md mx-4">
-                        <h3 className="text-lg font-semibold text-white mb-4">
-                            {moderationAction === 'note' && '📝 Add Note'}
-                            {moderationAction === 'silence' && '🔇 Silence User'}
-                            {moderationAction === 'restrict' && '⚠️ Restrict User'}
-                            {moderationAction === 'ban' && '🚫 Ban User'}
-                        </h3>
-
-                        <p className="text-gray-400 text-sm mb-4">
-                            User: <span className="text-white">{moderationModalUser.display_name}</span> ({moderationModalUser.email})
-                        </p>
-
-                        {moderationAction !== 'note' && (
-                            <div className="mb-4">
-                                <label className="block text-sm text-gray-400 mb-1">Duration</label>
-                                {moderationAction === 'ban' && (
-                                    <label className="flex items-center gap-2 mb-2 text-sm text-gray-300">
-                                        <input
-                                            type="checkbox"
-                                            checked={moderationPermanent}
-                                            onChange={(e) => setModerationPermanent(e.target.checked)}
-                                            className="rounded"
-                                        />
-                                        Permanent
+                                <div className="mb-4">
+                                    <label className="block text-sm text-gray-400 mb-1">
+                                        {moderationAction === 'note' ? 'Note' : 'Reason'}
                                     </label>
-                                )}
-                                {!moderationPermanent && (
-                                    <select
-                                        value={moderationDuration}
-                                        onChange={(e) => setModerationDuration(Number(e.target.value))}
-                                        className="w-full bg-dark-300 border border-gray-600 text-white rounded-lg px-3 py-2"
+                                    <textarea
+                                        value={moderationReason}
+                                        onChange={(e) => setModerationReason(e.target.value)}
+                                        placeholder={moderationAction === 'note' ? 'Enter administrative note...' : 'Enter reason for this action...'}
+                                        className="w-full bg-dark-300 border border-gray-600 text-white rounded-lg px-3 py-2 h-24 resize-none"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="flex gap-3 justify-end">
+                                    <button
+                                        onClick={() => {
+                                            setModerationModalUser(null)
+                                            setModerationAction(null)
+                                            setModerationReason('')
+                                        }}
+                                        className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
                                     >
-                                        <option value={1}>1 hour</option>
-                                        <option value={6}>6 hours</option>
-                                        <option value={24}>24 hours</option>
-                                        <option value={72}>3 days</option>
-                                        <option value={168}>1 week</option>
-                                        <option value={336}>2 weeks</option>
-                                        <option value={720}>1 month</option>
-                                        <option value={2160}>3 months</option>
-                                    </select>
-                                )}
-                            </div>
-                        )}
-
-                        <div className="mb-4">
-                            <label className="block text-sm text-gray-400 mb-1">
-                                {moderationAction === 'note' ? 'Note' : 'Reason'}
-                            </label>
-                            <textarea
-                                value={moderationReason}
-                                onChange={(e) => setModerationReason(e.target.value)}
-                                placeholder={moderationAction === 'note' ? 'Enter administrative note...' : 'Enter reason for this action...'}
-                                className="w-full bg-dark-300 border border-gray-600 text-white rounded-lg px-3 py-2 h-24 resize-none"
-                                required
-                            />
-                        </div>
-
-                        <div className="flex gap-3 justify-end">
-                            <button
-                                onClick={() => {
-                                    setModerationModalUser(null)
-                                    setModerationAction(null)
-                                    setModerationReason('')
-                                }}
-                                className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleModerationSubmit}
-                                disabled={!moderationReason.trim() || moderationSubmitting}
-                                className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 ${moderationAction === 'note' ? 'bg-blue-500 hover:bg-blue-600 text-white' :
-                                    moderationAction === 'silence' ? 'bg-yellow-500 hover:bg-yellow-600 text-black' :
-                                        moderationAction === 'restrict' ? 'bg-orange-500 hover:bg-orange-600 text-white' :
-                                            'bg-red-500 hover:bg-red-600 text-white'
-                                    }`}
-                            >
-                                {moderationSubmitting ? 'Submitting...' : 'Confirm'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Jobs Tab */}
-            {activeTab === 'jobs' && queueStats && (
-                <div className="space-y-6">
-                    {/* Job Stats Overview */}
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                        <div className="bg-blue-500/10 rounded-xl p-4 border border-blue-500/30">
-                            <p className="text-3xl font-bold text-blue-400">{queueStats.queued}</p>
-                            <p className="text-sm text-blue-300/80">Queued</p>
-                        </div>
-                        <div className="bg-yellow-500/10 rounded-xl p-4 border border-yellow-500/30">
-                            <p className="text-3xl font-bold text-yellow-400">{queueStats.processing}</p>
-                            <p className="text-sm text-yellow-300/80">Processing</p>
-                        </div>
-                        <div className="bg-green-500/10 rounded-xl p-4 border border-green-500/30">
-                            <p className="text-3xl font-bold text-green-400">{queueStats.complete}</p>
-                            <p className="text-sm text-green-300/80">Complete</p>
-                        </div>
-                        <div className="bg-red-500/10 rounded-xl p-4 border border-red-500/30">
-                            <p className="text-3xl font-bold text-red-400">{queueStats.failed}</p>
-                            <p className="text-sm text-red-300/80">Failed</p>
-                        </div>
-                        <div className="bg-gray-500/10 rounded-xl p-4 border border-gray-500/30">
-                            <p className="text-3xl font-bold text-gray-400">{queueStats.cancelled}</p>
-                            <p className="text-sm text-gray-300/80">Cancelled</p>
-                        </div>
-                    </div>
-
-                    {/* Additional Stats */}
-                    <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
-                        <h3 className="text-lg font-semibold text-white mb-4">Processing Statistics</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                            <div>
-                                <p className="text-2xl font-bold text-white">{queueStats.total_jobs.toLocaleString()}</p>
-                                <p className="text-gray-400 text-sm">Total Jobs</p>
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold text-white">{queueStats.jobs_today}</p>
-                                <p className="text-gray-400 text-sm">Jobs Today</p>
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold text-white">{queueStats.jobs_this_hour}</p>
-                                <p className="text-gray-400 text-sm">Jobs This Hour</p>
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold text-white">
-                                    {queueStats.avg_processing_time_seconds
-                                        ? `${Math.round(queueStats.avg_processing_time_seconds)}s`
-                                        : 'N/A'
-                                    }
-                                </p>
-                                <p className="text-gray-400 text-sm">Avg Processing Time</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Quick Actions */}
-                    <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h3 className="text-lg font-semibold text-white">Job Management</h3>
-                                <p className="text-gray-400 text-sm mt-1">
-                                    View detailed job information, retry failed jobs, and manage the processing queue.
-                                </p>
-                            </div>
-                            <Link
-                                to="/queue"
-                                className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors"
-                            >
-                                View Full Queue →
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Contributions Tab */}
-            {activeTab === 'contributions' && (
-                <div className="space-y-6">
-                    {/* Contribution Stats Cards */}
-                    {contributionStats && (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <StatCard
-                                title="Total Contributions"
-                                value={contributionStats.total_contributions}
-                                icon="📝"
-                            />
-                            <StatCard
-                                title="Pending Review"
-                                value={contributionStats.pending_review}
-                                icon="⏳"
-                            />
-                            <StatCard
-                                title="Approved"
-                                value={contributionStats.approved}
-                                icon="✅"
-                            />
-                            <StatCard
-                                title="Exported for Training"
-                                value={contributionStats.exported}
-                                icon="🚀"
-                            />
-                        </div>
-                    )}
-
-                    {/* Approval Metrics */}
-                    {contributionStats && (
-                        <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
-                            <h3 className="text-lg font-semibold text-white mb-4">Approval Metrics</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/30">
-                                    <p className="text-2xl font-bold text-green-400">
-                                        {contributionStats.total_contributions > 0
-                                            ? ((contributionStats.approved + contributionStats.exported) / contributionStats.total_contributions * 100).toFixed(1)
-                                            : 0}%
-                                    </p>
-                                    <p className="text-sm text-green-300/80">Approval Rate</p>
-                                </div>
-                                <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/30">
-                                    <p className="text-2xl font-bold text-yellow-400">{contributionStats.pending_export}</p>
-                                    <p className="text-sm text-yellow-300/80">Ready for Export</p>
-                                </div>
-                                <div className="bg-red-500/10 rounded-lg p-4 border border-red-500/30">
-                                    <p className="text-2xl font-bold text-red-400">{contributionStats.rejected}</p>
-                                    <p className="text-sm text-red-300/80">Rejected</p>
-                                </div>
-                                <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/30">
-                                    <p className="text-2xl font-bold text-blue-400">
-                                        {(contributionStats.approved + contributionStats.exported) * 15}
-                                    </p>
-                                    <p className="text-sm text-blue-300/80">Karma Distributed</p>
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleModerationSubmit}
+                                        disabled={!moderationReason.trim() || moderationSubmitting}
+                                        className={`px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 ${moderationAction === 'note' ? 'bg-blue-500 hover:bg-blue-600 text-white' :
+                                            moderationAction === 'silence' ? 'bg-yellow-500 hover:bg-yellow-600 text-black' :
+                                                moderationAction === 'restrict' ? 'bg-orange-500 hover:bg-orange-600 text-white' :
+                                                    'bg-red-500 hover:bg-red-600 text-white'
+                                            }`}
+                                    >
+                                        {moderationSubmitting ? 'Submitting...' : 'Confirm'}
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* Correction Types Breakdown */}
-                    {contributionStats && Object.keys(contributionStats.correction_types_approved).length > 0 && (
-                        <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
-                            <h3 className="text-lg font-semibold text-white mb-4">Correction Types (Approved)</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                {Object.entries(contributionStats.correction_types_approved).map(([type, count]) => (
-                                    <div key={type} className="bg-dark-300/50 rounded-lg p-3">
-                                        <p className="text-lg font-bold text-white">{count}</p>
-                                        <p className="text-sm text-gray-400 capitalize">{type.replace(/_/g, ' ')}</p>
+                    {/* Jobs Tab */}
+                    {activeTab === 'jobs' && queueStats && (
+                        <div className="space-y-6">
+                            {/* Job Stats Overview */}
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                <div className="bg-blue-500/10 rounded-xl p-4 border border-blue-500/30">
+                                    <p className="text-3xl font-bold text-blue-400">{queueStats.queued}</p>
+                                    <p className="text-sm text-blue-300/80">Queued</p>
+                                </div>
+                                <div className="bg-yellow-500/10 rounded-xl p-4 border border-yellow-500/30">
+                                    <p className="text-3xl font-bold text-yellow-400">{queueStats.processing}</p>
+                                    <p className="text-sm text-yellow-300/80">Processing</p>
+                                </div>
+                                <div className="bg-green-500/10 rounded-xl p-4 border border-green-500/30">
+                                    <p className="text-3xl font-bold text-green-400">{queueStats.complete}</p>
+                                    <p className="text-sm text-green-300/80">Complete</p>
+                                </div>
+                                <div className="bg-red-500/10 rounded-xl p-4 border border-red-500/30">
+                                    <p className="text-3xl font-bold text-red-400">{queueStats.failed}</p>
+                                    <p className="text-sm text-red-300/80">Failed</p>
+                                </div>
+                                <div className="bg-gray-500/10 rounded-xl p-4 border border-gray-500/30">
+                                    <p className="text-3xl font-bold text-gray-400">{queueStats.cancelled}</p>
+                                    <p className="text-sm text-gray-300/80">Cancelled</p>
+                                </div>
+                            </div>
+
+                            {/* Additional Stats */}
+                            <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
+                                <h3 className="text-lg font-semibold text-white mb-4">Processing Statistics</h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                    <div>
+                                        <p className="text-2xl font-bold text-white">{queueStats.total_jobs.toLocaleString()}</p>
+                                        <p className="text-gray-400 text-sm">Total Jobs</p>
                                     </div>
-                                ))}
+                                    <div>
+                                        <p className="text-2xl font-bold text-white">{queueStats.jobs_today}</p>
+                                        <p className="text-gray-400 text-sm">Jobs Today</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-bold text-white">{queueStats.jobs_this_hour}</p>
+                                        <p className="text-gray-400 text-sm">Jobs This Hour</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-bold text-white">
+                                            {queueStats.avg_processing_time_seconds
+                                                ? `${Math.round(queueStats.avg_processing_time_seconds)}s`
+                                                : 'N/A'
+                                            }
+                                        </p>
+                                        <p className="text-gray-400 text-sm">Avg Processing Time</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Quick Actions */}
+                            <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-white">Job Management</h3>
+                                        <p className="text-gray-400 text-sm mt-1">
+                                            View detailed job information, retry failed jobs, and manage the processing queue.
+                                        </p>
+                                    </div>
+                                    <Link
+                                        to="/queue"
+                                        className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors"
+                                    >
+                                        View Full Queue →
+                                    </Link>
+                                </div>
                             </div>
                         </div>
                     )}
 
-                    {/* Verifier Leaderboard */}
-                    {verifierLeaderboard.length > 0 && (
-                        <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
-                            <h3 className="text-lg font-semibold text-white mb-4">Top Verifiers</h3>
-                            <div className="space-y-3">
-                                {verifierLeaderboard.slice(0, 10).map((verifier, index) => (
-                                    <div key={verifier.verifier_id} className="flex items-center justify-between bg-dark-300/50 rounded-lg p-3">
-                                        <div className="flex items-center gap-3">
-                                            <span className={`w-6 h-6 flex items-center justify-center rounded-full text-sm font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
-                                                index === 1 ? 'bg-gray-400 text-black' :
-                                                    index === 2 ? 'bg-amber-600 text-white' :
-                                                        'bg-gray-600 text-white'
-                                                }`}>
-                                                {index + 1}
-                                            </span>
-                                            <span className="text-white font-medium">@{verifier.username}</span>
+                    {/* Contributions Tab */}
+                    {activeTab === 'contributions' && (
+                        <div className="space-y-6">
+                            {/* Contribution Stats Cards */}
+                            {contributionStats && (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <StatCard
+                                        title="Total Contributions"
+                                        value={contributionStats.total_contributions}
+                                        icon="📝"
+                                    />
+                                    <StatCard
+                                        title="Pending Review"
+                                        value={contributionStats.pending_review}
+                                        icon="⏳"
+                                    />
+                                    <StatCard
+                                        title="Approved"
+                                        value={contributionStats.approved}
+                                        icon="✅"
+                                    />
+                                    <StatCard
+                                        title="Exported for Training"
+                                        value={contributionStats.exported}
+                                        icon="🚀"
+                                    />
+                                </div>
+                            )}
+
+                            {/* Approval Metrics */}
+                            {contributionStats && (
+                                <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
+                                    <h3 className="text-lg font-semibold text-white mb-4">Approval Metrics</h3>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/30">
+                                            <p className="text-2xl font-bold text-green-400">
+                                                {contributionStats.total_contributions > 0
+                                                    ? ((contributionStats.approved + contributionStats.exported) / contributionStats.total_contributions * 100).toFixed(1)
+                                                    : 0}%
+                                            </p>
+                                            <p className="text-sm text-green-300/80">Approval Rate</p>
                                         </div>
-                                        <div className="flex items-center gap-4 text-sm">
-                                            <span className="text-gray-400">{verifier.total_reviews} reviews</span>
-                                            <span className="text-green-400">+{verifier.approved}</span>
-                                            <span className="text-red-400">-{verifier.rejected}</span>
-                                            {verifier.avg_review_time_hours && (
-                                                <span className="text-gray-500">
-                                                    ~{verifier.avg_review_time_hours.toFixed(1)}h avg
-                                                </span>
-                                            )}
+                                        <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/30">
+                                            <p className="text-2xl font-bold text-yellow-400">{contributionStats.pending_export}</p>
+                                            <p className="text-sm text-yellow-300/80">Ready for Export</p>
+                                        </div>
+                                        <div className="bg-red-500/10 rounded-lg p-4 border border-red-500/30">
+                                            <p className="text-2xl font-bold text-red-400">{contributionStats.rejected}</p>
+                                            <p className="text-sm text-red-300/80">Rejected</p>
+                                        </div>
+                                        <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/30">
+                                            <p className="text-2xl font-bold text-blue-400">
+                                                {(contributionStats.approved + contributionStats.exported) * 15}
+                                            </p>
+                                            <p className="text-sm text-blue-300/80">Karma Distributed</p>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                                </div>
+                            )}
 
-                    {contributionsLoading && (
-                        <div className="bg-dark-400 rounded-xl p-8 border border-white/10 text-center">
-                            <div className="flex items-center justify-center gap-3">
-                                <div className="animate-spin h-5 w-5 border-2 border-primary-500 border-t-transparent rounded-full" />
-                                <p className="text-gray-400">Loading contribution statistics...</p>
-                            </div>
-                        </div>
-                    )}
+                            {/* Correction Types Breakdown */}
+                            {contributionStats && Object.keys(contributionStats.correction_types_approved).length > 0 && (
+                                <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
+                                    <h3 className="text-lg font-semibold text-white mb-4">Correction Types (Approved)</h3>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        {Object.entries(contributionStats.correction_types_approved).map(([type, count]) => (
+                                            <div key={type} className="bg-dark-300/50 rounded-lg p-3">
+                                                <p className="text-lg font-bold text-white">{count}</p>
+                                                <p className="text-sm text-gray-400 capitalize">{type.replace(/_/g, ' ')}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
-                    {contributionsError && !contributionsLoading && (
-                        <div className="bg-red-500/10 rounded-xl p-6 border border-red-500/30 text-center">
-                            <p className="text-red-400">{contributionsError}</p>
-                            <button
-                                onClick={loadContributions}
-                                className="mt-4 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
-                            >
-                                Retry
-                            </button>
-                        </div>
-                    )}
+                            {/* Verifier Leaderboard */}
+                            {verifierLeaderboard.length > 0 && (
+                                <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
+                                    <h3 className="text-lg font-semibold text-white mb-4">Top Verifiers</h3>
+                                    <div className="space-y-3">
+                                        {verifierLeaderboard.slice(0, 10).map((verifier, index) => (
+                                            <div key={verifier.verifier_id} className="flex items-center justify-between bg-dark-300/50 rounded-lg p-3">
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`w-6 h-6 flex items-center justify-center rounded-full text-sm font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
+                                                        index === 1 ? 'bg-gray-400 text-black' :
+                                                            index === 2 ? 'bg-amber-600 text-white' :
+                                                                'bg-gray-600 text-white'
+                                                        }`}>
+                                                        {index + 1}
+                                                    </span>
+                                                    <span className="text-white font-medium">@{verifier.username}</span>
+                                                </div>
+                                                <div className="flex items-center gap-4 text-sm">
+                                                    <span className="text-gray-400">{verifier.total_reviews} reviews</span>
+                                                    <span className="text-green-400">+{verifier.approved}</span>
+                                                    <span className="text-red-400">-{verifier.rejected}</span>
+                                                    {verifier.avg_review_time_hours && (
+                                                        <span className="text-gray-500">
+                                                            ~{verifier.avg_review_time_hours.toFixed(1)}h avg
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
-                    {!contributionStats && !contributionsLoading && !contributionsError && (
-                        <div className="bg-dark-400 rounded-xl p-8 border border-white/10 text-center">
-                            <p className="text-gray-400">No contribution statistics available</p>
+                            {contributionsLoading && (
+                                <div className="bg-dark-400 rounded-xl p-8 border border-white/10 text-center">
+                                    <div className="flex items-center justify-center gap-3">
+                                        <div className="animate-spin h-5 w-5 border-2 border-primary-500 border-t-transparent rounded-full" />
+                                        <p className="text-gray-400">Loading contribution statistics...</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {contributionsError && !contributionsLoading && (
+                                <div className="bg-red-500/10 rounded-xl p-6 border border-red-500/30 text-center">
+                                    <p className="text-red-400">{contributionsError}</p>
+                                    <button
+                                        onClick={loadContributions}
+                                        className="mt-4 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
+                                    >
+                                        Retry
+                                    </button>
+                                </div>
+                            )}
+
+                            {!contributionStats && !contributionsLoading && !contributionsError && (
+                                <div className="bg-dark-400 rounded-xl p-8 border border-white/10 text-center">
+                                    <p className="text-gray-400">No contribution statistics available</p>
+                                </div>
+                            )}
                         </div>
                     )}
-                </div>
-            )}
+                </motion.div>
+            </AnimatePresence>
         </div>
     )
 }

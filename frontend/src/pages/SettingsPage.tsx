@@ -15,6 +15,11 @@ import { TwoFactorSettings } from '@/components/TwoFactorSettings'
 import { PhoneVerificationSettings } from '@/components/PhoneVerificationSettings'
 import { API_CONFIG } from '@/lib/config'
 import { Select } from '@/components/ui/Dropdown'
+import {
+    tabContentVariants as unifiedTabContentVariants,
+    TRANSITION_DURATION,
+    EASE_CURVE
+} from '@/components/ui/UnifiedTransitions'
 import type { UserPreferences } from '@/types/sync'
 import { DEFAULT_CUSTOM_SETTINGS } from '@/types/sync'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
@@ -486,13 +491,14 @@ export function SettingsPage() {
 
                 {/* Content */}
                 <div className="flex-1">
-                    <AnimatePresence mode="wait">
+                    <AnimatePresence mode="wait" initial={false}>
                         {isLoading ? (
                             <motion.div
                                 key="loading"
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
+                                transition={{ duration: TRANSITION_DURATION }}
                                 className="card flex items-center justify-center py-12"
                             >
                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
@@ -500,10 +506,10 @@ export function SettingsPage() {
                         ) : (
                             <motion.div
                                 key={activeTab}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
-                                transition={{ duration: 0.2 }}
+                                initial="initial"
+                                animate="animate"
+                                exit="exit"
+                                variants={unifiedTabContentVariants}
                             >
                                 {activeTab === 'account' && (
                                     <div className="space-y-6">

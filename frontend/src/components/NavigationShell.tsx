@@ -14,6 +14,7 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { EXTERNAL_LINKS, getDocsLink, getCommunityLink } from '@/lib/externalLinks'
 import { SKIP_LINK_TARGETS, ARIA_LABELS } from '@/lib/accessibility'
 import { forceUnlockBodyScroll } from '@/lib/bodyScrollLock'
+import { TRANSITION_DURATION, EASE_CURVE } from '@/components/ui/UnifiedTransitions'
 
 interface LayoutProps {
     children: React.ReactNode
@@ -167,7 +168,7 @@ export function Layout({ children }: LayoutProps) {
             <motion.nav
                 initial={{ y: -100 }}
                 animate={{ y: 0 }}
-                transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+                transition={{ duration: TRANSITION_DURATION, ease: EASE_CURVE }}
                 className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${isScrolled
                     ? 'bg-dark-600/95 backdrop-blur-md shadow-lg'
                     : 'bg-dark-600/80 backdrop-blur-sm'
@@ -301,7 +302,7 @@ export function Layout({ children }: LayoutProps) {
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                            transition={{ duration: TRANSITION_DURATION, ease: EASE_CURVE }}
                             className="md:hidden border-t border-white/10 bg-dark-600"
                             id="mobile-menu"
                             role="menu"

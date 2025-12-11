@@ -17,24 +17,15 @@ import type { AIJob } from '@/types/api'
 import { getRecentTopics } from '@/api/forum'
 import { AnimatedCounter } from '@/components/ui'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import {
+    staggerContainerVariants,
+    staggerItemVariants
+} from '@/components/ui/UnifiedTransitions'
 
-// Animation variants
-const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: { staggerChildren: 0.08 }
-    }
-}
+// Animation variants - use unified system
+const containerVariants = staggerContainerVariants
 
-const itemVariants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: {
-        opacity: 1,
-        y: 0,
-        transition: { duration: 0.3 }
-    }
-}
+const itemVariants = staggerItemVariants
 
 export function DashboardPage() {
     const user = useAuthStore((state) => state.user)

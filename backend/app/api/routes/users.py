@@ -11,7 +11,7 @@ from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from PIL import Image
 from pydantic import BaseModel, Field
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -480,7 +480,7 @@ class PublicUserProfile(BaseModel):
     """Public user profile response."""
     
     id: str
-    user_number: int  # Human-friendly ID like osu! (e.g., 1000001)
+    user_number: int  # Human-friendly ID like osu! (e.g., 1)
     display_name: str
     avatar_url: Optional[str] = None
     banner_url: Optional[str] = None
@@ -492,6 +492,8 @@ class PublicUserProfile(BaseModel):
     bio: Optional[str] = None
     # Custom profile tags (like osu!'s DEV, VIP, etc.)
     tags: list[ProfileTag] = []
+    # Leaderboard ranking (null if user has hidden from leaderboards)
+    leaderboard_rank: Optional[int] = None
     # Stats
     songs_uploaded: int
     maps_generated: int
@@ -576,9 +578,11 @@ async def get_public_user_profile(
     """
     Get a user's public profile.
     
-    Supports lookup by either UUID or user_number (e.g., /users/1000001/profile).
+    Supports lookup by either UUID or user_number (e.g., /users/1/profile).
     Returns public information about a user including their stats and activity.
     """
+    from app.models.user_settings import UserSettings
+    
     user = await _get_user_for_profile(user_id, session)
     
     if not user:
@@ -629,6 +633,37 @@ async def get_public_user_profile(
         for tag in sorted(user.tags, key=lambda t: t.display_order)
     ] if user.tags else []
     
+    # Calculate leaderboard rank (only if user hasn't hidden from leaderboards)
+    leaderboard_rank = None
+    try:
+        # Check if user has hidden from leaderboards
+        settings_result = await session.execute(
+            select(UserSettings).where(UserSettings.user_id == user.id)
+        )
+        user_settings = settings_result.scalar_one_or_none()
+        
+        # If no settings or not hidden, calculate rank
+        if not user_settings or not user_settings.hide_from_leaderboards:
+            # Count how many non-hidden users have more karma
+            rank_result = await session.execute(
+                select(func.count())
+                .select_from(User)
+                .outerjoin(UserSettings, User.id == UserSettings.user_id)
+                .where(
+                    User.karma_score > (user.karma_score or 0),
+                    User.restriction_level != 'banned',
+                    or_(
+                        UserSettings.hide_from_leaderboards.is_(None),
+                        UserSettings.hide_from_leaderboards == False
+                    )
+                )
+            )
+            users_above = rank_result.scalar() or 0
+            leaderboard_rank = users_above + 1
+    except Exception:
+        # If there's an issue calculating rank, just leave it null
+        pass
+    
     return PublicUserProfile(
         id=str(user.id),
         user_number=user.user_number,
@@ -642,6 +677,7 @@ async def get_public_user_profile(
         country_code=getattr(user, 'country_code', None),
         bio=getattr(user, 'bio', None),
         tags=profile_tags,
+        leaderboard_rank=leaderboard_rank,
         songs_uploaded=songs_count,
         maps_generated=songs_count,  # Approximate - should count maps
         maps_verified=0,  # TODO: Count verified maps

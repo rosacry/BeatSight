@@ -76,6 +76,7 @@ interface VerifierLeaderboard {
 
 interface AdminUser {
     id: string
+    user_number: number | null  // Human-friendly ID
     email: string
     display_name: string
     role: string
@@ -164,10 +165,29 @@ export function AdminDashboardPage() {
     const [userTags, setUserTags] = useState<UserTag[]>([])
     const [tagsLoading, setTagsLoading] = useState(false)
     const [newTagName, setNewTagName] = useState('')
-    const [newTagBgColor, setNewTagBgColor] = useState('#3b82f6')
-    const [newTagTextColor, setNewTagTextColor] = useState('')
-    const [useCustomTextColor, setUseCustomTextColor] = useState(false)
+    const [newTagBgColor, setNewTagBgColor] = useState('#ec4899')  // Pink (primary)
+    const [newTagTextColor, setNewTagTextColor] = useState('#ffffff')
+    const [useCustomColors, setUseCustomColors] = useState(false)
     const [tagSubmitting, setTagSubmitting] = useState(false)
+
+    // Default tag colors that match the app theme
+    const DEFAULT_TAG_COLORS = [
+        { name: 'Pink', bg: '#ec4899', text: '#ffffff' },      // Primary/accent
+        { name: 'Purple', bg: '#8b5cf6', text: '#ffffff' },    // Verifier color
+        { name: 'Blue', bg: '#3b82f6', text: '#ffffff' },      // Standard link color
+        { name: 'Green', bg: '#22c55e', text: '#ffffff' },     // Success/verified
+        { name: 'Yellow', bg: '#eab308', text: '#000000' },    // Warning/caution
+        { name: 'Orange', bg: '#f97316', text: '#ffffff' },    // Energetic
+        { name: 'Red', bg: '#ef4444', text: '#ffffff' },       // Admin/important
+        { name: 'Cyan', bg: '#06b6d4', text: '#ffffff' },      // Cool accent
+        { name: 'Slate', bg: '#64748b', text: '#ffffff' },     // Neutral
+    ]
+
+    // Helper function to get color name from hex
+    const getColorDisplayName = (bgColor: string): string => {
+        const match = DEFAULT_TAG_COLORS.find(c => c.bg.toLowerCase() === bgColor.toLowerCase())
+        return match ? match.name : bgColor.toUpperCase()
+    }
 
     // Actions dropdown state
     const [openActionsUserId, setOpenActionsUserId] = useState<string | null>(null)
@@ -538,7 +558,7 @@ export function AdminDashboardPage() {
                 body: JSON.stringify({
                     name: newTagName.trim(),
                     background_color: newTagBgColor,
-                    text_color: useCustomTextColor ? newTagTextColor : null,
+                    text_color: newTagTextColor || '#ffffff',
                     display_order: userTags.length,
                 }),
             })
@@ -585,9 +605,9 @@ export function AdminDashboardPage() {
     const openTagsModal = (user: AdminUser) => {
         setTagsModalUser(user)
         setNewTagName('')
-        setNewTagBgColor('#3b82f6')
+        setNewTagBgColor('#ec4899')  // Default to Pink
         setNewTagTextColor('#ffffff')
-        setUseCustomTextColor(false)
+        setUseCustomColors(false)
         loadUserTags(user.id)
     }
 
@@ -897,7 +917,7 @@ export function AdminDashboardPage() {
                                                             </span>
                                                         </div>
                                                         <div className="min-w-0">
-                                                            <Link to={`/users/${user.id}`} className="text-white font-medium truncate hover:text-primary-400 transition-colors block">
+                                                            <Link to={`/user/${user.user_number ?? user.id}`} className="text-white font-medium truncate hover:text-primary-400 transition-colors block">
                                                                 {user.display_name}
                                                             </Link>
                                                             <p className="text-gray-400 text-xs truncate">{user.email}</p>
@@ -1213,7 +1233,7 @@ export function AdminDashboardPage() {
                                 <div className="bg-dark-400 rounded-xl border border-white/10 p-6 w-full max-w-md mx-4 max-h-[80vh] overflow-y-auto">
                                     <h3 className="text-lg font-semibold text-white mb-2">🏷️ Manage Tags</h3>
                                     <p className="text-gray-400 text-sm mb-4">
-                                        User: <Link to={`/users/${tagsModalUser.id}`} className="text-primary-400 hover:underline">{tagsModalUser.display_name}</Link>
+                                        User: <Link to={`/user/${tagsModalUser.user_number ?? tagsModalUser.id}`} className="text-primary-400 hover:underline">{tagsModalUser.display_name}</Link>
                                     </p>
 
                                     {/* Current Tags */}
@@ -1226,22 +1246,33 @@ export function AdminDashboardPage() {
                                         ) : userTags.length === 0 ? (
                                             <p className="text-gray-500 text-sm py-2">No tags assigned</p>
                                         ) : (
-                                            <div className="flex flex-wrap gap-2">
+                                            <div className="space-y-2">
                                                 {userTags.map((tag) => (
                                                     <div
                                                         key={tag.id}
-                                                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold"
-                                                        style={{
-                                                            backgroundColor: tag.background_color,
-                                                            color: tag.text_color || '#ffffff',
-                                                        }}
+                                                        className="flex items-center justify-between bg-dark-300 rounded-lg p-2"
                                                     >
-                                                        {tag.name}
+                                                        <div className="flex items-center gap-3">
+                                                            <span
+                                                                className="px-2 py-1 rounded text-xs font-bold"
+                                                                style={{
+                                                                    backgroundColor: tag.background_color,
+                                                                    color: tag.text_color || '#ffffff',
+                                                                }}
+                                                            >
+                                                                {tag.name}
+                                                            </span>
+                                                            <span className="text-xs text-gray-500 font-mono">
+                                                                {getColorDisplayName(tag.background_color)}
+                                                            </span>
+                                                        </div>
                                                         <button
                                                             onClick={() => handleDeleteTag(tag.id)}
-                                                            className="ml-1 hover:opacity-70"
+                                                            className="text-gray-400 hover:text-red-400 transition-colors"
                                                         >
-                                                            ×
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
                                                         </button>
                                                     </div>
                                                 ))}
@@ -1263,66 +1294,98 @@ export function AdminDashboardPage() {
                                                 className="w-full bg-dark-300 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm"
                                             />
 
-                                            <div className="flex gap-3">
-                                                <div className="flex-1">
-                                                    <label className="block text-xs text-gray-500 mb-1">Background</label>
-                                                    <div className="flex items-center gap-2">
-                                                        <input
-                                                            type="color"
-                                                            value={newTagBgColor}
-                                                            onChange={(e) => setNewTagBgColor(e.target.value)}
-                                                            className="w-10 h-8 rounded cursor-pointer border-0"
-                                                        />
-                                                        <input
-                                                            type="text"
-                                                            value={newTagBgColor}
-                                                            onChange={(e) => setNewTagBgColor(e.target.value)}
-                                                            className="flex-1 bg-dark-300 border border-gray-600 text-white rounded px-2 py-1 text-xs font-mono"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-
+                                            {/* Custom Colors Toggle */}
                                             <label className="flex items-center gap-2 text-sm text-gray-300">
                                                 <input
                                                     type="checkbox"
-                                                    checked={useCustomTextColor}
-                                                    onChange={(e) => setUseCustomTextColor(e.target.checked)}
+                                                    checked={useCustomColors}
+                                                    onChange={(e) => setUseCustomColors(e.target.checked)}
                                                     className="rounded"
                                                 />
-                                                Custom text color
+                                                Use custom colors
                                             </label>
 
-                                            {useCustomTextColor && (
-                                                <div className="flex items-center gap-2">
-                                                    <label className="text-xs text-gray-500">Text Color:</label>
-                                                    <input
-                                                        type="color"
-                                                        value={newTagTextColor || '#ffffff'}
-                                                        onChange={(e) => setNewTagTextColor(e.target.value)}
-                                                        className="w-10 h-8 rounded cursor-pointer border-0"
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        value={newTagTextColor}
-                                                        onChange={(e) => setNewTagTextColor(e.target.value)}
-                                                        className="flex-1 bg-dark-300 border border-gray-600 text-white rounded px-2 py-1 text-xs font-mono"
-                                                    />
+                                            {!useCustomColors ? (
+                                                /* Default Color Presets */
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-2">Select Color</label>
+                                                    <div className="grid grid-cols-3 gap-2">
+                                                        {DEFAULT_TAG_COLORS.map((color) => (
+                                                            <button
+                                                                key={color.name}
+                                                                onClick={() => {
+                                                                    setNewTagBgColor(color.bg)
+                                                                    setNewTagTextColor(color.text)
+                                                                }}
+                                                                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${newTagBgColor === color.bg
+                                                                        ? 'border-white/50 bg-dark-200'
+                                                                        : 'border-white/10 hover:border-white/30'
+                                                                    }`}
+                                                            >
+                                                                <div
+                                                                    className="w-4 h-4 rounded"
+                                                                    style={{ backgroundColor: color.bg }}
+                                                                />
+                                                                <span className="text-xs text-gray-300">{color.name}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                /* Custom Color Pickers */
+                                                <div className="space-y-3">
+                                                    <div>
+                                                        <label className="block text-xs text-gray-500 mb-1">Background Color</label>
+                                                        <div className="flex items-center gap-2">
+                                                            <input
+                                                                type="color"
+                                                                value={newTagBgColor}
+                                                                onChange={(e) => setNewTagBgColor(e.target.value)}
+                                                                className="w-10 h-8 rounded cursor-pointer border-0"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                value={newTagBgColor}
+                                                                onChange={(e) => setNewTagBgColor(e.target.value)}
+                                                                className="flex-1 bg-dark-300 border border-gray-600 text-white rounded px-2 py-1 text-xs font-mono"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs text-gray-500 mb-1">Text Color</label>
+                                                        <div className="flex items-center gap-2">
+                                                            <input
+                                                                type="color"
+                                                                value={newTagTextColor}
+                                                                onChange={(e) => setNewTagTextColor(e.target.value)}
+                                                                className="w-10 h-8 rounded cursor-pointer border-0"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                value={newTagTextColor}
+                                                                onChange={(e) => setNewTagTextColor(e.target.value)}
+                                                                className="flex-1 bg-dark-300 border border-gray-600 text-white rounded px-2 py-1 text-xs font-mono"
+                                                            />
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             )}
 
                                             {/* Preview */}
                                             {newTagName && (
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2 pt-2">
                                                     <span className="text-xs text-gray-500">Preview:</span>
                                                     <span
                                                         className="px-2 py-1 rounded text-xs font-bold"
                                                         style={{
                                                             backgroundColor: newTagBgColor,
-                                                            color: useCustomTextColor ? newTagTextColor : '#ffffff',
+                                                            color: newTagTextColor,
                                                         }}
                                                     >
                                                         {newTagName}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500 font-mono">
+                                                        ({getColorDisplayName(newTagBgColor)})
                                                     </span>
                                                 </div>
                                             )}

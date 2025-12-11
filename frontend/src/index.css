@@ -76,13 +76,11 @@
     }
 
     .btn-primary {
-        background: linear-gradient(135deg, #ff66ab 0%, #e91e8c 100%);
-        @apply text-white shadow-md;
+        @apply bg-primary-500 text-white shadow-md;
     }
 
     .btn-primary:hover {
-        background: linear-gradient(135deg, #ff7ab8 0%, #ff66ab 100%);
-        @apply shadow-glow-pink;
+        @apply bg-primary-400 shadow-glow-pink;
     }
 
     .btn-secondary {

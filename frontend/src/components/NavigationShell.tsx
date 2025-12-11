@@ -169,7 +169,7 @@ export function Layout({ children }: LayoutProps) {
                 animate={{ y: 0 }}
                 transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
                 className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${isScrolled
-                    ? 'bg-dark-600/95 backdrop-blur-md shadow-lg border-b border-white/5'
+                    ? 'bg-dark-600/95 backdrop-blur-md shadow-lg'
                     : 'bg-dark-600/80 backdrop-blur-sm'
                     }`}
                 id={SKIP_LINK_TARGETS.NAVIGATION}

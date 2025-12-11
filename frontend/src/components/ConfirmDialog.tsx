@@ -3,11 +3,14 @@
  * Used for sign-out confirmation, destructive actions, etc.
  * 
  * Styled similar to osu!'s confirmation popups with clean overlay design
+ * 
+ * NOTE: This component avoids AnimatePresence + createPortal combination
+ * which causes "removeChild" errors during navigation unmounts.
+ * Uses CSS transitions via tailwindcss-animate for animations instead.
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { motion, AnimatePresence } from 'framer-motion'
 import { lockBodyScroll, unlockBodyScroll } from '@/lib/bodyScrollLock'
 
 interface ConfirmDialogProps {
@@ -22,42 +25,6 @@ interface ConfirmDialogProps {
     isLoading?: boolean
     /** Show as a centered popup overlay (osu-style) vs modal dialog */
     style?: 'modal' | 'popup'
-}
-
-const overlayVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: { duration: 0.2, ease: 'easeOut' }
-    },
-}
-
-const dialogVariants = {
-    hidden: {
-        opacity: 0,
-        scale: 0.96,
-        y: -20
-    },
-    visible: {
-        opacity: 1,
-        scale: 1,
-        y: 0,
-        transition: {
-            type: 'spring',
-            duration: 0.4,
-            bounce: 0.15,
-            delay: 0.05
-        }
-    },
-    exit: {
-        opacity: 0,
-        scale: 0.96,
-        y: -10,
-        transition: {
-            duration: 0.2,
-            ease: [0.4, 0, 1, 1]
-        }
-    },
 }
 
 export function ConfirmDialog({
@@ -84,7 +51,6 @@ export function ConfirmDialog({
 
         if (isOpen) {
             document.addEventListener('keydown', handleKeyDown)
-            // Focus the dialog when opened
             dialogRef.current?.focus()
         }
 
@@ -94,22 +60,18 @@ export function ConfirmDialog({
     }, [isOpen, onClose])
 
     // Prevent body scroll when dialog is open
-    // Use a more robust cleanup that ensures unlock happens even during navigation
     useEffect(() => {
         if (isOpen) {
             lockBodyScroll()
             return () => {
-                // Always unlock on cleanup, regardless of current state
                 unlockBodyScroll()
             }
         }
     }, [isOpen])
 
-    // Additional safety: ensure body scroll is unlocked when component unmounts
-    // This catches cases where isOpen changes during unmount
+    // Safety: ensure body scroll is unlocked when component unmounts
     useEffect(() => {
         return () => {
-            // Force cleanup on unmount to prevent stuck states during navigation
             unlockBodyScroll()
         }
     }, [])
@@ -138,7 +100,7 @@ export function ConfirmDialog({
                 return {
                     confirmButton: 'bg-primary-500 hover:bg-primary-400 focus:ring-primary-500/50 shadow-lg shadow-primary-500/25',
                     cancelButton: 'bg-dark-300 hover:bg-dark-300/80 text-gray-200 border border-white/10 hover:border-white/20',
-                    icon: null, // No icon for osu-style signout popup
+                    icon: null,
                 }
             default:
                 return {
@@ -154,283 +116,175 @@ export function ConfirmDialog({
 
     const styles = getVariantStyles()
 
-    // osu-style popup for signout variant - rendered via portal for proper centering
-    // Note: Using mode="sync" instead of "wait" to prevent animation interruption during navigation
-    if (style === 'popup' || variant === 'signout') {
-        const dialogContent = (
-            <AnimatePresence mode="sync">
-                {isOpen && (
-                    <motion.div
-                        key="popup-overlay"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.25 }}
-                        className="fixed inset-0 z-[9999] flex items-center justify-center"
-                        onClick={onClose}
-                        style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                        }}
-                    >
-                        {/* Full-screen backdrop with blur and dark overlay */}
-                        <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
-
-                        {/* Dialog Card - Centered */}
-                        <motion.div
-                            ref={dialogRef}
-                            initial={{ opacity: 0, scale: 0.85, y: 30 }}
-                            animate={{
-                                opacity: 1,
-                                scale: 1,
-                                y: 0,
-                                transition: {
-                                    type: 'spring',
-                                    duration: 0.5,
-                                    bounce: 0.25
-                                }
-                            }}
-                            exit={{
-                                opacity: 0,
-                                scale: 0.9,
-                                y: 20,
-                                transition: { duration: 0.2, ease: 'easeIn' }
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            tabIndex={-1}
-                            className="relative bg-dark-400 rounded-2xl border border-white/10 shadow-2xl shadow-black/60 max-w-md w-full mx-4 overflow-hidden focus:outline-none"
-                            role="dialog"
-                            aria-modal="true"
-                            aria-labelledby="dialog-title"
-                        >
-                            {/* Decorative top accent line */}
-                            <div className="absolute top-0 left-0 right-0 h-1 bg-primary-500" />
-
-                            {/* Content */}
-                            <div className="relative px-8 pt-10 pb-8 text-center">
-                                {/* Icon with animated ring */}
-                                <motion.div
-                                    className="mx-auto w-16 h-16 rounded-full bg-primary-500/15 border border-primary-500/30 flex items-center justify-center mb-5 relative"
-                                    initial={{ scale: 0.8 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ delay: 0.1, type: 'spring', bounce: 0.4 }}
-                                >
-                                    {/* Animated ring */}
-                                    <motion.div
-                                        className="absolute inset-0 rounded-full border-2 border-primary-400/30"
-                                        initial={{ scale: 1, opacity: 0.5 }}
-                                        animate={{
-                                            scale: [1, 1.3, 1.3],
-                                            opacity: [0.5, 0, 0]
-                                        }}
-                                        transition={{
-                                            duration: 2,
-                                            repeat: Infinity,
-                                            ease: 'easeOut'
-                                        }}
-                                    />
-                                    <svg className="w-8 h-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                    </svg>
-                                </motion.div>
-
-                                {/* Title */}
-                                <motion.h2
-                                    id="dialog-title"
-                                    className="text-2xl font-bold text-white mb-3"
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.15 }}
-                                >
-                                    {title}
-                                </motion.h2>
-
-                                {/* Message */}
-                                <motion.p
-                                    className="text-gray-400 text-base mb-8 leading-relaxed"
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.2 }}
-                                >
-                                    {message}
-                                </motion.p>
-
-                                {/* Buttons */}
-                                <motion.div
-                                    className="flex gap-4 justify-center"
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.25 }}
-                                >
-                                    <button
-                                        onClick={onClose}
-                                        disabled={isLoading}
-                                        className={`px-8 py-3 text-sm font-semibold rounded-xl transition-all duration-200
-                                                 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark-500
-                                                 disabled:opacity-50 min-w-[140px] hover:scale-105 active:scale-95
-                                                 ${styles.cancelButton || 'bg-dark-300 hover:bg-dark-300/80 text-gray-200 border border-white/10 hover:border-white/20 focus:ring-gray-500/50'}`}
-                                    >
-                                        {cancelLabel}
-                                    </button>
-                                    <button
-                                        onClick={onConfirm}
-                                        disabled={isLoading}
-                                        className={`px-8 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200
-                                                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark-500
-                                                  disabled:opacity-50 min-w-[140px] hover:scale-105 active:scale-95
-                                                  ${styles.confirmButton}`}
-                                    >
-                                        {isLoading ? (
-                                            <span className="flex items-center justify-center gap-2">
-                                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                                </svg>
-                                            </span>
-                                        ) : (
-                                            confirmLabel
-                                        )}
-                                    </button>
-                                </motion.div>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        )
-
-        // Use portal to render at document root, escaping any parent positioning
-        return createPortal(dialogContent, document.body)
+    // Don't render anything if not open (avoids animation issues during navigation)
+    if (!isOpen) {
+        return null
     }
 
-    // Standard modal dialog
-    return (
-        <AnimatePresence>
-            {isOpen && (
-                <motion.div
-                    initial="hidden"
-                    animate="visible"
-                    exit="hidden"
-                    variants={overlayVariants}
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                    onClick={onClose}
+    // osu-style popup for signout variant
+    if (style === 'popup' || variant === 'signout') {
+        const dialogContent = (
+            <div
+                className="fixed inset-0 z-[9999] flex items-center justify-center animate-in fade-in duration-200"
+                onClick={onClose}
+            >
+                {/* Full-screen backdrop */}
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+
+                {/* Dialog Card */}
+                <div
+                    ref={dialogRef}
+                    onClick={(e) => e.stopPropagation()}
+                    tabIndex={-1}
+                    className="relative bg-dark-400 rounded-2xl border border-white/10 shadow-2xl shadow-black/60 max-w-md w-full mx-4 overflow-hidden focus:outline-none animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="dialog-title"
                 >
-                    {/* Backdrop */}
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                    {/* Decorative top accent line */}
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-primary-500" />
 
-                    {/* Dialog */}
-                    <motion.div
-                        ref={dialogRef}
-                        variants={dialogVariants}
-                        initial="hidden"
-                        animate="visible"
-                        exit="exit"
-                        onClick={(e) => e.stopPropagation()}
-                        tabIndex={-1}
-                        className="relative bg-dark-400 rounded-2xl border border-white/10 shadow-2xl shadow-black/50 max-w-sm w-full overflow-hidden focus:outline-none"
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="dialog-title"
-                    >
-                        {/* Header */}
-                        <div className="px-6 py-5 border-b border-white/10">
-                            <div className="flex items-center gap-3">
-                                {styles.icon && (
-                                    <div className="flex-shrink-0">
-                                        {styles.icon}
-                                    </div>
-                                )}
-                                <h2 id="dialog-title" className="text-lg font-semibold text-white">
-                                    {title}
-                                </h2>
-                            </div>
+                    {/* Content */}
+                    <div className="relative px-8 pt-10 pb-8 text-center">
+                        {/* Icon */}
+                        <div className="mx-auto w-16 h-16 rounded-full bg-primary-500/15 border border-primary-500/30 flex items-center justify-center mb-5">
+                            <svg className="w-8 h-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
                         </div>
 
-                        {/* Content */}
-                        <div className="px-6 py-4">
-                            <p className="text-gray-300">{message}</p>
-                        </div>
+                        {/* Title */}
+                        <h2
+                            id="dialog-title"
+                            className="text-2xl font-bold text-white mb-3"
+                        >
+                            {title}
+                        </h2>
 
-                        {/* Actions */}
-                        <div className="px-6 py-4 bg-dark-500/50 flex gap-3 justify-end">
+                        {/* Message */}
+                        <p className="text-gray-400 text-base mb-8 leading-relaxed">
+                            {message}
+                        </p>
+
+                        {/* Buttons */}
+                        <div className="flex gap-4 justify-center">
                             <button
                                 onClick={onClose}
                                 disabled={isLoading}
-                                className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white 
-                                         bg-dark-300 hover:bg-gray-600 rounded-lg transition-colors
-                                         focus:outline-none focus:ring-2 focus:ring-gray-500/50
-                                         disabled:opacity-50"
+                                className={`px-8 py-3 text-sm font-semibold rounded-xl transition-all duration-200
+                                         focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark-500
+                                         disabled:opacity-50 min-w-[140px] hover:scale-105 active:scale-95
+                                         ${styles.cancelButton || 'bg-dark-300 hover:bg-dark-300/80 text-gray-200 border border-white/10 hover:border-white/20 focus:ring-gray-500/50'}`}
                             >
                                 {cancelLabel}
                             </button>
                             <button
                                 onClick={onConfirm}
                                 disabled={isLoading}
-                                className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors
-                                          focus:outline-none focus:ring-2 disabled:opacity-50
+                                className={`px-8 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200
+                                          focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark-500
+                                          disabled:opacity-50 min-w-[140px] hover:scale-105 active:scale-95
                                           ${styles.confirmButton}`}
                             >
                                 {isLoading ? (
-                                    <span className="flex items-center gap-2">
+                                    <span className="flex items-center justify-center gap-2">
                                         <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                                         </svg>
-                                        Processing...
                                     </span>
                                 ) : (
                                     confirmLabel
                                 )}
                             </button>
                         </div>
-                    </motion.div>
-                </motion.div>
-            )}
-        </AnimatePresence>
+                    </div>
+                </div>
+            </div>
+        )
+
+        return createPortal(dialogContent, document.body)
+    }
+
+    // Standard modal dialog (for non-signout variants)
+    const modalContent = (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
+            onClick={onClose}
+        >
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+            {/* Dialog */}
+            <div
+                ref={dialogRef}
+                onClick={(e) => e.stopPropagation()}
+                tabIndex={-1}
+                className="relative bg-dark-400 rounded-2xl border border-white/10 shadow-2xl shadow-black/50 max-w-sm w-full overflow-hidden focus:outline-none animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="dialog-title"
+            >
+                {/* Header */}
+                <div className="px-6 py-5 border-b border-white/10">
+                    <div className="flex items-center gap-3">
+                        {styles.icon && (
+                            <div className="flex-shrink-0">
+                                {styles.icon}
+                            </div>
+                        )}
+                        <h2 id="dialog-title" className="text-lg font-semibold text-white">
+                            {title}
+                        </h2>
+                    </div>
+                </div>
+
+                {/* Body */}
+                <div className="px-6 py-4">
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                        {message}
+                    </p>
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-4 bg-dark-500/50 border-t border-white/5 flex justify-end gap-3">
+                    <button
+                        onClick={onClose}
+                        disabled={isLoading}
+                        className="px-4 py-2 text-sm font-medium text-gray-300 rounded-lg
+                                 bg-dark-300 border border-white/10 
+                                 hover:bg-dark-200 hover:border-white/20
+                                 focus:outline-none focus:ring-2 focus:ring-gray-500/50
+                                 disabled:opacity-50 transition-all duration-200"
+                    >
+                        {cancelLabel}
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={isLoading}
+                        className={`px-4 py-2 text-sm font-medium text-white rounded-lg
+                                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark-500
+                                  disabled:opacity-50 transition-all duration-200
+                                  ${styles.confirmButton}`}
+                    >
+                        {isLoading ? (
+                            <span className="flex items-center gap-2">
+                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                                Processing...
+                            </span>
+                        ) : (
+                            confirmLabel
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
     )
+
+    return createPortal(modalContent, document.body)
 }
 
-/**
- * Hook for easily managing confirm dialog state
- */
-export function useConfirmDialog() {
-    const [isOpen, setIsOpen] = useState(false)
-    const [config, setConfig] = useState<Omit<ConfirmDialogProps, 'isOpen' | 'onClose' | 'onConfirm'>>({
-        title: '',
-        message: '',
-    })
-    const resolveRef = useRef<((value: boolean) => void) | null>(null)
-
-    const confirm = (options: Omit<ConfirmDialogProps, 'isOpen' | 'onClose' | 'onConfirm'>): Promise<boolean> => {
-        setConfig(options)
-        setIsOpen(true)
-
-        return new Promise((resolve) => {
-            resolveRef.current = resolve
-        })
-    }
-
-    const handleClose = () => {
-        setIsOpen(false)
-        resolveRef.current?.(false)
-    }
-
-    const handleConfirm = () => {
-        setIsOpen(false)
-        resolveRef.current?.(true)
-    }
-
-    const Dialog = () => (
-        <ConfirmDialog
-            isOpen={isOpen}
-            onClose={handleClose}
-            onConfirm={handleConfirm}
-            {...config}
-        />
-    )
-
-    return { confirm, Dialog }
-}
+export default ConfirmDialog

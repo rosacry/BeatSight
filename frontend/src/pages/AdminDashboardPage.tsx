@@ -694,9 +694,6 @@ export function AdminDashboardPage() {
                                     </button>
                                 </div>
                             </div>
-
-                            {/* Results count */}
-                            {users.length > 0 && (
                         </StaggerSection>
 
                         {/* Results count */}
@@ -900,8 +897,7 @@ export function AdminDashboardPage() {
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
-                    )}
+                        </StaggerSection>
 
                         {/* Actions Dropdown Portal */}
                         {openActionsUserId && dropdownPosition && createPortal(

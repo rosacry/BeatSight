@@ -3,11 +3,15 @@
  * 
  * Provides smooth fade and slide animations between route changes,
  * inspired by modern rhythm game navigation experiences.
+ * 
+ * NOTE: For consistent animations across the app, prefer using the
+ * unified transition system in @/components/ui/UnifiedTransitions
  */
 
 import { ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLocation } from 'react-router-dom'
+import { TRANSITION_DURATION, EASE_CURVE } from './ui/UnifiedTransitions'
 
 interface PageTransitionProps {
     children: ReactNode
@@ -53,8 +57,8 @@ export function PageTransition({ children, mode = 'slideUp' }: PageTransitionPro
                 animate={variant.animate}
                 exit={variant.exit}
                 transition={{
-                    duration: 0.25,
-                    ease: [0.25, 0.46, 0.45, 0.94], // Custom ease curve
+                    duration: TRANSITION_DURATION + 0.05, // Slightly longer for page-level transitions
+                    ease: [...EASE_CURVE], // Use unified ease curve
                 }}
             >
                 {children}
@@ -81,8 +85,8 @@ export function AnimatedRoutes({ children }: AnimatedRoutesProps) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{
-                    duration: 0.2,
-                    ease: [0.25, 0.46, 0.45, 0.94],
+                    duration: TRANSITION_DURATION,
+                    ease: [...EASE_CURVE],
                 }}
                 className="min-h-full"
             >
@@ -142,7 +146,7 @@ export function StaggerItem({ children, className = '' }: StaggerItemProps) {
                     y: 0,
                     transition: {
                         duration: 0.4,
-                        ease: [0.25, 0.46, 0.45, 0.94],
+                        ease: [...EASE_CURVE],
                     },
                 },
             }}

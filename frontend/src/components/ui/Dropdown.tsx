@@ -7,8 +7,9 @@ import React, { useState, useRef, useEffect, useCallback, createContext, useCont
 import { motion, AnimatePresence } from 'framer-motion'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '../../lib/utils'
+import { TRANSITION_DURATION, EASE_CURVE } from './UnifiedTransitions'
 
-// Animation variants for dropdown menu - matching UserMenu animation
+// Animation variants for dropdown menu - using unified transition system
 const dropdownAnimationVariants = {
     hidden: {
         opacity: 0,
@@ -20,8 +21,8 @@ const dropdownAnimationVariants = {
         scale: 1,
         y: 0,
         transition: {
-            duration: 0.15,
-            ease: [0.4, 0, 0.2, 1],
+            duration: TRANSITION_DURATION,
+            ease: EASE_CURVE,
         },
     },
     exit: {
@@ -29,8 +30,8 @@ const dropdownAnimationVariants = {
         scale: 0.95,
         y: -10,
         transition: {
-            duration: 0.15,
-            ease: [0.4, 0, 0.2, 1],
+            duration: TRANSITION_DURATION,
+            ease: EASE_CURVE,
         },
     },
 }

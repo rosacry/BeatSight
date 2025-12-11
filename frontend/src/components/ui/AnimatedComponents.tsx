@@ -8,9 +8,10 @@
 import React, { forwardRef, useState } from 'react'
 import { motion, AnimatePresence, Variants, useMotionValue, useTransform, useSpring, animate } from 'framer-motion'
 import { cn } from '../../lib/utils'
+import { TRANSITION_DURATION, STAGGER_DELAY, EASE_CURVE } from './UnifiedTransitions'
 
 // ============================================================================
-// Animation Presets
+// Animation Presets (using unified constants for consistency)
 // ============================================================================
 
 export const fadeInUp: Variants = {
@@ -18,9 +19,9 @@ export const fadeInUp: Variants = {
     visible: {
         opacity: 1,
         y: 0,
-        transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }
+        transition: { duration: TRANSITION_DURATION * 2, ease: EASE_CURVE }
     },
-    exit: { opacity: 0, y: -10, transition: { duration: 0.3 } }
+    exit: { opacity: 0, y: -10, transition: { duration: TRANSITION_DURATION } }
 }
 
 export const fadeInScale: Variants = {
@@ -28,9 +29,9 @@ export const fadeInScale: Variants = {
     visible: {
         opacity: 1,
         scale: 1,
-        transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }
+        transition: { duration: TRANSITION_DURATION * 2, ease: EASE_CURVE }
     },
-    exit: { opacity: 0, scale: 0.95, transition: { duration: 0.2 } }
+    exit: { opacity: 0, scale: 0.95, transition: { duration: TRANSITION_DURATION } }
 }
 
 export const staggerContainer: Variants = {
@@ -38,8 +39,8 @@ export const staggerContainer: Variants = {
     visible: {
         opacity: 1,
         transition: {
-            staggerChildren: 0.1,
-            delayChildren: 0.1,
+            staggerChildren: STAGGER_DELAY,
+            delayChildren: STAGGER_DELAY,
         }
     }
 }
@@ -49,7 +50,7 @@ export const slideInFromLeft: Variants = {
     visible: {
         opacity: 1,
         x: 0,
-        transition: { duration: 0.5, ease: 'easeOut' }
+        transition: { duration: TRANSITION_DURATION * 2, ease: EASE_CURVE }
     }
 }
 
@@ -58,7 +59,7 @@ export const slideInFromRight: Variants = {
     visible: {
         opacity: 1,
         x: 0,
-        transition: { duration: 0.5, ease: 'easeOut' }
+        transition: { duration: TRANSITION_DURATION * 2, ease: EASE_CURVE }
     }
 }
 

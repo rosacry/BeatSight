@@ -7,6 +7,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { TRANSITION_DURATION, STAGGER_DELAY, EASE_CURVE } from '@/components/ui/UnifiedTransitions';
 
 // ============================================================================
 // Types
@@ -357,7 +358,7 @@ export function FeatureFlagsDebugPanel() {
                         initial={{ opacity: 0, scale: 0.95, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                        transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                        transition={{ duration: TRANSITION_DURATION, ease: EASE_CURVE }}
                         className="absolute bottom-12 right-0 w-80 bg-dark-500 border border-white/10 rounded-lg shadow-2xl overflow-hidden"
                     >
                         <div className="p-3 border-b border-white/10 flex items-center justify-between">
@@ -377,7 +378,7 @@ export function FeatureFlagsDebugPanel() {
                                     key={flag.key}
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.03, duration: 0.15 }}
+                                    transition={{ delay: index * STAGGER_DELAY, duration: TRANSITION_DURATION }}
                                     className="px-3 py-2 border-b border-white/10 last:border-0 flex items-center justify-between"
                                 >
                                     <div>

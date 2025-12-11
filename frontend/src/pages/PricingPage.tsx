@@ -4,7 +4,7 @@
  * See docs/MONETIZATION_STRATEGY.md for pricing rationale.
  */
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { PRICING_PLANS, type SubscriptionPlan } from '@/types/billing'
@@ -14,6 +14,9 @@ import { usePurchaseCredits, useCreditBalance } from '@/hooks/useCredits'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/components/Toast'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import {
+    tabContentVariants as unifiedTabContentVariants
+} from '@/components/ui/UnifiedTransitions'
 
 export function PricingPage() {
     useDocumentTitle('pricing')
@@ -26,6 +29,7 @@ export function PricingPage() {
     const isCollapsingRef = useRef<boolean>(false)
     const savedScrollRef = useRef<number>(0)
     const creditsSectionRef = useRef<HTMLDivElement>(null)
+    const animationFrameRef = useRef<number | null>(null)
 
     const { isAuthenticated } = useAuthStore()
     const { data: subscription } = useSubscription()
@@ -34,12 +38,30 @@ export function PricingPage() {
     const upgradeMutation = useUpgradeSubscription()
     const purchaseCreditsMutation = usePurchaseCredits()
 
+    // Cleanup animation frame on unmount
+    useEffect(() => {
+        return () => {
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current)
+            }
+        }
+    }, [])
+
     // Handle credits toggle with scroll preservation
     const handleCreditsToggle = useCallback(() => {
         if (showCredits) {
             // About to collapse - mark it and save scroll position
             isCollapsingRef.current = true
             savedScrollRef.current = window.scrollY
+
+            // Use RAF loop to aggressively maintain scroll position during collapse
+            const maintainScroll = () => {
+                if (isCollapsingRef.current) {
+                    window.scrollTo(0, savedScrollRef.current)
+                    animationFrameRef.current = requestAnimationFrame(maintainScroll)
+                }
+            }
+            animationFrameRef.current = requestAnimationFrame(maintainScroll)
         } else {
             isCollapsingRef.current = false
         }
@@ -287,37 +309,23 @@ export function PricingPage() {
                                         height: 0,
                                         opacity: 0,
                                         transition: {
-                                            opacity: { duration: 0.12, ease: 'easeOut' },
-                                            height: { duration: 0.25, ease: [0.33, 1, 0.68, 1] }
+                                            opacity: { duration: 0.15, ease: 'easeOut' },
+                                            height: { duration: 0.3, ease: [0.33, 1, 0.68, 1], delay: 0.05 }
                                         }
                                     }}
                                     className="overflow-hidden"
                                     style={{
-                                        willChange: 'height',
-                                        overflowAnchor: 'none'
-                                    }}
-                                    onAnimationStart={() => {
-                                        // When collapsing, we need to preserve scroll position
-                                        if (isCollapsingRef.current) {
-                                            // Temporarily disable smooth scrolling to prevent browser interference
-                                            document.documentElement.style.scrollBehavior = 'auto';
-                                        }
-                                    }}
-                                    onUpdate={() => {
-                                        // During collapse animation, actively maintain scroll position
-                                        if (isCollapsingRef.current) {
-                                            const currentScroll = window.scrollY;
-                                            const targetScroll = savedScrollRef.current;
-                                            // Only correct if there's a significant jump
-                                            if (Math.abs(currentScroll - targetScroll) > 5) {
-                                                window.scrollTo({ top: targetScroll, behavior: 'instant' });
-                                            }
-                                        }
+                                        willChange: 'height, opacity',
+                                        overflowAnchor: 'none',
+                                        contain: 'layout'
                                     }}
                                     onAnimationComplete={() => {
-                                        // Reset after animation
-                                        isCollapsingRef.current = false;
-                                        document.documentElement.style.scrollBehavior = '';
+                                        // Stop the RAF loop and reset state
+                                        if (animationFrameRef.current) {
+                                            cancelAnimationFrame(animationFrameRef.current)
+                                            animationFrameRef.current = null
+                                        }
+                                        isCollapsingRef.current = false
                                     }}
                                 >
                                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl mx-auto pb-4 pt-6">

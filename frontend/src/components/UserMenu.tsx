@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { ConfirmDialog } from './ConfirmDialog'
 import { forceUnlockBodyScroll } from '@/lib/bodyScrollLock'
+import { TRANSITION_DURATION, STAGGER_DELAY, EASE_CURVE } from '@/components/ui/UnifiedTransitions'
 
 export function UserMenu() {
     const { user, logout } = useAuthStore()
@@ -85,7 +86,7 @@ export function UserMenu() {
                         initial={{ opacity: 0, scale: 0.95, y: -10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                        transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                        transition={{ duration: TRANSITION_DURATION, ease: EASE_CURVE }}
                         className="absolute right-0 mt-2 w-56 bg-dark-400 rounded-xl shadow-xl border border-white/10 py-1 z-50 overflow-hidden"
                     >
                         {/* User info */}
@@ -101,7 +102,7 @@ export function UserMenu() {
                                     key={item.to}
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.05, duration: 0.15 }}
+                                    transition={{ delay: index * STAGGER_DELAY, duration: TRANSITION_DURATION }}
                                 >
                                     <Link
                                         to={item.to}

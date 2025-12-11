@@ -8,6 +8,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { TRANSITION_DURATION, EASE_CURVE } from '@/components/ui/UnifiedTransitions';
 
 // ============================================================================
 // Types
@@ -276,7 +277,7 @@ function TourOverlay() {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.3 }}
+                        transition={{ duration: TRANSITION_DURATION, ease: EASE_CURVE }}
                         className="absolute pointer-events-none"
                         style={{
                             top: targetRect.top - padding,

@@ -34,16 +34,16 @@ import { useAuthStore } from './stores/authStore'
 import { useServiceWorkerUpdate } from './hooks/usePWA'
 import { KeyboardShortcutsProvider } from './hooks/useKeyboardShortcuts'
 import { forceUnlockBodyScroll } from './lib/bodyScrollLock'
+import {
+    pageVariants as unifiedPageVariants,
+    TRANSITION_DURATION
+} from './components/ui/UnifiedTransitions'
 
-// Page transition animation variants
-const pageVariants = {
-    initial: { opacity: 0 },
-    animate: { opacity: 1 },
-    exit: { opacity: 0 },
-}
+// Page transition animation variants - using unified system
+const pageVariants = unifiedPageVariants
 
 const pageTransition = {
-    duration: 0.15,
+    duration: TRANSITION_DURATION,
     ease: 'easeOut',
 }
 

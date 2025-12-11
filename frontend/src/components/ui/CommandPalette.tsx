@@ -9,6 +9,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { TRANSITION_DURATION, EASE_CURVE } from './UnifiedTransitions';
 
 // ============================================================================
 // Types
@@ -278,7 +279,7 @@ export function CommandPalette({
                         initial={{ opacity: 0, scale: 0.95, y: -20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -20 }}
-                        transition={{ duration: 0.15 }}
+                        transition={{ duration: TRANSITION_DURATION, ease: EASE_CURVE }}
                         className={cn(
                             'fixed left-1/2 top-[20%] z-50 -translate-x-1/2',
                             'w-full max-w-xl p-0 overflow-hidden rounded-xl',

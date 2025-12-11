@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore, TwoFactorRequiredError } from '@/stores/authStore'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { forceUnlockBodyScroll, removeStaleOverlays } from '@/lib/bodyScrollLock'
+import { TRANSITION_DURATION, EASE_CURVE } from '@/components/ui/UnifiedTransitions'
 
 // Eye icons for password visibility toggle
 function EyeIcon() {
@@ -180,7 +181,7 @@ export function LoginPage() {
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: TRANSITION_DURATION, ease: EASE_CURVE }}
                 className="w-full max-w-sm"
             >
                 <div className="bg-dark-400 rounded-xl p-6 border border-white/5">
@@ -191,7 +192,7 @@ export function LoginPage() {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                transition={{ duration: 0.2 }}
+                                transition={{ duration: TRANSITION_DURATION, ease: EASE_CURVE }}
                             >
                                 {/* Header */}
                                 <div className="text-center mb-6">
@@ -314,7 +315,7 @@ export function LoginPage() {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                transition={{ duration: 0.2 }}
+                                transition={{ duration: TRANSITION_DURATION, ease: EASE_CURVE }}
                             >
                                 {/* 2FA Header */}
                                 <div className="text-center mb-6">

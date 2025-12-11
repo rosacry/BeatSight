@@ -10,11 +10,16 @@
 
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { API_CONFIG } from '@/lib/config'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import {
+    tabContentVariants as unifiedTabContentVariants,
+    staggerContainerVariants,
+    staggerItemVariants
+} from '@/components/ui/UnifiedTransitions'
 
 // Types
 interface LeaderboardUser {
@@ -50,23 +55,10 @@ type LeaderboardTab = 'karma' | 'verifiers' | 'contributors'
 
 const VALID_TABS: LeaderboardTab[] = ['karma', 'verifiers', 'contributors']
 
-// Animation variants
-const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: { staggerChildren: 0.05, delayChildren: 0.1 }
-    }
-}
+// Animation variants - use unified system
+const containerVariants = staggerContainerVariants
 
-const itemVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: {
-        opacity: 1,
-        x: 0,
-        transition: { duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }
-    }
-}
+const itemVariants = staggerItemVariants
 
 export function LeaderboardPage() {
     useDocumentTitle('leaderboard')
@@ -199,207 +191,217 @@ export function LeaderboardPage() {
                         <p className="text-gray-400 mt-4">Loading leaderboard...</p>
                     </div>
                 ) : (
-                    <motion.div
-                        initial="hidden"
-                        animate="visible"
-                        variants={containerVariants}
-                    >
-                        {/* Karma Leaderboard */}
-                        {activeTab === 'karma' && karmaLeaderboard && (
-                            <div className="divide-y divide-dark-300">
-                                {karmaLeaderboard.map((entry, index) => (
-                                    <motion.div
-                                        key={entry.id}
-                                        variants={itemVariants}
-                                        className={`flex items-center gap-4 p-4 hover:bg-dark-300 transition-colors ${entry.id === user?.id ? 'bg-primary-500/10 border-l-4 border-primary-500' : ''
-                                            }`}
-                                    >
-                                        {/* Rank */}
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
-                                            index === 1 ? 'bg-gray-300 text-black' :
-                                                index === 2 ? 'bg-amber-600 text-white' :
-                                                    'bg-dark-500 text-gray-400'
-                                            }`}>
-                                            {index + 1}
-                                        </div>
+                    <AnimatePresence mode="wait" initial={false}>
+                        <motion.div
+                            key={activeTab}
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            variants={unifiedTabContentVariants}
+                        >
+                            <motion.div
+                                initial="initial"
+                                animate="animate"
+                                variants={containerVariants}
+                            >
+                                {/* Karma Leaderboard */}
+                                {activeTab === 'karma' && karmaLeaderboard && (
+                                    <div className="divide-y divide-dark-300">
+                                        {karmaLeaderboard.map((entry, index) => (
+                                            <motion.div
+                                                key={entry.id}
+                                                variants={itemVariants}
+                                                className={`flex items-center gap-4 p-4 hover:bg-dark-300 transition-colors ${entry.id === user?.id ? 'bg-primary-500/10 border-l-4 border-primary-500' : ''
+                                                    }`}
+                                            >
+                                                {/* Rank */}
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
+                                                    index === 1 ? 'bg-gray-300 text-black' :
+                                                        index === 2 ? 'bg-amber-600 text-white' :
+                                                            'bg-dark-500 text-gray-400'
+                                                    }`}>
+                                                    {index + 1}
+                                                </div>
 
-                                        {/* Avatar & Name */}
-                                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                                            {entry.is_anonymous ? (
-                                                <div className="w-10 h-10 rounded-full bg-accent-500 flex items-center justify-center text-white">
-                                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l-2-2m0 0l-2-2m2 2l2-2m-2 2l2 2" />
-                                                    </svg>
-                                                </div>
-                                            ) : entry.avatar_url ? (
-                                                <img
-                                                    src={entry.avatar_url}
-                                                    alt={entry.display_name}
-                                                    className="w-10 h-10 rounded-full"
-                                                />
-                                            ) : (
-                                                <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center text-white font-medium">
-                                                    {entry.display_name?.[0]?.toUpperCase() || '?'}
-                                                </div>
-                                            )}
-                                            <div className="min-w-0">
-                                                <p className={`font-medium truncate ${entry.is_anonymous ? 'text-accent-300 italic' : 'text-white'}`}>
-                                                    {entry.display_name}
-                                                    {entry.is_anonymous && (
-                                                        <span className="ml-2 text-xs text-accent-400">🕵️</span>
+                                                {/* Avatar & Name */}
+                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    {entry.is_anonymous ? (
+                                                        <div className="w-10 h-10 rounded-full bg-accent-500 flex items-center justify-center text-white">
+                                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l-2-2m0 0l-2-2m2 2l2-2m-2 2l2 2" />
+                                                            </svg>
+                                                        </div>
+                                                    ) : entry.avatar_url ? (
+                                                        <img
+                                                            src={entry.avatar_url}
+                                                            alt={entry.display_name}
+                                                            className="w-10 h-10 rounded-full"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center text-white font-medium">
+                                                            {entry.display_name?.[0]?.toUpperCase() || '?'}
+                                                        </div>
                                                     )}
-                                                </p>
-                                                {entry.id === user?.id && (
-                                                    <p className="text-xs text-primary-400">This is you!</p>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Score */}
-                                        <div className="text-right">
-                                            <p className="text-lg font-bold text-primary-400">{entry.karma_score.toLocaleString()}</p>
-                                            <p className="text-xs text-gray-400">karma</p>
-                                        </div>
-                                    </motion.div>
-                                ))}
-
-                                {karmaLeaderboard.length === 0 && (
-                                    <div className="p-8 text-center text-gray-400">
-                                        No karma data available yet.
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Verifier Leaderboard */}
-                        {activeTab === 'verifiers' && verifierLeaderboard && (
-                            <div className="divide-y divide-gray-700/50">
-                                {verifierLeaderboard.map((entry, index) => (
-                                    <motion.div
-                                        key={entry.verifier_id}
-                                        variants={itemVariants}
-                                        className="flex items-center gap-4 p-4 hover:bg-dark-300 transition-colors"
-                                    >
-                                        {/* Rank */}
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
-                                            index === 1 ? 'bg-gray-300 text-black' :
-                                                index === 2 ? 'bg-amber-600 text-white' :
-                                                    'bg-dark-500 text-gray-400'
-                                            }`}>
-                                            {index + 1}
-                                        </div>
-
-                                        {/* Avatar & Name */}
-                                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                                            {entry.avatar_url ? (
-                                                <img
-                                                    src={entry.avatar_url}
-                                                    alt={entry.username}
-                                                    className="w-10 h-10 rounded-full"
-                                                />
-                                            ) : (
-                                                <div className="w-10 h-10 rounded-full bg-accent-500 flex items-center justify-center text-white font-medium">
-                                                    {entry.username?.[0]?.toUpperCase() || '?'}
+                                                    <div className="min-w-0">
+                                                        <p className={`font-medium truncate ${entry.is_anonymous ? 'text-accent-300 italic' : 'text-white'}`}>
+                                                            {entry.display_name}
+                                                            {entry.is_anonymous && (
+                                                                <span className="ml-2 text-xs text-accent-400">🕵️</span>
+                                                            )}
+                                                        </p>
+                                                        {entry.id === user?.id && (
+                                                            <p className="text-xs text-primary-400">This is you!</p>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            )}
-                                            <div className="min-w-0">
-                                                <p className="font-medium text-white truncate">{entry.username}</p>
-                                                <div className="flex gap-3 text-xs text-gray-400">
-                                                    <span className="text-green-400">{entry.approved} ✓</span>
-                                                    <span className="text-red-400">{entry.rejected} ✗</span>
+
+                                                {/* Score */}
+                                                <div className="text-right">
+                                                    <p className="text-lg font-bold text-primary-400">{entry.karma_score.toLocaleString()}</p>
+                                                    <p className="text-xs text-gray-400">karma</p>
                                                 </div>
+                                            </motion.div>
+                                        ))}
+
+                                        {karmaLeaderboard.length === 0 && (
+                                            <div className="p-8 text-center text-gray-400">
+                                                No karma data available yet.
                                             </div>
-                                        </div>
-
-                                        {/* Stats */}
-                                        <div className="text-right">
-                                            <p className="text-lg font-bold text-accent-400">{entry.total_reviews}</p>
-                                            <p className="text-xs text-gray-400">reviews</p>
-                                        </div>
-                                    </motion.div>
-                                ))}
-
-                                {verifierLeaderboard.length === 0 && (
-                                    <div className="p-8 text-center text-gray-400">
-                                        {!accessToken ? (
-                                            <>
-                                                <p>Sign in to view the verifier leaderboard.</p>
-                                                <Link to="/login" className="text-primary-400 hover:text-primary-300 mt-2 inline-block">
-                                                    Sign in →
-                                                </Link>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <p>No verifier data available yet.</p>
-                                                <Link to="/verifier" className="text-primary-400 hover:text-primary-300 mt-2 inline-block">
-                                                    Become a verifier →
-                                                </Link>
-                                            </>
                                         )}
                                     </div>
                                 )}
-                            </div>
-                        )}
 
-                        {/* Contributor Leaderboard */}
-                        {activeTab === 'contributors' && contributorLeaderboard && (
-                            <div className="divide-y divide-dark-300">
-                                {contributorLeaderboard.map((entry, index) => (
-                                    <motion.div
-                                        key={entry.user_id}
-                                        variants={itemVariants}
-                                        className="flex items-center gap-4 p-4 hover:bg-dark-300 transition-colors"
-                                    >
-                                        {/* Rank */}
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
-                                            index === 1 ? 'bg-gray-300 text-black' :
-                                                index === 2 ? 'bg-amber-600 text-white' :
-                                                    'bg-dark-500 text-gray-400'
-                                            }`}>
-                                            {index + 1}
-                                        </div>
-
-                                        {/* Avatar & Name */}
-                                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                                            {entry.avatar_url ? (
-                                                <img
-                                                    src={entry.avatar_url}
-                                                    alt={entry.username}
-                                                    className="w-10 h-10 rounded-full"
-                                                />
-                                            ) : (
-                                                <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-medium">
-                                                    {entry.username?.[0]?.toUpperCase() || '?'}
+                                {/* Verifier Leaderboard */}
+                                {activeTab === 'verifiers' && verifierLeaderboard && (
+                                    <div className="divide-y divide-gray-700/50">
+                                        {verifierLeaderboard.map((entry, index) => (
+                                            <motion.div
+                                                key={entry.verifier_id}
+                                                variants={itemVariants}
+                                                className="flex items-center gap-4 p-4 hover:bg-dark-300 transition-colors"
+                                            >
+                                                {/* Rank */}
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
+                                                    index === 1 ? 'bg-gray-300 text-black' :
+                                                        index === 2 ? 'bg-amber-600 text-white' :
+                                                            'bg-dark-500 text-gray-400'
+                                                    }`}>
+                                                    {index + 1}
                                                 </div>
-                                            )}
-                                            <div className="min-w-0">
-                                                <p className="font-medium text-white truncate">{entry.username}</p>
-                                                <p className="text-xs text-gray-400">
-                                                    {entry.approved_count} approved
-                                                </p>
+
+                                                {/* Avatar & Name */}
+                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    {entry.avatar_url ? (
+                                                        <img
+                                                            src={entry.avatar_url}
+                                                            alt={entry.username}
+                                                            className="w-10 h-10 rounded-full"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-full bg-accent-500 flex items-center justify-center text-white font-medium">
+                                                            {entry.username?.[0]?.toUpperCase() || '?'}
+                                                        </div>
+                                                    )}
+                                                    <div className="min-w-0">
+                                                        <p className="font-medium text-white truncate">{entry.username}</p>
+                                                        <div className="flex gap-3 text-xs text-gray-400">
+                                                            <span className="text-green-400">{entry.approved} ✓</span>
+                                                            <span className="text-red-400">{entry.rejected} ✗</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Stats */}
+                                                <div className="text-right">
+                                                    <p className="text-lg font-bold text-accent-400">{entry.total_reviews}</p>
+                                                    <p className="text-xs text-gray-400">reviews</p>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+
+                                        {verifierLeaderboard.length === 0 && (
+                                            <div className="p-8 text-center text-gray-400">
+                                                {!accessToken ? (
+                                                    <>
+                                                        <p>Sign in to view the verifier leaderboard.</p>
+                                                        <Link to="/login" className="text-primary-400 hover:text-primary-300 mt-2 inline-block">
+                                                            Sign in →
+                                                        </Link>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <p>No verifier data available yet.</p>
+                                                        <Link to="/verifier" className="text-primary-400 hover:text-primary-300 mt-2 inline-block">
+                                                            Become a verifier →
+                                                        </Link>
+                                                    </>
+                                                )}
                                             </div>
-                                        </div>
-
-                                        {/* Stats */}
-                                        <div className="text-right">
-                                            <p className="text-lg font-bold text-green-400">{entry.contribution_count}</p>
-                                            <p className="text-xs text-gray-400">contributions</p>
-                                        </div>
-                                    </motion.div>
-                                ))}
-
-                                {contributorLeaderboard.length === 0 && (
-                                    <div className="p-8 text-center text-gray-400">
-                                        <p>No contribution data available yet.</p>
-                                        <Link to="/upload" className="text-primary-400 hover:text-primary-300 mt-2 inline-block">
-                                            Start contributing →
-                                        </Link>
+                                        )}
                                     </div>
                                 )}
-                            </div>
-                        )}
-                    </motion.div>
+
+                                {/* Contributor Leaderboard */}
+                                {activeTab === 'contributors' && contributorLeaderboard && (
+                                    <div className="divide-y divide-dark-300">
+                                        {contributorLeaderboard.map((entry, index) => (
+                                            <motion.div
+                                                key={entry.user_id}
+                                                variants={itemVariants}
+                                                className="flex items-center gap-4 p-4 hover:bg-dark-300 transition-colors"
+                                            >
+                                                {/* Rank */}
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
+                                                    index === 1 ? 'bg-gray-300 text-black' :
+                                                        index === 2 ? 'bg-amber-600 text-white' :
+                                                            'bg-dark-500 text-gray-400'
+                                                    }`}>
+                                                    {index + 1}
+                                                </div>
+
+                                                {/* Avatar & Name */}
+                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    {entry.avatar_url ? (
+                                                        <img
+                                                            src={entry.avatar_url}
+                                                            alt={entry.username}
+                                                            className="w-10 h-10 rounded-full"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-medium">
+                                                            {entry.username?.[0]?.toUpperCase() || '?'}
+                                                        </div>
+                                                    )}
+                                                    <div className="min-w-0">
+                                                        <p className="font-medium text-white truncate">{entry.username}</p>
+                                                        <p className="text-xs text-gray-400">
+                                                            {entry.approved_count} approved
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Stats */}
+                                                <div className="text-right">
+                                                    <p className="text-lg font-bold text-green-400">{entry.contribution_count}</p>
+                                                    <p className="text-xs text-gray-400">contributions</p>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+
+                                        {contributorLeaderboard.length === 0 && (
+                                            <div className="p-8 text-center text-gray-400">
+                                                <p>No contribution data available yet.</p>
+                                                <Link to="/upload" className="text-primary-400 hover:text-primary-300 mt-2 inline-block">
+                                                    Start contributing →
+                                                </Link>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </motion.div>
+                        </motion.div>
+                    </AnimatePresence>
                 )}
             </div>
 

@@ -14,24 +14,15 @@ import { motion } from 'framer-motion'
 import { getQueueLength, getQuota } from '@/api/client'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { AnimatedCounter } from '@/components/ui'
+import {
+    staggerContainerVariants,
+    staggerItemVariants
+} from '@/components/ui/UnifiedTransitions'
 
-// Animation variants - subtle and smooth
-const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: { staggerChildren: 0.08, delayChildren: 0.1 }
-    }
-}
+// Animation variants - use unified system
+const containerVariants = staggerContainerVariants
 
-const itemVariants = {
-    hidden: { opacity: 0, y: 15 },
-    visible: {
-        opacity: 1,
-        y: 0,
-        transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }
-    }
-}
+const itemVariants = staggerItemVariants
 
 const features = [
     {

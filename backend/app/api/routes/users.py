@@ -13,6 +13,7 @@ from PIL import Image
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user, get_current_user_optional, get_db_session
 from app.models.user import User
@@ -482,7 +483,9 @@ async def get_public_user_profile(
     """
     # Fetch the user (User model uses restriction_level, not deleted_at)
     result = await session.execute(
-        select(User).where(
+        select(User)
+        .options(selectinload(User.roles))
+        .where(
             User.id == user_id,
             User.restriction_level != 'banned'
         )

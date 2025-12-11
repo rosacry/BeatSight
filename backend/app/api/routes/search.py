@@ -221,9 +221,9 @@ async def global_search(
             song_id=str(s.id),
             title=s.title,
             artist=s.artist or "Unknown Artist",
-            creator_name=s.owner.display_name if s.owner else "Unknown",
-            creator_id=str(s.owner_id) if s.owner_id else "",
-            is_verified=getattr(s, 'is_verified', False),
+            creator_name=s.creator.display_name if s.creator else "Unknown",
+            creator_id=str(s.created_by_id) if s.created_by_id else "",
+            is_verified=s.status == SongStatus.VERIFIED if hasattr(s, 'status') else False,
             difficulty_rating=None,
             cover_url=s.cover_url if hasattr(s, 'cover_url') else None
         )
@@ -375,9 +375,9 @@ async def search_maps_extended(
                 "song_id": str(s.id),
                 "title": s.title,
                 "artist": s.artist or "Unknown Artist",
-                "creator_name": s.owner.display_name if s.owner else "Unknown",
-                "creator_id": str(s.owner_id) if s.owner_id else "",
-                "is_verified": getattr(s, 'is_verified', False),
+                "creator_name": s.creator.display_name if s.creator else "Unknown",
+                "creator_id": str(s.created_by_id) if s.created_by_id else "",
+                "is_verified": s.status == SongStatus.VERIFIED if hasattr(s, 'status') else False,
                 "cover_url": getattr(s, 'cover_url', None),
             }
             for s in songs

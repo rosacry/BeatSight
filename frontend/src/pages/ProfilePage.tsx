@@ -146,7 +146,7 @@ export function ProfilePage() {
                 <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4">
                     {/* Avatar - rounded square like osu! */}
                     <Avatar
-                        src={user.avatar_url}
+                        src={user.avatar_url ?? undefined}
                         fallback={initials}
                         alt={user.display_name}
                         size="4xl"

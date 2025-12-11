@@ -6,6 +6,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { billingApi } from '@/api/billing'
 import type { SubscriptionPlan } from '@/types/billing'
 import { toast } from '@/components/Toast'
+import { useAuthStore } from '@/stores/authStore'
 
 /**
  * Hook to fetch Stripe configuration.
@@ -20,12 +21,16 @@ export function useStripeConfig() {
 
 /**
  * Hook to fetch current subscription status.
+ * Only fetches when user is authenticated to avoid 401 errors.
  */
 export function useSubscription() {
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+
     return useQuery({
         queryKey: ['subscription'],
         queryFn: () => billingApi.getSubscription(),
         staleTime: 1000 * 60 * 5, // 5 minutes
+        enabled: isAuthenticated, // Only fetch when authenticated
     })
 }
 

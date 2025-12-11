@@ -14,9 +14,6 @@ import { usePurchaseCredits, useCreditBalance } from '@/hooks/useCredits'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from '@/components/Toast'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
-import {
-    tabContentVariants as unifiedTabContentVariants
-} from '@/components/ui/UnifiedTransitions'
 
 export function PricingPage() {
     useDocumentTitle('pricing')

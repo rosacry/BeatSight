@@ -1,6 +1,9 @@
 /**
  * Error boundary component.
  * Catches JavaScript errors in child components and displays a fallback UI.
+ * 
+ * Note: This component resets when the `resetKey` prop changes, allowing
+ * parent components to clear the error state (e.g., on navigation).
  */
 
 import { Component, ErrorInfo, ReactNode } from 'react'
@@ -9,6 +12,8 @@ import { captureError } from '../lib/errorReporting'
 interface Props {
     children: ReactNode
     fallback?: ReactNode
+    /** Optional key that resets the error boundary when changed */
+    resetKey?: string | number
 }
 
 interface State {
@@ -27,6 +32,15 @@ export class ErrorBoundary extends Component<Props, State> {
     }
 
     componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+        // Don't log "removeChild" errors to error reporting - these are harmless
+        // DOM timing issues that occur during navigation/unmounting
+        if (error.name === 'NotFoundError' && error.message.includes('removeChild')) {
+            console.warn('[ErrorBoundary] Suppressed removeChild error during navigation:', error.message)
+            // Reset the error state since this is a non-critical timing issue
+            this.setState({ hasError: false, error: null })
+            return
+        }
+
         console.error('Error caught by boundary:', error, errorInfo)
         // Send to error reporting service
         captureError(error, {

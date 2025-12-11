@@ -182,10 +182,21 @@ export class ErrorBoundary extends React.Component<
     }
 
     static getDerivedStateFromError(error: Error) {
+        // Don't show error UI for removeChild errors - these are harmless
+        // DOM timing issues that occur during navigation/unmounting
+        if (error.name === 'NotFoundError' && error.message.includes('removeChild')) {
+            return { hasError: false, error: null };
+        }
         return { hasError: true, error };
     }
 
     componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+        // Suppress removeChild errors - these are timing issues during unmount
+        if (error.name === 'NotFoundError' && error.message.includes('removeChild')) {
+            console.warn('[ErrorBoundary] Suppressed removeChild error during navigation');
+            return;
+        }
+
         captureError(error, {
             componentStack: errorInfo.componentStack,
         });

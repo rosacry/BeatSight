@@ -956,7 +956,7 @@ export function SettingsPage() {
                                                         </div>
                                                         <div>
                                                             <p className="text-white font-medium">Hide from leaderboards</p>
-                                                            <p className="text-sm text-gray-400">Appear as "Secret Agent" 🕵️</p>
+                                                            <p className="text-sm text-gray-400">Your name will be hidden on all leaderboards</p>
                                                         </div>
                                                     </div>
                                                     <input
@@ -976,7 +976,7 @@ export function SettingsPage() {
                                                         </div>
                                                         <div>
                                                             <p className="text-white font-medium">Hide from public queues</p>
-                                                            <p className="text-sm text-gray-400">Jobs appear as "Secret Agent" 🕵️</p>
+                                                            <p className="text-sm text-gray-400">Your jobs will be hidden from public view</p>
                                                         </div>
                                                     </div>
                                                     <input

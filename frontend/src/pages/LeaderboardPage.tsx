@@ -14,6 +14,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { API_CONFIG } from '@/lib/config'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { UsernameLink } from '@/components/social'
 import {
     AnimatedTabContent,
     AnimatedTabButton,
@@ -230,11 +231,19 @@ export function LeaderboardPage() {
                                                         </div>
                                                     )}
                                                     <div className="min-w-0">
-                                                        <p className={`font-medium truncate ${entry.is_anonymous ? 'text-accent-300' : 'text-white'}`}>
-                                                            {entry.display_name}
-                                                        </p>
-                                                        {entry.id === user?.id && (
-                                                            <p className="text-xs text-primary-400">This is you!</p>
+                                                        {entry.is_anonymous ? (
+                                                            <p className="font-medium text-accent-300 truncate">
+                                                                {entry.display_name}
+                                                            </p>
+                                                        ) : (
+                                                            <UsernameLink
+                                                                user={{
+                                                                    id: entry.id,
+                                                                    username: entry.display_name,
+                                                                    display_name: entry.display_name,
+                                                                }}
+                                                                className="font-medium truncate"
+                                                            />
                                                         )}
                                                     </div>
                                                 </div>
@@ -289,7 +298,14 @@ export function LeaderboardPage() {
                                                         </div>
                                                     )}
                                                     <div className="min-w-0">
-                                                        <p className="font-medium text-white truncate">{entry.username}</p>
+                                                        <UsernameLink
+                                                            user={{
+                                                                id: entry.verifier_id,
+                                                                username: entry.username,
+                                                                display_name: entry.username,
+                                                            }}
+                                                            className="font-medium truncate"
+                                                        />
                                                         <div className="flex gap-3 text-xs text-gray-400">
                                                             <span className="text-green-400">{entry.approved} ✓</span>
                                                             <span className="text-red-400">{entry.rejected} ✗</span>
@@ -361,7 +377,14 @@ export function LeaderboardPage() {
                                                         </div>
                                                     )}
                                                     <div className="min-w-0">
-                                                        <p className="font-medium text-white truncate">{entry.username}</p>
+                                                        <UsernameLink
+                                                            user={{
+                                                                id: entry.user_id,
+                                                                username: entry.username,
+                                                                display_name: entry.username,
+                                                            }}
+                                                            className="font-medium truncate"
+                                                        />
                                                         <p className="text-xs text-gray-400">
                                                             {entry.approved_count} approved
                                                         </p>

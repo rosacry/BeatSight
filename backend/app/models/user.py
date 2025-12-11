@@ -25,6 +25,7 @@ if TYPE_CHECKING:  # pragma: no cover - type-checking only
     from .phone_verification import PhoneVerificationCode
     from .push_subscription import PushSubscription
     from .role import UserRole
+    from .social import Message, UserBlock, UserReport
     from .song import Song
     from .subscription import Subscription
     from .training_contribution import ContributionConsent, TrainingContribution
@@ -176,6 +177,48 @@ class User(Base):
         "UserSettings",
         back_populates="user",
         uselist=False,
+        cascade="all, delete-orphan",
+    )
+
+    # Social: Messages
+    sent_messages: Mapped[list["Message"]] = relationship(
+        "Message",
+        back_populates="sender",
+        foreign_keys="Message.sender_id",
+        cascade="all, delete-orphan",
+    )
+    received_messages: Mapped[list["Message"]] = relationship(
+        "Message",
+        back_populates="recipient",
+        foreign_keys="Message.recipient_id",
+        cascade="all, delete-orphan",
+    )
+
+    # Social: Blocks
+    blocks_given: Mapped[list["UserBlock"]] = relationship(
+        "UserBlock",
+        back_populates="blocker",
+        foreign_keys="UserBlock.blocker_id",
+        cascade="all, delete-orphan",
+    )
+    blocks_received: Mapped[list["UserBlock"]] = relationship(
+        "UserBlock",
+        back_populates="blocked",
+        foreign_keys="UserBlock.blocked_id",
+        cascade="all, delete-orphan",
+    )
+
+    # Social: Reports
+    reports_submitted: Mapped[list["UserReport"]] = relationship(
+        "UserReport",
+        back_populates="reporter",
+        foreign_keys="UserReport.reporter_id",
+        cascade="all, delete-orphan",
+    )
+    reports_received: Mapped[list["UserReport"]] = relationship(
+        "UserReport",
+        back_populates="reported_user",
+        foreign_keys="UserReport.reported_user_id",
         cascade="all, delete-orphan",
     )
 

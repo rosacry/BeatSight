@@ -265,3 +265,34 @@ async def health_check() -> HealthResponse:
         timestamp=datetime.now(timezone.utc),
         uptime_seconds=round(get_uptime_seconds(), 2),
     )
+
+
+class FeaturesResponse(BaseModel):
+    """Feature flags response."""
+    cloud_sync: bool
+    phone_verification: bool
+    two_factor_auth: bool
+    stripe_payments: bool
+
+
+@router.get(
+    "/features",
+    response_model=FeaturesResponse,
+    summary="Get enabled features",
+    description="Returns which optional features are enabled on the backend.",
+)
+async def get_features() -> FeaturesResponse:
+    """
+    Get enabled features.
+    
+    Returns which optional features are enabled, allowing the frontend
+    to conditionally show/hide functionality and avoid making requests
+    to disabled endpoints.
+    """
+    settings = get_settings()
+    return FeaturesResponse(
+        cloud_sync=settings.feature_cloud_sync,
+        phone_verification=bool(settings.twilio_account_sid and settings.twilio_auth_token),
+        two_factor_auth=True,  # Always available
+        stripe_payments=bool(settings.stripe_secret_key),
+    )

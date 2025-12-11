@@ -26,6 +26,7 @@ from app.api.routes import (
     metadata,
     phone,
     roles,
+    social,
     songs,
     storage,
     sync,
@@ -281,6 +282,7 @@ app.include_router(map_edits.router, prefix=settings.api_prefix)
 app.include_router(maps.router, prefix=settings.api_prefix)
 app.include_router(votes.router, prefix=settings.api_prefix)
 app.include_router(forum.router, prefix=settings.api_prefix)
+app.include_router(social.router, prefix=settings.api_prefix)
 app.include_router(contributions.router, prefix=settings.api_prefix)
 app.include_router(websocket.router)  # No prefix - /ws/jobs
 

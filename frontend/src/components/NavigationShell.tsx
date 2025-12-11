@@ -31,6 +31,7 @@ const navItems: NavItem[] = [
     { path: '/queue', label: 'Queue', icon: <QueueIcon /> },
     { path: '/forum', label: 'Forum', icon: <ForumIcon /> },
     { path: '/leaderboard', label: 'Leaderboard', icon: <LeaderboardIcon /> },
+    { path: '/messages', label: 'Messages', requiresAuth: true, icon: <MessagesIcon /> },
     { path: '/record', label: 'Record', requiresAuth: true, icon: <MicIcon /> },
     { path: '/library', label: 'Library', requiresAuth: true, icon: <LibraryIcon /> },
 ]
@@ -55,6 +56,14 @@ function ForumIcon() {
     return (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+        </svg>
+    )
+}
+
+function MessagesIcon() {
+    return (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
         </svg>
     )
 }

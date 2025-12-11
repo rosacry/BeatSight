@@ -61,6 +61,13 @@ from .training_contribution import (
     CorrectionType,
     TrainingContribution,
 )
+from .social import (
+    DirectMessage,
+    ReportStatus,
+    ReportType,
+    UserBlock,
+    UserReport,
+)
 from .user import RestrictionLevel, User
 from .user_settings import ReEvaluationPolicy, UploadVisibility, UserSettings
 from .webhook_event import ProcessedWebhookEvent
@@ -77,6 +84,7 @@ __all__ = [
     "CreditPurchase",
     "CreditTransaction",
     "CreditTransactionType",
+    "DirectMessage",
     "Forum",
     "ForumCategory",
     "ForumPoll",
@@ -108,6 +116,8 @@ __all__ = [
     "ProcessedWebhookEvent",
     "PushSubscription",
     "REQUIRED_VERIFIERS_FOR_ACCURACY",
+    "ReportStatus",
+    "ReportType",
     "RestrictionLevel",
     "Role",
     "Song",
@@ -125,7 +135,9 @@ __all__ = [
     "User",
     "UserAccountHistory",
     "UserAchievement",
+    "UserBlock",
     "UserPreferences",
+    "UserReport",
     "UserRole",
     "UserSettings",
     "UploadVisibility",

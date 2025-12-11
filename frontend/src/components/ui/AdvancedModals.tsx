@@ -141,6 +141,13 @@ export function Sheet({
         }
     }, [isOpen])
 
+    // Additional safety: ensure body scroll is unlocked when component unmounts
+    useEffect(() => {
+        return () => {
+            unlockBodyScroll()
+        }
+    }, [])
+
     if (!isOpen) return null
 
     return createPortal(

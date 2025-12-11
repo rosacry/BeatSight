@@ -166,12 +166,12 @@ export function LeaderboardPage() {
             {/* Header */}
             <div className="text-center mb-8">
                 <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Leaderboards</h1>
-                <p className="text-slate-400 text-sm sm:text-base">Top contributors in the BeatSight community</p>
+                <p className="text-gray-400 text-sm sm:text-base">Top contributors in the BeatSight community</p>
             </div>
 
             {/* Tab Navigation */}
             <div className="flex justify-center mb-8 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
-                <div className="inline-flex gap-1 p-1 bg-gray-800/50 rounded-xl flex-nowrap">
+                <div className="inline-flex gap-1 p-1 bg-dark-400 rounded-xl flex-nowrap">
                     {[
                         { id: 'karma', label: '🏆 Karma', description: 'Top karma earners' },
                         { id: 'verifiers', label: '✓ Verifiers', description: 'Top beatmap verifiers' },
@@ -181,8 +181,8 @@ export function LeaderboardPage() {
                             key={tab.id}
                             onClick={() => handleTabChange(tab.id as LeaderboardTab)}
                             className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap ${activeTab === tab.id
-                                ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-lg shadow-cyan-500/25'
-                                : 'text-slate-400 hover:text-white hover:bg-gray-700/50'
+                                ? 'bg-primary-500 text-white'
+                                : 'text-gray-400 hover:text-white hover:bg-dark-300'
                                 }`}
                         >
                             {tab.label}
@@ -192,11 +192,11 @@ export function LeaderboardPage() {
             </div>
 
             {/* Leaderboard Content */}
-            <div className="bg-gray-800/50 rounded-2xl border border-gray-700/50 overflow-hidden">
+            <div className="bg-dark-400 rounded-xl border border-dark-300 overflow-hidden">
                 {isLoading ? (
                     <div className="p-8 text-center">
-                        <div className="animate-spin h-8 w-8 border-4 border-cyan-500 border-t-transparent rounded-full mx-auto"></div>
-                        <p className="text-slate-400 mt-4">Loading leaderboard...</p>
+                        <div className="animate-spin h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full mx-auto"></div>
+                        <p className="text-gray-400 mt-4">Loading leaderboard...</p>
                     </div>
                 ) : (
                     <motion.div
@@ -206,19 +206,19 @@ export function LeaderboardPage() {
                     >
                         {/* Karma Leaderboard */}
                         {activeTab === 'karma' && karmaLeaderboard && (
-                            <div className="divide-y divide-gray-700/50">
+                            <div className="divide-y divide-dark-300">
                                 {karmaLeaderboard.map((entry, index) => (
                                     <motion.div
                                         key={entry.id}
                                         variants={itemVariants}
-                                        className={`flex items-center gap-4 p-4 hover:bg-gray-700/30 transition-colors ${entry.id === user?.id ? 'bg-cyan-500/10 border-l-4 border-cyan-500' : ''
+                                        className={`flex items-center gap-4 p-4 hover:bg-dark-300 transition-colors ${entry.id === user?.id ? 'bg-primary-500/10 border-l-4 border-primary-500' : ''
                                             }`}
                                     >
                                         {/* Rank */}
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-black' :
-                                            index === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-black' :
-                                                index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-white' :
-                                                    'bg-gray-700 text-gray-400'
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
+                                            index === 1 ? 'bg-gray-300 text-black' :
+                                                index === 2 ? 'bg-amber-600 text-white' :
+                                                    'bg-dark-500 text-gray-400'
                                             }`}>
                                             {index + 1}
                                         </div>
@@ -226,7 +226,7 @@ export function LeaderboardPage() {
                                         {/* Avatar & Name */}
                                         <div className="flex items-center gap-3 flex-1 min-w-0">
                                             {entry.is_anonymous ? (
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white">
+                                                <div className="w-10 h-10 rounded-full bg-accent-500 flex items-center justify-center text-white">
                                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l-2-2m0 0l-2-2m2 2l2-2m-2 2l2 2" />
@@ -239,33 +239,33 @@ export function LeaderboardPage() {
                                                     className="w-10 h-10 rounded-full"
                                                 />
                                             ) : (
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-fuchsia-500 flex items-center justify-center text-white font-medium">
+                                                <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center text-white font-medium">
                                                     {entry.display_name?.[0]?.toUpperCase() || '?'}
                                                 </div>
                                             )}
                                             <div className="min-w-0">
-                                                <p className={`font-medium truncate ${entry.is_anonymous ? 'text-purple-300 italic' : 'text-white'}`}>
+                                                <p className={`font-medium truncate ${entry.is_anonymous ? 'text-accent-300 italic' : 'text-white'}`}>
                                                     {entry.display_name}
                                                     {entry.is_anonymous && (
-                                                        <span className="ml-2 text-xs text-purple-400">🕵️</span>
+                                                        <span className="ml-2 text-xs text-accent-400">🕵️</span>
                                                     )}
                                                 </p>
                                                 {entry.id === user?.id && (
-                                                    <p className="text-xs text-cyan-400">This is you!</p>
+                                                    <p className="text-xs text-primary-400">This is you!</p>
                                                 )}
                                             </div>
                                         </div>
 
                                         {/* Score */}
                                         <div className="text-right">
-                                            <p className="text-lg font-bold text-cyan-400">{entry.karma_score.toLocaleString()}</p>
-                                            <p className="text-xs text-slate-400">karma</p>
+                                            <p className="text-lg font-bold text-primary-400">{entry.karma_score.toLocaleString()}</p>
+                                            <p className="text-xs text-gray-400">karma</p>
                                         </div>
                                     </motion.div>
                                 ))}
 
                                 {karmaLeaderboard.length === 0 && (
-                                    <div className="p-8 text-center text-slate-400">
+                                    <div className="p-8 text-center text-gray-400">
                                         No karma data available yet.
                                     </div>
                                 )}
@@ -279,13 +279,13 @@ export function LeaderboardPage() {
                                     <motion.div
                                         key={entry.verifier_id}
                                         variants={itemVariants}
-                                        className="flex items-center gap-4 p-4 hover:bg-gray-700/30 transition-colors"
+                                        className="flex items-center gap-4 p-4 hover:bg-dark-300 transition-colors"
                                     >
                                         {/* Rank */}
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-black' :
-                                            index === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-black' :
-                                                index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-white' :
-                                                    'bg-gray-700 text-gray-400'
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
+                                            index === 1 ? 'bg-gray-300 text-black' :
+                                                index === 2 ? 'bg-amber-600 text-white' :
+                                                    'bg-dark-500 text-gray-400'
                                             }`}>
                                             {index + 1}
                                         </div>
@@ -299,13 +299,13 @@ export function LeaderboardPage() {
                                                     className="w-10 h-10 rounded-full"
                                                 />
                                             ) : (
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-medium">
+                                                <div className="w-10 h-10 rounded-full bg-accent-500 flex items-center justify-center text-white font-medium">
                                                     {entry.username?.[0]?.toUpperCase() || '?'}
                                                 </div>
                                             )}
                                             <div className="min-w-0">
                                                 <p className="font-medium text-white truncate">{entry.username}</p>
-                                                <div className="flex gap-3 text-xs text-slate-400">
+                                                <div className="flex gap-3 text-xs text-gray-400">
                                                     <span className="text-green-400">{entry.approved} ✓</span>
                                                     <span className="text-red-400">{entry.rejected} ✗</span>
                                                 </div>
@@ -314,25 +314,25 @@ export function LeaderboardPage() {
 
                                         {/* Stats */}
                                         <div className="text-right">
-                                            <p className="text-lg font-bold text-purple-400">{entry.total_reviews}</p>
-                                            <p className="text-xs text-slate-400">reviews</p>
+                                            <p className="text-lg font-bold text-accent-400">{entry.total_reviews}</p>
+                                            <p className="text-xs text-gray-400">reviews</p>
                                         </div>
                                     </motion.div>
                                 ))}
 
                                 {verifierLeaderboard.length === 0 && (
-                                    <div className="p-8 text-center text-slate-400">
+                                    <div className="p-8 text-center text-gray-400">
                                         {!accessToken ? (
                                             <>
                                                 <p>Sign in to view the verifier leaderboard.</p>
-                                                <Link to="/login" className="text-cyan-400 hover:text-cyan-300 mt-2 inline-block">
+                                                <Link to="/login" className="text-primary-400 hover:text-primary-300 mt-2 inline-block">
                                                     Sign in →
                                                 </Link>
                                             </>
                                         ) : (
                                             <>
                                                 <p>No verifier data available yet.</p>
-                                                <Link to="/verifier" className="text-cyan-400 hover:text-cyan-300 mt-2 inline-block">
+                                                <Link to="/verifier" className="text-primary-400 hover:text-primary-300 mt-2 inline-block">
                                                     Become a verifier →
                                                 </Link>
                                             </>
@@ -344,18 +344,18 @@ export function LeaderboardPage() {
 
                         {/* Contributor Leaderboard */}
                         {activeTab === 'contributors' && contributorLeaderboard && (
-                            <div className="divide-y divide-gray-700/50">
+                            <div className="divide-y divide-dark-300">
                                 {contributorLeaderboard.map((entry, index) => (
                                     <motion.div
                                         key={entry.user_id}
                                         variants={itemVariants}
-                                        className="flex items-center gap-4 p-4 hover:bg-gray-700/30 transition-colors"
+                                        className="flex items-center gap-4 p-4 hover:bg-dark-300 transition-colors"
                                     >
                                         {/* Rank */}
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-black' :
-                                            index === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-black' :
-                                                index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-white' :
-                                                    'bg-gray-700 text-gray-400'
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
+                                            index === 1 ? 'bg-gray-300 text-black' :
+                                                index === 2 ? 'bg-amber-600 text-white' :
+                                                    'bg-dark-500 text-gray-400'
                                             }`}>
                                             {index + 1}
                                         </div>
@@ -369,13 +369,13 @@ export function LeaderboardPage() {
                                                     className="w-10 h-10 rounded-full"
                                                 />
                                             ) : (
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white font-medium">
+                                                <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-medium">
                                                     {entry.username?.[0]?.toUpperCase() || '?'}
                                                 </div>
                                             )}
                                             <div className="min-w-0">
                                                 <p className="font-medium text-white truncate">{entry.username}</p>
-                                                <p className="text-xs text-slate-400">
+                                                <p className="text-xs text-gray-400">
                                                     {entry.approved_count} approved
                                                 </p>
                                             </div>
@@ -384,15 +384,15 @@ export function LeaderboardPage() {
                                         {/* Stats */}
                                         <div className="text-right">
                                             <p className="text-lg font-bold text-green-400">{entry.contribution_count}</p>
-                                            <p className="text-xs text-slate-400">contributions</p>
+                                            <p className="text-xs text-gray-400">contributions</p>
                                         </div>
                                     </motion.div>
                                 ))}
 
                                 {contributorLeaderboard.length === 0 && (
-                                    <div className="p-8 text-center text-slate-400">
+                                    <div className="p-8 text-center text-gray-400">
                                         <p>No contribution data available yet.</p>
-                                        <Link to="/upload" className="text-cyan-400 hover:text-cyan-300 mt-2 inline-block">
+                                        <Link to="/upload" className="text-primary-400 hover:text-primary-300 mt-2 inline-block">
                                             Start contributing →
                                         </Link>
                                     </div>
@@ -405,34 +405,34 @@ export function LeaderboardPage() {
 
             {/* Incentives Section */}
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="p-5 rounded-xl bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 border border-cyan-500/20">
-                    <h3 className="font-semibold text-cyan-400 mb-2">🏆 Earn Karma</h3>
-                    <p className="text-sm text-slate-400 mb-3">
+                <div className="p-5 rounded-xl bg-dark-400 border border-primary-500/20">
+                    <h3 className="font-semibold text-primary-400 mb-2">🏆 Earn Karma</h3>
+                    <p className="text-sm text-gray-400 mb-3">
                         Create beatmaps, help verify contributions, and participate in the community.
                     </p>
-                    <ul className="text-xs text-slate-500 space-y-1">
+                    <ul className="text-xs text-gray-500 space-y-1">
                         <li>• +10 karma per approved beatmap</li>
                         <li>• +5 karma per helpful review</li>
                         <li>• +2 karma per verified contribution</li>
                     </ul>
                 </div>
-                <div className="p-5 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20">
-                    <h3 className="font-semibold text-purple-400 mb-2">✓ Become a Verifier</h3>
-                    <p className="text-sm text-slate-400 mb-3">
+                <div className="p-5 rounded-xl bg-dark-400 border border-accent-500/20">
+                    <h3 className="font-semibold text-accent-400 mb-2">✓ Become a Verifier</h3>
+                    <p className="text-sm text-gray-400 mb-3">
                         Help maintain quality by reviewing community beatmap contributions.
                     </p>
-                    <ul className="text-xs text-slate-500 space-y-1">
+                    <ul className="text-xs text-gray-500 space-y-1">
                         <li>• Requires 100+ karma</li>
                         <li>• Phone verification needed</li>
                         <li>• Exclusive verifier badge</li>
                     </ul>
                 </div>
-                <div className="p-5 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/5 border border-green-500/20">
+                <div className="p-5 rounded-xl bg-dark-400 border border-green-500/20">
                     <h3 className="font-semibold text-green-400 mb-2">📝 Contribute</h3>
-                    <p className="text-sm text-slate-400 mb-3">
+                    <p className="text-sm text-gray-400 mb-3">
                         Improve AI training by submitting beatmap corrections and annotations.
                     </p>
-                    <ul className="text-xs text-slate-500 space-y-1">
+                    <ul className="text-xs text-gray-500 space-y-1">
                         <li>• Credit in published beatmaps</li>
                         <li>• Contribution badges</li>
                         <li>• Early access to new features</li>
@@ -441,31 +441,31 @@ export function LeaderboardPage() {
             </div>
 
             {/* Role Tiers Section */}
-            <div className="mt-8 p-6 rounded-xl bg-gray-800/50 border border-gray-700/50">
+            <div className="mt-8 p-6 rounded-xl bg-dark-400 border border-dark-300">
                 <h3 className="text-lg font-semibold text-white mb-4">🎖️ Role Progression</h3>
-                <p className="text-sm text-slate-400 mb-4">
+                <p className="text-sm text-gray-400 mb-4">
                     Earn karma to unlock new roles and abilities within the BeatSight community.
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-                    <div className="p-3 rounded-lg bg-slate-700/30 border border-slate-600/30">
-                        <div className="text-sm font-medium text-slate-300">Fixer</div>
-                        <div className="text-xs text-slate-500">50+ karma</div>
-                        <div className="text-xs text-slate-400 mt-1">Submit beatmap corrections</div>
+                    <div className="p-3 rounded-lg bg-dark-500 border border-dark-300">
+                        <div className="text-sm font-medium text-gray-300">Fixer</div>
+                        <div className="text-xs text-gray-500">50+ karma</div>
+                        <div className="text-xs text-gray-400 mt-1">Submit beatmap corrections</div>
                     </div>
-                    <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/30">
-                        <div className="text-sm font-medium text-purple-400">Verifier</div>
-                        <div className="text-xs text-slate-500">100+ karma + phone</div>
-                        <div className="text-xs text-slate-400 mt-1">Review & approve contributions</div>
+                    <div className="p-3 rounded-lg bg-accent-500/10 border border-accent-500/30">
+                        <div className="text-sm font-medium text-accent-400">Verifier</div>
+                        <div className="text-xs text-gray-500">100+ karma + phone</div>
+                        <div className="text-xs text-gray-400 mt-1">Review & approve contributions</div>
                     </div>
                     <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
                         <div className="text-sm font-medium text-amber-400">Curator</div>
-                        <div className="text-xs text-slate-500">500+ karma + phone</div>
-                        <div className="text-xs text-slate-400 mt-1">Manage featured content</div>
+                        <div className="text-xs text-gray-500">500+ karma + phone</div>
+                        <div className="text-xs text-gray-400 mt-1">Manage featured content</div>
                     </div>
                     <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
                         <div className="text-sm font-medium text-red-400">Admin</div>
-                        <div className="text-xs text-slate-500">By invitation</div>
-                        <div className="text-xs text-slate-400 mt-1">Full platform access</div>
+                        <div className="text-xs text-gray-500">By invitation</div>
+                        <div className="text-xs text-gray-400 mt-1">Full platform access</div>
                     </div>
                 </div>
             </div>

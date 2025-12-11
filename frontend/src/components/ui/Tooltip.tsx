@@ -15,18 +15,18 @@ import { cn } from '../../lib/utils'
 const tooltipVariants = cva(
     [
         'z-50 px-3 py-1.5 text-sm rounded-lg',
-        'bg-slate-800 border border-slate-700/50 text-slate-200',
+        'bg-dark-400 border border-white/10 text-gray-200',
         'shadow-lg shadow-black/30',
         'animate-in fade-in-0 zoom-in-95 duration-150',
     ],
     {
         variants: {
             variant: {
-                default: 'bg-slate-800 border-slate-700/50',
-                dark: 'bg-slate-900 border-slate-700',
-                light: 'bg-slate-100 border-slate-200 text-slate-900',
-                cyan: 'bg-cyan-900/90 border-cyan-500/30 text-cyan-100',
-                magenta: 'bg-fuchsia-900/90 border-fuchsia-500/30 text-fuchsia-100',
+                default: 'bg-dark-400 border-white/10',
+                dark: 'bg-dark-500 border-white/10',
+                light: 'bg-gray-100 border-gray-200 text-gray-900',
+                cyan: 'bg-primary-900/90 border-primary-500/30 text-primary-100',
+                magenta: 'bg-accent-900/90 border-accent-500/30 text-accent-100',
             },
         },
         defaultVariants: {
@@ -38,11 +38,11 @@ const tooltipVariants = cva(
 const arrowVariants = cva('absolute w-2 h-2 rotate-45', {
     variants: {
         variant: {
-            default: 'bg-slate-800 border-slate-700/50',
-            dark: 'bg-slate-900 border-slate-700',
-            light: 'bg-slate-100 border-slate-200',
-            cyan: 'bg-cyan-900/90 border-cyan-500/30',
-            magenta: 'bg-fuchsia-900/90 border-fuchsia-500/30',
+            default: 'bg-dark-400 border-white/10',
+            dark: 'bg-dark-500 border-white/10',
+            light: 'bg-gray-100 border-gray-200',
+            cyan: 'bg-primary-900/90 border-primary-500/30',
+            magenta: 'bg-accent-900/90 border-accent-500/30',
         },
         placement: {
             top: 'bottom-[-5px] border-r border-b',
@@ -349,17 +349,17 @@ export function RichTooltip({
     const content = (
         <div className="max-w-xs">
             <div className="flex items-start gap-2">
-                {icon && <div className="flex-shrink-0 text-cyan-400">{icon}</div>}
+                {icon && <div className="flex-shrink-0 text-primary-400">{icon}</div>}
                 <div className="flex-1 min-w-0">
-                    {title && <div className="font-medium text-slate-100">{title}</div>}
-                    {description && <div className="text-sm text-slate-400 mt-0.5">{description}</div>}
+                    {title && <div className="font-medium text-gray-100">{title}</div>}
+                    {description && <div className="text-sm text-gray-400 mt-0.5">{description}</div>}
                     {action && (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation()
                                 action.onClick()
                             }}
-                            className="mt-2 text-xs text-cyan-400 hover:text-cyan-300 font-medium"
+                            className="mt-2 text-xs text-primary-400 hover:text-primary-300 font-medium"
                         >
                             {action.label} →
                         </button>
@@ -394,11 +394,11 @@ export function ShortcutTooltip({ label, shortcut, children, ...props }: Shortcu
             <div className="flex items-center gap-1">
                 {shortcuts.map((key, index) => (
                     <React.Fragment key={key}>
-                        {index > 0 && <span className="text-slate-500">+</span>}
+                        {index > 0 && <span className="text-gray-500">+</span>}
                         <kbd
                             className={cn(
                                 'px-1.5 py-0.5 text-xs font-mono rounded',
-                                'bg-slate-700 border border-slate-600 text-slate-300',
+                                'bg-dark-300 border border-white/10 text-gray-300',
                                 'shadow-sm'
                             )}
                         >
@@ -439,8 +439,8 @@ export function InfoTooltip({ content, size = 'md', iconClassName, ...props }: I
                 type="button"
                 className={cn(
                     'inline-flex items-center justify-center rounded-full',
-                    'text-slate-500 hover:text-slate-400 transition-colors',
-                    'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50'
+                    'text-gray-500 hover:text-gray-400 transition-colors',
+                    'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50'
                 )}
                 aria-label="More information"
             >

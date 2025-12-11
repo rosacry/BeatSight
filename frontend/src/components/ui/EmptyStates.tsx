@@ -213,7 +213,7 @@ export function NoNotificationsEmptyState({ className }: PresetEmptyStateProps) 
         <EmptyState
             icon={<NoNotificationsIcon className="w-full h-full" />}
             title="All caught up!"
-            description="You have no new notifications. We'll let you know when something happens."
+            description="No new notifications."
             size="sm"
             className={className}
         />
@@ -222,7 +222,7 @@ export function NoNotificationsEmptyState({ className }: PresetEmptyStateProps) 
 
 export function ErrorEmptyState({
     title = 'Something went wrong',
-    description = "We're having trouble loading this content. Please try again.",
+    description = "Couldn't load content. Try again.",
     action,
     className,
 }: PresetEmptyStateProps & { title?: string; description?: string }) {

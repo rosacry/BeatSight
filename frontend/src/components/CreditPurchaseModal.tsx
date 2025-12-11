@@ -36,15 +36,15 @@ export function CreditPurchaseModal({
     const contextMessages = {
         quota_exceeded: {
             title: 'Out of Monthly Quota',
-            subtitle: "You've used all your included songs. Buy credits to continue.",
+            subtitle: 'Buy credits to continue.',
         },
         voluntary: {
             title: 'Buy Credits',
-            subtitle: 'Get extra AI beatmap generations anytime.',
+            subtitle: 'Extra generations, anytime.',
         },
         upgrade_prompt: {
             title: 'Need More Songs?',
-            subtitle: 'Buy credits or upgrade to Pro for 50 songs/month.',
+            subtitle: 'Buy credits or upgrade to Pro.',
         },
     }
 

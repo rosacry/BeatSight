@@ -187,8 +187,8 @@ export function ForumViewPage() {
                                 className={clsx(
                                     'px-3 py-1.5 text-xs sm:text-sm rounded transition-colors',
                                     sort === option.value
-                                        ? 'bg-purple-600 text-white'
-                                        : 'bg-gray-800 text-gray-400 hover:text-white'
+                                        ? 'bg-primary-500 text-white'
+                                        : 'bg-dark-400 text-gray-400 hover:text-white'
                                 )}
                             >
                                 {option.label}
@@ -257,8 +257,8 @@ export function ForumViewPage() {
                                     className={clsx(
                                         'w-10 h-10 rounded transition-colors',
                                         page === pageNum
-                                            ? 'bg-purple-600 text-white'
-                                            : 'bg-gray-800 text-gray-400 hover:text-white'
+                                            ? 'bg-primary-500 text-white'
+                                            : 'bg-dark-400 text-gray-400 hover:text-white'
                                     )}
                                 >
                                     {pageNum}

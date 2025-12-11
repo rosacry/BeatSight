@@ -17,9 +17,9 @@ export interface TimelineToolbarProps extends HTMLAttributes<HTMLDivElement> {
 export const TimelineToolbar = forwardRef<HTMLDivElement, TimelineToolbarProps>(
     ({ variant = 'default', className, children, ...props }, ref) => {
         const variants = {
-            default: 'flex flex-wrap items-center gap-3 p-3 bg-slate-900/80 backdrop-blur-sm border-b border-slate-700/50',
-            compact: 'flex items-center gap-2 p-2 bg-slate-900/90 backdrop-blur-sm',
-            floating: 'flex items-center gap-3 p-3 bg-slate-800/95 backdrop-blur-md rounded-xl shadow-2xl border border-slate-700/50',
+            default: 'flex flex-wrap items-center gap-3 p-3 bg-dark-500/80 backdrop-blur-sm border-b border-white/10',
+            compact: 'flex items-center gap-2 p-2 bg-dark-500/90 backdrop-blur-sm',
+            floating: 'flex items-center gap-3 p-3 bg-dark-400/95 backdrop-blur-md rounded-xl shadow-2xl border border-white/10',
         }
 
         return (
@@ -42,7 +42,7 @@ ToolbarGroup.displayName = 'ToolbarGroup'
 
 export const ToolbarDivider = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
     ({ className, ...props }, ref) => (
-        <div ref={ref} className={cn('w-px h-6 bg-slate-700/50 mx-1', className)} {...props} />
+        <div ref={ref} className={cn('w-px h-6 bg-white/10 mx-1', className)} {...props} />
     )
 )
 ToolbarDivider.displayName = 'ToolbarDivider'
@@ -62,14 +62,14 @@ export interface ControlButtonProps extends ButtonHTMLAttributes<HTMLButtonEleme
 
 export const ControlButton = forwardRef<HTMLButtonElement, ControlButtonProps>(
     ({ variant = 'default', size = 'md', icon, isActive, className, children, disabled, ...props }, ref) => {
-        const baseStyles = 'inline-flex items-center justify-center gap-1.5 font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-900'
+        const baseStyles = 'inline-flex items-center justify-center gap-1.5 font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-dark-500'
 
         const variants = {
-            default: 'bg-slate-700 hover:bg-slate-600 text-slate-200 focus:ring-slate-500',
-            primary: 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white shadow-lg shadow-orange-500/25 focus:ring-orange-500',
+            default: 'bg-dark-400 hover:bg-dark-300 text-gray-200 focus:ring-gray-500',
+            primary: 'bg-primary-500 hover:bg-primary-400 text-white shadow-lg shadow-primary-500/25 focus:ring-primary-500',
             danger: 'bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 focus:ring-red-500',
             success: 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 focus:ring-emerald-500',
-            ghost: 'bg-transparent hover:bg-slate-700/50 text-slate-400 hover:text-slate-200 focus:ring-slate-500',
+            ghost: 'bg-transparent hover:bg-dark-400 text-gray-400 hover:text-gray-200 focus:ring-gray-500',
         }
 
         const sizes = {
@@ -86,7 +86,7 @@ export const ControlButton = forwardRef<HTMLButtonElement, ControlButtonProps>(
                     baseStyles,
                     variants[variant],
                     sizes[size],
-                    isActive && 'ring-2 ring-cyan-400 bg-cyan-500/20',
+                    isActive && 'ring-2 ring-primary-400 bg-primary-500/20',
                     className
                 )}
                 {...props}

@@ -168,7 +168,7 @@ export function SettingsPage() {
                 method: 'POST',
                 body: JSON.stringify(contributionConsent),
             }, accessToken)
-            setSuccessMessage('Privacy settings saved successfully!')
+            setSuccessMessage('Privacy settings saved!')
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save privacy settings')
         } finally {
@@ -263,7 +263,7 @@ export function SettingsPage() {
                 body: JSON.stringify({ display_name: displayName }),
             }, accessToken)
             await fetchCurrentUser()
-            setSuccessMessage('Profile saved successfully!')
+            setSuccessMessage('Profile saved!')
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save profile')
         } finally {
@@ -293,7 +293,7 @@ export function SettingsPage() {
                     custom_settings: preferences.custom_settings,
                 }),
             }, accessToken)
-            setSuccessMessage('Preferences saved successfully!')
+            setSuccessMessage('Preferences saved!')
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save preferences')
         } finally {
@@ -508,16 +508,16 @@ export function SettingsPage() {
                                 {activeTab === 'account' && (
                                     <div className="space-y-6">
                                         {/* Profile Section - Modern Card */}
-                                        <div className="card bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-white/5">
+                                        <div className="card bg-dark-400 border border-white/10">
                                             <div className="flex items-center gap-3 mb-6">
-                                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 flex items-center justify-center">
-                                                    <svg className="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <div className="w-10 h-10 rounded-xl bg-primary-500/20 flex items-center justify-center">
+                                                    <svg className="w-5 h-5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                                     </svg>
                                                 </div>
                                                 <div>
                                                     <h2 className="text-lg font-semibold text-white">Profile</h2>
-                                                    <p className="text-sm text-gray-400">Manage your public profile information</p>
+                                                    <p className="text-sm text-gray-400">Your public identity</p>
                                                 </div>
                                             </div>
 
@@ -528,7 +528,7 @@ export function SettingsPage() {
                                                         currentAvatarUrl={user?.avatar_url}
                                                         size="lg"
                                                         onUploadSuccess={() => {
-                                                            setSuccessMessage('Avatar updated successfully!')
+                                                            setSuccessMessage('Avatar updated!')
                                                         }}
                                                         onUploadError={(err) => {
                                                             setError(err)
@@ -551,7 +551,7 @@ export function SettingsPage() {
                                                                 type="text"
                                                                 value={displayName}
                                                                 onChange={(e) => setDisplayName(e.target.value)}
-                                                                className="input pl-10 bg-slate-800/50 border-slate-700/50 focus:border-cyan-500/50 focus:ring-cyan-500/20"
+                                                                className="input pl-10 bg-dark-300 border-white/10 focus:border-primary-500/50 focus:ring-primary-500/20"
                                                                 placeholder="Your display name"
                                                             />
                                                             <svg className="w-5 h-5 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -569,7 +569,7 @@ export function SettingsPage() {
                                                                 type="email"
                                                                 value={user?.email || ''}
                                                                 disabled
-                                                                className="input pl-10 bg-slate-900/50 border-slate-700/30 text-gray-500 cursor-not-allowed"
+                                                                className="input pl-10 bg-dark-500 border-white/10 text-gray-500 cursor-not-allowed"
                                                             />
                                                             <svg className="w-5 h-5 text-gray-600 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -629,22 +629,22 @@ export function SettingsPage() {
                                         </div>
 
                                         {/* Security Section */}
-                                        <div className="card bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-white/5">
+                                        <div className="card bg-dark-400 border border-white/10">
                                             <div className="flex items-center gap-3 mb-6">
-                                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-600/20 flex items-center justify-center">
+                                                <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
                                                     <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                                     </svg>
                                                 </div>
                                                 <div>
                                                     <h2 className="text-lg font-semibold text-white">Security</h2>
-                                                    <p className="text-sm text-gray-400">Manage your account security</p>
+                                                    <p className="text-sm text-gray-400">Password, verification & 2FA</p>
                                                 </div>
                                             </div>
 
                                             <div className="space-y-6">
                                                 {/* Email Verification Status */}
-                                                <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-700/50">
+                                                <div className="p-4 rounded-xl bg-dark-300 border border-white/10">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-3">
                                                             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${user?.email_verified
@@ -684,23 +684,23 @@ export function SettingsPage() {
                                                 <PhoneVerificationSettings />
 
                                                 {/* Password Reset */}
-                                                <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-700/50">
+                                                <div className="p-4 rounded-xl bg-dark-300 border border-white/10">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 rounded-full bg-slate-700/50 flex items-center justify-center">
-                                                                <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <div className="w-10 h-10 rounded-full bg-dark-400 flex items-center justify-center">
+                                                                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                                                                 </svg>
                                                             </div>
                                                             <div>
                                                                 <p className="text-white font-medium">Password</p>
-                                                                <p className="text-sm text-gray-400">Reset your password via email</p>
+                                                                <p className="text-sm text-gray-400">Change via email link</p>
                                                             </div>
                                                         </div>
                                                         <button
                                                             onClick={handleSendPasswordResetEmail}
                                                             disabled={isSaving}
-                                                            className="btn btn-sm bg-slate-700/50 hover:bg-slate-700 text-white border border-slate-600/50"
+                                                            className="btn btn-sm bg-dark-300 hover:bg-dark-400 text-white border border-white/10"
                                                         >
                                                             <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -725,9 +725,7 @@ export function SettingsPage() {
                                             <label className="flex items-center justify-between">
                                                 <div>
                                                     <span className="text-white">Auto-generate beatmap</span>
-                                                    <p className="text-sm text-gray-500">
-                                                        Automatically start generation after upload
-                                                    </p>
+                                                    <p className="text-sm text-gray-500">Start after upload</p>
                                                 </div>
                                                 <input
                                                     type="checkbox"
@@ -771,9 +769,7 @@ export function SettingsPage() {
                                             <label className="flex items-center justify-between">
                                                 <div>
                                                     <span className="text-white">Show confidence overlay</span>
-                                                    <p className="text-sm text-gray-500">
-                                                        Display detection confidence heatmap
-                                                    </p>
+                                                    <p className="text-sm text-gray-500">Detection heatmap</p>
                                                 </div>
                                                 <input
                                                     type="checkbox"
@@ -786,9 +782,7 @@ export function SettingsPage() {
                                             <label className="flex items-center justify-between">
                                                 <div>
                                                     <span className="text-white">Enable offline mode</span>
-                                                    <p className="text-sm text-gray-500">
-                                                        Cache beatmaps for offline access
-                                                    </p>
+                                                    <p className="text-sm text-gray-500">Cache for offline play</p>
                                                 </div>
                                                 <input
                                                     type="checkbox"
@@ -813,9 +807,7 @@ export function SettingsPage() {
                                             <label className="flex items-center justify-between">
                                                 <div>
                                                     <span className="text-white">Job complete emails</span>
-                                                    <p className="text-sm text-gray-500">
-                                                        Get notified when beatmap generation completes
-                                                    </p>
+                                                    <p className="text-sm text-gray-500">On generation finish</p>
                                                 </div>
                                                 <input
                                                     type="checkbox"
@@ -828,9 +820,7 @@ export function SettingsPage() {
                                             <label className="flex items-center justify-between">
                                                 <div>
                                                     <span className="text-white">Job failed emails</span>
-                                                    <p className="text-sm text-gray-500">
-                                                        Get notified when a job fails
-                                                    </p>
+                                                    <p className="text-sm text-gray-500">On generation failure</p>
                                                 </div>
                                                 <input
                                                     type="checkbox"
@@ -843,9 +833,7 @@ export function SettingsPage() {
                                             <label className="flex items-center justify-between">
                                                 <div>
                                                     <span className="text-white">Push notifications</span>
-                                                    <p className="text-sm text-gray-500">
-                                                        Receive browser push notifications
-                                                    </p>
+                                                    <p className="text-sm text-gray-500">Browser alerts</p>
                                                 </div>
                                                 <input
                                                     type="checkbox"
@@ -858,9 +846,7 @@ export function SettingsPage() {
                                             <label className="flex items-center justify-between">
                                                 <div>
                                                     <span className="text-white">Marketing emails</span>
-                                                    <p className="text-sm text-gray-500">
-                                                        Receive updates about new features
-                                                    </p>
+                                                    <p className="text-sm text-gray-500">Feature updates</p>
                                                 </div>
                                                 <input
                                                     type="checkbox"
@@ -880,80 +866,80 @@ export function SettingsPage() {
                                 {activeTab === 'privacy' && (
                                     <div className="space-y-6">
                                         {/* Anonymous Mode Section */}
-                                        <div className="card bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-white/5">
+                                        <div className="card bg-dark-400 border border-white/10">
                                             <div className="flex items-center gap-3 mb-6">
-                                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 flex items-center justify-center">
-                                                    <svg className="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <div className="w-10 h-10 rounded-xl bg-accent-500/20 flex items-center justify-center">
+                                                    <svg className="w-5 h-5 text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
                                                     </svg>
                                                 </div>
                                                 <div>
                                                     <h2 className="text-lg font-semibold text-white">Anonymous Mode</h2>
-                                                    <p className="text-sm text-gray-400">Control your visibility on public pages</p>
+                                                    <p className="text-sm text-gray-400">Public visibility options</p>
                                                 </div>
                                             </div>
 
                                             <div className="space-y-4">
-                                                <label className="flex items-center justify-between p-4 rounded-xl bg-slate-800/30 border border-slate-700/50 cursor-pointer hover:bg-slate-800/50 transition-colors">
+                                                <label className="flex items-center justify-between p-4 rounded-xl bg-dark-300 border border-white/10 cursor-pointer hover:bg-dark-400 transition-colors">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
-                                                            <svg className="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <div className="w-10 h-10 rounded-full bg-accent-500/20 flex items-center justify-center">
+                                                            <svg className="w-5 h-5 text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                                                             </svg>
                                                         </div>
                                                         <div>
                                                             <p className="text-white font-medium">Hide from leaderboards</p>
-                                                            <p className="text-sm text-gray-400">Your name appears as "Secret Agent" 🕵️ on karma, verifier, and contributor rankings</p>
+                                                            <p className="text-sm text-gray-400">Appear as "Secret Agent" 🕵️</p>
                                                         </div>
                                                     </div>
                                                     <input
                                                         type="checkbox"
                                                         checked={preferences?.custom_settings?.hideFromLeaderboards ?? false}
                                                         onChange={(e) => updateCustomSetting('hideFromLeaderboards', e.target.checked)}
-                                                        className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-purple-500 focus:ring-purple-500"
+                                                        className="w-5 h-5 rounded bg-dark-300 border-white/20 text-accent-500 focus:ring-accent-500"
                                                     />
                                                 </label>
 
-                                                <label className="flex items-center justify-between p-4 rounded-xl bg-slate-800/30 border border-slate-700/50 cursor-pointer hover:bg-slate-800/50 transition-colors">
+                                                <label className="flex items-center justify-between p-4 rounded-xl bg-dark-300 border border-white/10 cursor-pointer hover:bg-dark-400 transition-colors">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
-                                                            <svg className="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <div className="w-10 h-10 rounded-full bg-accent-500/20 flex items-center justify-center">
+                                                            <svg className="w-5 h-5 text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                                                             </svg>
                                                         </div>
                                                         <div>
                                                             <p className="text-white font-medium">Hide from public queues</p>
-                                                            <p className="text-sm text-gray-400">Your jobs appear as "Secret Agent" 🕵️ in the public queue view</p>
+                                                            <p className="text-sm text-gray-400">Jobs appear as "Secret Agent" 🕵️</p>
                                                         </div>
                                                     </div>
                                                     <input
                                                         type="checkbox"
                                                         checked={preferences?.custom_settings?.hideFromPublicQueues ?? false}
                                                         onChange={(e) => updateCustomSetting('hideFromPublicQueues', e.target.checked)}
-                                                        className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-purple-500 focus:ring-purple-500"
+                                                        className="w-5 h-5 rounded bg-dark-300 border-white/20 text-accent-500 focus:ring-accent-500"
                                                     />
                                                 </label>
                                             </div>
 
-                                            <div className="mt-4 p-3 bg-purple-500/10 border border-purple-500/30 rounded-lg">
-                                                <p className="text-purple-400 text-sm">
-                                                    <strong>Note:</strong> Anonymous mode displays your name as "Secret Agent" on public pages while keeping all your features intact. Your contributions still count toward community improvements.
+                                            <div className="mt-4 p-3 bg-accent-500/10 border border-accent-500/30 rounded-lg">
+                                                <p className="text-accent-400 text-sm">
+                                                    <strong>Note:</strong> Your contributions still count toward community improvements.
                                                 </p>
                                             </div>
                                         </div>
 
                                         {/* Training Data Section */}
-                                        <div className="card bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-white/5">
+                                        <div className="card bg-dark-400 border border-white/10">
                                             <div className="flex items-center gap-3 mb-6">
-                                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 flex items-center justify-center">
-                                                    <svg className="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <div className="w-10 h-10 rounded-xl bg-primary-500/20 flex items-center justify-center">
+                                                    <svg className="w-5 h-5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                                                     </svg>
                                                 </div>
                                                 <div>
-                                                    <h2 className="text-lg font-semibold text-white">Privacy & Training Data</h2>
-                                                    <p className="text-sm text-gray-400">Control how your beatmap corrections contribute to improving our AI model. Your corrections help make BeatSight better for everyone.</p>
+                                                    <h2 className="text-lg font-semibold text-white">Training Data</h2>
+                                                    <p className="text-sm text-gray-400">Help improve the AI with your corrections</p>
                                                 </div>
                                             </div>
 
@@ -965,8 +951,7 @@ export function SettingsPage() {
                                                         <div>
                                                             <span className="text-white">Contribute to model training</span>
                                                             <p className="text-sm text-gray-500">
-                                                                Allow your beatmap corrections to be used for improving the AI.
-                                                                Earn karma when your contributions are approved.
+                                                                Earn +15 karma per approved correction
                                                             </p>
                                                         </div>
                                                         <input
@@ -985,9 +970,7 @@ export function SettingsPage() {
                                                             <label className="flex items-center justify-between">
                                                                 <div>
                                                                     <span className="text-white">Anonymous export</span>
-                                                                    <p className="text-sm text-gray-500">
-                                                                        Export corrections without your username attached
-                                                                    </p>
+                                                                    <p className="text-sm text-gray-500">Hide username in exports</p>
                                                                 </div>
                                                                 <input
                                                                     type="checkbox"
@@ -1003,9 +986,7 @@ export function SettingsPage() {
                                                             <label className="flex items-center justify-between">
                                                                 <div>
                                                                     <span className="text-white">Public credit</span>
-                                                                    <p className="text-sm text-gray-500">
-                                                                        Show your name in public contributor lists
-                                                                    </p>
+                                                                    <p className="text-sm text-gray-500">Show in contributor lists</p>
                                                                 </div>
                                                                 <input
                                                                     type="checkbox"
@@ -1043,16 +1024,14 @@ export function SettingsPage() {
                                     <div className="card space-y-6">
                                         <h2 className="text-lg font-semibold text-white">Developer Settings</h2>
                                         <p className="text-gray-400 text-sm">
-                                            Advanced settings for developers and power users. These settings sync across all your devices.
+                                            Advanced options for power users. Syncs across devices.
                                         </p>
 
                                         <div className="space-y-4">
                                             <label className="flex items-center justify-between">
                                                 <div>
                                                     <span className="text-white">Developer Mode</span>
-                                                    <p className="text-sm text-gray-500">
-                                                        Enable console logging and debug information in production
-                                                    </p>
+                                                    <p className="text-sm text-gray-500">Console logging & debug info</p>
                                                 </div>
                                                 <input
                                                     type="checkbox"
@@ -1065,8 +1044,7 @@ export function SettingsPage() {
                                             {developerMode && (
                                                 <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                                                     <p className="text-yellow-400 text-sm">
-                                                        <strong>Developer Mode Active:</strong> Console logging is enabled.
-                                                        Open your browser's developer tools (F12) to view logs.
+                                                        <strong>Active:</strong> Open DevTools (F12) to view logs.
                                                     </p>
                                                 </div>
                                             )}
@@ -1086,8 +1064,7 @@ export function SettingsPage() {
                                             <div className="p-4 bg-red-500/10 rounded-lg">
                                                 <h3 className="text-white font-medium mb-2">Delete Account</h3>
                                                 <p className="text-gray-400 text-sm mb-4">
-                                                    Permanently delete your account and all associated data. This action cannot be
-                                                    undone.
+                                                    Permanently delete all data. Cannot be undone.
                                                 </p>
                                                 {showDeleteConfirm ? (
                                                     <div className="space-y-3">

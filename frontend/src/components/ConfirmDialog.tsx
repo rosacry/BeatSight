@@ -94,14 +94,25 @@ export function ConfirmDialog({
     }, [isOpen, onClose])
 
     // Prevent body scroll when dialog is open
+    // Use a more robust cleanup that ensures unlock happens even during navigation
     useEffect(() => {
         if (isOpen) {
             lockBodyScroll()
             return () => {
+                // Always unlock on cleanup, regardless of current state
                 unlockBodyScroll()
             }
         }
     }, [isOpen])
+
+    // Additional safety: ensure body scroll is unlocked when component unmounts
+    // This catches cases where isOpen changes during unmount
+    useEffect(() => {
+        return () => {
+            // Force cleanup on unmount to prevent stuck states during navigation
+            unlockBodyScroll()
+        }
+    }, [])
 
     const getVariantStyles = () => {
         switch (variant) {
@@ -144,9 +155,10 @@ export function ConfirmDialog({
     const styles = getVariantStyles()
 
     // osu-style popup for signout variant - rendered via portal for proper centering
+    // Note: Using mode="sync" instead of "wait" to prevent animation interruption during navigation
     if (style === 'popup' || variant === 'signout') {
         const dialogContent = (
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="sync">
                 {isOpen && (
                     <motion.div
                         key="popup-overlay"

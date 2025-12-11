@@ -47,7 +47,7 @@ export function PricingPage() {
         }
 
         if (!stripeConfig?.is_configured) {
-            toast.error('Payment system is not available. Please try again later.')
+            toast.error('Payment unavailable. Try again later.')
             return
         }
 
@@ -66,7 +66,7 @@ export function PricingPage() {
         }
 
         if (!stripeConfig?.is_configured) {
-            toast.error('Payment system is not available. Please try again later.')
+            toast.error('Payment unavailable. Try again later.')
             return
         }
 
@@ -80,28 +80,28 @@ export function PricingPage() {
     const currentPlan = subscription?.plan || 'free'
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 py-8 sm:py-16 px-4">
+        <div className="min-h-screen bg-dark-500 py-8 sm:py-16 px-4">
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <div className="text-center mb-8 sm:mb-12">
                     <h1 className="text-2xl sm:text-4xl font-bold text-white mb-3 sm:mb-4">
-                        Simple, Transparent Pricing
+                        Pricing
                     </h1>
                     <p className="text-base sm:text-xl text-gray-400 max-w-2xl mx-auto">
-                        Choose Pro for regular use, or pay-per-song with credits.
+                        Pro for regular use, or pay-per-song with credits.
                     </p>
-                    <p className="text-xs sm:text-sm text-cyan-400 mt-3 sm:mt-4">
-                        Playing beatmaps, creating manual maps, and verifying community maps is always free.
+                    <p className="text-xs sm:text-sm text-primary-400 mt-3 sm:mt-4">
+                        Playing, manual mapping, and verification always free.
                     </p>
                 </div>
 
                 {/* Billing Toggle */}
                 <div className="flex justify-center mb-8 sm:mb-12">
-                    <div className="bg-gray-800 p-1 rounded-lg flex">
+                    <div className="bg-dark-400 p-1 rounded-lg flex">
                         <button
                             onClick={() => setBillingCycle('monthly')}
                             className={`px-4 sm:px-6 py-2 rounded-md text-sm font-medium transition-colors ${billingCycle === 'monthly'
-                                ? 'bg-purple-600 text-white'
+                                ? 'bg-primary-500 text-white'
                                 : 'text-gray-400 hover:text-white'
                                 }`}
                         >
@@ -110,7 +110,7 @@ export function PricingPage() {
                         <button
                             onClick={() => setBillingCycle('yearly')}
                             className={`px-4 sm:px-6 py-2 rounded-md text-sm font-medium transition-colors ${billingCycle === 'yearly'
-                                ? 'bg-purple-600 text-white'
+                                ? 'bg-primary-500 text-white'
                                 : 'text-gray-400 hover:text-white'
                                 }`}
                         >
@@ -132,14 +132,14 @@ export function PricingPage() {
                         return (
                             <div
                                 key={plan.id}
-                                className={`relative rounded-2xl p-8 ${plan.highlighted
-                                    ? 'bg-gradient-to-b from-purple-900/50 to-gray-800 border-2 border-purple-500'
-                                    : 'bg-gray-800 border border-gray-700'
+                                className={`relative rounded-xl p-8 ${plan.highlighted
+                                    ? 'bg-dark-400 border-2 border-primary-500'
+                                    : 'bg-dark-400 border border-dark-300'
                                     }`}
                             >
                                 {plan.highlighted && (
                                     <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                                        <span className="bg-purple-600 text-white text-sm font-medium px-4 py-1 rounded-full">
+                                        <span className="bg-primary-500 text-white text-sm font-medium px-4 py-1 rounded-full">
                                             Best Value
                                         </span>
                                     </div>
@@ -154,7 +154,7 @@ export function PricingPage() {
 
                                 {/* Quota badge */}
                                 {plan.monthlyQuota && (
-                                    <div className="inline-block px-3 py-1 bg-gray-700/50 rounded-full text-sm text-gray-300 mb-4">
+                                    <div className="inline-block px-3 py-1 bg-dark-500 rounded-full text-sm text-gray-300 mb-4">
                                         {plan.monthlyQuota} songs/month
                                     </div>
                                 )}
@@ -198,10 +198,10 @@ export function PricingPage() {
                                     onClick={() => handleSelectPlan(plan.id)}
                                     disabled={isCurrentPlan || upgradeMutation.isPending}
                                     className={`w-full py-3 rounded-lg font-medium transition-colors ${isCurrentPlan
-                                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                                        ? 'bg-dark-500 text-gray-400 cursor-not-allowed'
                                         : plan.highlighted
-                                            ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                                            : 'bg-gray-700 hover:bg-gray-600 text-white'
+                                            ? 'bg-primary-500 hover:bg-primary-600 text-white'
+                                            : 'bg-dark-500 hover:bg-dark-300 text-white'
                                         }`}
                                 >
                                     {isCurrentPlan
@@ -221,12 +221,10 @@ export function PricingPage() {
                         <motion.button
                             onClick={() => setShowCredits(!showCredits)}
                             className="group inline-flex items-center gap-2 px-6 py-3 rounded-xl
-                                     bg-gradient-to-r from-slate-800/80 to-slate-800/60
-                                     hover:from-cyan-500/20 hover:to-fuchsia-500/20
-                                     border border-white/10 hover:border-cyan-500/30
+                                     bg-dark-400 hover:bg-dark-300
+                                     border border-dark-300 hover:border-primary-500/50
                                      text-gray-300 hover:text-white
-                                     transition-all duration-300 ease-out
-                                     shadow-lg shadow-black/20 hover:shadow-cyan-500/10"
+                                     transition-all duration-200"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                         >
@@ -236,7 +234,7 @@ export function PricingPage() {
                             <motion.svg
                                 animate={{ rotate: showCredits ? 180 : 0 }}
                                 transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-                                className="w-5 h-5 text-cyan-400"
+                                className="w-5 h-5 text-primary-400"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -268,7 +266,7 @@ export function PricingPage() {
                                     {CREDIT_PACKS.map((pack) => (
                                         <div
                                             key={pack.type}
-                                            className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-primary-500/50 transition-colors duration-200"
+                                            className="bg-dark-400 border border-dark-300 rounded-xl p-6 hover:border-primary-500/50 transition-colors duration-200"
                                         >
                                             <div className="flex justify-between items-start mb-3">
                                                 <h4 className="font-semibold text-white">{pack.name}</h4>
@@ -287,7 +285,7 @@ export function PricingPage() {
                                             <button
                                                 onClick={() => handleBuyCredits(pack.type)}
                                                 disabled={purchaseCreditsMutation.isPending}
-                                                className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors duration-200 disabled:opacity-50"
+                                                className="w-full py-2 bg-dark-500 hover:bg-dark-300 text-white text-sm font-medium rounded-lg transition-colors duration-200 disabled:opacity-50"
                                             >
                                                 {purchaseCreditsMutation.isPending ? 'Processing...' : 'Buy Now'}
                                             </button>
@@ -365,19 +363,18 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 
     return (
         <motion.div
-            className="border border-gray-700/50 rounded-xl overflow-hidden bg-gradient-to-br from-slate-800/30 to-slate-900/30 backdrop-blur-sm"
+            className="border border-dark-300 rounded-xl overflow-hidden bg-dark-400"
             initial={false}
-            whileHover={{ borderColor: 'rgba(34, 211, 238, 0.3)' }}
+            whileHover={{ borderColor: 'rgba(255, 102, 171, 0.3)' }}
             transition={{ duration: 0.2 }}
         >
             <motion.button
                 onClick={() => setIsOpen(!isOpen)}
                 className="w-full px-6 py-5 text-left flex justify-between items-center gap-4 group"
-                whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
                 whileTap={{ scale: 0.995 }}
                 transition={{ duration: 0.15 }}
             >
-                <span className="font-medium text-white group-hover:text-cyan-400 transition-colors duration-200">
+                <span className="font-medium text-white group-hover:text-primary-400 transition-colors duration-200">
                     {question}
                 </span>
                 <motion.div
@@ -386,7 +383,7 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
                     className="flex-shrink-0"
                 >
                     <svg
-                        className="w-5 h-5 text-gray-400 group-hover:text-cyan-400 transition-colors duration-200"
+                        className="w-5 h-5 text-gray-400 group-hover:text-primary-400 transition-colors duration-200"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -409,7 +406,7 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
                         transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
                         className="overflow-hidden"
                     >
-                        <div className="px-6 pb-5 text-gray-400 leading-relaxed border-t border-gray-700/30 pt-4">
+                        <div className="px-6 pb-5 text-gray-400 leading-relaxed border-t border-dark-300 pt-4">
                             {answer}
                         </div>
                     </motion.div>

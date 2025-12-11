@@ -34,6 +34,7 @@ def upgrade() -> None:
         "inappropriate_content",
         "cheating",
         "impersonation",
+        "copyright",
         "other",
         name="reporttype",
     )
@@ -42,7 +43,7 @@ def upgrade() -> None:
     # Create ReportStatus enum
     report_status_enum = postgresql.ENUM(
         "pending",
-        "reviewed",
+        "under_review",
         "resolved",
         "dismissed",
         name="reportstatus",
@@ -56,8 +57,8 @@ def upgrade() -> None:
         sa.Column(
             "sender_id",
             postgresql.UUID(as_uuid=True),
-            sa.ForeignKey("users.id", ondelete="CASCADE"),
-            nullable=False,
+            sa.ForeignKey("users.id", ondelete="SET NULL"),
+            nullable=True,
         ),
         sa.Column(
             "recipient_id",
@@ -65,13 +66,23 @@ def upgrade() -> None:
             sa.ForeignKey("users.id", ondelete="CASCADE"),
             nullable=False,
         ),
+        sa.Column("subject", sa.String(255), nullable=True),
         sa.Column("content", sa.Text(), nullable=False),
+        sa.Column("is_read", sa.Boolean(), default=False, nullable=False),
         sa.Column("read_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("deleted_by_sender", sa.Boolean(), default=False, nullable=False),
+        sa.Column("deleted_by_recipient", sa.Boolean(), default=False, nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
             server_default=sa.text("now()"),
             nullable=False,
+        ),
+        sa.Column(
+            "reply_to_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("direct_messages.id", ondelete="SET NULL"),
+            nullable=True,
         ),
     )
     

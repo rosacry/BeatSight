@@ -9,9 +9,9 @@ import { cn } from '../../lib/utils';
 const audioPlayerVariants = cva('relative rounded-xl border transition-all', {
     variants: {
         variant: {
-            default: 'bg-gray-900/80 border-gray-700 backdrop-blur-sm',
+            default: 'bg-dark-500/80 border-white/10 backdrop-blur-sm',
             minimal: 'bg-transparent border-transparent',
-            card: 'bg-gray-800 border-gray-700 shadow-xl',
+            card: 'bg-dark-400 border-white/10 shadow-xl',
         },
         size: {
             sm: 'p-3',
@@ -199,7 +199,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ current, total, onSeek, buffe
             {/* Time display on hover */}
             {hoverPosition !== null && (
                 <div
-                    className="absolute -top-8 px-2 py-1 bg-gray-900 text-xs text-white rounded transform -translate-x-1/2 pointer-events-none"
+                    className="absolute -top-8 px-2 py-1 bg-dark-500 text-xs text-white rounded transform -translate-x-1/2 pointer-events-none"
                     style={{ left: `${hoverPosition * 100}%` }}
                 >
                     {formatTime(hoverPosition * total)}
@@ -208,7 +208,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ current, total, onSeek, buffe
 
             <div
                 ref={progressRef}
-                className="h-2 bg-gray-700 rounded-full cursor-pointer overflow-hidden"
+                className="h-2 bg-dark-300 rounded-full cursor-pointer overflow-hidden"
                 onClick={handleClick}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
@@ -258,7 +258,7 @@ const VolumeSlider: React.FC<VolumeSliderProps> = ({ volume, muted, onVolumeChan
         >
             <button
                 onClick={onMuteToggle}
-                className="p-2 rounded-full hover:bg-gray-700 transition-colors"
+                className="p-2 rounded-full hover:bg-dark-300 transition-colors"
                 aria-label={muted ? 'Unmute' : 'Mute'}
             >
                 <VolumeIcon className="w-5 h-5 text-gray-300" muted={muted} level={volume} />
@@ -277,7 +277,7 @@ const VolumeSlider: React.FC<VolumeSliderProps> = ({ volume, muted, onVolumeChan
                     step="0.01"
                     value={muted ? 0 : volume}
                     onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
-                    className="w-full h-1 bg-gray-700 rounded-full appearance-none cursor-pointer
+                    className="w-full h-1 bg-dark-300 rounded-full appearance-none cursor-pointer
                      [&::-webkit-slider-thumb]:appearance-none
                      [&::-webkit-slider-thumb]:w-3
                      [&::-webkit-slider-thumb]:h-3
@@ -303,11 +303,11 @@ const TrackInfo: React.FC<TrackInfoProps> = ({ track, compact }) => {
         return (
             <div className={cn('flex items-center gap-3', compact && 'gap-2')}>
                 <div
-                    className={cn('bg-gray-800 rounded-lg flex-shrink-0', compact ? 'w-10 h-10' : 'w-14 h-14')}
+                    className={cn('bg-dark-400 rounded-lg flex-shrink-0', compact ? 'w-10 h-10' : 'w-14 h-14')}
                 />
                 <div className="min-w-0">
-                    <div className={cn('h-4 bg-gray-700 rounded w-32', compact && 'w-24')} />
-                    <div className={cn('h-3 bg-gray-800 rounded w-20 mt-1', compact && 'w-16')} />
+                    <div className={cn('h-4 bg-dark-300 rounded w-32', compact && 'w-24')} />
+                    <div className={cn('h-3 bg-dark-400 rounded w-20 mt-1', compact && 'w-16')} />
                 </div>
             </div>
         );
@@ -318,7 +318,7 @@ const TrackInfo: React.FC<TrackInfoProps> = ({ track, compact }) => {
             {/* Album Art */}
             <div
                 className={cn(
-                    'bg-gray-800 rounded-lg flex-shrink-0 overflow-hidden',
+                    'bg-dark-400 rounded-lg flex-shrink-0 overflow-hidden',
                     compact ? 'w-10 h-10' : 'w-14 h-14'
                 )}
             >
@@ -370,7 +370,7 @@ const Waveform: React.FC<WaveformProps> = ({ isPlaying, progress }) => {
                         key={i}
                         className={cn(
                             'w-1 rounded-full transition-all duration-150',
-                            isActive ? 'bg-gradient-to-t from-primary to-accent' : 'bg-gray-700'
+                            isActive ? 'bg-gradient-to-t from-primary to-accent' : 'bg-dark-300'
                         )}
                         style={{
                             height: isPlaying ? `${height}%` : '20%',
@@ -665,12 +665,12 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     return (
         <div
             className={cn(
-                'fixed bottom-4 right-4 flex items-center gap-3 p-3 bg-gray-900/95 backdrop-blur-md rounded-xl border border-gray-700 shadow-2xl',
+                'fixed bottom-4 right-4 flex items-center gap-3 p-3 bg-dark-500/95 backdrop-blur-md rounded-xl border border-white/10 shadow-2xl',
                 className
             )}
         >
             {/* Track artwork */}
-            <div className="w-12 h-12 bg-gray-800 rounded-lg overflow-hidden flex-shrink-0">
+            <div className="w-12 h-12 bg-dark-400 rounded-lg overflow-hidden flex-shrink-0">
                 {track?.coverUrl && (
                     <img src={track.coverUrl} alt={track.title} className="w-full h-full object-cover" />
                 )}

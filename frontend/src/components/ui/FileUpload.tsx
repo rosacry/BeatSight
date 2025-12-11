@@ -10,7 +10,7 @@ const fileUploadVariants = cva(
     {
         variants: {
             variant: {
-                default: 'border-gray-700 bg-gray-900/50 hover:border-primary/50 hover:bg-gray-800/50',
+                default: 'border-white/10 bg-dark-500/50 hover:border-primary/50 hover:bg-dark-400/50',
                 success: 'border-green-500 bg-green-500/10',
                 error: 'border-red-500 bg-red-500/10',
             },
@@ -147,9 +147,9 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onRemove }) => {
     const isImage = file.type.startsWith('image/');
 
     return (
-        <div className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+        <div className="flex items-center gap-3 p-3 bg-dark-400/50 rounded-lg border border-white/10">
             {/* Icon/Preview */}
-            <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-gray-900 flex items-center justify-center overflow-hidden">
+            <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-dark-500 flex items-center justify-center overflow-hidden">
                 {isImage && preview ? (
                     <img src={preview} alt={file.name} className="w-full h-full object-cover" />
                 ) : isAudio ? (
@@ -170,7 +170,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onRemove }) => {
                 <button
                     type="button"
                     onClick={onRemove}
-                    className="flex-shrink-0 p-1 rounded-full hover:bg-gray-700 transition-colors"
+                    className="flex-shrink-0 p-1 rounded-full hover:bg-dark-300 transition-colors"
                 >
                     <XIcon className="w-4 h-4 text-gray-400" />
                 </button>
@@ -357,7 +357,7 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
                                 ? 'bg-green-500/20'
                                 : uploadVariant === 'error'
                                     ? 'bg-red-500/20'
-                                    : 'bg-gray-800'
+                                    : 'bg-dark-400'
                         )}
                     >
                         <UploadIcon
@@ -491,14 +491,14 @@ export const UploadProgress: React.FC<UploadProgressProps> = ({
     };
 
     return (
-        <div className="w-full p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+        <div className="w-full p-4 bg-dark-400/50 rounded-lg border border-white/10">
             <div className="flex items-center justify-between mb-2">
                 {fileName && <span className="text-sm font-medium text-white truncate">{fileName}</span>}
                 <span className={cn('text-xs', status === 'error' ? 'text-red-400' : 'text-gray-400')}>{getStatusText()}</span>
             </div>
 
             {/* Progress bar */}
-            <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+            <div className="h-2 bg-dark-300 rounded-full overflow-hidden">
                 <div
                     className={cn('h-full transition-all duration-300 rounded-full', getStatusColor())}
                     style={{ width: `${progress}%` }}

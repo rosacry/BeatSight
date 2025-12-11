@@ -177,22 +177,7 @@ export function ConfirmDialog({
                         }}
                     >
                         {/* Full-screen backdrop with blur and dark overlay */}
-                        <motion.div
-                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                        />
-
-                        {/* Subtle animated gradient overlay for depth */}
-                        <motion.div
-                            className="absolute inset-0 bg-gradient-to-br from-primary-900/15 via-transparent to-dark-500/20 pointer-events-none"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.4 }}
-                        />
+                        <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
 
                         {/* Dialog Card - Centered */}
                         <motion.div
@@ -216,16 +201,13 @@ export function ConfirmDialog({
                             }}
                             onClick={(e) => e.stopPropagation()}
                             tabIndex={-1}
-                            className="relative bg-gradient-to-b from-dark-400/95 to-dark-500/95 rounded-3xl border border-white/10 shadow-2xl shadow-black/60 max-w-md w-full mx-4 overflow-hidden focus:outline-none backdrop-blur-xl"
+                            className="relative bg-dark-400 rounded-2xl border border-white/10 shadow-2xl shadow-black/60 max-w-md w-full mx-4 overflow-hidden focus:outline-none"
                             role="dialog"
                             aria-modal="true"
                             aria-labelledby="dialog-title"
                         >
                             {/* Decorative top accent line */}
                             <div className="absolute top-0 left-0 right-0 h-1 bg-primary-500" />
-
-                            {/* Subtle glow effect */}
-                            <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-32 bg-primary-500/15 rounded-full blur-3xl pointer-events-none" />
 
                             {/* Content */}
                             <div className="relative px-8 pt-10 pb-8 text-center">
@@ -348,13 +330,13 @@ export function ConfirmDialog({
                         exit="exit"
                         onClick={(e) => e.stopPropagation()}
                         tabIndex={-1}
-                        className="relative bg-gray-800 rounded-2xl border border-gray-700 shadow-2xl shadow-black/50 max-w-sm w-full overflow-hidden focus:outline-none"
+                        className="relative bg-dark-400 rounded-2xl border border-white/10 shadow-2xl shadow-black/50 max-w-sm w-full overflow-hidden focus:outline-none"
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="dialog-title"
                     >
                         {/* Header */}
-                        <div className="px-6 py-5 border-b border-gray-700">
+                        <div className="px-6 py-5 border-b border-white/10">
                             <div className="flex items-center gap-3">
                                 {styles.icon && (
                                     <div className="flex-shrink-0">
@@ -373,12 +355,12 @@ export function ConfirmDialog({
                         </div>
 
                         {/* Actions */}
-                        <div className="px-6 py-4 bg-gray-900/50 flex gap-3 justify-end">
+                        <div className="px-6 py-4 bg-dark-500/50 flex gap-3 justify-end">
                             <button
                                 onClick={onClose}
                                 disabled={isLoading}
                                 className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white 
-                                         bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors
+                                         bg-dark-300 hover:bg-gray-600 rounded-lg transition-colors
                                          focus:outline-none focus:ring-2 focus:ring-gray-500/50
                                          disabled:opacity-50"
                             >

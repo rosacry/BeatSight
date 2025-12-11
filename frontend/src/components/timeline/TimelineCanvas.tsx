@@ -829,7 +829,7 @@ export function TimelineCanvas({
     return (
         <div
             ref={containerRef}
-            className="relative w-full overflow-hidden rounded-lg border border-gray-700 bg-gray-800"
+            className="relative w-full overflow-hidden rounded-lg border border-white/10 bg-dark-400"
             style={{ height: totalHeight }}
         >
             {/* Static layer - background grid, lanes, ruler */}

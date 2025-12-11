@@ -90,11 +90,11 @@ function BeatmapAnimation({ isActive }: { isActive: boolean }) {
     }, [isActive])
 
     return (
-        <div className="relative h-16 w-full overflow-hidden rounded bg-gray-900/50">
+        <div className="relative h-16 w-full overflow-hidden rounded bg-dark-500/50">
             {/* Timeline lanes */}
             <div className="absolute inset-0 flex flex-col justify-around">
                 {[0, 1, 2].map(lane => (
-                    <div key={lane} className="h-px bg-gray-700" />
+                    <div key={lane} className="h-px bg-dark-300" />
                 ))}
             </div>
             {/* Moving notes */}
@@ -141,7 +141,7 @@ export function LandingDemo() {
 
     return (
         <div
-            className="aspect-video bg-gray-900 rounded-2xl border border-gray-700 overflow-hidden relative cursor-pointer group"
+            className="aspect-video bg-dark-500 rounded-2xl border border-white/10 overflow-hidden relative cursor-pointer group"
             onClick={() => setIsPlaying(!isPlaying)}
         >
             {/* Background gradient */}
@@ -194,7 +194,7 @@ export function LandingDemo() {
 
                 {/* Progress bar */}
                 <div className="absolute bottom-4 left-4 right-4">
-                    <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
+                    <div className="h-1 bg-dark-300 rounded-full overflow-hidden">
                         <div
                             className="h-full bg-purple-500 transition-all duration-100 ease-linear"
                             style={{ width: `${progress}%` }}

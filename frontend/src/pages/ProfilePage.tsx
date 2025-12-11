@@ -94,15 +94,15 @@ export function ProfilePage() {
                 {/* Profile Header Skeleton */}
                 <div className="card animate-pulse">
                     <div className="flex flex-col sm:flex-row items-center gap-6">
-                        <div className="w-24 h-24 bg-gray-700 rounded-full" />
+                        <div className="w-24 h-24 bg-dark-300 rounded-full" />
                         <div className="flex-1 text-center sm:text-left space-y-3">
-                            <div className="h-8 bg-gray-700 rounded w-48" />
-                            <div className="h-4 bg-gray-700 rounded w-32" />
-                            <div className="h-4 bg-gray-700 rounded w-24" />
+                            <div className="h-8 bg-dark-300 rounded w-48" />
+                            <div className="h-4 bg-dark-300 rounded w-32" />
+                            <div className="h-4 bg-dark-300 rounded w-24" />
                         </div>
                         <div className="text-center space-y-2">
-                            <div className="h-10 bg-gray-700 rounded w-16 mx-auto" />
-                            <div className="h-4 bg-gray-700 rounded w-12 mx-auto" />
+                            <div className="h-10 bg-dark-300 rounded w-16 mx-auto" />
+                            <div className="h-4 bg-dark-300 rounded w-12 mx-auto" />
                         </div>
                     </div>
                 </div>
@@ -111,8 +111,8 @@ export function ProfilePage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {[1, 2, 3].map((i) => (
                         <div key={i} className="card animate-pulse text-center">
-                            <div className="h-10 bg-gray-700 rounded w-16 mx-auto mb-2" />
-                            <div className="h-4 bg-gray-700 rounded w-24 mx-auto" />
+                            <div className="h-10 bg-dark-300 rounded w-16 mx-auto mb-2" />
+                            <div className="h-4 bg-dark-300 rounded w-24 mx-auto" />
                         </div>
                     ))}
                 </div>
@@ -120,12 +120,12 @@ export function ProfilePage() {
                 {/* Tabs Skeleton */}
                 <div className="card animate-pulse">
                     <div className="flex gap-4 mb-6">
-                        <div className="h-8 bg-gray-700 rounded w-24" />
-                        <div className="h-8 bg-gray-700 rounded w-24" />
+                        <div className="h-8 bg-dark-300 rounded w-24" />
+                        <div className="h-8 bg-dark-300 rounded w-24" />
                     </div>
                     <div className="space-y-4">
                         {[1, 2, 3].map((i) => (
-                            <div key={i} className="h-16 bg-gray-700 rounded" />
+                            <div key={i} className="h-16 bg-dark-300 rounded" />
                         ))}
                     </div>
                 </div>
@@ -203,7 +203,7 @@ export function ProfilePage() {
             </div>
 
             {/* Tabs */}
-            <div className="border-b border-gray-700 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+            <div className="border-b border-white/10 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
                 <nav className="flex gap-4 sm:gap-8 min-w-max">
                     <button
                         onClick={() => handleTabChange('overview')}
@@ -303,7 +303,7 @@ export function ProfilePage() {
                             {achievementsLoading ? (
                                 <div className="space-y-3">
                                     {[1, 2, 3].map((i) => (
-                                        <div key={i} className="h-16 bg-gray-700 rounded animate-pulse" />
+                                        <div key={i} className="h-16 bg-dark-300 rounded animate-pulse" />
                                     ))}
                                 </div>
                             ) : (

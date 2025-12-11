@@ -290,7 +290,7 @@ export function RecordPage() {
                     <h2 className="text-xl font-bold text-white mb-2">Browser Not Supported</h2>
                     <p className="text-gray-300 mb-6">{browserSupport.reason}</p>
 
-                    <div className="border-t border-gray-700 pt-6">
+                    <div className="border-t border-white/10 pt-6">
                         <p className="text-gray-400 text-sm mb-4">
                             You can still upload existing audio files:
                         </p>
@@ -331,7 +331,7 @@ export function RecordPage() {
                         Microphone permission was denied. To record audio, you'll need to enable microphone access in your browser settings.
                     </p>
 
-                    <div className="bg-gray-800/50 rounded-lg p-4 text-left text-sm text-gray-400 mb-6">
+                    <div className="bg-dark-400/50 rounded-lg p-4 text-left text-sm text-gray-400 mb-6">
                         <p className="font-medium text-white mb-2">How to enable microphone:</p>
                         <ol className="list-decimal list-inside space-y-1">
                             <li>Click the lock/info icon in your browser's address bar</li>
@@ -350,7 +350,7 @@ export function RecordPage() {
                         </button>
                         <button
                             onClick={() => navigate('/upload')}
-                            className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+                            className="px-6 py-3 bg-dark-300 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
                         >
                             Upload Instead
                         </button>
@@ -420,28 +420,28 @@ export function RecordPage() {
 
                         {/* Feature highlights */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8 text-left">
-                            <div className="bg-gray-800/50 rounded-lg p-4">
+                            <div className="bg-dark-400/50 rounded-lg p-4">
                                 <div className="text-primary-400 font-medium mb-1">🎤 Live Recording</div>
                                 <p className="text-gray-400 text-sm">Record directly from your microphone</p>
                             </div>
-                            <div className="bg-gray-800/50 rounded-lg p-4">
+                            <div className="bg-dark-400/50 rounded-lg p-4">
                                 <div className="text-primary-400 font-medium mb-1">🎵 Metronome</div>
                                 <p className="text-gray-400 text-sm">Built-in click track with tap tempo</p>
                             </div>
-                            <div className="bg-gray-800/50 rounded-lg p-4">
+                            <div className="bg-dark-400/50 rounded-lg p-4">
                                 <div className="text-primary-400 font-medium mb-1">🤖 AI Analysis</div>
                                 <p className="text-gray-400 text-sm">Get beatmaps in seconds</p>
                             </div>
                         </div>
 
                         {/* Alternative */}
-                        <div className="border-t border-gray-700 pt-6 mt-8">
+                        <div className="border-t border-white/10 pt-6 mt-8">
                             <p className="text-gray-400 text-sm mb-4">
                                 Or upload an existing audio file:
                             </p>
                             <button
                                 onClick={() => navigate('/upload')}
-                                className="inline-flex items-center gap-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+                                className="inline-flex items-center gap-2 px-6 py-3 bg-dark-300 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -476,9 +476,9 @@ export function RecordPage() {
                 />
             ) : (
                 /* Post-Recording Interface */
-                <div className="bg-gray-900 rounded-xl p-6 space-y-6">
+                <div className="bg-dark-500 rounded-xl p-6 space-y-6">
                     {/* Recording Preview */}
-                    <div className="bg-gray-800 rounded-lg p-4">
+                    <div className="bg-dark-400 rounded-lg p-4">
                         <div className="flex items-center gap-4">
                             <div className="w-16 h-16 bg-primary-500/20 rounded-lg flex items-center justify-center">
                                 <svg className="w-8 h-8 text-primary-500" fill="currentColor" viewBox="0 0 24 24">
@@ -516,7 +516,7 @@ export function RecordPage() {
                                 value={songTitle}
                                 onChange={(e) => setSongTitle(e.target.value)}
                                 placeholder="My Drum Recording"
-                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                                className="w-full bg-dark-400 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                             />
                         </div>
 
@@ -529,7 +529,7 @@ export function RecordPage() {
                                 value={artist}
                                 onChange={(e) => setArtist(e.target.value)}
                                 placeholder="Unknown Artist"
-                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                                className="w-full bg-dark-400 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                             />
                         </div>
                     </div>
@@ -539,7 +539,7 @@ export function RecordPage() {
                         <button
                             onClick={handleUpload}
                             disabled={isUploading || !songTitle}
-                            className="flex-1 px-6 py-3 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                            className="flex-1 px-6 py-3 bg-primary-500 hover:bg-primary-600 disabled:bg-dark-300 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                         >
                             {isUploading ? (
                                 <>
@@ -558,7 +558,7 @@ export function RecordPage() {
 
                         <button
                             onClick={handleDownload}
-                            className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                            className="px-6 py-3 bg-dark-400 hover:bg-dark-300 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                         >
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -568,7 +568,7 @@ export function RecordPage() {
 
                         <button
                             onClick={handleDiscard}
-                            className="px-6 py-3 bg-gray-800 hover:bg-red-500/20 text-gray-400 hover:text-red-400 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                            className="px-6 py-3 bg-dark-400 hover:bg-red-500/20 text-gray-400 hover:text-red-400 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                         >
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -580,7 +580,7 @@ export function RecordPage() {
             )}
 
             {/* Tips Section */}
-            <div className="mt-8 bg-gray-800/50 rounded-lg p-4">
+            <div className="mt-8 bg-dark-400/50 rounded-lg p-4">
                 <h3 className="text-sm font-medium text-white mb-3">Recording Tips</h3>
                 <ul className="space-y-2 text-sm text-gray-400">
                     <li className="flex items-start gap-2">

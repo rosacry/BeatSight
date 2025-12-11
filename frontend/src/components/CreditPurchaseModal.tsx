@@ -52,9 +52,9 @@ export function CreditPurchaseModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-            <div className="bg-gray-900 rounded-xl border border-gray-800 w-full max-w-lg shadow-2xl">
+            <div className="bg-dark-500 rounded-xl border border-white/10 w-full max-w-lg shadow-2xl">
                 {/* Header */}
-                <div className="p-6 border-b border-gray-800">
+                <div className="p-6 border-b border-white/10">
                     <div className="flex justify-between items-start">
                         <div>
                             <h2 className="text-xl font-bold text-white">{title}</h2>
@@ -95,7 +95,7 @@ export function CreditPurchaseModal({
                                 onClick={() => setSelectedPack(pack.type)}
                                 className={`w-full p-4 rounded-lg border transition-all text-left ${selectedPack === pack.type
                                     ? 'border-primary-500 bg-primary-500/10'
-                                    : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
+                                    : 'border-white/10 bg-dark-400/50 hover:border-gray-600'
                                     }`}
                             >
                                 <div className="flex justify-between items-center">
@@ -124,12 +124,12 @@ export function CreditPurchaseModal({
                 </div>
 
                 {/* Footer */}
-                <div className="p-6 border-t border-gray-800 space-y-4">
+                <div className="p-6 border-t border-white/10 space-y-4">
                     {/* Purchase button */}
                     <button
                         onClick={handlePurchase}
                         disabled={purchaseMutation.isPending}
-                        className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-700 
+                        className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 disabled:bg-dark-300 
                        text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
                         {purchaseMutation.isPending ? (

@@ -114,12 +114,12 @@ export function TopicViewPage() {
         return (
             <div className="max-w-4xl mx-auto">
                 <div className="animate-pulse space-y-6">
-                    <div className="h-8 bg-gray-700 rounded w-3/4" />
-                    <div className="h-4 bg-gray-700 rounded w-48" />
+                    <div className="h-8 bg-dark-300 rounded w-3/4" />
+                    <div className="h-4 bg-dark-300 rounded w-48" />
                     <div className="space-y-4">
                         {[1, 2, 3].map((i) => (
-                            <div key={i} className="card bg-gray-800/50 border border-gray-700">
-                                <div className="h-32 bg-gray-700 rounded" />
+                            <div key={i} className="card bg-dark-400/50 border border-white/10">
+                                <div className="h-32 bg-dark-300 rounded" />
                             </div>
                         ))}
                     </div>
@@ -145,7 +145,7 @@ export function TopicViewPage() {
     return (
         <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
             {/* Topic header */}
-            <div className="card bg-gray-800/50 border border-gray-700">
+            <div className="card bg-dark-400/50 border border-white/10">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-2">
@@ -213,7 +213,7 @@ export function TopicViewPage() {
                         {/* Moderator actions */}
                         {canModerate && (
                             <div className="relative group">
-                                <button className="p-2 rounded bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors">
+                                <button className="p-2 rounded bg-dark-300 text-gray-300 hover:bg-gray-600 transition-colors">
                                     <svg
                                         className="w-5 h-5"
                                         fill="none"
@@ -228,18 +228,18 @@ export function TopicViewPage() {
                                         />
                                     </svg>
                                 </button>
-                                <div className="absolute right-0 top-full mt-1 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                                <div className="absolute right-0 top-full mt-1 w-48 bg-dark-400 border border-white/10 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
                                     <button
                                         onClick={() => lockMutation.mutate()}
                                         disabled={lockMutation.isPending}
-                                        className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 first:rounded-t-lg"
+                                        className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-dark-300 first:rounded-t-lg"
                                     >
                                         {topic.is_locked ? 'Unlock Topic' : 'Lock Topic'}
                                     </button>
                                     <button
                                         onClick={() => pinMutation.mutate()}
                                         disabled={pinMutation.isPending}
-                                        className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 last:rounded-b-lg"
+                                        className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-dark-300 last:rounded-b-lg"
                                     >
                                         {topic.is_pinned ? 'Unpin Topic' : 'Pin Topic'}
                                     </button>
@@ -266,9 +266,9 @@ export function TopicViewPage() {
                         {[1, 2, 3].map((i) => (
                             <div
                                 key={i}
-                                className="card bg-gray-800/50 border border-gray-700 animate-pulse"
+                                className="card bg-dark-400/50 border border-white/10 animate-pulse"
                             >
-                                <div className="h-32 bg-gray-700 rounded" />
+                                <div className="h-32 bg-dark-300 rounded" />
                             </div>
                         ))}
                     </>
@@ -294,8 +294,8 @@ export function TopicViewPage() {
                         className={clsx(
                             'px-4 py-2 rounded transition-colors',
                             postsData.has_prev
-                                ? 'bg-gray-800 text-white hover:bg-gray-700'
-                                : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
+                                ? 'bg-dark-400 text-white hover:bg-dark-300'
+                                : 'bg-dark-400/50 text-gray-500 cursor-not-allowed'
                         )}
                     >
                         Previous
@@ -340,8 +340,8 @@ export function TopicViewPage() {
                         className={clsx(
                             'px-4 py-2 rounded transition-colors',
                             postsData.has_next
-                                ? 'bg-gray-800 text-white hover:bg-gray-700'
-                                : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
+                                ? 'bg-dark-400 text-white hover:bg-dark-300'
+                                : 'bg-dark-400/50 text-gray-500 cursor-not-allowed'
                         )}
                     >
                         Next

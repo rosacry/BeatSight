@@ -510,7 +510,7 @@ export function AdminDashboardPage() {
 
             {/* Tabs */}
             <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-2 mb-8">
-                <div className="flex gap-1 p-1 bg-gray-800 rounded-lg w-fit">
+                <div className="flex gap-1 p-1 bg-dark-400 rounded-lg w-fit">
                     {(['overview', 'users', 'jobs', 'contributions'] as const).map((tab) => (
                         <button
                             key={tab}
@@ -580,7 +580,7 @@ export function AdminDashboardPage() {
                     </div>
 
                     {/* Queue Status */}
-                    <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                    <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
                         <h3 className="text-lg font-semibold text-white mb-4">Job Queue Status</h3>
                         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                             <QueueItem label="Queued" value={queueStats.queued} color="blue" />
@@ -597,7 +597,7 @@ export function AdminDashboardPage() {
                     </div>
 
                     {/* User Stats */}
-                    <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                    <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
                         <h3 className="text-lg font-semibold text-white mb-4">User Growth</h3>
                         <div className="grid grid-cols-3 gap-6">
                             <div>
@@ -613,7 +613,7 @@ export function AdminDashboardPage() {
                                 <p className="text-gray-400">This Month</p>
                             </div>
                         </div>
-                        <div className="mt-4 pt-4 border-t border-gray-700">
+                        <div className="mt-4 pt-4 border-t border-white/10">
                             <p className="text-gray-400 text-sm">
                                 {userStats.verified_users} verified ({((userStats.verified_users / userStats.total_users) * 100).toFixed(0)}%)
                             </p>
@@ -636,7 +636,7 @@ export function AdminDashboardPage() {
                                 placeholder="Search by email or name..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                className="w-full pl-10 pr-4 py-2.5 bg-dark-400 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
                             />
                         </div>
 
@@ -702,9 +702,9 @@ export function AdminDashboardPage() {
                     )}
 
                     {/* Users Table */}
-                    <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-x-auto">
+                    <div className="bg-dark-400 rounded-xl border border-white/10 overflow-x-auto">
                         <table className="w-full min-w-[900px]">
-                            <thead className="bg-gray-900">
+                            <thead className="bg-dark-500">
                                 <tr>
                                     <th
                                         onClick={() => handleSort('display_name')}
@@ -752,7 +752,7 @@ export function AdminDashboardPage() {
                             </thead>
                             <tbody className="divide-y divide-gray-700">
                                 {sortedUsers.map((user) => (
-                                    <tr key={user.id} className="hover:bg-gray-700/50">
+                                    <tr key={user.id} className="hover:bg-dark-300/50">
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
                                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${user.is_banned ? 'bg-red-500/20' :
@@ -859,7 +859,7 @@ export function AdminDashboardPage() {
                                                             setOpenActionsUserId(user.id)
                                                         }
                                                     }}
-                                                    className="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+                                                    className="p-1.5 rounded hover:bg-dark-300 text-gray-400 hover:text-white"
                                                 >
                                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
@@ -896,7 +896,7 @@ export function AdminDashboardPage() {
                             top: dropdownPosition.top,
                             left: dropdownPosition.left,
                         }}
-                        className="w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-[9999]"
+                        className="w-48 bg-dark-400 border border-white/10 rounded-lg shadow-xl z-[9999]"
                     >
                         <div className="p-1">
                             {(() => {
@@ -911,7 +911,7 @@ export function AdminDashboardPage() {
                                                 setOpenActionsUserId(null)
                                                 setDropdownPosition(null)
                                             }}
-                                            className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded"
+                                            className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-dark-300 rounded"
                                         >
                                             📝 Add Note
                                         </button>
@@ -925,7 +925,7 @@ export function AdminDashboardPage() {
                                                         setOpenActionsUserId(null)
                                                         setDropdownPosition(null)
                                                     }}
-                                                    className="w-full text-left px-3 py-2 text-sm text-yellow-400 hover:bg-gray-700 rounded"
+                                                    className="w-full text-left px-3 py-2 text-sm text-yellow-400 hover:bg-dark-300 rounded"
                                                 >
                                                     🔇 Silence
                                                 </button>
@@ -937,7 +937,7 @@ export function AdminDashboardPage() {
                                                         setOpenActionsUserId(null)
                                                         setDropdownPosition(null)
                                                     }}
-                                                    className="w-full text-left px-3 py-2 text-sm text-orange-400 hover:bg-gray-700 rounded"
+                                                    className="w-full text-left px-3 py-2 text-sm text-orange-400 hover:bg-dark-300 rounded"
                                                 >
                                                     ⚠️ Restrict
                                                 </button>
@@ -950,7 +950,7 @@ export function AdminDashboardPage() {
                                                         setOpenActionsUserId(null)
                                                         setDropdownPosition(null)
                                                     }}
-                                                    className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-gray-700 rounded"
+                                                    className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-dark-300 rounded"
                                                 >
                                                     🚫 Ban
                                                 </button>
@@ -963,7 +963,7 @@ export function AdminDashboardPage() {
                                                     setOpenActionsUserId(null)
                                                     setDropdownPosition(null)
                                                 }}
-                                                className="w-full text-left px-3 py-2 text-sm text-green-400 hover:bg-gray-700 rounded"
+                                                className="w-full text-left px-3 py-2 text-sm text-green-400 hover:bg-dark-300 rounded"
                                             >
                                                 ✅ Remove Restriction
                                             </button>
@@ -980,7 +980,7 @@ export function AdminDashboardPage() {
             {/* Moderation Modal */}
             {moderationModalUser && moderationAction && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                    <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 w-full max-w-md mx-4">
+                    <div className="bg-dark-400 rounded-xl border border-white/10 p-6 w-full max-w-md mx-4">
                         <h3 className="text-lg font-semibold text-white mb-4">
                             {moderationAction === 'note' && '📝 Add Note'}
                             {moderationAction === 'silence' && '🔇 Silence User'}
@@ -1010,7 +1010,7 @@ export function AdminDashboardPage() {
                                     <select
                                         value={moderationDuration}
                                         onChange={(e) => setModerationDuration(Number(e.target.value))}
-                                        className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2"
+                                        className="w-full bg-dark-300 border border-gray-600 text-white rounded-lg px-3 py-2"
                                     >
                                         <option value={1}>1 hour</option>
                                         <option value={6}>6 hours</option>
@@ -1033,7 +1033,7 @@ export function AdminDashboardPage() {
                                 value={moderationReason}
                                 onChange={(e) => setModerationReason(e.target.value)}
                                 placeholder={moderationAction === 'note' ? 'Enter administrative note...' : 'Enter reason for this action...'}
-                                className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 h-24 resize-none"
+                                className="w-full bg-dark-300 border border-gray-600 text-white rounded-lg px-3 py-2 h-24 resize-none"
                                 required
                             />
                         </div>
@@ -1093,7 +1093,7 @@ export function AdminDashboardPage() {
                     </div>
 
                     {/* Additional Stats */}
-                    <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                    <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
                         <h3 className="text-lg font-semibold text-white mb-4">Processing Statistics</h3>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                             <div>
@@ -1121,7 +1121,7 @@ export function AdminDashboardPage() {
                     </div>
 
                     {/* Quick Actions */}
-                    <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                    <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
                         <div className="flex items-center justify-between">
                             <div>
                                 <h3 className="text-lg font-semibold text-white">Job Management</h3>
@@ -1171,7 +1171,7 @@ export function AdminDashboardPage() {
 
                     {/* Approval Metrics */}
                     {contributionStats && (
-                        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                        <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
                             <h3 className="text-lg font-semibold text-white mb-4">Approval Metrics</h3>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/30">
@@ -1202,11 +1202,11 @@ export function AdminDashboardPage() {
 
                     {/* Correction Types Breakdown */}
                     {contributionStats && Object.keys(contributionStats.correction_types_approved).length > 0 && (
-                        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                        <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
                             <h3 className="text-lg font-semibold text-white mb-4">Correction Types (Approved)</h3>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 {Object.entries(contributionStats.correction_types_approved).map(([type, count]) => (
-                                    <div key={type} className="bg-gray-700/50 rounded-lg p-3">
+                                    <div key={type} className="bg-dark-300/50 rounded-lg p-3">
                                         <p className="text-lg font-bold text-white">{count}</p>
                                         <p className="text-sm text-gray-400 capitalize">{type.replace(/_/g, ' ')}</p>
                                     </div>
@@ -1217,11 +1217,11 @@ export function AdminDashboardPage() {
 
                     {/* Verifier Leaderboard */}
                     {verifierLeaderboard.length > 0 && (
-                        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                        <div className="bg-dark-400 rounded-xl p-6 border border-white/10">
                             <h3 className="text-lg font-semibold text-white mb-4">Top Verifiers</h3>
                             <div className="space-y-3">
                                 {verifierLeaderboard.slice(0, 10).map((verifier, index) => (
-                                    <div key={verifier.verifier_id} className="flex items-center justify-between bg-gray-700/50 rounded-lg p-3">
+                                    <div key={verifier.verifier_id} className="flex items-center justify-between bg-dark-300/50 rounded-lg p-3">
                                         <div className="flex items-center gap-3">
                                             <span className={`w-6 h-6 flex items-center justify-center rounded-full text-sm font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
                                                 index === 1 ? 'bg-gray-400 text-black' :
@@ -1249,7 +1249,7 @@ export function AdminDashboardPage() {
                     )}
 
                     {contributionsLoading && (
-                        <div className="bg-gray-800 rounded-xl p-8 border border-gray-700 text-center">
+                        <div className="bg-dark-400 rounded-xl p-8 border border-white/10 text-center">
                             <div className="flex items-center justify-center gap-3">
                                 <div className="animate-spin h-5 w-5 border-2 border-primary-500 border-t-transparent rounded-full" />
                                 <p className="text-gray-400">Loading contribution statistics...</p>
@@ -1270,7 +1270,7 @@ export function AdminDashboardPage() {
                     )}
 
                     {!contributionStats && !contributionsLoading && !contributionsError && (
-                        <div className="bg-gray-800 rounded-xl p-8 border border-gray-700 text-center">
+                        <div className="bg-dark-400 rounded-xl p-8 border border-white/10 text-center">
                             <p className="text-gray-400">No contribution statistics available</p>
                         </div>
                     )}
@@ -1282,7 +1282,7 @@ export function AdminDashboardPage() {
 
 function StatCard({ title, value, icon, trend }: { title: string; value: number; icon: string; trend?: string }) {
     return (
-        <div className="bg-gray-800 rounded-xl p-5 border border-gray-700">
+        <div className="bg-dark-400 rounded-xl p-5 border border-white/10">
             <div className="flex items-center justify-between mb-3">
                 <span className="text-2xl">{icon}</span>
                 {trend && <span className="text-xs text-gray-400">{trend}</span>}
@@ -1295,17 +1295,17 @@ function StatCard({ title, value, icon, trend }: { title: string; value: number;
 
 function QueueItem({ label, value, color }: { label: string; value: number; color: string }) {
     const colorClasses = {
-        blue: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
-        yellow: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
-        green: 'bg-green-500/10 text-green-400 border-green-500/30',
-        red: 'bg-red-500/10 text-red-400 border-red-500/30',
-        gray: 'bg-gray-500/10 text-gray-400 border-gray-500/30',
+        blue: 'bg-dark-300 text-blue-400 border-white/10',
+        yellow: 'bg-dark-300 text-yellow-400 border-white/10',
+        green: 'bg-dark-300 text-green-400 border-white/10',
+        red: 'bg-dark-300 text-red-400 border-white/10',
+        gray: 'bg-dark-300 text-gray-400 border-white/10',
     }
 
     return (
         <div className={`rounded-lg p-4 border ${colorClasses[color as keyof typeof colorClasses]}`}>
             <p className="text-2xl font-bold">{value}</p>
-            <p className="text-sm opacity-80">{label}</p>
+            <p className="text-sm text-gray-400">{label}</p>
         </div>
     )
 }

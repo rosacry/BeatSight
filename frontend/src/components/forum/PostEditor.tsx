@@ -64,7 +64,7 @@ export function PostEditor({
     // Not logged in
     if (!user) {
         return (
-            <div className="card bg-gray-800/50 border border-gray-700 text-center py-8">
+            <div className="card bg-dark-400/50 border border-white/10 text-center py-8">
                 <p className="text-gray-400 mb-4">Log in to reply.</p>
                 <Link to="/login" className="btn btn-primary">
                     Log In
@@ -76,7 +76,7 @@ export function PostEditor({
     // Topic is locked
     if (isLocked) {
         return (
-            <div className="card bg-gray-800/50 border border-gray-700 text-center py-8">
+            <div className="card bg-dark-400/50 border border-white/10 text-center py-8">
                 <div className="flex items-center justify-center gap-2 text-gray-400">
                     <svg
                         className="w-5 h-5"
@@ -98,7 +98,7 @@ export function PostEditor({
     }
 
     return (
-        <form onSubmit={handleSubmit} className="card bg-gray-800/50 border border-gray-700">
+        <form onSubmit={handleSubmit} className="card bg-dark-400/50 border border-white/10">
             <div className="flex items-start gap-4">
                 {/* User avatar */}
                 <div className="flex-shrink-0 hidden sm:block">
@@ -123,7 +123,7 @@ export function PostEditor({
                         placeholder={placeholder}
                         autoFocus={autoFocus}
                         className={clsx(
-                            'w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg',
+                            'w-full px-4 py-3 bg-dark-500 border border-gray-600 rounded-lg',
                             'text-white placeholder-gray-400',
                             'focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent',
                             'resize-y'
@@ -295,7 +295,7 @@ export function CreateTopicForm({ onSubmit, onCancel }: CreateTopicFormProps) {
 
     if (!user) {
         return (
-            <div className="card bg-gray-800/50 border border-gray-700 text-center py-8">
+            <div className="card bg-dark-400/50 border border-white/10 text-center py-8">
                 <p className="text-gray-400 mb-4">Log in to create a topic.</p>
                 <Link to="/login" className="btn btn-primary">
                     Log In
@@ -317,7 +317,7 @@ export function CreateTopicForm({ onSubmit, onCancel }: CreateTopicFormProps) {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Enter a descriptive title..."
-                    className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-3 bg-dark-500 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                     disabled={isSubmitting}
                     maxLength={200}
                 />
@@ -336,7 +336,7 @@ export function CreateTopicForm({ onSubmit, onCancel }: CreateTopicFormProps) {
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
                     placeholder="Write your post..."
-                    className="w-full h-48 px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-y"
+                    className="w-full h-48 px-4 py-3 bg-dark-500 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-y"
                     disabled={isSubmitting}
                 />
                 <div className="text-xs text-gray-500 mt-1">
@@ -365,7 +365,7 @@ export function CreateTopicForm({ onSubmit, onCancel }: CreateTopicFormProps) {
 
                 {/* Poll options */}
                 {showPoll && (
-                    <div className="mt-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700 space-y-4">
+                    <div className="mt-4 p-4 bg-dark-400/50 rounded-lg border border-white/10 space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-300 mb-2">
                                 Poll Question
@@ -375,7 +375,7 @@ export function CreateTopicForm({ onSubmit, onCancel }: CreateTopicFormProps) {
                                 value={pollTitle}
                                 onChange={(e) => setPollTitle(e.target.value)}
                                 placeholder="What would you like to ask?"
-                                className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full px-3 py-2 bg-dark-500 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                             />
                         </div>
 
@@ -393,7 +393,7 @@ export function CreateTopicForm({ onSubmit, onCancel }: CreateTopicFormProps) {
                                                 updatePollOption(index, e.target.value)
                                             }
                                             placeholder={`Option ${index + 1}`}
-                                            className="flex-1 px-3 py-2 bg-gray-900 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                            className="flex-1 px-3 py-2 bg-dark-500 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                                         />
                                         {pollOptions.length > 2 && (
                                             <button
@@ -440,7 +440,7 @@ export function CreateTopicForm({ onSubmit, onCancel }: CreateTopicFormProps) {
                                     onChange={(e) =>
                                         setPollMaxOptions(parseInt(e.target.value, 10))
                                     }
-                                    className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-3 py-2 bg-dark-500 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 >
                                     {[1, 2, 3, 4, 5].map((n) => (
                                         <option key={n} value={n}>
@@ -462,7 +462,7 @@ export function CreateTopicForm({ onSubmit, onCancel }: CreateTopicFormProps) {
                                                 : undefined
                                         )
                                     }
-                                    className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-3 py-2 bg-dark-500 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 >
                                     <option value="">No limit</option>
                                     <option value="1">1 day</option>
@@ -480,7 +480,7 @@ export function CreateTopicForm({ onSubmit, onCancel }: CreateTopicFormProps) {
                                     type="checkbox"
                                     checked={pollAllowChange}
                                     onChange={(e) => setPollAllowChange(e.target.checked)}
-                                    className="w-4 h-4 rounded border-gray-600 bg-gray-900 text-purple-500 focus:ring-purple-500"
+                                    className="w-4 h-4 rounded border-gray-600 bg-dark-500 text-purple-500 focus:ring-purple-500"
                                 />
                                 <span className="text-sm text-gray-300">
                                     Allow vote changes
@@ -491,7 +491,7 @@ export function CreateTopicForm({ onSubmit, onCancel }: CreateTopicFormProps) {
                                     type="checkbox"
                                     checked={pollHideResults}
                                     onChange={(e) => setPollHideResults(e.target.checked)}
-                                    className="w-4 h-4 rounded border-gray-600 bg-gray-900 text-purple-500 focus:ring-purple-500"
+                                    className="w-4 h-4 rounded border-gray-600 bg-dark-500 text-purple-500 focus:ring-purple-500"
                                 />
                                 <span className="text-sm text-gray-300">
                                     Hide results until voted

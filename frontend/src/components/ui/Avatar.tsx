@@ -18,7 +18,7 @@ import { clsx } from 'clsx'
 const avatarVariants = cva(
     [
         'relative inline-flex items-center justify-center',
-        'overflow-hidden rounded-full bg-gray-700',
+        'overflow-hidden rounded-full bg-dark-300',
         'ring-2 ring-gray-800',
     ],
     {
@@ -45,7 +45,7 @@ const avatarVariants = cva(
 )
 
 const statusVariants = cva(
-    'absolute rounded-full border-2 border-gray-800',
+    'absolute rounded-full border-2 border-white/10',
     {
         variants: {
             status: {
@@ -214,7 +214,7 @@ export const AvatarGroup = forwardRef<HTMLDivElement, AvatarGroupProps>(
                     <div
                         className={clsx(
                             avatarVariants({ size }),
-                            'bg-gray-700 text-gray-300 font-medium',
+                            'bg-dark-300 text-gray-300 font-medium',
                             overlapClasses[size]
                         )}
                         style={{ zIndex: 0 }}

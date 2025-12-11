@@ -467,14 +467,14 @@ export function TimelineEditor({
     }, [onSubmit, undoStack])
 
     return (
-        <div className="flex flex-col gap-4 rounded-lg bg-gray-900 p-4">
+        <div className="flex flex-col gap-4 rounded-lg bg-dark-500 p-4">
             {/* Toolbar */}
             <div className="flex flex-wrap items-center gap-4">
                 {/* Playback controls */}
                 <div className="flex items-center gap-2">
                     <button
                         onClick={stopPlayback}
-                        className="rounded bg-gray-700 px-3 py-1.5 text-sm hover:bg-gray-600"
+                        className="rounded bg-dark-300 px-3 py-1.5 text-sm hover:bg-gray-600"
                         title="Stop"
                     >
                         ⏹
@@ -499,7 +499,7 @@ export function TimelineEditor({
                     <select
                         value={playbackRate}
                         onChange={(e) => setPlaybackRate(parseFloat(e.target.value))}
-                        className="rounded bg-gray-700 px-2 py-1 text-sm"
+                        className="rounded bg-dark-300 px-2 py-1 text-sm"
                     >
                         {PLAYBACK_RATES.map((rate) => (
                             <option key={rate} value={rate}>
@@ -523,7 +523,7 @@ export function TimelineEditor({
                     />
                 </div>
 
-                <div className="h-6 w-px bg-gray-700" />
+                <div className="h-6 w-px bg-dark-300" />
 
                 {/* Snap controls */}
                 <div className="flex items-center gap-2">
@@ -542,7 +542,7 @@ export function TimelineEditor({
                             setSnap((s) => ({ ...s, divisor: parseInt(e.target.value) as SnapSettings['divisor'] }))
                         }
                         disabled={!snap.enabled}
-                        className="rounded bg-gray-700 px-2 py-1 text-sm disabled:opacity-50"
+                        className="rounded bg-dark-300 px-2 py-1 text-sm disabled:opacity-50"
                     >
                         {SNAP_OPTIONS.map((opt) => (
                             <option key={opt.value} value={opt.value}>
@@ -552,7 +552,7 @@ export function TimelineEditor({
                     </select>
                 </div>
 
-                <div className="h-6 w-px bg-gray-700" />
+                <div className="h-6 w-px bg-dark-300" />
 
                 {/* Diff toggle */}
                 {comparisonBeatmap && (
@@ -567,7 +567,7 @@ export function TimelineEditor({
                     </label>
                 )}
 
-                <div className="h-6 w-px bg-gray-700" />
+                <div className="h-6 w-px bg-dark-300" />
 
                 {/* Display controls - matches desktop EditorTimeline */}
                 <label className="flex items-center gap-1.5 text-sm">
@@ -621,7 +621,7 @@ export function TimelineEditor({
                         <button
                             onClick={undo}
                             disabled={undoStack.length === 0}
-                            className="rounded bg-gray-700 px-3 py-1.5 text-sm hover:bg-gray-600 disabled:opacity-50"
+                            className="rounded bg-dark-300 px-3 py-1.5 text-sm hover:bg-gray-600 disabled:opacity-50"
                             title="Undo (Ctrl+Z)"
                         >
                             ↩
@@ -629,7 +629,7 @@ export function TimelineEditor({
                         <button
                             onClick={redo}
                             disabled={redoStack.length === 0}
-                            className="rounded bg-gray-700 px-3 py-1.5 text-sm hover:bg-gray-600 disabled:opacity-50"
+                            className="rounded bg-dark-300 px-3 py-1.5 text-sm hover:bg-gray-600 disabled:opacity-50"
                             title="Redo (Ctrl+Y)"
                         >
                             ↪
@@ -650,7 +650,7 @@ export function TimelineEditor({
 
             {/* Selection info */}
             {selection.noteIds.size > 0 && (
-                <div className="flex items-center gap-4 rounded bg-gray-800 px-3 py-2 text-sm">
+                <div className="flex items-center gap-4 rounded bg-dark-400 px-3 py-2 text-sm">
                     <span className="text-gray-400">Selected: {selection.noteIds.size} notes</span>
                     {!readOnly && (
                         <>

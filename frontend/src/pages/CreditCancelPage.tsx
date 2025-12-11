@@ -12,7 +12,7 @@ export function CreditCancelPage() {
         <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 flex items-center justify-center px-4">
             <div className="max-w-md w-full text-center">
                 {/* Cancel icon */}
-                <div className="mx-auto w-20 h-20 bg-gray-700/50 rounded-full flex items-center justify-center mb-6">
+                <div className="mx-auto w-20 h-20 bg-dark-300/50 rounded-full flex items-center justify-center mb-6">
                     <svg
                         className="w-10 h-10 text-gray-400"
                         fill="none"
@@ -37,7 +37,7 @@ export function CreditCancelPage() {
                 </p>
 
                 {/* Info box */}
-                <div className="bg-gray-800/50 rounded-xl p-6 mb-8 border border-gray-700 text-left">
+                <div className="bg-dark-400/50 rounded-xl p-6 mb-8 border border-white/10 text-left">
                     <h3 className="font-medium text-white mb-3">Why buy credits?</h3>
                     <ul className="space-y-2 text-sm text-gray-400">
                         <li className="flex items-start gap-2">
@@ -71,7 +71,7 @@ export function CreditCancelPage() {
                     </Link>
                     <Link
                         to="/"
-                        className="block w-full py-3 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+                        className="block w-full py-3 bg-dark-300 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
                     >
                         Back to Home
                     </Link>

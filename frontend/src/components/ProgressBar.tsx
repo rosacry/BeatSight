@@ -29,7 +29,7 @@ export function ProgressBar({
                 </div>
             )}
 
-            <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-dark-300 rounded-full h-2 overflow-hidden">
                 <div
                     className={clsx(
                         'h-full rounded-full transition-all duration-300 ease-out',
@@ -57,7 +57,7 @@ export function IndeterminateProgressBar({
                 <span className="text-sm text-gray-400">{message}</span>
             </div>
 
-            <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden relative">
+            <div className="w-full bg-dark-300 rounded-full h-2 overflow-hidden relative">
                 <div className="absolute inset-0 bg-primary-500/50 animate-progress" />
             </div>
         </div>

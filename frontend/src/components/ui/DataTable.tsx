@@ -227,7 +227,7 @@ export function DataTable<T>({
     return (
         <div
             className={clsx(
-                'relative rounded-xl border border-gray-700/50 bg-gray-800/50 backdrop-blur-sm overflow-hidden',
+                'relative rounded-xl border border-white/10/50 bg-dark-400/50 backdrop-blur-sm overflow-hidden',
                 className
             )}
             {...props}
@@ -239,7 +239,7 @@ export function DataTable<T>({
                 <table className={tableVariants({ variant, size })}>
                     <thead
                         className={clsx(
-                            'bg-gray-800/80 border-b border-gray-700/50',
+                            'bg-dark-400/80 border-b border-white/10/50',
                             stickyHeader && 'sticky top-0 z-10'
                         )}
                     >
@@ -251,7 +251,7 @@ export function DataTable<T>({
                                         checked={allSelected}
                                         ref={(el) => el && (el.indeterminate = someSelected && !allSelected)}
                                         onChange={handleSelectAll}
-                                        className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-primary-500 focus:ring-primary-500 focus:ring-offset-0"
+                                        className="w-4 h-4 rounded border-gray-600 bg-dark-300 text-primary-500 focus:ring-primary-500 focus:ring-offset-0"
                                     />
                                 </th>
                             )}
@@ -262,7 +262,7 @@ export function DataTable<T>({
                                         cellVariants({ size, align: column.align }),
                                         'font-semibold text-gray-300 whitespace-nowrap',
                                         column.sortable && 'cursor-pointer hover:text-white select-none',
-                                        column.sticky && 'sticky left-0 bg-gray-800/80 z-10'
+                                        column.sticky && 'sticky left-0 bg-dark-400/80 z-10'
                                     )}
                                     style={{ width: column.width }}
                                     onClick={() => column.sortable && handleSort(column.key)}
@@ -309,11 +309,11 @@ export function DataTable<T>({
                                     <tr
                                         key={rowKey}
                                         className={clsx(
-                                            'border-b border-gray-700/30 last:border-0',
-                                            hoverable && 'hover:bg-gray-700/30',
+                                            'border-b border-white/10/30 last:border-0',
+                                            hoverable && 'hover:bg-dark-300/30',
                                             isSelected && 'bg-primary-500/10',
                                             onRowClick && 'cursor-pointer',
-                                            variant === 'striped' && rowIndex % 2 === 1 && 'bg-gray-800/30'
+                                            variant === 'striped' && rowIndex % 2 === 1 && 'bg-dark-400/30'
                                         )}
                                         onClick={() => onRowClick?.(row, rowIndex)}
                                     >
@@ -326,7 +326,7 @@ export function DataTable<T>({
                                                     type="checkbox"
                                                     checked={isSelected}
                                                     onChange={() => handleSelectRow(rowKey)}
-                                                    className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-primary-500 focus:ring-primary-500 focus:ring-offset-0"
+                                                    className="w-4 h-4 rounded border-gray-600 bg-dark-300 text-primary-500 focus:ring-primary-500 focus:ring-offset-0"
                                                 />
                                             </td>
                                         )}
@@ -347,7 +347,7 @@ export function DataTable<T>({
                                                     className={clsx(
                                                         cellVariants({ size, align: column.align }),
                                                         'text-gray-200',
-                                                        column.sticky && 'sticky left-0 bg-gray-800/80 z-10'
+                                                        column.sticky && 'sticky left-0 bg-dark-400/80 z-10'
                                                     )}
                                                 >
                                                     {cellContent}
@@ -438,7 +438,7 @@ export const TablePagination = forwardRef<HTMLDivElement, TablePaginationProps>(
             <div
                 ref={ref}
                 className={clsx(
-                    'flex items-center justify-between gap-4 px-4 py-3 bg-gray-800/30 border-t border-gray-700/50',
+                    'flex items-center justify-between gap-4 px-4 py-3 bg-dark-400/30 border-t border-white/10/50',
                     className
                 )}
                 {...props}
@@ -455,7 +455,7 @@ export const TablePagination = forwardRef<HTMLDivElement, TablePaginationProps>(
                             <select
                                 value={pageSize}
                                 onChange={(e) => onPageSizeChange(Number(e.target.value))}
-                                className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-gray-200 focus:ring-primary-500 focus:border-primary-500"
+                                className="bg-dark-300 border border-gray-600 rounded px-2 py-1 text-sm text-gray-200 focus:ring-primary-500 focus:border-primary-500"
                             >
                                 {pageSizeOptions.map((size) => (
                                     <option key={size} value={size}>
@@ -473,7 +473,7 @@ export const TablePagination = forwardRef<HTMLDivElement, TablePaginationProps>(
                         type="button"
                         onClick={() => onPageChange(page - 1)}
                         disabled={page <= 1}
-                        className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-dark-300/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         aria-label="Previous page"
                     >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -496,7 +496,7 @@ export const TablePagination = forwardRef<HTMLDivElement, TablePaginationProps>(
                                     'min-w-[36px] h-9 px-3 rounded-lg text-sm font-medium transition-colors',
                                     page === pageNum
                                         ? 'bg-primary-500 text-white'
-                                        : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                                        : 'text-gray-400 hover:text-white hover:bg-dark-300/50'
                                 )}
                             >
                                 {pageNum}
@@ -509,7 +509,7 @@ export const TablePagination = forwardRef<HTMLDivElement, TablePaginationProps>(
                         type="button"
                         onClick={() => onPageChange(page + 1)}
                         disabled={page >= totalPages}
-                        className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-dark-300/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         aria-label="Next page"
                     >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

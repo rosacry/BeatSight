@@ -130,7 +130,7 @@ export const CardFooter = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivEleme
             <div
                 ref={ref}
                 className={clsx(
-                    'mt-6 pt-4 border-t border-gray-700/50 flex items-center gap-3',
+                    'mt-6 pt-4 border-t border-white/10/50 flex items-center gap-3',
                     className
                 )}
                 {...props}
@@ -215,7 +215,7 @@ export const StatCard = forwardRef<HTMLDivElement, StatCardProps>(
                         )}
                     </div>
                     {icon && (
-                        <div className="p-2 rounded-lg bg-gray-700/50 text-gray-400">
+                        <div className="p-2 rounded-lg bg-dark-300/50 text-gray-400">
                             {icon}
                         </div>
                     )}
@@ -258,7 +258,7 @@ export const GlowingCard = forwardRef<HTMLDivElement, GlowingCardProps>(
                 />
 
                 {/* Card content */}
-                <div className="relative bg-gray-900 rounded-xl p-6">
+                <div className="relative bg-dark-500 rounded-xl p-6">
                     {children}
                 </div>
             </div>

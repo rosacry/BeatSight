@@ -391,7 +391,7 @@ export function LiveRecorder({
     }
 
     return (
-        <div className="bg-gray-900 rounded-xl p-4 md:p-6 space-y-6">
+        <div className="bg-dark-400 rounded-xl border border-white/10 p-4 md:p-6 space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -416,7 +416,7 @@ export function LiveRecorder({
             </div>
 
             {/* Waveform Visualization */}
-            <div className="relative h-24 bg-gray-800 rounded-lg overflow-hidden">
+            <div className="relative h-24 bg-dark-500 rounded-lg overflow-hidden border border-white/5">
                 {/* Waveform bars */}
                 <div className="absolute inset-0 flex items-center justify-center gap-0.5 px-2">
                     {waveformData.map((value, i) => (
@@ -456,7 +456,7 @@ export function LiveRecorder({
                 )}
 
                 {/* Peak level meter */}
-                <div className="absolute bottom-2 right-2 w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
+                <div className="absolute bottom-2 right-2 w-24 h-2 bg-dark-300 rounded-full overflow-hidden">
                     <div
                         className={`h-full transition-all duration-75 ${peakLevel > 0.9 ? 'bg-red-500' : peakLevel > 0.7 ? 'bg-yellow-500' : 'bg-green-500'
                             }`}
@@ -489,7 +489,7 @@ export function LiveRecorder({
                 {state === 'countdown' && (
                     <button
                         onClick={resetRecorder}
-                        className="w-20 h-20 rounded-full bg-gray-600 hover:bg-gray-700 flex items-center justify-center transition-colors"
+                        className="w-20 h-20 rounded-full bg-gray-600 hover:bg-dark-300 flex items-center justify-center transition-colors"
                     >
                         <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
@@ -547,13 +547,13 @@ export function LiveRecorder({
 
             {/* Metronome Controls */}
             {showMetronome && (
-                <div className="border-t border-gray-800 pt-4">
+                <div className="border-t border-white/10 pt-4">
                     <div className="flex items-center justify-between mb-3">
                         <span className="text-sm font-medium text-gray-400">Metronome</span>
                         <button
                             onClick={toggleMetronome}
                             disabled={state !== 'idle'}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${metronomeEnabled ? 'bg-primary-500' : 'bg-gray-700'
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${metronomeEnabled ? 'bg-primary-500' : 'bg-dark-300'
                                 } disabled:opacity-50`}
                         >
                             <span
@@ -570,7 +570,7 @@ export function LiveRecorder({
                                 <button
                                     onClick={() => setBpm(Math.max(40, bpm - 5))}
                                     disabled={state !== 'idle'}
-                                    className="w-8 h-8 rounded bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-50"
+                                    className="w-8 h-8 rounded bg-dark-400 text-white hover:bg-dark-300 disabled:opacity-50"
                                 >
                                     -
                                 </button>
@@ -581,7 +581,7 @@ export function LiveRecorder({
                                 <button
                                     onClick={() => setBpm(Math.min(240, bpm + 5))}
                                     disabled={state !== 'idle'}
-                                    className="w-8 h-8 rounded bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-50"
+                                    className="w-8 h-8 rounded bg-dark-400 text-white hover:bg-dark-300 disabled:opacity-50"
                                 >
                                     +
                                 </button>
@@ -593,7 +593,7 @@ export function LiveRecorder({
                                 value={bpm}
                                 onChange={(e) => setBpm(parseInt(e.target.value))}
                                 disabled={state !== 'idle'}
-                                className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer disabled:opacity-50"
+                                className="w-full h-2 bg-dark-300 rounded-lg appearance-none cursor-pointer disabled:opacity-50"
                             />
                         </div>
 
@@ -601,7 +601,7 @@ export function LiveRecorder({
                         <button
                             onClick={handleTapTempo}
                             disabled={state !== 'idle'}
-                            className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 whitespace-nowrap"
+                            className="px-4 py-2 bg-dark-300 text-white rounded-lg hover:bg-dark-300/80 disabled:opacity-50 whitespace-nowrap"
                         >
                             Tap Tempo
                         </button>
@@ -617,7 +617,7 @@ export function LiveRecorder({
                                         ? beat === 1
                                             ? 'bg-primary-500 scale-125'
                                             : 'bg-gray-400 scale-110'
-                                        : 'bg-gray-700'
+                                        : 'bg-dark-300'
                                         }`}
                                 />
                             ))}

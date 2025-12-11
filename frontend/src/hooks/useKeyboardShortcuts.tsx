@@ -130,7 +130,7 @@ function ShortcutsHelpModal({ shortcuts, onClose }: ShortcutsHelpModalProps) {
             onClick={onClose}
         >
             <div
-                className="bg-gray-800 rounded-xl p-6 max-w-lg w-full mx-4 border border-gray-700 shadow-2xl"
+                className="bg-dark-400 rounded-xl p-6 max-w-lg w-full mx-4 border border-white/10 shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between mb-6">
@@ -153,7 +153,7 @@ function ShortcutsHelpModal({ shortcuts, onClose }: ShortcutsHelpModalProps) {
                                 {scopeShortcuts.map((shortcut) => (
                                     <div key={shortcut.key} className="flex items-center justify-between">
                                         <span className="text-gray-300">{shortcut.description}</span>
-                                        <kbd className="px-2 py-1 bg-gray-700 rounded text-sm font-mono text-gray-200">
+                                        <kbd className="px-2 py-1 bg-dark-300 rounded text-sm font-mono text-gray-200">
                                             {formatShortcut(shortcut)}
                                         </kbd>
                                     </div>
@@ -168,11 +168,11 @@ function ShortcutsHelpModal({ shortcuts, onClose }: ShortcutsHelpModalProps) {
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <span className="text-gray-300">Show this help</span>
-                                <kbd className="px-2 py-1 bg-gray-700 rounded text-sm font-mono text-gray-200">?</kbd>
+                                <kbd className="px-2 py-1 bg-dark-300 rounded text-sm font-mono text-gray-200">?</kbd>
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-gray-300">Close dialogs</span>
-                                <kbd className="px-2 py-1 bg-gray-700 rounded text-sm font-mono text-gray-200">Esc</kbd>
+                                <kbd className="px-2 py-1 bg-dark-300 rounded text-sm font-mono text-gray-200">Esc</kbd>
                             </div>
                         </div>
                     </div>

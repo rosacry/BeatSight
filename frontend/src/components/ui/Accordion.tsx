@@ -36,7 +36,7 @@ const accordionVariants = cva('', {
     variants: {
         variant: {
             default: 'divide-y divide-gray-700/50',
-            bordered: 'border border-gray-700/50 rounded-xl divide-y divide-gray-700/50 overflow-hidden',
+            bordered: 'border border-white/10/50 rounded-xl divide-y divide-gray-700/50 overflow-hidden',
             separated: 'space-y-2',
         },
     },
@@ -122,7 +122,7 @@ const accordionItemVariants = cva('', {
         variant: {
             default: '',
             bordered: '',
-            separated: 'border border-gray-700/50 rounded-xl overflow-hidden',
+            separated: 'border border-white/10/50 rounded-xl overflow-hidden',
         },
     },
     defaultVariants: {
@@ -430,14 +430,14 @@ export const ExpandableCard = forwardRef<HTMLDivElement, ExpandableCardProps>(
             <div
                 ref={ref}
                 className={clsx(
-                    'rounded-xl border border-gray-700/50 bg-gray-800/50 backdrop-blur-sm overflow-hidden',
+                    'rounded-xl border border-white/10/50 bg-dark-400/50 backdrop-blur-sm overflow-hidden',
                     className
                 )}
                 {...props}
             >
                 <button
                     type="button"
-                    className="w-full flex items-center justify-between gap-4 p-4 text-left hover:bg-gray-700/20 transition-colors"
+                    className="w-full flex items-center justify-between gap-4 p-4 text-left hover:bg-dark-300/20 transition-colors"
                     onClick={toggle}
                     aria-expanded={isExpanded}
                 >
@@ -465,7 +465,7 @@ export const ExpandableCard = forwardRef<HTMLDivElement, ExpandableCardProps>(
                     style={{ height }}
                     aria-hidden={!isExpanded}
                 >
-                    <div ref={contentRef} className="px-4 pb-4 border-t border-gray-700/50">
+                    <div ref={contentRef} className="px-4 pb-4 border-t border-white/10/50">
                         <div className="pt-4">{children}</div>
                     </div>
                 </div>

@@ -258,7 +258,7 @@ export function BarChart({
                                     <span className="text-gray-400">{item.value.toLocaleString()}</span>
                                 )}
                             </div>
-                            <div className="h-3 bg-gray-800 rounded-full overflow-hidden">
+                            <div className="h-3 bg-dark-400 rounded-full overflow-hidden">
                                 <motion.div
                                     initial={animate ? { width: 0 } : undefined}
                                     animate={{ width: `${percentage}%` }}
@@ -640,7 +640,7 @@ export function MetricComparison({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className={cn(
-                'p-4 rounded-lg bg-gray-900/50 border border-white/5',
+                'p-4 rounded-lg bg-dark-500/50 border border-white/5',
                 className
             )}
         >
@@ -681,7 +681,7 @@ export function ChartSkeleton({ type = 'bar', className }: ChartSkeletonProps) {
                     {[0.6, 0.8, 0.4, 0.9, 0.5, 0.7].map((height, i) => (
                         <div
                             key={i}
-                            className="flex-1 bg-gray-800 rounded-t"
+                            className="flex-1 bg-dark-400 rounded-t"
                             style={{ height: `${height * 100}%` }}
                         />
                     ))}
@@ -691,12 +691,12 @@ export function ChartSkeleton({ type = 'bar', className }: ChartSkeletonProps) {
                 <div className="h-40 bg-gradient-to-t from-gray-800 to-transparent rounded" />
             )}
             {type === 'donut' && (
-                <div className="w-40 h-40 rounded-full border-[20px] border-gray-800" />
+                <div className="w-40 h-40 rounded-full border-[20px] border-white/10" />
             )}
             {type === 'stat' && (
                 <div className="space-y-3">
-                    <div className="h-4 w-24 bg-gray-800 rounded" />
-                    <div className="h-8 w-32 bg-gray-800 rounded" />
+                    <div className="h-4 w-24 bg-dark-400 rounded" />
+                    <div className="h-8 w-32 bg-dark-400 rounded" />
                 </div>
             )}
         </div>

@@ -161,7 +161,7 @@ export function JobProgressTracker({ job, onComplete }: JobProgressTrackerProps)
             </div>
 
             {progress.message && (
-                <div className="mt-4 p-3 bg-gray-700/50 rounded-lg">
+                <div className="mt-4 p-3 bg-dark-300/50 rounded-lg">
                     <p className="text-sm text-gray-300">{progress.message}</p>
                 </div>
             )}

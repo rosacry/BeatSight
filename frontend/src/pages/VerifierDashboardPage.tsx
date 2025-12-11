@@ -203,24 +203,24 @@ export function VerifierDashboardPage() {
         return (
             <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
                 {/* Skeleton loading state - matches actual content layout to prevent layout shift */}
-                <div className="h-8 w-64 bg-gray-800/50 rounded-lg mb-2 animate-pulse"></div>
-                <div className="h-5 w-80 bg-gray-800/30 rounded mb-4 animate-pulse"></div>
+                <div className="h-8 w-64 bg-dark-400/50 rounded-lg mb-2 animate-pulse"></div>
+                <div className="h-5 w-80 bg-dark-400/30 rounded mb-4 animate-pulse"></div>
 
                 {/* Banner skeleton */}
-                <div className="mb-6 p-4 rounded-xl bg-gray-800/30 border border-gray-700/30 h-20 animate-pulse"></div>
+                <div className="mb-6 p-4 rounded-xl bg-dark-400/30 border border-white/10/30 h-20 animate-pulse"></div>
 
                 {/* Stats cards skeleton */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
                     {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-4 h-20 animate-pulse"></div>
+                        <div key={i} className="bg-dark-400/50 rounded-xl border border-white/10/50 p-4 h-20 animate-pulse"></div>
                     ))}
                 </div>
 
                 {/* Tabs skeleton */}
-                <div className="flex gap-1 p-1 bg-gray-800/50 rounded-xl w-64 mb-6 h-12 animate-pulse"></div>
+                <div className="flex gap-1 p-1 bg-dark-400/50 rounded-xl w-64 mb-6 h-12 animate-pulse"></div>
 
                 {/* Content skeleton */}
-                <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-8 h-32 animate-pulse"></div>
+                <div className="bg-dark-400/50 rounded-xl border border-white/10/50 p-8 h-32 animate-pulse"></div>
             </div>
         )
     }
@@ -331,7 +331,7 @@ export function VerifierDashboardPage() {
                                             <summary className="cursor-pointer text-sm text-primary-400 hover:text-primary-300">
                                                 View Changes ({(proposal.diff_payload as unknown as DiffPayload).edit_count || Object.keys(proposal.diff_payload).length} modifications)
                                             </summary>
-                                            <div className="mt-2 p-3 bg-gray-900 rounded border border-gray-700">
+                                            <div className="mt-2 p-3 bg-dark-500 rounded border border-white/10">
                                                 <ProposalDiffViewer diffPayload={proposal.diff_payload as unknown as DiffPayload} />
                                             </div>
                                         </details>
@@ -428,7 +428,7 @@ export function VerifierDashboardPage() {
 
                             <div className="mb-4">
                                 <h4 className="font-medium text-gray-300 mb-2">Changes</h4>
-                                <div className="border border-gray-600 rounded-lg p-4 bg-gray-900 max-h-64 overflow-y-auto">
+                                <div className="border border-gray-600 rounded-lg p-4 bg-dark-500 max-h-64 overflow-y-auto">
                                     <ProposalDiffViewer diffPayload={selectedProposal.diff_payload as unknown as DiffPayload} />
                                 </div>
                             </div>

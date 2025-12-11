@@ -443,7 +443,7 @@ export function DifficultyHeatmap({
             {/* Hover Tooltip */}
             {showDetails && hoveredSegment && mousePosition && (
                 <div
-                    className="fixed z-50 bg-gray-900 border border-gray-700 rounded-lg p-3 shadow-xl pointer-events-none"
+                    className="fixed z-50 bg-dark-500 border border-white/10 rounded-lg p-3 shadow-xl pointer-events-none"
                     style={{
                         left: mousePosition.x + 10,
                         top: mousePosition.y + 10,
@@ -471,7 +471,7 @@ export function DifficultyHeatmap({
                             <span className="text-gray-400">Note Density</span>
                             <div className="flex items-center gap-1">
                                 <div
-                                    className="w-16 h-1.5 rounded-full bg-gray-700 overflow-hidden"
+                                    className="w-16 h-1.5 rounded-full bg-dark-300 overflow-hidden"
                                 >
                                     <div
                                         className="h-full rounded-full transition-all"
@@ -490,7 +490,7 @@ export function DifficultyHeatmap({
                             <span className="text-gray-400">Complexity</span>
                             <div className="flex items-center gap-1">
                                 <div
-                                    className="w-16 h-1.5 rounded-full bg-gray-700 overflow-hidden"
+                                    className="w-16 h-1.5 rounded-full bg-dark-300 overflow-hidden"
                                 >
                                     <div
                                         className="h-full rounded-full transition-all"
@@ -509,7 +509,7 @@ export function DifficultyHeatmap({
                             <span className="text-gray-400">Coordination</span>
                             <div className="flex items-center gap-1">
                                 <div
-                                    className="w-16 h-1.5 rounded-full bg-gray-700 overflow-hidden"
+                                    className="w-16 h-1.5 rounded-full bg-dark-300 overflow-hidden"
                                 >
                                     <div
                                         className="h-full rounded-full transition-all"
@@ -528,7 +528,7 @@ export function DifficultyHeatmap({
 
                     {/* Techniques in this section */}
                     {hoveredSegment.techniques.length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-gray-700">
+                        <div className="mt-2 pt-2 border-t border-white/10">
                             <span className="text-xs text-gray-400">Techniques:</span>
                             <div className="flex flex-wrap gap-1 mt-1">
                                 {hoveredSegment.techniques.map(tech => (

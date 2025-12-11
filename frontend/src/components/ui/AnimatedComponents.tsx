@@ -354,7 +354,7 @@ export function GradientBorderCard({
 
             {/* Content container */}
             <div
-                className="relative rounded-2xl bg-gray-900 p-6"
+                className="relative rounded-2xl bg-dark-500 p-6"
                 style={{ margin: borderWidth }}
             >
                 {children}

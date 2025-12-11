@@ -77,7 +77,7 @@ function KeyboardShortcut({ keys }: { keys: string[] }) {
                         'inline-flex items-center justify-center',
                         'min-w-[20px] px-1.5 py-0.5',
                         'text-[10px] font-medium text-gray-400',
-                        'bg-gray-800 border border-gray-700 rounded',
+                        'bg-dark-400 border border-white/10 rounded',
                         'shadow-[0_1px_0_1px_rgba(0,0,0,0.2)]'
                     )}
                 >

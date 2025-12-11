@@ -129,7 +129,7 @@ export function SkeletonCard({
     return (
         <div
             className={cn(
-                'rounded-xl bg-gray-900/50 border border-gray-800 overflow-hidden',
+                'rounded-xl bg-dark-500/50 border border-white/10 overflow-hidden',
                 className
             )}
         >
@@ -172,7 +172,7 @@ export function SkeletonTable({
     return (
         <div className={cn('w-full', className)}>
             {showHeader && (
-                <div className="flex gap-4 p-4 border-b border-gray-800 bg-gray-900/30">
+                <div className="flex gap-4 p-4 border-b border-white/10 bg-dark-500/30">
                     {Array.from({ length: columns }).map((_, i) => (
                         <Skeleton
                             key={i}
@@ -185,7 +185,7 @@ export function SkeletonTable({
             {Array.from({ length: rows }).map((_, rowIndex) => (
                 <div
                     key={rowIndex}
-                    className="flex gap-4 p-4 border-b border-gray-800/50"
+                    className="flex gap-4 p-4 border-b border-white/10/50"
                 >
                     {Array.from({ length: columns }).map((_, colIndex) => (
                         <Skeleton
@@ -209,7 +209,7 @@ export function SkeletonTrackCard({ className }: { className?: string }) {
     return (
         <div
             className={cn(
-                'flex gap-4 p-4 rounded-xl bg-gray-900/50 border border-gray-800',
+                'flex gap-4 p-4 rounded-xl bg-dark-500/50 border border-white/10',
                 className
             )}
         >
@@ -268,7 +268,7 @@ export function SkeletonStatsCard({ className }: { className?: string }) {
     return (
         <div
             className={cn(
-                'p-6 rounded-xl bg-gray-900/50 border border-gray-800',
+                'p-6 rounded-xl bg-dark-500/50 border border-white/10',
                 className
             )}
         >
@@ -315,7 +315,7 @@ export function SkeletonJobProgress({ className }: { className?: string }) {
     return (
         <div
             className={cn(
-                'p-4 rounded-xl bg-gray-900/50 border border-gray-800',
+                'p-4 rounded-xl bg-dark-500/50 border border-white/10',
                 className
             )}
         >
@@ -348,7 +348,7 @@ export function SkeletonBeatmapCard({ className }: { className?: string }) {
     return (
         <div
             className={cn(
-                'rounded-xl bg-gray-900/50 border border-gray-800 overflow-hidden',
+                'rounded-xl bg-dark-500/50 border border-white/10 overflow-hidden',
                 className
             )}
         >

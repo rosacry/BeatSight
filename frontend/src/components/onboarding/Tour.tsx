@@ -297,7 +297,7 @@ function TourOverlay() {
                     exit={{ opacity: 0, y: 10 }}
                     className={cn(
                         'fixed z-[9999] w-80',
-                        'bg-gray-900 border border-gray-700 rounded-xl',
+                        'bg-dark-500 border border-white/10 rounded-xl',
                         'shadow-2xl shadow-black/50',
                     )}
                     style={getTooltipPosition()}
@@ -310,7 +310,7 @@ function TourOverlay() {
                                     key={index}
                                     className={cn(
                                         'h-1 flex-1 rounded-full transition-colors',
-                                        index <= currentStep ? 'bg-primary-500' : 'bg-gray-700'
+                                        index <= currentStep ? 'bg-primary-500' : 'bg-dark-300'
                                     )}
                                 />
                             ))}
@@ -346,7 +346,7 @@ function TourOverlay() {
                                     onClick={prevStep}
                                     className={cn(
                                         'px-3 py-1.5 text-sm font-medium rounded-lg',
-                                        'text-gray-300 hover:text-white hover:bg-gray-800',
+                                        'text-gray-300 hover:text-white hover:bg-dark-400',
                                         'transition-colors'
                                     )}
                                 >

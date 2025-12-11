@@ -285,7 +285,7 @@ export const FormGroup = forwardRef<HTMLDivElement, FormGroupProps>(
             <div
                 ref={ref}
                 className={cn(
-                    'rounded-lg border border-gray-700/50 bg-gray-800/30',
+                    'rounded-lg border border-white/10/50 bg-dark-400/30',
                     className
                 )}
                 {...props}
@@ -294,8 +294,8 @@ export const FormGroup = forwardRef<HTMLDivElement, FormGroupProps>(
                     <div
                         className={cn(
                             'flex items-center justify-between px-4 py-3',
-                            collapsible && 'cursor-pointer hover:bg-gray-700/30 transition-colors',
-                            !isCollapsed && 'border-b border-gray-700/50'
+                            collapsible && 'cursor-pointer hover:bg-dark-300/30 transition-colors',
+                            !isCollapsed && 'border-b border-white/10/50'
                         )}
                         onClick={() => collapsible && setIsCollapsed(!isCollapsed)}
                     >
@@ -410,9 +410,9 @@ export const FormActions = forwardRef<HTMLDivElement, FormActionsProps>(
             <div
                 ref={ref}
                 className={cn(
-                    'flex items-center gap-3 pt-4 border-t border-gray-700/50',
+                    'flex items-center gap-3 pt-4 border-t border-white/10/50',
                     alignClasses[align],
-                    sticky && 'sticky bottom-0 bg-gray-900/95 backdrop-blur-sm py-4 -mx-4 px-4',
+                    sticky && 'sticky bottom-0 bg-dark-500/95 backdrop-blur-sm py-4 -mx-4 px-4',
                     className
                 )}
                 {...props}
@@ -484,7 +484,7 @@ export const RadioGroup = forwardRef<HTMLDivElement, RadioGroupProps>(
                                 'p-4 rounded-lg border transition-colors',
                                 value === option.value
                                     ? 'border-primary-500 bg-primary-500/10'
-                                    : 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
+                                    : 'border-white/10 hover:border-gray-600 bg-dark-400/50'
                             ]
                         )}
                     >
@@ -724,7 +724,7 @@ export const ColorPicker = forwardRef<HTMLDivElement, ColorPickerProps>(
                             type="text"
                             value={value}
                             onChange={(e) => onChange?.(e.target.value)}
-                            className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white font-mono focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            className="flex-1 px-3 py-2 bg-dark-400 border border-white/10 rounded-lg text-sm text-white font-mono focus:outline-none focus:ring-2 focus:ring-primary-500"
                             placeholder="#000000"
                         />
                     </div>
@@ -815,7 +815,7 @@ export const RangeSlider = forwardRef<HTMLDivElement, RangeSliderProps>(
 
                 <div className="relative h-6">
                     {/* Track background */}
-                    <div className="absolute top-1/2 -translate-y-1/2 w-full h-2 rounded-full bg-gray-700" />
+                    <div className="absolute top-1/2 -translate-y-1/2 w-full h-2 rounded-full bg-dark-300" />
 
                     {/* Active track */}
                     <div

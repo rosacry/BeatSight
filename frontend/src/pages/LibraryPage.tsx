@@ -209,7 +209,7 @@ function SongCard({ song, job }: SongCardProps) {
         <div className="card hover:bg-gray-750 transition-colors">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 {/* Album art placeholder */}
-                <div className="w-16 h-16 bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
+                <div className="w-16 h-16 bg-dark-300 rounded-lg flex items-center justify-center flex-shrink-0">
                     <svg className="w-8 h-8 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                     </svg>

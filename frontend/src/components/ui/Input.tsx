@@ -9,7 +9,7 @@ import { clsx } from 'clsx'
 const inputVariants = cva(
     // Base styles
     [
-        'w-full bg-gray-800 text-white placeholder-gray-500',
+        'w-full bg-dark-400 text-white placeholder-gray-500',
         'border rounded-lg transition-all duration-200',
         'focus:outline-none focus:ring-2 focus:ring-offset-0',
         'disabled:opacity-50 disabled:cursor-not-allowed',
@@ -18,14 +18,14 @@ const inputVariants = cva(
         variants: {
             variant: {
                 default: [
-                    'border-gray-700',
+                    'border-white/10',
                     'hover:border-gray-600',
                     'focus:border-primary-500 focus:ring-primary-500/20',
                 ],
                 filled: [
-                    'bg-gray-700 border-transparent',
+                    'bg-dark-300 border-transparent',
                     'hover:bg-gray-600',
-                    'focus:bg-gray-700 focus:border-primary-500 focus:ring-primary-500/20',
+                    'focus:bg-dark-300 focus:border-primary-500 focus:ring-primary-500/20',
                 ],
                 outline: [
                     'bg-transparent border-gray-600',
@@ -34,8 +34,8 @@ const inputVariants = cva(
                 ],
                 ghost: [
                     'bg-transparent border-transparent',
-                    'hover:bg-gray-800',
-                    'focus:bg-gray-800 focus:border-gray-700',
+                    'hover:bg-dark-400',
+                    'focus:bg-dark-400 focus:border-white/10',
                 ],
             },
             inputSize: {
@@ -250,7 +250,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
                         <button
                             type="button"
                             onClick={onClear}
-                            className="p-1 hover:bg-gray-700 rounded transition-colors"
+                            className="p-1 hover:bg-dark-300 rounded transition-colors"
                         >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path
@@ -286,7 +286,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, Omit<InputProps, 'type
                     <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="p-1 hover:bg-gray-700 rounded transition-colors"
+                        className="p-1 hover:bg-dark-300 rounded transition-colors"
                         aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                         {showPassword ? (

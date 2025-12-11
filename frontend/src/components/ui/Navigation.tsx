@@ -139,8 +139,8 @@ const navItemVariants = cva(
     {
         variants: {
             active: {
-                true: 'text-white bg-gray-700/50',
-                false: 'text-gray-400 hover:text-white hover:bg-gray-800/50',
+                true: 'text-white bg-dark-300/50',
+                false: 'text-gray-400 hover:text-white hover:bg-dark-400/50',
             },
             variant: {
                 default: '',
@@ -331,7 +331,7 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(
             <aside
                 ref={ref}
                 className={clsx(
-                    'h-full bg-gray-900 border-r border-gray-800 transition-all duration-300 overflow-hidden',
+                    'h-full bg-dark-500 border-r border-white/10 transition-all duration-300 overflow-hidden',
                     className
                 )}
                 style={{ width: collapsed ? collapsedWidth : width }}
@@ -450,7 +450,7 @@ export const SidebarItem = forwardRef<HTMLButtonElement, SidebarItemProps>(
             'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
             active
                 ? 'bg-primary-500/10 text-primary-400'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800/50',
+                : 'text-gray-400 hover:text-white hover:bg-dark-400/50',
             collapsed && 'justify-center',
             className
         )
@@ -556,7 +556,7 @@ export const Pagination = forwardRef<HTMLElement, PaginationProps>(
                         ? 'bg-primary-500 text-white'
                         : disabled
                             ? 'text-gray-600 cursor-not-allowed'
-                            : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                            : 'text-gray-400 hover:text-white hover:bg-dark-300/50'
                 )}
                 {...btnProps}
             >

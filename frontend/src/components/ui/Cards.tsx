@@ -314,8 +314,8 @@ export const UserCard: React.FC<UserCardProps> = ({
                 <button
                     onClick={onFollow}
                     className={`mt-4 w-full py-2 rounded-xl font-medium transition-colors ${isFollowing
-                            ? 'bg-dark-300 text-white hover:bg-dark-300'
-                            : 'bg-primary-500 text-white hover:bg-primary-400'
+                        ? 'bg-dark-300 text-white hover:bg-dark-300'
+                        : 'bg-primary-500 text-white hover:bg-primary-400'
                         }`}
                 >
                     {isFollowing ? 'Following' : 'Follow'}
@@ -454,8 +454,8 @@ export const PricingCard: React.FC<PricingCardProps> = ({
             <button
                 onClick={onSelect}
                 className={`w-full py-3 rounded-xl font-medium transition-colors ${isPopular
-                        ? 'bg-gradient-to-r from-primary-500 to-purple-500 text-white hover:opacity-90'
-                        : 'bg-dark-300 text-white hover:bg-dark-300'
+                    ? 'bg-gradient-to-r from-primary-500 to-purple-500 text-white hover:opacity-90'
+                    : 'bg-dark-300 text-white hover:bg-dark-300'
                     }`}
             >
                 {ctaText}

@@ -34,7 +34,7 @@ const sliderVariants = cva(
 )
 
 const trackVariants = cva(
-    'absolute rounded-full bg-gray-700',
+    'absolute rounded-full bg-dark-300',
     {
         variants: {
             size: {
@@ -264,7 +264,7 @@ export const Slider = forwardRef<HTMLDivElement, SliderProps>(
                 {/* Tooltip */}
                 {showTooltip && (showTooltipState || isDragging) && (
                     <div
-                        className="absolute -top-8 px-2 py-1 bg-gray-800 rounded text-xs text-white shadow-lg -translate-x-1/2 pointer-events-none"
+                        className="absolute -top-8 px-2 py-1 bg-dark-400 rounded text-xs text-white shadow-lg -translate-x-1/2 pointer-events-none"
                         style={{ left: `${percentage}%` }}
                     >
                         {formatValue(value)}

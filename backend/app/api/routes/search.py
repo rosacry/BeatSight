@@ -33,6 +33,7 @@ router = APIRouter(prefix="/search", tags=["search"])
 class UserSearchItem(BaseModel):
     """User search result item."""
     id: str
+    user_number: int  # Human-friendly ID like osu! (e.g., 1000001)
     display_name: str
     username: str
     avatar_url: Optional[str] = None
@@ -207,6 +208,7 @@ async def global_search(
     user_items = [
         UserSearchItem(
             id=str(u.id),
+            user_number=u.user_number,
             display_name=u.display_name,
             username=u.display_name.lower().replace(" ", "_"),
             avatar_url=u.avatar_url,

@@ -17,6 +17,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user, get_current_user_optional, get_db_session
 from app.models.user import User
+from app.models.user_tag import UserTag
 from app.models.song import Song
 from app.models.forum import ForumPost
 from app.models.role import UserRole
@@ -41,10 +42,22 @@ class UserUpdateRequest(BaseModel):
     display_name: Optional[str] = Field(None, min_length=2, max_length=120)
 
 
+class UserTagResponse(BaseModel):
+    """User tag response (like osu!'s DEV, VIP, etc.)."""
+    
+    id: int
+    name: str
+    background_color: str
+    text_color: Optional[str] = None
+    
+    model_config = {"from_attributes": True}
+
+
 class UserResponse(BaseModel):
     """User info response."""
 
     id: uuid.UUID
+    user_number: int  # Human-friendly ID like osu! (e.g., 1000001)
     email: str
     display_name: str
     email_verified: bool
@@ -53,6 +66,7 @@ class UserResponse(BaseModel):
     avatar_url: Optional[str] = None
     karma_score: int
     created_at: datetime
+    tags: list[UserTagResponse] = []  # Custom profile tags
 
     model_config = {"from_attributes": True}
 
@@ -83,8 +97,31 @@ class MessageResponse(BaseModel):
 async def get_current_user_profile(
     current_user: User = Depends(get_current_user),
 ) -> UserResponse:
-    """Get the current user's profile."""
-    return UserResponse.model_validate(current_user)
+    """Get the current user's profile including custom tags."""
+    # Build tags list from loaded relationship
+    tags = [
+        UserTagResponse(
+            id=tag.id,
+            name=tag.name,
+            background_color=tag.background_color,
+            text_color=tag.text_color,
+        )
+        for tag in sorted(current_user.tags, key=lambda t: t.display_order)
+    ] if current_user.tags else []
+    
+    return UserResponse(
+        id=current_user.id,
+        user_number=current_user.user_number,
+        email=current_user.email,
+        display_name=current_user.display_name,
+        email_verified=current_user.email_verified,
+        phone_number=current_user.phone_number,
+        phone_verified=current_user.phone_verified,
+        avatar_url=current_user.avatar_url,
+        karma_score=current_user.karma_score,
+        created_at=current_user.created_at,
+        tags=tags,
+    )
 
 
 @router.patch("/me", response_model=UserResponse)
@@ -428,10 +465,22 @@ async def update_user_settings(
 # =============================================================================
 
 
+class ProfileTag(BaseModel):
+    """A custom tag displayed on user profiles (like osu!'s DEV, VIP, etc.)."""
+    
+    id: int
+    name: str
+    background_color: str
+    text_color: Optional[str] = None
+    
+    model_config = {"from_attributes": True}
+
+
 class PublicUserProfile(BaseModel):
     """Public user profile response."""
     
     id: str
+    user_number: int  # Human-friendly ID like osu! (e.g., 1000001)
     display_name: str
     avatar_url: Optional[str] = None
     banner_url: Optional[str] = None
@@ -441,6 +490,8 @@ class PublicUserProfile(BaseModel):
     is_verified: bool
     country_code: Optional[str] = None
     bio: Optional[str] = None
+    # Custom profile tags (like osu!'s DEV, VIP, etc.)
+    tags: list[ProfileTag] = []
     # Stats
     songs_uploaded: int
     maps_generated: int
@@ -471,27 +522,64 @@ class UserMapsResponse(BaseModel):
     total: int
 
 
+async def _get_user_for_profile(
+    user_identifier: str,
+    session: AsyncSession,
+) -> User | None:
+    """
+    Fetch user by either UUID or user_number.
+    Returns None if not found or banned.
+    """
+    # Try to parse as UUID first
+    try:
+        user_uuid = uuid.UUID(user_identifier)
+        result = await session.execute(
+            select(User)
+            .options(
+                selectinload(User.roles).selectinload(UserRole.role),
+                selectinload(User.tags),  # Load custom tags
+            )
+            .where(
+                User.id == user_uuid,
+                User.restriction_level != 'banned'
+            )
+        )
+        return result.scalar_one_or_none()
+    except ValueError:
+        pass
+    
+    # Try to parse as integer (user_number)
+    try:
+        user_number = int(user_identifier)
+        result = await session.execute(
+            select(User)
+            .options(
+                selectinload(User.roles).selectinload(UserRole.role),
+                selectinload(User.tags),  # Load custom tags
+            )
+            .where(
+                User.user_number == user_number,
+                User.restriction_level != 'banned'
+            )
+        )
+        return result.scalar_one_or_none()
+    except ValueError:
+        return None
+
+
 @router.get("/{user_id}/profile", response_model=PublicUserProfile)
 async def get_public_user_profile(
-    user_id: uuid.UUID,
+    user_id: str,
     session: AsyncSession = Depends(get_db_session),
     current_user: Optional[User] = Depends(get_current_user_optional),
 ) -> PublicUserProfile:
     """
     Get a user's public profile.
     
+    Supports lookup by either UUID or user_number (e.g., /users/1000001/profile).
     Returns public information about a user including their stats and activity.
     """
-    # Fetch the user (User model uses restriction_level, not deleted_at)
-    result = await session.execute(
-        select(User)
-        .options(selectinload(User.roles).selectinload(UserRole.role))
-        .where(
-            User.id == user_id,
-            User.restriction_level != 'banned'
-        )
-    )
-    user = result.scalar_one_or_none()
+    user = await _get_user_for_profile(user_id, session)
     
     if not user:
         raise HTTPException(
@@ -502,7 +590,7 @@ async def get_public_user_profile(
     # Get song count
     songs_result = await session.execute(
         select(func.count()).select_from(Song).where(
-            Song.created_by_id == user_id
+            Song.created_by_id == user.id
         )
     )
     songs_count = songs_result.scalar() or 0
@@ -511,7 +599,7 @@ async def get_public_user_profile(
     try:
         posts_result = await session.execute(
             select(func.count()).select_from(ForumPost).where(
-                ForumPost.author_id == user_id,
+                ForumPost.author_id == user.id,
                 ForumPost.deleted_at.is_(None)
             )
         )
@@ -530,8 +618,20 @@ async def get_public_user_profile(
         elif "verifier" in role_codes:
             role = "verifier"
     
+    # Build profile tags list
+    profile_tags = [
+        ProfileTag(
+            id=tag.id,
+            name=tag.name,
+            background_color=tag.background_color,
+            text_color=tag.text_color,
+        )
+        for tag in sorted(user.tags, key=lambda t: t.display_order)
+    ] if user.tags else []
+    
     return PublicUserProfile(
         id=str(user.id),
+        user_number=user.user_number,
         display_name=user.display_name,
         avatar_url=user.avatar_url,
         banner_url=getattr(user, 'banner_url', None),
@@ -541,6 +641,7 @@ async def get_public_user_profile(
         is_verified=user.email_verified or False,
         country_code=getattr(user, 'country_code', None),
         bio=getattr(user, 'bio', None),
+        tags=profile_tags,
         songs_uploaded=songs_count,
         maps_generated=songs_count,  # Approximate - should count maps
         maps_verified=0,  # TODO: Count verified maps
@@ -550,23 +651,53 @@ async def get_public_user_profile(
     )
 
 
+async def _get_user_by_identifier(
+    user_identifier: str,
+    session: AsyncSession,
+) -> User | None:
+    """
+    Fetch user by either UUID or user_number (no eager loading).
+    Returns None if not found or banned.
+    """
+    # Try to parse as UUID first
+    try:
+        user_uuid = uuid.UUID(user_identifier)
+        result = await session.execute(
+            select(User).where(
+                User.id == user_uuid,
+                User.restriction_level != 'banned'
+            )
+        )
+        return result.scalar_one_or_none()
+    except ValueError:
+        pass
+    
+    # Try to parse as integer (user_number)
+    try:
+        user_number = int(user_identifier)
+        result = await session.execute(
+            select(User).where(
+                User.user_number == user_number,
+                User.restriction_level != 'banned'
+            )
+        )
+        return result.scalar_one_or_none()
+    except ValueError:
+        return None
+
+
 @router.get("/{user_id}/maps", response_model=UserMapsResponse)
 async def get_user_maps(
-    user_id: uuid.UUID,
+    user_id: str,
     session: AsyncSession = Depends(get_db_session),
     current_user: Optional[User] = Depends(get_current_user_optional),
 ) -> UserMapsResponse:
     """
     Get a user's public beatmaps.
+    
+    Supports lookup by either UUID or user_number.
     """
-    # Verify user exists (User model uses restriction_level instead of deleted_at)
-    result = await session.execute(
-        select(User).where(
-            User.id == user_id,
-            User.restriction_level != 'banned'
-        )
-    )
-    user = result.scalar_one_or_none()
+    user = await _get_user_by_identifier(user_id, session)
     
     if not user:
         raise HTTPException(
@@ -578,7 +709,7 @@ async def get_user_maps(
     songs_result = await session.execute(
         select(Song)
         .where(
-            Song.created_by_id == user_id
+            Song.created_by_id == user.id
         )
         .order_by(Song.created_at.desc())
         .limit(50)

@@ -99,19 +99,25 @@ class AuthService:
             return None
 
     async def get_user_by_id(self, user_id: uuid.UUID) -> User | None:
-        """Retrieve a user by their ID with roles eagerly loaded."""
+        """Retrieve a user by their ID with roles and tags eagerly loaded."""
         result = await self.session.execute(
             select(User)
-            .options(selectinload(User.roles).selectinload(UserRole.role))
+            .options(
+                selectinload(User.roles).selectinload(UserRole.role),
+                selectinload(User.tags),  # Load custom profile tags
+            )
             .where(User.id == user_id)
         )
         return result.scalar_one_or_none()
 
     async def get_user_by_email(self, email: str) -> User | None:
-        """Retrieve a user by their email address with roles eagerly loaded."""
+        """Retrieve a user by their email address with roles and tags eagerly loaded."""
         result = await self.session.execute(
             select(User)
-            .options(selectinload(User.roles).selectinload(UserRole.role))
+            .options(
+                selectinload(User.roles).selectinload(UserRole.role),
+                selectinload(User.tags),  # Load custom profile tags
+            )
             .where(User.email == email)
         )
         return result.scalar_one_or_none()

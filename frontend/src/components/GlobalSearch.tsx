@@ -442,14 +442,16 @@ interface UserResultItemProps {
 function UserResultItem({ user, onClick }: UserResultItemProps) {
     return (
         <Link
-            to={`/user/${user.id}`}
+            to={`/user/${user.user_number}`}
             onClick={onClick}
             className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors"
         >
             <Avatar
                 src={user.avatar_url || undefined}
                 alt={user.display_name}
+                fallback={user.display_name}
                 size="sm"
+                gradient
             />
             <div className="flex-1 min-w-0">
                 <p className="text-white font-medium truncate">{user.display_name}</p>

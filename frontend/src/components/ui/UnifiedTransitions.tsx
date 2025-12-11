@@ -12,7 +12,7 @@
  * - Use AnimatedTabButton for consistent tab button styling and animation
  */
 
-import { ReactNode, useRef, useEffect, useState, useCallback } from 'react'
+import { ReactNode, useRef, useEffect, useState } from 'react'
 import { motion, AnimatePresence, Variants, useReducedMotion } from 'framer-motion'
 import { cn } from '../../lib/utils'
 
@@ -777,7 +777,7 @@ export function StaggerSection({ children, className }: StaggerItemProps) {
 
 interface PageContentWrapperProps {
     /** Page content to animate */
-    children: ReactNode
+    children?: ReactNode
     /** Additional CSS classes */
     className?: string
     /** Whether to use stagger animation for direct children */

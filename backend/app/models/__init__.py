@@ -70,6 +70,7 @@ from .social import (
 )
 from .user import RestrictionLevel, User
 from .user_settings import ReEvaluationPolicy, UploadVisibility, UserSettings
+from .user_tag import UserTag
 from .webhook_event import ProcessedWebhookEvent
 
 __all__ = [
@@ -140,6 +141,7 @@ __all__ = [
     "UserReport",
     "UserRole",
     "UserSettings",
+    "UserTag",
     "UploadVisibility",
     "ReEvaluationPolicy",
     "UserVerificationBonus",

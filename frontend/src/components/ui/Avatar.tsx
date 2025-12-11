@@ -18,7 +18,7 @@ import { clsx } from 'clsx'
 const avatarVariants = cva(
     [
         'relative inline-flex items-center justify-center',
-        'overflow-hidden rounded-full bg-dark-300',
+        'overflow-hidden bg-dark-300',
         'ring-2 ring-gray-800',
     ],
     {
@@ -30,16 +30,23 @@ const avatarVariants = cva(
                 lg: 'w-12 h-12 text-lg',
                 xl: 'w-16 h-16 text-xl',
                 '2xl': 'w-20 h-20 text-2xl',
+                '3xl': 'w-24 h-24 text-3xl',
+                '4xl': 'w-32 h-32 text-4xl',
             },
             variant: {
                 default: '',
                 bordered: 'ring-4',
                 glow: 'ring-4 ring-primary-500/30',
             },
+            shape: {
+                circle: 'rounded-full',
+                square: 'rounded-xl',  // osu!-style rounded square
+            },
         },
         defaultVariants: {
             size: 'md',
             variant: 'default',
+            shape: 'square',  // Default to rounded square like osu!
         },
     }
 )
@@ -61,6 +68,8 @@ const statusVariants = cva(
                 lg: 'w-3 h-3 right-0 bottom-0',
                 xl: 'w-3.5 h-3.5 right-0 bottom-0',
                 '2xl': 'w-4 h-4 right-0.5 bottom-0.5',
+                '3xl': 'w-5 h-5 right-1 bottom-1',
+                '4xl': 'w-6 h-6 right-1.5 bottom-1.5',
             },
         },
         defaultVariants: {
@@ -85,6 +94,8 @@ export interface AvatarProps
     fallbackIcon?: ReactNode
     /** Gradient background when no image */
     gradient?: boolean
+    /** Shape of avatar - circle or square (osu!-style rounded square) */
+    shape?: 'circle' | 'square'
 }
 
 export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
@@ -93,6 +104,7 @@ export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
             className,
             size,
             variant,
+            shape,
             src,
             alt,
             fallback,
@@ -115,7 +127,7 @@ export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
             <div
                 ref={ref}
                 className={clsx(
-                    avatarVariants({ size, variant }),
+                    avatarVariants({ size, variant, shape }),
                     gradient && showFallback && `bg-gradient-to-br ${gradientColors.join(' ')}`,
                     className
                 )}

@@ -55,16 +55,30 @@ class TwoFactorRequiredResponse(BaseModel):
     message: str = "Two-factor authentication required"
 
 
+class UserTagResponse(BaseModel):
+    """User tag response for profile display."""
+    
+    id: int
+    name: str
+    background_color: str
+    text_color: str | None = None
+
+
 class UserResponse(BaseModel):
     """User info response."""
 
     id: uuid.UUID
+    user_number: int | None = None
     email: str
     display_name: str
     email_verified: bool
+    phone_number: str | None = None
+    phone_verified: bool = False
+    avatar_url: str | None = None
     karma_score: int
     created_at: datetime
     roles: list[str] = []
+    tags: list[UserTagResponse] = []
 
     model_config = {"from_attributes": True}
 
@@ -343,26 +357,46 @@ async def get_me(
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
     from app.models.role import UserRole
+    from app.models.user_tag import UserTag
 
-    # Eagerly load roles
+    # Eagerly load roles and tags
     result = await session.execute(
         select(User)
-        .options(selectinload(User.roles).selectinload(UserRole.role))
+        .options(
+            selectinload(User.roles).selectinload(UserRole.role),
+            selectinload(User.tags)
+        )
         .where(User.id == current_user.id)
     )
     user = result.scalar_one()
 
     # Extract role codes
     role_codes = [ur.role.code for ur in user.roles if ur.role]
+    
+    # Build tags list
+    tags_list = [
+        {
+            "id": tag.id,
+            "name": tag.name,
+            "background_color": tag.background_color,
+            "text_color": tag.text_color,
+        }
+        for tag in sorted(user.tags, key=lambda t: t.display_order)
+    ]
 
     return UserResponse(
         id=user.id,
+        user_number=user.user_number,
         email=user.email,
         display_name=user.display_name,
         email_verified=user.email_verified,
+        phone_number=user.phone_number,
+        phone_verified=user.phone_verified,
+        avatar_url=user.avatar_url,
         karma_score=user.karma_score,
         created_at=user.created_at,
         roles=role_codes,
+        tags=tags_list,
     )
 
 

@@ -14,6 +14,7 @@ const API_BASE = API_CONFIG.baseUrl
 
 export interface UserSearchItem {
     id: string
+    user_number: number  // Human-friendly ID like osu! (e.g., 1000001)
     display_name: string
     username: string
     avatar_url: string | null

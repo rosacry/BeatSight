@@ -2,8 +2,17 @@
  * Authentication-related types.
  */
 
+// Profile tag (like osu!'s DEV, VIP, etc.)
+export interface ProfileTag {
+    id: number
+    name: string
+    background_color: string
+    text_color: string | null
+}
+
 export interface User {
     id: string
+    user_number: number  // Human-friendly ID like osu! (e.g., 1)
     email: string
     display_name: string
     email_verified: boolean
@@ -13,6 +22,7 @@ export interface User {
     karma_score: number
     created_at: string
     roles: string[]
+    tags: ProfileTag[]  // Custom profile tags like DEV, VIP, etc.
 }
 
 export type UserRole = 'user' | 'verifier' | 'staff' | 'admin'

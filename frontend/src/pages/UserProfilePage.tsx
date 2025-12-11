@@ -34,8 +34,17 @@ import {
 // Types
 // =============================================================================
 
+// Profile tag (like osu!'s DEV, VIP, etc.)
+interface ProfileTag {
+    id: number
+    name: string
+    background_color: string
+    text_color: string | null
+}
+
 interface PublicUserProfile {
     id: string
+    user_number: number  // Human-friendly ID like osu! (e.g., 1000001)
     display_name: string
     avatar_url: string | null
     banner_url: string | null
@@ -45,6 +54,8 @@ interface PublicUserProfile {
     is_verified: boolean
     country_code: string | null
     bio: string | null
+    // Custom profile tags (like osu!'s DEV, VIP, etc.)
+    tags: ProfileTag[]
     // Stats
     songs_uploaded: number
     maps_generated: number
@@ -164,8 +175,9 @@ export function UserProfilePage() {
     const blockUser = useBlockUser()
     const unblockUser = useUnblockUser()
 
-    // Is viewing own profile?
-    const isOwnProfile = currentUser?.id === userId
+    // Is viewing own profile? (check both UUID and user_number)
+    const isOwnProfile = currentUser?.id === userId ||
+        (currentUser?.user_number !== undefined && String(currentUser.user_number) === userId)
 
     // Fetch user profile
     const { data: profile, isLoading, error } = useQuery<PublicUserProfile>({
@@ -305,7 +317,7 @@ export function UserProfilePage() {
 
                         {/* User Info */}
                         <div className="flex-1 pb-4">
-                            <div className="flex items-center gap-3 mb-2">
+                            <div className="flex items-center gap-3 mb-2 flex-wrap">
                                 <h1 className="text-2xl md:text-3xl font-bold text-white">
                                     {profile.display_name}
                                 </h1>
@@ -317,18 +329,37 @@ export function UserProfilePage() {
                                 )}
                                 {profile.role && profile.role !== 'user' && (
                                     <span className={clsx(
-                                        'px-2 py-1 text-xs rounded-full',
+                                        'px-2 py-1 text-xs font-bold rounded-full',
                                         profile.role === 'admin' ? 'bg-red-500/20 text-red-400' :
                                             profile.role === 'staff' ? 'bg-amber-500/20 text-amber-400' :
                                                 profile.role === 'verifier' ? 'bg-accent-500/20 text-accent-400' :
                                                     'bg-gray-500/20 text-gray-400'
                                     )}>
-                                        {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
+                                        {profile.role.toUpperCase()}
                                     </span>
                                 )}
+                                {/* Custom profile tags (like osu!'s DEV, VIP, etc.) */}
+                                {profile.tags?.map((tag) => (
+                                    <span
+                                        key={tag.id}
+                                        className="px-2 py-1 text-xs font-bold rounded"
+                                        style={{
+                                            backgroundColor: tag.background_color,
+                                            color: tag.text_color || '#ffffff',
+                                        }}
+                                    >
+                                        {tag.name}
+                                    </span>
+                                ))}
                             </div>
 
                             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
+                                {/* User number like osu! */}
+                                {profile.user_number && (
+                                    <span className="font-mono text-gray-500">
+                                        #{profile.user_number}
+                                    </span>
+                                )}
                                 {profile.country_code && (
                                     <span className="flex items-center gap-1">
                                         <span className={`fi fi-${profile.country_code.toLowerCase()}`} />

@@ -30,6 +30,7 @@ if TYPE_CHECKING:  # pragma: no cover - type-checking only
     from .subscription import Subscription
     from .training_contribution import ContributionConsent, TrainingContribution
     from .user_settings import UserSettings
+    from .user_tag import UserTag
 
 
 class RestrictionLevel(str, enum.Enum):
@@ -48,10 +49,17 @@ class User(Base):
 
     # Index for karma leaderboard queries (ORDER BY karma_score DESC)
     # and rank calculation (COUNT WHERE karma_score > x)
-    __table_args__ = (Index("ix_users_karma_score", "karma_score"),)
+    __table_args__ = (
+        Index("ix_users_karma_score", "karma_score"),
+        Index("ix_users_user_number", "user_number", unique=True),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    # Human-friendly numeric ID like osu! (e.g., 9792512 instead of UUID)
+    user_number: Mapped[int] = mapped_column(
+        Integer, unique=True, index=True, nullable=False
     )
     display_name: Mapped[str] = mapped_column(String(120), nullable=False)
     email: Mapped[str] = mapped_column(
@@ -220,6 +228,15 @@ class User(Base):
         back_populates="reported_user",
         foreign_keys="UserReport.reported_user_id",
         cascade="all, delete-orphan",
+    )
+
+    # Custom profile tags (like osu!'s DEV, VIP, etc.)
+    tags: Mapped[list["UserTag"]] = relationship(
+        "UserTag",
+        back_populates="user",
+        foreign_keys="UserTag.user_id",
+        cascade="all, delete-orphan",
+        order_by="UserTag.display_order",
     )
 
     @property

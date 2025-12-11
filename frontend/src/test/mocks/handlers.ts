@@ -20,12 +20,18 @@ export { createMockJwt };
 // Mock user data
 const mockUser = {
     id: '1',
+    user_number: 1,
     email: 'test@example.com',
     username: 'testuser',
     display_name: 'Test User',
+    email_verified: true,
+    phone_number: null,
+    phone_verified: false,
     avatar_url: null,
+    karma_score: 100,
     created_at: '2024-01-01T00:00:00Z',
     roles: ['user'],
+    tags: [],
 };
 
 // Generate fresh tokens each time to ensure they have valid expiration

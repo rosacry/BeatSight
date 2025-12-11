@@ -49,7 +49,7 @@ describe('authStore', () => {
         it('isAuthenticated returns true when logged in', () => {
             setState({
                 accessToken: createMockJwt(3600),
-                user: { id: '1', email: 'a@b.com', display_name: 'user', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01', roles: [] },
+                user: { id: '1', user_number: 1, email: 'a@b.com', display_name: 'user', email_verified: true, phone_number: null, phone_verified: false, avatar_url: null, karma_score: 0, created_at: '2024-01-01', roles: [], tags: [] },
             })
             expect(getState().isAuthenticated()).toBe(true)
         })
@@ -58,7 +58,7 @@ describe('authStore', () => {
     describe('logout', () => {
         it('clears all auth state', () => {
             setState({
-                user: { id: 'user-123', email: 'test@example.com', display_name: 'testuser', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01', roles: [] },
+                user: { id: 'user-123', user_number: 1, email: 'test@example.com', display_name: 'testuser', email_verified: true, phone_number: null, phone_verified: false, avatar_url: null, karma_score: 0, created_at: '2024-01-01', roles: [], tags: [] },
                 accessToken: createMockJwt(3600),
                 refreshToken: 'refresh',
                 isLoading: false,
@@ -100,7 +100,7 @@ describe('authStore', () => {
         it('does nothing when user already exists', async () => {
             setState({
                 accessToken: createMockJwt(3600),
-                user: { id: '1', email: 'e@e.com', display_name: 'u', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01', roles: [] },
+                user: { id: '1', user_number: 1, email: 'e@e.com', display_name: 'u', email_verified: true, phone_number: null, phone_verified: false, avatar_url: null, karma_score: 0, created_at: '2024-01-01', roles: [], tags: [] },
             })
 
             const existingUser = getState().user
@@ -140,7 +140,7 @@ describe('authStore', () => {
         it('isAuthenticated returns true when logged in', () => {
             setState({
                 accessToken: createMockJwt(3600),
-                user: { id: '1', email: 'a@b.com', display_name: 'user', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01', roles: [] },
+                user: { id: '1', user_number: 1, email: 'a@b.com', display_name: 'user', email_verified: true, phone_number: null, phone_verified: false, avatar_url: null, karma_score: 0, created_at: '2024-01-01', roles: [], tags: [] },
             })
 
             expect(isAuthenticated()).toBe(true)
@@ -155,7 +155,7 @@ describe('authStore', () => {
             setState({
                 accessToken: mockToken,
                 refreshToken: 'refresh',
-                user: { id: '1', email: 'e@e.com', display_name: 'u', email_verified: true, avatar_url: null, karma_score: 0, created_at: '2024-01-01', roles: [] },
+                user: { id: '1', user_number: 1, email: 'e@e.com', display_name: 'u', email_verified: true, phone_number: null, phone_verified: false, avatar_url: null, karma_score: 0, created_at: '2024-01-01', roles: [], tags: [] },
                 isLoading: true,
             })
 

@@ -93,6 +93,17 @@ interface AdminUser {
     user_warnings: number
 }
 
+// User tag type (like osu!'s DEV, VIP, etc.)
+interface UserTag {
+    id: number
+    name: string
+    background_color: string
+    text_color: string | null
+    description: string | null
+    display_order: number
+    created_at: string
+}
+
 // Sorting types
 type SortField = 'display_name' | 'email' | 'role' | 'created_at' | 'karma_score' | 'job_count' | 'restriction_level'
 type SortDirection = 'asc' | 'desc'
@@ -147,6 +158,16 @@ export function AdminDashboardPage() {
     const [moderationDuration, setModerationDuration] = useState(24)
     const [moderationPermanent, setModerationPermanent] = useState(false)
     const [moderationSubmitting, setModerationSubmitting] = useState(false)
+
+    // Tags modal state (like osu!'s DEV, VIP tags)
+    const [tagsModalUser, setTagsModalUser] = useState<AdminUser | null>(null)
+    const [userTags, setUserTags] = useState<UserTag[]>([])
+    const [tagsLoading, setTagsLoading] = useState(false)
+    const [newTagName, setNewTagName] = useState('')
+    const [newTagBgColor, setNewTagBgColor] = useState('#3b82f6')
+    const [newTagTextColor, setNewTagTextColor] = useState('')
+    const [useCustomTextColor, setUseCustomTextColor] = useState(false)
+    const [tagSubmitting, setTagSubmitting] = useState(false)
 
     // Actions dropdown state
     const [openActionsUserId, setOpenActionsUserId] = useState<string | null>(null)
@@ -483,6 +504,93 @@ export function AdminDashboardPage() {
         }
     }
 
+    // Tags management functions
+    const loadUserTags = async (userId: string) => {
+        setTagsLoading(true)
+        try {
+            const response = await fetch(`${API_CONFIG.baseUrl}/api/admin/users/${userId}/tags`, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+            })
+            if (response.ok) {
+                const data = await response.json()
+                setUserTags(data.tags || [])
+            }
+        } catch (err) {
+            console.error('Failed to load user tags:', err)
+        } finally {
+            setTagsLoading(false)
+        }
+    }
+
+    const handleAddTag = async () => {
+        if (!tagsModalUser || !newTagName.trim()) return
+
+        setTagSubmitting(true)
+        try {
+            const response = await fetch(`${API_CONFIG.baseUrl}/api/admin/users/${tagsModalUser.id}/tags`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: newTagName.trim(),
+                    background_color: newTagBgColor,
+                    text_color: useCustomTextColor ? newTagTextColor : null,
+                    display_order: userTags.length,
+                }),
+            })
+
+            if (!response.ok) {
+                throw new Error('Failed to add tag')
+            }
+
+            const newTag = await response.json()
+            setUserTags([...userTags, newTag])
+            setNewTagName('')
+            setSuccessMessage('Tag added successfully')
+            setTimeout(() => setSuccessMessage(null), 3000)
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to add tag')
+        } finally {
+            setTagSubmitting(false)
+        }
+    }
+
+    const handleDeleteTag = async (tagId: number) => {
+        if (!tagsModalUser || !confirm('Are you sure you want to remove this tag?')) return
+
+        try {
+            const response = await fetch(`${API_CONFIG.baseUrl}/api/admin/users/${tagsModalUser.id}/tags/${tagId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+            })
+
+            if (!response.ok) {
+                throw new Error('Failed to delete tag')
+            }
+
+            setUserTags(userTags.filter(t => t.id !== tagId))
+            setSuccessMessage('Tag removed')
+            setTimeout(() => setSuccessMessage(null), 3000)
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to delete tag')
+        }
+    }
+
+    const openTagsModal = (user: AdminUser) => {
+        setTagsModalUser(user)
+        setNewTagName('')
+        setNewTagBgColor('#3b82f6')
+        setNewTagTextColor('#ffffff')
+        setUseCustomTextColor(false)
+        loadUserTags(user.id)
+    }
+
     if (loading) {
         return (
             <PageContentWrapper isLoading={true} className="flex items-center justify-center min-h-[60vh]">
@@ -789,7 +897,9 @@ export function AdminDashboardPage() {
                                                             </span>
                                                         </div>
                                                         <div className="min-w-0">
-                                                            <p className="text-white font-medium truncate">{user.display_name}</p>
+                                                            <Link to={`/users/${user.id}`} className="text-white font-medium truncate hover:text-primary-400 transition-colors block">
+                                                                {user.display_name}
+                                                            </Link>
                                                             <p className="text-gray-400 text-xs truncate">{user.email}</p>
                                                         </div>
                                                         <div className="flex gap-1 flex-shrink-0">
@@ -925,6 +1035,17 @@ export function AdminDashboardPage() {
                                             if (!user) return null
                                             return (
                                                 <>
+                                                    <button
+                                                        onClick={() => {
+                                                            openTagsModal(user)
+                                                            setOpenActionsUserId(null)
+                                                            setDropdownPosition(null)
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 text-sm text-primary-400 hover:bg-dark-300 rounded"
+                                                    >
+                                                        🏷️ Tags
+                                                    </button>
+                                                    <div className="border-t border-white/10 my-1" />
                                                     <button
                                                         onClick={() => {
                                                             setModerationModalUser(user)
@@ -1080,6 +1201,150 @@ export function AdminDashboardPage() {
                                                 }`}
                                         >
                                             {moderationSubmitting ? 'Submitting...' : 'Confirm'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Tags Modal (like osu!'s DEV, VIP tags) */}
+                        {tagsModalUser && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+                                <div className="bg-dark-400 rounded-xl border border-white/10 p-6 w-full max-w-md mx-4 max-h-[80vh] overflow-y-auto">
+                                    <h3 className="text-lg font-semibold text-white mb-2">🏷️ Manage Tags</h3>
+                                    <p className="text-gray-400 text-sm mb-4">
+                                        User: <Link to={`/users/${tagsModalUser.id}`} className="text-primary-400 hover:underline">{tagsModalUser.display_name}</Link>
+                                    </p>
+
+                                    {/* Current Tags */}
+                                    <div className="mb-6">
+                                        <label className="block text-sm text-gray-400 mb-2">Current Tags</label>
+                                        {tagsLoading ? (
+                                            <div className="flex items-center justify-center py-4">
+                                                <div className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                                            </div>
+                                        ) : userTags.length === 0 ? (
+                                            <p className="text-gray-500 text-sm py-2">No tags assigned</p>
+                                        ) : (
+                                            <div className="flex flex-wrap gap-2">
+                                                {userTags.map((tag) => (
+                                                    <div
+                                                        key={tag.id}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold"
+                                                        style={{
+                                                            backgroundColor: tag.background_color,
+                                                            color: tag.text_color || '#ffffff',
+                                                        }}
+                                                    >
+                                                        {tag.name}
+                                                        <button
+                                                            onClick={() => handleDeleteTag(tag.id)}
+                                                            className="ml-1 hover:opacity-70"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Add New Tag */}
+                                    <div className="border-t border-white/10 pt-4">
+                                        <label className="block text-sm text-gray-400 mb-2">Add New Tag</label>
+
+                                        <div className="space-y-3">
+                                            <input
+                                                type="text"
+                                                value={newTagName}
+                                                onChange={(e) => setNewTagName(e.target.value.toUpperCase())}
+                                                placeholder="Tag name (e.g., DEV, VIP, MAPPER)"
+                                                maxLength={32}
+                                                className="w-full bg-dark-300 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm"
+                                            />
+
+                                            <div className="flex gap-3">
+                                                <div className="flex-1">
+                                                    <label className="block text-xs text-gray-500 mb-1">Background</label>
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="color"
+                                                            value={newTagBgColor}
+                                                            onChange={(e) => setNewTagBgColor(e.target.value)}
+                                                            className="w-10 h-8 rounded cursor-pointer border-0"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={newTagBgColor}
+                                                            onChange={(e) => setNewTagBgColor(e.target.value)}
+                                                            className="flex-1 bg-dark-300 border border-gray-600 text-white rounded px-2 py-1 text-xs font-mono"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <label className="flex items-center gap-2 text-sm text-gray-300">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={useCustomTextColor}
+                                                    onChange={(e) => setUseCustomTextColor(e.target.checked)}
+                                                    className="rounded"
+                                                />
+                                                Custom text color
+                                            </label>
+
+                                            {useCustomTextColor && (
+                                                <div className="flex items-center gap-2">
+                                                    <label className="text-xs text-gray-500">Text Color:</label>
+                                                    <input
+                                                        type="color"
+                                                        value={newTagTextColor || '#ffffff'}
+                                                        onChange={(e) => setNewTagTextColor(e.target.value)}
+                                                        className="w-10 h-8 rounded cursor-pointer border-0"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        value={newTagTextColor}
+                                                        onChange={(e) => setNewTagTextColor(e.target.value)}
+                                                        className="flex-1 bg-dark-300 border border-gray-600 text-white rounded px-2 py-1 text-xs font-mono"
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {/* Preview */}
+                                            {newTagName && (
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-gray-500">Preview:</span>
+                                                    <span
+                                                        className="px-2 py-1 rounded text-xs font-bold"
+                                                        style={{
+                                                            backgroundColor: newTagBgColor,
+                                                            color: useCustomTextColor ? newTagTextColor : '#ffffff',
+                                                        }}
+                                                    >
+                                                        {newTagName}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-3 justify-end mt-6">
+                                        <button
+                                            onClick={() => {
+                                                setTagsModalUser(null)
+                                                setUserTags([])
+                                            }}
+                                            className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                                        >
+                                            Close
+                                        </button>
+                                        <button
+                                            onClick={handleAddTag}
+                                            disabled={!newTagName.trim() || tagSubmitting}
+                                            className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                                        >
+                                            {tagSubmitting ? 'Adding...' : 'Add Tag'}
                                         </button>
                                     </div>
                                 </div>

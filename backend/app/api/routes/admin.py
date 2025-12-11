@@ -28,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_session
 from app.models.ai_job import AIJob, AIJobState, AIJobPriority
 from app.models.user import User
+from app.models.user_tag import UserTag
 from app.models.subscription import Subscription, SubscriptionPlan, SubscriptionStatus
 from app.models.role import Role, UserRole
 from app.logging import get_logger
@@ -1938,4 +1939,229 @@ async def trigger_re_evaluation(
         jobs_skipped=result["skipped"],
         errors=result.get("errors", []),
     )
+
+
+# =============================================================================
+# User Tags Management (like osu!'s DEV, VIP, etc.)
+# =============================================================================
+
+
+class UserTagResponse(BaseModel):
+    """Response model for a user tag."""
+    
+    id: int
+    name: str
+    background_color: str
+    text_color: str | None = None
+    description: str | None = None
+    display_order: int
+    created_at: datetime
+    created_by_id: uuid.UUID | None = None
+    
+    model_config = {"from_attributes": True}
+
+
+class UserTagsResponse(BaseModel):
+    """Response for user's tags list."""
+    
+    user_id: uuid.UUID
+    display_name: str
+    tags: list[UserTagResponse]
+
+
+class CreateUserTagRequest(BaseModel):
+    """Request to create a new user tag."""
+    
+    name: str  # e.g., "DEV", "VIP", "MAPPER"
+    background_color: str = "#3b82f6"  # Hex color for background
+    text_color: str | None = None  # If null, auto-calculate contrast
+    description: str | None = None  # Admin note
+    display_order: int = 0  # Lower = displayed first
+
+
+class UpdateUserTagRequest(BaseModel):
+    """Request to update an existing tag."""
+    
+    name: str | None = None
+    background_color: str | None = None
+    text_color: str | None = None
+    description: str | None = None
+    display_order: int | None = None
+
+
+@router.get(
+    "/users/{user_id}/tags",
+    response_model=UserTagsResponse,
+    summary="Get user's tags",
+    description="Get all custom tags for a user.",
+)
+async def get_user_tags(
+    user_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(RequireAdminDashboard)],
+) -> UserTagsResponse:
+    """Get all tags for a specific user."""
+    # Verify user exists
+    user_result = await db.execute(select(User).where(User.id == user_id))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    
+    # Get user's tags
+    tags_result = await db.execute(
+        select(UserTag)
+        .where(UserTag.user_id == user_id)
+        .order_by(UserTag.display_order)
+    )
+    tags = tags_result.scalars().all()
+    
+    return UserTagsResponse(
+        user_id=user.id,
+        display_name=user.display_name,
+        tags=[UserTagResponse.model_validate(tag) for tag in tags],
+    )
+
+
+@router.post(
+    "/users/{user_id}/tags",
+    response_model=UserTagResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add tag to user",
+    description="Add a custom tag to a user's profile (like osu!'s DEV, VIP tags).",
+)
+async def create_user_tag(
+    user_id: uuid.UUID,
+    request: CreateUserTagRequest,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(RequireAdminDashboard)],
+) -> UserTagResponse:
+    """Create a new tag for a user."""
+    # Verify user exists
+    user_result = await db.execute(select(User).where(User.id == user_id))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    
+    # Create the tag
+    tag = UserTag(
+        user_id=user_id,
+        name=request.name.upper().strip(),  # Normalize to uppercase
+        background_color=request.background_color,
+        text_color=request.text_color,
+        description=request.description,
+        display_order=request.display_order,
+        created_by_id=admin.id,
+    )
+    db.add(tag)
+    await db.commit()
+    await db.refresh(tag)
+    
+    logger.info(
+        "admin_created_user_tag",
+        admin_id=str(admin.id),
+        user_id=str(user_id),
+        tag_name=tag.name,
+    )
+    
+    return UserTagResponse.model_validate(tag)
+
+
+@router.patch(
+    "/users/{user_id}/tags/{tag_id}",
+    response_model=UserTagResponse,
+    summary="Update user tag",
+    description="Update an existing user tag.",
+)
+async def update_user_tag(
+    user_id: uuid.UUID,
+    tag_id: int,
+    request: UpdateUserTagRequest,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(RequireAdminDashboard)],
+) -> UserTagResponse:
+    """Update an existing tag."""
+    # Get the tag
+    tag_result = await db.execute(
+        select(UserTag).where(
+            UserTag.id == tag_id,
+            UserTag.user_id == user_id,
+        )
+    )
+    tag = tag_result.scalar_one_or_none()
+    if not tag:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tag not found",
+        )
+    
+    # Update fields
+    if request.name is not None:
+        tag.name = request.name.upper().strip()
+    if request.background_color is not None:
+        tag.background_color = request.background_color
+    if request.text_color is not None:
+        tag.text_color = request.text_color
+    if request.description is not None:
+        tag.description = request.description
+    if request.display_order is not None:
+        tag.display_order = request.display_order
+    
+    await db.commit()
+    await db.refresh(tag)
+    
+    logger.info(
+        "admin_updated_user_tag",
+        admin_id=str(admin.id),
+        user_id=str(user_id),
+        tag_id=tag_id,
+    )
+    
+    return UserTagResponse.model_validate(tag)
+
+
+@router.delete(
+    "/users/{user_id}/tags/{tag_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete user tag",
+    description="Remove a tag from a user's profile.",
+)
+async def delete_user_tag(
+    user_id: uuid.UUID,
+    tag_id: int,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    admin: Annotated[User, Depends(RequireAdminDashboard)],
+) -> None:
+    """Delete a user's tag."""
+    # Get the tag
+    tag_result = await db.execute(
+        select(UserTag).where(
+            UserTag.id == tag_id,
+            UserTag.user_id == user_id,
+        )
+    )
+    tag = tag_result.scalar_one_or_none()
+    if not tag:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tag not found",
+        )
+    
+    tag_name = tag.name
+    await db.delete(tag)
+    await db.commit()
+    
+    logger.info(
+        "admin_deleted_user_tag",
+        admin_id=str(admin.id),
+        user_id=str(user_id),
+        tag_id=tag_id,
+        tag_name=tag_name,
+    )
+
 

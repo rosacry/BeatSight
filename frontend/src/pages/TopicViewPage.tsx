@@ -16,6 +16,7 @@ import {
     unpinTopic,
 } from '@/api/forum'
 import { ForumPostCard, ForumPoll, PostEditor } from '@/components/forum'
+import { UsernameLink } from '@/components/social'
 import { useAuthStore } from '@/stores/authStore'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { PageContentWrapper } from '@/components/ui/UnifiedTransitions'
@@ -170,11 +171,22 @@ export function TopicViewPage() {
                             {topic.title}
                         </h1>
                         <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm text-gray-400">
-                            <span>
+                            <span className="inline-flex items-center gap-1">
                                 by{' '}
-                                <span className="text-gray-300 truncate max-w-[100px] sm:max-w-none inline-block align-bottom">
-                                    {topic.author?.display_name || 'Unknown'}
-                                </span>
+                                {topic.author ? (
+                                    <UsernameLink
+                                        user={{
+                                            id: topic.author.id,
+                                            username: topic.author.display_name,
+                                            display_name: topic.author.display_name,
+                                        }}
+                                        className="text-gray-300 truncate max-w-[100px] sm:max-w-none"
+                                    />
+                                ) : (
+                                    <span className="text-gray-300 truncate max-w-[100px] sm:max-w-none inline-block align-bottom">
+                                        Unknown
+                                    </span>
+                                )}
                             </span>
                             <span className="whitespace-nowrap">{topic.view_count.toLocaleString()} views</span>
                             <span className="whitespace-nowrap">{topic.post_count.toLocaleString()} posts</span>

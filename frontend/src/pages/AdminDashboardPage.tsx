@@ -20,6 +20,9 @@ import {
     TRANSITION_DURATION,
     EASE_CURVE
 } from '@/components/ui/UnifiedTransitions'
+import { useAdminReports, useUpdateReportStatus } from '@/api/socialHooks'
+import type { ReportStatus, AdminReport } from '@/api/social'
+import { Avatar } from '@/components/ui/Avatar'
 
 interface SystemOverview {
     total_users: number
@@ -94,7 +97,7 @@ interface AdminUser {
 type SortField = 'display_name' | 'email' | 'role' | 'created_at' | 'karma_score' | 'job_count' | 'restriction_level'
 type SortDirection = 'asc' | 'desc'
 
-const VALID_TABS = ['overview', 'users', 'jobs', 'contributions'] as const
+const VALID_TABS = ['overview', 'users', 'jobs', 'contributions', 'reports'] as const
 type TabType = typeof VALID_TABS[number]
 
 // Helper to get valid tab from URL
@@ -520,7 +523,7 @@ export function AdminDashboardPage() {
             {/* Tabs */}
             <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-2 mb-8">
                 <div className="flex gap-1 p-1 bg-dark-400 rounded-lg w-fit">
-                    {(['overview', 'users', 'jobs', 'contributions'] as const).map((tab) => (
+                    {(['overview', 'users', 'jobs', 'contributions', 'reports'] as const).map((tab) => (
                         <AnimatedTabButton
                             key={tab}
                             isActive={activeTab === tab}
@@ -1312,6 +1315,13 @@ export function AdminDashboardPage() {
                         )}
                     </StaggerPageContent>
                 )}
+
+                {/* Reports Tab */}
+                {activeTab === 'reports' && (
+                    <StaggerPageContent className="space-y-6">
+                        <ReportsTabContent accessToken={accessToken} />
+                    </StaggerPageContent>
+                )}
             </AnimatedTabContent>
         </PageContentWrapper>
     )
@@ -1344,5 +1354,420 @@ function QueueItem({ label, value, color }: { label: string; value: number; colo
             <p className="text-2xl font-bold">{value}</p>
             <p className="text-sm text-gray-400">{label}</p>
         </div>
+    )
+}
+
+// =============================================================================
+// Reports Tab Content
+// =============================================================================
+
+interface ReportsTabContentProps {
+    accessToken: string | null
+}
+
+function ReportsTabContent({ accessToken }: ReportsTabContentProps) {
+    const [statusFilter, setStatusFilter] = useState<ReportStatus | undefined>(undefined)
+    const { data: reportsData, isLoading, error, refetch } = useAdminReports({ status: statusFilter })
+    const updateReportStatus = useUpdateReportStatus()
+    const [selectedReport, setSelectedReport] = useState<AdminReport | null>(null)
+    const [adminNotes, setAdminNotes] = useState('')
+    const [actionStatus, setActionStatus] = useState<ReportStatus | null>(null)
+
+    const handleResolveReport = async () => {
+        if (!selectedReport || !actionStatus) return
+
+        try {
+            await updateReportStatus.mutateAsync({
+                reportId: selectedReport.id,
+                status: actionStatus,
+                adminNotes: adminNotes || undefined,
+            })
+            setSelectedReport(null)
+            setAdminNotes('')
+            setActionStatus(null)
+        } catch (err) {
+            console.error('Failed to update report:', err)
+        }
+    }
+
+    const getStatusColor = (status: ReportStatus) => {
+        switch (status) {
+            case 'pending':
+                return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+            case 'under_review':
+                return 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+            case 'resolved':
+                return 'bg-green-500/20 text-green-400 border-green-500/30'
+            case 'dismissed':
+                return 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+            default:
+                return 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+        }
+    }
+
+    const getReportTypeIcon = (type: string) => {
+        switch (type) {
+            case 'spam':
+                return '📧'
+            case 'harassment':
+                return '⚠️'
+            case 'inappropriate_content':
+                return '🚫'
+            case 'cheating':
+                return '🎮'
+            case 'impersonation':
+                return '👤'
+            case 'copyright':
+                return '©️'
+            default:
+                return '📋'
+        }
+    }
+
+    if (isLoading) {
+        return (
+            <StaggerSection>
+                <div className="bg-dark-400 rounded-xl p-8 border border-white/10 text-center">
+                    <div className="flex items-center justify-center gap-3">
+                        <div className="animate-spin h-5 w-5 border-2 border-primary-500 border-t-transparent rounded-full" />
+                        <p className="text-gray-400">Loading reports...</p>
+                    </div>
+                </div>
+            </StaggerSection>
+        )
+    }
+
+    if (error) {
+        return (
+            <StaggerSection>
+                <div className="bg-red-500/10 rounded-xl p-6 border border-red-500/30 text-center">
+                    <p className="text-red-400">Failed to load reports</p>
+                    <button
+                        onClick={() => refetch()}
+                        className="mt-4 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </StaggerSection>
+        )
+    }
+
+    return (
+        <>
+            {/* Filter Bar */}
+            <StaggerSection>
+                <div className="bg-dark-400 rounded-xl p-4 border border-white/10">
+                    <div className="flex flex-wrap items-center gap-4">
+                        <span className="text-white font-medium">Filter by status:</span>
+                        <div className="flex gap-2 flex-wrap">
+                            <button
+                                onClick={() => setStatusFilter(undefined)}
+                                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${!statusFilter
+                                        ? 'bg-primary-500 text-white'
+                                        : 'bg-dark-300 text-gray-400 hover:text-white'
+                                    }`}
+                            >
+                                All
+                            </button>
+                            {(['pending', 'under_review', 'resolved', 'dismissed'] as ReportStatus[]).map((status) => (
+                                <button
+                                    key={status}
+                                    onClick={() => setStatusFilter(status)}
+                                    className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${statusFilter === status
+                                            ? 'bg-primary-500 text-white'
+                                            : 'bg-dark-300 text-gray-400 hover:text-white'
+                                        }`}
+                                >
+                                    {status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1)}
+                                </button>
+                            ))}
+                        </div>
+                        <span className="ml-auto text-gray-500 text-sm">
+                            {reportsData?.total || 0} reports
+                        </span>
+                    </div>
+                </div>
+            </StaggerSection>
+
+            {/* Reports List */}
+            <StaggerSection>
+                <div className="bg-dark-400 rounded-xl border border-white/10 overflow-hidden">
+                    {reportsData?.items && reportsData.items.length > 0 ? (
+                        <div className="divide-y divide-white/10">
+                            {reportsData.items.map((report) => (
+                                <div
+                                    key={report.id}
+                                    className="p-4 hover:bg-dark-300/50 transition-colors cursor-pointer"
+                                    onClick={() => {
+                                        setSelectedReport(report)
+                                        setAdminNotes(report.admin_notes || '')
+                                    }}
+                                >
+                                    <div className="flex items-start gap-4">
+                                        {/* Report Type Icon */}
+                                        <div className="text-2xl">
+                                            {getReportTypeIcon(report.report_type)}
+                                        </div>
+
+                                        {/* Report Content */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className={`px-2 py-0.5 rounded text-xs border ${getStatusColor(report.status)}`}>
+                                                    {report.status.replace('_', ' ')}
+                                                </span>
+                                                <span className="text-xs text-gray-500">
+                                                    {new Date(report.created_at).toLocaleDateString()}
+                                                </span>
+                                            </div>
+
+                                            <p className="text-white font-medium">
+                                                {report.report_type.replace('_', ' ').charAt(0).toUpperCase() +
+                                                    report.report_type.replace('_', ' ').slice(1)}
+                                            </p>
+
+                                            <p className="text-gray-400 text-sm mt-1 line-clamp-2">
+                                                {report.description}
+                                            </p>
+
+                                            <div className="flex items-center gap-4 mt-2 text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <Avatar
+                                                        src={report.reporter.avatar_url || undefined}
+                                                        alt={report.reporter.display_name}
+                                                        size="xs"
+                                                    />
+                                                    <span className="text-gray-400">
+                                                        from <span className="text-white">{report.reporter.display_name}</span>
+                                                    </span>
+                                                </div>
+                                                <span className="text-gray-600">→</span>
+                                                <div className="flex items-center gap-2">
+                                                    <Avatar
+                                                        src={report.reported_user.avatar_url || undefined}
+                                                        alt={report.reported_user.display_name}
+                                                        size="xs"
+                                                    />
+                                                    <span className="text-gray-400">
+                                                        about <Link
+                                                            to={`/user/${report.reported_user.id}`}
+                                                            className="text-primary-400 hover:text-primary-300"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            {report.reported_user.display_name}
+                                                        </Link>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Action Arrow */}
+                                        <svg
+                                            className="w-5 h-5 text-gray-500"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M9 5l7 7-7 7"
+                                            />
+                                        </svg>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="p-8 text-center">
+                            <p className="text-gray-400">No reports found</p>
+                        </div>
+                    )}
+                </div>
+            </StaggerSection>
+
+            {/* Report Detail Modal */}
+            <AnimatePresence>
+                {selectedReport && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setSelectedReport(null)}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-dark-500 rounded-xl border border-white/10 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="p-6 border-b border-white/10">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-3xl">{getReportTypeIcon(selectedReport.report_type)}</span>
+                                        <div>
+                                            <h3 className="text-xl font-bold text-white">
+                                                {selectedReport.report_type.replace('_', ' ').charAt(0).toUpperCase() +
+                                                    selectedReport.report_type.replace('_', ' ').slice(1)} Report
+                                            </h3>
+                                            <p className="text-gray-400 text-sm">
+                                                Submitted {new Date(selectedReport.created_at).toLocaleString()}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className={`px-3 py-1 rounded-lg text-sm border ${getStatusColor(selectedReport.status)}`}>
+                                        {selectedReport.status.replace('_', ' ')}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-6 space-y-6">
+                                {/* Users */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-dark-400 rounded-lg p-4">
+                                        <p className="text-gray-400 text-sm mb-2">Reporter</p>
+                                        <div className="flex items-center gap-3">
+                                            <Avatar
+                                                src={selectedReport.reporter.avatar_url || undefined}
+                                                alt={selectedReport.reporter.display_name}
+                                                size="md"
+                                            />
+                                            <div>
+                                                <Link
+                                                    to={`/user/${selectedReport.reporter.id}`}
+                                                    className="text-white font-medium hover:text-primary-400"
+                                                >
+                                                    {selectedReport.reporter.display_name}
+                                                </Link>
+                                                <p className="text-gray-500 text-sm">@{selectedReport.reporter.username}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-dark-400 rounded-lg p-4">
+                                        <p className="text-gray-400 text-sm mb-2">Reported User</p>
+                                        <div className="flex items-center gap-3">
+                                            <Avatar
+                                                src={selectedReport.reported_user.avatar_url || undefined}
+                                                alt={selectedReport.reported_user.display_name}
+                                                size="md"
+                                            />
+                                            <div>
+                                                <Link
+                                                    to={`/user/${selectedReport.reported_user.id}`}
+                                                    className="text-white font-medium hover:text-primary-400"
+                                                >
+                                                    {selectedReport.reported_user.display_name}
+                                                </Link>
+                                                <p className="text-gray-500 text-sm">@{selectedReport.reported_user.username}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Description */}
+                                <div>
+                                    <p className="text-gray-400 text-sm mb-2">Description</p>
+                                    <div className="bg-dark-400 rounded-lg p-4">
+                                        <p className="text-white whitespace-pre-wrap">{selectedReport.description}</p>
+                                    </div>
+                                </div>
+
+                                {/* Admin Notes */}
+                                <div>
+                                    <label className="text-gray-400 text-sm mb-2 block">Admin Notes</label>
+                                    <textarea
+                                        value={adminNotes}
+                                        onChange={(e) => setAdminNotes(e.target.value)}
+                                        className="w-full bg-dark-400 border border-white/10 rounded-lg p-4 text-white placeholder-gray-500 focus:outline-none focus:border-primary-500"
+                                        placeholder="Add internal notes about this report..."
+                                        rows={3}
+                                    />
+                                </div>
+
+                                {/* Action Selection */}
+                                {(selectedReport.status === 'pending' || selectedReport.status === 'under_review') && (
+                                    <div>
+                                        <p className="text-gray-400 text-sm mb-2">Take Action</p>
+                                        <div className="flex gap-2 flex-wrap">
+                                            <button
+                                                onClick={() => setActionStatus('under_review')}
+                                                className={`px-4 py-2 rounded-lg text-sm transition-colors ${actionStatus === 'under_review'
+                                                        ? 'bg-blue-500 text-white'
+                                                        : 'bg-dark-400 text-gray-400 hover:text-white border border-white/10'
+                                                    }`}
+                                            >
+                                                Mark Under Review
+                                            </button>
+                                            <button
+                                                onClick={() => setActionStatus('resolved')}
+                                                className={`px-4 py-2 rounded-lg text-sm transition-colors ${actionStatus === 'resolved'
+                                                        ? 'bg-green-500 text-white'
+                                                        : 'bg-dark-400 text-gray-400 hover:text-white border border-white/10'
+                                                    }`}
+                                            >
+                                                Resolve
+                                            </button>
+                                            <button
+                                                onClick={() => setActionStatus('dismissed')}
+                                                className={`px-4 py-2 rounded-lg text-sm transition-colors ${actionStatus === 'dismissed'
+                                                        ? 'bg-gray-500 text-white'
+                                                        : 'bg-dark-400 text-gray-400 hover:text-white border border-white/10'
+                                                    }`}
+                                            >
+                                                Dismiss
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Reviewed By */}
+                                {selectedReport.reviewed_by && (
+                                    <div className="bg-dark-400 rounded-lg p-4">
+                                        <p className="text-gray-400 text-sm mb-2">Reviewed by</p>
+                                        <div className="flex items-center gap-2">
+                                            <Avatar
+                                                src={selectedReport.reviewed_by.avatar_url || undefined}
+                                                alt={selectedReport.reviewed_by.display_name}
+                                                size="sm"
+                                            />
+                                            <span className="text-white">{selectedReport.reviewed_by.display_name}</span>
+                                            {selectedReport.reviewed_at && (
+                                                <span className="text-gray-500 text-sm">
+                                                    on {new Date(selectedReport.reviewed_at).toLocaleString()}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer */}
+                            <div className="p-6 border-t border-white/10 flex justify-end gap-3">
+                                <button
+                                    onClick={() => setSelectedReport(null)}
+                                    className="px-4 py-2 bg-dark-400 text-white rounded-lg hover:bg-dark-300 transition-colors"
+                                >
+                                    Close
+                                </button>
+                                {actionStatus && (
+                                    <button
+                                        onClick={handleResolveReport}
+                                        disabled={updateReportStatus.isPending}
+                                        className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors disabled:opacity-50"
+                                    >
+                                        {updateReportStatus.isPending ? 'Saving...' : 'Save Changes'}
+                                    </button>
+                                )}
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </>
     )
 }

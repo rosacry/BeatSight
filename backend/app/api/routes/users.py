@@ -11,10 +11,13 @@ from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from PIL import Image
 from pydantic import BaseModel, Field
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db_session
+from app.api.deps import get_current_user, get_current_user_optional, get_db_session
 from app.models.user import User
+from app.models.song import Song
+from app.models.forum import ForumPost
 from app.schemas.user_settings import UserSettingsRead, UserSettingsUpdate
 from app.services.storage import get_storage
 from app.services.user_settings import UserSettingsService
@@ -416,4 +419,177 @@ async def update_user_settings(
         notify_weekly_summary=request.notify_weekly_summary,
     )
     return UserSettingsRead.model_validate(settings)
+
+
+# =============================================================================
+# Public User Profile Endpoint
+# =============================================================================
+
+
+class PublicUserProfile(BaseModel):
+    """Public user profile response."""
+    
+    id: str
+    display_name: str
+    avatar_url: Optional[str] = None
+    banner_url: Optional[str] = None
+    karma_score: int
+    created_at: datetime
+    role: str
+    is_verified: bool
+    country_code: Optional[str] = None
+    bio: Optional[str] = None
+    # Stats
+    songs_uploaded: int
+    maps_generated: int
+    maps_verified: int
+    achievements_count: int
+    forum_posts: int
+    # Activity
+    last_active: Optional[datetime] = None
+
+
+class UserMapItem(BaseModel):
+    """User's map item for listing."""
+    
+    id: str
+    song_id: str
+    title: str
+    artist: str
+    cover_url: Optional[str] = None
+    is_verified: bool
+    created_at: datetime
+    play_count: int
+
+
+class UserMapsResponse(BaseModel):
+    """Response for user's maps."""
+    
+    items: list[UserMapItem]
+    total: int
+
+
+@router.get("/{user_id}/profile", response_model=PublicUserProfile)
+async def get_public_user_profile(
+    user_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db_session),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+) -> PublicUserProfile:
+    """
+    Get a user's public profile.
+    
+    Returns public information about a user including their stats and activity.
+    """
+    # Fetch the user
+    result = await session.execute(
+        select(User).where(User.id == user_id, User.deleted_at.is_(None))
+    )
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    
+    # Get song count
+    songs_result = await session.execute(
+        select(func.count()).select_from(Song).where(
+            Song.owner_id == user_id,
+            Song.deleted_at.is_(None)
+        )
+    )
+    songs_count = songs_result.scalar() or 0
+    
+    # Get forum posts count
+    try:
+        posts_result = await session.execute(
+            select(func.count()).select_from(ForumPost).where(
+                ForumPost.author_id == user_id,
+                ForumPost.deleted_at.is_(None)
+            )
+        )
+        forum_posts = posts_result.scalar() or 0
+    except Exception:
+        forum_posts = 0
+    
+    # Determine role
+    role = "user"
+    if user.roles:
+        role_names = [r.name for r in user.roles]
+        if "admin" in role_names:
+            role = "admin"
+        elif "staff" in role_names:
+            role = "staff"
+        elif "verifier" in role_names:
+            role = "verifier"
+    
+    return PublicUserProfile(
+        id=str(user.id),
+        display_name=user.display_name,
+        avatar_url=user.avatar_url,
+        banner_url=getattr(user, 'banner_url', None),
+        karma_score=user.karma_score or 0,
+        created_at=user.created_at,
+        role=role,
+        is_verified=user.email_verified or False,
+        country_code=getattr(user, 'country_code', None),
+        bio=getattr(user, 'bio', None),
+        songs_uploaded=songs_count,
+        maps_generated=songs_count,  # Approximate - should count maps
+        maps_verified=0,  # TODO: Count verified maps
+        achievements_count=0,  # TODO: Count achievements
+        forum_posts=forum_posts,
+        last_active=getattr(user, 'last_active_at', None),
+    )
+
+
+@router.get("/{user_id}/maps", response_model=UserMapsResponse)
+async def get_user_maps(
+    user_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db_session),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+) -> UserMapsResponse:
+    """
+    Get a user's public beatmaps.
+    """
+    # Verify user exists
+    result = await session.execute(
+        select(User).where(User.id == user_id, User.deleted_at.is_(None))
+    )
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    
+    # Fetch user's songs
+    songs_result = await session.execute(
+        select(Song)
+        .where(
+            Song.owner_id == user_id,
+            Song.deleted_at.is_(None)
+        )
+        .order_by(Song.created_at.desc())
+        .limit(50)
+    )
+    songs = songs_result.scalars().all()
+    
+    items = [
+        UserMapItem(
+            id=str(s.id),
+            song_id=str(s.id),
+            title=s.title,
+            artist=s.artist or "Unknown Artist",
+            cover_url=getattr(s, 'cover_url', None),
+            is_verified=getattr(s, 'is_verified', False),
+            created_at=s.created_at,
+            play_count=0,  # TODO: Track play counts
+        )
+        for s in songs
+    ]
+    
+    return UserMapsResponse(items=items, total=len(items))
 

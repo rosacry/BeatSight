@@ -19,6 +19,7 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { LibraryPage } from './pages/LibraryPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { UserProfilePage } from './pages/UserProfilePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { PricingPage } from './pages/PricingPage'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
@@ -135,6 +136,9 @@ function AnimatedRoutes() {
                         <Route path="/credits/success" element={<CreditSuccessPage />} />
                         <Route path="/credits/cancel" element={<CreditCancelPage />} />
                         <Route path="/leaderboard" element={<LeaderboardPage />} />
+
+                        {/* Public user profile */}
+                        <Route path="/user/:userId" element={<UserProfilePage />} />
 
                         {/* Forum routes (public, posting requires auth) */}
                         <Route path="/forum" element={<ForumPage />} />

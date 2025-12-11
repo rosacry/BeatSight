@@ -96,17 +96,26 @@ export function UsernameLink({ user, showPopover = true, className, children }: 
         )
     }
 
+    // Link to the user's public profile page
     return (
         <>
-            <button
-                onClick={() => setShowProfileCard(true)}
+            <Link
+                to={`/user/${user.id}`}
+                onClick={(e) => {
+                    // If holding Ctrl/Cmd, let it open in new tab
+                    // Otherwise, show the quick preview modal for convenience
+                    if (!e.ctrlKey && !e.metaKey && showPopover) {
+                        e.preventDefault()
+                        setShowProfileCard(true)
+                    }
+                }}
                 className={clsx(
-                    'font-medium text-primary-400 hover:text-primary-300 hover:underline cursor-pointer bg-transparent border-none p-0',
+                    'font-medium text-primary-400 hover:text-primary-300 hover:underline cursor-pointer',
                     className
                 )}
             >
                 {children || displayName}
-            </button>
+            </Link>
             {showPopover && (
                 <UserProfileModal
                     userId={user.id}
@@ -208,6 +217,12 @@ export function UserProfileModal({ userId, open, onClose }: UserProfileModalProp
 
                             {/* Actions */}
                             <div className="flex flex-wrap gap-2">
+                                <Link to={`/user/${userId}`} onClick={onClose}>
+                                    <Button variant="primary" size="sm">
+                                        View Full Profile
+                                    </Button>
+                                </Link>
+
                                 <Link to={`/messages/${userId}`}>
                                     <Button variant="outline" size="sm">
                                         <MessageIcon />

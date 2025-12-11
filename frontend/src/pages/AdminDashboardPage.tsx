@@ -1319,7 +1319,7 @@ export function AdminDashboardPage() {
                 {/* Reports Tab */}
                 {activeTab === 'reports' && (
                     <StaggerPageContent className="space-y-6">
-                        <ReportsTabContent accessToken={accessToken} />
+                        <ReportsTabContent />
                     </StaggerPageContent>
                 )}
             </AnimatedTabContent>
@@ -1361,11 +1361,7 @@ function QueueItem({ label, value, color }: { label: string; value: number; colo
 // Reports Tab Content
 // =============================================================================
 
-interface ReportsTabContentProps {
-    accessToken: string | null
-}
-
-function ReportsTabContent({ accessToken }: ReportsTabContentProps) {
+function ReportsTabContent() {
     const [statusFilter, setStatusFilter] = useState<ReportStatus | undefined>(undefined)
     const { data: reportsData, isLoading, error, refetch } = useAdminReports({ status: statusFilter })
     const updateReportStatus = useUpdateReportStatus()
@@ -1464,8 +1460,8 @@ function ReportsTabContent({ accessToken }: ReportsTabContentProps) {
                             <button
                                 onClick={() => setStatusFilter(undefined)}
                                 className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${!statusFilter
-                                        ? 'bg-primary-500 text-white'
-                                        : 'bg-dark-300 text-gray-400 hover:text-white'
+                                    ? 'bg-primary-500 text-white'
+                                    : 'bg-dark-300 text-gray-400 hover:text-white'
                                     }`}
                             >
                                 All
@@ -1475,8 +1471,8 @@ function ReportsTabContent({ accessToken }: ReportsTabContentProps) {
                                     key={status}
                                     onClick={() => setStatusFilter(status)}
                                     className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${statusFilter === status
-                                            ? 'bg-primary-500 text-white'
-                                            : 'bg-dark-300 text-gray-400 hover:text-white'
+                                        ? 'bg-primary-500 text-white'
+                                        : 'bg-dark-300 text-gray-400 hover:text-white'
                                         }`}
                                 >
                                     {status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1)}
@@ -1697,8 +1693,8 @@ function ReportsTabContent({ accessToken }: ReportsTabContentProps) {
                                             <button
                                                 onClick={() => setActionStatus('under_review')}
                                                 className={`px-4 py-2 rounded-lg text-sm transition-colors ${actionStatus === 'under_review'
-                                                        ? 'bg-blue-500 text-white'
-                                                        : 'bg-dark-400 text-gray-400 hover:text-white border border-white/10'
+                                                    ? 'bg-blue-500 text-white'
+                                                    : 'bg-dark-400 text-gray-400 hover:text-white border border-white/10'
                                                     }`}
                                             >
                                                 Mark Under Review
@@ -1706,8 +1702,8 @@ function ReportsTabContent({ accessToken }: ReportsTabContentProps) {
                                             <button
                                                 onClick={() => setActionStatus('resolved')}
                                                 className={`px-4 py-2 rounded-lg text-sm transition-colors ${actionStatus === 'resolved'
-                                                        ? 'bg-green-500 text-white'
-                                                        : 'bg-dark-400 text-gray-400 hover:text-white border border-white/10'
+                                                    ? 'bg-green-500 text-white'
+                                                    : 'bg-dark-400 text-gray-400 hover:text-white border border-white/10'
                                                     }`}
                                             >
                                                 Resolve
@@ -1715,8 +1711,8 @@ function ReportsTabContent({ accessToken }: ReportsTabContentProps) {
                                             <button
                                                 onClick={() => setActionStatus('dismissed')}
                                                 className={`px-4 py-2 rounded-lg text-sm transition-colors ${actionStatus === 'dismissed'
-                                                        ? 'bg-gray-500 text-white'
-                                                        : 'bg-dark-400 text-gray-400 hover:text-white border border-white/10'
+                                                    ? 'bg-gray-500 text-white'
+                                                    : 'bg-dark-400 text-gray-400 hover:text-white border border-white/10'
                                                     }`}
                                             >
                                                 Dismiss

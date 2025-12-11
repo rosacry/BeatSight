@@ -278,7 +278,6 @@ async def block_user(
         return BlockedUserResponse(
             id=block.id,
             blocked_id=user_id,
-            blocked_username=blocked_user.username,
             blocked_display_name=blocked_user.display_name,
             reason=block.reason,
             created_at=block.created_at,
@@ -334,7 +333,6 @@ async def get_blocked_users(
             BlockedUserResponse(
                 id=block.id,
                 blocked_id=block.blocked_id,
-                blocked_username=block.blocked.username,
                 blocked_display_name=block.blocked.display_name,
                 reason=block.reason,
                 created_at=block.created_at,

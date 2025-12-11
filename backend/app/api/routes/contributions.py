@@ -287,7 +287,7 @@ class ContributorLeaderboardEntry(BaseModel):
     """Single entry in the contributor leaderboard."""
 
     user_id: uuid.UUID
-    username: str
+    display_name: str
     avatar_url: Optional[str] = None
     contribution_count: int
     approved_count: int
@@ -767,7 +767,7 @@ async def get_contributor_leaderboard(
     contributors = [
         ContributorLeaderboardEntry(
             user_id=row.id,
-            username=row.display_name,
+            display_name=row.display_name,
             avatar_url=row.avatar_url,
             contribution_count=row.total_count or 0,
             approved_count=row.approved_count or 0,

@@ -39,7 +39,7 @@ class ProposerInfo(BaseModel):
     """Brief info about the proposer."""
 
     id: uuid.UUID
-    username: str
+    display_name: str
     avatar_url: Optional[str] = None
 
 
@@ -77,7 +77,7 @@ class DecisionRead(BaseModel):
     decision: VerificationDecision
     notes: Optional[str] = None
     verifier_id: uuid.UUID
-    verifier_username: Optional[str] = None
+    verifier_display_name: Optional[str] = None
     decided_at: datetime
 
     model_config = {"from_attributes": True}
@@ -107,7 +107,7 @@ class VerifierLeaderboardEntry(BaseModel):
     """Entry in the verifier leaderboard."""
 
     verifier_id: uuid.UUID
-    username: str
+    display_name: str
     total_reviews: int
     approved: int
     rejected: int
@@ -208,7 +208,7 @@ async def list_proposals(
                 decision=proposal.decision.decision,
                 notes=proposal.decision.notes,
                 verifier_id=proposal.decision.verifier_id,
-                verifier_username=proposal.decision.verifier.username
+                verifier_display_name=proposal.decision.verifier.display_name
                 if proposal.decision.verifier
                 else None,
                 decided_at=proposal.decision.decided_at,
@@ -220,7 +220,7 @@ async def list_proposals(
                 map_version_id=proposal.map_version_id,
                 proposer=ProposerInfo(
                     id=proposal.proposer.id,
-                    username=proposal.proposer.username,
+                    display_name=proposal.proposer.display_name,
                     avatar_url=None,  # Add avatar if available
                 ),
                 summary=proposal.summary,
@@ -283,7 +283,7 @@ async def get_proposal(
             decision=proposal.decision.decision,
             notes=proposal.decision.notes,
             verifier_id=proposal.decision.verifier_id,
-            verifier_username=proposal.decision.verifier.username
+            verifier_display_name=proposal.decision.verifier.display_name
             if proposal.decision.verifier
             else None,
             decided_at=proposal.decision.decided_at,
@@ -294,7 +294,7 @@ async def get_proposal(
         map_version_id=proposal.map_version_id,
         proposer=ProposerInfo(
             id=proposal.proposer.id,
-            username=proposal.proposer.username,
+            display_name=proposal.proposer.display_name,
             avatar_url=None,
         ),
         summary=proposal.summary,
@@ -565,7 +565,7 @@ async def get_verifier_leaderboard(
     verifiers = [
         VerifierLeaderboardEntry(
             verifier_id=row.verifier_id,
-            username=row.display_name,
+            display_name=row.display_name,
             total_reviews=row.total_reviews or 0,
             approved=row.approved or 0,
             rejected=row.rejected or 0,
@@ -639,7 +639,7 @@ async def list_my_decisions(
                 decision=proposal.decision.decision,
                 notes=proposal.decision.notes,
                 verifier_id=proposal.decision.verifier_id,
-                verifier_username=proposal.decision.verifier.username
+                verifier_display_name=proposal.decision.verifier.display_name
                 if proposal.decision.verifier
                 else None,
                 decided_at=proposal.decision.decided_at,
@@ -651,7 +651,7 @@ async def list_my_decisions(
                 map_version_id=proposal.map_version_id,
                 proposer=ProposerInfo(
                     id=proposal.proposer.id,
-                    username=proposal.proposer.username,
+                    display_name=proposal.proposer.display_name,
                     avatar_url=None,
                 ),
                 summary=proposal.summary,

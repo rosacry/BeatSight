@@ -45,7 +45,6 @@ class UserPublicProfile(BaseModel):
     """Public user profile information."""
 
     id: UUID
-    username: str
     display_name: str
     avatar_url: Optional[str] = None
     karma_score: int
@@ -58,7 +57,6 @@ class UserSearchResult(BaseModel):
     """Search result item."""
 
     id: UUID
-    username: str
     display_name: str
     avatar_url: Optional[str] = None
 
@@ -149,7 +147,6 @@ class BlockedUserResponse(BaseModel):
 
     id: UUID
     blocked_id: UUID
-    blocked_username: str
     blocked_display_name: str
     reason: Optional[str] = None
     created_at: datetime

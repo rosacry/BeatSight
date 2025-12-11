@@ -104,12 +104,12 @@ export function ForumViewPage() {
         return (
             <div className="max-w-6xl mx-auto">
                 <div className="animate-pulse space-y-6">
-                    <div className="h-8 bg-gray-700 rounded w-64" />
-                    <div className="h-4 bg-gray-700 rounded w-96" />
-                    <div className="card bg-gray-800/50 border border-gray-700">
+                    <div className="h-8 bg-dark-300 rounded w-64" />
+                    <div className="h-4 bg-dark-300 rounded w-96" />
+                    <div className="card bg-dark-400/50 border border-white/10">
                         <div className="space-y-4">
                             {[1, 2, 3, 4, 5].map((i) => (
-                                <div key={i} className="h-20 bg-gray-700 rounded" />
+                                <div key={i} className="h-20 bg-dark-300 rounded" />
                             ))}
                         </div>
                     </div>
@@ -160,7 +160,7 @@ export function ForumViewPage() {
 
             {/* Create topic form */}
             {showCreateForm && (
-                <div className="card bg-gray-800/50 border border-gray-700">
+                <div className="card bg-dark-400/50 border border-white/10">
                     <h2 className="text-xl font-bold text-white mb-4">Create New Topic</h2>
                     <CreateTopicForm
                         forumId={forumId!}
@@ -206,11 +206,11 @@ export function ForumViewPage() {
             </div>
 
             {/* Topics list */}
-            <div className="card bg-gray-800/50 border border-gray-700 p-0 overflow-hidden">
+            <div className="card bg-dark-400/50 border border-white/10 p-0 overflow-hidden">
                 {topicsLoading ? (
                     <div className="p-4 space-y-4">
                         {[1, 2, 3, 4, 5].map((i) => (
-                            <div key={i} className="h-20 bg-gray-700 rounded animate-pulse" />
+                            <div key={i} className="h-20 bg-dark-300 rounded animate-pulse" />
                         ))}
                     </div>
                 ) : (
@@ -230,8 +230,8 @@ export function ForumViewPage() {
                         className={clsx(
                             'px-4 py-2 rounded transition-colors',
                             topicsData.has_prev
-                                ? 'bg-gray-800 text-white hover:bg-gray-700'
-                                : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
+                                ? 'bg-dark-400 text-white hover:bg-dark-300'
+                                : 'bg-dark-400/50 text-gray-500 cursor-not-allowed'
                         )}
                     >
                         Previous
@@ -273,8 +273,8 @@ export function ForumViewPage() {
                         className={clsx(
                             'px-4 py-2 rounded transition-colors',
                             topicsData.has_next
-                                ? 'bg-gray-800 text-white hover:bg-gray-700'
-                                : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
+                                ? 'bg-dark-400 text-white hover:bg-dark-300'
+                                : 'bg-dark-400/50 text-gray-500 cursor-not-allowed'
                         )}
                     >
                         Next

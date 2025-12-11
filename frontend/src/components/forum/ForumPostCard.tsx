@@ -80,7 +80,7 @@ export function ForumPostCard({
     // Deleted post display
     if (post.is_deleted) {
         return (
-            <div className="card bg-gray-800/30 border border-gray-700/50">
+            <div className="card bg-dark-400/30 border border-white/10/50">
                 <div className="flex items-center gap-3 text-gray-500 italic">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path
@@ -99,8 +99,8 @@ export function ForumPostCard({
     return (
         <div
             className={clsx(
-                'card bg-gray-800/50 border',
-                isFirstPost ? 'border-purple-500/30' : 'border-gray-700'
+                'card bg-dark-400/50 border',
+                isFirstPost ? 'border-purple-500/30' : 'border-white/10'
             )}
             id={`post-${post.id}`}
         >
@@ -195,14 +195,14 @@ export function ForumPostCard({
                             <textarea
                                 value={editContent}
                                 onChange={(e) => setEditContent(e.target.value)}
-                                className="w-full h-32 px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-y"
+                                className="w-full h-32 px-4 py-3 bg-dark-500 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-y"
                                 placeholder="Write your reply..."
                             />
                             <input
                                 type="text"
                                 value={editReason}
                                 onChange={(e) => setEditReason(e.target.value)}
-                                className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full px-3 py-2 bg-dark-500 border border-gray-600 rounded text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 placeholder="Edit reason (optional)"
                             />
                             <div className="flex gap-2">
@@ -248,7 +248,7 @@ export function ForumPostCard({
 
                     {/* Post actions */}
                     {!isEditing && (canEdit || canDelete) && (
-                        <div className="mt-4 pt-3 border-t border-gray-700 flex items-center gap-4">
+                        <div className="mt-4 pt-3 border-t border-white/10 flex items-center gap-4">
                             {canEdit && (
                                 <button
                                     onClick={() => setIsEditing(true)}

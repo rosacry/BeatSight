@@ -646,7 +646,7 @@ export const Heatmap = forwardRef<HTMLDivElement, HeatmapProps>(
 
                 {/* Tooltip */}
                 {showTooltips && hoveredCell && (
-                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 rounded text-xs text-white whitespace-nowrap z-10">
+                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-dark-400 rounded text-xs text-white whitespace-nowrap z-10">
                         {hoveredCell.label || `Value: ${(hoveredCell.value * 100).toFixed(0)}%`}
                     </div>
                 )}
@@ -721,7 +721,7 @@ export const DrumKitVisualizer = forwardRef<HTMLDivElement, DrumKitVisualizerPro
         return (
             <div
                 ref={ref}
-                className={cn('relative bg-gray-900/50 rounded-xl overflow-hidden', className)}
+                className={cn('relative bg-dark-500/50 rounded-xl overflow-hidden', className)}
                 style={{ aspectRatio: '4/3' }}
                 {...props}
             >
@@ -988,7 +988,7 @@ export const TimelineVisualizer = forwardRef<HTMLDivElement, TimelineVisualizerP
         return (
             <div
                 ref={ref}
-                className={cn('relative bg-gray-900/50 rounded-lg overflow-hidden', className)}
+                className={cn('relative bg-dark-500/50 rounded-lg overflow-hidden', className)}
                 style={{ height }}
                 {...props}
             >
@@ -1001,7 +1001,7 @@ export const TimelineVisualizer = forwardRef<HTMLDivElement, TimelineVisualizerP
                     {showTimeMarkers && markers.map(time => (
                         <div
                             key={time}
-                            className="absolute top-0 bottom-0 border-l border-gray-700"
+                            className="absolute top-0 bottom-0 border-l border-white/10"
                             style={{ left: `${(time / duration) * 100}%` }}
                         >
                             <span className="absolute top-1 left-1 text-[10px] text-gray-500">

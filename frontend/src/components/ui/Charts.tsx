@@ -69,7 +69,7 @@ export const BarChart = forwardRef<HTMLDivElement, BarChartProps>(
                                     <span className="text-white font-medium">{formatValue(item.value)}</span>
                                 )}
                             </div>
-                            <div className="h-2 bg-gray-700/50 rounded-full overflow-hidden">
+                            <div className="h-2 bg-dark-300/50 rounded-full overflow-hidden">
                                 <div
                                     className={clsx(
                                         'h-full rounded-full bg-gradient-to-r',
@@ -113,7 +113,7 @@ export const BarChart = forwardRef<HTMLDivElement, BarChartProps>(
                         </div>
                     ))}
                 </div>
-                <div className="flex gap-2 mt-2 pt-2 border-t border-gray-700/50">
+                <div className="flex gap-2 mt-2 pt-2 border-t border-white/10/50">
                     {data.map((item) => (
                         <div key={item.label} className="flex-1 text-center">
                             <span className="text-xs text-gray-400 truncate block">{item.label}</span>
@@ -497,7 +497,7 @@ export const StatCard = forwardRef<HTMLDivElement, StatCardProps>(
             <div
                 ref={ref}
                 className={clsx(
-                    'p-6 rounded-xl border border-gray-700/50 bg-gray-800/50 backdrop-blur-sm',
+                    'p-6 rounded-xl border border-white/10/50 bg-dark-400/50 backdrop-blur-sm',
                     className
                 )}
                 {...props}

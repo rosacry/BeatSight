@@ -11,7 +11,7 @@ const notificationVariants = cva(
     {
         variants: {
             variant: {
-                default: 'bg-gray-800 border-gray-700 text-white',
+                default: 'bg-dark-400 border-white/10 text-white',
                 success: 'bg-green-900/80 border-green-700 text-green-100',
                 error: 'bg-red-900/80 border-red-700 text-red-100',
                 warning: 'bg-yellow-900/80 border-yellow-700 text-yellow-100',
@@ -352,7 +352,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ count = 0, o
         <button
             onClick={onClick}
             className={cn(
-                'relative p-2 rounded-full hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-primary',
+                'relative p-2 rounded-full hover:bg-dark-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary',
                 className
             )}
             aria-label={`Notifications${count > 0 ? ` (${count} unread)` : ''}`}
@@ -388,7 +388,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({
     return (
         <div className={cn('w-full', className)}>
             {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-gray-700">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
                 <h3 className="text-sm font-semibold text-white">Notifications</h3>
                 {notifications.length > 0 && onClearAll && (
                     <button onClick={onClearAll} className="text-xs text-primary hover:underline">

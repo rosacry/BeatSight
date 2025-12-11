@@ -44,10 +44,10 @@ export function JobDetailPage() {
     if (isLoading) {
         return (
             <div className="space-y-6 animate-pulse">
-                <div className="h-8 bg-gray-700 rounded w-1/3" />
+                <div className="h-8 bg-dark-300 rounded w-1/3" />
                 <div className="card">
-                    <div className="h-4 bg-gray-700 rounded w-1/2 mb-4" />
-                    <div className="h-20 bg-gray-700 rounded" />
+                    <div className="h-4 bg-dark-300 rounded w-1/2 mb-4" />
+                    <div className="h-20 bg-dark-300 rounded" />
                 </div>
             </div>
         )
@@ -171,7 +171,7 @@ export function JobDetailPage() {
             {job.state === 'failed' && job.error_message && (
                 <div className="card bg-red-500/10 border border-red-500/20">
                     <h2 className="text-lg font-medium text-red-400 mb-2">Error Details</h2>
-                    <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono bg-gray-800 rounded p-4">
+                    <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono bg-dark-400 rounded p-4">
                         {job.error_message}
                     </pre>
                 </div>

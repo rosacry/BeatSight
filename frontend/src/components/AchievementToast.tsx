@@ -77,7 +77,7 @@ export function AchievementToast({ achievement, onDismiss }: AchievementToastPro
         <div
             className={cn(
                 'relative overflow-hidden rounded-xl shadow-2xl transition-all duration-300 ease-out',
-                'bg-gray-900 border border-gray-700',
+                'bg-dark-500 border border-white/10',
                 'w-80 cursor-pointer',
                 isVisible && !isLeaving ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
             )}
@@ -137,7 +137,7 @@ export function AchievementToast({ achievement, onDismiss }: AchievementToastPro
             </div>
 
             {/* Progress bar for auto-dismiss */}
-            <div className="h-1 bg-gray-800">
+            <div className="h-1 bg-dark-400">
                 <div
                     className={cn('h-full bg-gradient-to-r transition-all ease-linear', gradientColor)}
                     style={{

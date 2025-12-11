@@ -74,7 +74,7 @@ export function ForumPoll({ poll, topicId, isLocked = false }: ForumPollProps) {
     }
 
     return (
-        <div className="card bg-gray-800/50 border border-gray-700">
+        <div className="card bg-dark-400/50 border border-white/10">
             {/* Poll Header */}
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white">{poll.title}</h3>

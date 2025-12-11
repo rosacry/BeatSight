@@ -38,7 +38,7 @@ export function SubscriptionSettings() {
                 </h3>
 
                 {/* Current Plan Card */}
-                <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <div className="bg-dark-400 rounded-lg p-6 border border-white/10">
                     <div className="flex items-start justify-between">
                         <div>
                             <div className="flex items-center gap-3 mb-2">
@@ -95,14 +95,14 @@ export function SubscriptionSettings() {
                 <h3 className="text-lg font-semibold text-white mb-4">
                     AI Generation Quota
                 </h3>
-                <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <div className="bg-dark-400 rounded-lg p-6 border border-white/10">
                     <div className="flex items-center justify-between mb-3">
                         <span className="text-gray-300">Remaining this period</span>
                         <span className="text-white font-bold text-xl">
                             {subscription?.ai_quota_remaining ?? 3}
                         </span>
                     </div>
-                    <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div className="w-full bg-dark-300 rounded-full h-2">
                         <div
                             className="bg-primary-500 h-2 rounded-full transition-all"
                             style={{
@@ -122,7 +122,7 @@ export function SubscriptionSettings() {
                     <button
                         onClick={() => manageMutation.mutate()}
                         disabled={manageMutation.isPending}
-                        className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                        className="px-4 py-2 bg-dark-300 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50"
                     >
                         {manageMutation.isPending ? 'Loading...' : 'Manage Subscription'}
                     </button>

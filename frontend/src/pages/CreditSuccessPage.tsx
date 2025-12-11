@@ -61,10 +61,10 @@ export function CreditSuccessPage() {
                 </p>
 
                 {/* Credit balance display */}
-                <div className="bg-gray-800 rounded-xl p-6 mb-8 border border-gray-700">
+                <div className="bg-dark-400 rounded-xl p-6 mb-8 border border-white/10">
                     <p className="text-sm text-gray-400 mb-2">Your Credit Balance</p>
                     {isLoading ? (
-                        <div className="animate-pulse h-10 bg-gray-700 rounded w-24 mx-auto" />
+                        <div className="animate-pulse h-10 bg-dark-300 rounded w-24 mx-auto" />
                     ) : (
                         <p className="text-4xl font-bold text-primary-400">
                             {balance?.total_credits ?? 0}
@@ -83,7 +83,7 @@ export function CreditSuccessPage() {
                     </Link>
                     <Link
                         to="/library"
-                        className="block w-full py-3 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+                        className="block w-full py-3 bg-dark-300 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
                     >
                         Go to My Library
                     </Link>

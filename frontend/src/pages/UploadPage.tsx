@@ -175,7 +175,7 @@ export function UploadPage() {
                         </div>
 
                         {file && (
-                            <div className="mt-4 p-4 bg-gray-700 rounded-lg flex items-center justify-between">
+                            <div className="mt-4 p-4 bg-dark-300 rounded-lg flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <svg className="w-8 h-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
@@ -219,7 +219,7 @@ export function UploadPage() {
                             </svg>
                         </div>
                         <p className="text-white font-medium mb-2">Uploading...</p>
-                        <div className="w-full bg-gray-700 rounded-full h-2">
+                        <div className="w-full bg-dark-300 rounded-full h-2">
                             <div
                                 className="bg-primary-500 h-2 rounded-full transition-all"
                                 style={{ width: `${uploadProgress}%` }}
@@ -276,7 +276,7 @@ export function UploadPage() {
             )}
 
             {/* Help text */}
-            <div className="card bg-gray-800/50">
+            <div className="card bg-dark-400/50">
                 <h3 className="text-lg font-medium text-white mb-3">How it works</h3>
                 <ol className="list-decimal list-inside space-y-2 text-gray-400">
                     <li>Upload your audio file (song you want to play)</li>

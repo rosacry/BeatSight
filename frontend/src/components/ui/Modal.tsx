@@ -156,7 +156,7 @@ export function Modal({
                             'absolute top-4 right-4 z-10',
                             'p-2 rounded-lg',
                             'text-gray-400 hover:text-white',
-                            'hover:bg-gray-700/50 transition-colors'
+                            'hover:bg-dark-300/50 transition-colors'
                         )}
                         aria-label="Close modal"
                     >
@@ -241,7 +241,7 @@ export const ModalFooter = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElem
             <div
                 ref={ref}
                 className={clsx(
-                    'px-6 py-4 border-t border-gray-700/50',
+                    'px-6 py-4 border-t border-white/10/50',
                     'flex items-center justify-end gap-3',
                     className
                 )}
@@ -341,7 +341,7 @@ export function ConfirmDialog({
                         type="button"
                         onClick={onClose}
                         disabled={loading}
-                        className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+                        className="px-4 py-2 text-sm font-medium text-gray-300 bg-dark-300 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
                     >
                         {cancelText}
                     </button>

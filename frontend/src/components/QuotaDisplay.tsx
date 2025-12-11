@@ -34,7 +34,7 @@ export function QuotaDisplay({ quota, className, onBuyCredits }: QuotaDisplayPro
                             {quota.used_this_month} / {quota.limit_month}
                         </span>
                     </div>
-                    <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div className="w-full bg-dark-300 rounded-full h-2">
                         <div
                             className={`h-full rounded-full transition-all ${monthPercent > 90 ? 'bg-red-500' : monthPercent > 70 ? 'bg-yellow-500' : 'bg-primary-500'
                                 }`}
@@ -54,7 +54,7 @@ export function QuotaDisplay({ quota, className, onBuyCredits }: QuotaDisplayPro
                             {quota.used_today} / {quota.limit_day}
                         </span>
                     </div>
-                    <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div className="w-full bg-dark-300 rounded-full h-2">
                         <div
                             className={`h-full rounded-full transition-all ${dayPercent > 90 ? 'bg-red-500' : dayPercent > 70 ? 'bg-yellow-500' : 'bg-primary-500'
                                 }`}
@@ -67,7 +67,7 @@ export function QuotaDisplay({ quota, className, onBuyCredits }: QuotaDisplayPro
                 </div>
 
                 {/* Credits balance */}
-                <div className="pt-2 border-t border-gray-700">
+                <div className="pt-2 border-t border-white/10">
                     <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-400">Credits</span>
                         {loadingCredits ? (
@@ -86,7 +86,7 @@ export function QuotaDisplay({ quota, className, onBuyCredits }: QuotaDisplayPro
                 </div>
 
                 {/* Plan info */}
-                <div className="pt-2 border-t border-gray-700">
+                <div className="pt-2 border-t border-white/10">
                     <div className="flex justify-between items-center">
                         <span className="text-sm text-gray-400">Plan</span>
                         <span className="text-sm font-medium text-primary-400">

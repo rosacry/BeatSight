@@ -72,7 +72,7 @@ export class ErrorBoundary extends Component<Props, State> {
                                 <summary className="text-sm text-gray-500 cursor-pointer hover:text-gray-400">
                                     Error Details (Dev Only)
                                 </summary>
-                                <pre className="mt-2 p-4 bg-gray-800 rounded-lg text-xs text-red-400 overflow-auto">
+                                <pre className="mt-2 p-4 bg-dark-400 rounded-lg text-xs text-red-400 overflow-auto">
                                     {this.state.error.message}
                                     {'\n\n'}
                                     {this.state.error.stack}

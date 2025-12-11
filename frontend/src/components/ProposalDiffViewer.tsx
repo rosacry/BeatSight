@@ -205,7 +205,7 @@ export function ProposalDiffViewer({ diffPayload, className = '' }: ProposalDiff
 
             {/* Raw JSON view */}
             {showRawJson && (
-                <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
+                <div className="bg-dark-500 text-gray-100 p-4 rounded-lg overflow-x-auto">
                     <pre className="text-xs">
                         {JSON.stringify({ edit_type, edit_count, edits }, null, 2)}
                     </pre>
@@ -214,7 +214,7 @@ export function ProposalDiffViewer({ diffPayload, className = '' }: ProposalDiff
 
             {/* Full BSM content view */}
             {showBsmContent && bsm_content && (
-                <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
+                <div className="bg-dark-500 text-gray-100 p-4 rounded-lg overflow-x-auto">
                     <pre className="text-xs whitespace-pre-wrap">
                         {typeof bsm_content === 'string'
                             ? bsm_content.slice(0, 5000) + (bsm_content.length > 5000 ? '\n... (truncated)' : '')

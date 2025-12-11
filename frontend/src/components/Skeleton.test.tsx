@@ -22,7 +22,7 @@ describe('Skeleton components', () => {
             const { container } = render(<Skeleton />)
             const element = container.firstChild as HTMLElement
             expect(element).toHaveClass('animate-pulse')
-            expect(element).toHaveClass('bg-gray-700')
+            expect(element).toHaveClass('bg-dark-300')
         })
 
         it('applies custom className', () => {
@@ -84,7 +84,7 @@ describe('Skeleton components', () => {
     describe('Composite skeletons', () => {
         it('SongCardSkeleton renders all elements', () => {
             const { container } = render(<SongCardSkeleton />)
-            expect(container.querySelector('.bg-gray-800')).toBeInTheDocument()
+            expect(container.querySelector('.bg-dark-400')).toBeInTheDocument()
             // Should contain multiple skeleton elements
             expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(1)
         })
@@ -105,7 +105,7 @@ describe('Skeleton components', () => {
 
         it('JobCardSkeleton renders job card structure', () => {
             const { container } = render(<JobCardSkeleton />)
-            expect(container.querySelector('.bg-gray-800')).toBeInTheDocument()
+            expect(container.querySelector('.bg-dark-400')).toBeInTheDocument()
             // Contains progress bar skeleton (rounded-full)
             expect(container.querySelector('.rounded-full')).toBeInTheDocument()
         })
@@ -140,13 +140,13 @@ describe('Skeleton components', () => {
     describe('LibraryGridSkeleton', () => {
         it('renders default 8 cards', () => {
             const { container } = render(<LibraryGridSkeleton />)
-            const cards = container.querySelectorAll('.bg-gray-800.rounded-lg')
+            const cards = container.querySelectorAll('.bg-dark-400.rounded-lg')
             expect(cards).toHaveLength(8)
         })
 
         it('renders custom count of cards', () => {
             const { container } = render(<LibraryGridSkeleton count={4} />)
-            const cards = container.querySelectorAll('.bg-gray-800.rounded-lg')
+            const cards = container.querySelectorAll('.bg-dark-400.rounded-lg')
             expect(cards).toHaveLength(4)
         })
 

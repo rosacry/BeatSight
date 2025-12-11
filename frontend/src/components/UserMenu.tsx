@@ -119,7 +119,7 @@ export function UserMenu() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: 0.15 }}
-                            className="px-4 py-2 border-t border-gray-700/50"
+                            className="px-4 py-2 border-t border-white/10/50"
                         >
                             <div className="flex items-center justify-between">
                                 <span className="text-xs text-gray-400">Karma</span>
@@ -132,7 +132,7 @@ export function UserMenu() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: 0.2 }}
-                            className="border-t border-gray-700/50 py-1"
+                            className="border-t border-white/10/50 py-1"
                         >
                             <button
                                 onClick={handleLogout}

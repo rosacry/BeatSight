@@ -15,7 +15,7 @@ export function Skeleton({ className, label = 'Loading' }: SkeletonProps) {
     return (
         <div
             className={clsx(
-                'animate-pulse bg-gray-700 rounded',
+                'animate-pulse bg-dark-300 rounded',
                 className
             )}
             role="status"
@@ -51,7 +51,7 @@ export function SkeletonImage({ className }: SkeletonProps) {
 
 export function SongCardSkeleton() {
     return (
-        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <div className="bg-dark-400 rounded-lg p-4 border border-white/10">
             <SkeletonImage className="h-40 mb-4" />
             <SkeletonTitle className="mb-2" />
             <SkeletonText className="w-1/2 mb-2" />
@@ -65,7 +65,7 @@ export function SongCardSkeleton() {
 
 export function SongListItemSkeleton() {
     return (
-        <div className="flex items-center gap-4 p-4 bg-gray-800 rounded-lg border border-gray-700">
+        <div className="flex items-center gap-4 p-4 bg-dark-400 rounded-lg border border-white/10">
             <Skeleton className="h-12 w-12 rounded" />
             <div className="flex-1">
                 <SkeletonTitle className="mb-2 w-1/3" />
@@ -89,7 +89,7 @@ export function ProfileSkeleton() {
             </div>
             <div className="grid grid-cols-3 gap-4">
                 {[1, 2, 3].map((i) => (
-                    <div key={i} className="bg-gray-800 rounded-lg p-4">
+                    <div key={i} className="bg-dark-400 rounded-lg p-4">
                         <SkeletonText className="w-1/2 mb-2" />
                         <Skeleton className="h-8 w-16" />
                     </div>
@@ -101,7 +101,7 @@ export function ProfileSkeleton() {
 
 export function JobCardSkeleton() {
     return (
-        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <div className="bg-dark-400 rounded-lg p-4 border border-white/10">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                     <Skeleton className="h-10 w-10 rounded" />
@@ -119,7 +119,7 @@ export function JobCardSkeleton() {
 
 export function TableRowSkeleton({ columns = 5 }: { columns?: number }) {
     return (
-        <tr className="border-b border-gray-700">
+        <tr className="border-b border-white/10">
             {Array.from({ length: columns }).map((_, i) => (
                 <td key={i} className="p-4">
                     <SkeletonText className={i === 0 ? 'w-3/4' : 'w-1/2'} />

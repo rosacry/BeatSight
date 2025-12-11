@@ -346,7 +346,7 @@ export function FeatureFlagsDebugPanel() {
         <div className="fixed bottom-4 right-4 z-[9999]">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="bg-gray-900 text-white px-3 py-2 rounded-lg shadow-lg text-sm font-medium hover:bg-gray-800"
+                className="bg-dark-500 text-white px-3 py-2 rounded-lg shadow-lg text-sm font-medium hover:bg-dark-400"
             >
                 🚩 Flags ({flags.size})
             </button>
@@ -358,9 +358,9 @@ export function FeatureFlagsDebugPanel() {
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
                         transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
-                        className="absolute bottom-12 right-0 w-80 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl overflow-hidden"
+                        className="absolute bottom-12 right-0 w-80 bg-dark-500 border border-white/10 rounded-lg shadow-2xl overflow-hidden"
                     >
-                        <div className="p-3 border-b border-gray-700 flex items-center justify-between">
+                        <div className="p-3 border-b border-white/10 flex items-center justify-between">
                             <span className="font-medium text-white">Feature Flags</span>
                             <button
                                 onClick={refresh}
@@ -378,7 +378,7 @@ export function FeatureFlagsDebugPanel() {
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: index * 0.03, duration: 0.15 }}
-                                    className="px-3 py-2 border-b border-gray-800 last:border-0 flex items-center justify-between"
+                                    className="px-3 py-2 border-b border-white/10 last:border-0 flex items-center justify-between"
                                 >
                                     <div>
                                         <div className="text-sm text-white font-mono">{flag.key}</div>

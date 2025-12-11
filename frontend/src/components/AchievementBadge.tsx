@@ -63,7 +63,7 @@ export function AchievementBadge({
                 'flex items-center gap-3 rounded-lg border p-3 transition-all',
                 achievement.earned
                     ? `${colors.bg} ${colors.border}`
-                    : 'bg-gray-800/50 border-gray-700 opacity-50 grayscale'
+                    : 'bg-dark-400/50 border-white/10 opacity-50 grayscale'
             )}
         >
             {/* Icon */}
@@ -71,7 +71,7 @@ export function AchievementBadge({
                 className={cn(
                     'flex items-center justify-center rounded-full',
                     sizeClasses[size],
-                    achievement.earned ? colors.bg : 'bg-gray-700'
+                    achievement.earned ? colors.bg : 'bg-dark-300'
                 )}
             >
                 <svg

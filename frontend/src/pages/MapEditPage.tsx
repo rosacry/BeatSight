@@ -131,7 +131,7 @@ export function MapEditPage() {
                     </div>
                     <Link
                         to="/library"
-                        className="rounded bg-gray-700 px-4 py-2 text-sm hover:bg-gray-600"
+                        className="rounded bg-dark-300 px-4 py-2 text-sm hover:bg-gray-600"
                     >
                         Back to Library
                     </Link>
@@ -171,7 +171,7 @@ export function MapEditPage() {
                     <div className="flex items-center gap-3">
                         <Link
                             to={`/maps/${mapId}`}
-                            className="rounded bg-gray-700 px-4 py-2 text-sm hover:bg-gray-600"
+                            className="rounded bg-dark-300 px-4 py-2 text-sm hover:bg-gray-600"
                         >
                             Cancel
                         </Link>
@@ -196,7 +196,7 @@ export function MapEditPage() {
                 )}
 
                 {/* Comment input */}
-                <div className="rounded-lg bg-gray-800 p-4">
+                <div className="rounded-lg bg-dark-400 p-4">
                     <label className="mb-2 block text-sm font-medium text-gray-300">
                         Edit Comment (optional)
                     </label>
@@ -204,7 +204,7 @@ export function MapEditPage() {
                         value={comment}
                         onChange={(e) => setComment(e.target.value)}
                         placeholder="Describe what you changed and why..."
-                        className="w-full rounded bg-gray-700 px-3 py-2 text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        className="w-full rounded bg-dark-300 px-3 py-2 text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
                         rows={2}
                     />
                 </div>
@@ -220,7 +220,7 @@ export function MapEditPage() {
                 />
 
                 {/* Help text */}
-                <div className="rounded-lg bg-gray-800/50 p-4 text-sm text-gray-400">
+                <div className="rounded-lg bg-dark-400/50 p-4 text-sm text-gray-400">
                     <h3 className="mb-2 font-medium text-gray-300">How to Edit</h3>
                     <ul className="list-inside list-disc space-y-1">
                         <li>Click on notes to select them</li>

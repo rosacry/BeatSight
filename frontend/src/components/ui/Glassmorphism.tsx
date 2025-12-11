@@ -303,7 +303,7 @@ export const GlassSelect = forwardRef<HTMLSelectElement, GlassSelectProps>(
                         <option
                             key={option.value}
                             value={option.value}
-                            className="bg-gray-900 text-white"
+                            className="bg-dark-500 text-white"
                         >
                             {option.label}
                         </option>

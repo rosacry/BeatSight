@@ -671,7 +671,7 @@ async def get_public_user_profile(
                     User.restriction_level != 'banned',
                     or_(
                         UserSettings.hide_from_leaderboards.is_(None),
-                        UserSettings.hide_from_leaderboards == False
+                        UserSettings.hide_from_leaderboards.is_(False)
                     ),
                     or_(
                         User.karma_score > (user.karma_score or 0),
@@ -719,7 +719,7 @@ async def get_public_user_profile(
                     User.restriction_level != 'banned',
                     or_(
                         UserSettings.hide_from_leaderboards.is_(None),
-                        UserSettings.hide_from_leaderboards == False
+                        UserSettings.hide_from_leaderboards.is_(False)
                     ),
                     or_(
                         func.coalesce(contrib_subquery.c.approved_count, 0) > user_approved_count,
@@ -736,7 +736,7 @@ async def get_public_user_profile(
     except Exception as e:
         # If there's an issue calculating ranks, leave them null
         import logging
-        logging.error(f"Error calculating ranks: {e}")
+        logging.exception(f"Error calculating ranks for user {user.id}: {e}")
     
     return PublicUserProfile(
         id=str(user.id),

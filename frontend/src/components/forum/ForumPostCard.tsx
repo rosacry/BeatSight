@@ -143,6 +143,7 @@ export function ForumPostCard({
                                         <UsernameLink
                                             user={{
                                                 id: post.author.id || post.user_id,
+                                                user_number: post.author.user_number,
                                                 username: post.author.display_name,
                                                 display_name: post.author.display_name,
                                             }}

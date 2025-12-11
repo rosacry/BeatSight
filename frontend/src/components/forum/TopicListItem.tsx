@@ -126,6 +126,7 @@ export function TopicListItem({ topic, showForum = false }: TopicListItemProps) 
                                 <UsernameLink
                                     user={{
                                         id: topic.author.id,
+                                        user_number: topic.author.user_number,
                                         username: topic.author.display_name,
                                         display_name: topic.author.display_name,
                                     }}
@@ -178,6 +179,7 @@ export function TopicListItem({ topic, showForum = false }: TopicListItemProps) 
                                     <UsernameLink
                                         user={{
                                             id: topic.last_post.author.id,
+                                            user_number: topic.last_post.author.user_number,
                                             username: topic.last_post.author.display_name,
                                             display_name: topic.last_post.author.display_name,
                                         }}

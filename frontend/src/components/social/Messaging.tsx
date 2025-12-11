@@ -221,12 +221,13 @@ export function MessageThread({ partnerId }: MessageThreadProps) {
                     <UsernameLink
                         user={{
                             id: partner.id,
-                            username: partner.username,
+                            user_number: partner.user_number,
+                            username: partner.display_name,
                             display_name: partner.display_name,
                         }}
                         className="text-lg font-semibold"
                     />
-                    <p className="text-sm text-gray-400">@{partner.username}</p>
+                    <p className="text-sm text-gray-400">@{partner.display_name}</p>
                 </div>
             </div>
 

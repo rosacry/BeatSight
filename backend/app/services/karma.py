@@ -361,6 +361,7 @@ class KarmaService:
         result = await self.session.execute(
             select(
                 User.id,
+                User.user_number,
                 case(
                     (UserSettings.hide_from_leaderboards == True, literal("Secret Agent")),  # noqa: E712
                     else_=User.display_name
@@ -379,6 +380,7 @@ class KarmaService:
         return [
             {
                 "user_id": row.id,
+                "user_number": row.user_number,
                 "display_name": row.display_name,
                 "karma_score": row.karma_score,
                 "is_anonymous": row.is_anonymous,

@@ -13,7 +13,7 @@ const API_BASE = API_CONFIG.baseUrl
 
 export interface UserPublicProfile {
     id: string
-    username: string
+    user_number: number
     display_name: string
     avatar_url: string | null
     karma_score: number
@@ -22,7 +22,7 @@ export interface UserPublicProfile {
 
 export interface UserSearchResult {
     id: string
-    username: string
+    user_number: number
     display_name: string
     avatar_url: string | null
 }

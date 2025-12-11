@@ -45,6 +45,7 @@ class UserPublicProfile(BaseModel):
     """Public user profile information."""
 
     id: UUID
+    user_number: int
     display_name: str
     avatar_url: Optional[str] = None
     karma_score: int
@@ -57,6 +58,7 @@ class UserSearchResult(BaseModel):
     """Search result item."""
 
     id: UUID
+    user_number: int
     display_name: str
     avatar_url: Optional[str] = None
 

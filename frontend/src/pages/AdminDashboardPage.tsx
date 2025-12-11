@@ -67,7 +67,7 @@ interface ContributionStats {
 
 interface VerifierLeaderboard {
     verifier_id: string
-    username: string
+    display_name: string
     total_reviews: number
     approved: number
     rejected: number
@@ -1318,8 +1318,8 @@ export function AdminDashboardPage() {
                                                                     setNewTagTextColor(color.text)
                                                                 }}
                                                                 className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${newTagBgColor === color.bg
-                                                                        ? 'border-white/50 bg-dark-200'
-                                                                        : 'border-white/10 hover:border-white/30'
+                                                                    ? 'border-white/50 bg-dark-200'
+                                                                    : 'border-white/10 hover:border-white/30'
                                                                     }`}
                                                             >
                                                                 <div
@@ -1590,7 +1590,7 @@ export function AdminDashboardPage() {
                                                         }`}>
                                                         {index + 1}
                                                     </span>
-                                                    <span className="text-white font-medium">@{verifier.username}</span>
+                                                    <span className="text-white font-medium">@{verifier.display_name}</span>
                                                 </div>
                                                 <div className="flex items-center gap-4 text-sm">
                                                     <span className="text-gray-400">{verifier.total_reviews} reviews</span>
@@ -1874,7 +1874,7 @@ function ReportsTabContent() {
                                                     />
                                                     <span className="text-gray-400">
                                                         about <Link
-                                                            to={`/user/${report.reported_user.id}`}
+                                                            to={`/user/${report.reported_user.user_number}`}
                                                             className="text-primary-400 hover:text-primary-300"
                                                             onClick={(e) => e.stopPropagation()}
                                                         >
@@ -1963,12 +1963,12 @@ function ReportsTabContent() {
                                             />
                                             <div>
                                                 <Link
-                                                    to={`/user/${selectedReport.reporter.id}`}
+                                                    to={`/user/${selectedReport.reporter.user_number}`}
                                                     className="text-white font-medium hover:text-primary-400"
                                                 >
                                                     {selectedReport.reporter.display_name}
                                                 </Link>
-                                                <p className="text-gray-500 text-sm">@{selectedReport.reporter.username}</p>
+                                                <p className="text-gray-500 text-sm">@{selectedReport.reporter.display_name}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -1982,12 +1982,12 @@ function ReportsTabContent() {
                                             />
                                             <div>
                                                 <Link
-                                                    to={`/user/${selectedReport.reported_user.id}`}
+                                                    to={`/user/${selectedReport.reported_user.user_number}`}
                                                     className="text-white font-medium hover:text-primary-400"
                                                 >
                                                     {selectedReport.reported_user.display_name}
                                                 </Link>
-                                                <p className="text-gray-500 text-sm">@{selectedReport.reported_user.username}</p>
+                                                <p className="text-gray-500 text-sm">@{selectedReport.reported_user.display_name}</p>
                                             </div>
                                         </div>
                                     </div>

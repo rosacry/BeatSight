@@ -20,7 +20,7 @@ import {
 
 interface Proposer {
     id: string
-    username: string
+    display_name: string
     avatar_url: string | null
 }
 
@@ -336,7 +336,7 @@ export function VerifierDashboardPage() {
                                                                     {proposal.status}
                                                                 </span>
                                                                 <span className="text-sm text-gray-400">
-                                                                    by @{proposal.proposer.username}
+                                                                    by @{proposal.proposer.display_name}
                                                                 </span>
                                                             </div>
                                                             <h3 className="font-medium text-lg text-white">{proposal.summary}</h3>
@@ -412,7 +412,7 @@ export function VerifierDashboardPage() {
                                                     </div>
                                                     <h3 className="font-medium text-white">{proposal.summary}</h3>
                                                     <p className="text-sm text-gray-400 mt-1">
-                                                        by @{proposal.proposer.username} • {formatDate(proposal.submitted_at)}
+                                                        by @{proposal.proposer.display_name} • {formatDate(proposal.submitted_at)}
                                                     </p>
                                                     {proposal.decision?.notes && (
                                                         <p className="text-sm text-gray-300 mt-2 italic">
@@ -448,7 +448,7 @@ export function VerifierDashboardPage() {
                                         <div className="mb-4">
                                             <h3 className="font-medium text-white mb-2">{selectedProposal.summary}</h3>
                                             <p className="text-sm text-gray-400">
-                                                Submitted by @{selectedProposal.proposer.username} on {formatDate(selectedProposal.submitted_at)}
+                                                Submitted by @{selectedProposal.proposer.display_name} on {formatDate(selectedProposal.submitted_at)}
                                             </p>
                                         </div>
 
@@ -463,7 +463,7 @@ export function VerifierDashboardPage() {
                                         <div className="mb-4 bg-primary-500/10 border border-primary-500/30 rounded-lg p-4">
                                             <h4 className="font-medium text-primary-400 mb-2">Karma Impact</h4>
                                             <p className="text-sm text-gray-300">
-                                                Your decision will affect @{selectedProposal.proposer.username}'s karma:
+                                                Your decision will affect @{selectedProposal.proposer.display_name}'s karma:
                                             </p>
                                             <div className="flex gap-4 mt-2">
                                                 <span className="text-green-400 font-medium">

@@ -186,9 +186,6 @@ export function ProfilePage() {
                             )}
                         </div>
                         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-1 text-sm text-gray-400">
-                            {user.user_number && (
-                                <span className="font-mono text-gray-500">#{user.user_number}</span>
-                            )}
                             <span>Joined {format(new Date(user.created_at), 'MMMM yyyy')}</span>
                         </div>
                     </div>
@@ -303,7 +300,7 @@ export function ProfilePage() {
                                         <div className="bg-dark-300/30 rounded-lg p-3">
                                             <dt className="text-xs text-gray-500 uppercase tracking-wider">User ID</dt>
                                             <dd className="text-white mt-1 font-mono text-sm">
-                                                {user.user_number ? `#${user.user_number}` : user.id}
+                                                {user.user_number ?? user.id}
                                             </dd>
                                         </div>
                                         <div className="bg-dark-300/30 rounded-lg p-3">

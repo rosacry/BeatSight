@@ -44,7 +44,7 @@ interface ProfileTag {
 
 interface PublicUserProfile {
     id: string
-    user_number: number  // Human-friendly ID like osu! (e.g., 1000001)
+    user_number: number  // Human-friendly ID like osu! (e.g., 1)
     display_name: string
     avatar_url: string | null
     banner_url: string | null
@@ -56,6 +56,8 @@ interface PublicUserProfile {
     bio: string | null
     // Custom profile tags (like osu!'s DEV, VIP, etc.)
     tags: ProfileTag[]
+    // Leaderboard ranking (null if hidden)
+    leaderboard_rank: number | null
     // Stats
     songs_uploaded: number
     maps_generated: number
@@ -354,10 +356,13 @@ export function UserProfilePage() {
                             </div>
 
                             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
-                                {/* User number like osu! */}
-                                {profile.user_number && (
-                                    <span className="font-mono text-gray-500">
-                                        #{profile.user_number}
+                                {/* Leaderboard Rank */}
+                                {profile.leaderboard_rank && (
+                                    <span className="flex items-center gap-1 text-yellow-400">
+                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                        </svg>
+                                        Rank #{profile.leaderboard_rank.toLocaleString()}
                                     </span>
                                 )}
                                 {profile.country_code && (

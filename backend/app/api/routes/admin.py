@@ -611,6 +611,7 @@ class AdminUserSummary(BaseModel):
     """User summary for admin list view."""
 
     id: uuid.UUID
+    user_number: int | None = None  # Human-friendly ID
     email: str
     display_name: str
     role: str
@@ -814,6 +815,7 @@ async def list_users(
         user_summaries.append(
             AdminUserSummary(
                 id=user.id,
+                user_number=user.user_number,
                 email=user.email,
                 display_name=user.display_name,
                 role=primary_role,
@@ -943,6 +945,7 @@ async def get_user_detail(
 
     return AdminUserSummary(
         id=user.id,
+        user_number=user.user_number,
         email=user.email,
         display_name=user.display_name,
         role=primary_role,

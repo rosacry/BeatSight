@@ -50,10 +50,10 @@ export const Card: React.FC<CardProps> = ({
     ...props
 }) => {
     const variantStyles = {
-        default: 'bg-slate-800/50 border border-slate-700/50',
-        elevated: 'bg-slate-800 shadow-xl shadow-black/20',
-        outlined: 'bg-transparent border-2 border-slate-700',
-        glass: 'bg-slate-800/30 backdrop-blur-md border border-slate-600/30',
+        default: 'bg-dark-400/50 border border-white/10/50',
+        elevated: 'bg-dark-400 shadow-xl shadow-black/20',
+        outlined: 'bg-transparent border-2 border-white/10',
+        glass: 'bg-dark-400/30 backdrop-blur-md border border-white/10/30',
     };
 
     const paddingStyles = {
@@ -69,7 +69,7 @@ export const Card: React.FC<CardProps> = ({
         rounded-2xl transition-all duration-300
         ${variantStyles[variant]}
         ${paddingStyles[padding]}
-        ${hover ? 'hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/5 hover:-translate-y-0.5' : ''}
+        ${hover ? 'hover:border-primary-500/30 hover:shadow-lg hover:shadow-cyan-500/5 hover:-translate-y-0.5' : ''}
         ${className}
       `}
             {...props}
@@ -119,12 +119,12 @@ export const TrackCard: React.FC<TrackCardProps> = ({
         <Card hover className="group">
             <div className="flex items-center gap-4">
                 {/* Album Art */}
-                <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-slate-700 flex-shrink-0">
+                <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-dark-300 flex-shrink-0">
                     {coverUrl ? (
                         <img src={coverUrl} alt={title} className="w-full h-full object-cover" />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                            <Music className="w-8 h-8 text-slate-500" />
+                            <Music className="w-8 h-8 text-gray-500" />
                         </div>
                     )}
                     {/* Play Overlay */}
@@ -140,16 +140,16 @@ export const TrackCard: React.FC<TrackCardProps> = ({
                     </button>
                     {/* Playing Indicator */}
                     {isPlaying && (
-                        <div className="absolute bottom-1 right-1 w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+                        <div className="absolute bottom-1 right-1 w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
                     )}
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-white truncate">{title}</h3>
-                    <p className="text-sm text-slate-400 truncate">{artist}</p>
+                    <p className="text-sm text-gray-400 truncate">{artist}</p>
                     <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-slate-500 flex items-center gap-1">
+                        <span className="text-xs text-gray-500 flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             {duration}
                         </span>
@@ -165,14 +165,14 @@ export const TrackCard: React.FC<TrackCardProps> = ({
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                         onClick={onFavorite}
-                        className={`p-2 rounded-lg transition-colors ${isFavorite ? 'text-red-400' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                        className={`p-2 rounded-lg transition-colors ${isFavorite ? 'text-red-400' : 'text-gray-400 hover:text-white hover:bg-dark-300/50'
                             }`}
                     >
                         <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
                     </button>
                     <button
                         onClick={onMore}
-                        className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 transition-colors"
+                        className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-dark-300/50 transition-colors"
                     >
                         <MoreHorizontal className="w-5 h-5" />
                     </button>
@@ -206,36 +206,36 @@ export const StatCard: React.FC<StatCardProps> = ({
     variant = 'default',
 }) => {
     const variantStyles = {
-        default: 'from-slate-800 to-slate-800/50',
-        cyan: 'from-cyan-500/20 to-slate-800/50',
-        purple: 'from-purple-500/20 to-slate-800/50',
-        amber: 'from-amber-500/20 to-slate-800/50',
-        emerald: 'from-emerald-500/20 to-slate-800/50',
+        default: 'from-dark-400 to-dark-400/50',
+        cyan: 'from-primary-500/20 to-dark-400/50',
+        purple: 'from-purple-500/20 to-dark-400/50',
+        amber: 'from-amber-500/20 to-dark-400/50',
+        emerald: 'from-emerald-500/20 to-dark-400/50',
     };
 
     const iconBgStyles = {
-        default: 'bg-slate-700',
-        cyan: 'bg-cyan-500/20',
+        default: 'bg-dark-300',
+        cyan: 'bg-primary-500/20',
         purple: 'bg-purple-500/20',
         amber: 'bg-amber-500/20',
         emerald: 'bg-emerald-500/20',
     };
 
     return (
-        <div className={`rounded-2xl bg-gradient-to-br ${variantStyles[variant]} border border-slate-700/50 p-5`}>
+        <div className={`rounded-2xl bg-gradient-to-br ${variantStyles[variant]} border border-white/10/50 p-5`}>
             <div className="flex items-start justify-between">
                 <div className="space-y-2">
-                    <p className="text-sm text-slate-400">{label}</p>
+                    <p className="text-sm text-gray-400">{label}</p>
                     <p className="text-3xl font-bold text-white">{value}</p>
                     {change !== undefined && (
                         <div className="flex items-center gap-1.5">
                             {trend === 'up' && <TrendingUp className="w-4 h-4 text-emerald-400" />}
                             {trend === 'down' && <TrendingDown className="w-4 h-4 text-red-400" />}
-                            <span className={`text-sm font-medium ${trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-red-400' : 'text-slate-400'
+                            <span className={`text-sm font-medium ${trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-red-400' : 'text-gray-400'
                                 }`}>
                                 {change > 0 ? '+' : ''}{change}%
                             </span>
-                            {changeLabel && <span className="text-sm text-slate-500">{changeLabel}</span>}
+                            {changeLabel && <span className="text-sm text-gray-500">{changeLabel}</span>}
                         </div>
                     )}
                 </div>
@@ -276,8 +276,8 @@ export const UserCard: React.FC<UserCardProps> = ({
         <Card variant="glass" hover className="text-center">
             {/* Avatar */}
             <div className="relative inline-block mx-auto mb-4">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 p-0.5">
-                    <div className="w-full h-full rounded-full overflow-hidden bg-slate-800">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary-500 to-purple-500 p-0.5">
+                    <div className="w-full h-full rounded-full overflow-hidden bg-dark-400">
                         {avatarUrl ? (
                             <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
                         ) : (
@@ -288,22 +288,22 @@ export const UserCard: React.FC<UserCardProps> = ({
                     </div>
                 </div>
                 {isOnline !== undefined && (
-                    <div className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-slate-800 ${isOnline ? 'bg-emerald-500' : 'bg-slate-500'
+                    <div className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-white/10 ${isOnline ? 'bg-emerald-500' : 'bg-slate-500'
                         }`} />
                 )}
             </div>
 
             {/* Info */}
             <h3 className="font-semibold text-white">{name}</h3>
-            {subtitle && <p className="text-sm text-slate-400 mt-0.5">{subtitle}</p>}
+            {subtitle && <p className="text-sm text-gray-400 mt-0.5">{subtitle}</p>}
 
             {/* Stats */}
             {stats && stats.length > 0 && (
-                <div className="flex justify-center gap-6 mt-4 pt-4 border-t border-slate-700/50">
+                <div className="flex justify-center gap-6 mt-4 pt-4 border-t border-white/10/50">
                     {stats.map((stat, index) => (
                         <div key={index} className="text-center">
                             <p className="font-semibold text-white">{stat.value}</p>
-                            <p className="text-xs text-slate-500">{stat.label}</p>
+                            <p className="text-xs text-gray-500">{stat.label}</p>
                         </div>
                     ))}
                 </div>
@@ -314,8 +314,8 @@ export const UserCard: React.FC<UserCardProps> = ({
                 <button
                     onClick={onFollow}
                     className={`mt-4 w-full py-2 rounded-xl font-medium transition-colors ${isFollowing
-                            ? 'bg-slate-700 text-white hover:bg-slate-600'
-                            : 'bg-cyan-500 text-white hover:bg-cyan-400'
+                            ? 'bg-dark-300 text-white hover:bg-dark-300'
+                            : 'bg-primary-500 text-white hover:bg-primary-400'
                         }`}
                 >
                     {isFollowing ? 'Following' : 'Follow'}
@@ -348,14 +348,14 @@ export const FeatureCard: React.FC<FeatureCardProps> = ({
     action,
 }) => {
     const gradientStyles = {
-        cyan: 'from-cyan-500/20 via-transparent to-transparent',
+        cyan: 'from-primary-500/20 via-transparent to-transparent',
         purple: 'from-purple-500/20 via-transparent to-transparent',
         amber: 'from-amber-500/20 via-transparent to-transparent',
         emerald: 'from-emerald-500/20 via-transparent to-transparent',
     };
 
     const iconColors = {
-        cyan: 'text-cyan-400',
+        cyan: 'text-primary-400',
         purple: 'text-purple-400',
         amber: 'text-amber-400',
         emerald: 'text-emerald-400',
@@ -367,11 +367,11 @@ export const FeatureCard: React.FC<FeatureCardProps> = ({
             <div className={`absolute -top-10 -right-10 w-32 h-32 rounded-full ${gradientStyles[gradient]} blur-2xl opacity-50`} />
 
             <div className="relative">
-                <div className={`w-12 h-12 rounded-xl bg-slate-700/50 flex items-center justify-center mb-4 ${iconColors[gradient]}`}>
+                <div className={`w-12 h-12 rounded-xl bg-dark-300/50 flex items-center justify-center mb-4 ${iconColors[gradient]}`}>
                     {icon}
                 </div>
                 <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">{description}</p>
+                <p className="text-gray-400 text-sm leading-relaxed">{description}</p>
                 {action && (
                     <button
                         onClick={action.onClick}
@@ -414,11 +414,11 @@ export const PricingCard: React.FC<PricingCardProps> = ({
     return (
         <Card
             variant={isPopular ? 'elevated' : 'default'}
-            className={`relative ${isPopular ? 'ring-2 ring-cyan-500' : ''}`}
+            className={`relative ${isPopular ? 'ring-2 ring-primary-500' : ''}`}
         >
             {isPopular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="px-3 py-1 rounded-full bg-gradient-to-r from-cyan-500 to-purple-500 text-white text-xs font-medium">
+                    <span className="px-3 py-1 rounded-full bg-gradient-to-r from-primary-500 to-purple-500 text-white text-xs font-medium">
                         Most Popular
                     </span>
                 </div>
@@ -426,25 +426,25 @@ export const PricingCard: React.FC<PricingCardProps> = ({
 
             <div className="text-center mb-6">
                 <h3 className="text-lg font-semibold text-white">{name}</h3>
-                {description && <p className="text-sm text-slate-400 mt-1">{description}</p>}
+                {description && <p className="text-sm text-gray-400 mt-1">{description}</p>}
                 <div className="mt-4">
                     <span className="text-4xl font-bold text-white">${price}</span>
-                    <span className="text-slate-400">{period}</span>
+                    <span className="text-gray-400">{period}</span>
                 </div>
             </div>
 
             <ul className="space-y-3 mb-6">
                 {features.map((feature, index) => (
                     <li key={index} className="flex items-center gap-3">
-                        <div className={`w-5 h-5 rounded-full flex items-center justify-center ${feature.included ? 'bg-cyan-500/20' : 'bg-slate-700'
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center ${feature.included ? 'bg-primary-500/20' : 'bg-dark-300'
                             }`}>
                             {feature.included ? (
-                                <Check className="w-3 h-3 text-cyan-400" />
+                                <Check className="w-3 h-3 text-primary-400" />
                             ) : (
                                 <span className="w-1.5 h-0.5 bg-slate-500 rounded-full" />
                             )}
                         </div>
-                        <span className={feature.included ? 'text-slate-300' : 'text-slate-500'}>
+                        <span className={feature.included ? 'text-gray-300' : 'text-gray-500'}>
                             {feature.text}
                         </span>
                     </li>
@@ -454,8 +454,8 @@ export const PricingCard: React.FC<PricingCardProps> = ({
             <button
                 onClick={onSelect}
                 className={`w-full py-3 rounded-xl font-medium transition-colors ${isPopular
-                        ? 'bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:opacity-90'
-                        : 'bg-slate-700 text-white hover:bg-slate-600'
+                        ? 'bg-gradient-to-r from-primary-500 to-purple-500 text-white hover:opacity-90'
+                        : 'bg-dark-300 text-white hover:bg-dark-300'
                     }`}
             >
                 {ctaText}
@@ -489,14 +489,14 @@ export function DataTable<T extends { id: string | number }>({
     emptyMessage = 'No data available',
 }: DataTableProps<T>) {
     return (
-        <div className="overflow-x-auto rounded-xl border border-slate-700/50">
+        <div className="overflow-x-auto rounded-xl border border-white/10/50">
             <table className="w-full">
                 <thead>
-                    <tr className="bg-slate-800/50">
+                    <tr className="bg-dark-400/50">
                         {columns.map((col) => (
                             <th
                                 key={String(col.key)}
-                                className="px-4 py-3 text-left text-sm font-medium text-slate-400"
+                                className="px-4 py-3 text-left text-sm font-medium text-gray-400"
                                 style={{ width: col.width }}
                             >
                                 {col.header}
@@ -507,7 +507,7 @@ export function DataTable<T extends { id: string | number }>({
                 <tbody>
                     {data.length === 0 ? (
                         <tr>
-                            <td colSpan={columns.length} className="px-4 py-8 text-center text-slate-500">
+                            <td colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">
                                 {emptyMessage}
                             </td>
                         </tr>
@@ -517,12 +517,12 @@ export function DataTable<T extends { id: string | number }>({
                                 key={item.id}
                                 onClick={() => onRowClick?.(item)}
                                 className={`
-                  border-t border-slate-700/30 transition-colors
-                  ${onRowClick ? 'cursor-pointer hover:bg-slate-800/50' : ''}
+                  border-t border-white/10/30 transition-colors
+                  ${onRowClick ? 'cursor-pointer hover:bg-dark-400/50' : ''}
                 `}
                             >
                                 {columns.map((col) => (
-                                    <td key={String(col.key)} className="px-4 py-3 text-sm text-slate-300">
+                                    <td key={String(col.key)} className="px-4 py-3 text-sm text-gray-300">
                                         {col.render ? col.render(item[col.key], item) : String(item[col.key])}
                                     </td>
                                 ))}
@@ -563,22 +563,22 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     const lines = code.split('\n');
 
     return (
-        <div className="rounded-xl overflow-hidden border border-slate-700/50">
+        <div className="rounded-xl overflow-hidden border border-white/10/50">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-2 bg-slate-800/80 border-b border-slate-700/50">
+            <div className="flex items-center justify-between px-4 py-2 bg-dark-400/80 border-b border-white/10/50">
                 <div className="flex items-center gap-2">
                     <div className="flex gap-1.5">
                         <div className="w-3 h-3 rounded-full bg-red-500/80" />
                         <div className="w-3 h-3 rounded-full bg-amber-500/80" />
                         <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
                     </div>
-                    {title && <span className="text-sm text-slate-400 ml-2">{title}</span>}
+                    {title && <span className="text-sm text-gray-400 ml-2">{title}</span>}
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500">{language}</span>
+                    <span className="text-xs text-gray-500">{language}</span>
                     <button
                         onClick={handleCopy}
-                        className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                        className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-dark-300 transition-colors"
                     >
                         {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                     </button>
@@ -586,9 +586,9 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
             </div>
 
             {/* Code */}
-            <div className="bg-slate-900/50 overflow-x-auto">
+            <div className="bg-dark-500/50 overflow-x-auto">
                 <pre className="p-4 text-sm">
-                    <code className="text-slate-300">
+                    <code className="text-gray-300">
                         {showLineNumbers ? (
                             <table className="w-full">
                                 <tbody>
@@ -644,7 +644,7 @@ export const LinkCard: React.FC<LinkCardProps> = ({
                 <div className="flex gap-4">
                     {/* Image Preview */}
                     {imageUrl && (
-                        <div className="w-32 h-24 rounded-lg overflow-hidden bg-slate-700 flex-shrink-0">
+                        <div className="w-32 h-24 rounded-lg overflow-hidden bg-dark-300 flex-shrink-0">
                             <img src={imageUrl} alt="" className="w-full h-full object-cover" />
                         </div>
                     )}
@@ -653,14 +653,14 @@ export const LinkCard: React.FC<LinkCardProps> = ({
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                             {favicon && <img src={favicon} alt="" className="w-4 h-4" />}
-                            <span className="text-xs text-slate-500">{domain}</span>
-                            <ExternalLink className="w-3 h-3 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <span className="text-xs text-gray-500">{domain}</span>
+                            <ExternalLink className="w-3 h-3 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
-                        <h3 className="font-medium text-white group-hover:text-cyan-400 transition-colors truncate">
+                        <h3 className="font-medium text-white group-hover:text-primary-400 transition-colors truncate">
                             {title}
                         </h3>
                         {description && (
-                            <p className="text-sm text-slate-400 line-clamp-2 mt-1">{description}</p>
+                            <p className="text-sm text-gray-400 line-clamp-2 mt-1">{description}</p>
                         )}
                     </div>
                 </div>
@@ -685,7 +685,7 @@ export const QuickStats: React.FC<QuickStatsProps> = ({ stats }) => {
     return (
         <div className="flex items-center gap-6 flex-wrap">
             {stats.map((stat, index) => (
-                <div key={index} className="flex items-center gap-2 text-slate-400">
+                <div key={index} className="flex items-center gap-2 text-gray-400">
                     {stat.icon}
                     <span className="font-medium text-white">{stat.value}</span>
                     <span className="text-sm">{stat.label}</span>

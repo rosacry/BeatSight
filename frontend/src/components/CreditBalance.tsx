@@ -64,7 +64,7 @@ export function CreditBalance({
             content={
                 <div className="text-center">
                     <div className="font-medium">Credit Balance</div>
-                    <div className="text-slate-400 text-xs mt-1">Click to buy more credits</div>
+                    <div className="text-gray-400 text-xs mt-1">Click to buy more credits</div>
                 </div>
             }
         >
@@ -72,15 +72,15 @@ export function CreditBalance({
                 onClick={handleClick}
                 data-tour="credits"
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full 
-                      bg-cyan-500/10 border border-cyan-500/30 
-                      hover:bg-cyan-500/20 hover:border-cyan-400/50
+                      bg-primary-500/10 border border-primary-500/30 
+                      hover:bg-primary-500/20 hover:border-primary-400/50
                       active:scale-95
                       transition-all duration-200 ${className}`}
                 aria-label={`${displayCredits} credits available. Click to buy more.`}
             >
                 {/* Credit coin icon */}
                 <svg
-                    className="w-4 h-4 text-cyan-400"
+                    className="w-4 h-4 text-primary-400"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                 >
@@ -89,9 +89,9 @@ export function CreditBalance({
 
                 {/* Balance */}
                 {isLoading && lastKnownCredits === null ? (
-                    <span className="text-sm text-slate-400 animate-pulse">...</span>
+                    <span className="text-sm text-gray-400 animate-pulse">...</span>
                 ) : (
-                    <span className="text-sm font-medium text-cyan-300 tabular-nums">
+                    <span className="text-sm font-medium text-primary-300 tabular-nums">
                         {displayCredits}
                     </span>
                 )}

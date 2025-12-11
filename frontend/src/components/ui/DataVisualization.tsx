@@ -80,18 +80,18 @@ export function StatCard({
                 'bg-gradient-to-br from-gray-900/80 to-gray-950/80',
                 'border border-white/10 backdrop-blur-sm',
                 'p-6 transition-all duration-300',
-                'hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/10',
+                'hover:border-primary-500/30 hover:shadow-lg hover:shadow-cyan-500/10',
                 className
             )}
         >
             {/* Background glow */}
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+            <div className="absolute inset-0 bg-gradient-to-br from-primary-500/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
 
             <div className="relative z-10">
                 <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-gray-400 font-medium">{label}</span>
                     {icon && (
-                        <span className="text-cyan-400 opacity-60">{icon}</span>
+                        <span className="text-primary-400 opacity-60">{icon}</span>
                     )}
                 </div>
 

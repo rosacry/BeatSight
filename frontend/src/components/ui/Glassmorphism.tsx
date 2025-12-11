@@ -22,7 +22,7 @@ const glassPanelVariants = cva(
                 light: 'bg-white/10 border-white/20 hover:bg-white/15',
                 dark: 'bg-black/20 border-white/5 hover:bg-black/30',
                 frost: 'bg-white/[0.02] border-white/[0.05] hover:border-white/10',
-                glow: 'bg-white/5 border-cyan-500/20 shadow-[0_0_30px_rgba(0,212,255,0.1)]',
+                glow: 'bg-white/5 border-primary-500/20 shadow-[0_0_30px_rgba(0,212,255,0.1)]',
                 gradient: 'bg-gradient-to-br from-white/10 to-white/5 border-white/10',
             },
             rounded: {
@@ -123,7 +123,7 @@ const glassButtonVariants = cva(
         'relative overflow-hidden inline-flex items-center justify-center gap-2',
         'font-medium transition-all duration-300',
         'backdrop-blur-md border',
-        'focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:ring-offset-2 focus:ring-offset-transparent',
+        'focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:ring-offset-2 focus:ring-offset-transparent',
         'disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none',
     ],
     {
@@ -134,8 +134,8 @@ const glassButtonVariants = cva(
                     'hover:bg-white/20 hover:border-white/30',
                 ],
                 primary: [
-                    'bg-cyan-500/20 border-cyan-500/30 text-cyan-300',
-                    'hover:bg-cyan-500/30 hover:border-cyan-500/50 hover:text-cyan-200',
+                    'bg-primary-500/20 border-primary-500/30 text-primary-300',
+                    'hover:bg-primary-500/30 hover:border-primary-500/50 hover:text-cyan-200',
                     'hover:shadow-[0_0_20px_rgba(0,212,255,0.3)]',
                 ],
                 accent: [
@@ -144,9 +144,9 @@ const glassButtonVariants = cva(
                     'hover:shadow-[0_0_20px_rgba(255,50,150,0.3)]',
                 ],
                 gradient: [
-                    'bg-gradient-to-r from-cyan-500/20 to-magenta-500/20',
+                    'bg-gradient-to-r from-primary-500/20 to-magenta-500/20',
                     'border-transparent text-white',
-                    'hover:from-cyan-500/30 hover:to-magenta-500/30',
+                    'hover:from-primary-500/30 hover:to-magenta-500/30',
                 ],
                 ghost: [
                     'bg-transparent border-transparent text-white/70',
@@ -245,7 +245,7 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
                             'border border-white/10',
                             'text-white placeholder:text-white/30',
                             'transition-all duration-300',
-                            'focus:outline-none focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20',
+                            'focus:outline-none focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20',
                             'hover:bg-white/10 hover:border-white/20',
                             icon && 'pl-10',
                             error && 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/20',
@@ -290,7 +290,7 @@ export const GlassSelect = forwardRef<HTMLSelectElement, GlassSelectProps>(
                         'border border-white/10',
                         'text-white',
                         'transition-all duration-300',
-                        'focus:outline-none focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20',
+                        'focus:outline-none focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20',
                         'hover:bg-white/10 hover:border-white/20',
                         'cursor-pointer appearance-none',
                         'bg-[url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'white\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")] bg-[length:1.5rem] bg-no-repeat bg-[right_0.75rem_center]',
@@ -387,7 +387,7 @@ const glassBadgeVariants = cva(
                 success: 'bg-green-500/20 border-green-500/30 text-green-300',
                 warning: 'bg-yellow-500/20 border-yellow-500/30 text-yellow-300',
                 error: 'bg-red-500/20 border-red-500/30 text-red-300',
-                info: 'bg-cyan-500/20 border-cyan-500/30 text-cyan-300',
+                info: 'bg-primary-500/20 border-primary-500/30 text-primary-300',
                 premium: 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500/30 text-yellow-300',
             },
         },
@@ -413,7 +413,7 @@ export function GlassBadge({ className, variant, children, dot, ...props }: Glas
                     variant === 'success' && 'bg-green-400',
                     variant === 'warning' && 'bg-yellow-400',
                     variant === 'error' && 'bg-red-400',
-                    variant === 'info' && 'bg-cyan-400',
+                    variant === 'info' && 'bg-primary-400',
                     variant === 'premium' && 'bg-yellow-400',
                     !variant && 'bg-white/50',
                 )} />
@@ -524,9 +524,9 @@ export function GlassProgress({
     const percentage = Math.min(Math.max((value / max) * 100, 0), 100)
 
     const colorClasses = {
-        cyan: 'bg-cyan-500',
+        cyan: 'bg-primary-500',
         magenta: 'bg-magenta-500',
-        gradient: 'bg-gradient-to-r from-cyan-500 to-magenta-500',
+        gradient: 'bg-gradient-to-r from-primary-500 to-magenta-500',
     }
 
     return (

@@ -12,7 +12,7 @@ import { cn } from '../../lib/utils'
 // ============================================================================
 
 const progressVariants = cva(
-    ['relative overflow-hidden rounded-full bg-slate-800/50'],
+    ['relative overflow-hidden rounded-full bg-dark-400/50'],
     {
         variants: {
             size: {
@@ -34,12 +34,12 @@ const progressBarVariants = cva(
     {
         variants: {
             variant: {
-                default: 'bg-cyan-500',
-                gradient: 'bg-gradient-to-r from-cyan-500 to-fuchsia-500',
+                default: 'bg-primary-500',
+                gradient: 'bg-gradient-to-r from-primary-500 to-fuchsia-500',
                 success: 'bg-green-500',
                 warning: 'bg-amber-500',
                 danger: 'bg-red-500',
-                rainbow: 'bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-amber-500',
+                rainbow: 'bg-gradient-to-r from-primary-500 via-fuchsia-500 to-amber-500',
             },
             animated: {
                 true: '',
@@ -100,8 +100,8 @@ export function ProgressBar({
         <div className={cn('w-full', className)} {...props}>
             {(label || showValue) && (
                 <div className="flex justify-between items-center mb-1.5">
-                    {label && <span className="text-sm text-slate-300">{label}</span>}
-                    {showValue && <span className="text-sm text-slate-400">{displayValue}</span>}
+                    {label && <span className="text-sm text-gray-300">{label}</span>}
+                    {showValue && <span className="text-sm text-gray-400">{displayValue}</span>}
                 </div>
             )}
             <div className={cn(progressVariants({ size }))}>
@@ -220,7 +220,7 @@ export function CircularProgress({
             {showValue && !indeterminate && (
                 <div className="absolute inset-0 flex items-center justify-center">
                     <span className={cn(
-                        'font-medium text-slate-200',
+                        'font-medium text-gray-200',
                         size < 48 && 'text-xs',
                         size >= 48 && size < 80 && 'text-sm',
                         size >= 80 && 'text-base'
@@ -231,7 +231,7 @@ export function CircularProgress({
             )}
 
             {label && (
-                <span className="mt-2 text-sm text-slate-400">{label}</span>
+                <span className="mt-2 text-sm text-gray-400">{label}</span>
             )}
         </div>
     )
@@ -298,9 +298,9 @@ export function StepsProgress({
                                         className={cn(
                                             'flex items-center justify-center rounded-full transition-all duration-300',
                                             variant === 'dots' ? 'w-3 h-3' : 'w-8 h-8',
-                                            isCompleted && 'bg-cyan-500 text-white',
-                                            isCurrent && 'bg-cyan-500/20 border-2 border-cyan-500 text-cyan-400',
-                                            !isCompleted && !isCurrent && 'bg-slate-800 border border-slate-700 text-slate-500'
+                                            isCompleted && 'bg-primary-500 text-white',
+                                            isCurrent && 'bg-primary-500/20 border-2 border-primary-500 text-primary-400',
+                                            !isCompleted && !isCurrent && 'bg-dark-400 border border-white/10 text-gray-500'
                                         )}
                                     >
                                         {variant !== 'dots' && (
@@ -321,7 +321,7 @@ export function StepsProgress({
                                         <div
                                             className={cn(
                                                 'absolute left-1/2 -translate-x-1/2 w-0.5 h-8 top-full mt-0',
-                                                isCompleted ? 'bg-cyan-500' : 'bg-slate-700'
+                                                isCompleted ? 'bg-primary-500' : 'bg-dark-300'
                                             )}
                                         />
                                     )}
@@ -333,13 +333,13 @@ export function StepsProgress({
                                         <div
                                             className={cn(
                                                 'text-sm font-medium',
-                                                isCompleted || isCurrent ? 'text-slate-200' : 'text-slate-500'
+                                                isCompleted || isCurrent ? 'text-gray-200' : 'text-gray-500'
                                             )}
                                         >
                                             {step.label}
                                         </div>
                                         {step.description && (
-                                            <div className="text-xs text-slate-500 mt-0.5">{step.description}</div>
+                                            <div className="text-xs text-gray-500 mt-0.5">{step.description}</div>
                                         )}
                                     </div>
                                 )}
@@ -350,7 +350,7 @@ export function StepsProgress({
                                 <div
                                     className={cn(
                                         'flex-1 h-0.5 mx-2',
-                                        isCompleted ? 'bg-cyan-500' : 'bg-slate-700'
+                                        isCompleted ? 'bg-primary-500' : 'bg-dark-300'
                                     )}
                                 />
                             )}
@@ -371,13 +371,13 @@ export function StepsProgress({
                                 <div
                                     className={cn(
                                         'text-xs font-medium',
-                                        isCompleted || isCurrent ? 'text-slate-200' : 'text-slate-500'
+                                        isCompleted || isCurrent ? 'text-gray-200' : 'text-gray-500'
                                     )}
                                 >
                                     {step.label}
                                 </div>
                                 {step.description && (
-                                    <div className="text-xs text-slate-500 mt-0.5">{step.description}</div>
+                                    <div className="text-xs text-gray-500 mt-0.5">{step.description}</div>
                                 )}
                             </div>
                         )
@@ -414,7 +414,7 @@ export function Spinner({ size = 'md', variant = 'default', className }: Spinner
                     <div
                         key={i}
                         className={cn(
-                            'rounded-full bg-cyan-500',
+                            'rounded-full bg-primary-500',
                             sizeMap[size].split(' ')[0].replace('w-', 'w-').replace(/\d+/, String(parseInt(sizeMap[size].split(' ')[0].match(/\d+/)?.[0] || '4') / 3)),
                             'animate-bounce'
                         )}
@@ -432,15 +432,15 @@ export function Spinner({ size = 'md', variant = 'default', className }: Spinner
     if (variant === 'pulse') {
         return (
             <div className={cn(sizeMap[size], 'relative', className)}>
-                <div className="absolute inset-0 rounded-full bg-cyan-500/50 animate-ping" />
-                <div className="relative rounded-full bg-cyan-500" style={{ width: '100%', height: '100%' }} />
+                <div className="absolute inset-0 rounded-full bg-primary-500/50 animate-ping" />
+                <div className="relative rounded-full bg-primary-500" style={{ width: '100%', height: '100%' }} />
             </div>
         )
     }
 
     return (
         <svg
-            className={cn(sizeMap[size], 'animate-spin text-cyan-500', className)}
+            className={cn(sizeMap[size], 'animate-spin text-primary-500', className)}
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -481,7 +481,7 @@ export function Skeleton({
     className,
     ...props
 }: SkeletonProps) {
-    const baseClasses = 'animate-pulse bg-slate-800/50 rounded'
+    const baseClasses = 'animate-pulse bg-dark-400/50 rounded'
 
     if (variant === 'circular') {
         return (

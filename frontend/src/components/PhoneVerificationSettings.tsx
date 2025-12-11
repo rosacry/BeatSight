@@ -197,8 +197,8 @@ export function PhoneVerificationSettings() {
 
     if (isLoading && !status) {
         return (
-            <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-700/50 animate-pulse">
-                <div className="h-20 bg-slate-700/30 rounded"></div>
+            <div className="p-4 rounded-xl bg-dark-400/30 border border-white/10/50 animate-pulse">
+                <div className="h-20 bg-dark-300/30 rounded"></div>
             </div>
         )
     }
@@ -206,7 +206,7 @@ export function PhoneVerificationSettings() {
     const isVerified = user?.phone_verified || status?.phone_verified
 
     return (
-        <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-700/50">
+        <div className="p-4 rounded-xl bg-dark-400/30 border border-white/10/50">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isVerified

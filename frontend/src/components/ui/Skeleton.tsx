@@ -246,7 +246,7 @@ export function SkeletonWaveform({ className }: { className?: string }) {
                 return (
                     <motion.div
                         key={i}
-                        className="flex-1 bg-gradient-to-t from-cyan-500/20 to-cyan-500/40 rounded-t"
+                        className="flex-1 bg-gradient-to-t from-primary-500/20 to-primary-500/40 rounded-t"
                         style={{ height: `${height}%` }}
                         animate={{
                             opacity: [0.5, 0.8, 0.5],

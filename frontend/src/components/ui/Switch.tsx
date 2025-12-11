@@ -15,7 +15,7 @@ const switchVariants = cva(
     [
         'relative inline-flex shrink-0 cursor-pointer items-center rounded-full',
         'border-2 border-transparent transition-colors duration-200',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900',
         'disabled:cursor-not-allowed disabled:opacity-50',
     ],
     {
@@ -27,19 +27,19 @@ const switchVariants = cva(
             },
             variant: {
                 default: [
-                    'bg-slate-700',
-                    'data-[state=checked]:bg-cyan-500',
+                    'bg-dark-300',
+                    'data-[state=checked]:bg-primary-500',
                 ],
                 gradient: [
-                    'bg-slate-700',
-                    'data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-cyan-500 data-[state=checked]:to-fuchsia-500',
+                    'bg-dark-300',
+                    'data-[state=checked]:bg-primary-500',
                 ],
                 success: [
-                    'bg-slate-700',
+                    'bg-dark-300',
                     'data-[state=checked]:bg-green-500',
                 ],
                 danger: [
-                    'bg-slate-700',
+                    'bg-dark-300',
                     'data-[state=checked]:bg-red-500',
                 ],
             },
@@ -147,7 +147,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
                     {label && (
                         <span
                             className={cn(
-                                'text-sm font-medium text-slate-200',
+                                'text-sm font-medium text-gray-200',
                                 disabled && 'opacity-50'
                             )}
                         >
@@ -157,7 +157,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
                     {description && (
                         <span
                             className={cn(
-                                'text-xs text-slate-500',
+                                'text-xs text-gray-500',
                                 disabled && 'opacity-50'
                             )}
                         >
@@ -222,26 +222,26 @@ export function ToggleGroup<T extends string = string>({
     }
 
     const variantClasses = {
-        default: 'bg-slate-800/50 rounded-lg p-1',
-        outline: 'border border-slate-700 rounded-lg p-1',
+        default: 'bg-dark-400 rounded-lg p-1',
+        outline: 'border border-white/10 rounded-lg p-1',
         pills: 'gap-2',
     }
 
     const itemVariantClasses = {
         default: cn(
             'rounded-md transition-all duration-200',
-            'text-slate-400 hover:text-slate-200',
-            'data-[state=on]:bg-slate-700 data-[state=on]:text-cyan-400'
+            'text-gray-400 hover:text-gray-200',
+            'data-[state=on]:bg-dark-300 data-[state=on]:text-primary-400'
         ),
         outline: cn(
             'rounded-md transition-all duration-200',
-            'text-slate-400 hover:text-slate-200',
-            'data-[state=on]:bg-cyan-500/10 data-[state=on]:text-cyan-400'
+            'text-gray-400 hover:text-gray-200',
+            'data-[state=on]:bg-primary-500/10 data-[state=on]:text-primary-400'
         ),
         pills: cn(
             'rounded-full transition-all duration-200 border',
-            'border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600',
-            'data-[state=on]:border-cyan-500/50 data-[state=on]:bg-cyan-500/10 data-[state=on]:text-cyan-400'
+            'border-white/10 text-gray-400 hover:text-gray-200 hover:border-white/20',
+            'data-[state=on]:border-primary-500/50 data-[state=on]:bg-primary-500/10 data-[state=on]:text-primary-400'
         ),
     }
 
@@ -265,7 +265,7 @@ export function ToggleGroup<T extends string = string>({
                         onClick={() => handleSelect(option.value)}
                         className={cn(
                             'inline-flex items-center justify-center gap-2 font-medium',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50',
                             'disabled:pointer-events-none disabled:opacity-50',
                             sizeClasses[size],
                             itemVariantClasses[variant]
@@ -326,10 +326,10 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
                     <div
                         className={cn(
                             sizeClasses[size],
-                            'rounded border-2 border-slate-600 bg-slate-800/50',
+                            'rounded border-2 border-white/10 bg-dark-400/50',
                             'transition-all duration-200',
-                            'peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-500/50 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-slate-900',
-                            'peer-checked:border-cyan-500 peer-checked:bg-cyan-500'
+                            'peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500/50 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-slate-900',
+                            'peer-checked:border-primary-500 peer-checked:bg-primary-500'
                         )}
                     />
                     <svg
@@ -348,8 +348,8 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
                 </div>
                 {(label || description) && (
                     <div className="flex flex-col">
-                        {label && <span className="text-sm font-medium text-slate-200">{label}</span>}
-                        {description && <span className="text-xs text-slate-500">{description}</span>}
+                        {label && <span className="text-sm font-medium text-gray-200">{label}</span>}
+                        {description && <span className="text-xs text-gray-500">{description}</span>}
                     </div>
                 )}
             </label>
@@ -450,16 +450,16 @@ export function RadioGroup<T extends string = string>({
                             <div
                                 className={cn(
                                     sizeClasses[size],
-                                    'rounded-full border-2 border-slate-600 bg-slate-800/50',
+                                    'rounded-full border-2 border-white/10 bg-dark-400/50',
                                     'transition-all duration-200',
-                                    'peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-500/50 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-slate-900',
-                                    'peer-checked:border-cyan-500'
+                                    'peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500/50 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-slate-900',
+                                    'peer-checked:border-primary-500'
                                 )}
                             />
                             <div
                                 className={cn(
                                     dotSizes[size],
-                                    'absolute rounded-full bg-cyan-500',
+                                    'absolute rounded-full bg-primary-500',
                                     'scale-0 transition-transform duration-200',
                                     'peer-checked:scale-100'
                                 )}
@@ -468,10 +468,10 @@ export function RadioGroup<T extends string = string>({
                         {(option.label || option.description) && (
                             <div className="flex flex-col">
                                 {option.label && (
-                                    <span className="text-sm font-medium text-slate-200">{option.label}</span>
+                                    <span className="text-sm font-medium text-gray-200">{option.label}</span>
                                 )}
                                 {option.description && (
-                                    <span className="text-xs text-slate-500">{option.description}</span>
+                                    <span className="text-xs text-gray-500">{option.description}</span>
                                 )}
                             </div>
                         )}

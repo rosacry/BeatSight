@@ -51,10 +51,10 @@ export function Tooltip({ content, children, side = 'top', delay = 300, classNam
     }
 
     const arrowStyles = {
-        top: 'top-full left-1/2 -translate-x-1/2 border-t-slate-800 border-x-transparent border-b-transparent',
-        bottom: 'bottom-full left-1/2 -translate-x-1/2 border-b-slate-800 border-x-transparent border-t-transparent',
-        left: 'left-full top-1/2 -translate-y-1/2 border-l-slate-800 border-y-transparent border-r-transparent',
-        right: 'right-full top-1/2 -translate-y-1/2 border-r-slate-800 border-y-transparent border-l-transparent',
+        top: 'top-full left-1/2 -translate-x-1/2 border-t-dark-400 border-x-transparent border-b-transparent',
+        bottom: 'bottom-full left-1/2 -translate-x-1/2 border-b-dark-400 border-x-transparent border-t-transparent',
+        left: 'left-full top-1/2 -translate-y-1/2 border-l-dark-400 border-y-transparent border-r-transparent',
+        right: 'right-full top-1/2 -translate-y-1/2 border-r-dark-400 border-y-transparent border-l-transparent',
     }
 
     return (
@@ -63,7 +63,7 @@ export function Tooltip({ content, children, side = 'top', delay = 300, classNam
             {isVisible && (
                 <div
                     className={cn(
-                        'absolute z-50 px-2 py-1 text-xs text-slate-200 bg-slate-800 rounded-md shadow-lg whitespace-nowrap',
+                        'absolute z-50 px-2 py-1 text-xs text-gray-200 bg-dark-400 rounded-md shadow-lg whitespace-nowrap',
                         'animate-in fade-in-0 zoom-in-95 duration-150',
                         sideStyles[side],
                         className
@@ -93,13 +93,13 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
     ({ variant = 'default', size = 'md', dot, pulse, className, children, ...props }, ref) => {
         const variants = {
-            default: 'bg-slate-700 text-slate-200',
-            secondary: 'bg-slate-600/50 text-slate-300',
+            default: 'bg-dark-300 text-gray-200',
+            secondary: 'bg-dark-400 text-gray-300',
             success: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
             warning: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
             danger: 'bg-red-500/20 text-red-400 border border-red-500/30',
-            info: 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30',
-            premium: 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400 border border-amber-500/30',
+            info: 'bg-primary-500/20 text-primary-400 border border-primary-500/30',
+            premium: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
         }
 
         const sizes = {
@@ -247,11 +247,11 @@ interface ToastItemProps {
 
 function ToastItem({ toast, onDismiss }: ToastItemProps) {
     const variantStyles = {
-        default: 'bg-slate-800 border-slate-700 text-slate-200',
+        default: 'bg-dark-400 border-white/10 text-gray-200',
         success: 'bg-emerald-900/90 border-emerald-700 text-emerald-100',
         error: 'bg-red-900/90 border-red-700 text-red-100',
         warning: 'bg-amber-900/90 border-amber-700 text-amber-100',
-        info: 'bg-cyan-900/90 border-cyan-700 text-cyan-100',
+        info: 'bg-primary-900/90 border-primary-700 text-primary-100',
     }
 
     const icons = {
@@ -275,7 +275,7 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
             </svg>
         ),
         info: (
-            <svg className="w-5 h-5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="w-5 h-5 text-primary-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="10" />
                 <path d="M12 16v-4M12 8h.01" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -348,7 +348,7 @@ export function ProgressRing({
                     fill="none"
                     stroke="currentColor"
                     strokeWidth={strokeWidth}
-                    className="text-slate-700"
+                    className="text-gray-700"
                 />
                 {/* Progress circle */}
                 <circle
@@ -365,8 +365,8 @@ export function ProgressRing({
                 />
                 <defs>
                     <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#06b6d4" />
-                        <stop offset="100%" stopColor="#d946ef" />
+                        <stop offset="0%" stopColor="#ff66ab" />
+                        <stop offset="100%" stopColor="#aa92ff" />
                     </linearGradient>
                 </defs>
             </svg>
@@ -393,10 +393,10 @@ export interface StatusIndicatorProps {
 export function StatusIndicator({ status, size = 'md', showLabel, className }: StatusIndicatorProps) {
     const statusStyles = {
         online: { color: 'bg-emerald-500', label: 'Online' },
-        offline: { color: 'bg-slate-500', label: 'Offline' },
+        offline: { color: 'bg-gray-500', label: 'Offline' },
         busy: { color: 'bg-red-500', label: 'Busy' },
         away: { color: 'bg-amber-500', label: 'Away' },
-        processing: { color: 'bg-cyan-500', label: 'Processing' },
+        processing: { color: 'bg-primary-500', label: 'Processing' },
     }
 
     const sizes = {
@@ -410,7 +410,7 @@ export function StatusIndicator({ status, size = 'md', showLabel, className }: S
     return (
         <span className={cn('inline-flex items-center gap-1.5', className)}>
             <span className={cn('rounded-full', sizes[size], color, status === 'processing' && 'animate-pulse')} />
-            {showLabel && <span className="text-xs text-slate-400">{label}</span>}
+            {showLabel && <span className="text-xs text-gray-400">{label}</span>}
         </span>
     )
 }
@@ -426,7 +426,7 @@ export interface HighlightTagProps extends HTMLAttributes<HTMLSpanElement> {
 export const HighlightTag = forwardRef<HTMLSpanElement, HighlightTagProps>(
     ({ color = 'cyan', className, children, ...props }, ref) => {
         const colors = {
-            cyan: 'from-cyan-500/20 to-cyan-500/10 text-cyan-400 border-cyan-500/30',
+            cyan: 'from-primary-500/20 to-primary-500/10 text-primary-400 border-primary-500/30',
             fuchsia: 'from-fuchsia-500/20 to-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/30',
             amber: 'from-amber-500/20 to-amber-500/10 text-amber-400 border-amber-500/30',
             emerald: 'from-emerald-500/20 to-emerald-500/10 text-emerald-400 border-emerald-500/30',

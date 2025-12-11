@@ -329,7 +329,7 @@ export const HoverReveal = forwardRef<HTMLDivElement, HoverRevealProps>(
         {children}
         <div
           className={cn(
-            'absolute inset-0 bg-slate-900/90 backdrop-blur-sm',
+            'absolute inset-0 bg-dark-500/90 backdrop-blur-sm',
             'flex items-center justify-center',
             'transition-transform duration-300 ease-out',
             translateClasses[direction]

@@ -230,12 +230,12 @@ export function AnimatedPageHeader({
         <div className={cn('mb-8', className)}>
             {badge && (
                 <div
-                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-cyan-500/10 
-                     border border-cyan-500/30 rounded-full mb-4
+                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-500/10 
+                     border border-primary-500/30 rounded-full mb-4
                      opacity-0 animate-[fadeInUp_0.5s_ease-out_forwards]"
                     style={{ animationDelay: '100ms' }}
                 >
-                    <span className="text-cyan-400 text-sm font-medium">{badge}</span>
+                    <span className="text-primary-400 text-sm font-medium">{badge}</span>
                 </div>
             )}
 
@@ -250,7 +250,7 @@ export function AnimatedPageHeader({
                     </h1>
                     {subtitle && (
                         <p
-                            className="mt-2 text-slate-400 text-lg
+                            className="mt-2 text-gray-400 text-lg
                          opacity-0 animate-[fadeInUp_0.5s_ease-out_forwards]"
                             style={{ animationDelay: '200ms' }}
                         >
@@ -363,12 +363,12 @@ export function ParallaxHero({
         <section className={cn('relative overflow-hidden py-24 sm:py-32', className)}>
             {/* Animated background gradient */}
             <div
-                className="absolute inset-0 bg-gradient-to-br from-cyan-900/30 via-slate-900 to-slate-950"
+                className="absolute inset-0 bg-gradient-to-br from-primary-900/30 via-dark-500 to-dark-500"
                 style={{ transform: `translateY(${parallaxOffset * 0.5}px)` }}
             />
             <div
                 className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] 
-                   from-cyan-500/20 via-transparent to-transparent"
+                   from-primary-500/20 via-transparent to-transparent"
                 style={{ transform: `translateY(${parallaxOffset * 0.3}px)` }}
             />
 
@@ -414,7 +414,7 @@ export function ParallaxHero({
 
                 {subtitle && (
                     <p
-                        className="text-xl text-slate-400 max-w-2xl mx-auto mb-10
+                        className="text-xl text-gray-400 max-w-2xl mx-auto mb-10
                        opacity-0 animate-[fadeInUp_0.6s_ease-out_forwards]"
                         style={{ animationDelay: '300ms' }}
                     >

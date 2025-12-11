@@ -250,7 +250,7 @@ export function ReAuthDialog({
                         exit="exit"
                         onClick={(e) => e.stopPropagation()}
                         tabIndex={-1}
-                        className="relative bg-slate-900 rounded-2xl border border-slate-700/50 shadow-2xl shadow-black/50 max-w-lg w-full overflow-hidden focus:outline-none"
+                        className="relative bg-dark-500 rounded-2xl border border-white/10/50 shadow-2xl shadow-black/50 max-w-lg w-full overflow-hidden focus:outline-none"
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="reauth-title"
@@ -258,7 +258,7 @@ export function ReAuthDialog({
                         {/* Close button */}
                         <button
                             onClick={onClose}
-                            className="absolute top-4 right-4 z-10 p-1 text-slate-400 hover:text-white transition-colors"
+                            className="absolute top-4 right-4 z-10 p-1 text-gray-400 hover:text-white transition-colors"
                             aria-label="Close"
                         >
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -274,7 +274,7 @@ export function ReAuthDialog({
                             </h2>
 
                             {/* Description */}
-                            <p className="text-slate-300 text-center mb-6 text-sm">
+                            <p className="text-gray-300 text-center mb-6 text-sm">
                                 {description || defaultDescription}
                             </p>
 
@@ -287,8 +287,8 @@ export function ReAuthDialog({
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
                                             placeholder="Enter your password"
-                                            className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-xl
-                                                     text-white placeholder-slate-400 text-center
+                                            className="w-full px-4 py-3 bg-dark-400 border border-white/10 rounded-xl
+                                                     text-white placeholder-gray-400 text-center
                                                      focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500
                                                      transition-colors"
                                             autoFocus
@@ -316,14 +316,14 @@ export function ReAuthDialog({
                                                     value={verificationCode}
                                                     onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                                                     placeholder="Enter 6-digit code"
-                                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-xl
-                                                             text-white placeholder-slate-400 text-center text-2xl tracking-widest
+                                                    className="w-full px-4 py-3 bg-dark-400 border border-white/10 rounded-xl
+                                                             text-white placeholder-gray-400 text-center text-2xl tracking-widest
                                                              focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500
                                                              transition-colors font-mono"
                                                     maxLength={6}
                                                     autoFocus
                                                 />
-                                                <p className="text-xs text-slate-500 text-center mt-2">
+                                                <p className="text-xs text-gray-500 text-center mt-2">
                                                     Make sure to check your spam folder if you can't find the email.
                                                 </p>
                                             </div>
@@ -343,7 +343,7 @@ export function ReAuthDialog({
                                     <button
                                         type="submit"
                                         disabled={isLoading}
-                                        className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white font-medium
+                                        className="w-full py-3 bg-dark-300 hover:bg-dark-300 text-white font-medium
                                                  rounded-xl transition-colors disabled:opacity-50"
                                     >
                                         {isLoading ? 'Verifying...' : 'Verify'}
@@ -353,10 +353,10 @@ export function ReAuthDialog({
 
                             {/* Helper links for email verification */}
                             {verificationType === 'email' && codeSent && (
-                                <div className="mt-6 text-center text-sm text-slate-400">
+                                <div className="mt-6 text-center text-sm text-gray-400">
                                     <p>
                                         If you can't access your email or have forgotten what you used, please follow the{' '}
-                                        <a href="/forgot-password" className="text-cyan-400 hover:text-cyan-300 transition-colors">
+                                        <a href="/forgot-password" className="text-primary-400 hover:text-primary-300 transition-colors">
                                             email recovery process here
                                         </a>
                                         .
@@ -366,14 +366,14 @@ export function ReAuthDialog({
                                         <button
                                             onClick={handleSendCode}
                                             disabled={cooldown > 0}
-                                            className="text-cyan-400 hover:text-cyan-300 transition-colors disabled:text-slate-500"
+                                            className="text-primary-400 hover:text-primary-300 transition-colors disabled:text-gray-500"
                                         >
                                             request another code{cooldown > 0 ? ` (${cooldown}s)` : ''}
                                         </button>
                                         {' '}or{' '}
                                         <button
                                             onClick={onClose}
-                                            className="text-cyan-400 hover:text-cyan-300 transition-colors"
+                                            className="text-primary-400 hover:text-primary-300 transition-colors"
                                         >
                                             sign out
                                         </button>

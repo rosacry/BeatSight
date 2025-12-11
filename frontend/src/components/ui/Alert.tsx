@@ -21,8 +21,8 @@ const alertVariants = cva(
         variants: {
             variant: {
                 default: [
-                    'bg-slate-800/50 border-slate-700 text-slate-200',
-                    '[&>svg]:text-slate-400',
+                    'bg-dark-400/50 border-white/10 text-gray-200',
+                    '[&>svg]:text-gray-400',
                 ],
                 info: [
                     'bg-blue-500/10 border-blue-500/30 text-blue-200',
@@ -210,7 +210,7 @@ export function Toast({
     if (!isVisible) return null
 
     const variantColors = {
-        default: 'border-slate-700 bg-slate-800',
+        default: 'border-white/10 bg-dark-400',
         info: 'border-blue-500/30 bg-blue-500/10',
         success: 'border-green-500/30 bg-green-500/10',
         warning: 'border-amber-500/30 bg-amber-500/10',
@@ -218,7 +218,7 @@ export function Toast({
     }
 
     const iconColors = {
-        default: 'text-slate-400',
+        default: 'text-gray-400',
         info: 'text-blue-400',
         success: 'text-green-400',
         warning: 'text-amber-400',
@@ -244,15 +244,15 @@ export function Toast({
                             <p className="text-sm font-medium text-slate-100">{title}</p>
                         )}
                         {description && (
-                            <p className="mt-1 text-sm text-slate-400">{description}</p>
+                            <p className="mt-1 text-sm text-gray-400">{description}</p>
                         )}
                     </div>
                     <button
                         onClick={handleClose}
                         className={cn(
                             'shrink-0 rounded-md p-1',
-                            'text-slate-500 hover:text-slate-300 transition-colors',
-                            'focus:outline-none focus:ring-2 focus:ring-cyan-500/50'
+                            'text-gray-500 hover:text-gray-300 transition-colors',
+                            'focus:outline-none focus:ring-2 focus:ring-primary-500/50'
                         )}
                     >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -267,10 +267,10 @@ export function Toast({
                 </div>
             </div>
             {duration > 0 && (
-                <div className="h-1 bg-slate-700/50">
+                <div className="h-1 bg-dark-300/50">
                     <div
                         className={cn(
-                            'h-full bg-gradient-to-r from-cyan-500 to-fuchsia-500',
+                            'h-full bg-gradient-to-r from-primary-500 to-fuchsia-500',
                             'animate-shrink-width'
                         )}
                         style={{
@@ -424,7 +424,7 @@ export function Callout({
     ...props
 }: CalloutProps) {
     const variantStyles = {
-        default: 'border-l-slate-500 bg-slate-800/30',
+        default: 'border-l-slate-500 bg-dark-400/30',
         info: 'border-l-blue-500 bg-blue-500/5',
         success: 'border-l-green-500 bg-green-500/5',
         warning: 'border-l-amber-500 bg-amber-500/5',
@@ -432,7 +432,7 @@ export function Callout({
     }
 
     const iconColors = {
-        default: 'text-slate-400',
+        default: 'text-gray-400',
         info: 'text-blue-400',
         success: 'text-green-400',
         warning: 'text-amber-400',
@@ -458,7 +458,7 @@ export function Callout({
                     {title && (
                         <h4 className="mb-1 font-medium text-slate-100">{title}</h4>
                     )}
-                    <div className="text-sm text-slate-300">{children}</div>
+                    <div className="text-sm text-gray-300">{children}</div>
                 </div>
             </div>
         </div>

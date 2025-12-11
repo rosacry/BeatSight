@@ -5,7 +5,6 @@
 
 import { useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { useQuery } from '@tanstack/react-query'
 import { listJobs, listSongs, listAchievements, getMyVerificationStats } from '@/api/client'
@@ -320,7 +319,7 @@ export function ProfilePage() {
                 ) : (
                     <StaggerPageContent className="space-y-4">
                         {jobs && jobs.length > 0 ? (
-                            jobs.slice(0, 10).map((job, index) => (
+                            jobs.slice(0, 10).map((job) => (
                                 <StaggerSection key={job.id}>
                                     <div className="card">
                                         <div className="flex items-center justify-between">

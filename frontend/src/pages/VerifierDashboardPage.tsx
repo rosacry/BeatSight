@@ -11,7 +11,10 @@ import { ProposalDiffViewer, type DiffPayload } from '@/components/ProposalDiffV
 import { API_CONFIG } from '@/lib/config'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import {
-    tabContentVariants as unifiedTabContentVariants
+    AnimatedTabContent,
+    AnimatedTabButton,
+    StaggerPageContent,
+    StaggerSection
 } from '@/components/ui/UnifiedTransitions'
 
 interface Proposer {
@@ -294,46 +297,36 @@ export function VerifierDashboardPage() {
 
                     {/* Tabs */}
                     <div className="flex gap-1 p-1 bg-dark-400 rounded-xl w-fit mb-6 overflow-x-auto">
-                        <button
+                        <AnimatedTabButton
+                            isActive={activeTab === 'queue'}
                             onClick={() => handleTabChange('queue')}
-                            className={`px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${activeTab === 'queue'
-                                ? 'bg-primary-500 text-white'
-                                : 'text-gray-400 hover:text-white hover:bg-dark-300'
-                                }`}
-                        >
-                            Pending ({stats?.pending_count || 0})
-                        </button>
-                        <button
+                            label={`Pending (${stats?.pending_count || 0})`}
+                            variant="pills"
+                        />
+                        <AnimatedTabButton
+                            isActive={activeTab === 'history'}
                             onClick={() => handleTabChange('history')}
-                            className={`px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${activeTab === 'history'
-                                ? 'bg-primary-500 text-white'
-                                : 'text-gray-400 hover:text-white hover:bg-dark-300'
-                                }`}
-                        >
-                            My Decision History
-                        </button>
+                            label="My Decision History"
+                            variant="pills"
+                        />
                     </div>
 
                     {/* Tab Content with Unified Transitions */}
-                    <AnimatePresence mode="wait" initial={false}>
-                        <motion.div
-                            key={activeTab}
-                            initial="initial"
-                            animate="animate"
-                            exit="exit"
-                            variants={unifiedTabContentVariants}
-                        >
-                            {/* Queue Tab */}
-                            {activeTab === 'queue' && (
-                                <div className="space-y-4">
-                                    {proposals.length === 0 ? (
+                    <AnimatedTabContent activeTab={activeTab}>
+                        {/* Queue Tab */}
+                        {activeTab === 'queue' && (
+                            <StaggerPageContent className="space-y-4">
+                                {proposals.length === 0 ? (
+                                    <StaggerSection>
                                         <div className="bg-dark-400 rounded-xl border border-dark-300 p-8 text-center">
                                             <p className="text-gray-300">No pending proposals to review!</p>
                                             <p className="text-sm text-gray-500 mt-2">Check back later for new submissions</p>
                                         </div>
-                                    ) : (
-                                        proposals.map(proposal => (
-                                            <div key={proposal.id} className="bg-dark-400 rounded-xl border border-dark-300 p-4">
+                                    </StaggerSection>
+                                ) : (
+                                    proposals.map(proposal => (
+                                        <StaggerSection key={proposal.id}>
+                                            <div className="bg-dark-400 rounded-xl border border-dark-300 p-4">
                                                 <div className="flex items-start justify-between">
                                                     <div className="flex-1">
                                                         <div className="flex items-center gap-2 mb-2">
@@ -372,33 +365,39 @@ export function VerifierDashboardPage() {
                                                     )}
                                                 </div>
                                             </div>
-                                        ))
-                                    )}
+                                        </StaggerSection>
+                                    ))
+                                )}
 
-                                    {hasMore && (
+                                {hasMore && (
+                                    <StaggerSection>
                                         <button
                                             onClick={() => setPage(p => p + 1)}
                                             className="w-full py-2.5 text-primary-400 hover:bg-dark-300 rounded-xl transition-colors"
                                         >
                                             Load More
                                         </button>
-                                    )}
-                                </div>
-                            )}
+                                    </StaggerSection>
+                                )}
+                            </StaggerPageContent>
+                        )}
 
-                            {/* History Tab */}
-                            {activeTab === 'history' && (
-                                <div className="space-y-4">
-                                    {myDecisions.length === 0 ? (
+                        {/* History Tab */}
+                        {activeTab === 'history' && (
+                            <StaggerPageContent className="space-y-4">
+                                {myDecisions.length === 0 ? (
+                                    <StaggerSection>
                                         <div className="bg-dark-400 rounded-xl border border-white/10 p-8 text-center">
                                             <p className="text-gray-300">No decisions yet</p>
                                             <p className="text-sm text-gray-500 mt-2">
                                                 Your review history will appear here
                                             </p>
                                         </div>
-                                    ) : (
-                                        myDecisions.map(proposal => (
-                                            <div key={proposal.id} className="bg-dark-400 rounded-xl border border-white/10 p-4">
+                                    </StaggerSection>
+                                ) : (
+                                    myDecisions.map(proposal => (
+                                        <StaggerSection key={proposal.id}>
+                                            <div className="bg-dark-400 rounded-xl border border-white/10 p-4">
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(proposal.status)}`}>
                                                         {proposal.status}
@@ -419,12 +418,12 @@ export function VerifierDashboardPage() {
                                                     </p>
                                                 )}
                                             </div>
-                                        ))
-                                    )}
-                                </div>
-                            )}
-                        </motion.div>
-                    </AnimatePresence>
+                                        </StaggerSection>
+                                    ))
+                                )}
+                            </StaggerPageContent>
+                        )}
+                    </AnimatedTabContent>
 
                     {/* Review Modal */}
                     {selectedProposal && (

@@ -10,14 +10,16 @@
 
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { API_CONFIG } from '@/lib/config'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import {
-    tabContentVariants as unifiedTabContentVariants,
-    staggerContainerVariants,
+    AnimatedTabContent,
+    AnimatedTabButton,
+    StaggerPageContent,
+    StaggerSection,
     staggerItemVariants
 } from '@/components/ui/UnifiedTransitions'
 
@@ -56,8 +58,6 @@ type LeaderboardTab = 'karma' | 'verifiers' | 'contributors'
 const VALID_TABS: LeaderboardTab[] = ['karma', 'verifiers', 'contributors']
 
 // Animation variants - use unified system
-const containerVariants = staggerContainerVariants
-
 const itemVariants = staggerItemVariants
 
 export function LeaderboardPage() {
@@ -164,22 +164,24 @@ export function LeaderboardPage() {
             {/* Tab Navigation */}
             <div className="flex justify-center mb-8 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
                 <div className="inline-flex gap-1 p-1 bg-dark-400 rounded-xl flex-nowrap">
-                    {[
-                        { id: 'karma', label: '🏆 Karma', description: 'Top karma earners' },
-                        { id: 'verifiers', label: '✓ Verifiers', description: 'Top beatmap verifiers' },
-                        { id: 'contributors', label: '📝 Contributors', description: 'Top beatmap contributors' },
-                    ].map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => handleTabChange(tab.id as LeaderboardTab)}
-                            className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap ${activeTab === tab.id
-                                ? 'bg-primary-500 text-white'
-                                : 'text-gray-400 hover:text-white hover:bg-dark-300'
-                                }`}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
+                    <AnimatedTabButton
+                        isActive={activeTab === 'karma'}
+                        onClick={() => handleTabChange('karma')}
+                        label="🏆 Karma"
+                        variant="pills"
+                    />
+                    <AnimatedTabButton
+                        isActive={activeTab === 'verifiers'}
+                        onClick={() => handleTabChange('verifiers')}
+                        label="✓ Verifiers"
+                        variant="pills"
+                    />
+                    <AnimatedTabButton
+                        isActive={activeTab === 'contributors'}
+                        onClick={() => handleTabChange('contributors')}
+                        label="📝 Contributors"
+                        variant="pills"
+                    />
                 </div>
             </div>
 
@@ -191,26 +193,14 @@ export function LeaderboardPage() {
                         <p className="text-gray-400 mt-4">Loading leaderboard...</p>
                     </div>
                 ) : (
-                    <AnimatePresence mode="wait" initial={false}>
-                        <motion.div
-                            key={activeTab}
-                            initial="initial"
-                            animate="animate"
-                            exit="exit"
-                            variants={unifiedTabContentVariants}
-                        >
-                            <motion.div
-                                initial="initial"
-                                animate="animate"
-                                variants={containerVariants}
-                            >
-                                {/* Karma Leaderboard */}
-                                {activeTab === 'karma' && karmaLeaderboard && (
-                                    <div className="divide-y divide-dark-300">
-                                        {karmaLeaderboard.map((entry, index) => (
-                                            <motion.div
-                                                key={entry.id}
-                                                variants={itemVariants}
+                    <AnimatedTabContent activeTab={activeTab}>
+                        <StaggerPageContent>
+                            {/* Karma Leaderboard */}
+                            {activeTab === 'karma' && karmaLeaderboard && (
+                                <div className="divide-y divide-dark-300">
+                                    {karmaLeaderboard.map((entry, index) => (
+                                        <StaggerSection key={entry.id}>
+                                            <div
                                                 className={`flex items-center gap-4 p-4 hover:bg-dark-300 transition-colors ${entry.id === user?.id ? 'bg-primary-500/10 border-l-4 border-primary-500' : ''
                                                     }`}
                                             >
@@ -261,24 +251,26 @@ export function LeaderboardPage() {
                                                     <p className="text-lg font-bold text-primary-400">{entry.karma_score.toLocaleString()}</p>
                                                     <p className="text-xs text-gray-400">karma</p>
                                                 </div>
-                                            </motion.div>
-                                        ))}
+                                            </div>
+                                        </StaggerSection>
+                                    ))}
 
-                                        {karmaLeaderboard.length === 0 && (
+                                    {karmaLeaderboard.length === 0 && (
+                                        <StaggerSection>
                                             <div className="p-8 text-center text-gray-400">
                                                 No karma data available yet.
                                             </div>
-                                        )}
-                                    </div>
-                                )}
+                                        </StaggerSection>
+                                    )}
+                                </div>
+                            )}
 
-                                {/* Verifier Leaderboard */}
-                                {activeTab === 'verifiers' && verifierLeaderboard && (
-                                    <div className="divide-y divide-gray-700/50">
-                                        {verifierLeaderboard.map((entry, index) => (
-                                            <motion.div
-                                                key={entry.verifier_id}
-                                                variants={itemVariants}
+                            {/* Verifier Leaderboard */}
+                            {activeTab === 'verifiers' && verifierLeaderboard && (
+                                <div className="divide-y divide-gray-700/50">
+                                    {verifierLeaderboard.map((entry, index) => (
+                                        <StaggerSection key={entry.verifier_id}>
+                                            <div
                                                 className="flex items-center gap-4 p-4 hover:bg-dark-300 transition-colors"
                                             >
                                                 {/* Rank */}
@@ -317,10 +309,12 @@ export function LeaderboardPage() {
                                                     <p className="text-lg font-bold text-accent-400">{entry.total_reviews}</p>
                                                     <p className="text-xs text-gray-400">reviews</p>
                                                 </div>
-                                            </motion.div>
-                                        ))}
+                                            </div>
+                                        </StaggerSection>
+                                    ))}
 
-                                        {verifierLeaderboard.length === 0 && (
+                                    {verifierLeaderboard.length === 0 && (
+                                        <StaggerSection>
                                             <div className="p-8 text-center text-gray-400">
                                                 {!accessToken ? (
                                                     <>
@@ -338,17 +332,17 @@ export function LeaderboardPage() {
                                                     </>
                                                 )}
                                             </div>
-                                        )}
-                                    </div>
-                                )}
+                                        </StaggerSection>
+                                    )}
+                                </div>
+                            )}
 
-                                {/* Contributor Leaderboard */}
-                                {activeTab === 'contributors' && contributorLeaderboard && (
-                                    <div className="divide-y divide-dark-300">
-                                        {contributorLeaderboard.map((entry, index) => (
-                                            <motion.div
-                                                key={entry.user_id}
-                                                variants={itemVariants}
+                            {/* Contributor Leaderboard */}
+                            {activeTab === 'contributors' && contributorLeaderboard && (
+                                <div className="divide-y divide-dark-300">
+                                    {contributorLeaderboard.map((entry, index) => (
+                                        <StaggerSection key={entry.user_id}>
+                                            <div
                                                 className="flex items-center gap-4 p-4 hover:bg-dark-300 transition-colors"
                                             >
                                                 {/* Rank */}
@@ -386,22 +380,24 @@ export function LeaderboardPage() {
                                                     <p className="text-lg font-bold text-green-400">{entry.contribution_count}</p>
                                                     <p className="text-xs text-gray-400">contributions</p>
                                                 </div>
-                                            </motion.div>
-                                        ))}
+                                            </div>
+                                        </StaggerSection>
+                                    ))}
 
-                                        {contributorLeaderboard.length === 0 && (
+                                    {contributorLeaderboard.length === 0 && (
+                                        <StaggerSection>
                                             <div className="p-8 text-center text-gray-400">
                                                 <p>No contribution data available yet.</p>
                                                 <Link to="/upload" className="text-primary-400 hover:text-primary-300 mt-2 inline-block">
                                                     Start contributing →
                                                 </Link>
                                             </div>
-                                        )}
-                                    </div>
-                                )}
-                            </motion.div>
-                        </motion.div>
-                    </AnimatePresence>
+                                        </StaggerSection>
+                                    )}
+                                </div>
+                            )}
+                        </StaggerPageContent>
+                    </AnimatedTabContent>
                 )}
             </div>
 

@@ -11,7 +11,7 @@
  */
 
 import { useState } from 'react'
-import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { clsx } from 'clsx'
 import { format } from 'date-fns'
@@ -56,14 +56,16 @@ interface PublicUserProfile {
     bio: string | null
     // Custom profile tags (like osu!'s DEV, VIP, etc.)
     tags: ProfileTag[]
-    // Leaderboard ranking (null if hidden)
-    leaderboard_rank: number | null
+    // Leaderboard rankings (null if hidden)
+    karma_rank: number | null
+    contribution_rank: number | null
     // Stats
     songs_uploaded: number
     maps_generated: number
     maps_verified: number
     achievements_count: number
     forum_posts: number
+    contribution_count: number
     // Recent activity
     last_active: string | null
 }
@@ -165,7 +167,6 @@ function getTabFromUrl(searchParams: URLSearchParams): ProfileTab {
 export function UserProfilePage() {
     const { userId } = useParams<{ userId: string }>()
     const [searchParams, setSearchParams] = useSearchParams()
-    const navigate = useNavigate()
     const currentUser = useAuthStore((s) => s.user)
     const accessToken = useAuthStore((s) => s.accessToken)
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated())
@@ -216,7 +217,13 @@ export function UserProfilePage() {
     })
 
     // Set document title
-    useDocumentTitle(profile?.display_name ? `${profile.display_name}'s Profile` : 'User Profile')
+    useDocumentTitle(
+        isOwnProfile
+            ? 'My Profile'
+            : profile?.display_name
+                ? `${profile.display_name}'s Profile`
+                : 'User Profile'
+    )
 
     const handleTabChange = (tab: ProfileTab) => {
         setSearchParams({ tab }, { replace: true })
@@ -240,12 +247,6 @@ export function UserProfilePage() {
         } catch (err) {
             console.error('Failed to unblock user:', err)
         }
-    }
-
-    // Redirect to own profile page if viewing self
-    if (isOwnProfile) {
-        navigate('/profile', { replace: true })
-        return null
     }
 
     if (isLoading) {
@@ -356,14 +357,29 @@ export function UserProfilePage() {
                             </div>
 
                             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
-                                {/* Leaderboard Rank */}
-                                {profile.leaderboard_rank && (
-                                    <span className="flex items-center gap-1 text-yellow-400">
+                                {/* Karma Ranking */}
+                                {profile.karma_rank && (
+                                    <Link
+                                        to="/leaderboard?tab=karma"
+                                        className="flex items-center gap-1 text-yellow-400 hover:text-yellow-300 transition-colors"
+                                    >
                                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                                         </svg>
-                                        Rank #{profile.leaderboard_rank.toLocaleString()}
-                                    </span>
+                                        Karma #{profile.karma_rank.toLocaleString()}
+                                    </Link>
+                                )}
+                                {/* Contribution Ranking */}
+                                {profile.contribution_rank && (
+                                    <Link
+                                        to="/leaderboard?tab=contributors"
+                                        className="flex items-center gap-1 text-green-400 hover:text-green-300 transition-colors"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Contrib #{profile.contribution_rank.toLocaleString()}
+                                    </Link>
                                 )}
                                 {profile.country_code && (
                                     <span className="flex items-center gap-1">
@@ -418,45 +434,79 @@ export function UserProfilePage() {
             {isAuthenticated && (
                 <div className="max-w-4xl mx-auto px-4 pb-6">
                     <div className="flex flex-wrap gap-3">
-                        <Link to={`/messages/${userId}`}>
-                            <Button variant="primary" size="md">
-                                <MessageIcon className="w-4 h-4 mr-2" />
-                                Message
-                            </Button>
-                        </Link>
-
-                        {isBlocked ? (
-                            <Button
-                                variant="outline"
-                                size="md"
-                                onClick={handleUnblock}
-                                disabled={unblockUser.isPending}
-                            >
-                                <BlockIcon className="w-4 h-4 mr-2" />
-                                Unblock
-                            </Button>
+                        {isOwnProfile ? (
+                            <>
+                                {/* Own Profile Actions */}
+                                <Link to="/upload">
+                                    <Button variant="primary" size="md">
+                                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                        </svg>
+                                        Upload Song
+                                    </Button>
+                                </Link>
+                                <Link to="/library">
+                                    <Button variant="secondary" size="md">
+                                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                        </svg>
+                                        My Library
+                                    </Button>
+                                </Link>
+                                <Link to="/settings">
+                                    <Button variant="outline" size="md">
+                                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        Settings
+                                    </Button>
+                                </Link>
+                            </>
                         ) : (
-                            <Button
-                                variant="outline"
-                                size="md"
-                                onClick={handleBlock}
-                                disabled={blockUser.isPending}
-                                className="hover:text-red-400 hover:border-red-400/50"
-                            >
-                                <BlockIcon className="w-4 h-4 mr-2" />
-                                Block
-                            </Button>
-                        )}
+                            <>
+                                {/* Other User Actions */}
+                                <Link to={`/messages/${userId}`}>
+                                    <Button variant="primary" size="md">
+                                        <MessageIcon className="w-4 h-4 mr-2" />
+                                        Message
+                                    </Button>
+                                </Link>
 
-                        <Button
-                            variant="outline"
-                            size="md"
-                            onClick={() => setShowReportModal(true)}
-                            className="hover:text-red-400 hover:border-red-400/50"
-                        >
-                            <FlagIcon className="w-4 h-4 mr-2" />
-                            Report
-                        </Button>
+                                {isBlocked ? (
+                                    <Button
+                                        variant="outline"
+                                        size="md"
+                                        onClick={handleUnblock}
+                                        disabled={unblockUser.isPending}
+                                    >
+                                        <BlockIcon className="w-4 h-4 mr-2" />
+                                        Unblock
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        variant="outline"
+                                        size="md"
+                                        onClick={handleBlock}
+                                        disabled={blockUser.isPending}
+                                        className="hover:text-red-400 hover:border-red-400/50"
+                                    >
+                                        <BlockIcon className="w-4 h-4 mr-2" />
+                                        Block
+                                    </Button>
+                                )}
+
+                                <Button
+                                    variant="outline"
+                                    size="md"
+                                    onClick={() => setShowReportModal(true)}
+                                    className="hover:text-red-400 hover:border-red-400/50"
+                                >
+                                    <FlagIcon className="w-4 h-4 mr-2" />
+                                    Report
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </div>
             )}

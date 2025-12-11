@@ -1,11 +1,9 @@
 /**
- * Leaderboard Page - Community rankings for karma and verifiers
+ * Leaderboard Page - Community rankings for karma and contributors
  * 
  * Shows:
  * - Top karma earners
- * - Top verifiers
  * - Top contributors
- * - Achievement holders
  */
 
 import { useState, useEffect } from 'react'
@@ -33,17 +31,6 @@ interface LeaderboardUser {
     is_anonymous?: boolean
 }
 
-interface VerifierStats {
-    verifier_id: string
-    username: string
-    avatar_url: string | null
-    total_reviews: number
-    approved: number
-    rejected: number
-    accuracy: number
-    rank: number
-}
-
 interface ContributorStats {
     user_id: string
     username: string
@@ -53,9 +40,9 @@ interface ContributorStats {
     rank: number
 }
 
-type LeaderboardTab = 'karma' | 'verifiers' | 'contributors'
+type LeaderboardTab = 'karma' | 'contributors'
 
-const VALID_TABS: LeaderboardTab[] = ['karma', 'verifiers', 'contributors']
+const VALID_TABS: LeaderboardTab[] = ['karma', 'contributors']
 
 export function LeaderboardPage() {
     useDocumentTitle('leaderboard')
@@ -102,29 +89,6 @@ export function LeaderboardPage() {
         enabled: activeTab === 'karma',
     })
 
-    // Fetch verifier leaderboard (requires authentication)
-    const { data: verifierLeaderboard, isLoading: verifierLoading } = useQuery({
-        queryKey: ['leaderboard', 'verifiers'],
-        queryFn: async () => {
-            if (!accessToken) {
-                // Return empty array for unauthenticated users
-                return [] as VerifierStats[]
-            }
-            const response = await fetch(`${API_CONFIG.baseUrl}/api/verifier/leaderboard`, {
-                headers: { Authorization: `Bearer ${accessToken}` },
-            })
-            if (!response.ok) {
-                if (response.status === 401) {
-                    return [] as VerifierStats[]
-                }
-                throw new Error('Failed to fetch verifier leaderboard')
-            }
-            const data = await response.json()
-            return data.verifiers as VerifierStats[]
-        },
-        enabled: activeTab === 'verifiers',
-    })
-
     // Fetch contributor leaderboard
     const { data: contributorLeaderboard, isLoading: contributorLoading } = useQuery({
         queryKey: ['leaderboard', 'contributors'],
@@ -147,7 +111,6 @@ export function LeaderboardPage() {
     })
 
     const isLoading = (activeTab === 'karma' && karmaLoading) ||
-        (activeTab === 'verifiers' && verifierLoading) ||
         (activeTab === 'contributors' && contributorLoading)
 
     return (
@@ -165,12 +128,6 @@ export function LeaderboardPage() {
                         isActive={activeTab === 'karma'}
                         onClick={() => handleTabChange('karma')}
                         label="🏆 Karma"
-                        variant="pills"
-                    />
-                    <AnimatedTabButton
-                        isActive={activeTab === 'verifiers'}
-                        onClick={() => handleTabChange('verifiers')}
-                        label="✓ Verifiers"
                         variant="pills"
                     />
                     <AnimatedTabButton
@@ -261,85 +218,6 @@ export function LeaderboardPage() {
                                         <StaggerSection>
                                             <div className="p-8 text-center text-gray-400">
                                                 No karma data available yet.
-                                            </div>
-                                        </StaggerSection>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Verifier Leaderboard */}
-                            {activeTab === 'verifiers' && verifierLeaderboard && (
-                                <div className="divide-y divide-gray-700/50">
-                                    {verifierLeaderboard.map((entry, index) => (
-                                        <StaggerSection key={entry.verifier_id}>
-                                            <div
-                                                className="flex items-center gap-4 p-4 hover:bg-dark-300 transition-colors"
-                                            >
-                                                {/* Rank */}
-                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
-                                                    index === 1 ? 'bg-gray-300 text-black' :
-                                                        index === 2 ? 'bg-amber-600 text-white' :
-                                                            'bg-dark-500 text-gray-400'
-                                                    }`}>
-                                                    {index + 1}
-                                                </div>
-
-                                                {/* Avatar & Name */}
-                                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                    {entry.avatar_url ? (
-                                                        <img
-                                                            src={entry.avatar_url}
-                                                            alt={entry.username}
-                                                            className="w-10 h-10 rounded-full"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-10 h-10 rounded-full bg-accent-500 flex items-center justify-center text-white font-medium">
-                                                            {entry.username?.[0]?.toUpperCase() || '?'}
-                                                        </div>
-                                                    )}
-                                                    <div className="min-w-0">
-                                                        <UsernameLink
-                                                            user={{
-                                                                id: entry.verifier_id,
-                                                                username: entry.username,
-                                                                display_name: entry.username,
-                                                            }}
-                                                            className="font-medium truncate"
-                                                        />
-                                                        <div className="flex gap-3 text-xs text-gray-400">
-                                                            <span className="text-green-400">{entry.approved} ✓</span>
-                                                            <span className="text-red-400">{entry.rejected} ✗</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Stats */}
-                                                <div className="text-right">
-                                                    <p className="text-lg font-bold text-accent-400">{entry.total_reviews}</p>
-                                                    <p className="text-xs text-gray-400">reviews</p>
-                                                </div>
-                                            </div>
-                                        </StaggerSection>
-                                    ))}
-
-                                    {verifierLeaderboard.length === 0 && (
-                                        <StaggerSection>
-                                            <div className="p-8 text-center text-gray-400">
-                                                {!accessToken ? (
-                                                    <>
-                                                        <p>Sign in to view the verifier leaderboard.</p>
-                                                        <Link to="/login" className="text-primary-400 hover:text-primary-300 mt-2 inline-block">
-                                                            Sign in →
-                                                        </Link>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <p>No verifier data available yet.</p>
-                                                        <Link to="/verifier" className="text-primary-400 hover:text-primary-300 mt-2 inline-block">
-                                                            Become a verifier →
-                                                        </Link>
-                                                    </>
-                                                )}
                                             </div>
                                         </StaggerSection>
                                     )}

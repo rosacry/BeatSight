@@ -11,7 +11,7 @@ from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from PIL import Image
 from pydantic import BaseModel, Field
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -492,14 +492,16 @@ class PublicUserProfile(BaseModel):
     bio: Optional[str] = None
     # Custom profile tags (like osu!'s DEV, VIP, etc.)
     tags: list[ProfileTag] = []
-    # Leaderboard ranking (null if user has hidden from leaderboards)
-    leaderboard_rank: Optional[int] = None
+    # Leaderboard rankings (null if user has hidden from leaderboards)
+    karma_rank: Optional[int] = None
+    contribution_rank: Optional[int] = None
     # Stats
     songs_uploaded: int
     maps_generated: int
     maps_verified: int
     achievements_count: int
     forum_posts: int
+    contribution_count: int = 0  # Total contributions
     # Activity
     last_active: Optional[datetime] = None
 
@@ -582,6 +584,7 @@ async def get_public_user_profile(
     Returns public information about a user including their stats and activity.
     """
     from app.models.user_settings import UserSettings
+    from app.models.training import TrainingContribution
     
     user = await _get_user_for_profile(user_id, session)
     
@@ -611,6 +614,18 @@ async def get_public_user_profile(
     except Exception:
         forum_posts = 0
     
+    # Get contribution count
+    contribution_count = 0
+    try:
+        contrib_result = await session.execute(
+            select(func.count()).select_from(TrainingContribution).where(
+                TrainingContribution.user_id == user.id
+            )
+        )
+        contribution_count = contrib_result.scalar() or 0
+    except Exception:
+        pass
+    
     # Determine role
     role = "user"
     if user.roles:
@@ -633,8 +648,10 @@ async def get_public_user_profile(
         for tag in sorted(user.tags, key=lambda t: t.display_order)
     ] if user.tags else []
     
-    # Calculate leaderboard rank (only if user hasn't hidden from leaderboards)
-    leaderboard_rank = None
+    # Calculate leaderboard ranks (only if user hasn't hidden from leaderboards)
+    karma_rank = None
+    contribution_rank = None
+    
     try:
         # Check if user has hidden from leaderboards
         settings_result = await session.execute(
@@ -642,27 +659,84 @@ async def get_public_user_profile(
         )
         user_settings = settings_result.scalar_one_or_none()
         
-        # If no settings or not hidden, calculate rank
+        # If no settings or not hidden, calculate ranks
         if not user_settings or not user_settings.hide_from_leaderboards:
-            # Count how many non-hidden users have more karma
-            rank_result = await session.execute(
+            # Karma rank: count users with more karma, or same karma but earlier account
+            # (user_number is assigned sequentially, so lower = earlier)
+            karma_rank_result = await session.execute(
                 select(func.count())
                 .select_from(User)
                 .outerjoin(UserSettings, User.id == UserSettings.user_id)
                 .where(
-                    User.karma_score > (user.karma_score or 0),
                     User.restriction_level != 'banned',
                     or_(
                         UserSettings.hide_from_leaderboards.is_(None),
                         UserSettings.hide_from_leaderboards == False
+                    ),
+                    or_(
+                        User.karma_score > (user.karma_score or 0),
+                        # Tie-breaker: earlier account (lower user_number) ranks higher
+                        and_(
+                            User.karma_score == (user.karma_score or 0),
+                            User.user_number < user.user_number
+                        )
                     )
                 )
             )
-            users_above = rank_result.scalar() or 0
-            leaderboard_rank = users_above + 1
-    except Exception:
-        # If there's an issue calculating rank, just leave it null
-        pass
+            users_above_karma = karma_rank_result.scalar() or 0
+            karma_rank = users_above_karma + 1
+            
+            # Contribution rank: count users with more contributions
+            # First get user's approved contribution count
+            user_contrib_result = await session.execute(
+                select(func.count())
+                .select_from(TrainingContribution)
+                .where(
+                    TrainingContribution.user_id == user.id,
+                    TrainingContribution.status.in_(['approved', 'exported'])
+                )
+            )
+            user_approved_count = user_contrib_result.scalar() or 0
+            
+            # Now count users with more approved contributions
+            # Using a subquery to get each user's approved count
+            contrib_subquery = (
+                select(
+                    TrainingContribution.user_id,
+                    func.count().label('approved_count')
+                )
+                .where(TrainingContribution.status.in_(['approved', 'exported']))
+                .group_by(TrainingContribution.user_id)
+                .subquery()
+            )
+            
+            contrib_rank_result = await session.execute(
+                select(func.count())
+                .select_from(User)
+                .outerjoin(contrib_subquery, User.id == contrib_subquery.c.user_id)
+                .outerjoin(UserSettings, User.id == UserSettings.user_id)
+                .where(
+                    User.restriction_level != 'banned',
+                    or_(
+                        UserSettings.hide_from_leaderboards.is_(None),
+                        UserSettings.hide_from_leaderboards == False
+                    ),
+                    or_(
+                        func.coalesce(contrib_subquery.c.approved_count, 0) > user_approved_count,
+                        # Tie-breaker: earlier account ranks higher
+                        and_(
+                            func.coalesce(contrib_subquery.c.approved_count, 0) == user_approved_count,
+                            User.user_number < user.user_number
+                        )
+                    )
+                )
+            )
+            users_above_contrib = contrib_rank_result.scalar() or 0
+            contribution_rank = users_above_contrib + 1
+    except Exception as e:
+        # If there's an issue calculating ranks, leave them null
+        import logging
+        logging.error(f"Error calculating ranks: {e}")
     
     return PublicUserProfile(
         id=str(user.id),
@@ -677,12 +751,14 @@ async def get_public_user_profile(
         country_code=getattr(user, 'country_code', None),
         bio=getattr(user, 'bio', None),
         tags=profile_tags,
-        leaderboard_rank=leaderboard_rank,
+        karma_rank=karma_rank,
+        contribution_rank=contribution_rank,
         songs_uploaded=songs_count,
         maps_generated=songs_count,  # Approximate - should count maps
         maps_verified=0,  # TODO: Count verified maps
         achievements_count=0,  # TODO: Count achievements
         forum_posts=forum_posts,
+        contribution_count=contribution_count,
         last_active=getattr(user, 'last_active_at', None),
     )
 

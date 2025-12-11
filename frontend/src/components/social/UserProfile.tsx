@@ -16,7 +16,6 @@ import type { UserSearchResult, ReportType } from '@/api/social'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal'
-import { useAuthStore } from '@/stores/authStore'
 
 // Icons
 const MessageIcon = () => (
@@ -68,7 +67,7 @@ const KarmaIcon = () => (
 // =============================================================================
 
 interface UsernameLinkProps {
-    user: UserSearchResult | { id: string; username: string; display_name?: string }
+    user: UserSearchResult | { id: string; username: string; display_name?: string; user_number?: number }
     showPopover?: boolean
     className?: string
     children?: ReactNode
@@ -76,30 +75,19 @@ interface UsernameLinkProps {
 
 export function UsernameLink({ user, showPopover: _showPopover = true, className, children }: UsernameLinkProps) {
     // Note: showPopover prop kept for backwards compatibility but ignored - we now always navigate directly
-    const currentUser = useAuthStore((s) => s.user)
-    const isOwnProfile = currentUser?.id === user.id
 
     const displayName = 'display_name' in user ? user.display_name : user.username
 
-    if (isOwnProfile) {
-        // For own profile, link to settings
-        return (
-            <Link
-                to="/settings"
-                className={clsx(
-                    'font-medium text-primary-400 hover:text-primary-300 hover:underline cursor-pointer',
-                    className
-                )}
-            >
-                {children || displayName}
-            </Link>
-        )
-    }
+    // Use user_number for URL if available (osu!-style), otherwise fall back to UUID
+    const userIdentifier = 'user_number' in user && user.user_number
+        ? user.user_number
+        : user.id
 
-    // Always navigate directly to the user's public profile page (like osu!)
+    // Always link to the unified profile page (even for own profile)
+    // The UserProfilePage handles showing appropriate buttons for own vs other profiles
     return (
         <Link
-            to={`/user/${user.id}`}
+            to={`/user/${userIdentifier}`}
             className={clsx(
                 'font-medium text-primary-400 hover:text-primary-300 hover:underline cursor-pointer',
                 className

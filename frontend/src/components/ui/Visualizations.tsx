@@ -66,7 +66,7 @@ export interface SpectrumVisualizerProps extends HTMLAttributes<HTMLDivElement> 
 }
 
 const colorSchemes = {
-    cyan: ['#0ea5e9', '#06b6d4', '#22d3ee'],
+    cyan: ['#ff66ab', '#ff8dc7', '#ffb3d9'],
     pink: ['#ec4899', '#f472b6', '#fb7185'],
     rainbow: ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#8b5cf6'],
     fire: ['#fbbf24', '#f97316', '#ef4444', '#dc2626'],

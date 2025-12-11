@@ -97,7 +97,7 @@ export const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
                     'backdrop-blur-xl border border-white/10',
                     'shadow-xl',
                     hover && 'transition-all duration-300 hover:border-white/20 hover:shadow-2xl hover:-translate-y-1',
-                    glow && 'shadow-glow-cyan',
+                    glow && 'shadow-lg shadow-primary-500/20',
                     className
                 )}
                 {...props}
@@ -135,8 +135,8 @@ const glassButtonVariants = cva(
                 ],
                 primary: [
                     'bg-primary-500/20 border-primary-500/30 text-primary-300',
-                    'hover:bg-primary-500/30 hover:border-primary-500/50 hover:text-cyan-200',
-                    'hover:shadow-[0_0_20px_rgba(0,212,255,0.3)]',
+                    'hover:bg-primary-500/30 hover:border-primary-500/50 hover:text-primary-200',
+                    'hover:shadow-[0_0_20px_rgba(255,102,171,0.3)]',
                 ],
                 accent: [
                     'bg-magenta-500/20 border-magenta-500/30 text-magenta-300',

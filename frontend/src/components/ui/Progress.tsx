@@ -109,7 +109,7 @@ export function ProgressBar({
                     className={cn(
                         progressBarVariants({ variant, animated }),
                         indeterminate && 'w-1/3 animate-indeterminate',
-                        glow && 'shadow-lg shadow-cyan-500/30'
+                        glow && 'shadow-lg shadow-primary-500/30'
                     )}
                     style={{ width: indeterminate ? undefined : `${percentage}%` }}
                     role="progressbar"
@@ -163,7 +163,7 @@ export function CircularProgress({
         : `${Math.round(percentage)}%`
 
     const colorMap = {
-        default: '#00d4ff',
+        default: '#ff66ab',
         gradient: 'url(#gradient)',
         success: '#22c55e',
         warning: '#f59e0b',
@@ -178,14 +178,14 @@ export function CircularProgress({
                 viewBox={`0 0 ${size} ${size}`}
                 className={cn(
                     indeterminate && 'animate-spin',
-                    glow && 'drop-shadow-[0_0_8px_rgba(0,212,255,0.5)]'
+                    glow && 'drop-shadow-[0_0_8px_rgba(255,102,171,0.5)]'
                 )}
             >
                 {variant === 'gradient' && (
                     <defs>
                         <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#00d4ff" />
-                            <stop offset="100%" stopColor="#ff3296" />
+                            <stop offset="0%" stopColor="#ff66ab" />
+                            <stop offset="100%" stopColor="#aa92ff" />
                         </linearGradient>
                     </defs>
                 )}

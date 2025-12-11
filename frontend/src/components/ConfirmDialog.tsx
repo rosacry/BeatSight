@@ -136,8 +136,8 @@ export function ConfirmDialog({
                 }
             case 'signout':
                 return {
-                    confirmButton: 'bg-gradient-to-r from-primary-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 focus:ring-primary-500/50 shadow-lg shadow-cyan-500/25',
-                    cancelButton: 'bg-dark-300/60 hover:bg-dark-300/60 text-gray-200 border border-white/10/50 hover:border-white/10/50',
+                    confirmButton: 'bg-primary-500 hover:bg-primary-400 focus:ring-primary-500/50 shadow-lg shadow-primary-500/25',
+                    cancelButton: 'bg-dark-300 hover:bg-dark-300/80 text-gray-200 border border-white/10 hover:border-white/20',
                     icon: null, // No icon for osu-style signout popup
                 }
             default:
@@ -221,8 +221,8 @@ export function ConfirmDialog({
                             aria-modal="true"
                             aria-labelledby="dialog-title"
                         >
-                            {/* Decorative top gradient line */}
-                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-400 via-primary-500 to-teal-500" />
+                            {/* Decorative top accent line */}
+                            <div className="absolute top-0 left-0 right-0 h-1 bg-primary-500" />
 
                             {/* Subtle glow effect */}
                             <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-32 bg-primary-500/15 rounded-full blur-3xl pointer-events-none" />
@@ -231,7 +231,7 @@ export function ConfirmDialog({
                             <div className="relative px-8 pt-10 pb-8 text-center">
                                 {/* Icon with animated ring */}
                                 <motion.div
-                                    className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-primary-500/20 to-teal-500/20 border border-primary-500/40 flex items-center justify-center mb-5 relative"
+                                    className="mx-auto w-16 h-16 rounded-full bg-primary-500/15 border border-primary-500/30 flex items-center justify-center mb-5 relative"
                                     initial={{ scale: 0.8 }}
                                     animate={{ scale: 1 }}
                                     transition={{ delay: 0.1, type: 'spring', bounce: 0.4 }}
@@ -287,9 +287,9 @@ export function ConfirmDialog({
                                         onClick={onClose}
                                         disabled={isLoading}
                                         className={`px-8 py-3 text-sm font-semibold rounded-xl transition-all duration-200
-                                                 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900
+                                                 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark-500
                                                  disabled:opacity-50 min-w-[140px] hover:scale-105 active:scale-95
-                                                 ${styles.cancelButton || 'bg-dark-300/60 hover:bg-dark-300/60 text-gray-200 border border-white/10/50 hover:border-white/10/50 focus:ring-slate-500/50'}`}
+                                                 ${styles.cancelButton || 'bg-dark-300 hover:bg-dark-300/80 text-gray-200 border border-white/10 hover:border-white/20 focus:ring-gray-500/50'}`}
                                     >
                                         {cancelLabel}
                                     </button>
@@ -297,7 +297,7 @@ export function ConfirmDialog({
                                         onClick={onConfirm}
                                         disabled={isLoading}
                                         className={`px-8 py-3 text-sm font-semibold text-white rounded-xl transition-all duration-200
-                                                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900
+                                                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark-500
                                                   disabled:opacity-50 min-w-[140px] hover:scale-105 active:scale-95
                                                   ${styles.confirmButton}`}
                                     >

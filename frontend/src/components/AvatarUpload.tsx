@@ -174,12 +174,12 @@ export function AvatarUpload({
                     className={`
                         ${sizeClasses[size]}
                         rounded-full overflow-hidden
-                        bg-gradient-to-br from-primary-500 to-cyan-600 
+                        bg-primary-500/80
                         flex items-center justify-center
-                        border-2 border-transparent 
-                        hover:border-primary-400 hover:shadow-[0_0_20px_rgba(0,212,255,0.3)]
+                        border-2 border-primary-400/30 
+                        hover:border-primary-400 hover:shadow-[0_0_20px_rgba(255,102,171,0.3)]
                         transition-all duration-300
-                        focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-gray-900
+                        focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-500
                         ${isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                     `}
                 >

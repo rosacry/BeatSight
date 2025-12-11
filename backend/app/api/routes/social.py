@@ -409,7 +409,7 @@ async def get_reports_admin(
     """
     # Check if user is admin
     # Simple admin check - you may want to use your RBAC system
-    is_admin = any(role.name == "admin" for role in current_user.roles) if current_user.roles else False
+    is_admin = any(ur.role.code == "admin" for ur in current_user.roles if ur.role) if current_user.roles else False
     if not is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -464,7 +464,7 @@ async def get_report_admin(
 ) -> AdminReportResponse:
     """Get a single report by ID (admin only)."""
     # Check if user is admin
-    is_admin = any(role.name == "admin" for role in current_user.roles) if current_user.roles else False
+    is_admin = any(ur.role.code == "admin" for ur in current_user.roles if ur.role) if current_user.roles else False
     if not is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -505,7 +505,7 @@ async def update_report_admin(
 ) -> AdminReportResponse:
     """Update a report's status (admin only)."""
     # Check if user is admin
-    is_admin = any(role.name == "admin" for role in current_user.roles) if current_user.roles else False
+    is_admin = any(ur.role.code == "admin" for ur in current_user.roles if ur.role) if current_user.roles else False
     if not is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

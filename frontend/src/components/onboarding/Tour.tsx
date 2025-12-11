@@ -310,7 +310,7 @@ function TourOverlay() {
                                     key={index}
                                     className={cn(
                                         'h-1 flex-1 rounded-full transition-colors',
-                                        index <= currentStep ? 'bg-cyan-500' : 'bg-gray-700'
+                                        index <= currentStep ? 'bg-primary-500' : 'bg-gray-700'
                                     )}
                                 />
                             ))}
@@ -358,7 +358,7 @@ function TourOverlay() {
                                 onClick={nextStep}
                                 className={cn(
                                     'px-4 py-1.5 text-sm font-medium rounded-lg',
-                                    'bg-cyan-500 text-white hover:bg-cyan-400',
+                                    'bg-primary-500 text-white hover:bg-primary-400',
                                     'transition-colors'
                                 )}
                             >

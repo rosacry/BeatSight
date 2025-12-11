@@ -348,7 +348,7 @@ export function CommandPalette({
                                                             'w-full flex items-center gap-3 px-4 py-2.5',
                                                             'text-left transition-colors duration-75',
                                                             isSelected
-                                                                ? 'bg-cyan-500/20 text-white'
+                                                                ? 'bg-primary-500/20 text-white'
                                                                 : 'text-gray-300 hover:bg-white/5',
                                                         )}
                                                     >
@@ -356,7 +356,7 @@ export function CommandPalette({
                                                         {item.icon && (
                                                             <span className={cn(
                                                                 'flex-shrink-0 w-5 h-5 flex items-center justify-center',
-                                                                isSelected ? 'text-cyan-400' : 'text-gray-500'
+                                                                isSelected ? 'text-primary-400' : 'text-gray-500'
                                                             )}>
                                                                 {item.icon}
                                                             </span>

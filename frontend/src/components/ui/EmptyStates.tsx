@@ -72,12 +72,12 @@ export const EmptyState = forwardRef<HTMLDivElement, EmptyStateProps>(
                     </div>
                 )}
 
-                <h3 className={cn('font-semibold text-slate-200 mb-2', styles.title)}>
+                <h3 className={cn('font-semibold text-gray-200 mb-2', styles.title)}>
                     {title}
                 </h3>
 
                 {description && (
-                    <p className={cn('text-slate-400 max-w-sm mb-6', styles.description)}>
+                    <p className={cn('text-gray-400 max-w-sm mb-6', styles.description)}>
                         {description}
                     </p>
                 )}
@@ -303,16 +303,16 @@ const illustrations: Record<string, ReactNode> = {
     music: (
         <div className="relative w-32 h-32">
             {/* Background circles */}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cyan-500/20 to-fuchsia-500/20 animate-pulse" />
-            <div className="absolute inset-4 rounded-full bg-gradient-to-br from-cyan-500/10 to-fuchsia-500/10" />
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary-500/20 to-fuchsia-500/20 animate-pulse" />
+            <div className="absolute inset-4 rounded-full bg-gradient-to-br from-primary-500/10 to-fuchsia-500/10" />
 
             {/* Music note */}
-            <svg className="absolute inset-0 w-full h-full p-8 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <svg className="absolute inset-0 w-full h-full p-8 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M9 18V5l12-2v13M9 18c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
 
             {/* Floating notes */}
-            <div className="absolute -top-2 -right-2 w-6 h-6 text-cyan-400 animate-float">
+            <div className="absolute -top-2 -right-2 w-6 h-6 text-primary-400 animate-float">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
                 </svg>
@@ -330,14 +330,14 @@ const illustrations: Record<string, ReactNode> = {
             <div className="absolute inset-0 flex items-center justify-center">
                 <div className="relative">
                     {/* Snare */}
-                    <div className="w-16 h-8 bg-gradient-to-b from-slate-600 to-slate-700 rounded-full border-2 border-slate-500" />
+                    <div className="w-16 h-8 bg-gradient-to-b from-dark-300 to-dark-300 rounded-full border-2 border-white/10" />
                     {/* Drumsticks */}
                     <div className="absolute -top-4 left-1/2 -translate-x-1/2 flex gap-2">
                         <div className="w-1 h-10 bg-amber-600 rounded-full rotate-[-20deg] origin-bottom" />
                         <div className="w-1 h-10 bg-amber-600 rounded-full rotate-[20deg] origin-bottom" />
                     </div>
                     {/* Beat waves */}
-                    <div className="absolute inset-0 rounded-full border-2 border-cyan-400/30 animate-ping" />
+                    <div className="absolute inset-0 rounded-full border-2 border-primary-400/30 animate-ping" />
                 </div>
             </div>
         </div>
@@ -345,7 +345,7 @@ const illustrations: Record<string, ReactNode> = {
     search: (
         <div className="relative w-32 h-32">
             <div className="absolute inset-0 flex items-center justify-center">
-                <svg className="w-20 h-20 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <svg className="w-20 h-20 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <circle cx="11" cy="11" r="8" />
                     <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
                 </svg>
@@ -368,8 +368,8 @@ const illustrations: Record<string, ReactNode> = {
     ),
     upload: (
         <div className="relative w-32 h-32">
-            <div className="absolute inset-0 rounded-2xl border-2 border-dashed border-slate-600 flex items-center justify-center">
-                <svg className="w-12 h-12 text-slate-500 animate-bounce" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <div className="absolute inset-0 rounded-2xl border-2 border-dashed border-white/10 flex items-center justify-center">
+                <svg className="w-12 h-12 text-gray-500 animate-bounce" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
             </div>
@@ -389,10 +389,10 @@ export const IllustratedEmptyState = forwardRef<HTMLDivElement, IllustratedEmpty
                     {illustrations[illustration]}
                 </div>
 
-                <h3 className="text-xl font-semibold text-slate-200 mb-2">{title}</h3>
+                <h3 className="text-xl font-semibold text-gray-200 mb-2">{title}</h3>
 
                 {description && (
-                    <p className="text-slate-400 max-w-md mb-6">{description}</p>
+                    <p className="text-gray-400 max-w-md mb-6">{description}</p>
                 )}
 
                 {(action || secondaryAction) && (

@@ -184,13 +184,13 @@ export function TimeDisplay({ currentTime, duration, className }: TimeDisplayPro
 
     return (
         <div className={cn('flex flex-col', className)}>
-            <div className="font-mono text-lg font-medium text-slate-100 tabular-nums tracking-tight">
+            <div className="font-mono text-lg font-medium text-gray-100 tabular-nums tracking-tight">
                 {formatTime(currentTime)}
-                <span className="text-slate-500 text-sm ml-1">/ {formatTime(duration)}</span>
+                <span className="text-gray-500 text-sm ml-1">/ {formatTime(duration)}</span>
             </div>
-            <div className="h-1 w-32 bg-slate-700/50 rounded-full overflow-hidden mt-1">
+            <div className="h-1 w-32 bg-dark-300 rounded-full overflow-hidden mt-1">
                 <div
-                    className="h-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 transition-all duration-75"
+                    className="h-full bg-primary-500 transition-all duration-75"
                     style={{ width: `${progress}%` }}
                 />
             </div>
@@ -217,8 +217,8 @@ export function SpeedSelector({
 }: SpeedSelectorProps) {
     return (
         <div className={cn('flex items-center gap-2', className)}>
-            <span className="text-xs text-slate-500 uppercase tracking-wider">Speed</span>
-            <div className="flex items-center bg-slate-800 rounded-lg p-0.5">
+            <span className="text-xs text-gray-500 uppercase tracking-wider">Speed</span>
+            <div className="flex items-center bg-dark-400 rounded-lg p-0.5">
                 {rates.map((rate) => (
                     <button
                         key={rate}
@@ -226,8 +226,8 @@ export function SpeedSelector({
                         className={cn(
                             'px-2 py-1 text-xs font-medium rounded-md transition-all duration-200',
                             value === rate
-                                ? 'bg-slate-600 text-white shadow-sm'
-                                : 'text-slate-400 hover:text-slate-200'
+                                ? 'bg-dark-300 text-white shadow-sm'
+                                : 'text-gray-400 hover:text-gray-200'
                         )}
                     >
                         {rate}x
@@ -255,7 +255,7 @@ export function VolumeSlider({ value, onChange, className }: VolumeSliderProps) 
         <div className={cn('flex items-center gap-2', className)}>
             <button
                 onClick={() => onChange(isMuted ? 0.8 : 0)}
-                className="text-slate-400 hover:text-slate-200 transition-colors"
+                className="text-gray-400 hover:text-gray-200 transition-colors"
                 title={isMuted ? 'Unmute' : 'Mute'}
             >
                 {isMuted ? (
@@ -274,9 +274,9 @@ export function VolumeSlider({ value, onChange, className }: VolumeSliderProps) 
             </button>
             <div className="relative w-20 h-6 flex items-center">
                 <div className="absolute inset-y-0 left-0 right-0 flex items-center">
-                    <div className="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                    <div className="w-full h-1.5 bg-dark-300 rounded-full overflow-hidden">
                         <div
-                            className="h-full bg-gradient-to-r from-slate-400 to-slate-300 rounded-full"
+                            className="h-full bg-gray-400 rounded-full"
                             style={{ width: `${value * 100}%` }}
                         />
                     </div>
@@ -332,8 +332,8 @@ export function SnapSelector({
                 className={cn(
                     'flex items-center gap-1.5 px-2 py-1 rounded-lg text-sm transition-all duration-200',
                     enabled
-                        ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-                        : 'bg-slate-800 text-slate-500 border border-slate-700'
+                        ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
+                        : 'bg-dark-400 text-gray-500 border border-white/10'
                 )}
             >
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -342,7 +342,7 @@ export function SnapSelector({
                 Snap
             </button>
             {enabled && (
-                <div className="flex items-center bg-slate-800 rounded-lg overflow-hidden">
+                <div className="flex items-center bg-dark-400 rounded-lg overflow-hidden">
                     {SNAP_OPTIONS.map((opt) => (
                         <button
                             key={opt.value}
@@ -350,8 +350,8 @@ export function SnapSelector({
                             className={cn(
                                 'px-2 py-1 text-xs font-medium transition-all duration-200 relative',
                                 divisor === opt.value
-                                    ? 'bg-slate-600 text-white'
-                                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700'
+                                    ? 'bg-dark-300 text-white'
+                                    : 'text-gray-400 hover:text-gray-200 hover:bg-dark-300'
                             )}
                             title={opt.label}
                         >
@@ -390,7 +390,7 @@ export const ToggleSwitch = forwardRef<HTMLInputElement, ToggleSwitchProps>(
                     <div
                         className={cn(
                             'w-8 h-4 rounded-full transition-colors duration-200',
-                            checked ? 'bg-cyan-500' : 'bg-slate-700'
+                            checked ? 'bg-primary-500' : 'bg-dark-300'
                         )}
                     />
                     <div
@@ -400,7 +400,7 @@ export const ToggleSwitch = forwardRef<HTMLInputElement, ToggleSwitchProps>(
                         )}
                     />
                 </div>
-                <span className="text-xs text-slate-400">{label}</span>
+                <span className="text-xs text-gray-400">{label}</span>
             </label>
         )
     }
@@ -423,7 +423,7 @@ export function EditStatsBadge({ added, removed, modified, className }: EditStat
     if (total === 0) return null
 
     return (
-        <div className={cn('flex items-center gap-2 px-2 py-1 bg-slate-800/50 rounded-lg text-xs', className)}>
+        <div className={cn('flex items-center gap-2 px-2 py-1 bg-dark-400/50 rounded-lg text-xs', className)}>
             {added > 0 && (
                 <span className="flex items-center gap-1 text-emerald-400">
                     <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -513,15 +513,15 @@ export function SelectionInfoBar({ count, onDelete, onClear, readOnly, className
     return (
         <div
             className={cn(
-                'flex items-center gap-4 px-4 py-2 bg-cyan-500/10 border border-cyan-500/20 rounded-lg text-sm animate-in slide-in-from-top-2 duration-200',
+                'flex items-center gap-4 px-4 py-2 bg-primary-500/10 border border-primary-500/20 rounded-lg text-sm animate-in slide-in-from-top-2 duration-200',
                 className
             )}
         >
-            <span className="text-cyan-400 font-medium">
+            <span className="text-primary-400 font-medium">
                 {count} note{count !== 1 && 's'} selected
             </span>
 
-            <div className="h-4 w-px bg-cyan-500/30" />
+            <div className="h-4 w-px bg-primary-500/30" />
 
             {!readOnly && onDelete && (
                 <button
@@ -537,7 +537,7 @@ export function SelectionInfoBar({ count, onDelete, onClear, readOnly, className
 
             <button
                 onClick={onClear}
-                className="text-slate-400 hover:text-slate-200 transition-colors"
+                className="text-gray-400 hover:text-gray-200 transition-colors"
             >
                 Clear selection
             </button>
@@ -572,10 +572,10 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
 
 export function KeyboardShortcutsLegend({ shortcuts = DEFAULT_SHORTCUTS, className }: KeyboardShortcutsLegendProps) {
     return (
-        <div className={cn('flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500', className)}>
+        <div className={cn('flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500', className)}>
             {shortcuts.map((shortcut) => (
                 <span key={shortcut.key} className="flex items-center gap-1">
-                    <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-400 font-mono text-[10px]">
+                    <kbd className="px-1.5 py-0.5 bg-dark-400 rounded text-gray-400 font-mono text-[10px]">
                         {shortcut.key}
                     </kbd>
                     <span>{shortcut.description}</span>
@@ -606,7 +606,7 @@ export function WaveformScaleControl({
 }: WaveformScaleControlProps) {
     return (
         <div className={cn('flex items-center gap-2', className)}>
-            <span className="text-xs text-slate-500 flex items-center gap-1">
+            <span className="text-xs text-gray-500 flex items-center gap-1">
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M2 12h2M6 12h2M10 8v8M14 6v12M18 10v4M22 12h2" strokeLinecap="round" />
                 </svg>
@@ -614,7 +614,7 @@ export function WaveformScaleControl({
             </span>
             <div className="relative w-16 h-5 flex items-center">
                 <div className="absolute inset-y-0 left-0 right-0 flex items-center">
-                    <div className="w-full h-1 bg-slate-700 rounded-full">
+                    <div className="w-full h-1 bg-dark-300 rounded-full">
                         <div
                             className="h-full bg-fuchsia-500 rounded-full"
                             style={{ width: `${((value - min) / (max - min)) * 100}%` }}
@@ -632,7 +632,7 @@ export function WaveformScaleControl({
                     title={`Waveform scale: ${value.toFixed(1)}`}
                 />
             </div>
-            <span className="text-xs text-slate-400 font-mono w-8">{value.toFixed(1)}x</span>
+            <span className="text-xs text-gray-400 font-mono w-8">{value.toFixed(1)}x</span>
         </div>
     )
 }

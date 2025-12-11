@@ -155,7 +155,7 @@ const defaultColors = [
     'text-yellow-500',
     'text-red-500',
     'text-purple-500',
-    'text-cyan-500',
+    'text-primary-500',
     'text-orange-500',
 ]
 

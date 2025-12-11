@@ -39,10 +39,10 @@ const Info = InfoIcon;
 
 // Shared form field styles
 const baseInputStyles = `
-  w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl
-  text-white placeholder-slate-400
+  w-full px-4 py-3 bg-dark-400/50 border border-white/10/50 rounded-xl
+  text-white placeholder-gray-400
   transition-all duration-200
-  focus:outline-none focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20
+  focus:outline-none focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20
   disabled:opacity-50 disabled:cursor-not-allowed
 `;
 
@@ -68,14 +68,14 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
         return (
             <div className="space-y-1.5">
                 {label && (
-                    <label htmlFor={inputId} className="block text-sm font-medium text-slate-300">
+                    <label htmlFor={inputId} className="block text-sm font-medium text-gray-300">
                         {label}
                         {props.required && <span className="text-red-400 ml-1">*</span>}
                     </label>
                 )}
                 <div className="relative">
                     {leftIcon && (
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                             {leftIcon}
                         </div>
                     )}
@@ -94,7 +94,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
                         {...props}
                     />
                     {rightIcon && (
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
                             {rightIcon}
                         </div>
                     )}
@@ -106,7 +106,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
                     </p>
                 )}
                 {hint && !error && (
-                    <p id={`${inputId}-hint`} className="flex items-center gap-1.5 text-sm text-slate-500">
+                    <p id={`${inputId}-hint`} className="flex items-center gap-1.5 text-sm text-gray-500">
                         <Info className="w-4 h-4" />
                         {hint}
                     </p>
@@ -161,7 +161,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
                         <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="text-slate-400 hover:text-white transition-colors"
+                            className="text-gray-400 hover:text-white transition-colors"
                             aria-label={showPassword ? 'Hide password' : 'Show password'}
                         >
                             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -175,12 +175,12 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
                             {[0, 1, 2, 3, 4].map((i) => (
                                 <div
                                     key={i}
-                                    className={`h-1 flex-1 rounded-full transition-colors ${i < strength.score ? strength.color : 'bg-slate-700'
+                                    className={`h-1 flex-1 rounded-full transition-colors ${i < strength.score ? strength.color : 'bg-dark-300'
                                         }`}
                                 />
                             ))}
                         </div>
-                        <p className="text-xs text-slate-500">{strength.label}</p>
+                        <p className="text-xs text-gray-500">{strength.label}</p>
                     </div>
                 )}
             </div>
@@ -211,7 +211,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
                         <button
                             type="button"
                             onClick={onClear}
-                            className="text-slate-400 hover:text-white transition-colors"
+                            className="text-gray-400 hover:text-white transition-colors"
                             aria-label="Clear search"
                         >
                             <X className="w-5 h-5" />
@@ -247,7 +247,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         return (
             <div className="space-y-1.5">
                 {label && (
-                    <label htmlFor={textareaId} className="block text-sm font-medium text-slate-300">
+                    <label htmlFor={textareaId} className="block text-sm font-medium text-gray-300">
                         {label}
                         {props.required && <span className="text-red-400 ml-1">*</span>}
                     </label>
@@ -274,12 +274,12 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                             {error}
                         </p>
                     ) : hint ? (
-                        <p id={`${textareaId}-hint`} className="text-sm text-slate-500">{hint}</p>
+                        <p id={`${textareaId}-hint`} className="text-sm text-gray-500">{hint}</p>
                     ) : (
                         <span />
                     )}
                     {showCount && maxLength && (
-                        <span className={`text-xs ${charCount >= maxLength ? 'text-red-400' : 'text-slate-500'}`}>
+                        <span className={`text-xs ${charCount >= maxLength ? 'text-red-400' : 'text-gray-500'}`}>
                             {charCount}/{maxLength}
                         </span>
                     )}
@@ -317,7 +317,7 @@ export const SelectInput = forwardRef<HTMLSelectElement, SelectInputProps>(
         return (
             <div className="space-y-1.5">
                 {label && (
-                    <label htmlFor={selectId} className="block text-sm font-medium text-slate-300">
+                    <label htmlFor={selectId} className="block text-sm font-medium text-gray-300">
                         {label}
                         {props.required && <span className="text-red-400 ml-1">*</span>}
                     </label>
@@ -346,7 +346,7 @@ export const SelectInput = forwardRef<HTMLSelectElement, SelectInputProps>(
                             </option>
                         ))}
                     </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                 </div>
                 {error && (
                     <p className="flex items-center gap-1.5 text-sm text-red-400">
@@ -355,7 +355,7 @@ export const SelectInput = forwardRef<HTMLSelectElement, SelectInputProps>(
                     </p>
                 )}
                 {hint && !error && (
-                    <p className="text-sm text-slate-500">{hint}</p>
+                    <p className="text-sm text-gray-500">{hint}</p>
                 )}
             </div>
         );
@@ -389,11 +389,11 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
                         {...props}
                     />
                     <div className="
-            w-5 h-5 rounded border-2 border-slate-600
-            peer-checked:bg-cyan-500 peer-checked:border-cyan-500
-            peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-500/50
+            w-5 h-5 rounded border-2 border-white/10
+            peer-checked:bg-primary-500 peer-checked:border-primary-500
+            peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500/50
             peer-disabled:opacity-50 peer-disabled:cursor-not-allowed
-            transition-colors group-hover:border-slate-500
+            transition-colors group-hover:border-white/10
           ">
                         <Check className="w-full h-full text-white scale-0 peer-checked:scale-100 transition-transform" />
                     </div>
@@ -406,7 +406,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
                 {(label || description) && (
                     <div>
                         {label && <div className="text-sm font-medium text-white">{label}</div>}
-                        {description && <div className="text-sm text-slate-400">{description}</div>}
+                        {description && <div className="text-sm text-gray-400">{description}</div>}
                     </div>
                 )}
             </label>
@@ -441,15 +441,15 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(
                         {...props}
                     />
                     <div className="
-            w-5 h-5 rounded-full border-2 border-slate-600
-            peer-checked:border-cyan-500
-            peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-500/50
+            w-5 h-5 rounded-full border-2 border-white/10
+            peer-checked:border-primary-500
+            peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500/50
             peer-disabled:opacity-50 peer-disabled:cursor-not-allowed
-            transition-colors group-hover:border-slate-500
+            transition-colors group-hover:border-white/10
           " />
                     <div className="
             absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-            w-2.5 h-2.5 rounded-full bg-cyan-500
+            w-2.5 h-2.5 rounded-full bg-primary-500
             scale-0 peer-checked:scale-100
             transition-transform
           " />
@@ -457,7 +457,7 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(
                 {(label || description) && (
                     <div>
                         {label && <div className="text-sm font-medium text-white">{label}</div>}
-                        {description && <div className="text-sm text-slate-400">{description}</div>}
+                        {description && <div className="text-sm text-gray-400">{description}</div>}
                     </div>
                 )}
             </label>
@@ -499,7 +499,7 @@ export const RadioGroup: React.FC<RadioGroupProps> = ({
 }) => {
     return (
         <div className="space-y-2">
-            {label && <div className="text-sm font-medium text-slate-300">{label}</div>}
+            {label && <div className="text-sm font-medium text-gray-300">{label}</div>}
             <div className={`flex ${orientation === 'vertical' ? 'flex-col gap-3' : 'flex-row flex-wrap gap-6'}`}>
                 {options.map((option) => (
                     <Radio
@@ -543,7 +543,7 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
                 {(label || description) && (
                     <div className="flex-1">
                         {label && <div className="text-sm font-medium text-white">{label}</div>}
-                        {description && <div className="text-sm text-slate-400">{description}</div>}
+                        {description && <div className="text-sm text-gray-400">{description}</div>}
                     </div>
                 )}
                 <div className="relative flex-shrink-0">
@@ -555,9 +555,9 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
                         {...props}
                     />
                     <div className="
-            w-11 h-6 rounded-full bg-slate-700
-            peer-checked:bg-cyan-500
-            peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-500/50
+            w-11 h-6 rounded-full bg-dark-300
+            peer-checked:bg-primary-500
+            peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500/50
             peer-disabled:opacity-50 peer-disabled:cursor-not-allowed
             transition-colors
           " />
@@ -596,12 +596,12 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(
                 {(label || showValue) && (
                     <div className="flex justify-between items-center">
                         {label && (
-                            <label htmlFor={sliderId} className="text-sm font-medium text-slate-300">
+                            <label htmlFor={sliderId} className="text-sm font-medium text-gray-300">
                                 {label}
                             </label>
                         )}
                         {showValue && (
-                            <span className="text-sm text-cyan-400 font-medium">
+                            <span className="text-sm text-primary-400 font-medium">
                                 {valueFormatter ? valueFormatter(numValue) : numValue}
                             </span>
                         )}
@@ -616,14 +616,14 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(
                         min={min}
                         max={max}
                         className="
-              w-full h-2 bg-slate-700 rounded-full appearance-none cursor-pointer
+              w-full h-2 bg-dark-300 rounded-full appearance-none cursor-pointer
               [&::-webkit-slider-thumb]:appearance-none
               [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
-              [&::-webkit-slider-thumb]:bg-cyan-500 [&::-webkit-slider-thumb]:rounded-full
+              [&::-webkit-slider-thumb]:bg-primary-500 [&::-webkit-slider-thumb]:rounded-full
               [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-grab
               [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110
               [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5
-              [&::-moz-range-thumb]:bg-cyan-500 [&::-moz-range-thumb]:rounded-full
+              [&::-moz-range-thumb]:bg-primary-500 [&::-moz-range-thumb]:rounded-full
               [&::-moz-range-thumb]:border-0
               disabled:opacity-50 disabled:cursor-not-allowed
             "
@@ -660,7 +660,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
         return (
             <div className="space-y-1.5">
                 {label && (
-                    <label htmlFor={inputId} className="block text-sm font-medium text-slate-300">
+                    <label htmlFor={inputId} className="block text-sm font-medium text-gray-300">
                         {label}
                     </label>
                 )}
@@ -668,7 +668,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
                     <button
                         type="button"
                         onClick={onDecrement}
-                        className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-l-xl text-white hover:bg-slate-600 transition-colors"
+                        className="px-3 py-2 bg-dark-300 border border-white/10 rounded-l-xl text-white hover:bg-dark-300 transition-colors"
                         aria-label="Decrease"
                     >
                         -
@@ -679,9 +679,9 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
                         id={inputId}
                         step={step}
                         className={`
-              flex-1 px-4 py-2 bg-slate-800/50 border-y border-slate-600/50
+              flex-1 px-4 py-2 bg-dark-400/50 border-y border-white/10/50
               text-white text-center
-              focus:outline-none focus:border-cyan-500/50
+              focus:outline-none focus:border-primary-500/50
               [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
               ${error ? 'border-red-500/50' : ''}
               ${className}
@@ -691,7 +691,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
                     <button
                         type="button"
                         onClick={onIncrement}
-                        className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-r-xl text-white hover:bg-slate-600 transition-colors"
+                        className="px-3 py-2 bg-dark-300 border border-white/10 rounded-r-xl text-white hover:bg-dark-300 transition-colors"
                         aria-label="Increase"
                     >
                         +
@@ -756,7 +756,7 @@ export const FileInput = forwardRef<HTMLInputElement, FileInputProps>(
         return (
             <div className="space-y-1.5">
                 {label && (
-                    <label className="block text-sm font-medium text-slate-300">{label}</label>
+                    <label className="block text-sm font-medium text-gray-300">{label}</label>
                 )}
                 <div
                     onDragEnter={handleDrag}
@@ -766,10 +766,10 @@ export const FileInput = forwardRef<HTMLInputElement, FileInputProps>(
                     className={`
             relative border-2 border-dashed rounded-xl p-8 text-center transition-colors
             ${dragActive
-                            ? 'border-cyan-500 bg-cyan-500/10'
+                            ? 'border-primary-500 bg-primary-500/10'
                             : error
                                 ? 'border-red-500/50 bg-red-500/5'
-                                : 'border-slate-600 hover:border-slate-500 bg-slate-800/30'
+                                : 'border-white/10 hover:border-white/10 bg-dark-400/30'
                         }
             ${className}
           `}
@@ -783,17 +783,17 @@ export const FileInput = forwardRef<HTMLInputElement, FileInputProps>(
                         {...props}
                     />
                     <div className="space-y-2">
-                        <div className="mx-auto w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center">
-                            <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div className="mx-auto w-12 h-12 rounded-full bg-dark-300 flex items-center justify-center">
+                            <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                             </svg>
                         </div>
                         <div>
                             <p className="text-white font-medium">
-                                Drop files here or <span className="text-cyan-400">browse</span>
+                                Drop files here or <span className="text-primary-400">browse</span>
                             </p>
                             {acceptText && (
-                                <p className="text-sm text-slate-500 mt-1">{acceptText}</p>
+                                <p className="text-sm text-gray-500 mt-1">{acceptText}</p>
                             )}
                         </div>
                     </div>
@@ -805,7 +805,7 @@ export const FileInput = forwardRef<HTMLInputElement, FileInputProps>(
                     </p>
                 )}
                 {hint && !error && (
-                    <p className="text-sm text-slate-500">{hint}</p>
+                    <p className="text-sm text-gray-500">{hint}</p>
                 )}
             </div>
         );
@@ -836,7 +836,7 @@ export const FormGroup: React.FC<FormGroupProps> = ({
             {(title || description) && (
                 <div className="space-y-1">
                     {title && <legend className="text-lg font-semibold text-white">{title}</legend>}
-                    {description && <p className="text-sm text-slate-400">{description}</p>}
+                    {description && <p className="text-sm text-gray-400">{description}</p>}
                 </div>
             )}
             {children}

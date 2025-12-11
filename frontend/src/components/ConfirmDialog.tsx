@@ -136,15 +136,15 @@ export function ConfirmDialog({
                 }
             case 'signout':
                 return {
-                    confirmButton: 'bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 focus:ring-cyan-500/50 shadow-lg shadow-cyan-500/25',
-                    cancelButton: 'bg-slate-700/60 hover:bg-slate-600/60 text-slate-200 border border-slate-600/50 hover:border-slate-500/50',
+                    confirmButton: 'bg-gradient-to-r from-primary-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 focus:ring-primary-500/50 shadow-lg shadow-cyan-500/25',
+                    cancelButton: 'bg-dark-300/60 hover:bg-dark-300/60 text-gray-200 border border-white/10/50 hover:border-white/10/50',
                     icon: null, // No icon for osu-style signout popup
                 }
             default:
                 return {
-                    confirmButton: 'bg-cyan-500 hover:bg-cyan-600 focus:ring-cyan-500/50',
+                    confirmButton: 'bg-primary-500 hover:bg-primary-600 focus:ring-primary-500/50',
                     icon: (
-                        <svg className="w-6 h-6 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-6 h-6 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     ),
@@ -187,7 +187,7 @@ export function ConfirmDialog({
 
                         {/* Subtle animated gradient overlay for depth */}
                         <motion.div
-                            className="absolute inset-0 bg-gradient-to-br from-cyan-900/15 via-transparent to-slate-900/20 pointer-events-none"
+                            className="absolute inset-0 bg-gradient-to-br from-primary-900/15 via-transparent to-dark-500/20 pointer-events-none"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -216,29 +216,29 @@ export function ConfirmDialog({
                             }}
                             onClick={(e) => e.stopPropagation()}
                             tabIndex={-1}
-                            className="relative bg-gradient-to-b from-slate-800/95 to-slate-900/95 rounded-3xl border border-white/10 shadow-2xl shadow-black/60 max-w-md w-full mx-4 overflow-hidden focus:outline-none backdrop-blur-xl"
+                            className="relative bg-gradient-to-b from-dark-400/95 to-dark-500/95 rounded-3xl border border-white/10 shadow-2xl shadow-black/60 max-w-md w-full mx-4 overflow-hidden focus:outline-none backdrop-blur-xl"
                             role="dialog"
                             aria-modal="true"
                             aria-labelledby="dialog-title"
                         >
                             {/* Decorative top gradient line */}
-                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-400 via-cyan-500 to-teal-500" />
+                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-400 via-primary-500 to-teal-500" />
 
                             {/* Subtle glow effect */}
-                            <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-32 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
+                            <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-32 bg-primary-500/15 rounded-full blur-3xl pointer-events-none" />
 
                             {/* Content */}
                             <div className="relative px-8 pt-10 pb-8 text-center">
                                 {/* Icon with animated ring */}
                                 <motion.div
-                                    className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500/20 to-teal-500/20 border border-cyan-500/40 flex items-center justify-center mb-5 relative"
+                                    className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-primary-500/20 to-teal-500/20 border border-primary-500/40 flex items-center justify-center mb-5 relative"
                                     initial={{ scale: 0.8 }}
                                     animate={{ scale: 1 }}
                                     transition={{ delay: 0.1, type: 'spring', bounce: 0.4 }}
                                 >
                                     {/* Animated ring */}
                                     <motion.div
-                                        className="absolute inset-0 rounded-full border-2 border-cyan-400/30"
+                                        className="absolute inset-0 rounded-full border-2 border-primary-400/30"
                                         initial={{ scale: 1, opacity: 0.5 }}
                                         animate={{
                                             scale: [1, 1.3, 1.3],
@@ -250,7 +250,7 @@ export function ConfirmDialog({
                                             ease: 'easeOut'
                                         }}
                                     />
-                                    <svg className="w-8 h-8 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg className="w-8 h-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                                     </svg>
                                 </motion.div>
@@ -268,7 +268,7 @@ export function ConfirmDialog({
 
                                 {/* Message */}
                                 <motion.p
-                                    className="text-slate-400 text-base mb-8 leading-relaxed"
+                                    className="text-gray-400 text-base mb-8 leading-relaxed"
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 0.2 }}
@@ -289,7 +289,7 @@ export function ConfirmDialog({
                                         className={`px-8 py-3 text-sm font-semibold rounded-xl transition-all duration-200
                                                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900
                                                  disabled:opacity-50 min-w-[140px] hover:scale-105 active:scale-95
-                                                 ${styles.cancelButton || 'bg-slate-700/60 hover:bg-slate-600/60 text-slate-200 border border-slate-600/50 hover:border-slate-500/50 focus:ring-slate-500/50'}`}
+                                                 ${styles.cancelButton || 'bg-dark-300/60 hover:bg-dark-300/60 text-gray-200 border border-white/10/50 hover:border-white/10/50 focus:ring-slate-500/50'}`}
                                     >
                                         {cancelLabel}
                                     </button>

@@ -163,7 +163,7 @@ function getGradientFromString(str: string): string[] {
         ['from-orange-500', 'to-red-600'],
         ['from-pink-500', 'to-rose-600'],
         ['from-indigo-500', 'to-blue-600'],
-        ['from-cyan-500', 'to-blue-600'],
+        ['from-primary-500', 'to-blue-600'],
         ['from-amber-500', 'to-orange-600'],
         ['from-violet-500', 'to-purple-600'],
     ]

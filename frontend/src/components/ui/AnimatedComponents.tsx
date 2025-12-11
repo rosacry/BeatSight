@@ -180,9 +180,9 @@ export function MagneticButton({
             whileTap={{ scale: 0.95 }}
             className={cn(
                 'relative overflow-hidden rounded-lg px-6 py-3',
-                'bg-gradient-to-r from-cyan-500 to-magenta-500',
+                'bg-primary-500 hover:bg-primary-600',
                 'text-white font-semibold shadow-lg',
-                'transition-shadow hover:shadow-glow-cyan',
+                'transition-shadow hover:shadow-primary-500/20',
                 className
             )}
             {...restProps}
@@ -238,8 +238,8 @@ export function FloatingCard({ children, className, intensity = 10 }: FloatingCa
             }}
             className={cn(
                 'relative rounded-2xl p-6',
-                'bg-gradient-to-br from-gray-900/90 to-gray-800/90',
-                'border border-white/10 backdrop-blur-xl',
+                'bg-dark-400',
+                'border border-white/10',
                 'shadow-2xl',
                 className
             )}
@@ -339,7 +339,7 @@ export function GradientBorderCard({
             <motion.div
                 className="absolute inset-0"
                 style={{
-                    background: 'linear-gradient(90deg, #00d4ff, #ff3296, #00d4ff)',
+                    background: 'linear-gradient(90deg, #ff66ab, #aa92ff, #ff66ab)',
                     backgroundSize: '200% 100%',
                 }}
                 animate={animate ? {
@@ -393,8 +393,7 @@ export function SpotlightCard({
         <motion.div
             className={cn(
                 'relative overflow-hidden rounded-2xl',
-                'bg-gray-900/80 border border-white/10',
-                'backdrop-blur-xl',
+                'bg-dark-400 border border-white/10',
                 className
             )}
             onMouseMove={handleMouseMove}
@@ -476,7 +475,7 @@ interface ScrollProgressProps {
     color?: string
 }
 
-export function ScrollProgress({ className, color = '#00d4ff' }: ScrollProgressProps) {
+export function ScrollProgress({ className, color = '#ff66ab' }: ScrollProgressProps) {
     const [progress, setProgress] = useState(0)
 
     React.useEffect(() => {
@@ -571,7 +570,7 @@ interface MorphingBackgroundProps {
 
 export function MorphingBackground({
     className,
-    colors = ['#00d4ff', '#ff3296']
+    colors = ['#ff66ab', '#aa92ff']
 }: MorphingBackgroundProps) {
     return (
         <div className={cn('absolute inset-0 overflow-hidden', className)}>

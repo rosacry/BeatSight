@@ -365,7 +365,7 @@ export function FeatureFlagsDebugPanel() {
                             <button
                                 onClick={refresh}
                                 disabled={isLoading}
-                                className="text-xs text-cyan-400 hover:text-cyan-300 disabled:opacity-50"
+                                className="text-xs text-primary-400 hover:text-primary-300 disabled:opacity-50"
                             >
                                 {isLoading ? 'Loading...' : 'Refresh'}
                             </button>

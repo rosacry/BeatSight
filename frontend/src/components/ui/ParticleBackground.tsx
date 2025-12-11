@@ -310,7 +310,7 @@ function GradientOrbsBase({ className }: GradientOrbsProps) {
                 {/* Single simplified gradient for mobile - no animation, smaller blur */}
                 <div
                     className="absolute w-[300px] h-[300px] rounded-full opacity-20 blur-[40px]
-                               bg-gradient-to-br from-cyan-500 to-fuchsia-500"
+                               bg-gradient-to-br from-primary-500 to-fuchsia-500"
                     style={{ top: '10%', left: '10%' }}
                 />
             </div>
@@ -322,7 +322,7 @@ function GradientOrbsBase({ className }: GradientOrbsProps) {
             {/* Primary cyan orb */}
             <div
                 className="absolute w-[600px] h-[600px] rounded-full opacity-30 blur-[100px]
-                           bg-gradient-to-br from-cyan-500 to-cyan-700
+                           bg-gradient-to-br from-primary-500 to-cyan-700
                            animate-float-slow"
                 style={{ top: '-10%', left: '-5%' }}
             />

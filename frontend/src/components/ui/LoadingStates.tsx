@@ -33,10 +33,10 @@ export const BrandLoader = forwardRef<HTMLDivElement, BrandLoaderProps>(
                 {/* Animated drum icon */}
                 <div className={cn('relative', sizeClasses[size])}>
                     {/* Outer ring pulse */}
-                    <div className="absolute inset-0 rounded-full bg-cyan-500/20 animate-ping" />
+                    <div className="absolute inset-0 rounded-full bg-primary-500/20 animate-ping" />
 
                     {/* Main drum body */}
-                    <div className="relative w-full h-full rounded-full bg-gradient-to-br from-cyan-500 to-fuchsia-500 flex items-center justify-center animate-pulse">
+                    <div className="relative w-full h-full rounded-full bg-gradient-to-br from-primary-500 to-fuchsia-500 flex items-center justify-center animate-pulse">
                         {/* Drumstick icons */}
                         <svg
                             className="w-1/2 h-1/2 text-white animate-bounce"
@@ -51,12 +51,12 @@ export const BrandLoader = forwardRef<HTMLDivElement, BrandLoaderProps>(
                     </div>
 
                     {/* Beat wave rings */}
-                    <div className="absolute inset-0 rounded-full border-2 border-cyan-400/30 animate-[ping_1s_ease-out_infinite]" />
+                    <div className="absolute inset-0 rounded-full border-2 border-primary-400/30 animate-[ping_1s_ease-out_infinite]" />
                     <div className="absolute inset-0 rounded-full border-2 border-fuchsia-400/20 animate-[ping_1s_ease-out_0.5s_infinite]" />
                 </div>
 
                 {message && (
-                    <p className="text-slate-400 text-sm animate-pulse">{message}</p>
+                    <p className="text-gray-400 text-sm animate-pulse">{message}</p>
                 )}
             </div>
         )
@@ -74,7 +74,7 @@ export interface WaveformLoaderProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 export const WaveformLoader = forwardRef<HTMLDivElement, WaveformLoaderProps>(
-    ({ barCount = 5, color = 'bg-cyan-500', className, ...props }, ref) => {
+    ({ barCount = 5, color = 'bg-primary-500', className, ...props }, ref) => {
         return (
             <div
                 ref={ref}
@@ -123,7 +123,7 @@ export const BeatPulseLoader = forwardRef<HTMLDivElement, BeatPulseLoaderProps>(
                 {Array.from({ length: pulseCount }).map((_, i) => (
                     <div
                         key={i}
-                        className="w-3 h-3 rounded-full bg-gradient-to-r from-cyan-500 to-fuchsia-500"
+                        className="w-3 h-3 rounded-full bg-gradient-to-r from-primary-500 to-fuchsia-500"
                         style={{
                             animation: `beatPulse 1.2s ease-in-out infinite`,
                             animationDelay: `${i * 0.15}s`,
@@ -159,24 +159,24 @@ export const ProgressLoader = forwardRef<HTMLDivElement, ProgressLoaderProps>(
             <div ref={ref} className={cn('w-full max-w-md', className)} {...props}>
                 {(label || showPercentage) && (
                     <div className="flex justify-between items-center mb-2">
-                        {label && <span className="text-sm text-slate-400">{label}</span>}
+                        {label && <span className="text-sm text-gray-400">{label}</span>}
                         {showPercentage && !indeterminate && (
-                            <span className="text-sm font-medium text-slate-300">{Math.round(progress)}%</span>
+                            <span className="text-sm font-medium text-gray-300">{Math.round(progress)}%</span>
                         )}
                     </div>
                 )}
 
-                <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-2 bg-dark-400 rounded-full overflow-hidden">
                     {indeterminate ? (
                         <div
-                            className="h-full w-1/3 bg-gradient-to-r from-cyan-500 to-fuchsia-500 rounded-full"
+                            className="h-full w-1/3 bg-gradient-to-r from-primary-500 to-fuchsia-500 rounded-full"
                             style={{
                                 animation: 'indeterminate 1.5s ease-in-out infinite',
                             }}
                         />
                     ) : (
                         <div
-                            className="h-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 rounded-full transition-all duration-300"
+                            className="h-full bg-gradient-to-r from-primary-500 to-fuchsia-500 rounded-full transition-all duration-300"
                             style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
                         />
                     )}
@@ -218,7 +218,7 @@ export const Skeleton = forwardRef<HTMLDivElement, SkeletonProps>(
             <div
                 ref={ref}
                 className={cn(
-                    'bg-slate-800',
+                    'bg-dark-400',
                     animated && 'animate-pulse',
                     variantClasses[variant],
                     className
@@ -236,7 +236,7 @@ Skeleton.displayName = 'Skeleton'
 
 export function SongCardSkeleton({ className }: { className?: string }) {
     return (
-        <div className={cn('bg-slate-900 rounded-xl border border-slate-800 p-4', className)}>
+        <div className={cn('bg-dark-500 rounded-xl border border-white/10 p-4', className)}>
             <Skeleton variant="image" className="mb-4" />
             <Skeleton variant="title" className="mb-2" />
             <Skeleton variant="text" className="w-1/2 mb-4" />
@@ -250,7 +250,7 @@ export function SongCardSkeleton({ className }: { className?: string }) {
 
 export function TableRowSkeleton({ columns = 5 }: { columns?: number }) {
     return (
-        <div className="flex items-center gap-4 p-4 border-b border-slate-800">
+        <div className="flex items-center gap-4 p-4 border-b border-white/10">
             {Array.from({ length: columns }).map((_, i) => (
                 <Skeleton key={i} variant="text" className={i === 0 ? 'w-1/4' : 'flex-1'} />
             ))}
@@ -270,7 +270,7 @@ export function ProfileSkeleton({ className }: { className?: string }) {
             </div>
             <div className="grid grid-cols-3 gap-4">
                 {[1, 2, 3].map((i) => (
-                    <div key={i} className="bg-slate-900 rounded-lg p-4">
+                    <div key={i} className="bg-dark-500 rounded-lg p-4">
                         <Skeleton variant="text" className="w-1/2 mb-2" />
                         <Skeleton variant="title" className="w-16" />
                     </div>
@@ -284,19 +284,19 @@ export function TimelineSkeleton({ className }: { className?: string }) {
     return (
         <div className={cn('space-y-4', className)}>
             {/* Controls */}
-            <div className="flex items-center gap-4 p-4 bg-slate-900 rounded-lg">
+            <div className="flex items-center gap-4 p-4 bg-dark-500 rounded-lg">
                 <Skeleton variant="button" />
                 <Skeleton variant="text" className="flex-1 h-2" />
                 <Skeleton variant="text" className="w-16" />
             </div>
 
             {/* Waveform area */}
-            <div className="bg-slate-900 rounded-lg p-4">
+            <div className="bg-dark-500 rounded-lg p-4">
                 <div className="flex items-end gap-0.5 h-32">
                     {Array.from({ length: 60 }).map((_, i) => (
                         <div
                             key={i}
-                            className="flex-1 bg-slate-800 rounded-t animate-pulse"
+                            className="flex-1 bg-dark-400 rounded-t animate-pulse"
                             style={{
                                 height: `${20 + Math.random() * 80}%`,
                                 animationDelay: `${i * 0.02}s`,
@@ -309,7 +309,7 @@ export function TimelineSkeleton({ className }: { className?: string }) {
             {/* Lanes */}
             <div className="space-y-2">
                 {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex items-center gap-2 p-2 bg-slate-900/50 rounded">
+                    <div key={i} className="flex items-center gap-2 p-2 bg-dark-500/50 rounded">
                         <Skeleton variant="text" className="w-20 h-6" />
                         <Skeleton variant="text" className="flex-1 h-8" />
                     </div>
@@ -335,9 +335,9 @@ export function FullPageLoader({
     showProgress = false,
 }: FullPageLoaderProps) {
     return (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950">
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-dark-500">
             {/* Ambient background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/10 via-slate-950 to-fuchsia-900/10" />
+            <div className="absolute inset-0 bg-gradient-to-br from-primary-900/10 via-dark-500 to-fuchsia-900/10" />
 
             <div className="relative z-10 flex flex-col items-center gap-8 p-8">
                 <BrandLoader size="xl" />
@@ -345,7 +345,7 @@ export function FullPageLoader({
                 <div className="text-center space-y-2">
                     <h2 className="text-xl font-semibold text-white">{message}</h2>
                     {showProgress && progress !== undefined && (
-                        <p className="text-sm text-slate-400">
+                        <p className="text-sm text-gray-400">
                             {Math.round(progress)}% complete
                         </p>
                     )}
@@ -427,7 +427,7 @@ export const Shimmer = forwardRef<HTMLDivElement, ShimmerProps>(
             <div
                 ref={ref}
                 className={cn(
-                    'relative overflow-hidden bg-slate-800 rounded',
+                    'relative overflow-hidden bg-dark-400 rounded',
                     className
                 )}
                 style={{

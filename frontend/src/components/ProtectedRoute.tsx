@@ -64,7 +64,7 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
                             {requiredRoles.includes('admin') && ' This page requires admin privileges.'}
                             {requiredRoles.includes('verifier') && !requiredRoles.includes('admin') && ' This page requires verifier privileges.'}
                         </p>
-                        <a href="/" className="mt-4 text-cyan-400 hover:text-cyan-300 transition-colors">
+                        <a href="/" className="mt-4 text-primary-400 hover:text-primary-300 transition-colors">
                             Return to home
                         </a>
                     </div>

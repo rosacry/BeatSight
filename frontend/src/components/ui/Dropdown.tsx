@@ -68,17 +68,17 @@ const useDropdown = () => {
 const dropdownTriggerVariants = cva(
     [
         'inline-flex items-center justify-between gap-2',
-        'rounded-lg border bg-slate-900/50 text-slate-200',
+        'rounded-lg border bg-dark-400 text-gray-200',
         'transition-all duration-200',
-        'focus:outline-none focus:ring-2 focus:ring-cyan-500/50',
+        'focus:outline-none focus:ring-2 focus:ring-primary-500/50',
         'disabled:opacity-50 disabled:cursor-not-allowed',
     ],
     {
         variants: {
             variant: {
-                default: 'border-slate-700 hover:border-slate-600 hover:bg-slate-800/50',
-                outline: 'border-slate-600 hover:border-cyan-500/50 hover:bg-slate-800/30',
-                ghost: 'border-transparent bg-transparent hover:bg-slate-800/50',
+                default: 'border-white/10 hover:border-white/20 hover:bg-dark-300',
+                outline: 'border-white/10 hover:border-primary-500/50 hover:bg-dark-300',
+                ghost: 'border-transparent bg-transparent hover:bg-dark-300',
             },
             size: {
                 sm: 'px-3 py-1.5 text-sm min-w-[120px]',
@@ -96,7 +96,7 @@ const dropdownTriggerVariants = cva(
 const dropdownMenuVariants = cva(
     [
         'absolute z-50 min-w-[160px] overflow-hidden',
-        'rounded-lg border border-slate-700 bg-slate-900/95 backdrop-blur-xl',
+        'rounded-lg border border-white/10 bg-dark-400',
         'shadow-xl shadow-black/30',
         // Note: Removed 'transition-all duration-200' to prevent CSS transitions
         // from conflicting with Framer Motion animations, which caused a delayed
@@ -207,12 +207,12 @@ export const DropdownTrigger = React.forwardRef<HTMLButtonElement, DropdownTrigg
                 className={cn(dropdownTriggerVariants({ variant, size }), className)}
                 {...props}
             >
-                <span className={cn(!selectedValue && 'text-slate-500')}>
+                <span className={cn(!selectedValue && 'text-gray-500')}>
                     {children ?? selectedValue ?? placeholder}
                 </span>
                 <svg
                     className={cn(
-                        'h-4 w-4 text-slate-400 transition-transform duration-200',
+                        'h-4 w-4 text-gray-400 transition-transform duration-200',
                         isOpen && 'rotate-180'
                     )}
                     fill="none"
@@ -315,10 +315,10 @@ export function DropdownItem({ className, value, disabled, children, ...props }:
             className={cn(
                 'relative flex items-center px-3 py-2 text-sm cursor-pointer',
                 'transition-colors duration-150',
-                'outline-none focus:bg-slate-800/80',
+                'outline-none focus:bg-dark-300',
                 isSelected
-                    ? 'bg-cyan-500/10 text-cyan-400'
-                    : 'text-slate-300 hover:bg-slate-800/50 hover:text-slate-100',
+                    ? 'bg-primary-500/10 text-primary-400'
+                    : 'text-gray-300 hover:bg-dark-300 hover:text-gray-100',
                 disabled && 'opacity-50 cursor-not-allowed hover:bg-transparent',
                 className
             )}
@@ -326,7 +326,7 @@ export function DropdownItem({ className, value, disabled, children, ...props }:
         >
             {isSelected && (
                 <svg
-                    className="absolute left-2 h-4 w-4 text-cyan-400"
+                    className="absolute left-2 h-4 w-4 text-primary-400"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -344,7 +344,7 @@ export function DropdownItem({ className, value, disabled, children, ...props }:
 // ============================================================================
 
 export function DropdownSeparator({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-    return <div className={cn('my-1 h-px bg-slate-700', className)} {...props} />
+    return <div className={cn('my-1 h-px bg-white/10', className)} {...props} />
 }
 
 // ============================================================================
@@ -354,7 +354,7 @@ export function DropdownSeparator({ className, ...props }: React.HTMLAttributes<
 export function DropdownLabel({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
     return (
         <div
-            className={cn('px-3 py-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider', className)}
+            className={cn('px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider', className)}
             {...props}
         >
             {children}
@@ -399,7 +399,7 @@ export function Select({
 
     return (
         <div className={cn('w-full', className)}>
-            {label && <label className="block text-sm font-medium text-slate-300 mb-1.5">{label}</label>}
+            {label && <label className="block text-sm font-medium text-gray-300 mb-1.5">{label}</label>}
             <Dropdown value={value} onValueChange={onValueChange}>
                 <DropdownTrigger variant={variant} size={size} disabled={disabled} placeholder={placeholder}>
                     {selectedOption?.label}
@@ -481,7 +481,7 @@ export function MultiSelect({
 
     return (
         <div ref={containerRef} className={cn('relative w-full', className)}>
-            {label && <label className="block text-sm font-medium text-slate-300 mb-1.5">{label}</label>}
+            {label && <label className="block text-sm font-medium text-gray-300 mb-1.5">{label}</label>}
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
@@ -489,12 +489,12 @@ export function MultiSelect({
                 className={cn(
                     dropdownTriggerVariants({ variant, size }),
                     'w-full',
-                    selectedOptions.length === 0 && 'text-slate-500'
+                    selectedOptions.length === 0 && 'text-gray-500'
                 )}
             >
                 <span className="truncate">{displayText}</span>
                 <svg
-                    className={cn('h-4 w-4 text-slate-400 transition-transform duration-200', isOpen && 'rotate-180')}
+                    className={cn('h-4 w-4 text-gray-400 transition-transform duration-200', isOpen && 'rotate-180')}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -526,8 +526,8 @@ export function MultiSelect({
                                             'relative flex items-center gap-2 px-3 py-2 text-sm cursor-pointer',
                                             'transition-colors duration-150',
                                             isSelected
-                                                ? 'bg-cyan-500/10 text-cyan-400'
-                                                : 'text-slate-300 hover:bg-slate-800/50',
+                                                ? 'bg-primary-500/10 text-primary-400'
+                                                : 'text-gray-300 hover:bg-dark-300',
                                             option.disabled && 'opacity-50 cursor-not-allowed'
                                         )}
                                     >
@@ -536,8 +536,8 @@ export function MultiSelect({
                                                 'h-4 w-4 rounded border flex items-center justify-center',
                                                 'transition-colors duration-150',
                                                 isSelected
-                                                    ? 'bg-cyan-500 border-cyan-500'
-                                                    : 'border-slate-600 bg-slate-800/50'
+                                                    ? 'bg-primary-500 border-primary-500'
+                                                    : 'border-white/20 bg-dark-400'
                                             )}
                                         >
                                             {isSelected && (

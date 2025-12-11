@@ -37,10 +37,10 @@ const useTabs = () => {
 const tabsListVariants = cva(['flex gap-1'], {
     variants: {
         variant: {
-            default: 'bg-slate-900/50 p-1 rounded-lg border border-slate-700/50',
+            default: 'bg-dark-500/50 p-1 rounded-lg border border-white/10/50',
             pills: 'gap-2',
-            underline: 'border-b border-slate-700 pb-0 gap-0',
-            contained: 'bg-slate-800/30 rounded-t-lg',
+            underline: 'border-b border-white/10 pb-0 gap-0',
+            contained: 'bg-dark-400/30 rounded-t-lg',
         },
         orientation: {
             horizontal: 'flex-row',
@@ -57,7 +57,7 @@ const tabTriggerVariants = cva(
     [
         'relative inline-flex items-center justify-center gap-2',
         'text-sm font-medium transition-all duration-200',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50',
         'disabled:opacity-50 disabled:cursor-not-allowed',
     ],
     {
@@ -65,27 +65,27 @@ const tabTriggerVariants = cva(
             variant: {
                 default: [
                     'rounded-md px-3 py-1.5',
-                    'text-slate-400 hover:text-slate-200',
-                    'data-[state=active]:bg-slate-800 data-[state=active]:text-cyan-400',
+                    'text-gray-400 hover:text-gray-200',
+                    'data-[state=active]:bg-dark-400 data-[state=active]:text-primary-400',
                     'data-[state=active]:shadow-sm',
                 ],
                 pills: [
                     'rounded-full px-4 py-2',
-                    'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50',
-                    'data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400',
-                    'data-[state=active]:ring-1 data-[state=active]:ring-cyan-500/30',
+                    'text-gray-400 hover:text-gray-200 hover:bg-dark-400',
+                    'data-[state=active]:bg-primary-500/20 data-[state=active]:text-primary-400',
+                    'data-[state=active]:ring-1 data-[state=active]:ring-primary-500/30',
                 ],
                 underline: [
                     'px-4 py-2.5 -mb-px',
-                    'text-slate-400 hover:text-slate-200',
+                    'text-gray-400 hover:text-gray-200',
                     'border-b-2 border-transparent',
-                    'data-[state=active]:border-cyan-500 data-[state=active]:text-cyan-400',
+                    'data-[state=active]:border-primary-500 data-[state=active]:text-primary-400',
                 ],
                 contained: [
                     'px-4 py-2.5 rounded-t-lg',
-                    'text-slate-400 hover:text-slate-200',
-                    'data-[state=active]:bg-slate-900 data-[state=active]:text-cyan-400',
-                    'data-[state=active]:border-t data-[state=active]:border-x data-[state=active]:border-slate-700',
+                    'text-gray-400 hover:text-gray-200',
+                    'data-[state=active]:bg-dark-500 data-[state=active]:text-primary-400',
+                    'data-[state=active]:border-t data-[state=active]:border-x data-[state=active]:border-white/10',
                 ],
             },
         },
@@ -101,7 +101,7 @@ const tabContentVariants = cva(['focus:outline-none'], {
             default: 'pt-4',
             pills: 'pt-4',
             underline: 'pt-4',
-            contained: 'bg-slate-900 border border-slate-700 border-t-0 rounded-b-lg p-4',
+            contained: 'bg-dark-500 border border-white/10 border-t-0 rounded-b-lg p-4',
         },
     },
     defaultVariants: {
@@ -317,7 +317,7 @@ export function TabIndicator({ className, ...props }: TabIndicatorProps) {
     return (
         <div
             className={cn(
-                'absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-cyan-500 to-magenta-500',
+                'absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-primary-500 to-magenta-500',
                 'transition-all duration-300 ease-out',
                 className
             )}

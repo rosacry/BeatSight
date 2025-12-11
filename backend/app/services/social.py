@@ -25,7 +25,7 @@ from app.models.social import (
     UserBlock,
     UserReport,
 )
-from app.models.user import User
+from app.models.user import RestrictionLevel, User
 
 
 # =============================================================================
@@ -111,13 +111,13 @@ class SocialService:
         Returns:
             Tuple of (users list, total count)
         """
-        # Base query - search by username (case-insensitive)
+        # Base query - search by display_name (case-insensitive)
         search_pattern = f"%{query.lower()}%"
         
         base_query = select(User).where(
             and_(
-                func.lower(User.username).like(search_pattern),
-                User.is_active == True,  # noqa: E712
+                func.lower(User.display_name).like(search_pattern),
+                User.restriction_level != RestrictionLevel.BANNED.value,
             )
         )
 
@@ -146,7 +146,7 @@ class SocialService:
 
         # Get paginated results
         result = await self.db.execute(
-            base_query.order_by(User.username).offset(offset).limit(limit)
+            base_query.order_by(User.display_name).offset(offset).limit(limit)
         )
         users = list(result.scalars().all())
 
@@ -174,7 +174,7 @@ class SocialService:
             select(User).where(
                 and_(
                     User.id == user_id,
-                    User.is_active == True,  # noqa: E712
+                    User.restriction_level != RestrictionLevel.BANNED.value,
                 )
             )
         )
@@ -223,7 +223,7 @@ class SocialService:
             select(User).where(
                 and_(
                     User.id == recipient_id,
-                    User.is_active == True,  # noqa: E712
+                    User.restriction_level != RestrictionLevel.BANNED.value,
                 )
             )
         )

@@ -261,7 +261,7 @@ if settings.environment not in ("test", "testing"):
     except ImportError:
         logger.warning("rate_limiting_disabled", reason="dependencies not installed")
 
-app.include_router(health.router)
+app.include_router(health.router, prefix=settings.api_prefix)
 app.include_router(accuracy.router, prefix=settings.api_prefix)
 app.include_router(achievements.router, prefix=settings.api_prefix)
 app.include_router(auth.router, prefix=settings.api_prefix)

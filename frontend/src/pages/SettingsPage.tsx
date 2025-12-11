@@ -143,6 +143,30 @@ export function SettingsPage() {
     // Preferences from server
     const [preferences, setPreferences] = useState<Preferences | null>(null)
 
+    // Anonymous mode settings (from user_settings table, separate from cloud sync)
+    const [anonymousSettings, setAnonymousSettings] = useState({
+        hide_from_leaderboards: false,
+        hide_from_public_queues: false,
+    })
+
+    // Load user settings (for anonymous mode)
+    const loadUserSettings = useCallback(async () => {
+        if (!accessToken) return
+        try {
+            const settings = await apiRequest<{
+                hide_from_leaderboards: boolean
+                hide_from_public_queues: boolean
+            }>('/users/me/settings', {}, accessToken)
+            setAnonymousSettings({
+                hide_from_leaderboards: settings.hide_from_leaderboards ?? false,
+                hide_from_public_queues: settings.hide_from_public_queues ?? false,
+            })
+        } catch (err) {
+            // Silently handle errors - user settings might not exist yet
+            logger.debug('Could not load user settings, using defaults')
+        }
+    }, [accessToken])
+
     // Load contribution consent
     const loadContributionConsent = useCallback(async () => {
         if (!accessToken) return
@@ -188,7 +212,7 @@ export function SettingsPage() {
     // This is separate from cloud sync preferences - these settings control
     // whether the user appears anonymously on leaderboards and public queues
     const handleSaveAnonymousSettings = async () => {
-        if (!accessToken || !preferences) return
+        if (!accessToken) return
         setIsSaving(true)
         setError(null)
         try {
@@ -196,24 +220,11 @@ export function SettingsPage() {
             await apiRequest('/users/me/settings', {
                 method: 'PATCH',
                 body: JSON.stringify({
-                    hide_from_leaderboards: preferences.custom_settings?.hideFromLeaderboards ?? false,
-                    hide_from_public_queues: preferences.custom_settings?.hideFromPublicQueues ?? false,
+                    hide_from_leaderboards: anonymousSettings.hide_from_leaderboards,
+                    hide_from_public_queues: anonymousSettings.hide_from_public_queues,
                 }),
             }, accessToken)
-            
-            // Also save to cloud sync preferences for cross-device consistency
-            try {
-                await apiRequest('/sync/preferences', {
-                    method: 'PATCH',
-                    body: JSON.stringify({
-                        custom_settings: preferences.custom_settings,
-                    }),
-                }, accessToken)
-            } catch {
-                // Cloud sync might be disabled, that's okay
-                logger.debug('Cloud sync preferences update skipped (might be disabled)')
-            }
-            
+
             setSuccessMessage('Anonymous mode settings saved!')
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save anonymous mode settings')
@@ -233,7 +244,7 @@ export function SettingsPage() {
         } catch (err) {
             // Cloud sync might be disabled, handle gracefully without spamming console
             const errorMessage = err instanceof Error ? err.message : String(err)
-            if (errorMessage.includes('Cloud sync is not currently available') || 
+            if (errorMessage.includes('Cloud sync is not currently available') ||
                 errorMessage.includes('404')) {
                 logger.debug('Cloud sync disabled, using local preferences')
             } else {
@@ -262,7 +273,8 @@ export function SettingsPage() {
     useEffect(() => {
         loadPreferences()
         loadContributionConsent()
-    }, [loadPreferences, loadContributionConsent])
+        loadUserSettings()
+    }, [loadPreferences, loadContributionConsent, loadUserSettings])
 
     // Update URL when tab changes (URL is source of truth, so just update URL)
     const handleTabChange = (tab: SettingsTab) => {
@@ -949,8 +961,8 @@ export function SettingsPage() {
                                                     </div>
                                                     <input
                                                         type="checkbox"
-                                                        checked={preferences?.custom_settings?.hideFromLeaderboards ?? false}
-                                                        onChange={(e) => updateCustomSetting('hideFromLeaderboards', e.target.checked)}
+                                                        checked={anonymousSettings.hide_from_leaderboards}
+                                                        onChange={(e) => setAnonymousSettings(prev => ({ ...prev, hide_from_leaderboards: e.target.checked }))}
                                                         className="w-5 h-5 rounded bg-dark-300 border-white/20 text-accent-500 focus:ring-accent-500"
                                                     />
                                                 </label>
@@ -969,8 +981,8 @@ export function SettingsPage() {
                                                     </div>
                                                     <input
                                                         type="checkbox"
-                                                        checked={preferences?.custom_settings?.hideFromPublicQueues ?? false}
-                                                        onChange={(e) => updateCustomSetting('hideFromPublicQueues', e.target.checked)}
+                                                        checked={anonymousSettings.hide_from_public_queues}
+                                                        onChange={(e) => setAnonymousSettings(prev => ({ ...prev, hide_from_public_queues: e.target.checked }))}
                                                         className="w-5 h-5 rounded bg-dark-300 border-white/20 text-accent-500 focus:ring-accent-500"
                                                     />
                                                 </label>

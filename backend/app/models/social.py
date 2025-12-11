@@ -28,10 +28,10 @@ if TYPE_CHECKING:  # pragma: no cover
 # =============================================================================
 
 
-class Message(Base):
+class DirectMessage(Base):
     """Direct message between users."""
 
-    __tablename__ = "messages"
+    __tablename__ = "direct_messages"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -73,7 +73,7 @@ class Message(Base):
     # Reply tracking (for conversation threading)
     reply_to_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("messages.id", ondelete="SET NULL"),
+        ForeignKey("direct_messages.id", ondelete="SET NULL"),
         nullable=True,
     )
 
@@ -88,15 +88,15 @@ class Message(Base):
         back_populates="received_messages",
         foreign_keys=[recipient_id],
     )
-    reply_to: Mapped[Optional["Message"]] = relationship(
-        "Message",
+    reply_to: Mapped[Optional["DirectMessage"]] = relationship(
+        "DirectMessage",
         remote_side=[id],
         foreign_keys=[reply_to_id],
     )
 
     __table_args__ = (
-        Index("ix_messages_recipient_created", "recipient_id", "created_at"),
-        Index("ix_messages_sender_created", "sender_id", "created_at"),
+        Index("ix_direct_messages_recipient_created", "recipient_id", "created_at"),
+        Index("ix_direct_messages_sender_created", "sender_id", "created_at"),
     )
 
 
@@ -163,7 +163,7 @@ class UserBlock(Base):
 # =============================================================================
 
 
-class ReportReason(str, enum.Enum):
+class ReportType(str, enum.Enum):
     """Standard report reasons."""
     
     SPAM = "spam"
@@ -213,43 +213,45 @@ class UserReport(Base):
     )
 
     # Report details
-    reason: Mapped[ReportReason] = mapped_column(
+    report_type: Mapped[ReportType] = mapped_column(
         SAEnum(
-            ReportReason,
+            ReportType,
+            name="reporttype",
             values_callable=lambda e: [r.value for r in e],
         ),
         nullable=False,
     )
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    
-    # Optional evidence (URL to offending content)
-    evidence_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
 
     # Processing status
     status: Mapped[ReportStatus] = mapped_column(
         SAEnum(
             ReportStatus,
+            name="reportstatus",
             values_callable=lambda e: [s.value for s in e],
         ),
         default=ReportStatus.PENDING,
         nullable=False,
     )
 
-    # Admin who handled the report
-    handled_by_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    # Admin who reviewed the report
+    reviewed_by_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
 
-    # Admin's resolution notes
-    resolution_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Admin's notes
+    admin_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    resolved_at: Mapped[Optional[datetime]] = mapped_column(
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
@@ -264,9 +266,9 @@ class UserReport(Base):
         back_populates="reports_received",
         foreign_keys=[reported_user_id],
     )
-    handled_by: Mapped[Optional["User"]] = relationship(
+    reviewed_by: Mapped[Optional["User"]] = relationship(
         "User",
-        foreign_keys=[handled_by_id],
+        foreign_keys=[reviewed_by_id],
     )
 
     __table_args__ = (

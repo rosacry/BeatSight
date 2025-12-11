@@ -25,7 +25,7 @@ if TYPE_CHECKING:  # pragma: no cover - type-checking only
     from .phone_verification import PhoneVerificationCode
     from .push_subscription import PushSubscription
     from .role import UserRole
-    from .social import Message, UserBlock, UserReport
+    from .social import DirectMessage, UserBlock, UserReport
     from .song import Song
     from .subscription import Subscription
     from .training_contribution import ContributionConsent, TrainingContribution
@@ -181,16 +181,16 @@ class User(Base):
     )
 
     # Social: Messages
-    sent_messages: Mapped[list["Message"]] = relationship(
-        "Message",
+    sent_messages: Mapped[list["DirectMessage"]] = relationship(
+        "DirectMessage",
         back_populates="sender",
-        foreign_keys="Message.sender_id",
+        foreign_keys="DirectMessage.sender_id",
         cascade="all, delete-orphan",
     )
-    received_messages: Mapped[list["Message"]] = relationship(
-        "Message",
+    received_messages: Mapped[list["DirectMessage"]] = relationship(
+        "DirectMessage",
         back_populates="recipient",
-        foreign_keys="Message.recipient_id",
+        foreign_keys="DirectMessage.recipient_id",
         cascade="all, delete-orphan",
     )
 

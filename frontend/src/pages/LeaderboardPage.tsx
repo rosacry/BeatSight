@@ -10,7 +10,6 @@
 
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { API_CONFIG } from '@/lib/config'
@@ -19,8 +18,7 @@ import {
     AnimatedTabContent,
     AnimatedTabButton,
     StaggerPageContent,
-    StaggerSection,
-    staggerItemVariants
+    StaggerSection
 } from '@/components/ui/UnifiedTransitions'
 
 // Types
@@ -56,9 +54,6 @@ interface ContributorStats {
 type LeaderboardTab = 'karma' | 'verifiers' | 'contributors'
 
 const VALID_TABS: LeaderboardTab[] = ['karma', 'verifiers', 'contributors']
-
-// Animation variants - use unified system
-const itemVariants = staggerItemVariants
 
 export function LeaderboardPage() {
     useDocumentTitle('leaderboard')

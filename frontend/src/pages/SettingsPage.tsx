@@ -9,6 +9,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
+import { useFeaturesStore } from '@/stores/featuresStore'
 import { createLogger, getDeveloperModeEnabled, enableDeveloperMode, disableDeveloperMode } from '@/lib/logger'
 import { AvatarUpload } from '@/components/AvatarUpload'
 import { TwoFactorSettings } from '@/components/TwoFactorSettings'
@@ -84,6 +85,13 @@ export function SettingsPage() {
     const queryClient = useQueryClient()
     const user = useAuthStore((state) => state.user)
     const accessToken = useAuthStore((state) => state.accessToken)
+    const features = useFeaturesStore((state) => state.features)
+    const fetchFeatures = useFeaturesStore((state) => state.fetchFeatures)
+
+    // Fetch features on mount
+    useEffect(() => {
+        fetchFeatures()
+    }, [fetchFeatures])
 
     // Prefetch 2FA status immediately when settings page loads
     // This eliminates the 3-5 second delay for the TwoFactorSettings component
@@ -234,8 +242,33 @@ export function SettingsPage() {
     }
 
     // Load preferences on mount
+    // Default preferences used when cloud sync is disabled
+    const defaultPreferences: Preferences = {
+        scroll_speed: 1.0,
+        note_skin: 'default',
+        audio_offset_ms: 0,
+        visual_offset_ms: 0,
+        background_dim: 0.5,
+        master_volume: 1.0,
+        music_volume: 0.8,
+        effects_volume: 0.8,
+        hitsound_volume: 1.0,
+        theme: 'dark',
+        language: 'en',
+        custom_settings: DEFAULT_CUSTOM_SETTINGS,
+    }
+
     const loadPreferences = useCallback(async () => {
         if (!accessToken) return
+
+        // Skip cloud sync call if feature is disabled
+        if (features && !features.cloud_sync) {
+            logger.debug('Cloud sync disabled, using local preferences')
+            setPreferences(defaultPreferences)
+            setIsLoading(false)
+            return
+        }
+
         try {
             setIsLoading(true)
             const prefs = await apiRequest<Preferences>('/sync/preferences', {}, accessToken)
@@ -251,24 +284,11 @@ export function SettingsPage() {
                 logger.error('Failed to load preferences:', err)
             }
             // Initialize with defaults if cloud sync unavailable
-            setPreferences({
-                scroll_speed: 1.0,
-                note_skin: 'default',
-                audio_offset_ms: 0,
-                visual_offset_ms: 0,
-                background_dim: 0.5,  // Match backend default
-                master_volume: 1.0,
-                music_volume: 0.8,
-                effects_volume: 0.8,
-                hitsound_volume: 1.0,
-                theme: 'dark',
-                language: 'en',
-                custom_settings: DEFAULT_CUSTOM_SETTINGS,
-            })
+            setPreferences(defaultPreferences)
         } finally {
             setIsLoading(false)
         }
-    }, [accessToken])
+    }, [accessToken, features])
 
     useEffect(() => {
         loadPreferences()
@@ -338,6 +358,13 @@ export function SettingsPage() {
 
     const handleSavePreferences = async () => {
         if (!accessToken || !preferences) return
+
+        // If cloud sync is disabled, just show success (preferences are local only)
+        if (features && !features.cloud_sync) {
+            setSuccessMessage('Preferences saved locally!')
+            return
+        }
+
         setIsSaving(true)
         setError(null)
         try {
@@ -360,7 +387,14 @@ export function SettingsPage() {
             }, accessToken)
             setSuccessMessage('Preferences saved!')
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to save preferences')
+            // Handle cloud sync disabled gracefully
+            const errorMessage = err instanceof Error ? err.message : String(err)
+            if (errorMessage.includes('Cloud sync is not currently available') ||
+                errorMessage.includes('404')) {
+                setSuccessMessage('Preferences saved locally!')
+            } else {
+                setError(errorMessage || 'Failed to save preferences')
+            }
         } finally {
             setIsSaving(false)
         }

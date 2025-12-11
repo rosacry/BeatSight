@@ -30,7 +30,9 @@ import { CreditCancelPage } from './pages/CreditCancelPage'
 import { ForumPage } from './pages/ForumPage'
 import { ForumViewPage } from './pages/ForumViewPage'
 import { TopicViewPage } from './pages/TopicViewPage'
+import MessagesPage from './pages/MessagesPage'
 import { useAuthStore } from './stores/authStore'
+import { useFeaturesStore } from './stores/featuresStore'
 import { useServiceWorkerUpdate } from './hooks/usePWA'
 import { KeyboardShortcutsProvider } from './hooks/useKeyboardShortcuts'
 import { forceUnlockBodyScroll } from './lib/bodyScrollLock'
@@ -204,6 +206,24 @@ function AnimatedRoutes() {
                                 </ProtectedRoute>
                             }
                         />
+
+                        {/* Messages routes */}
+                        <Route
+                            path="/messages"
+                            element={
+                                <ProtectedRoute>
+                                    <MessagesPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/messages/:partnerId"
+                            element={
+                                <ProtectedRoute>
+                                    <MessagesPage />
+                                </ProtectedRoute>
+                            }
+                        />
                     </Routes>
                 </motion.div>
             </AnimatePresence>
@@ -213,12 +233,14 @@ function AnimatedRoutes() {
 
 function App() {
     const initialize = useAuthStore((state) => state.initialize)
+    const fetchFeatures = useFeaturesStore((state) => state.fetchFeatures)
     const { updateAvailable, applyUpdate } = useServiceWorkerUpdate()
 
-    // Initialize auth state on app load
+    // Initialize auth state and fetch features on app load
     useEffect(() => {
         initialize()
-    }, [initialize])
+        fetchFeatures()
+    }, [initialize, fetchFeatures])
 
     return (
         <ErrorBoundary>

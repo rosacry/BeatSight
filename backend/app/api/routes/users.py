@@ -480,9 +480,12 @@ async def get_public_user_profile(
     
     Returns public information about a user including their stats and activity.
     """
-    # Fetch the user
+    # Fetch the user (User model uses restriction_level, not deleted_at)
     result = await session.execute(
-        select(User).where(User.id == user_id, User.deleted_at.is_(None))
+        select(User).where(
+            User.id == user_id,
+            User.restriction_level != 'banned'
+        )
     )
     user = result.scalar_one_or_none()
     
@@ -553,9 +556,12 @@ async def get_user_maps(
     """
     Get a user's public beatmaps.
     """
-    # Verify user exists
+    # Verify user exists (User model uses restriction_level instead of deleted_at)
     result = await session.execute(
-        select(User).where(User.id == user_id, User.deleted_at.is_(None))
+        select(User).where(
+            User.id == user_id,
+            User.restriction_level != 'banned'
+        )
     )
     user = result.scalar_one_or_none()
     

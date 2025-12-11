@@ -178,26 +178,26 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
 
     return (
         <AnimatePresence>
-            {/* Backdrop */}
+            {/* Backdrop - click to close */}
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={onClose}
-                className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
+                className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
             />
 
-            {/* Modal */}
+            {/* Modal - centered like osu! */}
             <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: -20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: -20 }}
-                transition={{ duration: 0.15 }}
-                className="fixed top-[10%] left-1/2 -translate-x-1/2 w-full max-w-2xl z-50 px-4"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+                className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] px-4 pointer-events-none"
             >
-                <div className="bg-dark-500 border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
-                    {/* Search Input */}
-                    <div className="flex items-center gap-3 p-4 border-b border-white/10">
+                <div className="bg-dark-500 border border-white/10 rounded-xl shadow-2xl overflow-hidden w-full max-w-2xl pointer-events-auto">
+                    {/* Search Input - osu! style centered */}
+                    <div className="flex items-center gap-3 px-5 py-4 border-b border-white/5">
                         <SearchIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
                         <input
                             ref={inputRef}

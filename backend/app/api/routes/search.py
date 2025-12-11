@@ -101,12 +101,12 @@ async def global_search(
     """
     search_term = f"%{q.lower()}%"
     
-    # Search Users
+    # Search Users (User model doesn't have deleted_at - uses restriction_level instead)
     user_query = (
         select(User)
         .where(
             and_(
-                User.deleted_at.is_(None),
+                User.restriction_level != 'banned',
                 or_(
                     func.lower(User.display_name).like(search_term),
                     func.lower(User.email).like(search_term)
@@ -121,7 +121,7 @@ async def global_search(
         .select_from(User)
         .where(
             and_(
-                User.deleted_at.is_(None),
+                User.restriction_level != 'banned',
                 or_(
                     func.lower(User.display_name).like(search_term),
                     func.lower(User.email).like(search_term)
@@ -274,11 +274,12 @@ async def search_users_extended(
     search_term = f"%{q.lower()}%"
     offset = (page - 1) * page_size
     
+    # User model uses restriction_level instead of deleted_at
     query = (
         select(User)
         .where(
             and_(
-                User.deleted_at.is_(None),
+                User.restriction_level != 'banned',
                 or_(
                     func.lower(User.display_name).like(search_term),
                     func.lower(User.email).like(search_term)
@@ -295,7 +296,7 @@ async def search_users_extended(
         .select_from(User)
         .where(
             and_(
-                User.deleted_at.is_(None),
+                User.restriction_level != 'banned',
                 or_(
                     func.lower(User.display_name).like(search_term),
                     func.lower(User.email).like(search_term)

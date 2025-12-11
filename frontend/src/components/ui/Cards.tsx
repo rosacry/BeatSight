@@ -69,7 +69,7 @@ export const Card: React.FC<CardProps> = ({
         rounded-2xl transition-all duration-300
         ${variantStyles[variant]}
         ${paddingStyles[padding]}
-        ${hover ? 'hover:border-primary-500/30 hover:shadow-lg hover:shadow-cyan-500/5 hover:-translate-y-0.5' : ''}
+        ${hover ? 'hover:border-primary-500/30 hover:shadow-lg hover:shadow-primary-500/5 hover:-translate-y-0.5' : ''}
         ${className}
       `}
             {...props}

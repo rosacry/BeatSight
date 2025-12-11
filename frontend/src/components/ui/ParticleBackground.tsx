@@ -81,7 +81,7 @@ function usePrefersReducedMotion(): boolean {
 function ParticleBackgroundBase({
     className,
     particleCount = 50,
-    colors = ['#00d4ff', '#ff00ff', '#ffaa00'],
+    colors = ['#ff66ab', '#aa92ff', '#ffaa00'],
     speed = 0.5,
     interactive = true,
     blur = true,
@@ -319,10 +319,10 @@ function GradientOrbsBase({ className }: GradientOrbsProps) {
 
     return (
         <div className={cn('absolute inset-0 overflow-hidden pointer-events-none', className)}>
-            {/* Primary cyan orb */}
+            {/* Primary orb */}
             <div
                 className="absolute w-[600px] h-[600px] rounded-full opacity-30 blur-[100px]
-                           bg-gradient-to-br from-primary-500 to-cyan-700
+                           bg-gradient-to-br from-primary-500 to-primary-700
                            animate-float-slow"
                 style={{ top: '-10%', left: '-5%' }}
             />
@@ -357,7 +357,7 @@ interface AudioBarsProps {
     color?: string
 }
 
-function AudioBarsBase({ className, barCount = 5, color = '#00d4ff' }: AudioBarsProps) {
+function AudioBarsBase({ className, barCount = 5, color = '#ff66ab' }: AudioBarsProps) {
     const bars = useMemo(() =>
         Array.from({ length: barCount }, (_, i) => ({
             delay: i * 0.1,

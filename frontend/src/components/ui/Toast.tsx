@@ -251,12 +251,12 @@ export const toast = {
     levelUp: (newLevel: number) => {
         return sonnerToast.custom(() => (
             <div className="flex items-center gap-3 p-1">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-magenta-500">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary-400 to-accent-500">
                     <span className="text-xl">⬆️</span>
                 </div>
                 <div>
                     <div className="font-semibold text-white">Level Up!</div>
-                    <div className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-magenta-400 bg-clip-text text-transparent">
+                    <div className="text-lg font-bold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent">
                         Level {newLevel}
                     </div>
                 </div>
@@ -264,8 +264,8 @@ export const toast = {
         ), {
             duration: 6000,
             style: {
-                background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.95) 0%, rgba(0, 212, 255, 0.2) 100%)',
-                border: '1px solid rgba(0, 212, 255, 0.4)',
+                background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.95) 0%, rgba(255, 102, 171, 0.2) 100%)',
+                border: '1px solid rgba(255, 102, 171, 0.4)',
             },
         })
     },
@@ -315,19 +315,19 @@ export const toastStyles = `
 }
 
 [data-sonner-toast][data-type="info"] {
-    --toast-border: rgba(0, 212, 255, 0.3);
+    --toast-border: rgba(255, 102, 171, 0.3);
 }
 
 /* Toast action button */
 [data-sonner-toast] [data-button] {
-    background: rgba(0, 212, 255, 0.2);
-    color: #00d4ff;
-    border: 1px solid rgba(0, 212, 255, 0.3);
+    background: rgba(255, 102, 171, 0.2);
+    color: #ff66ab;
+    border: 1px solid rgba(255, 102, 171, 0.3);
     font-weight: 500;
 }
 
 [data-sonner-toast] [data-button]:hover {
-    background: rgba(0, 212, 255, 0.3);
+    background: rgba(255, 102, 171, 0.3);
 }
 
 /* Toast close button */

@@ -149,7 +149,7 @@ export function ProgressRing({
     const offset = circumference - (percentage / 100) * circumference;
 
     const colors = {
-        cyan: { stroke: '#00d4ff', glow: 'drop-shadow(0 0 8px rgba(0, 212, 255, 0.5))' },
+        cyan: { stroke: '#ff66ab', glow: 'drop-shadow(0 0 8px rgba(255, 102, 171, 0.5))' },
         magenta: { stroke: '#ff3296', glow: 'drop-shadow(0 0 8px rgba(255, 50, 150, 0.5))' },
         green: { stroke: '#10b981', glow: 'drop-shadow(0 0 8px rgba(16, 185, 129, 0.5))' },
         orange: { stroke: '#f59e0b', glow: 'drop-shadow(0 0 8px rgba(245, 158, 11, 0.5))' },
@@ -235,7 +235,7 @@ export function BarChart({
     const maxValue = Math.max(...data.map(d => d.value));
 
     const defaultColors = [
-        '#00d4ff', // cyan
+        '#ff66ab', // primary pink
         '#ff3296', // magenta
         '#10b981', // green
         '#f59e0b', // orange
@@ -332,7 +332,7 @@ export function Sparkline({
     data,
     width = 150,
     height = 40,
-    color = '#00d4ff',
+    color = '#ff66ab',
     showArea = true,
     className,
 }: SparklineProps) {
@@ -532,7 +532,7 @@ export function DonutChart({
     const circumference = radius * 2 * Math.PI;
 
     const defaultColors = [
-        '#00d4ff',
+        '#ff66ab',
         '#ff3296',
         '#10b981',
         '#f59e0b',

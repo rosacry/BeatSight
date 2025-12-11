@@ -23,6 +23,7 @@ class ReportType(str, Enum):
     INAPPROPRIATE_CONTENT = "inappropriate_content"
     CHEATING = "cheating"
     IMPERSONATION = "impersonation"
+    COPYRIGHT = "copyright"
     OTHER = "other"
 
 
@@ -30,7 +31,7 @@ class ReportStatus(str, Enum):
     """Status of a user report."""
 
     PENDING = "pending"
-    REVIEWED = "reviewed"
+    UNDER_REVIEW = "under_review"
     RESOLVED = "resolved"
     DISMISSED = "dismissed"
 

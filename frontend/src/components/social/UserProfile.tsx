@@ -284,6 +284,7 @@ const REPORT_TYPES: { value: ReportType; label: string; description: string }[] 
     },
     { value: 'cheating', label: 'Cheating', description: 'Exploiting or gaming the system' },
     { value: 'impersonation', label: 'Impersonation', description: 'Pretending to be someone else' },
+    { value: 'copyright', label: 'Copyright', description: 'Unauthorized use of copyrighted material' },
     { value: 'other', label: 'Other', description: 'Something else not listed above' },
 ]
 

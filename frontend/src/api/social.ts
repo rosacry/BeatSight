@@ -78,9 +78,10 @@ export type ReportType =
     | 'inappropriate_content'
     | 'cheating'
     | 'impersonation'
+    | 'copyright'
     | 'other'
 
-export type ReportStatus = 'pending' | 'reviewed' | 'resolved' | 'dismissed'
+export type ReportStatus = 'pending' | 'under_review' | 'resolved' | 'dismissed'
 
 export interface AdminReport {
     id: string

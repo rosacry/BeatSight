@@ -12,7 +12,9 @@ import { API_CONFIG } from '@/lib/config'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { Select } from '@/components/ui/Dropdown'
 import {
-    tabContentVariants as unifiedTabContentVariants
+    tabContentVariants as unifiedTabContentVariants,
+    TRANSITION_DURATION,
+    EASE_CURVE
 } from '@/components/ui/UnifiedTransitions'
 
 interface SystemOverview {

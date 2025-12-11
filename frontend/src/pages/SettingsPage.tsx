@@ -17,8 +17,7 @@ import { API_CONFIG } from '@/lib/config'
 import { Select } from '@/components/ui/Dropdown'
 import {
     tabContentVariants as unifiedTabContentVariants,
-    TRANSITION_DURATION,
-    EASE_CURVE
+    TRANSITION_DURATION
 } from '@/components/ui/UnifiedTransitions'
 import type { UserPreferences } from '@/types/sync'
 import { DEFAULT_CUSTOM_SETTINGS } from '@/types/sync'

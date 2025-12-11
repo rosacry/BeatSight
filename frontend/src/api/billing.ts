@@ -35,7 +35,9 @@ async function billingRequest<T>(
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Request failed' }))
-        throw new Error(error.detail || `HTTP ${response.status}`)
+        const err = new Error(error.detail || `HTTP ${response.status}`) as Error & { status: number }
+        err.status = response.status
+        throw err
     }
 
     return response.json()

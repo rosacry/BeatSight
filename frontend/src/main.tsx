@@ -16,10 +16,10 @@ const queryClient = new QueryClient({
             staleTime: 1000 * 60, // 1 minute
             gcTime: 1000 * 60 * 5, // 5 minutes garbage collection time
             retry: (failureCount, error) => {
-                // Don't retry on auth errors or client errors
+                // Don't retry on auth errors, client errors, or rate limiting
                 if (error instanceof Error && 'status' in error) {
                     const status = (error as { status: number }).status
-                    if (status === 401 || status === 403 || status === 404) {
+                    if (status === 401 || status === 403 || status === 404 || status === 429) {
                         return false
                     }
                 }

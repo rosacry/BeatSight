@@ -206,40 +206,28 @@ export function VerifierDashboardPage() {
     // Page-level loading/content transition variants
     const pageTransitionVariants = {
         initial: { opacity: 0 },
-        animate: { opacity: 1, transition: { duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] } },
-        exit: { opacity: 0, transition: { duration: 0.15, ease: [0.25, 0.46, 0.45, 0.94] } },
+        animate: { opacity: 1, transition: { duration: 0.15, ease: [0.25, 0.46, 0.45, 0.94] } },
+        exit: { opacity: 0, transition: { duration: 0.1, ease: [0.25, 0.46, 0.45, 0.94] } },
     }
 
     return (
         <AnimatePresence mode="wait">
             {loading && !stats ? (
                 <motion.div
-                    key="skeleton"
+                    key="loading"
                     variants={pageTransitionVariants}
                     initial="initial"
                     animate="animate"
                     exit="exit"
-                    className="max-w-6xl mx-auto px-4 py-6 sm:py-8"
+                    className="flex items-center justify-center min-h-[60vh]"
                 >
-                    {/* Skeleton loading state - matches actual content layout to prevent layout shift */}
-                    <div className="h-8 w-64 bg-dark-400/50 rounded-lg mb-2 animate-pulse"></div>
-                    <div className="h-5 w-80 bg-dark-400/30 rounded mb-4 animate-pulse"></div>
-
-                    {/* Banner skeleton */}
-                    <div className="mb-6 p-4 rounded-xl bg-dark-400/30 border border-white/10/30 h-20 animate-pulse"></div>
-
-                    {/* Stats cards skeleton */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
-                        {[1, 2, 3, 4].map((i) => (
-                            <div key={i} className="bg-dark-400/50 rounded-xl border border-white/10/50 p-4 h-20 animate-pulse"></div>
-                        ))}
+                    <div className="flex flex-col items-center gap-4">
+                        <svg className="animate-spin h-8 w-8 text-primary-500" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        <p className="text-gray-400">Loading verifier dashboard...</p>
                     </div>
-
-                    {/* Tabs skeleton */}
-                    <div className="flex gap-1 p-1 bg-dark-400/50 rounded-xl w-64 mb-6 h-12 animate-pulse"></div>
-
-                    {/* Content skeleton */}
-                    <div className="bg-dark-400/50 rounded-xl border border-white/10/50 p-8 h-32 animate-pulse"></div>
                 </motion.div>
             ) : error ? (
                 <motion.div

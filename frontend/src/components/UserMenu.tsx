@@ -8,7 +8,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import { ConfirmDialog } from './ConfirmDialog'
-import { forceUnlockBodyScroll } from '@/lib/bodyScrollLock'
 import { TRANSITION_DURATION, STAGGER_DELAY, EASE_CURVE } from '@/components/ui/UnifiedTransitions'
 
 export function UserMenu() {
@@ -40,16 +39,19 @@ export function UserMenu() {
     }
 
     const confirmLogout = () => {
-        // Force unlock all body scroll locks before navigation
-        // This prevents the stuck screen issue during logout
-        forceUnlockBodyScroll()
-
-        // Close dialog
+        // Close the dialog first and let React clean it up properly
         setShowSignOutConfirm(false)
 
-        // Logout and navigate immediately (no delay needed with proper cleanup)
-        logout()
-        navigate('/', { replace: true })
+        // Use requestAnimationFrame to ensure the dialog has time to unmount
+        // before we trigger the navigation and auth state change
+        requestAnimationFrame(() => {
+            // Another frame to ensure the portal is fully cleaned up
+            requestAnimationFrame(() => {
+                // Now safely logout and navigate
+                logout()
+                navigate('/', { replace: true })
+            })
+        })
     }
 
     // Get initials for avatar

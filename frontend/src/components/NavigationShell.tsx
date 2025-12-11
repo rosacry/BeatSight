@@ -13,7 +13,6 @@ import { CreditBalance } from './CreditBalance'
 import { ConfirmDialog } from './ConfirmDialog'
 import { EXTERNAL_LINKS, getDocsLink, getCommunityLink } from '@/lib/externalLinks'
 import { SKIP_LINK_TARGETS, ARIA_LABELS } from '@/lib/accessibility'
-import { forceUnlockBodyScroll } from '@/lib/bodyScrollLock'
 import { TRANSITION_DURATION, EASE_CURVE } from '@/components/ui/UnifiedTransitions'
 
 interface LayoutProps {
@@ -466,10 +465,19 @@ export function Layout({ children }: LayoutProps) {
                 isOpen={showMobileSignOutConfirm}
                 onClose={() => setShowMobileSignOutConfirm(false)}
                 onConfirm={() => {
-                    forceUnlockBodyScroll()
+                    // Close the dialog first and let React clean it up properly
                     setShowMobileSignOutConfirm(false)
-                    logout()
-                    navigate('/', { replace: true })
+                    // Close mobile menu too
+                    setIsMobileMenuOpen(false)
+
+                    // Use requestAnimationFrame to ensure dialogs have time to unmount
+                    // before we trigger the navigation and auth state change
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            logout()
+                            navigate('/', { replace: true })
+                        })
+                    })
                 }}
                 title="Sign out"
                 message="Are you sure you want to sign out of BeatSight?"

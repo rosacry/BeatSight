@@ -231,13 +231,26 @@ function App() {
                         {updateAvailable && <UpdateNotification onUpdate={applyUpdate} />}
 
                         <Layout>
-                            <ErrorBoundary>
-                                <AnimatedRoutes />
-                            </ErrorBoundary>
+                            <AnimatedRoutesWithErrorBoundary />
                         </Layout>
                     </KeyboardShortcutsProvider>
                 </AchievementNotificationProvider>
             </ToastProvider>
+        </ErrorBoundary>
+    )
+}
+
+/**
+ * Wrapper that provides an ErrorBoundary that resets on navigation.
+ * Uses location.key as the ErrorBoundary key so that navigating away
+ * from an error page clears the error state.
+ */
+function AnimatedRoutesWithErrorBoundary() {
+    const location = useLocation()
+
+    return (
+        <ErrorBoundary key={location.key}>
+            <AnimatedRoutes />
         </ErrorBoundary>
     )
 }

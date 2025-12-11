@@ -34,7 +34,7 @@ export function QuotaDisplay({ quota, className, onBuyCredits }: QuotaDisplayPro
                             {quota.used_this_month} / {quota.limit_month}
                         </span>
                     </div>
-                    <div className="w-full bg-dark-300 rounded-full h-2">
+                    <div className="w-full bg-white/10 rounded-full h-2">
                         <div
                             className={`h-full rounded-full transition-all ${monthPercent > 90 ? 'bg-red-500' : monthPercent > 70 ? 'bg-yellow-500' : 'bg-primary-500'
                                 }`}
@@ -54,7 +54,7 @@ export function QuotaDisplay({ quota, className, onBuyCredits }: QuotaDisplayPro
                             {quota.used_today} / {quota.limit_day}
                         </span>
                     </div>
-                    <div className="w-full bg-dark-300 rounded-full h-2">
+                    <div className="w-full bg-white/10 rounded-full h-2">
                         <div
                             className={`h-full rounded-full transition-all ${dayPercent > 90 ? 'bg-red-500' : dayPercent > 70 ? 'bg-yellow-500' : 'bg-primary-500'
                                 }`}

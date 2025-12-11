@@ -6,15 +6,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { creditsApi } from '@/api/credits'
 import type { CreditPackType, AutoTopupConfig } from '@/types/credits'
 import { toast } from '@/components/Toast'
+import { useAuthStore } from '@/stores/authStore'
 
 /**
  * Hook to fetch current credit balance.
+ * Only fetches when user is authenticated to avoid 401 errors.
  */
 export function useCreditBalance() {
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+
     return useQuery({
         queryKey: ['credit-balance'],
         queryFn: () => creditsApi.getBalance(),
         staleTime: 1000 * 60, // 1 minute - balance can change after jobs
+        enabled: isAuthenticated, // Only fetch when authenticated
     })
 }
 

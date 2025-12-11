@@ -59,8 +59,8 @@ export function SubscriptionSettings() {
                             <div className="flex items-center gap-4 text-sm">
                                 <div className="flex items-center gap-2">
                                     <span className={`w-2 h-2 rounded-full ${subscription?.is_active
-                                            ? 'bg-green-400'
-                                            : 'bg-yellow-400'
+                                        ? 'bg-green-400'
+                                        : 'bg-yellow-400'
                                         }`} />
                                     <span className="text-gray-300 capitalize">
                                         {subscription?.status || 'Active'}
@@ -102,7 +102,7 @@ export function SubscriptionSettings() {
                             {subscription?.ai_quota_remaining ?? 3}
                         </span>
                     </div>
-                    <div className="w-full bg-dark-300 rounded-full h-2">
+                    <div className="w-full bg-white/10 rounded-full h-2">
                         <div
                             className="bg-primary-500 h-2 rounded-full transition-all"
                             style={{

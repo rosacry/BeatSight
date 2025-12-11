@@ -316,6 +316,49 @@ class ForumService:
         await self.session.commit()
         await self.session.refresh(forum)
         return forum
+
+    async def get_recent_topics(
+        self,
+        limit: int = 25,
+        offset: int = 0,
+    ) -> tuple[list[ForumTopic], int]:
+        """
+        Get recent topics across all visible forums, sorted by last activity.
+        
+        Returns:
+            Tuple of (topics, total_count)
+        """
+        base_query = (
+            select(ForumTopic)
+            .join(Forum)
+            .where(
+                ForumTopic.deleted_at.is_(None),
+                Forum.is_visible == True,  # noqa: E712
+            )
+        )
+        
+        # Count total
+        count_result = await self.session.execute(
+            select(func.count()).select_from(base_query.subquery())
+        )
+        total = count_result.scalar()
+        
+        # Get topics sorted by last activity
+        query = (
+            base_query
+            .options(selectinload(ForumTopic.author))
+            .order_by(
+                ForumTopic.last_post_at.desc().nulls_last(),
+                ForumTopic.created_at.desc(),
+            )
+            .limit(limit)
+            .offset(offset)
+        )
+        
+        result = await self.session.execute(query)
+        topics = list(result.scalars().all())
+        
+        return topics, total
     
     async def get_forum_topics(
         self,

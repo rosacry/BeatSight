@@ -66,6 +66,26 @@ class TestCategoryEndpoints:
 
 
 # =============================================================================
+# Recent Topics Endpoint Tests
+# =============================================================================
+
+class TestRecentTopicsEndpoints:
+    """Tests for recent topics endpoints."""
+
+    def test_get_recent_topics_route_exists(self, client: TestClient):
+        """Test that the get recent topics route exists."""
+        response = client.get("/api/forum/topics/recent")
+        # Route should exist (might return 500 due to no DB, but not 404)
+        assert response.status_code != status.HTTP_404_NOT_FOUND
+
+    def test_get_recent_topics_with_pagination(self, client: TestClient):
+        """Test that the get recent topics route accepts pagination parameters."""
+        response = client.get("/api/forum/topics/recent?page=1&page_size=10")
+        # Route should exist and accept pagination params
+        assert response.status_code != status.HTTP_404_NOT_FOUND
+
+
+# =============================================================================
 # Forum Endpoint Tests
 # =============================================================================
 

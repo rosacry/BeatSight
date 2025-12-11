@@ -230,11 +230,8 @@ export function LeaderboardPage() {
                                                         </div>
                                                     )}
                                                     <div className="min-w-0">
-                                                        <p className={`font-medium truncate ${entry.is_anonymous ? 'text-accent-300 italic' : 'text-white'}`}>
+                                                        <p className={`font-medium truncate ${entry.is_anonymous ? 'text-accent-300' : 'text-white'}`}>
                                                             {entry.display_name}
-                                                            {entry.is_anonymous && (
-                                                                <span className="ml-2 text-xs text-accent-400">🕵️</span>
-                                                            )}
                                                         </p>
                                                         {entry.id === user?.id && (
                                                             <p className="text-xs text-primary-400">This is you!</p>

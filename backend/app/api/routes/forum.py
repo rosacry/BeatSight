@@ -389,6 +389,42 @@ async def get_forum(
     )
 
 
+@router.get("/topics/recent", response_model=PaginatedTopicsResponse)
+async def get_recent_topics(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
+    session: AsyncSession = Depends(get_db_session),
+) -> PaginatedTopicsResponse:
+    """Get recent topics across all visible forums."""
+    service = ForumService(session)
+    
+    offset = (page - 1) * page_size
+    topics, total = await service.get_recent_topics(limit=page_size, offset=offset)
+    
+    return PaginatedTopicsResponse(
+        items=[
+            TopicSummaryResponse(
+                id=str(t.id),
+                title=t.title,
+                slug=t.slug,
+                topic_type=t.topic_type.value,
+                status=t.status.value,
+                view_count=t.view_count,
+                reply_count=t.reply_count,
+                vote_score=t.vote_score,
+                has_poll=t.has_poll,
+                author=user_to_summary(t.author),
+                created_at=t.created_at,
+                last_post_at=t.last_post_at,
+            )
+            for t in topics
+        ],
+        total=total,
+        limit=page_size,
+        offset=offset,
+    )
+
+
 @router.get("/forums/{forum_slug}/topics", response_model=PaginatedTopicsResponse)
 async def get_forum_topics(
     forum_slug: str,

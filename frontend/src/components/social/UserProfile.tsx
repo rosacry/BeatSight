@@ -10,6 +10,7 @@ import {
     useBlockUser,
     useUnblockUser,
     useReportUser,
+    useUserSearch,
 } from '@/api/socialHooks'
 import type { UserSearchResult, ReportType } from '@/api/social'
 import { Avatar } from '@/components/ui/Avatar'
@@ -157,7 +158,7 @@ export function UserProfileModal({ userId, open, onClose }: UserProfileModalProp
     return (
         <>
             <Modal open={open} onClose={onClose} size="sm">
-                <ModalHeader onClose={onClose}>User Profile</ModalHeader>
+                <ModalHeader title="User Profile" />
                 <ModalBody>
                     {isLoading && (
                         <div className="flex justify-center py-8">
@@ -314,7 +315,7 @@ export function ReportUserModal({ userId, username, open, onClose }: ReportUserM
 
     return (
         <Modal open={open} onClose={handleClose} size="md">
-            <ModalHeader onClose={handleClose}>Report @{username}</ModalHeader>
+            <ModalHeader title={`Report @${username}`} />
             <ModalBody>
                 {submitted ? (
                     <div className="text-center py-6">

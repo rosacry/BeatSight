@@ -2,7 +2,6 @@
  * Blocked Users settings component.
  */
 
-import { clsx } from 'clsx'
 import { useBlockedUsers, useUnblockUser } from '@/api/socialHooks'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'

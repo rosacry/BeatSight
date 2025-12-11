@@ -74,15 +74,15 @@ interface UsernameLinkProps {
     children?: ReactNode
 }
 
-export function UsernameLink({ user, showPopover = true, className, children }: UsernameLinkProps) {
-    const [showProfileCard, setShowProfileCard] = useState(false)
+export function UsernameLink({ user, showPopover: _showPopover = true, className, children }: UsernameLinkProps) {
+    // Note: showPopover prop kept for backwards compatibility but ignored - we now always navigate directly
     const currentUser = useAuthStore((s) => s.user)
     const isOwnProfile = currentUser?.id === user.id
 
     const displayName = 'display_name' in user ? user.display_name : user.username
 
     if (isOwnProfile) {
-        // Don't show popover for own profile, just link to settings
+        // For own profile, link to settings
         return (
             <Link
                 to="/settings"
@@ -96,34 +96,17 @@ export function UsernameLink({ user, showPopover = true, className, children }: 
         )
     }
 
-    // Link to the user's public profile page
+    // Always navigate directly to the user's public profile page (like osu!)
     return (
-        <>
-            <Link
-                to={`/user/${user.id}`}
-                onClick={(e) => {
-                    // If holding Ctrl/Cmd, let it open in new tab
-                    // Otherwise, show the quick preview modal for convenience
-                    if (!e.ctrlKey && !e.metaKey && showPopover) {
-                        e.preventDefault()
-                        setShowProfileCard(true)
-                    }
-                }}
-                className={clsx(
-                    'font-medium text-primary-400 hover:text-primary-300 hover:underline cursor-pointer',
-                    className
-                )}
-            >
-                {children || displayName}
-            </Link>
-            {showPopover && (
-                <UserProfileModal
-                    userId={user.id}
-                    open={showProfileCard}
-                    onClose={() => setShowProfileCard(false)}
-                />
+        <Link
+            to={`/user/${user.id}`}
+            className={clsx(
+                'font-medium text-primary-400 hover:text-primary-300 hover:underline cursor-pointer',
+                className
             )}
-        </>
+        >
+            {children || displayName}
+        </Link>
     )
 }
 

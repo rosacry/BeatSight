@@ -41,7 +41,7 @@ export const useFeaturesStore = create<FeaturesState>((set, get) => ({
         set({ isLoading: true, error: null })
 
         try {
-            const response = await fetch(`${API_CONFIG.baseUrl}/api/health/features`)
+            const response = await fetch(`${API_CONFIG.baseUrl}/health/features`)
 
             if (!response.ok) {
                 // Fall back to defaults if endpoint doesn't exist

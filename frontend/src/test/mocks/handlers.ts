@@ -252,6 +252,15 @@ const handleHealth = () => {
     return HttpResponse.json({ status: 'healthy' });
 };
 
+const handleHealthFeatures = () => {
+    return HttpResponse.json({
+        cloud_sync: false,
+        phone_verification: false,
+        two_factor_auth: true,
+        stripe_payments: false,
+    });
+};
+
 export const handlers = [
     // Auth endpoints - both /api/auth/* and /api/api/auth/* patterns
     // Direct API calls use /api/auth/*
@@ -292,6 +301,8 @@ export const handlers = [
 
     // Health check - all patterns
     http.get('/health/live', handleHealth),
+    http.get('/health/features', handleHealthFeatures),
     http.get('/api/health/live', handleHealth),
+    http.get('/api/health/features', handleHealthFeatures),
     http.get('/api/api/health/live', handleHealth),
 ];

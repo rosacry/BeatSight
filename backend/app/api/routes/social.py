@@ -410,9 +410,6 @@ async def get_reports_admin(
     Optionally filter by status.
     """
     # Check if user is admin
-    from sqlalchemy import select
-    from app.models.roles import Role
-    
     # Simple admin check - you may want to use your RBAC system
     is_admin = any(role.name == "admin" for role in current_user.roles) if current_user.roles else False
     if not is_admin:

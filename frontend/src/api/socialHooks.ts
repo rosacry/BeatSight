@@ -18,7 +18,6 @@ import {
     getReports,
     getReport,
     updateReportStatus,
-    type SearchUsersParams,
     type ReportType,
     type ReportStatus,
     type GetReportsParams,
@@ -107,7 +106,7 @@ export function useMarkMessagesRead() {
 
     return useMutation({
         mutationFn: (partnerId: string) => markMessagesRead(partnerId),
-        onSuccess: (_, partnerId) => {
+        onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: socialQueryKeys.unreadCount })
             queryClient.invalidateQueries({ queryKey: socialQueryKeys.conversations })
         },

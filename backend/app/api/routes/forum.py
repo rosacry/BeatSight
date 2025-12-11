@@ -49,6 +49,7 @@ router = APIRouter(prefix="/forum", tags=["forum"])
 class UserSummary(BaseModel):
     """Brief user info for display."""
     id: str
+    user_number: int
     display_name: str
     avatar_url: Optional[str] = None
     karma_score: int
@@ -292,6 +293,7 @@ def user_to_summary(user: Optional[User]) -> Optional[UserSummary]:
         return None
     return UserSummary(
         id=str(user.id),
+        user_number=user.user_number,
         display_name=user.display_name,
         avatar_url=user.avatar_url,
         karma_score=user.karma_score,

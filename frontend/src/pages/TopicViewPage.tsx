@@ -177,6 +177,7 @@ export function TopicViewPage() {
                                     <UsernameLink
                                         user={{
                                             id: topic.author.id,
+                                            user_number: topic.author.user_number,
                                             username: topic.author.display_name,
                                             display_name: topic.author.display_name,
                                         }}

@@ -24,6 +24,7 @@ import {
 // Types
 interface LeaderboardUser {
     id: string
+    user_number: number
     display_name: string
     avatar_url: string | null
     karma_score: number
@@ -33,6 +34,7 @@ interface LeaderboardUser {
 
 interface ContributorStats {
     user_id: string
+    user_number: number
     username: string
     avatar_url: string | null
     contribution_count: number
@@ -77,8 +79,9 @@ export function LeaderboardPage() {
             if (!response.ok) throw new Error('Failed to fetch karma leaderboard')
             const data = await response.json()
             // Transform the response to match our LeaderboardUser interface
-            return data.entries.map((entry: { user_id: string; display_name: string; karma_score: number; rank: number; is_anonymous?: boolean }) => ({
+            return data.entries.map((entry: { user_id: string; user_number: number; display_name: string; karma_score: number; rank: number; is_anonymous?: boolean }) => ({
                 id: entry.user_id,
+                user_number: entry.user_number,
                 display_name: entry.display_name,
                 avatar_url: null, // API doesn't return avatar_url
                 karma_score: entry.karma_score,
@@ -98,9 +101,10 @@ export function LeaderboardPage() {
             })
             if (!response.ok) throw new Error('Failed to fetch contributor leaderboard')
             const data = await response.json()
-            return data.contributors.map((entry: { user_id: string; username: string; avatar_url: string | null; contribution_count: number; approved_count: number; rank: number }) => ({
+            return data.contributors.map((entry: { user_id: string; user_number: number; display_name: string; avatar_url: string | null; contribution_count: number; approved_count: number; rank: number }) => ({
                 user_id: entry.user_id,
-                username: entry.username,
+                user_number: entry.user_number,
+                username: entry.display_name,
                 avatar_url: entry.avatar_url,
                 contribution_count: entry.contribution_count,
                 approved_count: entry.approved_count,
@@ -196,6 +200,7 @@ export function LeaderboardPage() {
                                                             <UsernameLink
                                                                 user={{
                                                                     id: entry.id,
+                                                                    user_number: entry.user_number,
                                                                     username: entry.display_name,
                                                                     display_name: entry.display_name,
                                                                 }}
@@ -258,6 +263,7 @@ export function LeaderboardPage() {
                                                         <UsernameLink
                                                             user={{
                                                                 id: entry.user_id,
+                                                                user_number: entry.user_number,
                                                                 username: entry.username,
                                                                 display_name: entry.username,
                                                             }}

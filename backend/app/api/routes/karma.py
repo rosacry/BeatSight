@@ -87,6 +87,7 @@ class LeaderboardEntry(BaseModel):
 
     rank: int
     user_id: uuid.UUID
+    user_number: int
     display_name: str
     karma_score: int
     is_anonymous: bool = False
@@ -254,6 +255,7 @@ async def get_leaderboard(
         LeaderboardEntry(
             rank=offset + i + 1,
             user_id=entry["user_id"],
+            user_number=entry["user_number"],
             display_name=entry["display_name"],
             karma_score=entry["karma_score"],
             is_anonymous=entry["is_anonymous"],

@@ -10,6 +10,7 @@ export type ModeratorPermission = 'pin' | 'lock' | 'delete' | 'move' | 'ban'
 // Base user reference for forum content
 export interface ForumUser {
     id: string
+    user_number: number
     display_name: string
     avatar_url: string | null
     karma: number

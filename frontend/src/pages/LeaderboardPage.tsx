@@ -40,11 +40,24 @@ interface ContributorStats {
     contribution_count: number
     approved_count: number
     rank: number
+    is_anonymous?: boolean
 }
 
-type LeaderboardTab = 'karma' | 'contributors'
+interface VerifierStats {
+    user_id: string
+    user_number: number
+    display_name: string
+    avatar_url: string | null
+    total_verifications: number
+    consensus_matches: number
+    accuracy_rate: number
+    rank: number
+    is_anonymous?: boolean
+}
 
-const VALID_TABS: LeaderboardTab[] = ['karma', 'contributors']
+type LeaderboardTab = 'karma' | 'contributors' | 'verifiers'
+
+const VALID_TABS: LeaderboardTab[] = ['karma', 'contributors', 'verifiers']
 
 export function LeaderboardPage() {
     useDocumentTitle('leaderboard')
@@ -101,7 +114,7 @@ export function LeaderboardPage() {
             })
             if (!response.ok) throw new Error('Failed to fetch contributor leaderboard')
             const data = await response.json()
-            return data.contributors.map((entry: { user_id: string; user_number: number; display_name: string; avatar_url: string | null; contribution_count: number; approved_count: number; rank: number }) => ({
+            return data.contributors.map((entry: { user_id: string; user_number: number; display_name: string; avatar_url: string | null; contribution_count: number; approved_count: number; rank: number; is_anonymous?: boolean }) => ({
                 user_id: entry.user_id,
                 user_number: entry.user_number,
                 username: entry.display_name,
@@ -109,13 +122,27 @@ export function LeaderboardPage() {
                 contribution_count: entry.contribution_count,
                 approved_count: entry.approved_count,
                 rank: entry.rank,
+                is_anonymous: entry.is_anonymous || false,
             })) as ContributorStats[]
         },
         enabled: activeTab === 'contributors',
     })
 
+    // Fetch verifier leaderboard
+    const { data: verifierLeaderboard, isLoading: verifierLoading } = useQuery({
+        queryKey: ['leaderboard', 'verifiers'],
+        queryFn: async () => {
+            const response = await fetch(`${API_CONFIG.baseUrl}/api/accuracy/leaderboard?limit=50`)
+            if (!response.ok) throw new Error('Failed to fetch verifier leaderboard')
+            const data = await response.json()
+            return data.verifiers as VerifierStats[]
+        },
+        enabled: activeTab === 'verifiers',
+    })
+
     const isLoading = (activeTab === 'karma' && karmaLoading) ||
-        (activeTab === 'contributors' && contributorLoading)
+        (activeTab === 'contributors' && contributorLoading) ||
+        (activeTab === 'verifiers' && verifierLoading)
 
     return (
         <PageContentWrapper className="max-w-4xl mx-auto px-4 py-8">
@@ -138,6 +165,12 @@ export function LeaderboardPage() {
                         isActive={activeTab === 'contributors'}
                         onClick={() => handleTabChange('contributors')}
                         label="📝 Contributors"
+                        variant="pills"
+                    />
+                    <AnimatedTabButton
+                        isActive={activeTab === 'verifiers'}
+                        onClick={() => handleTabChange('verifiers')}
+                        label="✓ Verifiers"
                         variant="pills"
                     />
                 </div>
@@ -291,6 +324,84 @@ export function LeaderboardPage() {
                                                 <Link to="/upload" className="text-primary-400 hover:text-primary-300 mt-2 inline-block">
                                                     Start contributing →
                                                 </Link>
+                                            </div>
+                                        </StaggerSection>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Verifier Leaderboard */}
+                            {activeTab === 'verifiers' && verifierLeaderboard && (
+                                <div className="divide-y divide-dark-300">
+                                    {verifierLeaderboard.map((entry, index) => (
+                                        <StaggerSection key={entry.user_id}>
+                                            <div
+                                                className="flex items-center gap-4 p-4 hover:bg-dark-300 transition-colors"
+                                            >
+                                                {/* Rank */}
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-yellow-500 text-black' :
+                                                    index === 1 ? 'bg-gray-300 text-black' :
+                                                        index === 2 ? 'bg-amber-600 text-white' :
+                                                            'bg-dark-500 text-gray-400'
+                                                    }`}>
+                                                    {index + 1}
+                                                </div>
+
+                                                {/* Avatar & Name */}
+                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    {entry.is_anonymous ? (
+                                                        <div className="w-10 h-10 rounded-full bg-accent-500 flex items-center justify-center text-white">
+                                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                            </svg>
+                                                        </div>
+                                                    ) : entry.avatar_url ? (
+                                                        <img
+                                                            src={entry.avatar_url}
+                                                            alt={entry.display_name}
+                                                            className="w-10 h-10 rounded-full"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-full bg-accent-500 flex items-center justify-center text-white font-medium">
+                                                            {entry.display_name?.[0]?.toUpperCase() || '?'}
+                                                        </div>
+                                                    )}
+                                                    <div className="min-w-0">
+                                                        {entry.is_anonymous ? (
+                                                            <p className="font-medium text-accent-300 truncate">
+                                                                {entry.display_name}
+                                                            </p>
+                                                        ) : (
+                                                            <UsernameLink
+                                                                user={{
+                                                                    id: entry.user_id,
+                                                                    user_number: entry.user_number,
+                                                                    username: entry.display_name,
+                                                                    display_name: entry.display_name,
+                                                                }}
+                                                                className="font-medium truncate"
+                                                            />
+                                                        )}
+                                                        <p className="text-xs text-gray-400">
+                                                            {entry.accuracy_rate}% accuracy
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Stats */}
+                                                <div className="text-right">
+                                                    <p className="text-lg font-bold text-accent-400">{entry.consensus_matches}</p>
+                                                    <p className="text-xs text-gray-400">verified</p>
+                                                </div>
+                                            </div>
+                                        </StaggerSection>
+                                    ))}
+
+                                    {verifierLeaderboard.length === 0 && (
+                                        <StaggerSection>
+                                            <div className="p-8 text-center text-gray-400">
+                                                <p>No verification data available yet.</p>
+                                                <p className="text-sm mt-2">Be the first to verify beatmaps!</p>
                                             </div>
                                         </StaggerSection>
                                     )}

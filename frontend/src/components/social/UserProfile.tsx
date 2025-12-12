@@ -89,7 +89,7 @@ export function UsernameLink({ user, showPopover: _showPopover = true, className
         <Link
             to={`/user/${userIdentifier}`}
             className={clsx(
-                'font-medium text-primary-400 hover:text-primary-300 hover:underline cursor-pointer',
+                'font-medium text-white hover:text-primary-400 transition-colors cursor-pointer',
                 className
             )}
         >

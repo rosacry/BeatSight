@@ -1233,7 +1233,7 @@ export function AdminDashboardPage() {
                                 <div className="bg-dark-400 rounded-xl border border-white/10 p-6 w-full max-w-md mx-4 max-h-[80vh] overflow-y-auto">
                                     <h3 className="text-lg font-semibold text-white mb-2">🏷️ Manage Tags</h3>
                                     <p className="text-gray-400 text-sm mb-4">
-                                        User: <Link to={`/user/${tagsModalUser.user_number ?? tagsModalUser.id}`} className="text-primary-400 hover:underline">{tagsModalUser.display_name}</Link>
+                                        User: <Link to={`/user/${tagsModalUser.user_number ?? tagsModalUser.id}`} className="text-white hover:text-primary-400 transition-colors">{tagsModalUser.display_name}</Link>
                                     </p>
 
                                     {/* Current Tags */}
@@ -1875,7 +1875,7 @@ function ReportsTabContent() {
                                                     <span className="text-gray-400">
                                                         about <Link
                                                             to={`/user/${report.reported_user.user_number}`}
-                                                            className="text-primary-400 hover:text-primary-300"
+                                                            className="text-white hover:text-primary-400 transition-colors"
                                                             onClick={(e) => e.stopPropagation()}
                                                         >
                                                             {report.reported_user.display_name}

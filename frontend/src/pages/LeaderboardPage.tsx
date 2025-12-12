@@ -239,17 +239,17 @@ export function LeaderboardPage() {
                                         <tr
                                             key={entry.user_id}
                                             className={`border-b border-dark-300/30 transition-colors ${isCurrentUser
-                                                    ? 'bg-primary-500/15 hover:bg-primary-500/20 ring-1 ring-inset ring-primary-500/30'
-                                                    : `${karmaRank.rowBg} ${karmaRank.rowBgHover}`
+                                                ? 'bg-primary-500/15 hover:bg-primary-500/20 ring-1 ring-inset ring-primary-500/30'
+                                                : `${karmaRank.rowBg} ${karmaRank.rowBgHover}`
                                                 }`}
                                         >
                                             {/* Position Number */}
                                             <td className="px-3 py-3 text-center">
                                                 <span className={`text-sm font-bold tabular-nums ${displayRank <= 3
-                                                        ? displayRank === 1 ? 'text-yellow-400'
-                                                            : displayRank === 2 ? 'text-gray-300'
-                                                                : 'text-amber-500'
-                                                        : 'text-gray-500'
+                                                    ? displayRank === 1 ? 'text-yellow-400'
+                                                        : displayRank === 2 ? 'text-gray-300'
+                                                            : 'text-amber-500'
+                                                    : 'text-gray-500'
                                                     }`}>
                                                     {displayRank}
                                                 </span>
@@ -277,7 +277,7 @@ export function LeaderboardPage() {
                                                         </div>
                                                     )}
 
-                                                    {/* Name + Rank Badge */}
+                                                    {/* Name + Bonus indicator */}
                                                     <div className="min-w-0">
                                                         <div className="flex items-center gap-2">
                                                             {entry.is_anonymous ? (
@@ -305,11 +305,6 @@ export function LeaderboardPage() {
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <div className="mt-0.5 flex items-center gap-1.5">
-                                                            <span className={`text-[10px] ${karmaRank.color}`}>
-                                                                {karmaRank.icon} {karmaRank.name}
-                                                            </span>
-                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -320,57 +315,54 @@ export function LeaderboardPage() {
                                                     {entry.karma_score.toLocaleString()}
                                                 </span>
                                             </td>
-                                        </span>
+
+                                            {/* Maps */}
+                                            <td className="px-3 py-3 text-right hidden sm:table-cell">
+                                                <KarmaValue
+                                                    value={entry.breakdown.map_upvotes + entry.breakdown.map_downvotes}
+                                                    highlight={sortKey === 'maps'}
+                                                />
                                             </td>
 
-                            {/* Maps */}
-                            <td className="px-3 py-3 text-right hidden sm:table-cell">
-                                <KarmaValue
-                                    value={entry.breakdown.map_upvotes + entry.breakdown.map_downvotes}
-                                    highlight={sortKey === 'maps'}
-                                />
-                            </td>
+                                            {/* Contributions */}
+                                            <td className="px-3 py-3 text-right hidden md:table-cell">
+                                                <KarmaValue
+                                                    value={entry.breakdown.contributions_approved + entry.breakdown.contributions_rejected}
+                                                    highlight={sortKey === 'contributions'}
+                                                />
+                                            </td>
 
-                            {/* Contributions */}
-                            <td className="px-3 py-3 text-right hidden md:table-cell">
-                                <KarmaValue
-                                    value={entry.breakdown.contributions_approved + entry.breakdown.contributions_rejected}
-                                    highlight={sortKey === 'contributions'}
-                                />
-                            </td>
+                                            {/* Verification */}
+                                            <td className="px-3 py-3 text-right hidden lg:table-cell">
+                                                <KarmaValue
+                                                    value={entry.breakdown.verification_votes + entry.breakdown.verification_consensus}
+                                                    highlight={sortKey === 'verification'}
+                                                />
+                                            </td>
 
-                            {/* Verification */}
-                            <td className="px-3 py-3 text-right hidden lg:table-cell">
-                                <KarmaValue
-                                    value={entry.breakdown.verification_votes + entry.breakdown.verification_consensus}
-                                    highlight={sortKey === 'verification'}
-                                />
-                            </td>
-
-                            {/* Votes (forum activity / upvotes on content) */}
-                            <td className="px-3 py-3 text-right hidden lg:table-cell">
-                                <KarmaValue
-                                    value={entry.breakdown.forum_activity}
-                                    highlight={sortKey === 'votes'}
-                                />
-                            </td>
-                        </tr>
-                        )
+                                            {/* Votes */}
+                                            <td className="px-3 py-3 text-right hidden lg:table-cell">
+                                                <KarmaValue
+                                                    value={entry.breakdown.forum_activity}
+                                                    highlight={sortKey === 'votes'}
+                                                />
+                                            </td>
+                                        </tr>
+                                    )
                                 })}
-                    </tbody>
+                            </tbody>
                         </table>
-        </div>
-    ) : (
-        <div className="p-12 text-center text-gray-400">
-            <div className="text-4xl mb-4">🥁</div>
-            <p>No karma data yet. Be the first to contribute!</p>
-        </div>
-    )
-}
-            </div >
+                    </div>
+                ) : (
+                    <div className="p-12 text-center text-gray-400">
+                        <div className="text-4xl mb-4">🥁</div>
+                        <p>No karma data yet. Be the first to contribute!</p>
+                    </div>
+                )}
+            </div>
 
-    {/* Karma Ranks Section */ }
-    < div className = "mt-10" >
+            {/* Karma Ranks Section */}
+            <div className="mt-10">
                 <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
                     <span>🏅</span>
                     Karma Ranks
@@ -394,10 +386,10 @@ export function LeaderboardPage() {
                         </div>
                     ))}
                 </div>
-            </div >
+            </div>
 
-    {/* How to Earn Section */ }
-    < div className = "mt-10" >
+            {/* How to Earn Section */}
+            <div className="mt-10">
                 <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
                     <span>📈</span>
                     How to Earn Karma
@@ -501,7 +493,7 @@ export function LeaderboardPage() {
                         </p>
                     </div>
                 </div>
-            </div >
-        </PageContentWrapper >
+            </div>
+        </PageContentWrapper>
     )
 }

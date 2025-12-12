@@ -293,6 +293,7 @@ class ContributorLeaderboardEntry(BaseModel):
     contribution_count: int
     approved_count: int
     rank: int
+    is_anonymous: bool = False
 
 
 class ContributorLeaderboardResponse(BaseModel):
@@ -728,7 +729,11 @@ async def get_contributor_leaderboard(
     This endpoint does not require authentication.
     Shows users ranked by approved contribution count.
     Tie-breaker: whoever reached the same count FIRST ranks higher.
+    Hidden users appear as "Secret Agent" but still occupy rank positions.
     """
+    from sqlalchemy import literal
+    from app.models.user_settings import UserSettings
+    
     # Get approved/exported contribution counts per user
     approved_statuses = [ContributionStatus.APPROVED, ContributionStatus.EXPORTED]
     
@@ -757,17 +762,29 @@ async def get_contributor_leaderboard(
     )
     
     # Join with users to get display names and order by approved count
+    # Anonymize hidden users as "Secret Agent"
     # Tie-breaker: whoever reached the same count FIRST ranks higher (earlier timestamp)
     query = (
         select(
             User.id,
             User.user_number,
-            User.display_name,
-            User.avatar_url,
+            case(
+                (UserSettings.hide_from_leaderboards == True, literal("Secret Agent")),  # noqa: E712
+                else_=User.display_name
+            ).label("display_name"),
+            case(
+                (UserSettings.hide_from_leaderboards == True, literal(None)),  # noqa: E712
+                else_=User.avatar_url
+            ).label("avatar_url"),
             subquery.c.total_count,
             subquery.c.approved_count,
+            case(
+                (UserSettings.hide_from_leaderboards == True, literal(True)),  # noqa: E712
+                else_=literal(False)
+            ).label("is_anonymous"),
         )
         .join(subquery, User.id == subquery.c.user_id)
+        .outerjoin(UserSettings, User.id == UserSettings.user_id)
         .order_by(
             subquery.c.approved_count.desc(),
             # Tie-breaker: whoever reached the count FIRST ranks higher
@@ -790,6 +807,7 @@ async def get_contributor_leaderboard(
             contribution_count=row.total_count or 0,
             approved_count=row.approved_count or 0,
             rank=offset + i + 1,
+            is_anonymous=row.is_anonymous or False,
         )
         for i, row in enumerate(rows)
     ]

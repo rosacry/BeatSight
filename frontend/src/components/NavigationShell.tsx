@@ -181,25 +181,44 @@ interface DropdownMenuProps {
     label: string
     items: DropdownItem[]
     isActive?: boolean
+    /** Shared state for coordinating dropdowns */
+    openDropdown?: string | null
+    onDropdownChange?: (label: string | null) => void
 }
 
-function DropdownMenu({ label, items, isActive }: DropdownMenuProps) {
-    const [isOpen, setIsOpen] = useState(false)
+function DropdownMenu({ label, items, isActive, openDropdown, onDropdownChange }: DropdownMenuProps) {
+    const isOpen = openDropdown === label
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated())
 
     const handleMouseEnter = () => {
+        // Clear any pending close timeout
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current)
+            timeoutRef.current = null
         }
-        setIsOpen(true)
+        // Open this dropdown immediately and close others
+        onDropdownChange?.(label)
     }
 
     const handleMouseLeave = () => {
+        // Delay closing to allow moving to the dropdown content
         timeoutRef.current = setTimeout(() => {
-            setIsOpen(false)
-        }, 150)
+            // Only close if this dropdown is still the open one
+            if (openDropdown === label) {
+                onDropdownChange?.(null)
+            }
+        }, 100) // Reduced from 150ms for snappier feel
     }
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current)
+            }
+        }
+    }, [])
 
     // Filter items based on auth
     const visibleItems = items.filter(item => !item.requiresAuth || isAuthenticated)
@@ -228,7 +247,7 @@ function DropdownMenu({ label, items, isActive }: DropdownMenuProps) {
                         initial={{ opacity: 0, y: -8 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -8 }}
-                        transition={{ duration: 0.15, ease: 'easeOut' }}
+                        transition={{ duration: 0.12, ease: 'easeOut' }}
                         className="absolute top-full left-0 mt-1 min-w-[160px] bg-dark-500 border border-white/10 rounded-lg shadow-xl overflow-hidden z-[60]"
                         style={{ pointerEvents: 'auto' }}
                     >
@@ -241,7 +260,7 @@ function DropdownMenu({ label, items, isActive }: DropdownMenuProps) {
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-                                        onClick={() => setIsOpen(false)}
+                                        onClick={() => onDropdownChange?.(null)}
                                     >
                                         {item.icon}
                                         {item.label}
@@ -251,7 +270,7 @@ function DropdownMenu({ label, items, isActive }: DropdownMenuProps) {
                                         key={index}
                                         to={item.path || '/'}
                                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-                                        onClick={() => setIsOpen(false)}
+                                        onClick={() => onDropdownChange?.(null)}
                                     >
                                         {item.icon}
                                         {item.label}
@@ -310,6 +329,8 @@ export function Layout({ children }: LayoutProps) {
     const [isScrolled, setIsScrolled] = useState(false)
     const [showMobileSignOutConfirm, setShowMobileSignOutConfirm] = useState(false)
     const [isSearchOpen, setIsSearchOpen] = useState(false)
+    // Shared state for dropdown menus - only one can be open at a time
+    const [openDropdown, setOpenDropdown] = useState<string | null>(null)
 
     // Keyboard shortcut to open search with / key
     useEffect(() => {
@@ -331,6 +352,11 @@ export function Layout({ children }: LayoutProps) {
         window.addEventListener('scroll', handleScroll, { passive: true })
         return () => window.removeEventListener('scroll', handleScroll)
     }, [])
+
+    // Close dropdown when route changes
+    useEffect(() => {
+        setOpenDropdown(null)
+    }, [location.pathname])
 
     // Check if current path is in a dropdown group
     const isInBrowse = ['/', '/queue'].some(p => location.pathname === p || location.pathname.startsWith('/songs'))
@@ -405,6 +431,8 @@ export function Layout({ children }: LayoutProps) {
                                 <DropdownMenu
                                     label="beatmaps"
                                     isActive={isInBrowse && location.pathname !== '/'}
+                                    openDropdown={openDropdown}
+                                    onDropdownChange={setOpenDropdown}
                                     items={[
                                         { path: '/queue', label: 'browse', icon: <BeatmapsIcon /> },
                                         { path: '/library', label: 'my library', icon: <LibraryIcon />, requiresAuth: true },
@@ -428,6 +456,8 @@ export function Layout({ children }: LayoutProps) {
                                 <DropdownMenu
                                     label="community"
                                     isActive={isInCommunity}
+                                    openDropdown={openDropdown}
+                                    onDropdownChange={setOpenDropdown}
                                     items={[
                                         { path: '/forum', label: 'forums', icon: <ForumIcon /> },
                                         { path: '/messages', label: 'messages', icon: <MessagesIcon />, requiresAuth: true },
@@ -437,6 +467,8 @@ export function Layout({ children }: LayoutProps) {
                                 {/* Help dropdown */}
                                 <DropdownMenu
                                     label="help"
+                                    openDropdown={openDropdown}
+                                    onDropdownChange={setOpenDropdown}
                                     items={[
                                         { href: getDocsLink(), label: 'documentation', icon: <DocsIcon />, external: true },
                                         { href: getCommunityLink(), label: 'support', icon: <SupportIcon />, external: true },
@@ -448,6 +480,8 @@ export function Layout({ children }: LayoutProps) {
                                 {(isVerifier || isStaff || isAdmin) && (
                                     <DropdownMenu
                                         label="staff"
+                                        openDropdown={openDropdown}
+                                        onDropdownChange={setOpenDropdown}
                                         items={[
                                             ...(isVerifier ? [{ path: '/verifier', label: 'verify maps', icon: <VerifyIcon /> }] : []),
                                             ...((isStaff || isAdmin) ? [{ path: '/admin', label: 'admin panel', icon: <AdminIcon /> }] : []),

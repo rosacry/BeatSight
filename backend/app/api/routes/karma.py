@@ -89,6 +89,7 @@ class LeaderboardEntry(BaseModel):
     user_id: uuid.UUID
     user_number: int
     display_name: str
+    avatar_url: Optional[str] = None
     karma_score: int
     is_anonymous: bool = False
 
@@ -97,6 +98,57 @@ class LeaderboardResponse(BaseModel):
     """Karma leaderboard."""
 
     entries: list[LeaderboardEntry]
+    limit: int
+
+
+class KarmaSourceBreakdown(BaseModel):
+    """Breakdown of karma sources for a leaderboard entry."""
+    
+    # Map-related karma
+    map_upvotes: int = 0  # Karma from receiving map upvotes
+    map_downvotes: int = 0  # Karma lost from downvotes
+    
+    # Contribution karma  
+    contributions_approved: int = 0  # Karma from approved contributions
+    contributions_rejected: int = 0  # Karma lost from rejected contributions
+    
+    # Verification karma
+    verification_votes: int = 0  # Karma from accuracy votes cast
+    verification_consensus: int = 0  # Karma from votes matching consensus
+    
+    # Forum karma
+    forum_activity: int = 0  # Combined forum karma
+    
+    # Bonuses
+    verification_bonuses: int = 0  # Email/phone/full verification bonuses
+    subscription_bonuses: int = 0  # Subscription bonuses
+    
+    # Admin adjustments
+    admin_adjustments: int = 0  # Manual admin adjustments
+    
+    # Other
+    other: int = 0  # Fix accepted/rejected, verification complete/rejected, etc.
+
+
+class UnifiedLeaderboardEntry(BaseModel):
+    """Single entry in the unified karma leaderboard with breakdown."""
+
+    rank: int
+    user_id: uuid.UUID
+    user_number: int
+    display_name: str
+    avatar_url: Optional[str] = None
+    karma_score: int
+    is_anonymous: bool = False
+    
+    # Karma breakdown
+    breakdown: KarmaSourceBreakdown
+
+
+class UnifiedLeaderboardResponse(BaseModel):
+    """Unified karma leaderboard with source breakdowns."""
+
+    entries: list[UnifiedLeaderboardEntry]
     limit: int
     offset: int
 
@@ -265,6 +317,150 @@ async def get_leaderboard(
 
     return LeaderboardResponse(
         entries=leaderboard,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/leaderboard/unified", response_model=UnifiedLeaderboardResponse)
+async def get_unified_leaderboard(
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    session: AsyncSession = Depends(get_db_session),
+) -> UnifiedLeaderboardResponse:
+    """
+    Get the unified karma leaderboard with source breakdowns.
+
+    This endpoint shows a single leaderboard ranked by total karma,
+    with a breakdown of where each user's karma came from:
+    - Map upvotes/downvotes
+    - Contribution approvals
+    - Verification activity
+    - Forum activity
+    - Bonuses (email/phone verification, subscription)
+    - Admin adjustments
+
+    Users with anonymous mode enabled appear as "Secret Agent".
+    """
+    from sqlalchemy import case, literal, func
+    from app.models.karma import KarmaLedger, KarmaReason
+    from app.models.user_settings import UserSettings
+    
+    # First get the top users by karma
+    top_users_subquery = (
+        select(
+            User.id.label("user_id"),
+            User.user_number,
+            case(
+                (UserSettings.hide_from_leaderboards == True, literal("Secret Agent")),  # noqa: E712
+                else_=User.display_name
+            ).label("display_name"),
+            case(
+                (UserSettings.hide_from_leaderboards == True, literal(None)),  # noqa: E712
+                else_=User.avatar_url
+            ).label("avatar_url"),
+            User.karma_score,
+            case(
+                (UserSettings.hide_from_leaderboards == True, literal(True)),  # noqa: E712
+                else_=literal(False)
+            ).label("is_anonymous"),
+        )
+        .outerjoin(UserSettings, User.id == UserSettings.user_id)
+        .where(User.restriction_level != 'banned')
+        .order_by(
+            User.karma_score.desc(),
+            func.coalesce(User.karma_score_achieved_at, User.created_at).asc()
+        )
+        .offset(offset)
+        .limit(limit)
+        .subquery()
+    )
+    
+    # Get basic user info
+    result = await session.execute(
+        select(
+            top_users_subquery.c.user_id,
+            top_users_subquery.c.user_number,
+            top_users_subquery.c.display_name,
+            top_users_subquery.c.avatar_url,
+            top_users_subquery.c.karma_score,
+            top_users_subquery.c.is_anonymous,
+        )
+    )
+    users = result.all()
+    
+    if not users:
+        return UnifiedLeaderboardResponse(entries=[], limit=limit, offset=offset)
+    
+    user_ids = [u.user_id for u in users]
+    
+    # Get karma breakdown for each user in a single query
+    breakdown_result = await session.execute(
+        select(
+            KarmaLedger.user_id,
+            KarmaLedger.reason_code,
+            func.sum(KarmaLedger.delta).label("total"),
+        )
+        .where(KarmaLedger.user_id.in_(user_ids))
+        .group_by(KarmaLedger.user_id, KarmaLedger.reason_code)
+    )
+    
+    # Organize breakdown by user
+    user_breakdowns: dict = {uid: {} for uid in user_ids}
+    for row in breakdown_result.all():
+        user_breakdowns[row.user_id][row.reason_code] = row.total or 0
+    
+    # Map reason codes to breakdown categories
+    def build_breakdown(user_id) -> KarmaSourceBreakdown:
+        b = user_breakdowns.get(user_id, {})
+        
+        return KarmaSourceBreakdown(
+            map_upvotes=b.get(KarmaReason.MAP_UPVOTED, 0),
+            map_downvotes=b.get(KarmaReason.MAP_DOWNVOTED, 0),
+            contributions_approved=b.get(KarmaReason.CONTRIBUTION_APPROVED, 0),
+            contributions_rejected=b.get(KarmaReason.CONTRIBUTION_REJECTED, 0),
+            verification_votes=b.get(KarmaReason.ACCURACY_VOTE_CAST, 0),
+            verification_consensus=b.get(KarmaReason.ACCURACY_CONSENSUS_CONTRIBUTOR, 0),
+            forum_activity=(
+                b.get(KarmaReason.FORUM_POST_UPVOTED, 0) +
+                b.get(KarmaReason.FORUM_POST_DOWNVOTED, 0) +
+                b.get(KarmaReason.FORUM_TOPIC_UPVOTED, 0) +
+                b.get(KarmaReason.FORUM_TOPIC_DOWNVOTED, 0) +
+                b.get(KarmaReason.FORUM_HELPFUL_ANSWER, 0) +
+                b.get(KarmaReason.FORUM_SPAM_PENALTY, 0)
+            ),
+            verification_bonuses=(
+                b.get(KarmaReason.EMAIL_VERIFIED_BONUS, 0) +
+                b.get(KarmaReason.PHONE_VERIFIED_BONUS, 0) +
+                b.get(KarmaReason.FULL_VERIFICATION_BONUS, 0) +
+                b.get(KarmaReason.VERIFIED_USER_BONUS, 0)
+            ),
+            subscription_bonuses=b.get(KarmaReason.SUBSCRIPTION_BONUS, 0),
+            admin_adjustments=b.get(KarmaReason.ADMIN_ADJUSTMENT, 0),
+            other=(
+                b.get(KarmaReason.FIX_ACCEPTED, 0) +
+                b.get(KarmaReason.FIX_REJECTED, 0) +
+                b.get(KarmaReason.VERIFICATION_COMPLETE, 0) +
+                b.get(KarmaReason.VERIFICATION_REJECTED, 0)
+            ),
+        )
+    
+    entries = [
+        UnifiedLeaderboardEntry(
+            rank=offset + i + 1,
+            user_id=user.user_id,
+            user_number=user.user_number,
+            display_name=user.display_name,
+            avatar_url=user.avatar_url,
+            karma_score=user.karma_score,
+            is_anonymous=user.is_anonymous or False,
+            breakdown=build_breakdown(user.user_id),
+        )
+        for i, user in enumerate(users)
+    ]
+    
+    return UnifiedLeaderboardResponse(
+        entries=entries,
         limit=limit,
         offset=offset,
     )

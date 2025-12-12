@@ -67,7 +67,7 @@ function getKarmaRank(karma: number): KarmaRank {
 }
 
 // Sort configuration
-type SortKey = 'karma_score' | 'maps' | 'contributions' | 'verification' | 'bonuses' | 'forum'
+type SortKey = 'karma_score' | 'maps' | 'contributions' | 'verification' | 'votes'
 type SortDirection = 'asc' | 'desc'
 
 // Helper to get computed values for sorting
@@ -81,9 +81,8 @@ function getColumnValue(entry: LeaderboardEntry, key: SortKey): number {
             return entry.breakdown.contributions_approved + entry.breakdown.contributions_rejected
         case 'verification':
             return entry.breakdown.verification_votes + entry.breakdown.verification_consensus
-        case 'bonuses':
-            return entry.breakdown.verification_bonuses + entry.breakdown.subscription_bonuses
-        case 'forum':
+        case 'votes':
+            // Forum activity represents votes on content (posts, comments, etc.)
             return entry.breakdown.forum_activity
         default:
             return 0
@@ -91,17 +90,12 @@ function getColumnValue(entry: LeaderboardEntry, key: SortKey): number {
 }
 
 // Karma Rank Badge Component
-function KarmaRankBadge({ karma, size = 'sm' }: { karma: number; size?: 'sm' | 'md' | 'lg' }) {
+function KarmaRankBadge({ karma }: { karma: number }) {
     const rank = getKarmaRank(karma)
-    const sizeClasses = {
-        sm: 'text-[10px] px-1.5 py-0.5',
-        md: 'text-xs px-2 py-1',
-        lg: 'text-sm px-3 py-1.5'
-    }
     return (
-        <span className={`${sizeClasses[size]} ${rank.bgColor} ${rank.color} ${rank.borderColor} border rounded font-medium inline-flex items-center gap-1`}>
+        <span className={`text-[10px] px-1.5 py-0.5 ${rank.bgColor} ${rank.color} ${rank.borderColor} border rounded font-medium inline-flex items-center gap-1 whitespace-nowrap`}>
             <span>{rank.icon}</span>
-            <span className="hidden sm:inline">{rank.name}</span>
+            <span>{rank.name}</span>
         </span>
     )
 }
@@ -226,7 +220,7 @@ export function LeaderboardPage() {
                                     <SortableHeader label="Maps" sortKey="maps" currentKey={sortKey} direction={sortDirection} onSort={handleSort} className="text-right hidden sm:table-cell" />
                                     <SortableHeader label="Contrib" sortKey="contributions" currentKey={sortKey} direction={sortDirection} onSort={handleSort} className="text-right hidden md:table-cell" />
                                     <SortableHeader label="Verify" sortKey="verification" currentKey={sortKey} direction={sortDirection} onSort={handleSort} className="text-right hidden md:table-cell" />
-                                    <SortableHeader label="Bonus" sortKey="bonuses" currentKey={sortKey} direction={sortDirection} onSort={handleSort} className="text-right hidden lg:table-cell" />
+                                    <SortableHeader label="Votes" sortKey="votes" currentKey={sortKey} direction={sortDirection} onSort={handleSort} className="text-right hidden lg:table-cell" />
                                 </tr>
                             </thead>
                             <tbody>
@@ -239,16 +233,16 @@ export function LeaderboardPage() {
                                         <tr
                                             key={entry.user_id}
                                             className={`border-b border-dark-300/50 transition-colors ${isCurrentUser
-                                                    ? 'bg-primary-500/10 hover:bg-primary-500/15'
-                                                    : 'hover:bg-dark-300/30'
+                                                ? 'bg-primary-500/10 hover:bg-primary-500/15'
+                                                : 'hover:bg-dark-300/30'
                                                 }`}
                                         >
                                             {/* Rank */}
                                             <td className="px-4 py-3">
                                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${displayRank === 1 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-black shadow-lg shadow-yellow-500/30' :
-                                                        displayRank === 2 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-black' :
-                                                            displayRank === 3 ? 'bg-gradient-to-br from-amber-500 to-amber-700 text-white' :
-                                                                'bg-dark-500 text-gray-400'
+                                                    displayRank === 2 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-black' :
+                                                        displayRank === 3 ? 'bg-gradient-to-br from-amber-500 to-amber-700 text-white' :
+                                                            'bg-dark-500 text-gray-400'
                                                     }`}>
                                                     {displayRank}
                                                 </div>
@@ -277,7 +271,7 @@ export function LeaderboardPage() {
                                                     )}
 
                                                     {/* Name + Rank Badge */}
-                                                    <div className="min-w-0 flex flex-col gap-1">
+                                                    <div className="min-w-0">
                                                         {entry.is_anonymous ? (
                                                             <span className="font-medium text-accent-300 text-sm">
                                                                 {entry.display_name}
@@ -293,7 +287,9 @@ export function LeaderboardPage() {
                                                                 className="font-medium text-sm"
                                                             />
                                                         )}
-                                                        <KarmaRankBadge karma={entry.karma_score} size="sm" />
+                                                        <div className="mt-1">
+                                                            <KarmaRankBadge karma={entry.karma_score} />
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -329,11 +325,11 @@ export function LeaderboardPage() {
                                                 />
                                             </td>
 
-                                            {/* Bonuses */}
+                                            {/* Votes (forum activity / upvotes on content) */}
                                             <td className="px-3 py-3 text-right hidden lg:table-cell">
                                                 <KarmaValue
-                                                    value={entry.breakdown.verification_bonuses + entry.breakdown.subscription_bonuses}
-                                                    highlight={sortKey === 'bonuses'}
+                                                    value={entry.breakdown.forum_activity}
+                                                    highlight={sortKey === 'votes'}
                                                 />
                                             </td>
                                         </tr>
@@ -423,6 +419,7 @@ export function LeaderboardPage() {
                             <span className="text-2xl">✓</span>
                             <h3 className="font-semibold text-white">Verification</h3>
                         </div>
+                        <p className="text-xs text-gray-500 mb-2">Requires 200+ karma</p>
                         <ul className="space-y-1.5 text-sm text-gray-400">
                             <li className="flex justify-between">
                                 <span>Verification vote</span>
@@ -437,8 +434,25 @@ export function LeaderboardPage() {
 
                     <div className="p-5 rounded-xl bg-dark-400 border border-dark-300">
                         <div className="flex items-center gap-2 mb-3">
+                            <span className="text-2xl">🗳️</span>
+                            <h3 className="font-semibold text-white">Votes</h3>
+                        </div>
+                        <ul className="space-y-1.5 text-sm text-gray-400">
+                            <li className="flex justify-between">
+                                <span>Helpful posts/comments</span>
+                                <span className="text-green-400 font-medium">+3 to +15</span>
+                            </li>
+                            <li className="flex justify-between">
+                                <span>Spam penalty</span>
+                                <span className="text-red-400 font-medium">-25</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div className="p-5 rounded-xl bg-dark-400 border border-dark-300">
+                        <div className="flex items-center gap-2 mb-3">
                             <span className="text-2xl">🎁</span>
-                            <h3 className="font-semibold text-white">Bonuses</h3>
+                            <h3 className="font-semibold text-white">Account Bonuses</h3>
                         </div>
                         <ul className="space-y-1.5 text-sm text-gray-400">
                             <li className="flex justify-between">
@@ -449,24 +463,12 @@ export function LeaderboardPage() {
                                 <span>Phone verified</span>
                                 <span className="text-green-400 font-medium">+50</span>
                             </li>
-                        </ul>
-                    </div>
-
-                    <div className="p-5 rounded-xl bg-dark-400 border border-dark-300">
-                        <div className="flex items-center gap-2 mb-3">
-                            <span className="text-2xl">💬</span>
-                            <h3 className="font-semibold text-white">Forum Activity</h3>
-                        </div>
-                        <ul className="space-y-1.5 text-sm text-gray-400">
-                            <li className="flex justify-between">
-                                <span>Helpful posts</span>
-                                <span className="text-green-400 font-medium">+3 to +15</span>
-                            </li>
-                            <li className="flex justify-between">
-                                <span>Spam penalty</span>
-                                <span className="text-red-400 font-medium">-25</span>
+                            <li className="flex justify-between border-t border-dark-300 pt-1.5 mt-1.5">
+                                <span className="text-gray-300">Both verified</span>
+                                <span className="text-yellow-400 font-medium">+100 bonus</span>
                             </li>
                         </ul>
+                        <p className="text-[10px] text-gray-500 mt-2">Total: 200 karma for full verification</p>
                     </div>
 
                     <div className="p-5 rounded-xl bg-dark-400 border border-dark-300 flex flex-col justify-center">

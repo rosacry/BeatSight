@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/UnifiedTransitions'
 import { KarmaRankBadge } from './LeaderboardPage'
 import { KarmaBreakdownTooltip } from '@/components/social'
+import { BannerUpload } from '@/components/BannerUpload'
 
 // =============================================================================
 // Types
@@ -288,10 +289,22 @@ export function UserProfilePage() {
             <div className="relative">
                 {/* Banner Image */}
                 <div
-                    className="h-48 md:h-64 bg-gradient-to-b from-primary-900/30 to-dark-600 bg-cover bg-center"
+                    className="h-48 md:h-64 bg-gradient-to-b from-primary-900/30 to-dark-600 bg-cover bg-center relative"
                     style={profile.banner_url ? { backgroundImage: `url(${profile.banner_url})` } : undefined}
                 >
                     <div className="absolute inset-0 bg-gradient-to-t from-dark-600 via-dark-600/50 to-transparent" />
+
+                    {/* Banner Upload overlay for own profile */}
+                    {isOwnProfile && (
+                        <BannerUpload
+                            currentBannerUrl={profile.banner_url}
+                            onUploadSuccess={() => {
+                                // Refetch profile to get updated banner URL
+                                window.location.reload()
+                            }}
+                            className="absolute inset-0 z-10"
+                        />
+                    )}
                 </div>
 
                 {/* Profile Info Overlay */}
@@ -398,7 +411,7 @@ export function UserProfilePage() {
 
                         {/* Karma Score + Rank */}
                         <div className="text-center md:text-right pb-4">
-                            <KarmaBreakdownTooltip userId={profile.id} karmaScore={profile.karma_score} placement="bottom">
+                            <KarmaBreakdownTooltip userId={profile.id} karmaScore={profile.karma_score} placement="left">
                                 <div className="inline-block">
                                     <div className="flex items-center gap-2 justify-center md:justify-end">
                                         <StarIcon className="w-5 h-5 text-yellow-400" />
@@ -406,10 +419,12 @@ export function UserProfilePage() {
                                             {profile.karma_score.toLocaleString()}
                                         </span>
                                     </div>
-                                    <p className="text-sm text-gray-400 mb-2">Karma</p>
+                                    <div className="flex items-center justify-center md:justify-end gap-2 mt-1">
+                                        <p className="text-sm text-gray-400">Karma</p>
+                                        <KarmaRankBadge karma={profile.karma_score} />
+                                    </div>
                                 </div>
                             </KarmaBreakdownTooltip>
-                            <KarmaRankBadge karma={profile.karma_score} />
                         </div>
                     </div>
                 </div>

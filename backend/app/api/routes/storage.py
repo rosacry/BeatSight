@@ -432,3 +432,38 @@ async def get_avatar(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Avatar not found",
         )
+
+
+# --- Banner Endpoints ---
+
+
+@router.get(
+    "/banners/{user_id}",
+    response_class=Response,
+    summary="Get user profile banner",
+)
+async def get_banner(
+    user_id: uuid.UUID,
+) -> Response:
+    """Get a user's profile banner image.
+
+    Returns a 1200x300 JPEG image (4:1 aspect ratio, osu!-style).
+    If no banner exists, returns 404.
+    """
+    storage = await get_storage()
+    banner_key = f"banners/{user_id}.jpg"
+
+    try:
+        content = await storage.retrieve(banner_key)
+        return Response(
+            content=content,
+            media_type="image/jpeg",
+            headers={
+                "Cache-Control": "public, max-age=3600",  # Cache for 1 hour
+            },
+        )
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Banner not found",
+        )

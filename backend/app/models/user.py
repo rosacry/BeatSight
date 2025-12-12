@@ -69,6 +69,7 @@ class User(Base):
     phone_number: Mapped[str | None] = mapped_column(String(32))
     phone_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     avatar_url: Mapped[str | None] = mapped_column(String(512))  # URL to avatar image
+    banner_url: Mapped[str | None] = mapped_column(String(512))  # URL to profile banner image
     auth_provider_id: Mapped[str] = mapped_column(
         String(128), unique=True, nullable=False
     )

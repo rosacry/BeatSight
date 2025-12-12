@@ -31,8 +31,12 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 # Maximum avatar file size: 5MB
 MAX_AVATAR_SIZE = 5 * 1024 * 1024
+# Maximum banner file size: 10MB
+MAX_BANNER_SIZE = 10 * 1024 * 1024
 # Avatar dimensions after processing
 AVATAR_SIZE = (256, 256)
+# Banner dimensions after processing (wide banner like osu!)
+BANNER_SIZE = (1200, 300)
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 
 
@@ -64,6 +68,7 @@ class UserResponse(BaseModel):
     phone_number: Optional[str] = None
     phone_verified: bool = False
     avatar_url: Optional[str] = None
+    banner_url: Optional[str] = None  # Profile banner image (osu!-style)
     karma_score: int
     created_at: datetime
     tags: list[UserTagResponse] = []  # Custom profile tags
@@ -341,6 +346,152 @@ async def delete_avatar(
     await session.refresh(current_user)
 
     logger.info(f"User {current_user.id} deleted their avatar")
+
+    return UserResponse.model_validate(current_user)
+
+
+@router.post("/me/banner", response_model=UserResponse)
+async def upload_banner(
+    file: Annotated[
+        UploadFile, File(description="Banner image (JPEG, PNG, WebP, GIF)")
+    ],
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+) -> UserResponse:
+    """
+    Upload a new profile banner image (like osu!'s profile banner).
+
+    The image will be resized to 1200x300 pixels (4:1 aspect ratio).
+    Supported formats: JPEG, PNG, WebP, GIF
+    Maximum file size: 10MB
+    """
+    # Validate content type
+    content_type = file.content_type or ""
+    if content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Unsupported image type. Allowed: JPEG, PNG, WebP, GIF",
+        )
+
+    # Read and validate file size
+    content = await file.read()
+    if len(content) > MAX_BANNER_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Banner file too large. Maximum size: 10MB",
+        )
+
+    try:
+        # SECURITY: Limit max pixels to prevent decompression bomb attacks
+        Image.MAX_IMAGE_PIXELS = 50_000_000  # 50 megapixels max for banners
+
+        # Process image with Pillow
+        img = Image.open(BytesIO(content))
+
+        # Validate dimensions BEFORE any processing
+        if img.width > 8192 or img.height > 8192:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Image dimensions too large. Maximum 8192x8192 pixels.",
+            )
+
+        # Convert to RGB if necessary (for PNG with alpha, etc.)
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+
+        # Calculate target aspect ratio (4:1 for banner)
+        target_ratio = BANNER_SIZE[0] / BANNER_SIZE[1]  # 4.0
+        current_ratio = img.width / img.height
+
+        if current_ratio > target_ratio:
+            # Image is wider than target - crop sides
+            new_width = int(img.height * target_ratio)
+            left = (img.width - new_width) // 2
+            img = img.crop((left, 0, left + new_width, img.height))
+        else:
+            # Image is taller than target - crop top/bottom
+            new_height = int(img.width / target_ratio)
+            top = (img.height - new_height) // 2
+            img = img.crop((0, top, img.width, top + new_height))
+
+        # Final resize to target size
+        img = img.resize(BANNER_SIZE, Image.Resampling.LANCZOS)
+
+        # Save to buffer as JPEG
+        buffer = BytesIO()
+        img.save(buffer, format="JPEG", quality=90, optimize=True)
+        buffer.seek(0)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to process banner image: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to process image. Please upload a valid image file.",
+        )
+
+    # Upload to storage
+    try:
+        storage = get_storage()
+        banner_key = f"banners/{current_user.id}.jpg"
+
+        # Store directly
+        await storage.store(banner_key, buffer.read(), "image/jpeg")
+
+        # Generate URL
+        banner_url = f"/api/storage/banners/{current_user.id}"
+
+    except Exception as e:
+        logger.error(f"Failed to upload banner to storage: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to store banner. Please try again.",
+        )
+
+    # Update user record
+    current_user.banner_url = banner_url
+    session.add(current_user)
+    await session.commit()
+    await session.refresh(current_user)
+
+    logger.info(f"User {current_user.id} uploaded new banner")
+
+    return UserResponse.model_validate(current_user)
+
+
+@router.delete("/me/banner", response_model=UserResponse)
+async def delete_banner(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+) -> UserResponse:
+    """
+    Delete the current user's profile banner.
+
+    Resets to default gradient background.
+    """
+    if not current_user.banner_url:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No banner to delete",
+        )
+
+    # Remove from storage
+    try:
+        storage = get_storage()
+        banner_key = f"banners/{current_user.id}.jpg"
+        await storage.delete(banner_key)
+    except Exception as e:
+        logger.warning(f"Failed to delete banner from storage: {e}")
+        # Continue anyway - user should still be able to reset their banner_url
+
+    # Clear banner URL
+    current_user.banner_url = None
+    session.add(current_user)
+    await session.commit()
+    await session.refresh(current_user)
+
+    logger.info(f"User {current_user.id} deleted their banner")
 
     return UserResponse.model_validate(current_user)
 
@@ -812,10 +963,48 @@ async def _get_user_by_identifier(
         return None
 
 
+async def _get_user_by_identifier_with_roles(
+    user_identifier: str,
+    session: AsyncSession,
+) -> User | None:
+    """
+    Fetch user by either UUID or user_number with roles eagerly loaded.
+    Returns None if not found or banned.
+    """
+    # Try to parse as UUID first
+    try:
+        user_uuid = uuid.UUID(user_identifier)
+        result = await session.execute(
+            select(User)
+            .options(selectinload(User.roles).selectinload(UserRole.role))
+            .where(
+                User.id == user_uuid,
+                User.restriction_level != 'banned'
+            )
+        )
+        return result.scalar_one_or_none()
+    except ValueError:
+        pass
+    
+    # Try to parse as integer (user_number)
+    try:
+        user_number = int(user_identifier)
+        result = await session.execute(
+            select(User)
+            .options(selectinload(User.roles).selectinload(UserRole.role))
+            .where(
+                User.user_number == user_number,
+                User.restriction_level != 'banned'
+            )
+        )
+        return result.scalar_one_or_none()
+    except ValueError:
+        return None
+
+
 # =============================================================================
 # Hover Card Endpoint (Lightweight user info for tooltips)
 # =============================================================================
-
 
 class UserHoverCardResponse(BaseModel):
     """Lightweight user data for hover card tooltips (osu!-style)."""
@@ -845,7 +1034,8 @@ async def get_user_hover_card(
     
     Supports lookup by either UUID or user_number (e.g., /users/1/hover-card).
     """
-    user = await _get_user_by_identifier(user_id, session)
+    # Use the version that eagerly loads roles to avoid lazy loading issues
+    user = await _get_user_by_identifier_with_roles(user_id, session)
     
     if not user:
         raise HTTPException(
@@ -853,7 +1043,7 @@ async def get_user_hover_card(
             detail="User not found",
         )
     
-    # Determine role
+    # Determine role - roles are now eagerly loaded
     role = "user"
     if user.roles:
         role_codes = [r.role.code for r in user.roles if r.role]
@@ -869,7 +1059,7 @@ async def get_user_hover_card(
         user_number=user.user_number,
         display_name=user.display_name,
         avatar_url=user.avatar_url,
-        banner_url=getattr(user, 'banner_url', None),
+        banner_url=user.banner_url,
         karma_score=user.karma_score or 0,
         is_online=False,  # TODO: Implement real online status
         last_active=getattr(user, 'last_active_at', None),

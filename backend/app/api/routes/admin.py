@@ -20,7 +20,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel
 from sqlalchemy import select, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -2131,6 +2131,7 @@ async def update_user_tag(
 @router.delete(
     "/users/{user_id}/tags/{tag_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
     summary="Delete user tag",
     description="Remove a tag from a user's profile.",
 )
@@ -2139,7 +2140,7 @@ async def delete_user_tag(
     tag_id: int,
     db: Annotated[AsyncSession, Depends(get_session)],
     admin: Annotated[User, Depends(RequireAdminDashboard)],
-) -> None:
+):
     """Delete a user's tag."""
     # Get the tag
     tag_result = await db.execute(

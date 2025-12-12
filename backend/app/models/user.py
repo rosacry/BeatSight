@@ -74,6 +74,10 @@ class User(Base):
     )
     hashed_password: Mapped[str | None] = mapped_column(String(255))
     karma_score: Mapped[int] = mapped_column(default=0)
+    # Timestamp when the current karma_score was first achieved (for tie-breaking on leaderboards)
+    karma_score_achieved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     
     # Account moderation fields (inspired by osu!)
     restriction_level: Mapped[str] = mapped_column(

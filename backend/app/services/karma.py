@@ -123,6 +123,8 @@ class KarmaService:
         Returns:
             The user's new karma score.
         """
+        from datetime import datetime, timezone
+        
         # Determine karma amount
         if delta is None:
             delta = KARMA_REWARDS.get(reason, 0)
@@ -148,8 +150,14 @@ class KarmaService:
         if user is None:
             raise KarmaError(f"User {user_id} not found")
 
+        old_karma = user.karma_score
         user.karma_score = max(0, user.karma_score + delta)  # Floor at 0
         new_karma = user.karma_score
+        
+        # Update karma_score_achieved_at if this is a new high score
+        # This is used for tie-breaking on leaderboards - whoever reached the score first ranks higher
+        if new_karma > old_karma:
+            user.karma_score_achieved_at = datetime.now(timezone.utc)
 
         await self.session.commit()
 
@@ -350,6 +358,7 @@ class KarmaService:
         Get the karma leaderboard.
 
         Users with anonymous mode enabled are shown as "Secret Agent" instead of being hidden.
+        Tie-breaker: Users with the same karma score are ranked by who reached that score first.
 
         Returns:
             List of dicts: {user_id, display_name, karma_score, is_anonymous}
@@ -358,6 +367,7 @@ class KarmaService:
         
         # Select all users, but mask display_name for anonymous users
         # Use CASE to conditionally show "Secret Agent" for users with hide_from_leaderboards=True
+        # Order by karma_score DESC, then by karma_score_achieved_at ASC (earlier = higher rank)
         result = await self.session.execute(
             select(
                 User.id,
@@ -373,7 +383,12 @@ class KarmaService:
                 ).label("is_anonymous")
             )
             .outerjoin(UserSettings, User.id == UserSettings.user_id)
-            .order_by(User.karma_score.desc())
+            .order_by(
+                User.karma_score.desc(),
+                # Tie-breaker: whoever reached the score first ranks higher
+                # Use COALESCE to handle NULL (fallback to created_at for legacy data)
+                func.coalesce(User.karma_score_achieved_at, User.created_at).asc()
+            )
             .limit(limit)
             .offset(offset)
         )

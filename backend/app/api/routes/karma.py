@@ -346,8 +346,8 @@ async def get_unified_leaderboard(
     from app.models.karma import KarmaLedger, KarmaReason
     from app.models.user_settings import UserSettings
     
-    # First get the top users by karma
-    top_users_subquery = (
+    # First get the top users by karma with anonymization
+    users_query = (
         select(
             User.id.label("user_id"),
             User.user_number,
@@ -373,20 +373,9 @@ async def get_unified_leaderboard(
         )
         .offset(offset)
         .limit(limit)
-        .subquery()
     )
     
-    # Get basic user info
-    result = await session.execute(
-        select(
-            top_users_subquery.c.user_id,
-            top_users_subquery.c.user_number,
-            top_users_subquery.c.display_name,
-            top_users_subquery.c.avatar_url,
-            top_users_subquery.c.karma_score,
-            top_users_subquery.c.is_anonymous,
-        )
-    )
+    result = await session.execute(users_query)
     users = result.all()
     
     if not users:
@@ -405,43 +394,45 @@ async def get_unified_leaderboard(
         .group_by(KarmaLedger.user_id, KarmaLedger.reason_code)
     )
     
-    # Organize breakdown by user
+    # Organize breakdown by user - use string keys for enum values
     user_breakdowns: dict = {uid: {} for uid in user_ids}
     for row in breakdown_result.all():
-        user_breakdowns[row.user_id][row.reason_code] = row.total or 0
+        # Store by enum value string to avoid enum comparison issues
+        reason_key = row.reason_code.value if hasattr(row.reason_code, 'value') else str(row.reason_code)
+        user_breakdowns[row.user_id][reason_key] = row.total or 0
     
     # Map reason codes to breakdown categories
     def build_breakdown(user_id) -> KarmaSourceBreakdown:
         b = user_breakdowns.get(user_id, {})
         
         return KarmaSourceBreakdown(
-            map_upvotes=b.get(KarmaReason.MAP_UPVOTED, 0),
-            map_downvotes=b.get(KarmaReason.MAP_DOWNVOTED, 0),
-            contributions_approved=b.get(KarmaReason.CONTRIBUTION_APPROVED, 0),
-            contributions_rejected=b.get(KarmaReason.CONTRIBUTION_REJECTED, 0),
-            verification_votes=b.get(KarmaReason.ACCURACY_VOTE_CAST, 0),
-            verification_consensus=b.get(KarmaReason.ACCURACY_CONSENSUS_CONTRIBUTOR, 0),
+            map_upvotes=b.get(KarmaReason.MAP_UPVOTED.value, 0),
+            map_downvotes=b.get(KarmaReason.MAP_DOWNVOTED.value, 0),
+            contributions_approved=b.get(KarmaReason.CONTRIBUTION_APPROVED.value, 0),
+            contributions_rejected=b.get(KarmaReason.CONTRIBUTION_REJECTED.value, 0),
+            verification_votes=b.get(KarmaReason.ACCURACY_VOTE_CAST.value, 0),
+            verification_consensus=b.get(KarmaReason.ACCURACY_CONSENSUS_CONTRIBUTOR.value, 0),
             forum_activity=(
-                b.get(KarmaReason.FORUM_POST_UPVOTED, 0) +
-                b.get(KarmaReason.FORUM_POST_DOWNVOTED, 0) +
-                b.get(KarmaReason.FORUM_TOPIC_UPVOTED, 0) +
-                b.get(KarmaReason.FORUM_TOPIC_DOWNVOTED, 0) +
-                b.get(KarmaReason.FORUM_HELPFUL_ANSWER, 0) +
-                b.get(KarmaReason.FORUM_SPAM_PENALTY, 0)
+                b.get(KarmaReason.FORUM_POST_UPVOTED.value, 0) +
+                b.get(KarmaReason.FORUM_POST_DOWNVOTED.value, 0) +
+                b.get(KarmaReason.FORUM_TOPIC_UPVOTED.value, 0) +
+                b.get(KarmaReason.FORUM_TOPIC_DOWNVOTED.value, 0) +
+                b.get(KarmaReason.FORUM_HELPFUL_ANSWER.value, 0) +
+                b.get(KarmaReason.FORUM_SPAM_PENALTY.value, 0)
             ),
             verification_bonuses=(
-                b.get(KarmaReason.EMAIL_VERIFIED_BONUS, 0) +
-                b.get(KarmaReason.PHONE_VERIFIED_BONUS, 0) +
-                b.get(KarmaReason.FULL_VERIFICATION_BONUS, 0) +
-                b.get(KarmaReason.VERIFIED_USER_BONUS, 0)
+                b.get(KarmaReason.EMAIL_VERIFIED_BONUS.value, 0) +
+                b.get(KarmaReason.PHONE_VERIFIED_BONUS.value, 0) +
+                b.get(KarmaReason.FULL_VERIFICATION_BONUS.value, 0) +
+                b.get(KarmaReason.VERIFIED_USER_BONUS.value, 0)
             ),
-            subscription_bonuses=b.get(KarmaReason.SUBSCRIPTION_BONUS, 0),
-            admin_adjustments=b.get(KarmaReason.ADMIN_ADJUSTMENT, 0),
+            subscription_bonuses=b.get(KarmaReason.SUBSCRIPTION_BONUS.value, 0),
+            admin_adjustments=b.get(KarmaReason.ADMIN_ADJUSTMENT.value, 0),
             other=(
-                b.get(KarmaReason.FIX_ACCEPTED, 0) +
-                b.get(KarmaReason.FIX_REJECTED, 0) +
-                b.get(KarmaReason.VERIFICATION_COMPLETE, 0) +
-                b.get(KarmaReason.VERIFICATION_REJECTED, 0)
+                b.get(KarmaReason.FIX_ACCEPTED.value, 0) +
+                b.get(KarmaReason.FIX_REJECTED.value, 0) +
+                b.get(KarmaReason.VERIFICATION_COMPLETE.value, 0) +
+                b.get(KarmaReason.VERIFICATION_REJECTED.value, 0)
             ),
         )
     

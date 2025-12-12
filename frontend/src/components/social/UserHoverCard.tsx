@@ -5,7 +5,7 @@
  * - Avatar and cover image
  * - Display name and online status
  * - Karma score and rank badge
- * - Quick action buttons (message, add friend)
+ * - Quick action buttons (message, add friend, subscribe)
  * 
  * Similar to osu!'s user card tooltip system.
  */
@@ -17,6 +17,15 @@ import { useQuery } from '@tanstack/react-query'
 import { API_CONFIG } from '@/lib/config'
 import { Avatar } from '@/components/ui/Avatar'
 import { KarmaRankBadge, getKarmaRank } from '@/pages/LeaderboardPage'
+import { useAuthStore } from '@/stores/authStore'
+import {
+    useFriendshipStatus,
+    useSubscriptionStatus,
+    useAddFriend,
+    useRemoveFriend,
+    useSubscribeToUser,
+    useUnsubscribeFromUser,
+} from '@/api/socialHooks'
 
 // =============================================================================
 // Types
@@ -143,10 +152,34 @@ function UserPlusIcon({ className }: { className?: string }) {
     )
 }
 
+function UserCheckIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m0-4a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+        </svg>
+    )
+}
+
+function UsersIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+    )
+}
+
 function BellIcon({ className }: { className?: string }) {
     return (
         <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+    )
+}
+
+function BellFilledIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
         </svg>
     )
 }
@@ -171,6 +204,12 @@ export function UserHoverCard({
     const hideTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
     const isHoveringCardRef = useRef(false)
 
+    // Get current user to check if viewing own card
+    const currentUser = useAuthStore((s) => s.user)
+    const isAuthenticated = useAuthStore((s) => s.isAuthenticated())
+    const isOwnProfile = currentUser?.id === String(userId) ||
+        currentUser?.user_number === Number(userId)
+
     // Fetch user data on hover
     const { data: userData, isLoading } = useQuery({
         queryKey: ['user-hover-card', userId],
@@ -191,6 +230,51 @@ export function UserHoverCard({
         enabled: isVisible, // Only fetch when visible
         staleTime: 60000, // Cache for 1 minute
     })
+
+    // Friendship and subscription hooks - use userData.id for API calls
+    const { data: friendshipStatus } = useFriendshipStatus(
+        isVisible && userData && !isOwnProfile && isAuthenticated ? userData.id : undefined
+    )
+    const { data: subscriptionStatus } = useSubscriptionStatus(
+        isVisible && userData && !isOwnProfile && isAuthenticated ? userData.id : undefined
+    )
+
+    const addFriend = useAddFriend()
+    const removeFriend = useRemoveFriend()
+    const subscribeToUser = useSubscribeToUser()
+    const unsubscribeFromUser = useUnsubscribeFromUser()
+
+    const handleFriendClick = async (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (!userData) return
+
+        try {
+            if (friendshipStatus?.is_following) {
+                await removeFriend.mutateAsync(userData.id)
+            } else {
+                await addFriend.mutateAsync(userData.id)
+            }
+        } catch (err) {
+            console.error('Failed to update friend status:', err)
+        }
+    }
+
+    const handleSubscribeClick = async (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (!userData) return
+
+        try {
+            if (subscriptionStatus?.is_subscribed) {
+                await unsubscribeFromUser.mutateAsync(userData.id)
+            } else {
+                await subscribeToUser.mutateAsync({ userId: userData.id })
+            }
+        } catch (err) {
+            console.error('Failed to update subscription:', err)
+        }
+    }
 
     const show = useCallback(() => {
         if (disabled) return
@@ -390,28 +474,62 @@ export function UserHoverCard({
                                     <KarmaRankBadge karma={userData.karma_score} />
                                 </div>
 
-                                {/* Action Buttons */}
-                                <div className="flex items-center gap-2">
-                                    <Link
-                                        to={`/messages/${userData.id}`}
-                                        className="flex items-center justify-center w-9 h-9 rounded-lg bg-dark-400 hover:bg-primary-500/20 text-gray-400 hover:text-primary-400 transition-colors"
-                                        title="Send Message"
-                                    >
-                                        <MessageIcon className="w-5 h-5" />
-                                    </Link>
-                                    <button
-                                        className="flex items-center justify-center w-9 h-9 rounded-lg bg-dark-400 hover:bg-green-500/20 text-gray-400 hover:text-green-400 transition-colors"
-                                        title="Add Friend"
-                                    >
-                                        <UserPlusIcon className="w-5 h-5" />
-                                    </button>
-                                    <button
-                                        className="flex items-center justify-center w-9 h-9 rounded-lg bg-dark-400 hover:bg-yellow-500/20 text-gray-400 hover:text-yellow-400 transition-colors"
-                                        title="Subscribe to Updates"
-                                    >
-                                        <BellIcon className="w-5 h-5" />
-                                    </button>
-                                </div>
+                                {/* Action Buttons - Only show for other users when authenticated */}
+                                {isAuthenticated && !isOwnProfile && (
+                                    <div className="flex items-center gap-2">
+                                        <Link
+                                            to={`/messages/${userData.id}`}
+                                            className="flex items-center justify-center w-9 h-9 rounded-lg bg-dark-400 hover:bg-primary-500/20 text-gray-400 hover:text-primary-400 transition-colors"
+                                            title="Send Message"
+                                        >
+                                            <MessageIcon className="w-5 h-5" />
+                                        </Link>
+                                        <button
+                                            onClick={handleFriendClick}
+                                            disabled={addFriend.isPending || removeFriend.isPending}
+                                            className={`flex items-center justify-center w-9 h-9 rounded-lg transition-colors ${friendshipStatus?.is_mutual
+                                                    ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+                                                    : friendshipStatus?.is_following
+                                                        ? 'bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400'
+                                                        : 'bg-dark-400 hover:bg-green-500/20 text-gray-400 hover:text-green-400'
+                                                } disabled:opacity-50`}
+                                            title={
+                                                friendshipStatus?.is_mutual
+                                                    ? 'Mutual Friend'
+                                                    : friendshipStatus?.is_following
+                                                        ? 'Remove Friend'
+                                                        : 'Add Friend'
+                                            }
+                                        >
+                                            {friendshipStatus?.is_mutual ? (
+                                                <UsersIcon className="w-5 h-5" />
+                                            ) : friendshipStatus?.is_following ? (
+                                                <UserCheckIcon className="w-5 h-5" />
+                                            ) : (
+                                                <UserPlusIcon className="w-5 h-5" />
+                                            )}
+                                        </button>
+                                        <button
+                                            onClick={handleSubscribeClick}
+                                            disabled={subscribeToUser.isPending || unsubscribeFromUser.isPending}
+                                            className={`flex items-center justify-center w-9 h-9 rounded-lg transition-colors ${subscriptionStatus?.is_subscribed
+                                                    ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
+                                                    : 'bg-dark-400 hover:bg-yellow-500/20 text-gray-400 hover:text-yellow-400'
+                                                } disabled:opacity-50`}
+                                            title={
+                                                subscriptionStatus?.is_subscribed
+                                                    ? 'Subscribed - Click to Unsubscribe'
+                                                    : 'Subscribe to Updates'
+                                            }
+                                        >
+                                            {subscriptionStatus?.is_subscribed ? (
+                                                <BellFilledIcon className="w-5 h-5" />
+                                            ) : (
+                                                <BellIcon className="w-5 h-5" />
+                                            )}
+                                        </button>
+                                    </div>
+                                )}
                             </>
                         ) : (
                             <div className="text-center py-4 text-gray-400">

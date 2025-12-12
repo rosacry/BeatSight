@@ -436,9 +436,31 @@ class KarmaService:
             for row in breakdown_result.all()
         }
 
-        # Query 3: Get rank
+        # Query 3: Get rank with tie-breaker
+        # Count users who either have higher karma, OR have the same karma but achieved it earlier
+        # First get the user's karma_score_achieved_at for tie-breaking
+        user_achieved_result = await self.session.execute(
+            select(User.karma_score_achieved_at, User.created_at).where(User.id == user_id)
+        )
+        user_achieved_row = user_achieved_result.one_or_none()
+        user_achieved_at = user_achieved_row.karma_score_achieved_at if user_achieved_row else None
+        user_created_at = user_achieved_row.created_at if user_achieved_row else None
+        effective_achieved_at = user_achieved_at or user_created_at
+        
+        # Count users ranked higher: higher karma OR (same karma AND achieved earlier)
         rank_result = await self.session.execute(
-            select(func.count()).select_from(User).where(User.karma_score > karma)
+            select(func.count())
+            .select_from(User)
+            .where(
+                or_(
+                    User.karma_score > karma,
+                    and_(
+                        User.karma_score == karma,
+                        func.coalesce(User.karma_score_achieved_at, User.created_at) < effective_achieved_at,
+                        User.id != user_id  # Don't count self
+                    )
+                )
+            )
         )
         rank = (rank_result.scalar() or 0) + 1
 

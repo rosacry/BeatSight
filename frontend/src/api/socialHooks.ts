@@ -18,6 +18,17 @@ import {
     getReports,
     getReport,
     updateReportStatus,
+    // Friends
+    addFriend,
+    removeFriend,
+    getFriends,
+    getFriendshipStatus,
+    // Subscriptions
+    subscribeToUser,
+    unsubscribeFromUser,
+    getSubscriptions,
+    getSubscriptionStatus,
+    updateSubscription,
     type ReportType,
     type ReportStatus,
     type GetReportsParams,
@@ -33,6 +44,10 @@ export const socialQueryKeys = {
     blockedUsers: ['social', 'blocked'] as const,
     adminReports: (status?: ReportStatus) => ['social', 'admin', 'reports', status] as const,
     adminReport: (reportId: string) => ['social', 'admin', 'reports', reportId] as const,
+    friends: ['social', 'friends'] as const,
+    friendshipStatus: (userId: string) => ['social', 'friendship', userId] as const,
+    subscriptions: ['social', 'subscriptions'] as const,
+    subscriptionStatus: (userId: string) => ['social', 'subscription', userId] as const,
 }
 
 // =============================================================================
@@ -221,6 +236,120 @@ export function useUpdateReportStatus() {
                 socialQueryKeys.adminReport(updatedReport.id),
                 updatedReport
             )
+        },
+    })
+}
+
+// =============================================================================
+// User Friendships (osu!-style)
+// =============================================================================
+
+export function useFriends() {
+    return useQuery({
+        queryKey: socialQueryKeys.friends,
+        queryFn: getFriends,
+        staleTime: 60000,
+    })
+}
+
+export function useFriendshipStatus(userId: string | undefined) {
+    return useQuery({
+        queryKey: userId ? socialQueryKeys.friendshipStatus(userId) : ['friendship-undefined'],
+        queryFn: () => (userId ? getFriendshipStatus(userId) : Promise.reject('No user ID')),
+        enabled: !!userId,
+        staleTime: 30000,
+    })
+}
+
+export function useAddFriend() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: (userId: string) => addFriend(userId),
+        onSuccess: (_, userId) => {
+            queryClient.invalidateQueries({ queryKey: socialQueryKeys.friends })
+            queryClient.invalidateQueries({ queryKey: socialQueryKeys.friendshipStatus(userId) })
+        },
+    })
+}
+
+export function useRemoveFriend() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: (userId: string) => removeFriend(userId),
+        onSuccess: (_, userId) => {
+            queryClient.invalidateQueries({ queryKey: socialQueryKeys.friends })
+            queryClient.invalidateQueries({ queryKey: socialQueryKeys.friendshipStatus(userId) })
+        },
+    })
+}
+
+// =============================================================================
+// User Subscriptions (Bell notifications)
+// =============================================================================
+
+export function useSubscriptions() {
+    return useQuery({
+        queryKey: socialQueryKeys.subscriptions,
+        queryFn: getSubscriptions,
+        staleTime: 60000,
+    })
+}
+
+export function useSubscriptionStatus(userId: string | undefined) {
+    return useQuery({
+        queryKey: userId ? socialQueryKeys.subscriptionStatus(userId) : ['subscription-undefined'],
+        queryFn: () => (userId ? getSubscriptionStatus(userId) : Promise.reject('No user ID')),
+        enabled: !!userId,
+        staleTime: 30000,
+    })
+}
+
+export function useSubscribeToUser() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: ({
+            userId,
+            options,
+        }: {
+            userId: string
+            options?: { notify_on_map_upload?: boolean; notify_on_map_ranked?: boolean }
+        }) => subscribeToUser(userId, options),
+        onSuccess: (_, { userId }) => {
+            queryClient.invalidateQueries({ queryKey: socialQueryKeys.subscriptions })
+            queryClient.invalidateQueries({ queryKey: socialQueryKeys.subscriptionStatus(userId) })
+        },
+    })
+}
+
+export function useUnsubscribeFromUser() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: (userId: string) => unsubscribeFromUser(userId),
+        onSuccess: (_, userId) => {
+            queryClient.invalidateQueries({ queryKey: socialQueryKeys.subscriptions })
+            queryClient.invalidateQueries({ queryKey: socialQueryKeys.subscriptionStatus(userId) })
+        },
+    })
+}
+
+export function useUpdateSubscription() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: ({
+            userId,
+            options,
+        }: {
+            userId: string
+            options: { notify_on_map_upload?: boolean; notify_on_map_ranked?: boolean }
+        }) => updateSubscription(userId, options),
+        onSuccess: (_, { userId }) => {
+            queryClient.invalidateQueries({ queryKey: socialQueryKeys.subscriptions })
+            queryClient.invalidateQueries({ queryKey: socialQueryKeys.subscriptionStatus(userId) })
         },
     })
 }

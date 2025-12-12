@@ -345,3 +345,150 @@ export async function updateReportStatus(
         }),
     })
 }
+
+// =============================================================================
+// User Friendships (osu!-style)
+// =============================================================================
+
+export interface FriendResponse {
+    id: string
+    friend_id: string
+    friend_display_name: string
+    friend_avatar_url: string | null
+    friend_user_number: number
+    is_mutual: boolean
+    created_at: string
+}
+
+export interface FriendsListResponse {
+    items: FriendResponse[]
+    total: number
+}
+
+export interface FriendshipStatusResponse {
+    is_following: boolean
+    is_followed_by: boolean
+    is_mutual: boolean
+}
+
+export interface AddFriendResponse {
+    id: string
+    friend_id: string
+    is_mutual: boolean
+    message: string
+}
+
+/**
+ * Add a user as a friend (follow them).
+ */
+export async function addFriend(userId: string): Promise<AddFriendResponse> {
+    return request<AddFriendResponse>(`/social/users/${userId}/friend`, {
+        method: 'POST',
+    })
+}
+
+/**
+ * Remove a user from friends (unfollow them).
+ */
+export async function removeFriend(userId: string): Promise<{ message: string }> {
+    return request<{ message: string }>(`/social/users/${userId}/friend`, {
+        method: 'DELETE',
+    })
+}
+
+/**
+ * Get list of users you are following.
+ */
+export async function getFriends(): Promise<FriendsListResponse> {
+    return request<FriendsListResponse>('/social/friends')
+}
+
+/**
+ * Check friendship status with a user.
+ */
+export async function getFriendshipStatus(userId: string): Promise<FriendshipStatusResponse> {
+    return request<FriendshipStatusResponse>(`/social/users/${userId}/friendship`)
+}
+
+// =============================================================================
+// User Subscriptions (Bell notifications)
+// =============================================================================
+
+export interface SubscriptionResponse {
+    id: string
+    target_user_id: string
+    target_user_display_name: string
+    target_user_avatar_url: string | null
+    target_user_number: number
+    notify_on_map_upload: boolean
+    notify_on_map_ranked: boolean
+    created_at: string
+}
+
+export interface SubscriptionsListResponse {
+    items: SubscriptionResponse[]
+    total: number
+}
+
+export interface SubscriptionStatusResponse {
+    is_subscribed: boolean
+    notify_on_map_upload: boolean
+    notify_on_map_ranked: boolean
+}
+
+export interface CreateSubscriptionRequest {
+    notify_on_map_upload?: boolean
+    notify_on_map_ranked?: boolean
+}
+
+/**
+ * Subscribe to a user's beatmap uploads.
+ */
+export async function subscribeToUser(
+    userId: string,
+    options?: CreateSubscriptionRequest
+): Promise<{ id: string; target_user_id: string; message: string }> {
+    return request<{ id: string; target_user_id: string; message: string }>(
+        `/social/users/${userId}/subscribe`,
+        {
+            method: 'POST',
+            body: JSON.stringify(options || {}),
+        }
+    )
+}
+
+/**
+ * Unsubscribe from a user's notifications.
+ */
+export async function unsubscribeFromUser(userId: string): Promise<{ message: string }> {
+    return request<{ message: string }>(`/social/users/${userId}/subscribe`, {
+        method: 'DELETE',
+    })
+}
+
+/**
+ * Update subscription notification preferences.
+ */
+export async function updateSubscription(
+    userId: string,
+    options: { notify_on_map_upload?: boolean; notify_on_map_ranked?: boolean }
+): Promise<SubscriptionResponse> {
+    return request<SubscriptionResponse>(`/social/users/${userId}/subscribe`, {
+        method: 'PATCH',
+        body: JSON.stringify(options),
+    })
+}
+
+/**
+ * Get list of users you are subscribed to.
+ */
+export async function getSubscriptions(): Promise<SubscriptionsListResponse> {
+    return request<SubscriptionsListResponse>('/social/subscriptions')
+}
+
+/**
+ * Check subscription status for a user.
+ */
+export async function getSubscriptionStatus(userId: string): Promise<SubscriptionStatusResponse> {
+    return request<SubscriptionStatusResponse>(`/social/users/${userId}/subscription`)
+}

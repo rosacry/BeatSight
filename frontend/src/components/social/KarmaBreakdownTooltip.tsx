@@ -273,16 +273,31 @@ export function KarmaBreakdownTooltip({
         .filter(item => item.total !== 0)
         .sort((a, b) => Math.abs(b.total) - Math.abs(a.total)) || []
 
-    // Determine animation based on actual placement
-    const getAnimation = (actualPlacement: Placement) => {
-        switch (actualPlacement) {
-            case 'left': return 'slideInFromLeft 0.2s ease-out'
-            case 'right': return 'slideInFromRight 0.2s ease-out'
-            case 'top': return 'slideInFromTop 0.2s ease-out'
-            case 'bottom': return 'slideInFromBottom 0.2s ease-out'
-            default: return 'slideInFromBottom 0.2s ease-out'
+    // Track if positioning is ready to avoid flash from initial render position
+    const [isPositioned, setIsPositioned] = useState(false)
+
+    // Reset positioning state when visibility changes
+    useEffect(() => {
+        if (!isVisible) {
+            setIsPositioned(false)
         }
-    }
+    }, [isVisible])
+
+    // Mark as positioned after position is calculated
+    useEffect(() => {
+        if (isVisible && position.top !== 0) {
+            // Small delay to ensure position is applied before animation
+            const timer = setTimeout(() => setIsPositioned(true), 10)
+            return () => clearTimeout(timer)
+        }
+    }, [isVisible, position.top])
+
+    // Get animation styles
+    const getAnimationStyles = () => ({
+        opacity: isPositioned ? 1 : 0,
+        transform: isPositioned ? 'scale(1)' : 'scale(0.98)',
+        transition: 'opacity 0.2s ease-out, transform 0.2s ease-out',
+    })
 
     const trigger = (
         <span
@@ -303,11 +318,11 @@ export function KarmaBreakdownTooltip({
             ref={tooltipRef}
             onMouseEnter={handleTooltipMouseEnter}
             onMouseLeave={handleTooltipMouseLeave}
-            className="fixed z-[9999] w-[280px] transition-all duration-200 ease-out"
+            className="fixed z-[9999] w-[280px]"
             style={{
                 top: position.top,
                 left: position.left,
-                animation: getAnimation(position.actualPlacement),
+                ...getAnimationStyles(),
             }}
         >
             <div className="rounded-xl bg-dark-500 border border-white/10 shadow-2xl shadow-black/50 overflow-hidden">
@@ -519,16 +534,30 @@ export function StaticKarmaBreakdownTooltip({
         .filter(item => item.value !== 0)
         .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
 
-    // Determine animation based on actual placement
-    const getAnimation = (actualPlacement: Placement) => {
-        switch (actualPlacement) {
-            case 'left': return 'slideInFromLeft 0.2s ease-out'
-            case 'right': return 'slideInFromRight 0.2s ease-out'
-            case 'top': return 'slideInFromTop 0.2s ease-out'
-            case 'bottom': return 'slideInFromBottom 0.2s ease-out'
-            default: return 'slideInFromBottom 0.2s ease-out'
+    // Track if positioning is ready to avoid flash from initial render position
+    const [isPositioned, setIsPositioned] = useState(false)
+
+    // Reset positioning state when visibility changes
+    useEffect(() => {
+        if (!isVisible) {
+            setIsPositioned(false)
         }
-    }
+    }, [isVisible])
+
+    // Mark as positioned after position is calculated
+    useEffect(() => {
+        if (isVisible && position.top !== 0) {
+            const timer = setTimeout(() => setIsPositioned(true), 10)
+            return () => clearTimeout(timer)
+        }
+    }, [isVisible, position.top])
+
+    // Get animation styles
+    const getAnimationStyles = () => ({
+        opacity: isPositioned ? 1 : 0,
+        transform: isPositioned ? 'scale(1)' : 'scale(0.98)',
+        transition: 'opacity 0.2s ease-out, transform 0.2s ease-out',
+    })
 
     const trigger = (
         <span
@@ -549,11 +578,11 @@ export function StaticKarmaBreakdownTooltip({
             ref={tooltipRef}
             onMouseEnter={handleTooltipMouseEnter}
             onMouseLeave={handleTooltipMouseLeave}
-            className="fixed z-[9999] w-[260px] transition-all duration-200 ease-out"
+            className="fixed z-[9999] w-[260px]"
             style={{
                 top: position.top,
                 left: position.left,
-                animation: getAnimation(position.actualPlacement),
+                ...getAnimationStyles(),
             }}
         >
             <div className="rounded-xl bg-dark-500 border border-white/10 shadow-2xl shadow-black/50 overflow-hidden">

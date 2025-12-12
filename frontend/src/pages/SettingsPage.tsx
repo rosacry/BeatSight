@@ -12,6 +12,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useFeaturesStore } from '@/stores/featuresStore'
 import { createLogger, getDeveloperModeEnabled, enableDeveloperMode, disableDeveloperMode } from '@/lib/logger'
 import { AvatarUpload } from '@/components/AvatarUpload'
+import { BannerUpload } from '@/components/BannerUpload'
 import { TwoFactorSettings } from '@/components/TwoFactorSettings'
 import { PhoneVerificationSettings } from '@/components/PhoneVerificationSettings'
 import { API_CONFIG } from '@/lib/config'
@@ -619,6 +620,37 @@ export function SettingsPage() {
                                                     <h2 className="text-lg font-semibold text-white">Profile</h2>
                                                     <p className="text-sm text-gray-400">Your public identity</p>
                                                 </div>
+                                            </div>
+
+                                            {/* Profile Banner Upload */}
+                                            <div className="mb-6">
+                                                <label className="block text-sm font-medium text-gray-300 mb-3">
+                                                    Profile Banner
+                                                </label>
+                                                <div
+                                                    className="relative h-32 md:h-40 rounded-xl overflow-hidden bg-dark-300 border border-white/10"
+                                                    style={user?.banner_url ? {
+                                                        backgroundImage: `url(${user.banner_url})`,
+                                                        backgroundSize: 'cover',
+                                                        backgroundPosition: 'center',
+                                                    } : undefined}
+                                                >
+                                                    {!user?.banner_url && (
+                                                        <div className="absolute inset-0 bg-gradient-to-br from-primary-600/20 to-accent-600/20" />
+                                                    )}
+                                                    <BannerUpload
+                                                        currentBannerUrl={user?.banner_url}
+                                                        onUploadSuccess={() => {
+                                                            setSuccessMessage('Banner updated!')
+                                                            fetchCurrentUser()
+                                                        }}
+                                                        onUploadError={(err) => {
+                                                            setError(err)
+                                                        }}
+                                                        className="absolute inset-0"
+                                                    />
+                                                </div>
+                                                <p className="text-xs text-gray-500 mt-2">Recommended size: 1500×500px. Max size: 10MB</p>
                                             </div>
 
                                             <div className="grid md:grid-cols-[auto,1fr] gap-8 items-start">

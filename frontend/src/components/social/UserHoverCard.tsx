@@ -279,27 +279,41 @@ export function UserHoverCard({
 
     const karmaRank = userData ? getKarmaRank(userData.karma_score) : null
 
-    // Determine animation based on actual placement
-    const getAnimation = (actualPlacement: Placement) => {
-        switch (actualPlacement) {
-            case 'left': return 'slideInFromLeft 0.2s ease-out'
-            case 'right': return 'slideInFromRight 0.2s ease-out'
-            case 'top': return 'slideInFromTop 0.2s ease-out'
-            case 'bottom': return 'slideInFromBottom 0.2s ease-out'
-            default: return 'slideInFromRight 0.2s ease-out'
+    // Track if positioning is ready to avoid flash from initial render position
+    const [isPositioned, setIsPositioned] = useState(false)
+
+    // Reset positioning state when visibility changes
+    useEffect(() => {
+        if (!isVisible) {
+            setIsPositioned(false)
         }
-    }
+    }, [isVisible])
+
+    // Mark as positioned after position is calculated
+    useEffect(() => {
+        if (isVisible && position.top !== 0) {
+            const timer = setTimeout(() => setIsPositioned(true), 10)
+            return () => clearTimeout(timer)
+        }
+    }, [isVisible, position.top])
+
+    // Get animation styles
+    const getAnimationStyles = () => ({
+        opacity: isPositioned ? 1 : 0,
+        transform: isPositioned ? 'scale(1)' : 'scale(0.98)',
+        transition: 'opacity 0.2s ease-out, transform 0.2s ease-out',
+    })
 
     const card = isVisible && createPortal(
         <div
             ref={cardRef}
             onMouseEnter={handleCardMouseEnter}
             onMouseLeave={handleCardMouseLeave}
-            className="fixed z-[9999] w-[320px] transition-all duration-200 ease-out"
+            className="fixed z-[9999] w-[320px]"
             style={{
                 top: position.top,
                 left: position.left,
-                animation: getAnimation(position.actualPlacement),
+                ...getAnimationStyles(),
             }}
         >
             <div className="relative overflow-hidden rounded-xl bg-dark-500 border border-white/10 shadow-2xl shadow-black/50">

@@ -610,16 +610,30 @@ export function SettingsPage() {
                                     <div className="space-y-6">
                                         {/* Profile Section - Modern Card */}
                                         <div className="card bg-dark-400 border border-white/10">
-                                            <div className="flex items-center gap-3 mb-6">
-                                                <div className="w-10 h-10 rounded-xl bg-primary-500/20 flex items-center justify-center">
-                                                    <svg className="w-5 h-5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                                    </svg>
+                                            <div className="flex items-center justify-between mb-6">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-primary-500/20 flex items-center justify-center">
+                                                        <svg className="w-5 h-5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                        </svg>
+                                                    </div>
+                                                    <div>
+                                                        <h2 className="text-lg font-semibold text-white">Profile</h2>
+                                                        <p className="text-sm text-gray-400">Your public identity</p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <h2 className="text-lg font-semibold text-white">Profile</h2>
-                                                    <p className="text-sm text-gray-400">Your public identity</p>
-                                                </div>
+                                                {user && (
+                                                    <a
+                                                        href={`/user/${user.user_number || user.id}?tab=overview`}
+                                                        className="flex items-center gap-2 px-3 py-1.5 text-sm text-primary-400 hover:text-primary-300 hover:bg-primary-500/10 rounded-lg transition-colors"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                        </svg>
+                                                        View Profile
+                                                    </a>
+                                                )}
                                             </div>
 
                                             {/* Profile Banner Upload */}
@@ -627,29 +641,17 @@ export function SettingsPage() {
                                                 <label className="block text-sm font-medium text-gray-300 mb-3">
                                                     Profile Banner
                                                 </label>
-                                                <div
-                                                    className="relative h-32 md:h-40 rounded-xl bg-dark-300 border border-white/10"
-                                                    style={user?.banner_url ? {
-                                                        backgroundImage: `url(${user.banner_url})`,
-                                                        backgroundSize: 'cover',
-                                                        backgroundPosition: 'center',
-                                                    } : undefined}
-                                                >
-                                                    {!user?.banner_url && (
-                                                        <div className="absolute inset-0 bg-gradient-to-br from-primary-600/20 to-accent-600/20 rounded-xl" />
-                                                    )}
-                                                    <BannerUpload
-                                                        currentBannerUrl={user?.banner_url}
-                                                        onUploadSuccess={() => {
-                                                            setSuccessMessage('Banner updated!')
-                                                            fetchCurrentUser()
-                                                        }}
-                                                        onUploadError={(err) => {
-                                                            setError(err)
-                                                        }}
-                                                        className="absolute inset-0 rounded-xl"
-                                                    />
-                                                </div>
+                                                <BannerUpload
+                                                    currentBannerUrl={user?.banner_url}
+                                                    mode="standalone"
+                                                    onUploadSuccess={() => {
+                                                        setSuccessMessage('Banner updated!')
+                                                        fetchCurrentUser()
+                                                    }}
+                                                    onUploadError={(err) => {
+                                                        setError(err)
+                                                    }}
+                                                />
                                                 <p className="text-xs text-gray-500 mt-2">Recommended size: 1500×500px. Max size: 10MB</p>
                                             </div>
 

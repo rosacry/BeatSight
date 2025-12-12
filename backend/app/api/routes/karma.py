@@ -342,7 +342,7 @@ async def get_unified_leaderboard(
 
     Users with anonymous mode enabled appear as "Secret Agent".
     """
-    from sqlalchemy import case, literal, func
+    from sqlalchemy import case, literal, func, select
     from app.models.karma import KarmaLedger, KarmaReason
     from app.models.user_settings import UserSettings
     

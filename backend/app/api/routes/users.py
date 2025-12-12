@@ -652,12 +652,19 @@ async def get_public_user_profile(
     karma_rank = None
     contribution_rank = None
     
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
         # Check if user has hidden from leaderboards
         settings_result = await session.execute(
             select(UserSettings).where(UserSettings.user_id == user.id)
         )
         user_settings = settings_result.scalar_one_or_none()
+        
+        logger.info(f"Profile rank calc for user {user.user_number} ({user.display_name}): "
+                   f"settings_exists={user_settings is not None}, "
+                   f"hide_from_leaderboards={user_settings.hide_from_leaderboards if user_settings else 'N/A'}")
         
         # If no settings or not hidden, calculate ranks
         if not user_settings or not user_settings.hide_from_leaderboards:
@@ -733,10 +740,14 @@ async def get_public_user_profile(
             )
             users_above_contrib = contrib_rank_result.scalar() or 0
             contribution_rank = users_above_contrib + 1
+            
+            logger.info(f"Profile rank calc for user {user.user_number}: "
+                       f"karma_rank={karma_rank}, contribution_rank={contribution_rank}")
+        else:
+            logger.info(f"User {user.user_number} hidden from leaderboards, skipping rank calc")
     except Exception as e:
         # If there's an issue calculating ranks, leave them null
-        import logging
-        logging.exception(f"Error calculating ranks for user {user.id}: {e}")
+        logger.exception(f"Error calculating ranks for user {user.id}: {e}")
     
     return PublicUserProfile(
         id=str(user.id),

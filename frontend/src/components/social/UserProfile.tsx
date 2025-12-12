@@ -17,6 +17,8 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal'
 import { KarmaRankBadge } from '@/pages/LeaderboardPage'
+import { KarmaBreakdownTooltip } from './KarmaBreakdownTooltip'
+import { UserHoverCard } from './UserHoverCard'
 
 // Icons
 const MessageIcon = () => (
@@ -69,15 +71,14 @@ const KarmaIcon = () => (
 
 interface UsernameLinkProps {
     user: UserSearchResult | { id: string; username: string; display_name?: string; user_number?: number }
-    showPopover?: boolean
+    /** Whether to show the osu!-style hover card on hover (default: true) */
+    showHoverCard?: boolean
     className?: string
     children?: ReactNode
     onClick?: (e: React.MouseEvent) => void
 }
 
-export function UsernameLink({ user, showPopover: _showPopover = true, className, children, onClick }: UsernameLinkProps) {
-    // Note: showPopover prop kept for backwards compatibility but ignored - we now always navigate directly
-
+export function UsernameLink({ user, showHoverCard = true, className, children, onClick }: UsernameLinkProps) {
     const displayName = 'display_name' in user ? user.display_name : user.username
 
     // Use user_number for URL if available (osu!-style), otherwise fall back to UUID
@@ -85,9 +86,7 @@ export function UsernameLink({ user, showPopover: _showPopover = true, className
         ? user.user_number
         : user.id
 
-    // Always link to the unified profile page (even for own profile)
-    // The UserProfilePage handles showing appropriate buttons for own vs other profiles
-    return (
+    const link = (
         <Link
             to={`/user/${userIdentifier}`}
             onClick={onClick}
@@ -99,6 +98,17 @@ export function UsernameLink({ user, showPopover: _showPopover = true, className
             {children || displayName}
         </Link>
     )
+
+    // Wrap with hover card if enabled
+    if (showHoverCard) {
+        return (
+            <UserHoverCard userId={userIdentifier}>
+                {link}
+            </UserHoverCard>
+        )
+    }
+
+    return link
 }
 
 // =============================================================================
@@ -175,11 +185,13 @@ export function UserProfileModal({ userId, open, onClose }: UserProfileModalProp
 
                             {/* Stats */}
                             <div className="flex items-center gap-6 py-3 border-y border-white/10">
-                                <div className="flex items-center gap-2 text-yellow-500">
-                                    <KarmaIcon />
-                                    <span className="font-medium">{profile.karma_score}</span>
-                                    <span className="text-sm text-gray-400">karma</span>
-                                </div>
+                                <KarmaBreakdownTooltip userId={userId} karmaScore={profile.karma_score} placement="bottom">
+                                    <div className="flex items-center gap-2 text-yellow-500 cursor-help">
+                                        <KarmaIcon />
+                                        <span className="font-medium">{profile.karma_score}</span>
+                                        <span className="text-sm text-gray-400">karma</span>
+                                    </div>
+                                </KarmaBreakdownTooltip>
                                 <KarmaRankBadge karma={profile.karma_score} />
                             </div>
 

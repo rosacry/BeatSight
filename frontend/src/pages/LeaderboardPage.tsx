@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
 import { API_CONFIG } from '@/lib/config'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
-import { UsernameLink } from '@/components/social'
+import { UsernameLink, StaticKarmaBreakdownTooltip } from '@/components/social'
 import { PageContentWrapper } from '@/components/ui/UnifiedTransitions'
 
 // Types
@@ -311,9 +311,15 @@ export function LeaderboardPage() {
 
                                             {/* Total Karma */}
                                             <td className="px-3 py-3 text-right">
-                                                <span className={`text-base font-bold tabular-nums ${sortKey === 'karma_score' ? 'text-primary-400' : 'text-white'}`}>
-                                                    {entry.karma_score.toLocaleString()}
-                                                </span>
+                                                <StaticKarmaBreakdownTooltip
+                                                    breakdown={entry.breakdown}
+                                                    karmaScore={entry.karma_score}
+                                                    placement="left"
+                                                >
+                                                    <span className={`text-base font-bold tabular-nums ${sortKey === 'karma_score' ? 'text-primary-400' : 'text-white'}`}>
+                                                        {entry.karma_score.toLocaleString()}
+                                                    </span>
+                                                </StaticKarmaBreakdownTooltip>
                                             </td>
 
                                             {/* Maps */}

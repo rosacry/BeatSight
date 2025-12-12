@@ -334,7 +334,6 @@ export function Layout({ children }: LayoutProps) {
 
     // Check if current path is in a dropdown group
     const isInBrowse = ['/', '/queue'].some(p => location.pathname === p || location.pathname.startsWith('/songs'))
-    const isInRankings = ['/leaderboard'].some(p => location.pathname.startsWith(p))
     const isInCommunity = ['/forum', '/messages'].some(p => location.pathname.startsWith(p))
 
     return (

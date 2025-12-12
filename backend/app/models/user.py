@@ -58,8 +58,13 @@ class User(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     # Human-friendly numeric ID like osu! (e.g., 9792512 instead of UUID)
+    # Uses PostgreSQL sequence for auto-incrementing (created in migration 030)
     user_number: Mapped[int] = mapped_column(
-        Integer, unique=True, index=True, nullable=False
+        Integer,
+        unique=True,
+        index=True,
+        nullable=False,
+        server_default=func.nextval("user_number_seq"),
     )
     display_name: Mapped[str] = mapped_column(String(120), nullable=False)
     email: Mapped[str] = mapped_column(

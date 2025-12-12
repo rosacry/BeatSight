@@ -166,7 +166,7 @@ export function UserProfileModal({ userId, open, onClose }: UserProfileModalProp
                                     <h3 className="text-lg font-semibold text-white">
                                         {profile.display_name}
                                     </h3>
-                                    <p className="text-sm text-gray-400">@{profile.username}</p>
+                                    <p className="text-sm text-gray-400">@{profile.display_name}</p>
                                 </div>
                             </div>
 
@@ -241,7 +241,7 @@ export function UserProfileModal({ userId, open, onClose }: UserProfileModalProp
 
             <ReportUserModal
                 userId={userId}
-                username={profile?.username || 'User'}
+                username={profile?.display_name || 'User'}
                 open={showReportModal}
                 onClose={() => setShowReportModal(false)}
             />
@@ -463,7 +463,7 @@ export function UserSearch({ onSelect, placeholder = 'Search users...', classNam
                                     <div className="font-medium text-white">
                                         {user.display_name}
                                     </div>
-                                    <div className="text-sm text-gray-400">@{user.username}</div>
+                                    <div className="text-sm text-gray-400">@{user.display_name}</div>
                                 </div>
                             </button>
                         ))}

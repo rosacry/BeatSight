@@ -373,12 +373,12 @@ class UserSubscription(Base):
     # Relationships
     subscriber: Mapped["User"] = relationship(
         "User",
-        back_populates="subscriptions",
+        back_populates="upload_subscriptions",
         foreign_keys=[subscriber_id],
     )
     target_user: Mapped["User"] = relationship(
         "User",
-        back_populates="subscribers",
+        back_populates="upload_subscribers",
         foreign_keys=[target_user_id],
     )
 

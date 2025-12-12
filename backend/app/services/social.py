@@ -961,6 +961,22 @@ class SocialService:
         )
         return result.scalar_one_or_none() is not None
 
+    async def _get_user_by_id(self, user_id: UUID) -> Optional[User]:
+        """Get user by ID."""
+        result = await self.db.execute(
+            select(User).where(
+                and_(
+                    User.id == user_id,
+                    User.restriction_level != RestrictionLevel.BANNED.value,
+                )
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def _is_blocked(self, user_id: UUID, other_user_id: UUID) -> bool:
+        """Internal check if there's a block between two users."""
+        return await self.is_blocked(user_id, other_user_id)
+
     # =========================================================================
     # Subscriptions (Bell notifications)
     # =========================================================================

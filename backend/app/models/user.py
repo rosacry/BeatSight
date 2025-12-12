@@ -249,14 +249,15 @@ class User(Base):
         cascade="all, delete-orphan",
     )
 
-    # Social: Subscriptions (bell notifications)
-    subscriptions: Mapped[list["UserSubscription"]] = relationship(
+    # Social: User Subscriptions (bell notifications for beatmap uploads)
+    # Note: Different from billing "subscriptions" relationship
+    upload_subscriptions: Mapped[list["UserSubscription"]] = relationship(
         "UserSubscription",
         back_populates="subscriber",
         foreign_keys="UserSubscription.subscriber_id",
         cascade="all, delete-orphan",
     )
-    subscribers: Mapped[list["UserSubscription"]] = relationship(
+    upload_subscribers: Mapped[list["UserSubscription"]] = relationship(
         "UserSubscription",
         back_populates="target_user",
         foreign_keys="UserSubscription.target_user_id",

@@ -722,27 +722,29 @@ async def get_public_user_profile(
         )
         
         # Count users with more contributions (include ALL non-banned users)
-        contrib_rank_result = await session.execute(
-            select(func.count())
-            .select_from(User)
-            .outerjoin(contrib_subquery, User.id == contrib_subquery.c.user_id)
-            .where(
-                User.restriction_level != 'banned',
-                or_(
-                    func.coalesce(contrib_subquery.c.approved_count, 0) > user_approved_count,
-                    # Tie-breaker: whoever reached the same count FIRST ranks higher
-                    and_(
-                        func.coalesce(contrib_subquery.c.approved_count, 0) == user_approved_count,
-                        user_approved_count > 0,  # Only compare timestamps if user has contributions
-                        # Earlier timestamp = higher rank
-                        func.coalesce(contrib_subquery.c.latest_contrib_at, User.created_at) < 
-                        func.coalesce(user_nth_contrib_at, user.created_at)
+        # Only calculate contribution rank if user has at least 1 contribution
+        if user_approved_count > 0:
+            contrib_rank_result = await session.execute(
+                select(func.count())
+                .select_from(User)
+                .outerjoin(contrib_subquery, User.id == contrib_subquery.c.user_id)
+                .where(
+                    User.restriction_level != 'banned',
+                    or_(
+                        func.coalesce(contrib_subquery.c.approved_count, 0) > user_approved_count,
+                        # Tie-breaker: whoever reached the same count FIRST ranks higher
+                        and_(
+                            func.coalesce(contrib_subquery.c.approved_count, 0) == user_approved_count,
+                            # Earlier timestamp = higher rank
+                            func.coalesce(contrib_subquery.c.latest_contrib_at, User.created_at) < 
+                            func.coalesce(user_nth_contrib_at, user.created_at)
+                        )
                     )
                 )
             )
-        )
-        users_above_contrib = contrib_rank_result.scalar() or 0
-        contribution_rank = users_above_contrib + 1
+            users_above_contrib = contrib_rank_result.scalar() or 0
+            contribution_rank = users_above_contrib + 1
+        # else: contribution_rank stays None (user has no contributions)
         
         logger.info(f"Profile rank calc for user {user.user_number}: "
                    f"karma_rank={karma_rank}, contribution_rank={contribution_rank}")

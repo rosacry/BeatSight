@@ -575,6 +575,159 @@ async def get_my_verification_stats(
     )
 
 
+class VerifierLeaderboardEntry(BaseModel):
+    """Single entry in the verifier leaderboard."""
+    
+    user_id: uuid.UUID
+    user_number: int
+    display_name: str
+    avatar_url: Optional[str] = None
+    total_verifications: int
+    consensus_matches: int
+    accuracy_rate: float  # Percentage of votes matching consensus
+    rank: int
+    is_anonymous: bool = False
+
+
+class VerifierLeaderboardResponse(BaseModel):
+    """Verifier leaderboard response."""
+    
+    verifiers: list[VerifierLeaderboardEntry]
+    limit: int
+    offset: int
+
+
+@router.get(
+    "/leaderboard",
+    response_model=VerifierLeaderboardResponse,
+)
+async def get_verifier_leaderboard(
+    session: AsyncSession = Depends(get_db_session),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+) -> VerifierLeaderboardResponse:
+    """
+    Get the top verifiers leaderboard.
+    
+    Ranks verifiers by number of successful verifications (votes that
+    matched the final consensus). This rewards accurate verification work.
+    
+    Hidden users appear as "Secret Agent" but still occupy rank positions.
+    """
+    from sqlalchemy import func, case, literal, select
+    from app.models.map_accuracy import MapAccuracyVote, MapAccuracyConsensus, MapAccuracyStatus
+    from app.models.user_settings import UserSettings
+    
+    # Subquery to get each verifier's stats
+    # Count total votes and consensus matches
+    stats_subquery = (
+        select(
+            MapAccuracyVote.verifier_id.label("user_id"),
+            func.count(MapAccuracyVote.id).label("total_votes"),
+            func.sum(
+                case(
+                    # Vote matches consensus when:
+                    # - ACCURATE vote and consensus is VERIFIED
+                    # - INACCURATE vote and consensus is REJECTED
+                    # - NEEDS_WORK vote and consensus is NEEDS_REVISION
+                    (
+                        (MapAccuracyVote.vote == AccuracyVoteType.ACCURATE) &
+                        (MapAccuracyConsensus.status == MapAccuracyStatus.VERIFIED),
+                        1
+                    ),
+                    (
+                        (MapAccuracyVote.vote == AccuracyVoteType.INACCURATE) &
+                        (MapAccuracyConsensus.status == MapAccuracyStatus.REJECTED),
+                        1
+                    ),
+                    (
+                        (MapAccuracyVote.vote == AccuracyVoteType.NEEDS_WORK) &
+                        (MapAccuracyConsensus.status == MapAccuracyStatus.NEEDS_REVISION),
+                        1
+                    ),
+                    else_=0
+                )
+            ).label("consensus_matches"),
+        )
+        .outerjoin(
+            MapAccuracyConsensus,
+            MapAccuracyVote.map_version_id == MapAccuracyConsensus.map_version_id
+        )
+        .where(
+            # Only count votes for maps that have reached consensus
+            MapAccuracyConsensus.status.in_([
+                MapAccuracyStatus.VERIFIED,
+                MapAccuracyStatus.REJECTED,
+                MapAccuracyStatus.NEEDS_REVISION,
+            ])
+        )
+        .group_by(MapAccuracyVote.verifier_id)
+        .subquery()
+    )
+    
+    # Main query: join with users, anonymize hidden users
+    query = (
+        select(
+            User.id,
+            User.user_number,
+            case(
+                (UserSettings.hide_from_leaderboards == True, literal("Secret Agent")),  # noqa: E712
+                else_=User.display_name
+            ).label("display_name"),
+            case(
+                (UserSettings.hide_from_leaderboards == True, literal(None)),  # noqa: E712
+                else_=User.avatar_url
+            ).label("avatar_url"),
+            stats_subquery.c.total_votes,
+            stats_subquery.c.consensus_matches,
+            case(
+                (UserSettings.hide_from_leaderboards == True, literal(True)),  # noqa: E712
+                else_=literal(False)
+            ).label("is_anonymous"),
+        )
+        .join(stats_subquery, User.id == stats_subquery.c.user_id)
+        .outerjoin(UserSettings, User.id == UserSettings.user_id)
+        .where(
+            User.restriction_level != 'banned',
+            stats_subquery.c.consensus_matches > 0,  # Only show verifiers with at least 1 match
+        )
+        .order_by(
+            stats_subquery.c.consensus_matches.desc(),  # Primary: most consensus matches
+            # Secondary: higher accuracy rate (as percentage)
+            (stats_subquery.c.consensus_matches * 100.0 / 
+             func.nullif(stats_subquery.c.total_votes, 0)).desc().nullslast(),
+        )
+        .offset(offset)
+        .limit(limit)
+    )
+    
+    result = await session.execute(query)
+    rows = result.all()
+    
+    verifiers = [
+        VerifierLeaderboardEntry(
+            user_id=row.id,
+            user_number=row.user_number,
+            display_name=row.display_name,
+            avatar_url=row.avatar_url,
+            total_verifications=row.total_votes or 0,
+            consensus_matches=row.consensus_matches or 0,
+            accuracy_rate=round(
+                (row.consensus_matches * 100.0 / row.total_votes) if row.total_votes > 0 else 0.0, 1
+            ),
+            rank=offset + i + 1,
+            is_anonymous=row.is_anonymous or False,
+        )
+        for i, row in enumerate(rows)
+    ]
+    
+    return VerifierLeaderboardResponse(
+        verifiers=verifiers,
+        limit=limit,
+        offset=offset,
+    )
+
+
 @router.get(
     "/system-stats",
     response_model=SystemStatsResponse,

@@ -668,8 +668,8 @@ async def get_public_user_profile(
         
         # If no settings or not hidden, calculate ranks
         if not user_settings or not user_settings.hide_from_leaderboards:
-            # Karma rank: count users with more karma, or same karma but earlier account
-            # (user_number is assigned sequentially, so lower = earlier)
+            # Karma rank: count users with more karma, or same karma but reached it earlier
+            # Tie-breaker: whoever reached the current score FIRST ranks higher
             karma_rank_result = await session.execute(
                 select(func.count())
                 .select_from(User)
@@ -682,10 +682,13 @@ async def get_public_user_profile(
                     ),
                     or_(
                         User.karma_score > (user.karma_score or 0),
-                        # Tie-breaker: earlier account (lower user_number) ranks higher
+                        # Tie-breaker: whoever reached the same score FIRST ranks higher
                         and_(
                             User.karma_score == (user.karma_score or 0),
-                            User.user_number < user.user_number
+                            # Earlier karma_score_achieved_at = higher rank
+                            # Use COALESCE to handle NULL (treat as very late date for legacy data)
+                            func.coalesce(User.karma_score_achieved_at, User.created_at) < 
+                            func.coalesce(user.karma_score_achieved_at, user.created_at)
                         )
                     )
                 )
@@ -694,7 +697,9 @@ async def get_public_user_profile(
             karma_rank = users_above_karma + 1
             
             # Contribution rank: count users with more contributions
-            # First get user's approved contribution count
+            # For ties, whoever got their Nth contribution approved FIRST ranks higher
+            
+            # First get user's approved contribution count and their "Nth contribution" timestamp
             user_contrib_result = await session.execute(
                 select(func.count())
                 .select_from(TrainingContribution)
@@ -705,12 +710,25 @@ async def get_public_user_profile(
             )
             user_approved_count = user_contrib_result.scalar() or 0
             
-            # Now count users with more approved contributions
-            # Using a subquery to get each user's approved count
+            # Get the timestamp of the user's Nth (most recent) approved contribution
+            # This is used for tie-breaking - whoever got to N contributions first ranks higher
+            user_nth_contrib_result = await session.execute(
+                select(TrainingContribution.reviewed_at)
+                .where(
+                    TrainingContribution.user_id == user.id,
+                    TrainingContribution.status.in_(['approved', 'exported'])
+                )
+                .order_by(TrainingContribution.reviewed_at.desc())
+                .limit(1)
+            )
+            user_nth_contrib_at = user_nth_contrib_result.scalar_one_or_none()
+            
+            # Build subquery to get each user's contribution count AND their Nth contribution timestamp
             contrib_subquery = (
                 select(
                     TrainingContribution.user_id,
-                    func.count().label('approved_count')
+                    func.count().label('approved_count'),
+                    func.max(TrainingContribution.reviewed_at).label('latest_contrib_at')
                 )
                 .where(TrainingContribution.status.in_(['approved', 'exported']))
                 .group_by(TrainingContribution.user_id)
@@ -730,10 +748,13 @@ async def get_public_user_profile(
                     ),
                     or_(
                         func.coalesce(contrib_subquery.c.approved_count, 0) > user_approved_count,
-                        # Tie-breaker: earlier account ranks higher
+                        # Tie-breaker: whoever reached the same count FIRST ranks higher
                         and_(
                             func.coalesce(contrib_subquery.c.approved_count, 0) == user_approved_count,
-                            User.user_number < user.user_number
+                            user_approved_count > 0,  # Only compare timestamps if user has contributions
+                            # Earlier timestamp = higher rank
+                            func.coalesce(contrib_subquery.c.latest_contrib_at, User.created_at) < 
+                            func.coalesce(user_nth_contrib_at, user.created_at)
                         )
                     )
                 )

@@ -26,7 +26,7 @@ from typing import Annotated, Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import func, select, and_
+from sqlalchemy import func, select, and_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -727,11 +727,13 @@ async def get_contributor_leaderboard(
     
     This endpoint does not require authentication.
     Shows users ranked by approved contribution count.
+    Tie-breaker: whoever reached the same count FIRST ranks higher.
     """
     # Get approved/exported contribution counts per user
     approved_statuses = [ContributionStatus.APPROVED, ContributionStatus.EXPORTED]
     
     # Query to get total and approved counts grouped by user
+    # Also get the timestamp of their most recent approved contribution (for tie-breaking)
     subquery = (
         select(
             TrainingContribution.user_id,
@@ -742,12 +744,20 @@ async def get_contributor_leaderboard(
                     type_=func.count().type
                 )
             ).label("approved_count"),
+            # Get the timestamp when they reached their current count (latest approved contribution)
+            func.max(
+                case(
+                    (TrainingContribution.status.in_(approved_statuses), TrainingContribution.reviewed_at),
+                    else_=None
+                )
+            ).label("latest_approved_at"),
         )
         .group_by(TrainingContribution.user_id)
         .subquery()
     )
     
     # Join with users to get display names and order by approved count
+    # Tie-breaker: whoever reached the same count FIRST ranks higher (earlier timestamp)
     query = (
         select(
             User.id,
@@ -758,7 +768,12 @@ async def get_contributor_leaderboard(
             subquery.c.approved_count,
         )
         .join(subquery, User.id == subquery.c.user_id)
-        .order_by(subquery.c.approved_count.desc(), subquery.c.total_count.desc())
+        .order_by(
+            subquery.c.approved_count.desc(),
+            # Tie-breaker: whoever reached the count FIRST ranks higher
+            func.coalesce(subquery.c.latest_approved_at, User.created_at).asc(),
+            subquery.c.total_count.desc()
+        )
         .offset(offset)
         .limit(limit)
     )

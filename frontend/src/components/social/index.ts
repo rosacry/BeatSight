@@ -16,3 +16,7 @@ export {
 } from './Messaging'
 
 export { BlockedUsersSettings } from './BlockedUsers'
+
+export { UserHoverCard } from './UserHoverCard'
+
+export { KarmaBreakdownTooltip, StaticKarmaBreakdownTooltip } from './KarmaBreakdownTooltip'

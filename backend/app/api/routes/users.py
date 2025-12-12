@@ -812,6 +812,72 @@ async def _get_user_by_identifier(
         return None
 
 
+# =============================================================================
+# Hover Card Endpoint (Lightweight user info for tooltips)
+# =============================================================================
+
+
+class UserHoverCardResponse(BaseModel):
+    """Lightweight user data for hover card tooltips (osu!-style)."""
+    
+    id: str
+    user_number: int
+    display_name: str
+    avatar_url: Optional[str] = None
+    banner_url: Optional[str] = None
+    karma_score: int
+    is_online: bool = False  # TODO: Implement online status tracking
+    last_active: Optional[datetime] = None
+    role: str
+    country_code: Optional[str] = None
+
+
+@router.get("/{user_id}/hover-card", response_model=UserHoverCardResponse)
+async def get_user_hover_card(
+    user_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> UserHoverCardResponse:
+    """
+    Get lightweight user data for hover card tooltips.
+    
+    This is a faster endpoint than the full profile, designed for
+    quick user previews when hovering over usernames (similar to osu!'s user cards).
+    
+    Supports lookup by either UUID or user_number (e.g., /users/1/hover-card).
+    """
+    user = await _get_user_by_identifier(user_id, session)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    
+    # Determine role
+    role = "user"
+    if user.roles:
+        role_codes = [r.role.code for r in user.roles if r.role]
+        if "admin" in role_codes:
+            role = "admin"
+        elif "staff" in role_codes:
+            role = "staff"
+        elif "verifier" in role_codes:
+            role = "verifier"
+    
+    return UserHoverCardResponse(
+        id=str(user.id),
+        user_number=user.user_number,
+        display_name=user.display_name,
+        avatar_url=user.avatar_url,
+        banner_url=getattr(user, 'banner_url', None),
+        karma_score=user.karma_score or 0,
+        is_online=False,  # TODO: Implement real online status
+        last_active=getattr(user, 'last_active_at', None),
+        role=role,
+        country_code=getattr(user, 'country_code', None),
+    )
+
+
 @router.get("/{user_id}/maps", response_model=UserMapsResponse)
 async def get_user_maps(
     user_id: str,

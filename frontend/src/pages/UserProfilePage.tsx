@@ -30,6 +30,7 @@ import {
     PageContentWrapper
 } from '@/components/ui/UnifiedTransitions'
 import { KarmaRankBadge } from './LeaderboardPage'
+import { KarmaBreakdownTooltip } from '@/components/social'
 
 // =============================================================================
 // Types
@@ -397,13 +398,17 @@ export function UserProfilePage() {
 
                         {/* Karma Score + Rank */}
                         <div className="text-center md:text-right pb-4">
-                            <div className="flex items-center gap-2 justify-center md:justify-end">
-                                <StarIcon className="w-5 h-5 text-yellow-400" />
-                                <span className="text-3xl font-bold text-white">
-                                    {profile.karma_score.toLocaleString()}
-                                </span>
-                            </div>
-                            <p className="text-sm text-gray-400 mb-2">Karma</p>
+                            <KarmaBreakdownTooltip userId={profile.id} karmaScore={profile.karma_score} placement="bottom">
+                                <div className="inline-block">
+                                    <div className="flex items-center gap-2 justify-center md:justify-end">
+                                        <StarIcon className="w-5 h-5 text-yellow-400" />
+                                        <span className="text-3xl font-bold text-white">
+                                            {profile.karma_score.toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-gray-400 mb-2">Karma</p>
+                                </div>
+                            </KarmaBreakdownTooltip>
                             <KarmaRankBadge karma={profile.karma_score} />
                         </div>
                     </div>

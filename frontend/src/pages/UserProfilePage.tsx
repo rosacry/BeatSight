@@ -29,7 +29,6 @@ import {
     StaggerSection,
     PageContentWrapper
 } from '@/components/ui/UnifiedTransitions'
-import { KarmaRankBadge } from './LeaderboardPage'
 import { KarmaBreakdownTooltip } from '@/components/social'
 import { BannerUpload } from '@/components/BannerUpload'
 import { AvatarUpload } from '@/components/AvatarUpload'
@@ -191,6 +190,27 @@ function TrophyIcon({ className }: { className?: string }) {
         <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
         </svg>
+    )
+}
+
+// =============================================================================
+// Stat Item Component (osu!-style)
+// =============================================================================
+
+interface StatItemProps {
+    value: number
+    label: string
+    color?: string
+}
+
+function StatItem({ value, label, color = 'text-white' }: StatItemProps) {
+    return (
+        <div className="text-center">
+            <div className={clsx('text-2xl font-bold', color)}>
+                {value.toLocaleString()}
+            </div>
+            <div className="text-sm text-gray-400 mt-0.5">{label}</div>
+        </div>
     )
 }
 
@@ -365,21 +385,27 @@ export function UserProfilePage() {
 
     return (
         <PageContentWrapper className="min-h-screen bg-dark-600">
-            {/* Profile Header / Banner */}
+            {/* osu!-style Profile Header with Banner */}
             <div className="relative">
-                {/* Banner Image */}
+                {/* Banner Image - Larger, more prominent like osu! */}
                 <div
-                    className="h-48 md:h-64 bg-gradient-to-b from-primary-900/30 to-dark-600 bg-cover bg-center relative"
+                    className="h-56 md:h-72 lg:h-80 bg-cover bg-center relative overflow-hidden"
                     style={profile.banner_url ? { backgroundImage: `url(${profile.banner_url})` } : undefined}
                 >
-                    <div className="absolute inset-0 bg-gradient-to-t from-dark-600 via-dark-600/50 to-transparent" />
+                    {/* Default gradient background if no banner */}
+                    {!profile.banner_url && (
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary-900/60 via-dark-500 to-dark-600" />
+                    )}
 
-                    {/* Banner Upload overlay for own profile */}
+                    {/* Overlay gradient for readability */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-dark-600 via-dark-600/60 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-dark-600/40 to-transparent" />
+
+                    {/* Banner Upload overlay for own profile - positioned in corner like osu! */}
                     {isOwnProfile && (
                         <BannerUpload
                             currentBannerUrl={profile.banner_url}
                             onUploadSuccess={() => {
-                                // Refetch profile to get updated banner URL
                                 window.location.reload()
                             }}
                             className="absolute inset-0 z-10"
@@ -387,159 +413,150 @@ export function UserProfilePage() {
                     )}
                 </div>
 
-                {/* Profile Info Overlay */}
-                <div className="max-w-4xl mx-auto px-4 relative">
-                    <div className="flex flex-col md:flex-row items-start md:items-end gap-4 -mt-20 relative z-10">
-                        {/* Avatar */}
-                        <div className="relative group">
-                            {isOwnProfile ? (
-                                <AvatarUpload
-                                    currentAvatarUrl={profile.avatar_url}
-                                    size="lg"
-                                    hoverHint="change your avatar!"
-                                    showUploadHint={false}
-                                    onUploadSuccess={() => {
-                                        window.location.reload()
-                                    }}
-                                />
-                            ) : (
-                                <div className="w-32 h-32 md:w-40 md:h-40 rounded-2xl overflow-hidden border-4 border-dark-600 bg-dark-500 shadow-xl">
-                                    {profile.avatar_url ? (
-                                        <img
-                                            src={profile.avatar_url}
-                                            alt={profile.display_name}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full bg-primary-600 flex items-center justify-center">
-                                            <span className="text-4xl font-bold text-white">
-                                                {profile.display_name?.charAt(0).toUpperCase()}
-                                            </span>
+                {/* Profile Info Card - Overlapping banner like osu! */}
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 relative">
+                    <div className="relative -mt-32 md:-mt-36 z-20">
+                        <div className="bg-dark-500/90 backdrop-blur-sm rounded-2xl border border-white/5 shadow-2xl overflow-hidden">
+                            <div className="p-6 md:p-8">
+                                <div className="flex flex-col md:flex-row gap-6">
+                                    {/* Avatar Section */}
+                                    <div className="flex-shrink-0">
+                                        {isOwnProfile ? (
+                                            <AvatarUpload
+                                                currentAvatarUrl={profile.avatar_url}
+                                                size="lg"
+                                                hoverHint="change your avatar!"
+                                                showUploadHint={false}
+                                                onUploadSuccess={() => {
+                                                    window.location.reload()
+                                                }}
+                                            />
+                                        ) : (
+                                            <div className="w-28 h-28 md:w-32 md:h-32 rounded-2xl overflow-hidden bg-dark-400 shadow-xl ring-4 ring-dark-500">
+                                                {profile.avatar_url ? (
+                                                    <img
+                                                        src={profile.avatar_url}
+                                                        alt={profile.display_name}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
+                                                        <span className="text-4xl font-bold text-white">
+                                                            {profile.display_name?.charAt(0).toUpperCase()}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* User Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                                            {/* Name and badges */}
+                                            <div>
+                                                <div className="flex items-center gap-3 flex-wrap">
+                                                    <h1 className="text-2xl md:text-3xl font-bold text-white truncate">
+                                                        {profile.display_name}
+                                                    </h1>
+                                                    {profile.role && profile.role !== 'user' && (
+                                                        <span className={clsx(
+                                                            'px-2.5 py-1 text-xs font-bold rounded uppercase',
+                                                            profile.role === 'admin' ? 'bg-red-500 text-white' :
+                                                                profile.role === 'staff' ? 'bg-amber-500 text-dark-600' :
+                                                                    profile.role === 'verifier' ? 'bg-green-500 text-dark-600' :
+                                                                        'bg-gray-500 text-white'
+                                                        )}>
+                                                            {profile.role}
+                                                        </span>
+                                                    )}
+                                                    {/* Custom profile tags (like osu!'s DEV, VIP, etc.) */}
+                                                    {profile.tags?.map((tag) => (
+                                                        <span
+                                                            key={tag.id}
+                                                            className="px-2.5 py-1 text-xs font-bold rounded"
+                                                            style={{
+                                                                backgroundColor: tag.background_color,
+                                                                color: tag.text_color || '#ffffff',
+                                                            }}
+                                                        >
+                                                            {tag.name}
+                                                        </span>
+                                                    ))}
+                                                </div>
+
+                                                {/* Meta info line */}
+                                                <div className="flex items-center gap-4 mt-2 text-sm text-gray-400 flex-wrap">
+                                                    {profile.country_code && (
+                                                        <span className="flex items-center gap-1.5">
+                                                            <span className={`fi fi-${profile.country_code.toLowerCase()}`} />
+                                                            {profile.country_code}
+                                                        </span>
+                                                    )}
+                                                    <span className="flex items-center gap-1.5">
+                                                        <CalendarIcon className="w-4 h-4" />
+                                                        Joined {format(new Date(profile.created_at), 'MMM yyyy')}
+                                                    </span>
+                                                    {profile.last_active && (
+                                                        <span className="flex items-center gap-1.5 text-green-400">
+                                                            <div className="w-2 h-2 bg-green-400 rounded-full" />
+                                                            Online
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Karma Score - Large and prominent like osu!'s pp/rank display */}
+                                            <div className="flex-shrink-0">
+                                                <KarmaBreakdownTooltip userId={profile.id} karmaScore={profile.karma_score} placement="left">
+                                                    <div className="text-right">
+                                                        <div className="flex items-center gap-2 justify-end">
+                                                            <StarIcon className="w-6 h-6 text-yellow-400" />
+                                                            <span className="text-4xl font-bold text-white">
+                                                                {profile.karma_score.toLocaleString()}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-sm text-gray-400 mt-1">Karma</p>
+                                                        {profile.karma_rank && (
+                                                            <Link
+                                                                to="/leaderboard?tab=karma"
+                                                                className="inline-flex items-center gap-1 mt-2 px-3 py-1.5 bg-yellow-500/20 text-yellow-400 rounded-full text-sm font-bold hover:bg-yellow-500/30 transition-colors"
+                                                            >
+                                                                #{profile.karma_rank.toLocaleString()}
+                                                            </Link>
+                                                        )}
+                                                    </div>
+                                                </KarmaBreakdownTooltip>
+                                            </div>
                                         </div>
-                                    )}
-                                </div>
-                            )}
-                            {/* Online status indicator */}
-                            {profile.last_active && (
-                                <div className="absolute bottom-2 right-2 w-4 h-4 bg-green-500 rounded-full border-2 border-dark-600" />
-                            )}
-                        </div>
 
-                        {/* User Info */}
-                        <div className="flex-1 pb-4">
-                            <div className="flex items-center gap-3 mb-2 flex-wrap">
-                                <h1 className="text-2xl md:text-3xl font-bold text-white">
-                                    {profile.display_name}
-                                </h1>
-                                {profile.is_verified && (
-                                    <span className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-500/20 text-blue-400 rounded-full">
-                                        <VerifiedIcon className="w-3 h-3" />
-                                        Verified
-                                    </span>
-                                )}
-                                {profile.role && profile.role !== 'user' && (
-                                    <span className={clsx(
-                                        'px-2 py-1 text-xs font-bold rounded-full',
-                                        profile.role === 'admin' ? 'bg-red-500/20 text-red-400' :
-                                            profile.role === 'staff' ? 'bg-amber-500/20 text-amber-400' :
-                                                profile.role === 'verifier' ? 'bg-accent-500/20 text-accent-400' :
-                                                    'bg-gray-500/20 text-gray-400'
-                                    )}>
-                                        {profile.role.toUpperCase()}
-                                    </span>
-                                )}
-                                {/* Custom profile tags (like osu!'s DEV, VIP, etc.) */}
-                                {profile.tags?.map((tag) => (
-                                    <span
-                                        key={tag.id}
-                                        className="px-2 py-1 text-xs font-bold rounded"
-                                        style={{
-                                            backgroundColor: tag.background_color,
-                                            color: tag.text_color || '#ffffff',
-                                        }}
-                                    >
-                                        {tag.name}
-                                    </span>
-                                ))}
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
-                                {/* Karma Ranking */}
-                                {profile.karma_rank && (
-                                    <Link
-                                        to="/leaderboard?tab=karma"
-                                        className="flex items-center gap-1 text-yellow-400 hover:text-yellow-300 transition-colors"
-                                    >
-                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                                        </svg>
-                                        Karma #{profile.karma_rank.toLocaleString()}
-                                    </Link>
-                                )}
-                                {/* Contribution Ranking */}
-                                {profile.contribution_rank && (
-                                    <Link
-                                        to="/leaderboard?tab=contributors"
-                                        className="flex items-center gap-1 text-green-400 hover:text-green-300 transition-colors"
-                                    >
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        Contrib #{profile.contribution_rank.toLocaleString()}
-                                    </Link>
-                                )}
-                                {profile.country_code && (
-                                    <span className="flex items-center gap-1">
-                                        <span className={`fi fi-${profile.country_code.toLowerCase()}`} />
-                                        {profile.country_code}
-                                    </span>
-                                )}
-                                <span className="flex items-center gap-1">
-                                    <CalendarIcon className="w-4 h-4" />
-                                    Joined {format(new Date(profile.created_at), 'MMM yyyy')}
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Karma Score + Rank */}
-                        <div className="text-center md:text-right pb-4 md:self-end md:ml-auto">
-                            <KarmaBreakdownTooltip userId={profile.id} karmaScore={profile.karma_score} placement="left">
-                                <div className="inline-block">
-                                    <div className="flex items-center gap-2 justify-center md:justify-end">
-                                        <StarIcon className="w-5 h-5 text-yellow-400" />
-                                        <span className="text-3xl font-bold text-white">
-                                            {profile.karma_score.toLocaleString()}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-center md:justify-end gap-2 mt-1">
-                                        <p className="text-sm text-gray-400">Karma</p>
-                                        <KarmaRankBadge karma={profile.karma_score} />
+                                        {/* Stats Row - Clean grid like osu! */}
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-white/10">
+                                            <StatItem
+                                                value={profile.songs_uploaded}
+                                                label="Songs"
+                                                color="text-white"
+                                            />
+                                            <StatItem
+                                                value={profile.maps_generated}
+                                                label="Maps"
+                                                color="text-primary-400"
+                                            />
+                                            <StatItem
+                                                value={profile.maps_verified}
+                                                label="Verified"
+                                                color="text-green-400"
+                                            />
+                                            <StatItem
+                                                value={profile.achievements_count}
+                                                label="Achievements"
+                                                color="text-yellow-400"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                            </KarmaBreakdownTooltip>
+                            </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Stats Row */}
-            <div className="max-w-4xl mx-auto px-4 py-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-dark-400 rounded-xl p-4 text-center border border-white/5">
-                        <div className="text-2xl font-bold text-white">{profile.songs_uploaded}</div>
-                        <div className="text-sm text-gray-400">Songs Uploaded</div>
-                    </div>
-                    <div className="bg-dark-400 rounded-xl p-4 text-center border border-white/5">
-                        <div className="text-2xl font-bold text-white">{profile.maps_generated}</div>
-                        <div className="text-sm text-gray-400">Maps Generated</div>
-                    </div>
-                    <div className="bg-dark-400 rounded-xl p-4 text-center border border-white/5">
-                        <div className="text-2xl font-bold text-green-400">{profile.maps_verified}</div>
-                        <div className="text-sm text-gray-400">Maps Verified</div>
-                    </div>
-                    <div className="bg-dark-400 rounded-xl p-4 text-center border border-white/5">
-                        <div className="text-2xl font-bold text-primary-400">{profile.achievements_count}</div>
-                        <div className="text-sm text-gray-400">Achievements</div>
                     </div>
                 </div>
             </div>

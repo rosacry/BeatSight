@@ -214,8 +214,8 @@ function DropdownMenu({ label, items, isActive }: DropdownMenuProps) {
         >
             <button
                 className={`flex items-center gap-1 px-3 py-2 text-sm font-medium transition-colors ${isActive || isOpen
-                        ? 'text-white'
-                        : 'text-gray-400 hover:text-white'
+                    ? 'text-white'
+                    : 'text-gray-400 hover:text-white'
                     }`}
             >
                 {label}
@@ -229,7 +229,8 @@ function DropdownMenu({ label, items, isActive }: DropdownMenuProps) {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -8 }}
                         transition={{ duration: 0.15, ease: 'easeOut' }}
-                        className="absolute top-full left-0 mt-1 min-w-[180px] bg-dark-500 border border-white/10 rounded-lg shadow-xl overflow-hidden z-50"
+                        className="absolute top-full left-0 mt-1 min-w-[160px] bg-dark-500 border border-white/10 rounded-lg shadow-xl overflow-hidden z-[60]"
+                        style={{ pointerEvents: 'auto' }}
                     >
                         <div className="py-1">
                             {visibleItems.map((item, index) => (
@@ -411,15 +412,18 @@ export function Layout({ children }: LayoutProps) {
                                     ]}
                                 />
 
-                                {/* Rankings dropdown */}
-                                <DropdownMenu
-                                    label="rankings"
-                                    isActive={isInRankings}
-                                    items={[
-                                        { path: '/leaderboard', label: 'karma', icon: <LeaderboardIcon /> },
-                                        { path: '/leaderboard?tab=contributors', label: 'contributors', icon: <LeaderboardIcon /> },
-                                    ]}
-                                />
+                                {/* Rankings dropdown - direct link since only one item */}
+                                <NavLink
+                                    to="/leaderboard"
+                                    className={({ isActive }) =>
+                                        `px-3 py-2 text-sm font-medium transition-colors ${isActive
+                                            ? 'text-white'
+                                            : 'text-gray-400 hover:text-white'
+                                        }`
+                                    }
+                                >
+                                    rankings
+                                </NavLink>
 
                                 {/* Community dropdown */}
                                 <DropdownMenu

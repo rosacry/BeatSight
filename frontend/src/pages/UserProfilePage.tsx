@@ -511,8 +511,8 @@ export function UserProfilePage() {
                                                 <KarmaBreakdownTooltip userId={profile.id} karmaScore={profile.karma_score} placement="left">
                                                     <div className="text-right">
                                                         <div className="flex items-center gap-2 justify-end">
-                                                            <StarIcon className="w-6 h-6 text-yellow-400" />
-                                                            <span className="text-4xl font-bold text-white">
+                                                            <StarIcon className="w-7 h-7 text-yellow-400" />
+                                                            <span className="text-4xl md:text-5xl font-bold text-white">
                                                                 {profile.karma_score.toLocaleString()}
                                                             </span>
                                                         </div>
@@ -520,9 +520,10 @@ export function UserProfilePage() {
                                                         {profile.karma_rank && (
                                                             <Link
                                                                 to="/leaderboard?tab=karma"
-                                                                className="inline-flex items-center gap-1 mt-2 px-3 py-1.5 bg-yellow-500/20 text-yellow-400 rounded-full text-sm font-bold hover:bg-yellow-500/30 transition-colors"
+                                                                className="inline-flex items-center gap-1.5 mt-3 px-4 py-2 bg-gradient-to-r from-yellow-500/30 to-amber-500/20 text-yellow-300 rounded-full text-base font-bold hover:from-yellow-500/40 hover:to-amber-500/30 transition-all border border-yellow-500/30 shadow-lg shadow-yellow-500/10"
                                                             >
-                                                                #{profile.karma_rank.toLocaleString()}
+                                                                <span className="text-yellow-400">#</span>
+                                                                <span>{profile.karma_rank.toLocaleString()}</span>
                                                             </Link>
                                                         )}
                                                     </div>
@@ -563,8 +564,8 @@ export function UserProfilePage() {
 
             {/* Action Buttons */}
             {isAuthenticated && (
-                <div className="max-w-4xl mx-auto px-4 pb-6">
-                    <div className="flex flex-wrap gap-3">
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 pb-6">
+                    <div className="flex flex-wrap gap-3 justify-center md:justify-start">
                         {isOwnProfile ? (
                             <>
                                 {/* Own Profile Actions */}
@@ -698,15 +699,15 @@ export function UserProfilePage() {
 
             {/* Bio */}
             {profile.bio && (
-                <div className="max-w-4xl mx-auto px-4 pb-6">
-                    <div className="bg-dark-400 rounded-xl p-4 border border-white/5">
-                        <p className="text-gray-300 whitespace-pre-wrap">{profile.bio}</p>
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-6">
+                    <div className="bg-dark-400 rounded-xl p-5 border border-white/5">
+                        <p className="text-gray-300 whitespace-pre-wrap leading-relaxed">{profile.bio}</p>
                     </div>
                 </div>
             )}
 
             {/* Tabs */}
-            <div className="max-w-4xl mx-auto px-4">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6">
                 <div className="border-b border-white/10">
                     <nav className="flex gap-6">
                         <AnimatedTabButton
@@ -754,42 +755,24 @@ export function UserProfilePage() {
 
                                 <StaggerSection>
                                     <div className="bg-dark-400 rounded-xl p-6 border border-white/5">
-                                        <h3 className="text-lg font-semibold text-white mb-4">Community Activity</h3>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-lg bg-primary-500/20 flex items-center justify-center">
-                                                    <MapIcon className="w-5 h-5 text-primary-400" />
+                                        <h3 className="text-lg font-semibold text-white mb-4">Contributions</h3>
+                                        <div className="grid grid-cols-2 gap-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-xl bg-accent-500/20 flex items-center justify-center">
+                                                    <MessageIcon className="w-6 h-6 text-accent-400" />
                                                 </div>
                                                 <div>
-                                                    <div className="text-lg font-semibold text-white">{profile.maps_generated}</div>
-                                                    <div className="text-sm text-gray-400">Maps Created</div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-                                                    <VerifiedIcon className="w-5 h-5 text-green-400" />
-                                                </div>
-                                                <div>
-                                                    <div className="text-lg font-semibold text-white">{profile.maps_verified}</div>
-                                                    <div className="text-sm text-gray-400">Verifications</div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-lg bg-accent-500/20 flex items-center justify-center">
-                                                    <MessageIcon className="w-5 h-5 text-accent-400" />
-                                                </div>
-                                                <div>
-                                                    <div className="text-lg font-semibold text-white">{profile.forum_posts}</div>
+                                                    <div className="text-2xl font-bold text-white">{profile.forum_posts}</div>
                                                     <div className="text-sm text-gray-400">Forum Posts</div>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
-                                                    <TrophyIcon className="w-5 h-5 text-yellow-400" />
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+                                                    <VerifiedIcon className="w-6 h-6 text-green-400" />
                                                 </div>
                                                 <div>
-                                                    <div className="text-lg font-semibold text-white">{profile.achievements_count}</div>
-                                                    <div className="text-sm text-gray-400">Achievements</div>
+                                                    <div className="text-2xl font-bold text-white">{profile.contribution_count}</div>
+                                                    <div className="text-sm text-gray-400">Contributions</div>
                                                 </div>
                                             </div>
                                         </div>

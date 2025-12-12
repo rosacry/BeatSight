@@ -628,7 +628,7 @@ export function SettingsPage() {
                                                     Profile Banner
                                                 </label>
                                                 <div
-                                                    className="relative h-32 md:h-40 rounded-xl overflow-hidden bg-dark-300 border border-white/10"
+                                                    className="relative h-32 md:h-40 rounded-xl bg-dark-300 border border-white/10"
                                                     style={user?.banner_url ? {
                                                         backgroundImage: `url(${user.banner_url})`,
                                                         backgroundSize: 'cover',
@@ -636,7 +636,7 @@ export function SettingsPage() {
                                                     } : undefined}
                                                 >
                                                     {!user?.banner_url && (
-                                                        <div className="absolute inset-0 bg-gradient-to-br from-primary-600/20 to-accent-600/20" />
+                                                        <div className="absolute inset-0 bg-gradient-to-br from-primary-600/20 to-accent-600/20 rounded-xl" />
                                                     )}
                                                     <BannerUpload
                                                         currentBannerUrl={user?.banner_url}
@@ -647,7 +647,7 @@ export function SettingsPage() {
                                                         onUploadError={(err) => {
                                                             setError(err)
                                                         }}
-                                                        className="absolute inset-0"
+                                                        className="absolute inset-0 rounded-xl"
                                                     />
                                                 </div>
                                                 <p className="text-xs text-gray-500 mt-2">Recommended size: 1500×500px. Max size: 10MB</p>

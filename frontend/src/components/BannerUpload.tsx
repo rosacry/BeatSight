@@ -3,7 +3,7 @@
  * Allows users to upload and change their profile banner (osu!-style).
  */
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { API_CONFIG } from '@/lib/config'
 
@@ -33,6 +33,19 @@ export function BannerUpload({
     const [showMenu, setShowMenu] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const menuRef = useRef<HTMLDivElement>(null)
+
+    // Close menu on outside click
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setShowMenu(false)
+            }
+        }
+        if (showMenu) {
+            document.addEventListener('mousedown', handleClickOutside)
+            return () => document.removeEventListener('mousedown', handleClickOutside)
+        }
+    }, [showMenu])
 
     const uploadFile = useCallback(async (file: File) => {
         if (!accessToken) {
@@ -140,7 +153,8 @@ export function BannerUpload({
         }
     }
 
-    const handleUploadClick = () => {
+    const handleUploadClick = (e: React.MouseEvent) => {
+        e.stopPropagation()
         fileInputRef.current?.click()
         setShowMenu(false)
     }
@@ -148,8 +162,8 @@ export function BannerUpload({
     // Determine what to show
     const displayUrl = previewUrl || currentBannerUrl
 
-    // Close menu on outside click
-    const handleBannerClick = () => {
+    const handleBannerClick = (e: React.MouseEvent) => {
+        e.stopPropagation()
         setShowMenu(!showMenu)
     }
 
@@ -170,66 +184,79 @@ export function BannerUpload({
                 onClick={handleBannerClick}
             >
                 {/* Hover overlay */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-dark-500/90 rounded-lg border border-white/20">
-                        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <div className="flex items-center gap-2 px-5 py-3 bg-dark-500/95 rounded-xl border border-white/20 shadow-xl">
+                        <svg className="w-5 h-5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        <span className="text-sm font-medium text-white">Change Banner</span>
+                        <span className="text-sm font-semibold text-white">Click to Change Banner</span>
                     </div>
                 </div>
             </div>
 
-            {/* Dropdown menu */}
+            {/* Floating menu - positioned in center of banner */}
             {showMenu && (
                 <div
                     ref={menuRef}
-                    className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-dark-400 border border-white/10 rounded-xl shadow-xl overflow-hidden"
-                    style={{ animation: 'slideInFromTop 0.15s ease-out' }}
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] bg-dark-500 border border-white/10 rounded-xl shadow-2xl overflow-hidden min-w-[200px]"
+                    onClick={(e) => e.stopPropagation()}
                 >
-                    <button
-                        onClick={handleUploadClick}
-                        disabled={isUploading}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-dark-300 transition-colors"
-                    >
-                        <svg className="w-5 h-5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                        </svg>
-                        <span>Upload New Banner</span>
-                    </button>
-
-                    {displayUrl && (
+                    <div className="p-2 border-b border-white/10">
+                        <p className="text-xs text-gray-400 text-center font-medium">Profile Banner</p>
+                    </div>
+                    <div className="p-1">
                         <button
-                            onClick={handleDelete}
+                            onClick={handleUploadClick}
                             disabled={isUploading}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-dark-300 transition-colors border-t border-white/5"
+                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-white/10 rounded-lg transition-colors"
                         >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            <svg className="w-5 h-5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                             </svg>
-                            <span>Remove Banner</span>
+                            <span>Upload New Banner</span>
                         </button>
-                    )}
+
+                        {displayUrl && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+                                disabled={isUploading}
+                                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                            >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                <span>Remove Banner</span>
+                            </button>
+                        )}
+                    </div>
+                    <div className="p-2 border-t border-white/10">
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setShowMenu(false); }}
+                            className="w-full text-xs text-gray-500 hover:text-gray-300 py-1"
+                        >
+                            Cancel
+                        </button>
+                    </div>
                 </div>
             )}
 
             {/* Loading overlay */}
             {isUploading && (
-                <div className="absolute inset-0 bg-dark-600/80 flex items-center justify-center">
-                    <div className="flex items-center gap-2 text-white">
-                        <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                <div className="absolute inset-0 bg-dark-600/90 flex items-center justify-center z-[90]">
+                    <div className="flex flex-col items-center gap-3 text-white">
+                        <svg className="animate-spin h-8 w-8" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
-                        <span className="text-sm">Uploading...</span>
+                        <span className="text-sm font-medium">Uploading banner...</span>
                     </div>
                 </div>
             )}
 
             {/* Error toast */}
             {error && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-red-500/90 text-white text-sm rounded-lg shadow-lg">
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-red-500/90 text-white text-sm rounded-lg shadow-lg z-[100]">
                     {error}
                 </div>
             )}

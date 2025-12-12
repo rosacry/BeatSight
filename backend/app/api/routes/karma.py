@@ -573,3 +573,41 @@ async def get_user_karma(
         eligible_roles=stats["eligible_roles"],
         current_roles=stats["current_roles"],
     )
+
+
+@router.get("/users/{user_id}/stats", response_model=KarmaStatsResponse)
+async def get_user_karma_stats(
+    user_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db_session),
+) -> KarmaStatsResponse:
+    """
+    Get detailed karma statistics for a specific user (public profile).
+    
+    Includes full breakdown of karma sources.
+    This endpoint does not require authentication.
+    """
+    service = KarmaService(session)
+
+    try:
+        await service.get_user_karma(user_id)
+    except KarmaError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    stats = await service.get_karma_stats(user_id)
+
+    breakdown = [
+        KarmaBreakdownItem(reason=reason, total=data["total"], count=data["count"])
+        for reason, data in stats["breakdown"].items()
+    ]
+
+    return KarmaStatsResponse(
+        current_score=stats["current_score"],
+        rank=stats["rank"],
+        breakdown=breakdown,
+        eligible_roles=stats["eligible_roles"],
+        current_roles=stats["current_roles"],
+        daily_ai_quota=stats["daily_ai_quota"],
+    )

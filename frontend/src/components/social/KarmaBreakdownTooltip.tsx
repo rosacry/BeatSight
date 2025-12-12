@@ -190,7 +190,7 @@ export function KarmaBreakdownTooltip({
     const { data: breakdown, isLoading } = useQuery({
         queryKey: ['karma-breakdown', userId],
         queryFn: async () => {
-            const response = await fetch(`${API_CONFIG.baseUrl}/api/karma/stats`, {
+            const response = await fetch(`${API_CONFIG.baseUrl}/api/karma/users/${userId}/stats`, {
                 credentials: 'include',
             })
             if (!response.ok) throw new Error('Failed to fetch karma breakdown')
@@ -273,6 +273,17 @@ export function KarmaBreakdownTooltip({
         .filter(item => item.total !== 0)
         .sort((a, b) => Math.abs(b.total) - Math.abs(a.total)) || []
 
+    // Determine animation based on actual placement
+    const getAnimation = (actualPlacement: Placement) => {
+        switch (actualPlacement) {
+            case 'left': return 'slideInFromLeft 0.2s ease-out'
+            case 'right': return 'slideInFromRight 0.2s ease-out'
+            case 'top': return 'slideInFromTop 0.2s ease-out'
+            case 'bottom': return 'slideInFromBottom 0.2s ease-out'
+            default: return 'slideInFromBottom 0.2s ease-out'
+        }
+    }
+
     const trigger = (
         <span
             ref={(el) => { triggerRef.current = el }}
@@ -292,10 +303,11 @@ export function KarmaBreakdownTooltip({
             ref={tooltipRef}
             onMouseEnter={handleTooltipMouseEnter}
             onMouseLeave={handleTooltipMouseLeave}
-            className="fixed z-[9999] w-[280px] animate-in fade-in-0 zoom-in-95 duration-150"
+            className="fixed z-[9999] w-[280px] transition-all duration-200 ease-out"
             style={{
                 top: position.top,
                 left: position.left,
+                animation: getAnimation(position.actualPlacement),
             }}
         >
             <div className="rounded-xl bg-dark-500 border border-white/10 shadow-2xl shadow-black/50 overflow-hidden">
@@ -507,6 +519,17 @@ export function StaticKarmaBreakdownTooltip({
         .filter(item => item.value !== 0)
         .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
 
+    // Determine animation based on actual placement
+    const getAnimation = (actualPlacement: Placement) => {
+        switch (actualPlacement) {
+            case 'left': return 'slideInFromLeft 0.2s ease-out'
+            case 'right': return 'slideInFromRight 0.2s ease-out'
+            case 'top': return 'slideInFromTop 0.2s ease-out'
+            case 'bottom': return 'slideInFromBottom 0.2s ease-out'
+            default: return 'slideInFromBottom 0.2s ease-out'
+        }
+    }
+
     const trigger = (
         <span
             ref={(el) => { triggerRef.current = el }}
@@ -526,10 +549,11 @@ export function StaticKarmaBreakdownTooltip({
             ref={tooltipRef}
             onMouseEnter={handleTooltipMouseEnter}
             onMouseLeave={handleTooltipMouseLeave}
-            className="fixed z-[9999] w-[260px] animate-in fade-in-0 zoom-in-95 duration-150"
+            className="fixed z-[9999] w-[260px] transition-all duration-200 ease-out"
             style={{
                 top: position.top,
                 left: position.left,
+                animation: getAnimation(position.actualPlacement),
             }}
         >
             <div className="rounded-xl bg-dark-500 border border-white/10 shadow-2xl shadow-black/50 overflow-hidden">

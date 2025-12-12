@@ -279,15 +279,27 @@ export function UserHoverCard({
 
     const karmaRank = userData ? getKarmaRank(userData.karma_score) : null
 
+    // Determine animation based on actual placement
+    const getAnimation = (actualPlacement: Placement) => {
+        switch (actualPlacement) {
+            case 'left': return 'slideInFromLeft 0.2s ease-out'
+            case 'right': return 'slideInFromRight 0.2s ease-out'
+            case 'top': return 'slideInFromTop 0.2s ease-out'
+            case 'bottom': return 'slideInFromBottom 0.2s ease-out'
+            default: return 'slideInFromRight 0.2s ease-out'
+        }
+    }
+
     const card = isVisible && createPortal(
         <div
             ref={cardRef}
             onMouseEnter={handleCardMouseEnter}
             onMouseLeave={handleCardMouseLeave}
-            className="fixed z-[9999] w-[320px] animate-in fade-in-0 zoom-in-95 duration-150"
+            className="fixed z-[9999] w-[320px] transition-all duration-200 ease-out"
             style={{
                 top: position.top,
                 left: position.left,
+                animation: getAnimation(position.actualPlacement),
             }}
         >
             <div className="relative overflow-hidden rounded-xl bg-dark-500 border border-white/10 shadow-2xl shadow-black/50">

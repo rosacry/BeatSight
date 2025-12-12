@@ -19,6 +19,7 @@ export interface User {
     phone_number: string | null
     phone_verified: boolean
     avatar_url: string | null
+    banner_url: string | null
     karma_score: number
     created_at: string
     roles: string[]

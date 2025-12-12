@@ -32,6 +32,7 @@ import {
 import { KarmaRankBadge } from './LeaderboardPage'
 import { KarmaBreakdownTooltip } from '@/components/social'
 import { BannerUpload } from '@/components/BannerUpload'
+import { AvatarUpload } from '@/components/AvatarUpload'
 
 // =============================================================================
 // Types
@@ -311,22 +312,34 @@ export function UserProfilePage() {
                 <div className="max-w-4xl mx-auto px-4 relative">
                     <div className="flex flex-col md:flex-row items-start md:items-end gap-4 -mt-20 relative z-10">
                         {/* Avatar */}
-                        <div className="relative">
-                            <div className="w-32 h-32 md:w-40 md:h-40 rounded-2xl overflow-hidden border-4 border-dark-600 bg-dark-500 shadow-xl">
-                                {profile.avatar_url ? (
-                                    <img
-                                        src={profile.avatar_url}
-                                        alt={profile.display_name}
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full bg-primary-600 flex items-center justify-center">
-                                        <span className="text-4xl font-bold text-white">
-                                            {profile.display_name?.charAt(0).toUpperCase()}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
+                        <div className="relative group">
+                            {isOwnProfile ? (
+                                <AvatarUpload
+                                    currentAvatarUrl={profile.avatar_url}
+                                    size="lg"
+                                    hoverHint="change your avatar!"
+                                    showUploadHint={false}
+                                    onUploadSuccess={() => {
+                                        window.location.reload()
+                                    }}
+                                />
+                            ) : (
+                                <div className="w-32 h-32 md:w-40 md:h-40 rounded-2xl overflow-hidden border-4 border-dark-600 bg-dark-500 shadow-xl">
+                                    {profile.avatar_url ? (
+                                        <img
+                                            src={profile.avatar_url}
+                                            alt={profile.display_name}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full bg-primary-600 flex items-center justify-center">
+                                            <span className="text-4xl font-bold text-white">
+                                                {profile.display_name?.charAt(0).toUpperCase()}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             {/* Online status indicator */}
                             {profile.last_active && (
                                 <div className="absolute bottom-2 right-2 w-4 h-4 bg-green-500 rounded-full border-2 border-dark-600" />
@@ -410,7 +423,7 @@ export function UserProfilePage() {
                         </div>
 
                         {/* Karma Score + Rank */}
-                        <div className="text-center md:text-right pb-4">
+                        <div className="text-center md:text-right pb-4 md:self-end md:ml-auto">
                             <KarmaBreakdownTooltip userId={profile.id} karmaScore={profile.karma_score} placement="left">
                                 <div className="inline-block">
                                     <div className="flex items-center gap-2 justify-center md:justify-end">

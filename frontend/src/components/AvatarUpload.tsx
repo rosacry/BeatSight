@@ -16,6 +16,10 @@ interface AvatarUploadProps {
     onUploadSuccess?: (newAvatarUrl: string) => void
     onUploadError?: (error: string) => void
     size?: 'sm' | 'md' | 'lg'
+    /** Optional hint text to show on hover (e.g., "change your avatar!") */
+    hoverHint?: string
+    /** Whether to show the upload hint below the avatar */
+    showUploadHint?: boolean
 }
 
 export function AvatarUpload({
@@ -23,6 +27,8 @@ export function AvatarUpload({
     onUploadSuccess,
     onUploadError,
     size = 'md',
+    hoverHint,
+    showUploadHint = true,
 }: AvatarUploadProps) {
     const accessToken = useAuthStore((state) => state.accessToken)
     const user = useAuthStore((state) => state.user)
@@ -195,7 +201,7 @@ export function AvatarUpload({
 
                     {/* Hover overlay - CIRCULAR to match button */}
                     {!isUploading && (
-                        <div className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center">
+                        <div className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-200 flex flex-col items-center justify-center gap-1 p-2">
                             <svg
                                 className={`${iconSizes[size]} text-white drop-shadow-lg`}
                                 fill="none"
@@ -215,6 +221,9 @@ export function AvatarUpload({
                                     d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
                                 />
                             </svg>
+                            {hoverHint && (
+                                <span className="text-[10px] text-white font-medium text-center leading-tight">{hoverHint}</span>
+                            )}
                         </div>
                     )}
 
@@ -269,7 +278,9 @@ export function AvatarUpload({
             />
 
             {/* Upload text hint */}
-            <p className="text-xs text-gray-500">Click to upload</p>
+            {showUploadHint && (
+                <p className="text-xs text-gray-500">Click to upload</p>
+            )}
 
             {/* Error message */}
             {error && (

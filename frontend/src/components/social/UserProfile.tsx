@@ -71,9 +71,10 @@ interface UsernameLinkProps {
     showPopover?: boolean
     className?: string
     children?: ReactNode
+    onClick?: (e: React.MouseEvent) => void
 }
 
-export function UsernameLink({ user, showPopover: _showPopover = true, className, children }: UsernameLinkProps) {
+export function UsernameLink({ user, showPopover: _showPopover = true, className, children, onClick }: UsernameLinkProps) {
     // Note: showPopover prop kept for backwards compatibility but ignored - we now always navigate directly
 
     const displayName = 'display_name' in user ? user.display_name : user.username
@@ -88,6 +89,7 @@ export function UsernameLink({ user, showPopover: _showPopover = true, className
     return (
         <Link
             to={`/user/${userIdentifier}`}
+            onClick={onClick}
             className={clsx(
                 'font-medium text-white hover:text-primary-400 transition-colors cursor-pointer',
                 className

@@ -36,6 +36,20 @@ from app.schemas.social import (
     UserPublicProfile,
     UserSearchResponse,
     UserSearchResult,
+    # Friend schemas
+    FriendResponse,
+    FriendsListResponse,
+    AddFriendResponse,
+    RemoveFriendResponse,
+    FriendshipStatusResponse,
+    # Subscription schemas
+    SubscriptionResponse,
+    SubscriptionsListResponse,
+    CreateSubscriptionRequest,
+    CreateSubscriptionResponse,
+    RemoveSubscriptionResponse,
+    SubscriptionStatusResponse,
+    UpdateSubscriptionRequest,
 )
 from app.services.social import (
     AlreadyBlockedError,
@@ -46,6 +60,11 @@ from app.services.social import (
     SelfActionError,
     SocialService,
     UserNotFoundError,
+    # Friend/subscription errors
+    AlreadyFriendsError,
+    NotFriendsError,
+    AlreadySubscribedError,
+    NotSubscribedError,
 )
 
 logger = logging.getLogger(__name__)
@@ -547,3 +566,234 @@ async def update_report_admin(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Report not found",
         )
+
+
+# =============================================================================
+# User Friendships (osu!-style)
+# =============================================================================
+
+
+@router.post("/users/{user_id}/friend", response_model=AddFriendResponse, status_code=status.HTTP_201_CREATED)
+async def add_friend(
+    user_id: UUID,
+    current_user: User = Depends(get_current_user),
+    service: SocialService = Depends(get_social_service),
+) -> AddFriendResponse:
+    """Add a user as a friend (follow them).
+
+    If the other user also adds you, you become mutual friends.
+    """
+    try:
+        friendship, is_mutual = await service.add_friend(
+            user_id=current_user.id,
+            friend_id=user_id,
+        )
+        return AddFriendResponse(
+            id=friendship.id,
+            friend_id=user_id,
+            is_mutual=is_mutual,
+            message="Friend added successfully" + (" - You are now mutual friends!" if is_mutual else ""),
+        )
+    except SelfActionError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot add yourself as a friend",
+        )
+    except UserNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    except AlreadyFriendsError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Already following this user",
+        )
+    except BlockedUserError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot add this user as a friend",
+        )
+
+
+@router.delete("/users/{user_id}/friend", response_model=RemoveFriendResponse)
+async def remove_friend(
+    user_id: UUID,
+    current_user: User = Depends(get_current_user),
+    service: SocialService = Depends(get_social_service),
+) -> RemoveFriendResponse:
+    """Remove a user from friends (unfollow them)."""
+    try:
+        await service.remove_friend(
+            user_id=current_user.id,
+            friend_id=user_id,
+        )
+        return RemoveFriendResponse(message="Friend removed successfully")
+    except NotFriendsError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Not following this user",
+        )
+
+
+@router.get("/friends", response_model=FriendsListResponse)
+async def get_friends(
+    current_user: User = Depends(get_current_user),
+    service: SocialService = Depends(get_social_service),
+) -> FriendsListResponse:
+    """Get list of users you are following."""
+    friends = await service.get_friends(current_user.id)
+    return FriendsListResponse(
+        items=[FriendResponse(**f) for f in friends],
+        total=len(friends),
+    )
+
+
+@router.get("/users/{user_id}/friendship", response_model=FriendshipStatusResponse)
+async def get_friendship_status(
+    user_id: UUID,
+    current_user: User = Depends(get_current_user),
+    service: SocialService = Depends(get_social_service),
+) -> FriendshipStatusResponse:
+    """Check friendship status with a user."""
+    status_data = await service.get_friendship_status(
+        user_id=current_user.id,
+        target_user_id=user_id,
+    )
+    return FriendshipStatusResponse(**status_data)
+
+
+# =============================================================================
+# User Subscriptions (Bell notifications)
+# =============================================================================
+
+
+@router.post("/users/{user_id}/subscribe", response_model=CreateSubscriptionResponse, status_code=status.HTTP_201_CREATED)
+async def subscribe_to_user(
+    user_id: UUID,
+    request: CreateSubscriptionRequest = CreateSubscriptionRequest(),
+    current_user: User = Depends(get_current_user),
+    service: SocialService = Depends(get_social_service),
+) -> CreateSubscriptionResponse:
+    """Subscribe to notifications when a user uploads new beatmaps.
+
+    Click the bell icon to get notified when this user uploads.
+    """
+    try:
+        subscription = await service.subscribe_to_user(
+            subscriber_id=current_user.id,
+            target_user_id=user_id,
+            notify_on_map_upload=request.notify_on_map_upload,
+            notify_on_map_ranked=request.notify_on_map_ranked,
+        )
+        return CreateSubscriptionResponse(
+            id=subscription.id,
+            target_user_id=user_id,
+            message="Subscribed! You'll be notified when this user uploads new beatmaps.",
+        )
+    except SelfActionError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot subscribe to yourself",
+        )
+    except UserNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    except AlreadySubscribedError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Already subscribed to this user",
+        )
+    except BlockedUserError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot subscribe to this user",
+        )
+
+
+@router.delete("/users/{user_id}/subscribe", response_model=RemoveSubscriptionResponse)
+async def unsubscribe_from_user(
+    user_id: UUID,
+    current_user: User = Depends(get_current_user),
+    service: SocialService = Depends(get_social_service),
+) -> RemoveSubscriptionResponse:
+    """Unsubscribe from a user's notifications."""
+    try:
+        await service.unsubscribe_from_user(
+            subscriber_id=current_user.id,
+            target_user_id=user_id,
+        )
+        return RemoveSubscriptionResponse(message="Unsubscribed successfully")
+    except NotSubscribedError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Not subscribed to this user",
+        )
+
+
+@router.patch("/users/{user_id}/subscribe", response_model=SubscriptionResponse)
+async def update_subscription(
+    user_id: UUID,
+    request: UpdateSubscriptionRequest,
+    current_user: User = Depends(get_current_user),
+    service: SocialService = Depends(get_social_service),
+    db: AsyncSession = Depends(get_db_session),
+) -> SubscriptionResponse:
+    """Update subscription notification preferences."""
+    try:
+        subscription = await service.update_subscription(
+            subscriber_id=current_user.id,
+            target_user_id=user_id,
+            notify_on_map_upload=request.notify_on_map_upload,
+            notify_on_map_ranked=request.notify_on_map_ranked,
+        )
+        
+        # Get target user info
+        from sqlalchemy import select
+        result = await db.execute(select(User).where(User.id == user_id))
+        target_user = result.scalar_one()
+        
+        return SubscriptionResponse(
+            id=subscription.id,
+            target_user_id=subscription.target_user_id,
+            target_user_display_name=target_user.display_name,
+            target_user_avatar_url=target_user.avatar_url,
+            target_user_number=target_user.user_number,
+            notify_on_map_upload=subscription.notify_on_map_upload,
+            notify_on_map_ranked=subscription.notify_on_map_ranked,
+            created_at=subscription.created_at,
+        )
+    except NotSubscribedError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Not subscribed to this user",
+        )
+
+
+@router.get("/subscriptions", response_model=SubscriptionsListResponse)
+async def get_subscriptions(
+    current_user: User = Depends(get_current_user),
+    service: SocialService = Depends(get_social_service),
+) -> SubscriptionsListResponse:
+    """Get list of users you are subscribed to."""
+    subscriptions = await service.get_subscriptions(current_user.id)
+    return SubscriptionsListResponse(
+        items=[SubscriptionResponse(**s) for s in subscriptions],
+        total=len(subscriptions),
+    )
+
+
+@router.get("/users/{user_id}/subscription", response_model=SubscriptionStatusResponse)
+async def get_subscription_status(
+    user_id: UUID,
+    current_user: User = Depends(get_current_user),
+    service: SocialService = Depends(get_social_service),
+) -> SubscriptionStatusResponse:
+    """Check subscription status for a user."""
+    status_data = await service.get_subscription_status(
+        subscriber_id=current_user.id,
+        target_user_id=user_id,
+    )
+    return SubscriptionStatusResponse(**status_data)

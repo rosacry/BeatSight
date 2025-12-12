@@ -385,7 +385,7 @@ export function KarmaBreakdownTooltip({
                 {breakdown && breakdown.rank > 0 && (
                     <div className="px-4 py-2 bg-dark-400/50 border-t border-white/5 text-center">
                         <span className="text-xs text-gray-400">
-                            Global Rank: <span className="text-white font-medium">#{breakdown.rank.toLocaleString()}</span>
+                            Karma Ranking: <span className="text-white font-medium">#{breakdown.rank.toLocaleString()}</span>
                         </span>
                     </div>
                 )}

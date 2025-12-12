@@ -98,7 +98,7 @@ function getColumnValue(entry: LeaderboardEntry, key: SortKey): number {
 export function KarmaRankBadge({ karma, showIcon = true }: { karma: number; showIcon?: boolean }) {
     const rank = getKarmaRank(karma)
     return (
-        <span className={`text-[10px] px-1.5 py-0.5 ${rank.bgColor} ${rank.color} ${rank.borderColor} border rounded font-medium inline-flex items-center gap-1 whitespace-nowrap`}>
+        <span className={`text-[10px] px-1.5 py-0.5 ${rank.bgColor} ${rank.color} ${rank.borderColor} border rounded font-medium inline-flex items-center gap-1 whitespace-nowrap align-middle`}>
             {showIcon && <span>{rank.icon}</span>}
             <span>{rank.name}</span>
         </span>

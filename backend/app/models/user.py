@@ -25,7 +25,7 @@ if TYPE_CHECKING:  # pragma: no cover - type-checking only
     from .phone_verification import PhoneVerificationCode
     from .push_subscription import PushSubscription
     from .role import UserRole
-    from .social import DirectMessage, UserBlock, UserReport
+    from .social import DirectMessage, UserBlock, UserReport, UserFriendship, UserSubscription
     from .song import Song
     from .subscription import Subscription
     from .training_contribution import ContributionConsent, TrainingContribution
@@ -232,6 +232,34 @@ class User(Base):
         "UserReport",
         back_populates="reported_user",
         foreign_keys="UserReport.reported_user_id",
+        cascade="all, delete-orphan",
+    )
+
+    # Social: Friendships (osu!-style)
+    friends_added: Mapped[list["UserFriendship"]] = relationship(
+        "UserFriendship",
+        back_populates="user",
+        foreign_keys="UserFriendship.user_id",
+        cascade="all, delete-orphan",
+    )
+    friends_received: Mapped[list["UserFriendship"]] = relationship(
+        "UserFriendship",
+        back_populates="friend",
+        foreign_keys="UserFriendship.friend_id",
+        cascade="all, delete-orphan",
+    )
+
+    # Social: Subscriptions (bell notifications)
+    subscriptions: Mapped[list["UserSubscription"]] = relationship(
+        "UserSubscription",
+        back_populates="subscriber",
+        foreign_keys="UserSubscription.subscriber_id",
+        cascade="all, delete-orphan",
+    )
+    subscribers: Mapped[list["UserSubscription"]] = relationship(
+        "UserSubscription",
+        back_populates="target_user",
+        foreign_keys="UserSubscription.target_user_id",
         cascade="all, delete-orphan",
     )
 

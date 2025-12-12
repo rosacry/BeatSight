@@ -24,6 +24,8 @@ from app.models.social import (
     ReportType,
     UserBlock,
     UserReport,
+    UserFriendship,
+    UserSubscription,
 )
 from app.models.user import RestrictionLevel, User
 
@@ -75,6 +77,26 @@ class NotBlockedError(SocialError):
 
 class DuplicateReportError(SocialError):
     """A pending report already exists for this user."""
+    pass
+
+
+class AlreadyFriendsError(SocialError):
+    """Already following this user."""
+    pass
+
+
+class NotFriendsError(SocialError):
+    """Not following this user."""
+    pass
+
+
+class AlreadySubscribedError(SocialError):
+    """Already subscribed to this user."""
+    pass
+
+
+class NotSubscribedError(SocialError):
+    """Not subscribed to this user."""
     pass
 
 
@@ -748,3 +770,430 @@ class SocialService:
             raise ReportNotFoundError(f"Report {report_id} not found")
 
         return report
+
+    # =========================================================================
+    # Friendships (osu!-style)
+    # =========================================================================
+
+    async def add_friend(
+        self,
+        user_id: UUID,
+        friend_id: UUID,
+    ) -> tuple[UserFriendship, bool]:
+        """Add a user as a friend.
+
+        Args:
+            user_id: Current user's ID
+            friend_id: User ID to add as friend
+
+        Returns:
+            Tuple of (UserFriendship, is_mutual)
+
+        Raises:
+            SelfActionError: If trying to friend yourself
+            UserNotFoundError: If friend doesn't exist
+            AlreadyFriendsError: If already following this user
+            BlockedUserError: If either user has blocked the other
+        """
+        if user_id == friend_id:
+            raise SelfActionError("Cannot add yourself as a friend")
+
+        # Check if friend exists
+        friend = await self._get_user_by_id(friend_id)
+        if not friend:
+            raise UserNotFoundError(f"User {friend_id} not found")
+
+        # Check for blocks
+        if await self._is_blocked(user_id, friend_id):
+            raise BlockedUserError("Cannot add blocked user as friend")
+
+        # Check if already following
+        existing = await self.db.execute(
+            select(UserFriendship).where(
+                and_(
+                    UserFriendship.user_id == user_id,
+                    UserFriendship.friend_id == friend_id,
+                )
+            )
+        )
+        if existing.scalar_one_or_none():
+            raise AlreadyFriendsError("Already following this user")
+
+        # Create friendship
+        friendship = UserFriendship(
+            user_id=user_id,
+            friend_id=friend_id,
+        )
+        self.db.add(friendship)
+        await self.db.commit()
+        await self.db.refresh(friendship)
+
+        # Check if mutual
+        is_mutual = await self._is_mutual_friend(user_id, friend_id)
+
+        return friendship, is_mutual
+
+    async def remove_friend(
+        self,
+        user_id: UUID,
+        friend_id: UUID,
+    ) -> None:
+        """Remove a user from friends.
+
+        Args:
+            user_id: Current user's ID
+            friend_id: User ID to remove
+
+        Raises:
+            NotFriendsError: If not following this user
+        """
+        result = await self.db.execute(
+            select(UserFriendship).where(
+                and_(
+                    UserFriendship.user_id == user_id,
+                    UserFriendship.friend_id == friend_id,
+                )
+            )
+        )
+        friendship = result.scalar_one_or_none()
+        
+        if not friendship:
+            raise NotFriendsError("Not following this user")
+
+        await self.db.delete(friendship)
+        await self.db.commit()
+
+    async def get_friends(
+        self,
+        user_id: UUID,
+        include_mutual_status: bool = True,
+    ) -> list[dict]:
+        """Get list of users the current user is following.
+
+        Args:
+            user_id: Current user's ID
+            include_mutual_status: Whether to check if friends are mutual
+
+        Returns:
+            List of friend data with mutual status
+        """
+        result = await self.db.execute(
+            select(UserFriendship)
+            .where(UserFriendship.user_id == user_id)
+            .options(selectinload(UserFriendship.friend))
+            .order_by(UserFriendship.created_at.desc())
+        )
+        friendships = result.scalars().all()
+
+        friends = []
+        for f in friendships:
+            is_mutual = False
+            if include_mutual_status:
+                is_mutual = await self._is_mutual_friend(user_id, f.friend_id)
+            
+            friends.append({
+                'id': f.id,
+                'friend_id': f.friend_id,
+                'friend_display_name': f.friend.display_name,
+                'friend_avatar_url': f.friend.avatar_url,
+                'friend_user_number': f.friend.user_number,
+                'is_mutual': is_mutual,
+                'created_at': f.created_at,
+            })
+
+        return friends
+
+    async def get_friend_count(self, user_id: UUID) -> int:
+        """Get count of users following this user."""
+        result = await self.db.execute(
+            select(func.count(UserFriendship.id))
+            .where(UserFriendship.friend_id == user_id)
+        )
+        return result.scalar() or 0
+
+    async def get_friendship_status(
+        self,
+        user_id: UUID,
+        target_user_id: UUID,
+    ) -> dict:
+        """Get friendship status between two users.
+
+        Returns:
+            Dict with is_following, is_followed_by, is_mutual
+        """
+        # Check if user is following target
+        result1 = await self.db.execute(
+            select(UserFriendship).where(
+                and_(
+                    UserFriendship.user_id == user_id,
+                    UserFriendship.friend_id == target_user_id,
+                )
+            )
+        )
+        is_following = result1.scalar_one_or_none() is not None
+
+        # Check if target is following user
+        result2 = await self.db.execute(
+            select(UserFriendship).where(
+                and_(
+                    UserFriendship.user_id == target_user_id,
+                    UserFriendship.friend_id == user_id,
+                )
+            )
+        )
+        is_followed_by = result2.scalar_one_or_none() is not None
+
+        return {
+            'is_following': is_following,
+            'is_followed_by': is_followed_by,
+            'is_mutual': is_following and is_followed_by,
+        }
+
+    async def _is_mutual_friend(self, user_id: UUID, friend_id: UUID) -> bool:
+        """Check if two users follow each other."""
+        result = await self.db.execute(
+            select(UserFriendship).where(
+                and_(
+                    UserFriendship.user_id == friend_id,
+                    UserFriendship.friend_id == user_id,
+                )
+            )
+        )
+        return result.scalar_one_or_none() is not None
+
+    # =========================================================================
+    # Subscriptions (Bell notifications)
+    # =========================================================================
+
+    async def subscribe_to_user(
+        self,
+        subscriber_id: UUID,
+        target_user_id: UUID,
+        notify_on_map_upload: bool = True,
+        notify_on_map_ranked: bool = False,
+    ) -> UserSubscription:
+        """Subscribe to a user's uploads.
+
+        Args:
+            subscriber_id: Current user's ID
+            target_user_id: User ID to subscribe to
+            notify_on_map_upload: Notify when user uploads a new beatmap
+            notify_on_map_ranked: Notify when user's beatmap gets ranked
+
+        Returns:
+            UserSubscription object
+
+        Raises:
+            SelfActionError: If trying to subscribe to yourself
+            UserNotFoundError: If target user doesn't exist
+            AlreadySubscribedError: If already subscribed
+            BlockedUserError: If blocked by target user
+        """
+        if subscriber_id == target_user_id:
+            raise SelfActionError("Cannot subscribe to yourself")
+
+        # Check if target exists
+        target = await self._get_user_by_id(target_user_id)
+        if not target:
+            raise UserNotFoundError(f"User {target_user_id} not found")
+
+        # Check for blocks
+        if await self._is_blocked(subscriber_id, target_user_id):
+            raise BlockedUserError("Cannot subscribe to blocked user")
+
+        # Check if already subscribed
+        existing = await self.db.execute(
+            select(UserSubscription).where(
+                and_(
+                    UserSubscription.subscriber_id == subscriber_id,
+                    UserSubscription.target_user_id == target_user_id,
+                )
+            )
+        )
+        if existing.scalar_one_or_none():
+            raise AlreadySubscribedError("Already subscribed to this user")
+
+        # Create subscription
+        subscription = UserSubscription(
+            subscriber_id=subscriber_id,
+            target_user_id=target_user_id,
+            notify_on_map_upload=notify_on_map_upload,
+            notify_on_map_ranked=notify_on_map_ranked,
+        )
+        self.db.add(subscription)
+        await self.db.commit()
+        await self.db.refresh(subscription)
+
+        return subscription
+
+    async def unsubscribe_from_user(
+        self,
+        subscriber_id: UUID,
+        target_user_id: UUID,
+    ) -> None:
+        """Unsubscribe from a user.
+
+        Args:
+            subscriber_id: Current user's ID
+            target_user_id: User ID to unsubscribe from
+
+        Raises:
+            NotSubscribedError: If not subscribed to this user
+        """
+        result = await self.db.execute(
+            select(UserSubscription).where(
+                and_(
+                    UserSubscription.subscriber_id == subscriber_id,
+                    UserSubscription.target_user_id == target_user_id,
+                )
+            )
+        )
+        subscription = result.scalar_one_or_none()
+        
+        if not subscription:
+            raise NotSubscribedError("Not subscribed to this user")
+
+        await self.db.delete(subscription)
+        await self.db.commit()
+
+    async def update_subscription(
+        self,
+        subscriber_id: UUID,
+        target_user_id: UUID,
+        notify_on_map_upload: Optional[bool] = None,
+        notify_on_map_ranked: Optional[bool] = None,
+    ) -> UserSubscription:
+        """Update subscription preferences.
+
+        Args:
+            subscriber_id: Current user's ID
+            target_user_id: User ID subscribed to
+            notify_on_map_upload: Update map upload notifications
+            notify_on_map_ranked: Update ranked notifications
+
+        Returns:
+            Updated UserSubscription object
+
+        Raises:
+            NotSubscribedError: If not subscribed to this user
+        """
+        result = await self.db.execute(
+            select(UserSubscription).where(
+                and_(
+                    UserSubscription.subscriber_id == subscriber_id,
+                    UserSubscription.target_user_id == target_user_id,
+                )
+            )
+        )
+        subscription = result.scalar_one_or_none()
+        
+        if not subscription:
+            raise NotSubscribedError("Not subscribed to this user")
+
+        if notify_on_map_upload is not None:
+            subscription.notify_on_map_upload = notify_on_map_upload
+        if notify_on_map_ranked is not None:
+            subscription.notify_on_map_ranked = notify_on_map_ranked
+
+        await self.db.commit()
+        await self.db.refresh(subscription)
+
+        return subscription
+
+    async def get_subscriptions(
+        self,
+        subscriber_id: UUID,
+    ) -> list[dict]:
+        """Get list of users the current user is subscribed to.
+
+        Returns:
+            List of subscription data
+        """
+        result = await self.db.execute(
+            select(UserSubscription)
+            .where(UserSubscription.subscriber_id == subscriber_id)
+            .options(selectinload(UserSubscription.target_user))
+            .order_by(UserSubscription.created_at.desc())
+        )
+        subscriptions = result.scalars().all()
+
+        return [
+            {
+                'id': s.id,
+                'target_user_id': s.target_user_id,
+                'target_user_display_name': s.target_user.display_name,
+                'target_user_avatar_url': s.target_user.avatar_url,
+                'target_user_number': s.target_user.user_number,
+                'notify_on_map_upload': s.notify_on_map_upload,
+                'notify_on_map_ranked': s.notify_on_map_ranked,
+                'created_at': s.created_at,
+            }
+            for s in subscriptions
+        ]
+
+    async def get_subscriber_count(self, target_user_id: UUID) -> int:
+        """Get count of users subscribed to this user."""
+        result = await self.db.execute(
+            select(func.count(UserSubscription.id))
+            .where(UserSubscription.target_user_id == target_user_id)
+        )
+        return result.scalar() or 0
+
+    async def get_subscription_status(
+        self,
+        subscriber_id: UUID,
+        target_user_id: UUID,
+    ) -> dict:
+        """Get subscription status for a user.
+
+        Returns:
+            Dict with is_subscribed and notification preferences
+        """
+        result = await self.db.execute(
+            select(UserSubscription).where(
+                and_(
+                    UserSubscription.subscriber_id == subscriber_id,
+                    UserSubscription.target_user_id == target_user_id,
+                )
+            )
+        )
+        subscription = result.scalar_one_or_none()
+
+        if subscription:
+            return {
+                'is_subscribed': True,
+                'notify_on_map_upload': subscription.notify_on_map_upload,
+                'notify_on_map_ranked': subscription.notify_on_map_ranked,
+            }
+        return {
+            'is_subscribed': False,
+            'notify_on_map_upload': False,
+            'notify_on_map_ranked': False,
+        }
+
+    async def get_subscribers_for_notification(
+        self,
+        target_user_id: UUID,
+        notification_type: str = 'map_upload',
+    ) -> list[UUID]:
+        """Get list of subscriber IDs for sending notifications.
+
+        Args:
+            target_user_id: User who triggered the notification
+            notification_type: 'map_upload' or 'map_ranked'
+
+        Returns:
+            List of subscriber user IDs
+        """
+        query = select(UserSubscription.subscriber_id).where(
+            UserSubscription.target_user_id == target_user_id
+        )
+        
+        if notification_type == 'map_upload':
+            query = query.where(UserSubscription.notify_on_map_upload == True)
+        elif notification_type == 'map_ranked':
+            query = query.where(UserSubscription.notify_on_map_ranked == True)
+
+        result = await self.db.execute(query)
+        return [row[0] for row in result.all()]
+

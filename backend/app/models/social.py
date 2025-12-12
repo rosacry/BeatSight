@@ -274,3 +274,114 @@ class UserReport(Base):
     __table_args__ = (
         Index("ix_user_reports_status_created", "status", "created_at"),
     )
+
+
+# =============================================================================
+# User Friendships (osu!-style with mutual friends)
+# =============================================================================
+
+
+class UserFriendship(Base):
+    """User friendship/following relationship.
+    
+    Like osu!, when user A adds user B:
+    - A is following B
+    - If B also adds A, they become mutual friends
+    """
+
+    __tablename__ = "user_friendships"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+
+    # The user who added the friend
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    # The user being added as friend
+    friend_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    # Relationships
+    user: Mapped["User"] = relationship(
+        "User",
+        back_populates="friends_added",
+        foreign_keys=[user_id],
+    )
+    friend: Mapped["User"] = relationship(
+        "User",
+        back_populates="friends_received",
+        foreign_keys=[friend_id],
+    )
+
+    __table_args__ = (
+        Index("ix_user_friendships_user_friend", "user_id", "friend_id", unique=True),
+    )
+
+
+# =============================================================================
+# User Subscriptions (bell notifications for beatmap uploads)
+# =============================================================================
+
+
+class UserSubscription(Base):
+    """User subscription for notifications about another user's uploads.
+    
+    When subscribed to a user, you get notified when they upload new beatmaps.
+    Similar to osu!'s bell notification feature.
+    """
+
+    __tablename__ = "user_subscriptions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+
+    # The user who is subscribing
+    subscriber_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    # The user being subscribed to
+    target_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    # Notification preferences
+    notify_on_map_upload: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    notify_on_map_ranked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    # Relationships
+    subscriber: Mapped["User"] = relationship(
+        "User",
+        back_populates="subscriptions",
+        foreign_keys=[subscriber_id],
+    )
+    target_user: Mapped["User"] = relationship(
+        "User",
+        back_populates="subscribers",
+        foreign_keys=[target_user_id],
+    )
+
+    __table_args__ = (
+        Index("ix_user_subscriptions_subscriber_target", "subscriber_id", "target_user_id", unique=True),
+    )

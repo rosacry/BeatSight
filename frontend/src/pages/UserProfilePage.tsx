@@ -20,7 +20,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { API_CONFIG } from '@/lib/config'
 import { Button } from '@/components/ui/Button'
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal'
-import { useBlockUser, useUnblockUser, useReportUser } from '@/api/socialHooks'
+import { useBlockUser, useUnblockUser, useReportUser, useFriendshipStatus, useSubscriptionStatus, useAddFriend, useRemoveFriend, useSubscribeToUser, useUnsubscribeFromUser } from '@/api/socialHooks'
 import type { ReportType } from '@/api/social'
 import {
     AnimatedTabContent,
@@ -109,6 +109,47 @@ function FlagIcon({ className }: { className?: string }) {
     return (
         <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+        </svg>
+    )
+}
+
+function UserPlusIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+        </svg>
+    )
+}
+
+function UserCheckIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11l2 2 4-4" />
+        </svg>
+    )
+}
+
+function UsersIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+    )
+}
+
+function BellIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+    )
+}
+
+function BellFilledIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
         </svg>
     )
 }
@@ -206,6 +247,18 @@ export function UserProfilePage() {
         enabled: !!userId,
     })
 
+    // Friend/subscription hooks - enabled only when profile is loaded and viewing other user
+    const { data: friendshipStatus } = useFriendshipStatus(
+        profile && !isOwnProfile && isAuthenticated ? profile.id : undefined
+    )
+    const { data: subscriptionStatus } = useSubscriptionStatus(
+        profile && !isOwnProfile && isAuthenticated ? profile.id : undefined
+    )
+    const addFriend = useAddFriend()
+    const removeFriend = useRemoveFriend()
+    const subscribeToUser = useSubscribeToUser()
+    const unsubscribeFromUser = useUnsubscribeFromUser()
+
     // Fetch user's beatmaps
     const { data: userMaps } = useQuery<UserMap[]>({
         queryKey: ['user-maps', userId],
@@ -231,6 +284,32 @@ export function UserProfilePage() {
 
     const handleTabChange = (tab: ProfileTab) => {
         setSearchParams({ tab }, { replace: true })
+    }
+
+    const handleFriendClick = async () => {
+        if (!profile) return
+        try {
+            if (friendshipStatus?.is_following) {
+                await removeFriend.mutateAsync(profile.id)
+            } else {
+                await addFriend.mutateAsync(profile.id)
+            }
+        } catch (err) {
+            console.error('Failed to update friend status:', err)
+        }
+    }
+
+    const handleSubscribeClick = async () => {
+        if (!profile) return
+        try {
+            if (subscriptionStatus?.is_subscribed) {
+                await unsubscribeFromUser.mutateAsync(profile.id)
+            } else {
+                await subscribeToUser.mutateAsync({ userId: profile.id })
+            }
+        } catch (err) {
+            console.error('Failed to update subscription:', err)
+        }
     }
 
     const handleBlock = async () => {
@@ -507,6 +586,60 @@ export function UserProfilePage() {
                                         Message
                                     </Button>
                                 </Link>
+
+                                {/* Add Friend / Mutual Button */}
+                                <Button
+                                    variant={friendshipStatus?.is_mutual ? 'primary' : friendshipStatus?.is_following ? 'secondary' : 'outline'}
+                                    size="md"
+                                    onClick={handleFriendClick}
+                                    disabled={addFriend.isPending || removeFriend.isPending}
+                                    className={
+                                        friendshipStatus?.is_mutual
+                                            ? 'bg-purple-600 hover:bg-purple-700'
+                                            : friendshipStatus?.is_following
+                                                ? 'bg-green-600 hover:bg-green-700 hover:bg-red-600'
+                                                : ''
+                                    }
+                                >
+                                    {friendshipStatus?.is_mutual ? (
+                                        <>
+                                            <UsersIcon className="w-4 h-4 mr-2" />
+                                            Mutual
+                                        </>
+                                    ) : friendshipStatus?.is_following ? (
+                                        <>
+                                            <UserCheckIcon className="w-4 h-4 mr-2" />
+                                            Added
+                                        </>
+                                    ) : (
+                                        <>
+                                            <UserPlusIcon className="w-4 h-4 mr-2" />
+                                            Add Friend
+                                        </>
+                                    )}
+                                </Button>
+
+                                {/* Subscribe Button */}
+                                <Button
+                                    variant={subscriptionStatus?.is_subscribed ? 'secondary' : 'outline'}
+                                    size="md"
+                                    onClick={handleSubscribeClick}
+                                    disabled={subscribeToUser.isPending || unsubscribeFromUser.isPending}
+                                    className={subscriptionStatus?.is_subscribed ? 'bg-yellow-600 hover:bg-yellow-700' : ''}
+                                    title={subscriptionStatus?.is_subscribed ? 'Subscribed - Click to Unsubscribe' : 'Subscribe to get notified when this user uploads'}
+                                >
+                                    {subscriptionStatus?.is_subscribed ? (
+                                        <>
+                                            <BellFilledIcon className="w-4 h-4 mr-2" />
+                                            Subscribed
+                                        </>
+                                    ) : (
+                                        <>
+                                            <BellIcon className="w-4 h-4 mr-2" />
+                                            Subscribe
+                                        </>
+                                    )}
+                                </Button>
 
                                 {isBlocked ? (
                                     <Button

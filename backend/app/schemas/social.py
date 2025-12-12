@@ -232,3 +232,111 @@ class AdminUpdateReportRequest(BaseModel):
 
     status: ReportStatus
     admin_notes: Optional[str] = Field(None, max_length=2000)
+
+
+# =============================================================================
+# User Friendships (osu!-style)
+# =============================================================================
+
+
+class FriendResponse(BaseModel):
+    """Friend/following relationship information."""
+
+    id: UUID
+    friend_id: UUID
+    friend_display_name: str
+    friend_avatar_url: Optional[str] = None
+    friend_user_number: int
+    is_mutual: bool  # True if both users have added each other
+    created_at: datetime
+
+
+class FriendsListResponse(BaseModel):
+    """List of friends/following."""
+
+    items: list[FriendResponse]
+    total: int
+
+
+class AddFriendResponse(BaseModel):
+    """Response from adding a friend."""
+
+    id: UUID
+    friend_id: UUID
+    is_mutual: bool
+    message: str
+
+
+class RemoveFriendResponse(BaseModel):
+    """Response from removing a friend."""
+
+    message: str
+
+
+class FriendshipStatusResponse(BaseModel):
+    """Check friendship status between current user and target user."""
+
+    is_following: bool  # Current user follows target
+    is_followed_by: bool  # Target follows current user
+    is_mutual: bool  # Both follow each other
+
+
+# =============================================================================
+# User Subscriptions (Bell notifications)
+# =============================================================================
+
+
+class SubscriptionResponse(BaseModel):
+    """Subscription to a user's uploads."""
+
+    id: UUID
+    target_user_id: UUID
+    target_user_display_name: str
+    target_user_avatar_url: Optional[str] = None
+    target_user_number: int
+    notify_on_map_upload: bool
+    notify_on_map_ranked: bool
+    created_at: datetime
+
+
+class SubscriptionsListResponse(BaseModel):
+    """List of subscriptions."""
+
+    items: list[SubscriptionResponse]
+    total: int
+
+
+class CreateSubscriptionRequest(BaseModel):
+    """Request to subscribe to a user."""
+
+    notify_on_map_upload: bool = True
+    notify_on_map_ranked: bool = False
+
+
+class UpdateSubscriptionRequest(BaseModel):
+    """Request to update subscription preferences."""
+
+    notify_on_map_upload: Optional[bool] = None
+    notify_on_map_ranked: Optional[bool] = None
+
+
+class CreateSubscriptionResponse(BaseModel):
+    """Response from creating a subscription."""
+
+    id: UUID
+    target_user_id: UUID
+    message: str
+
+
+class RemoveSubscriptionResponse(BaseModel):
+    """Response from removing a subscription."""
+
+    message: str
+
+
+class SubscriptionStatusResponse(BaseModel):
+    """Check if subscribed to a user."""
+
+    is_subscribed: bool
+    notify_on_map_upload: bool
+    notify_on_map_ranked: bool

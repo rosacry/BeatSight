@@ -29,6 +29,7 @@ import {
     StaggerSection,
     PageContentWrapper
 } from '@/components/ui/UnifiedTransitions'
+import { KarmaRankBadge } from './LeaderboardPage'
 
 // =============================================================================
 // Types
@@ -394,7 +395,7 @@ export function UserProfilePage() {
                             </div>
                         </div>
 
-                        {/* Karma Score */}
+                        {/* Karma Score + Rank */}
                         <div className="text-center md:text-right pb-4">
                             <div className="flex items-center gap-2 justify-center md:justify-end">
                                 <StarIcon className="w-5 h-5 text-yellow-400" />
@@ -402,7 +403,8 @@ export function UserProfilePage() {
                                     {profile.karma_score.toLocaleString()}
                                 </span>
                             </div>
-                            <p className="text-sm text-gray-400">Karma</p>
+                            <p className="text-sm text-gray-400 mb-2">Karma</p>
+                            <KarmaRankBadge karma={profile.karma_score} />
                         </div>
                     </div>
                 </div>

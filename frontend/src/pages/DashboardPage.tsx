@@ -22,6 +22,7 @@ import {
     staggerItemVariants,
     PageContentWrapper
 } from '@/components/ui/UnifiedTransitions'
+import { KarmaRankBadge } from './LeaderboardPage'
 
 // Animation variants - use unified system
 const containerVariants = staggerContainerVariants
@@ -238,6 +239,9 @@ export function DashboardPage() {
                                             <AnimatedCounter value={user.karma_score || 0} />
                                         </p>
                                         <p className="text-xs text-gray-500 mt-0.5">Karma</p>
+                                        <div className="mt-1">
+                                            <KarmaRankBadge karma={user.karma_score || 0} />
+                                        </div>
                                     </div>
                                     <div className="text-center p-2.5 rounded-lg bg-dark-300">
                                         <p className="text-xl font-bold text-accent-400">

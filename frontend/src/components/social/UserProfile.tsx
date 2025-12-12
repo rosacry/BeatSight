@@ -16,6 +16,7 @@ import type { UserSearchResult, ReportType } from '@/api/social'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal'
+import { KarmaRankBadge } from '@/pages/LeaderboardPage'
 
 // Icons
 const MessageIcon = () => (
@@ -179,13 +180,7 @@ export function UserProfileModal({ userId, open, onClose }: UserProfileModalProp
                                     <span className="font-medium">{profile.karma_score}</span>
                                     <span className="text-sm text-gray-400">karma</span>
                                 </div>
-                                <div className="text-sm text-gray-400">
-                                    Joined{' '}
-                                    {new Date(profile.created_at).toLocaleDateString('en-US', {
-                                        month: 'short',
-                                        year: 'numeric',
-                                    })}
-                                </div>
+                                <KarmaRankBadge karma={profile.karma_score} />
                             </div>
 
                             {/* Actions */}

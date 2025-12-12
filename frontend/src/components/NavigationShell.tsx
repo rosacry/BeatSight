@@ -185,7 +185,7 @@ interface DropdownMenuProps {
 
 function DropdownMenu({ label, items, isActive }: DropdownMenuProps) {
     const [isOpen, setIsOpen] = useState(false)
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated())
 
     const handleMouseEnter = () => {

@@ -57,8 +57,8 @@ export function useAutoSave<T>({
     const [saveState, setSaveState] = useState<SaveState>('idle')
     const [error, setError] = useState<string | null>(null)
 
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-    const savedTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const lastValueRef = useRef<T | null>(null)
     const isMountedRef = useRef(true)
 
@@ -176,8 +176,8 @@ export function useMultiAutoSave({
     savedDisplayMs = 2000,
 }: UseMultiAutoSaveOptions = {}): UseMultiAutoSaveReturn {
     const [fieldStates, setFieldStates] = useState<Record<string, FieldSaveState>>({})
-    const timeoutsRef = useRef<Record<string, NodeJS.Timeout>>({})
-    const savedTimeoutsRef = useRef<Record<string, NodeJS.Timeout>>({})
+    const timeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+    const savedTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
     const isMountedRef = useRef(true)
 
     // Cleanup on unmount

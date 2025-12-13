@@ -20,7 +20,7 @@ import { PhoneVerificationSettings } from '@/components/PhoneVerificationSetting
 import { SaveIndicator } from '@/components/SaveIndicator'
 import { API_CONFIG } from '@/lib/config'
 import { Select } from '@/components/ui/Dropdown'
-import { useMultiAutoSave, type SaveState } from '@/hooks/useAutoSave'
+import { useMultiAutoSave } from '@/hooks/useAutoSave'
 import {
     tabContentVariants as unifiedTabContentVariants,
     TRANSITION_DURATION
@@ -208,48 +208,7 @@ export function SettingsPage() {
         }
     }, [accessToken])
 
-    // Save contribution consent
-    const handleSaveContributionConsent = async () => {
-        if (!accessToken) return
-        setIsSaving(true)
-        setError(null)
-        try {
-            await apiRequest('/contributions/consent', {
-                method: 'POST',
-                body: JSON.stringify(contributionConsent),
-            }, accessToken)
-            setSuccessMessage('Training data settings saved!')
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to save training data settings')
-        } finally {
-            setIsSaving(false)
-        }
-    }
 
-    // Save anonymous mode settings to the database (user_settings table)
-    // This is separate from cloud sync preferences - these settings control
-    // whether the user appears anonymously on leaderboards and public queues
-    const handleSaveAnonymousSettings = async () => {
-        if (!accessToken) return
-        setIsSaving(true)
-        setError(null)
-        try {
-            // Save to user_settings table via /users/me/settings endpoint
-            await apiRequest('/users/me/settings', {
-                method: 'PATCH',
-                body: JSON.stringify({
-                    hide_from_leaderboards: anonymousSettings.hide_from_leaderboards,
-                    hide_from_public_queues: anonymousSettings.hide_from_public_queues,
-                }),
-            }, accessToken)
-
-            setSuccessMessage('Anonymous mode settings saved!')
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to save anonymous mode settings')
-        } finally {
-            setIsSaving(false)
-        }
-    }
 
     // Load preferences on mount
     // Default preferences used when cloud sync is disabled
@@ -690,7 +649,6 @@ export function SettingsPage() {
                                                     currentBannerUrl={user?.banner_url}
                                                     mode="standalone"
                                                     onUploadSuccess={() => {
-                                                        setSuccessMessage('Banner updated!')
                                                         fetchCurrentUser()
                                                     }}
                                                     onUploadError={(err) => {
@@ -707,7 +665,7 @@ export function SettingsPage() {
                                                         currentAvatarUrl={user?.avatar_url}
                                                         size="lg"
                                                         onUploadSuccess={() => {
-                                                            setSuccessMessage('Avatar updated!')
+                                                            fetchCurrentUser()
                                                         }}
                                                         onUploadError={(err) => {
                                                             setError(err)

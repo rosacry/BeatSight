@@ -79,3 +79,9 @@ export type {
     UserContext,
 } from './useFeatureFlags'
 
+// Auto-save hooks for osu!-style settings
+export {
+    useAutoSave,
+    useMultiAutoSave,
+} from './useAutoSave'
+export type { SaveState } from './useAutoSave'

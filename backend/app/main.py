@@ -27,6 +27,7 @@ from app.api.routes import (
     phone,
     roles,
     search,
+    session_verification,
     social,
     songs,
     storage,
@@ -267,6 +268,7 @@ app.include_router(achievements.router, prefix=settings.api_prefix)
 app.include_router(auth.router, prefix=settings.api_prefix)
 app.include_router(twofa.router, prefix=settings.api_prefix)
 app.include_router(phone.router, prefix=settings.api_prefix)
+app.include_router(session_verification.router, prefix=settings.api_prefix)
 app.include_router(users.router, prefix=settings.api_prefix)
 app.include_router(songs.router, prefix=settings.api_prefix)
 app.include_router(ai_jobs.router, prefix=settings.api_prefix)

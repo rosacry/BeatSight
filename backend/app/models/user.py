@@ -25,6 +25,7 @@ if TYPE_CHECKING:  # pragma: no cover - type-checking only
     from .phone_verification import PhoneVerificationCode
     from .push_subscription import PushSubscription
     from .role import UserRole
+    from .session_verification import SessionVerification
     from .social import DirectMessage, UserBlock, UserReport, UserFriendship, UserSubscription
     from .song import Song
     from .subscription import Subscription
@@ -276,6 +277,13 @@ class User(Base):
         foreign_keys="UserTag.user_id",
         cascade="all, delete-orphan",
         order_by="UserTag.display_order",
+    )
+
+    # Session verifications for sensitive action verification (osu!-style)
+    session_verifications: Mapped[list["SessionVerification"]] = relationship(
+        "SessionVerification",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
 
     @property

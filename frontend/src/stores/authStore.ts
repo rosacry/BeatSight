@@ -284,6 +284,12 @@ export const useAuthStore = create<AuthStore>()(
 
             // Logout action
             logout: () => {
+                // Reset verification state on logout
+                // Import dynamically to avoid circular dependency
+                import('./verificationStore').then(({ resetSessionVerification }) => {
+                    resetSessionVerification()
+                })
+
                 set({
                     user: null,
                     accessToken: null,

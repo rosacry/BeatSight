@@ -2,9 +2,11 @@
  * User settings page.
  * Account settings, preferences, and notification configuration.
  * Persists to backend via /api/users/me and /api/sync/preferences
+ * 
+ * Uses osu!-style auto-save: changes are saved automatically as you make them.
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -15,8 +17,10 @@ import { AvatarUpload } from '@/components/AvatarUpload'
 import { BannerUpload } from '@/components/BannerUpload'
 import { TwoFactorSettings } from '@/components/TwoFactorSettings'
 import { PhoneVerificationSettings } from '@/components/PhoneVerificationSettings'
+import { SaveIndicator } from '@/components/SaveIndicator'
 import { API_CONFIG } from '@/lib/config'
 import { Select } from '@/components/ui/Dropdown'
+import { useMultiAutoSave, type SaveState } from '@/hooks/useAutoSave'
 import {
     tabContentVariants as unifiedTabContentVariants,
     TRANSITION_DURATION
@@ -127,13 +131,18 @@ export function SettingsPage() {
     // Use URL as source of truth - derive tab from URL on every render
     // This ensures tab persists on refresh and browser navigation
     const activeTab = getTabFromUrl(searchParams)
-    const [isSaving, setIsSaving] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [successMessage, setSuccessMessage] = useState<string | null>(null)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [deleteConfirmText, setDeleteConfirmText] = useState('')
     const [deletePassword, setDeletePassword] = useState('')
+    const [isDeleting, setIsDeleting] = useState(false)
+
+    // Auto-save state management (osu!-style)
+    const autoSave = useMultiAutoSave({ debounceMs: 600, savedDisplayMs: 2000 })
+
+    // Track initial values to detect changes
+    const initialDisplayNameRef = useRef<string>('')
 
     // Form state
     const [displayName, setDisplayName] = useState(user?.display_name || '')
@@ -328,78 +337,136 @@ export function SettingsPage() {
     useEffect(() => {
         if (user) {
             setDisplayName(user.display_name || '')
+            initialDisplayNameRef.current = user.display_name || ''
         }
     }, [user])
 
-    // Clear messages after 3 seconds
-    useEffect(() => {
-        if (successMessage) {
-            const timer = setTimeout(() => setSuccessMessage(null), 3000)
-            return () => clearTimeout(timer)
-        }
-    }, [successMessage])
+    // Auto-save handlers for each setting type
+    const saveDisplayName = useCallback(async (value: string) => {
+        if (!accessToken) throw new Error('Not authenticated')
+        await apiRequest('/users/me', {
+            method: 'PATCH',
+            body: JSON.stringify({ display_name: value }),
+        }, accessToken)
+        await fetchCurrentUser()
+        initialDisplayNameRef.current = value
+    }, [accessToken, fetchCurrentUser])
 
-    const handleSaveProfile = async () => {
-        if (!accessToken) return
-        setIsSaving(true)
-        setError(null)
-        try {
-            await apiRequest('/users/me', {
-                method: 'PATCH',
-                body: JSON.stringify({ display_name: displayName }),
-            }, accessToken)
-            await fetchCurrentUser()
-            setSuccessMessage('Profile saved!')
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to save profile')
-        } finally {
-            setIsSaving(false)
-        }
-    }
+    const savePreference = useCallback(async <K extends keyof Preferences['custom_settings']>(
+        key: K,
+        value: Preferences['custom_settings'][K]
+    ) => {
+        if (!accessToken || !preferences) throw new Error('Not authenticated')
 
-    const handleSavePreferences = async () => {
-        if (!accessToken || !preferences) return
-
-        // If cloud sync is disabled, just show success (preferences are local only)
+        // Skip if cloud sync is disabled
         if (features && !features.cloud_sync) {
-            setSuccessMessage('Preferences saved locally!')
+            // Just update local state
             return
         }
 
-        setIsSaving(true)
-        setError(null)
-        try {
-            await apiRequest('/sync/preferences', {
-                method: 'PATCH',
-                body: JSON.stringify({
-                    scroll_speed: preferences.scroll_speed,
-                    note_skin: preferences.note_skin,
-                    audio_offset_ms: preferences.audio_offset_ms,
-                    visual_offset_ms: preferences.visual_offset_ms,
-                    background_dim: preferences.background_dim,
-                    master_volume: preferences.master_volume,
-                    music_volume: preferences.music_volume,
-                    effects_volume: preferences.effects_volume,
-                    hitsound_volume: preferences.hitsound_volume,
-                    theme: preferences.theme,
-                    language: preferences.language,
-                    custom_settings: preferences.custom_settings,
-                }),
-            }, accessToken)
-            setSuccessMessage('Preferences saved!')
-        } catch (err) {
-            // Handle cloud sync disabled gracefully
-            const errorMessage = err instanceof Error ? err.message : String(err)
-            if (errorMessage.includes('Cloud sync is not currently available') ||
-                errorMessage.includes('404')) {
-                setSuccessMessage('Preferences saved locally!')
-            } else {
-                setError(errorMessage || 'Failed to save preferences')
-            }
-        } finally {
-            setIsSaving(false)
+        const updatedCustomSettings = { ...preferences.custom_settings, [key]: value }
+        await apiRequest('/sync/preferences', {
+            method: 'PATCH',
+            body: JSON.stringify({
+                scroll_speed: preferences.scroll_speed,
+                note_skin: preferences.note_skin,
+                audio_offset_ms: preferences.audio_offset_ms,
+                visual_offset_ms: preferences.visual_offset_ms,
+                background_dim: preferences.background_dim,
+                master_volume: preferences.master_volume,
+                music_volume: preferences.music_volume,
+                effects_volume: preferences.effects_volume,
+                hitsound_volume: preferences.hitsound_volume,
+                theme: preferences.theme,
+                language: preferences.language,
+                custom_settings: updatedCustomSettings,
+            }),
+        }, accessToken)
+    }, [accessToken, preferences, features])
+
+    const saveAnonymousSetting = useCallback(async (
+        key: 'hide_from_leaderboards' | 'hide_from_public_queues',
+        value: boolean
+    ) => {
+        if (!accessToken) throw new Error('Not authenticated')
+        await apiRequest('/users/me/settings', {
+            method: 'PATCH',
+            body: JSON.stringify({ [key]: value }),
+        }, accessToken)
+    }, [accessToken])
+
+    const saveContributionConsentSetting = useCallback(async (
+        updates: Partial<typeof contributionConsent>
+    ) => {
+        if (!accessToken) throw new Error('Not authenticated')
+        const newConsent = { ...contributionConsent, ...updates }
+        await apiRequest('/contributions/consent', {
+            method: 'POST',
+            body: JSON.stringify(newConsent),
+        }, accessToken)
+        setContributionConsent(newConsent)
+    }, [accessToken, contributionConsent])
+
+    // Handle display name change with auto-save
+    const handleDisplayNameChange = useCallback((value: string) => {
+        setDisplayName(value)
+        // Only save if different from initial value (avoid saving on load)
+        if (value !== initialDisplayNameRef.current && value.trim().length > 0) {
+            autoSave.saveField('displayName', value, saveDisplayName)
         }
-    }
+    }, [autoSave, saveDisplayName])
+
+    // Handle preference change with auto-save
+    const handlePreferenceChange = useCallback(<K extends keyof Preferences['custom_settings']>(
+        key: K,
+        value: Preferences['custom_settings'][K]
+    ) => {
+        if (!preferences) return
+        setPreferences({
+            ...preferences,
+            custom_settings: { ...preferences.custom_settings, [key]: value },
+        })
+        autoSave.saveField(`pref_${key}`, value, () => savePreference(key, value))
+    }, [preferences, autoSave, savePreference])
+
+    // Handle anonymous setting change with auto-save
+    const handleAnonymousSettingChange = useCallback((
+        key: 'hide_from_leaderboards' | 'hide_from_public_queues',
+        value: boolean
+    ) => {
+        setAnonymousSettings(prev => ({ ...prev, [key]: value }))
+        autoSave.saveField(`anon_${key}`, value, () => saveAnonymousSetting(key, value))
+    }, [autoSave, saveAnonymousSetting])
+
+    // Handle contribution consent change with auto-save
+    const handleContributionConsentChange = useCallback((
+        key: keyof typeof contributionConsent,
+        value: boolean
+    ) => {
+        const updates = { [key]: value }
+        setContributionConsent(prev => ({ ...prev, ...updates }))
+        autoSave.saveField(`consent_${key}`, value, () => saveContributionConsentSetting(updates))
+    }, [autoSave, saveContributionConsentSetting])
+
+    // Handle developer mode toggle with auto-save  
+    const handleDeveloperModeToggle = useCallback((enabled: boolean) => {
+        // Update local storage for immediate effect
+        if (enabled) {
+            enableDeveloperMode()
+        } else {
+            disableDeveloperMode()
+        }
+        setDeveloperMode(enabled)
+
+        // Also update server preferences for cross-device sync
+        if (preferences) {
+            setPreferences({
+                ...preferences,
+                custom_settings: { ...preferences.custom_settings, developerModeEnabled: enabled },
+            })
+            autoSave.saveField('developerMode', enabled, () => savePreference('developerModeEnabled', enabled))
+        }
+    }, [preferences, autoSave, savePreference])
 
     const handleDeleteAccount = async () => {
         if (deleteConfirmText !== 'DELETE') {
@@ -408,7 +475,7 @@ export function SettingsPage() {
         }
         if (!accessToken) return
 
-        setIsSaving(true)
+        setIsDeleting(true)
         setError(null)
         try {
             await apiRequest('/users/me', {
@@ -421,31 +488,35 @@ export function SettingsPage() {
             logout()
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to delete account')
-            setIsSaving(false)
+            setIsDeleting(false)
         }
     }
 
-    // Send verification email
+    // Send verification email (uses its own state since it's a one-time action)
+    const [isSendingEmail, setIsSendingEmail] = useState(false)
+    const [emailSent, setEmailSent] = useState<string | null>(null)
+
     const handleSendVerificationEmail = async () => {
         if (!accessToken || !user?.email) return
-        setIsSaving(true)
+        setIsSendingEmail(true)
         setError(null)
         try {
             await apiRequest('/auth/send-verification-email', {
                 method: 'POST',
             }, accessToken)
-            setSuccessMessage('Verification email sent! Please check your inbox.')
+            setEmailSent('verification')
+            setTimeout(() => setEmailSent(null), 3000)
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to send verification email')
         } finally {
-            setIsSaving(false)
+            setIsSendingEmail(false)
         }
     }
 
     // Send password reset email
     const handleSendPasswordResetEmail = async () => {
         if (!user?.email) return
-        setIsSaving(true)
+        setIsSendingEmail(true)
         setError(null)
         try {
             await fetch(`${API_BASE}/api/auth/forgot-password`, {
@@ -453,39 +524,12 @@ export function SettingsPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: user.email }),
             })
-            setSuccessMessage('Password reset link sent! Please check your inbox.')
+            setEmailSent('password')
+            setTimeout(() => setEmailSent(null), 3000)
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to send password reset email')
         } finally {
-            setIsSaving(false)
-        }
-    }
-
-    // Update custom settings helper
-    const updateCustomSetting = <K extends keyof Preferences['custom_settings']>(
-        key: K,
-        value: Preferences['custom_settings'][K]
-    ) => {
-        if (!preferences) return
-        setPreferences({
-            ...preferences,
-            custom_settings: { ...preferences.custom_settings, [key]: value },
-        })
-    }
-
-    // Toggle developer mode - updates both local storage and server preferences
-    const handleDeveloperModeToggle = (enabled: boolean) => {
-        // Update local storage for immediate effect
-        if (enabled) {
-            enableDeveloperMode()
-        } else {
-            disableDeveloperMode()
-        }
-        setDeveloperMode(enabled)
-
-        // Also update server preferences for cross-device sync
-        if (preferences) {
-            updateCustomSetting('developerModeEnabled', enabled)
+            setIsSendingEmail(false)
         }
     }
 
@@ -550,15 +594,16 @@ export function SettingsPage() {
         <div className="max-w-4xl mx-auto px-4 overflow-x-hidden">
             <h1 className="text-2xl font-bold text-white mb-8">Settings</h1>
 
-            {/* Feedback Messages */}
+            {/* Global Error Messages (only for critical errors) */}
             {error && (
                 <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400">
                     {error}
-                </div>
-            )}
-            {successMessage && (
-                <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg text-green-400">
-                    {successMessage}
+                    <button
+                        onClick={() => setError(null)}
+                        className="ml-2 text-red-300 hover:text-red-200"
+                    >
+                        ×
+                    </button>
                 </div>
             )}
 
@@ -677,14 +722,17 @@ export function SettingsPage() {
                                                 {/* Profile Form */}
                                                 <div className="space-y-5 flex-1">
                                                     <div>
-                                                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                                                            Display Name
-                                                        </label>
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <label className="block text-sm font-medium text-gray-300">
+                                                                Display Name
+                                                            </label>
+                                                            <SaveIndicator state={autoSave.getFieldState('displayName').state} />
+                                                        </div>
                                                         <div className="relative">
                                                             <input
                                                                 type="text"
                                                                 value={displayName}
-                                                                onChange={(e) => setDisplayName(e.target.value)}
+                                                                onChange={(e) => handleDisplayNameChange(e.target.value)}
                                                                 className="input pl-10 bg-dark-300 border-white/10 focus:border-primary-500/50 focus:ring-primary-500/20"
                                                                 placeholder="Your display name"
                                                             />
@@ -733,31 +781,6 @@ export function SettingsPage() {
                                                             Contact support to change your email address
                                                         </p>
                                                     </div>
-
-                                                    <button
-                                                        onClick={handleSaveProfile}
-                                                        disabled={isSaving || displayName === user?.display_name}
-                                                        className="btn btn-primary w-full sm:w-auto group relative overflow-hidden"
-                                                    >
-                                                        <span className="relative z-10 flex items-center justify-center gap-2">
-                                                            {isSaving ? (
-                                                                <>
-                                                                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                                                    </svg>
-                                                                    Saving...
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                                    </svg>
-                                                                    Save Changes
-                                                                </>
-                                                            )}
-                                                        </span>
-                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -803,13 +826,28 @@ export function SettingsPage() {
                                                             </div>
                                                         </div>
                                                         {!user?.email_verified && (
-                                                            <button
-                                                                onClick={handleSendVerificationEmail}
-                                                                disabled={isSaving}
-                                                                className="btn btn-sm bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30"
-                                                            >
-                                                                Send Verification Email
-                                                            </button>
+                                                            <div className="flex items-center gap-2">
+                                                                {emailSent === 'verification' && (
+                                                                    <span className="text-xs text-green-400">Sent!</span>
+                                                                )}
+                                                                <button
+                                                                    onClick={handleSendVerificationEmail}
+                                                                    disabled={isSendingEmail}
+                                                                    className="btn btn-sm bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 disabled:opacity-50"
+                                                                >
+                                                                    {isSendingEmail ? (
+                                                                        <span className="flex items-center gap-2">
+                                                                            <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                                                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                                                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                                                            </svg>
+                                                                            Sending...
+                                                                        </span>
+                                                                    ) : (
+                                                                        'Send Verification Email'
+                                                                    )}
+                                                                </button>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>
@@ -831,16 +869,32 @@ export function SettingsPage() {
                                                                 <p className="text-sm text-gray-400">Change via email link</p>
                                                             </div>
                                                         </div>
-                                                        <button
-                                                            onClick={handleSendPasswordResetEmail}
-                                                            disabled={isSaving}
-                                                            className="btn btn-sm bg-dark-300 hover:bg-dark-400 text-white border border-white/10"
-                                                        >
-                                                            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                                            </svg>
-                                                            Send Reset Link
-                                                        </button>
+                                                        <div className="flex items-center gap-2">
+                                                            {emailSent === 'password' && (
+                                                                <span className="text-xs text-green-400">Sent!</span>
+                                                            )}
+                                                            <button
+                                                                onClick={handleSendPasswordResetEmail}
+                                                                disabled={isSendingEmail}
+                                                                className="btn btn-sm bg-dark-300 hover:bg-dark-400 text-white border border-white/10 disabled:opacity-50"
+                                                            >
+                                                                {isSendingEmail ? (
+                                                                    <span className="flex items-center gap-2">
+                                                                        <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                                                        </svg>
+                                                                    </span>
+                                                                ) : (
+                                                                    <>
+                                                                        <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                                                        </svg>
+                                                                        Send Reset Link
+                                                                    </>
+                                                                )}
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
 
@@ -861,21 +915,27 @@ export function SettingsPage() {
                                                     <span className="text-white">Auto-generate beatmap</span>
                                                     <p className="text-sm text-gray-500">Start after upload</p>
                                                 </div>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={preferences.custom_settings.autoGenerateBeatmap}
-                                                    onChange={(e) => updateCustomSetting('autoGenerateBeatmap', e.target.checked)}
-                                                    className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
-                                                />
+                                                <div className="flex items-center gap-3">
+                                                    <SaveIndicator state={autoSave.getFieldState('pref_autoGenerateBeatmap').state} />
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={preferences.custom_settings.autoGenerateBeatmap}
+                                                        onChange={(e) => handlePreferenceChange('autoGenerateBeatmap', e.target.checked)}
+                                                        className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
+                                                    />
+                                                </div>
                                             </label>
 
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-300 mb-2">
-                                                    Default Quantization
-                                                </label>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <label className="block text-sm font-medium text-gray-300">
+                                                        Default Quantization
+                                                    </label>
+                                                    <SaveIndicator state={autoSave.getFieldState('pref_defaultQuantization').state} />
+                                                </div>
                                                 <Select
                                                     value={preferences.custom_settings.defaultQuantization}
-                                                    onValueChange={(value) => updateCustomSetting('defaultQuantization', value)}
+                                                    onValueChange={(value) => handlePreferenceChange('defaultQuantization', value)}
                                                     options={[
                                                         { value: '8th', label: '8th Notes' },
                                                         { value: '16th', label: '16th Notes' },
@@ -886,16 +946,19 @@ export function SettingsPage() {
                                             </div>
 
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-300 mb-2">
-                                                    Detection Sensitivity ({Math.round(preferences.custom_settings.defaultSensitivity * 100)}%)
-                                                </label>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <label className="block text-sm font-medium text-gray-300">
+                                                        Detection Sensitivity ({Math.round(preferences.custom_settings.defaultSensitivity * 100)}%)
+                                                    </label>
+                                                    <SaveIndicator state={autoSave.getFieldState('pref_defaultSensitivity').state} />
+                                                </div>
                                                 <input
                                                     type="range"
                                                     min="0"
                                                     max="1"
                                                     step="0.05"
                                                     value={preferences.custom_settings.defaultSensitivity}
-                                                    onChange={(e) => updateCustomSetting('defaultSensitivity', parseFloat(e.target.value))}
+                                                    onChange={(e) => handlePreferenceChange('defaultSensitivity', parseFloat(e.target.value))}
                                                     className="w-full"
                                                 />
                                             </div>
@@ -905,12 +968,15 @@ export function SettingsPage() {
                                                     <span className="text-white">Show confidence overlay</span>
                                                     <p className="text-sm text-gray-500">Detection heatmap</p>
                                                 </div>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={preferences.custom_settings.showConfidenceOverlay}
-                                                    onChange={(e) => updateCustomSetting('showConfidenceOverlay', e.target.checked)}
-                                                    className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
-                                                />
+                                                <div className="flex items-center gap-3">
+                                                    <SaveIndicator state={autoSave.getFieldState('pref_showConfidenceOverlay').state} />
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={preferences.custom_settings.showConfidenceOverlay}
+                                                        onChange={(e) => handlePreferenceChange('showConfidenceOverlay', e.target.checked)}
+                                                        className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
+                                                    />
+                                                </div>
                                             </label>
 
                                             <label className="flex items-center justify-between">
@@ -918,18 +984,17 @@ export function SettingsPage() {
                                                     <span className="text-white">Enable offline mode</span>
                                                     <p className="text-sm text-gray-500">Cache for offline play</p>
                                                 </div>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={preferences.custom_settings.enableOfflineMode}
-                                                    onChange={(e) => updateCustomSetting('enableOfflineMode', e.target.checked)}
-                                                    className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
-                                                />
+                                                <div className="flex items-center gap-3">
+                                                    <SaveIndicator state={autoSave.getFieldState('pref_enableOfflineMode').state} />
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={preferences.custom_settings.enableOfflineMode}
+                                                        onChange={(e) => handlePreferenceChange('enableOfflineMode', e.target.checked)}
+                                                        className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
+                                                    />
+                                                </div>
                                             </label>
                                         </div>
-
-                                        <button onClick={handleSavePreferences} disabled={isSaving} className="btn btn-primary">
-                                            {isSaving ? 'Saving...' : 'Save Preferences'}
-                                        </button>
                                     </div>
                                 )}
 
@@ -943,12 +1008,15 @@ export function SettingsPage() {
                                                     <span className="text-white">Job complete emails</span>
                                                     <p className="text-sm text-gray-500">On generation finish</p>
                                                 </div>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={preferences.custom_settings.emailJobComplete}
-                                                    onChange={(e) => updateCustomSetting('emailJobComplete', e.target.checked)}
-                                                    className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
-                                                />
+                                                <div className="flex items-center gap-3">
+                                                    <SaveIndicator state={autoSave.getFieldState('pref_emailJobComplete').state} />
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={preferences.custom_settings.emailJobComplete}
+                                                        onChange={(e) => handlePreferenceChange('emailJobComplete', e.target.checked)}
+                                                        className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
+                                                    />
+                                                </div>
                                             </label>
 
                                             <label className="flex items-center justify-between">
@@ -956,12 +1024,15 @@ export function SettingsPage() {
                                                     <span className="text-white">Job failed emails</span>
                                                     <p className="text-sm text-gray-500">On generation failure</p>
                                                 </div>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={preferences.custom_settings.emailJobFailed}
-                                                    onChange={(e) => updateCustomSetting('emailJobFailed', e.target.checked)}
-                                                    className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
-                                                />
+                                                <div className="flex items-center gap-3">
+                                                    <SaveIndicator state={autoSave.getFieldState('pref_emailJobFailed').state} />
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={preferences.custom_settings.emailJobFailed}
+                                                        onChange={(e) => handlePreferenceChange('emailJobFailed', e.target.checked)}
+                                                        className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
+                                                    />
+                                                </div>
                                             </label>
 
                                             <label className="flex items-center justify-between">
@@ -969,12 +1040,15 @@ export function SettingsPage() {
                                                     <span className="text-white">Push notifications</span>
                                                     <p className="text-sm text-gray-500">Browser alerts</p>
                                                 </div>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={preferences.custom_settings.pushNotifications}
-                                                    onChange={(e) => updateCustomSetting('pushNotifications', e.target.checked)}
-                                                    className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
-                                                />
+                                                <div className="flex items-center gap-3">
+                                                    <SaveIndicator state={autoSave.getFieldState('pref_pushNotifications').state} />
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={preferences.custom_settings.pushNotifications}
+                                                        onChange={(e) => handlePreferenceChange('pushNotifications', e.target.checked)}
+                                                        className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
+                                                    />
+                                                </div>
                                             </label>
 
                                             <label className="flex items-center justify-between">
@@ -982,18 +1056,17 @@ export function SettingsPage() {
                                                     <span className="text-white">Marketing emails</span>
                                                     <p className="text-sm text-gray-500">Feature updates</p>
                                                 </div>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={preferences.custom_settings.marketingEmails}
-                                                    onChange={(e) => updateCustomSetting('marketingEmails', e.target.checked)}
-                                                    className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
-                                                />
+                                                <div className="flex items-center gap-3">
+                                                    <SaveIndicator state={autoSave.getFieldState('pref_marketingEmails').state} />
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={preferences.custom_settings.marketingEmails}
+                                                        onChange={(e) => handlePreferenceChange('marketingEmails', e.target.checked)}
+                                                        className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
+                                                    />
+                                                </div>
                                             </label>
                                         </div>
-
-                                        <button onClick={handleSavePreferences} disabled={isSaving} className="btn btn-primary">
-                                            {isSaving ? 'Saving...' : 'Save Notifications'}
-                                        </button>
                                     </div>
                                 )}
 
@@ -1027,12 +1100,15 @@ export function SettingsPage() {
                                                             <p className="text-sm text-gray-400">Your name will be hidden on all leaderboards</p>
                                                         </div>
                                                     </div>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={anonymousSettings.hide_from_leaderboards}
-                                                        onChange={(e) => setAnonymousSettings(prev => ({ ...prev, hide_from_leaderboards: e.target.checked }))}
-                                                        className="w-5 h-5 rounded bg-dark-300 border-white/20 text-accent-500 focus:ring-accent-500"
-                                                    />
+                                                    <div className="flex items-center gap-3">
+                                                        <SaveIndicator state={autoSave.getFieldState('anon_hide_from_leaderboards').state} />
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={anonymousSettings.hide_from_leaderboards}
+                                                            onChange={(e) => handleAnonymousSettingChange('hide_from_leaderboards', e.target.checked)}
+                                                            className="w-5 h-5 rounded bg-dark-300 border-white/20 text-accent-500 focus:ring-accent-500"
+                                                        />
+                                                    </div>
                                                 </label>
 
                                                 <label className="flex items-center justify-between p-4 rounded-xl bg-dark-300 border border-white/10 cursor-pointer hover:bg-dark-400 transition-colors">
@@ -1047,12 +1123,15 @@ export function SettingsPage() {
                                                             <p className="text-sm text-gray-400">Your jobs will be hidden from public view</p>
                                                         </div>
                                                     </div>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={anonymousSettings.hide_from_public_queues}
-                                                        onChange={(e) => setAnonymousSettings(prev => ({ ...prev, hide_from_public_queues: e.target.checked }))}
-                                                        className="w-5 h-5 rounded bg-dark-300 border-white/20 text-accent-500 focus:ring-accent-500"
-                                                    />
+                                                    <div className="flex items-center gap-3">
+                                                        <SaveIndicator state={autoSave.getFieldState('anon_hide_from_public_queues').state} />
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={anonymousSettings.hide_from_public_queues}
+                                                            onChange={(e) => handleAnonymousSettingChange('hide_from_public_queues', e.target.checked)}
+                                                            className="w-5 h-5 rounded bg-dark-300 border-white/20 text-accent-500 focus:ring-accent-500"
+                                                        />
+                                                    </div>
                                                 </label>
                                             </div>
 
@@ -1061,10 +1140,6 @@ export function SettingsPage() {
                                                     <strong>Note:</strong> Your contributions still count toward community improvements.
                                                 </p>
                                             </div>
-
-                                            <button onClick={handleSaveAnonymousSettings} disabled={isSaving} className="btn btn-primary mt-4">
-                                                {isSaving ? 'Saving...' : 'Save Anonymous Mode'}
-                                            </button>
                                         </div>
 
                                         {/* Training Data Section */}
@@ -1092,15 +1167,15 @@ export function SettingsPage() {
                                                                 Earn +15 karma per approved correction
                                                             </p>
                                                         </div>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={contributionConsent.consent_given}
-                                                            onChange={(e) => setContributionConsent(prev => ({
-                                                                ...prev,
-                                                                consent_given: e.target.checked
-                                                            }))}
-                                                            className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
-                                                        />
+                                                        <div className="flex items-center gap-3">
+                                                            <SaveIndicator state={autoSave.getFieldState('consent_consent_given').state} />
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={contributionConsent.consent_given}
+                                                                onChange={(e) => handleContributionConsentChange('consent_given', e.target.checked)}
+                                                                className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
+                                                            />
+                                                        </div>
                                                     </label>
 
                                                     {contributionConsent.consent_given && (
@@ -1110,15 +1185,15 @@ export function SettingsPage() {
                                                                     <span className="text-white">Anonymous export</span>
                                                                     <p className="text-sm text-gray-500">Hide username in exports</p>
                                                                 </div>
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={contributionConsent.allow_anonymous_export}
-                                                                    onChange={(e) => setContributionConsent(prev => ({
-                                                                        ...prev,
-                                                                        allow_anonymous_export: e.target.checked
-                                                                    }))}
-                                                                    className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
-                                                                />
+                                                                <div className="flex items-center gap-3">
+                                                                    <SaveIndicator state={autoSave.getFieldState('consent_allow_anonymous_export').state} />
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={contributionConsent.allow_anonymous_export}
+                                                                        onChange={(e) => handleContributionConsentChange('allow_anonymous_export', e.target.checked)}
+                                                                        className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
+                                                                    />
+                                                                </div>
                                                             </label>
 
                                                             <label className="flex items-center justify-between">
@@ -1126,15 +1201,15 @@ export function SettingsPage() {
                                                                     <span className="text-white">Public credit</span>
                                                                     <p className="text-sm text-gray-500">Show in contributor lists</p>
                                                                 </div>
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={contributionConsent.allow_public_credit}
-                                                                    onChange={(e) => setContributionConsent(prev => ({
-                                                                        ...prev,
-                                                                        allow_public_credit: e.target.checked
-                                                                    }))}
-                                                                    className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
-                                                                />
+                                                                <div className="flex items-center gap-3">
+                                                                    <SaveIndicator state={autoSave.getFieldState('consent_allow_public_credit').state} />
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={contributionConsent.allow_public_credit}
+                                                                        onChange={(e) => handleContributionConsentChange('allow_public_credit', e.target.checked)}
+                                                                        className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
+                                                                    />
+                                                                </div>
                                                             </label>
                                                         </>
                                                     )}
@@ -1151,9 +1226,6 @@ export function SettingsPage() {
                                                 </div>
                                             )}
 
-                                            <button onClick={handleSaveContributionConsent} disabled={isSaving || isLoadingConsent} className="btn btn-primary">
-                                                {isSaving ? 'Saving...' : 'Save Training Data Settings'}
-                                            </button>
                                         </div>
                                     </div>
                                 )}
@@ -1171,12 +1243,15 @@ export function SettingsPage() {
                                                     <span className="text-white">Developer Mode</span>
                                                     <p className="text-sm text-gray-500">Console logging & debug info</p>
                                                 </div>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={developerMode}
-                                                    onChange={(e) => handleDeveloperModeToggle(e.target.checked)}
-                                                    className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
-                                                />
+                                                <div className="flex items-center gap-3">
+                                                    <SaveIndicator state={autoSave.getFieldState('developerMode').state} />
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={developerMode}
+                                                        onChange={(e) => handleDeveloperModeToggle(e.target.checked)}
+                                                        className="w-5 h-5 rounded bg-dark-300 border-gray-600 text-primary-500 focus:ring-primary-500"
+                                                    />
+                                                </div>
                                             </label>
 
                                             {developerMode && (
@@ -1187,10 +1262,6 @@ export function SettingsPage() {
                                                 </div>
                                             )}
                                         </div>
-
-                                        <button onClick={handleSavePreferences} disabled={isSaving} className="btn btn-primary">
-                                            {isSaving ? 'Saving...' : 'Save Developer Settings'}
-                                        </button>
                                     </div>
                                 )}
 
@@ -1226,10 +1297,10 @@ export function SettingsPage() {
                                                         <div className="flex gap-3">
                                                             <button
                                                                 onClick={handleDeleteAccount}
-                                                                disabled={isSaving || deleteConfirmText !== 'DELETE'}
+                                                                disabled={isDeleting || deleteConfirmText !== 'DELETE'}
                                                                 className="btn bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
                                                             >
-                                                                {isSaving ? 'Deleting...' : 'Delete My Account'}
+                                                                {isDeleting ? 'Deleting...' : 'Delete My Account'}
                                                             </button>
                                                             <button
                                                                 onClick={() => {

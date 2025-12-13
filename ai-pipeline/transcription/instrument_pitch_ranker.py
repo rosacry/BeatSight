@@ -22,10 +22,15 @@ Supported cymbal types:
 === TOM RANKING ===
 See docs/TOM_PITCH_RANKING.md for detailed documentation.
 
-Supported tom types:
-- tom_high → tom_high_1, tom_high_2 (e.g., 10" vs 12" rack toms)
-- tom_mid → tom_mid_1, tom_mid_2 (e.g., 13" vs 14" rack toms)
-- tom_low → tom_low_1, tom_low_2 (e.g., 16" vs 18" floor toms)
+The classifier now outputs a unified "tom" class. This ranker clusters
+all tom hits by pitch and assigns ranked labels:
+- tom → tom_1 (highest pitch, e.g., 10" rack tom)
+- tom → tom_2 (next highest, e.g., 12" rack tom)  
+- tom → tom_3 (e.g., 14" rack tom or 16" floor tom)
+- tom → tom_4 (lowest, e.g., 18" floor tom)
+
+Legacy support for tom_high/tom_mid/tom_low labels is maintained for
+backward compatibility with older beatmaps.
 
 === HI-HATS ===
 Hi-hats (hihat_closed, hihat_open, hihat_pedal, etc.) are NOT ranked
@@ -163,18 +168,22 @@ INSTRUMENT_CONFIGS: Dict[str, InstrumentConfig] = {
         supports_multiples=False,
         typical_count=(1, 1),
     ),
-    "hihat_splash": InstrumentConfig(
-        base_label="hihat_splash",
-        supports_multiples=False,
-        typical_count=(1, 1),
-    ),
-    "hihat_foot_splash": InstrumentConfig(
-        base_label="hihat_foot_splash",
-        supports_multiples=False,
-        typical_count=(1, 1),
-    ),
     # Toms - VERY important to distinguish!
-    # A drummer might have 2 rack toms both classified as "tom_high"
+    # Now that all toms are unified into "tom" class, we need to
+    # cluster and rank them into tom_1 (highest) to tom_N (lowest)
+    # Most kits have 2-4 toms
+    "tom": InstrumentConfig(
+        base_label="tom",
+        supports_multiples=True,  # Unified tom class needs splitting
+        ranking_strategy=RankingStrategy.PITCH_HIGH_TO_LOW,  # tom_1 = highest pitch
+        typical_count=(1, 4),  # Most kits have 2-4 toms
+        min_samples_for_clustering=5,  # Need more samples for tom clustering
+        centroid_weight=0.5,
+        mfcc_weight=0.3,
+        decay_weight=0.2,
+    ),
+    # Legacy tom_high/tom_mid/tom_low entries for backward compatibility
+    # (in case old events still have these labels)
     "tom_high": InstrumentConfig(
         base_label="tom_high",
         supports_multiples=True,  # Could have 2 high rack toms

@@ -538,6 +538,118 @@ The BeatSight Team
 """
         return await self._send_email(email, subject, html_content, text_content)
 
+    async def send_session_verification(
+        self,
+        email: str,
+        display_name: str,
+        verification_code: str,
+        link_key: str,
+        request_country: str | None = None,
+    ) -> bool:
+        """
+        Send session verification email (osu!-style).
+        
+        This is sent when users access sensitive areas (settings, credits, etc.)
+        after a period of inactivity.
+        
+        Args:
+            email: User's email address
+            display_name: User's display name
+            verification_code: 8-character hex code (e.g., "b8672ff1")
+            link_key: URL-safe key for one-click verification
+            request_country: Country where the action originated
+        """
+        verify_link = f"{self.frontend_url}/account/verify?key={link_key}"
+        country_text = request_country or "an unknown location"
+        
+        # Format code with spaces for readability (like osu!: "b867 2ff1")
+        formatted_code = f"{verification_code[:4]} {verification_code[4:]}"
+        
+        subject = "BeatSight account verification"
+        html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background: #111827; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .card {{ background: #1f2937; border-radius: 12px; overflow: hidden; }}
+        .header {{ background: linear-gradient(135deg, #7c3aed, #ec4899); padding: 30px; text-align: center; }}
+        .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+        .content {{ padding: 30px; color: #d1d5db; }}
+        .content p {{ line-height: 1.6; margin: 0 0 16px 0; }}
+        .code-box {{ background: #374151; border: 2px solid #7c3aed; border-radius: 8px; padding: 20px; 
+                    text-align: center; margin: 25px 0; }}
+        .code {{ font-family: 'Monaco', 'Consolas', monospace; font-size: 32px; font-weight: bold; 
+                 color: #7c3aed; letter-spacing: 4px; }}
+        .code-hint {{ font-size: 12px; color: #9ca3af; margin-top: 8px; }}
+        .button {{ display: inline-block; background: #7c3aed; color: white !important; padding: 14px 28px; 
+                   text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }}
+        .button:hover {{ background: #6d28d9; }}
+        .warning {{ background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; 
+                   border-radius: 0 8px 8px 0; margin: 20px 0; color: #92400e; }}
+        .footer {{ padding: 20px 30px; color: #6b7280; font-size: 12px; border-top: 1px solid #374151; }}
+        .divider {{ display: flex; align-items: center; margin: 20px 0; color: #6b7280; }}
+        .divider::before, .divider::after {{ content: ''; flex: 1; border-bottom: 1px solid #374151; }}
+        .divider span {{ padding: 0 10px; }}
+        .muted {{ color: #9ca3af; font-size: 14px; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <h1>🔐 Account Verification</h1>
+            </div>
+            <div class="content">
+                <p>Hi {display_name},</p>
+                <p>An action performed on your account from <strong>{country_text}</strong> requires verification.</p>
+                
+                <div class="code-box">
+                    <div class="code">{formatted_code}</div>
+                    <div class="code-hint">Enter this code with or without spaces</div>
+                </div>
+                
+                <div class="divider"><span>or</span></div>
+                
+                <p style="text-align: center;">
+                    <a href="{verify_link}" class="button">Click to Verify</a>
+                </p>
+                
+                <div class="warning">
+                    <strong>⚠️ Security Notice:</strong> If you did not request this, please 
+                    change your password immediately as your account may be compromised.
+                </div>
+                
+                <p class="muted">This code expires in 15 minutes.</p>
+            </div>
+            <div class="footer">
+                <p>If the button doesn't work, copy and paste this URL into your browser:</p>
+                <p style="word-break: break-all; color: #7c3aed;">{verify_link}</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+"""
+        text_content = f"""
+Hi {display_name},
+
+An action performed on your account from {country_text} requires verification.
+
+Your verification code is: {formatted_code}
+You can enter the code with or without spaces.
+
+Alternatively, you can also visit this link below to finish verification:
+{verify_link}
+
+If you did not request this, please REPLY IMMEDIATELY as your account may be in danger.
+
+--
+BeatSight | {self.frontend_url}
+"""
+        return await self._send_email(email, subject, html_content, text_content)
+
 
 # Singleton instance
 _email_service: EmailService | None = None

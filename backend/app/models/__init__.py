@@ -43,6 +43,13 @@ from .moderation import ModerationAction, UserAccountHistory
 from .phone_verification import PhoneVerificationAttempt, PhoneVerificationCode
 from .push_subscription import PushSubscription
 from .role import Role, UserRole
+from .session_verification import (
+    SensitiveActionLog,
+    SessionVerification,
+    VERIFICATION_CODE_LENGTH,
+    VERIFICATION_CODE_EXPIRY_MINUTES,
+    SESSION_VERIFICATION_TIMEOUT_MINUTES,
+)
 from .song import Map, Song
 from .subscription import BillingTransaction, Subscription
 from .sync import (
@@ -121,6 +128,9 @@ __all__ = [
     "ReportType",
     "RestrictionLevel",
     "Role",
+    "SensitiveActionLog",
+    "SessionVerification",
+    "SESSION_VERIFICATION_TIMEOUT_MINUTES",
     "Song",
     "Subscription",
     "SyncAction",
@@ -146,5 +156,7 @@ __all__ = [
     "ReEvaluationPolicy",
     "UserVerificationBonus",
     "VERIFIED_USER_KARMA_BONUS",
+    "VERIFICATION_CODE_EXPIRY_MINUTES",
+    "VERIFICATION_CODE_LENGTH",
     "VoteType",
 ]

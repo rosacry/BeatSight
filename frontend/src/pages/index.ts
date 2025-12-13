@@ -19,3 +19,8 @@ export { TopicViewPage } from './TopicViewPage'
 export { DashboardPage } from './DashboardPage'
 export { LeaderboardPage } from './LeaderboardPage'
 export { default as MessagesPage } from './MessagesPage'
+export {
+    AccountVerificationPage,
+    VerificationSuccessPage,
+    VerificationInvalidPage
+} from './AccountVerificationPage'

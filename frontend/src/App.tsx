@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Layout } from './components/NavigationShell'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { SensitiveRoute } from './components/SensitiveRoute'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { InstallPrompt, OfflineIndicator, UpdateNotification } from './components/PWAPrompts'
 import { ToastProvider } from './components/Toast'
@@ -32,6 +33,7 @@ import { ForumPage } from './pages/ForumPage'
 import { ForumViewPage } from './pages/ForumViewPage'
 import { TopicViewPage } from './pages/TopicViewPage'
 import MessagesPage from './pages/MessagesPage'
+import { AccountVerificationPage, VerificationSuccessPage, VerificationInvalidPage } from './pages/AccountVerificationPage'
 import { useAuthStore } from './stores/authStore'
 import { useFeaturesStore } from './stores/featuresStore'
 import { useServiceWorkerUpdate } from './hooks/usePWA'
@@ -137,6 +139,18 @@ function AnimatedRoutes() {
                         <Route path="/credits/cancel" element={<CreditCancelPage />} />
                         <Route path="/leaderboard" element={<LeaderboardPage />} />
 
+                        {/* Account verification routes (osu!-style) */}
+                        <Route
+                            path="/account/verify"
+                            element={
+                                <ProtectedRoute>
+                                    <AccountVerificationPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route path="/account/verify/success" element={<VerificationSuccessPage />} />
+                        <Route path="/account/verify/invalid" element={<VerificationInvalidPage />} />
+
                         {/* Public user profile */}
                         <Route path="/user/:userId" element={<UserProfilePage />} />
 
@@ -173,9 +187,9 @@ function AnimatedRoutes() {
                         <Route
                             path="/settings"
                             element={
-                                <ProtectedRoute>
+                                <SensitiveRoute>
                                     <SettingsPage />
-                                </ProtectedRoute>
+                                </SensitiveRoute>
                             }
                         />
                         <Route

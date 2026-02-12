@@ -30,6 +30,7 @@ class Genre(Enum):
 
     ROCK = "rock"
     METAL = "metal"
+    PROG_METAL = "prog_metal"
     JAZZ = "jazz"
     FUNK = "funk"
     POP = "pop"
@@ -272,6 +273,32 @@ GENRE_PROFILES: Dict[Genre, GenreProfile] = {
             (DrumState.TOM, DrumState.SNARE): 0.2,
         },
     ),
+    Genre.PROG_METAL: GenreProfile(
+        genre=Genre.PROG_METAL,
+        name="Progressive Metal",
+        description="Double bass, odd meters, high syncopation, blast beats, complex fills",
+        tempo_range=(100, 220),
+        common_time_signatures=[(4, 4), (7, 8), (5, 4), (11, 8)],
+        typical_swing_ratio=1.0,
+        primary_subdivision="sixteenth",
+        hihat_density="sixteenth",
+        kick_on_downbeats=0.6,
+        kick_syncopation=0.7,
+        backbeat_snare=0.6,  # Moderate backbeat — not as locked as rock
+        ghost_note_density=0.15,
+        crash_on_sections=0.9,
+        fill_frequency=0.35,
+        fill_complexity=0.9,
+        typical_nps=13.0,  # High density (double bass + cymbals)
+        max_burst_nps=24.0,  # Blast beats
+        transition_modifiers={
+            (DrumState.KICK, DrumState.KICK): 0.4,  # Double bass
+            (DrumState.SNARE, DrumState.SNARE): 0.2,  # Blast beats
+            (DrumState.TOM, DrumState.TOM): 0.3,  # Tom fills
+            (DrumState.SNARE, DrumState.TOM): 0.2,
+            (DrumState.KICK, DrumState.CYMBAL): 0.15,
+        },
+    ),
     Genre.UNKNOWN: GenreProfile(
         genre=Genre.UNKNOWN,
         name="Unknown/General",
@@ -327,14 +354,22 @@ def detect_genre(
         score = 0.0
         max_score = 0.0
 
-        # Tempo match (weighted heavily)
-        max_score += 2.0
+        # Tempo match (weighted VERY heavily — out-of-range genres should not win)
+        max_score += 3.0
         if profile.tempo_range[0] <= bpm <= profile.tempo_range[1]:
             # Score based on how central the tempo is in the range
             range_center = (profile.tempo_range[0] + profile.tempo_range[1]) / 2
             range_width = profile.tempo_range[1] - profile.tempo_range[0]
             tempo_score = 1.0 - abs(bpm - range_center) / (range_width / 2)
-            score += 2.0 * max(0, tempo_score)
+            score += 3.0 * max(0, tempo_score)
+        else:
+            # NEGATIVE scoring: BPM outside range actively penalizes
+            if bpm < profile.tempo_range[0]:
+                distance = profile.tempo_range[0] - bpm
+            else:
+                distance = bpm - profile.tempo_range[1]
+            penalty = min(1.0, distance / 40.0)  # Full penalty at 40 BPM out of range
+            score -= 1.5 * penalty
 
         # Swing match
         max_score += 1.5
@@ -371,13 +406,17 @@ def detect_genre(
         elif synco_diff < 0.4:
             score += 0.5
 
-        # Density match
+        # Density match (with gating: extreme mismatch caps score)
         max_score += 1.0
-        density_ratio = hit_analysis["avg_nps"] / profile.typical_nps
+        density_ratio = hit_analysis["avg_nps"] / profile.typical_nps if profile.typical_nps > 0 else 1.0
         if 0.7 <= density_ratio <= 1.4:
             score += 1.0
         elif 0.5 <= density_ratio <= 2.0:
             score += 0.5
+
+        # Density gating: if density is >2.5x or <0.25x typical, cap score
+        if density_ratio > 2.5 or density_ratio < 0.25:
+            score = min(score, max_score * 0.35)
 
         # Normalize score
         scores[genre] = score / max_score if max_score > 0 else 0
@@ -758,15 +797,19 @@ def apply_genre_aware_decoding(
     ):
         refined = original.copy()
 
-        # Update with decoded state if different
+        # IMPORTANT: Do NOT reassign component labels for multi-label output.
+        # The multi-label classifier already detected the correct set of
+        # components per onset. Viterbi decoding was designed for single-label
+        # sequences and will incorrectly collapse multi-label output.
+        # We only add metadata (genre, beat position, etc.) without
+        # overwriting the classifier's component decisions.
         decoded_component = event.state.to_component_prefix()
-        if (
-            decoded_component
-            and decoded_component != refined.get("component", "").lower()
-        ):
-            refined["original_component"] = refined.get("component", "")
-            refined["component"] = decoded_component
+        original_state = DrumState.from_component(refined.get("component", ""))
+        if decoded_component and event.state != original_state:
+            refined["decoded_state"] = decoded_component
             refined["state_refined"] = True
+            refined["original_state"] = original_state.name.lower()
+            # Keep original component — do NOT overwrite
 
         # Add genre metadata
         refined["genre"] = metadata["genre"].value

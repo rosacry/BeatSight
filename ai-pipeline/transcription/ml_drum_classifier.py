@@ -24,12 +24,21 @@ class DrumClassifierCNN(nn.Module):
     - Global average pooling
     - Dropout for regularization
     - Fully connected output layer
+    
+    Note: The model outputs 12 base classes (from components.json):
+        china, crash, cross_stick, hihat_closed, hihat_open, hihat_pedal,
+        kick, ride_bell, ride_bow, snare, splash, tom
+    
+    Post-processing then expands these to articulations like snare_rimshot,
+    snare_center, tom_high, crash_1, etc. via acoustic analysis.
     """
 
-    # Note: This is a reference list. The actual class list is determined by
-    # components.json in the dataset. Classes like 'shaker', 'tambourine',
-    # 'drum_mix', 'crash_1', 'crash_2' are excluded (see excluded_classes.py).
-    # Multi-cymbal distinction is handled via pitch-based post-processing.
+    # Note: This is the EXPANDED list of all possible output labels after
+    # post-processing. The model itself outputs only the 12 base classes
+    # from components.json. Post-processors add articulations:
+    #   - Rimshot detector: snare -> snare_rimshot, snare_center, snare (ghost)
+    #   - Pitch ranker: tom -> tom_high, tom_mid, tom_low
+    #   - Choke detector: crash -> crash + choked flag
     DRUM_COMPONENTS = [
         "aux_percussion",
         "china",
@@ -55,7 +64,15 @@ class DrumClassifierCNN(nn.Module):
         "tom_mid",
     ]
 
-    def __init__(self, num_classes: int = 21, dropout: float = 0.3):
+    def __init__(self, num_classes: int = 12, dropout: float = 0.3):
+        """Initialize the drum classifier CNN.
+        
+        Args:
+            num_classes: Number of output classes. Default 12 (base model classes
+                         from components.json after rimshot merge into snare).
+                         Must match the checkpoint being loaded.
+            dropout: Dropout probability for regularization.
+        """
         super().__init__()
 
         # Convolutional blocks

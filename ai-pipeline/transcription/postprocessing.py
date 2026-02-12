@@ -10,10 +10,11 @@ drum classification. The classifier outputs generic labels like "crash",
 === PIPELINE ORDER ===
 1. CLASSIFIER → Generic labels (crash, tom, snare, hihat_open, etc.)
 2. CHOKE DETECTOR → Adds 'choked' flag to cymbal events  
-3. PITCH RANKER → Splits cymbals/toms into numbered variants
+3. RIMSHOT DETECTOR → Adds articulation to snare events (rimshot/center/ghost)
+4. PITCH RANKER → Splits cymbals/toms into numbered variants
 
-=== 13-CLASS MODEL OUTPUTS ===
-After training with the consolidated class list:
+=== 12-CLASS MODEL OUTPUTS ===
+After training with the consolidated class list (rimshot merged into snare):
 - china         → pitch ranked to china_1, china_2
 - crash         → pitch ranked to crash_1, crash_2, crash_3, crash_4
 - cross_stick   → (no ranking, single type per kit)
@@ -23,8 +24,7 @@ After training with the consolidated class list:
 - kick          → (no ranking, usually single kick or same-tuned double)
 - ride_bell     → pitch ranked to ride_bell_1, ride_bell_2
 - ride_bow      → pitch ranked to ride_bow_1, ride_bow_2
-- rimshot       → (no ranking, always on snare)
-- snare         → (no ranking, usually single snare)
+- snare         → rimshot detector → snare_rimshot, snare_center, snare (ghost)
 - splash        → pitch ranked to splash_1, splash_2
 - tom           → pitch ranked to tom_1, tom_2, tom_3, tom_4
 
@@ -47,6 +47,7 @@ from dataclasses import dataclass
 # Import our post-processors
 from .cymbal_choke_detector import CymbalChokeDetector, ChokeConfig
 from .instrument_pitch_ranker import InstrumentPitchRanker, InstrumentConfig
+from .rimshot_detector import RimshotDetector, RimshotConfig
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,10 @@ class PostProcessingConfig:
     # Choke detection
     enable_choke_detection: bool = True
     choke_config: Optional[ChokeConfig] = None
+    
+    # Rimshot detection (articulation for snare hits)
+    enable_rimshot_detection: bool = True
+    rimshot_config: Optional[RimshotConfig] = None
     
     # Pitch ranking
     enable_pitch_ranking: bool = True
@@ -92,6 +97,12 @@ class DrumPostProcessor:
             self.choke_detector = CymbalChokeDetector(config=choke_config)
         else:
             self.choke_detector = None
+        
+        if self.config.enable_rimshot_detection:
+            rimshot_config = self.config.rimshot_config or RimshotConfig()
+            self.rimshot_detector = RimshotDetector(config=rimshot_config)
+        else:
+            self.rimshot_detector = None
         
         if self.config.enable_pitch_ranking:
             self.pitch_ranker = InstrumentPitchRanker(
@@ -135,7 +146,14 @@ class DrumPostProcessor:
             choke_count = sum(1 for e in results if e.get("choked", False))
             logger.info(f"Found {choke_count} cymbal chokes")
         
-        # Step 2: Rank instruments by pitch
+        # Step 2: Detect rimshot articulation on snare events
+        if self.rimshot_detector is not None:
+            logger.info("Running rimshot detection...")
+            results = self.rimshot_detector.process_song(results, audio, sr)
+            rimshot_count = sum(1 for e in results if e.get("articulation") == "rimshot")
+            logger.info(f"Found {rimshot_count} rimshots")
+        
+        # Step 3: Rank instruments by pitch
         if self.pitch_ranker is not None:
             logger.info("Running pitch ranking...")
             results = self.pitch_ranker.process_song(results, audio, sr)
@@ -150,15 +168,26 @@ class DrumPostProcessor:
         """
         Generate the final label combining all post-processing info.
         
-        Format: {ranked_label}[_choked]
+        Format: {ranked_label}[_articulation][_choked]
         
         Examples:
         - crash_1_choked (first crash, choked)
         - tom_2 (second tom by pitch)
-        - snare (no ranking needed)
+        - snare_rimshot (snare hit with rimshot articulation)
+        - snare_center (center snare hit)
+        - snare (ghost note or default)
         """
         # Start with ranked label if available, else original
         label = event.get("ranked_label", event.get("label", "unknown"))
+        
+        # Add snare articulation if detected
+        articulation = event.get("articulation")
+        if articulation and label == "snare":
+            if articulation == "rimshot":
+                label = "snare_rimshot"
+            elif articulation == "center":
+                label = "snare_center"
+            # "ghost" stays as just "snare"
         
         # Add choke suffix if applicable
         if event.get("choked", False):

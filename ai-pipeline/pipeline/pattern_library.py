@@ -800,6 +800,15 @@ def repair_with_patterns(
             if hit.get("confidence", 1.0) >= confidence_threshold:
                 continue  # Don't repair high-confidence hits
 
+            # Don't reassign cymbal components — the multi-label
+            # classifier's cymbal detections are more reliable than
+            # pattern-based guessing for these timbral classes.
+            _cymbal_components = frozenset({
+                'crash', 'china', 'splash', 'ride_bow', 'ride_bell',
+            })
+            if hit.get("component", "") in _cymbal_components:
+                continue
+
             # Find matching pattern event
             for p_event in pattern_events:
                 if abs(p_event["time"] - hit_time) < 0.05:  # 50ms tolerance

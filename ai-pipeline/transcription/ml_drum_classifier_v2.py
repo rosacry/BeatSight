@@ -8,17 +8,24 @@ This module provides an enhanced neural network-based drum classifier with:
 
 Reference: "Squeeze-and-Excitation Networks" (Hu et al., 2018)
 
+Note: The model outputs 12 base classes (from components.json):
+    china, crash, cross_stick, hihat_closed, hihat_open, hihat_pedal,
+    kick, ride_bell, ride_bow, snare, splash, tom
+
+Post-processors then expand to 21 output classes (articulations, etc.).
+Rimshot detection is handled by acoustic post-processing, not the model.
+
 Usage:
     from transcription.ml_drum_classifier_v2 import DrumClassifierCNNv2
 
-    # Standard usage (drop-in replacement for v1)
-    model = DrumClassifierCNNv2(num_classes=21)
+    # Standard usage (12 base classes)
+    model = DrumClassifierCNNv2(num_classes=12)
 
     # With SE attention (recommended)
-    model = DrumClassifierCNNv2(num_classes=21, use_se=True)
+    model = DrumClassifierCNNv2(num_classes=12, use_se=True)
 
     # With compound scaling for larger capacity
-    model = DrumClassifierCNNv2(num_classes=21, use_se=True, width_mult=1.5, depth_mult=1.5)
+    model = DrumClassifierCNNv2(num_classes=12, use_se=True, width_mult=1.5, depth_mult=1.5)
 """
 
 import torch
@@ -150,7 +157,7 @@ class DrumClassifierCNNv2(nn.Module):
     - Fully connected output layer
 
     Args:
-        num_classes: Number of output classes (default: 21 for drum components)
+        num_classes: Number of output classes (default: 12 base classes, post-processed to 21)
         dropout: Dropout rate before final FC layer (default: 0.3)
         use_se: Enable Squeeze-Excitation attention blocks (default: True)
         se_reduction: SE reduction ratio (default: 16)
@@ -159,7 +166,11 @@ class DrumClassifierCNNv2(nn.Module):
         use_residual: Enable residual connections where applicable (default: False)
     """
 
-    # Class list from v1 for compatibility
+    # EXPANDED output list after post-processing (not the model's 12 base classes).
+    # The model outputs 12 classes from components.json, then post-processors add:
+    #   - Rimshot detector: snare -> snare_rimshot, snare_center
+    #   - Pitch ranker: tom -> tom_high/mid/low, crash -> crash_1/2
+    #   - Choke detector: adds cymbal_choke flag
     DRUM_COMPONENTS = [
         "aux_percussion",
         "china",
@@ -187,7 +198,7 @@ class DrumClassifierCNNv2(nn.Module):
 
     def __init__(
         self,
-        num_classes: int = 21,
+        num_classes: int = 12,  # Base model classes (rimshot merged into snare)
         dropout: float = 0.3,
         use_se: bool = True,
         se_reduction: int = 16,
@@ -195,6 +206,19 @@ class DrumClassifierCNNv2(nn.Module):
         depth_mult: float = 1.0,
         use_residual: bool = False,
     ):
+        """Initialize the drum classifier CNN v2.
+        
+        Args:
+            num_classes: Number of output classes. Default 12 (base model classes
+                         from components.json after rimshot merge into snare).
+                         Must match the checkpoint being loaded.
+            dropout: Dropout probability for regularization.
+            use_se: Whether to use Squeeze-and-Excitation blocks.
+            se_reduction: SE block reduction ratio.
+            width_mult: Channel width multiplier for model scaling.
+            depth_mult: Depth multiplier for model scaling.
+            use_residual: Whether to use residual connections.
+        """
         super().__init__()
 
         self.use_se = use_se
@@ -350,10 +374,11 @@ def compare_architectures():
     print("Architecture Comparison: DrumClassifierCNN v1 vs v2")
     print("=" * 60)
 
-    v1 = DrumClassifierCNN(num_classes=21)
-    v2_base = DrumClassifierCNNv2(num_classes=21, use_se=False)
-    v2_se = DrumClassifierCNNv2(num_classes=21, use_se=True)
-    v2_scaled = DrumClassifierCNNv2(num_classes=21, use_se=True, width_mult=1.5)
+    # Using 12 classes (base model - rimshot merged into snare)
+    v1 = DrumClassifierCNN(num_classes=12)
+    v2_base = DrumClassifierCNNv2(num_classes=12, use_se=False)
+    v2_se = DrumClassifierCNNv2(num_classes=12, use_se=True)
+    v2_scaled = DrumClassifierCNNv2(num_classes=12, use_se=True, width_mult=1.5)
 
     print(f"\nv1 (baseline):           {count_parameters(v1):>10,} params")
     print(f"v2 (no SE):              {count_parameters(v2_base):>10,} params")
@@ -381,5 +406,5 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("DrumClassifierCNNv2 Architecture (with SE):")
     print("=" * 60)
-    model = DrumClassifierCNNv2(use_se=True)
+    model = DrumClassifierCNNv2(num_classes=12, use_se=True)
     print(model)

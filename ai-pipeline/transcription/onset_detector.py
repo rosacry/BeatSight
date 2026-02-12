@@ -256,6 +256,7 @@ def detect_onsets(
     threshold_window_seconds: float = 0.35,
     adaptive_params: Any = None,
     use_adaptive: bool = True,
+    min_ioi_ms: Optional[float] = None,
 ) -> OnsetDetectionResult:
     """Detect onsets from audio with adaptive thresholding.
 
@@ -327,10 +328,15 @@ def detect_onsets(
     window_frames = max(7, int(round(threshold_window_seconds * sr / hop_length)))
     adaptive_threshold = _adaptive_threshold(envelope, window_frames, threshold_k)
 
-    base_sixteenth = 60.0 / max(estimated_tempo, 1e-3) / 4.0
-    base_sixteenth = max(0.02, min(base_sixteenth, 0.12))
-    min_ioi = base_sixteenth * (1.0 + (1.0 - sens_clamped) * 0.6)
-    min_ioi = min(min_ioi, max(0.084, base_sixteenth))
+    if min_ioi_ms is not None:
+        # Explicit override — use directly
+        min_ioi = min_ioi_ms / 1000.0
+    else:
+        # Use 32nd note as base (was 16th), with lower hard floor
+        base_thirtysecond = 60.0 / max(estimated_tempo, 1e-3) / 8.0
+        base_thirtysecond = max(0.02, min(base_thirtysecond, 0.08))
+        min_ioi = base_thirtysecond * (1.0 + (1.0 - sens_clamped) * 0.6)
+        min_ioi = min(min_ioi, max(0.030, base_thirtysecond))  # 30ms floor (was 84ms)
     min_separation_frames = max(1, int(np.floor(min_ioi * sr / hop_length)))
 
     peak_window = 2  # frames on either side to check for local maxima

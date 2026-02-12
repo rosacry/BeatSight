@@ -232,6 +232,7 @@ class InstrumentPitchRanker:
         segment_duration: float = 0.5,  # Seconds of audio to analyze per hit
         segment_offset: float = -0.01,  # Start slightly before detected onset
         min_cluster_confidence: float = 0.6,
+        max_clusters: int = 10,  # Max distinct instruments of same type
         configs: Optional[Dict[str, InstrumentConfig]] = None,
     ):
         """
@@ -241,11 +242,14 @@ class InstrumentPitchRanker:
             segment_duration: Duration of audio segment to extract per hit
             segment_offset: Offset from detected onset (negative = before)
             min_cluster_confidence: Minimum confidence to trust clustering
+            max_clusters: Maximum number of distinct instruments per type
+                          (e.g., 10 toms → tom_1 to tom_10). Default 10.
             configs: Override default instrument configurations
         """
         self.segment_duration = segment_duration
         self.segment_offset = segment_offset
         self.min_cluster_confidence = min_cluster_confidence
+        self.max_clusters = max_clusters
         self.configs = configs or INSTRUMENT_CONFIGS.copy()
 
     def process_song(
@@ -487,14 +491,21 @@ class InstrumentPitchRanker:
         n_clusters = self._estimate_n_clusters(features_norm, config)
 
         if n_clusters == 1:
-            # All same cymbal
+            # All same instrument
             for event in events:
                 event.cluster_id = 0
                 event.ranked_label = f"{config.base_label}_1"
             return
 
-        # Simple k-means clustering
-        cluster_ids = self._kmeans(features_norm, n_clusters)
+        # Simple k-means clustering (seeded for reproducibility)
+        cluster_ids = self._kmeans(features_norm, n_clusters, seed=42)
+
+        # Enforce minimum cluster size: clusters with < 15% of hits
+        # get merged into their nearest neighbor cluster.
+        min_cluster_count = max(2, int(len(events) * 0.15))
+        cluster_ids = self._merge_small_clusters(
+            features_norm, cluster_ids, n_clusters, min_cluster_count
+        )
 
         # Assign cluster IDs
         for i, event in enumerate(events):
@@ -538,29 +549,44 @@ class InstrumentPitchRanker:
         self,
         features: np.ndarray,
         config: InstrumentConfig,
-        max_clusters: int = 10,  # Absolute maximum to try
+        max_clusters: Optional[int] = None,  # Override instance default
     ) -> int:
         """
         Estimate optimal number of clusters using elbow method.
 
         The typical_count in config is just a hint - we will detect MORE
         clusters if the data clearly shows them. This allows handling
-        songs with 5, 6, or even 10 crashes without any code changes.
+        songs with 5, 6, or even 14+ instruments without any code changes.
 
         Args:
             features: Normalized feature matrix
             config: Instrument configuration (typical_count is advisory)
-            max_clusters: Hard limit on clusters to try (default 10)
+            max_clusters: Hard limit on clusters to try (uses self.max_clusters if None)
 
         Returns:
             Optimal number of clusters (1 to max_clusters)
         """
+        # Use instance default if not overridden
+        if max_clusters is None:
+            max_clusters = self.max_clusters
+            
         n_samples = len(features)
         min_k, typical_max_k = config.typical_count
 
-        # Allow up to max_clusters, but never more than n_samples
-        # typical_max_k is just advisory - we go beyond if data shows it
-        actual_max_k = min(max_clusters, n_samples)
+        # Cap at typical_max_k from config to prevent over-clustering
+        # (e.g. 36 crashes should not produce crash_5 — real kits have 1-4 crashes)
+        actual_max_k = min(typical_max_k, max_clusters, n_samples)
+
+        # Also cap based on sample count: need at least 5 hits per cluster
+        # for meaningful grouping. With 20 hits, max 4 clusters.
+        max_k_by_size = max(1, n_samples // 5)
+        actual_max_k = min(actual_max_k, max_k_by_size)
+
+        # For very small sample sizes (< 30), be conservative:
+        # The elbow method is unreliable with few data points and tends
+        # to over-cluster, producing imbalanced groups like (18, 1, 1).
+        if n_samples < 30:
+            actual_max_k = min(actual_max_k, 2)
 
         if actual_max_k <= 1:
             return 1
@@ -568,7 +594,7 @@ class InstrumentPitchRanker:
         # Try different k values and find elbow
         inertias = []
         for k in range(1, actual_max_k + 1):
-            _, inertia = self._kmeans(features, k, return_inertia=True)
+            _, inertia = self._kmeans(features, k, return_inertia=True, seed=42)
             inertias.append(inertia)
 
         if len(inertias) < 2:
@@ -593,12 +619,51 @@ class InstrumentPitchRanker:
         # from typical_count - we detect as many as the data shows
         return max(min_k, best_k)
 
+    @staticmethod
+    def _merge_small_clusters(
+        features: np.ndarray,
+        labels: np.ndarray,
+        n_clusters: int,
+        min_count: int,
+    ) -> np.ndarray:
+        """Merge clusters smaller than *min_count* into their nearest neighbour."""
+        labels = labels.copy()
+        for _ in range(n_clusters):           # iterate until stable
+            counts = np.bincount(labels, minlength=n_clusters)
+            small = [c for c in range(n_clusters) if 0 < counts[c] < min_count]
+            if not small:
+                break
+            # Compute cluster centroids
+            centroids = {}
+            for c in range(n_clusters):
+                mask = labels == c
+                if mask.any():
+                    centroids[c] = features[mask].mean(axis=0)
+            for c in small:
+                if c not in centroids:
+                    continue
+                # Find nearest other cluster
+                best_dist, best_target = np.inf, -1
+                for other, centroid in centroids.items():
+                    if other == c:
+                        continue
+                    dist = np.sum((centroids[c] - centroid) ** 2)
+                    if dist < best_dist:
+                        best_dist, best_target = dist, other
+                if best_target >= 0:
+                    labels[labels == c] = best_target
+        # Re-number labels to be contiguous 0..N-1
+        unique = sorted(set(labels))
+        mapping = {old: new for new, old in enumerate(unique)}
+        return np.array([mapping[l] for l in labels])
+
     def _kmeans(
         self,
         features: np.ndarray,
         k: int,
         max_iter: int = 100,
         return_inertia: bool = False,
+        seed: int | None = None,
     ) -> np.ndarray:
         """
         Simple k-means implementation (avoids sklearn dependency).
@@ -608,10 +673,12 @@ class InstrumentPitchRanker:
             k: Number of clusters
             max_iter: Maximum iterations
             return_inertia: If True, return (labels, inertia)
+            seed: Random seed for reproducibility
 
         Returns:
             Cluster labels for each sample (and inertia if requested)
         """
+        rng = np.random.RandomState(seed)
         n_samples = len(features)
 
         if k >= n_samples:
@@ -621,14 +688,14 @@ class InstrumentPitchRanker:
             return labels
 
         # Initialize centroids using k-means++
-        centroids = [features[np.random.randint(n_samples)]]
+        centroids = [features[rng.randint(n_samples)]]
         for _ in range(1, k):
             distances = np.min(
                 [np.sum((features - c) ** 2, axis=1) for c in centroids], axis=0
             )
             probs = distances / (distances.sum() + 1e-10)
             cumprobs = np.cumsum(probs)
-            r = np.random.random()
+            r = rng.random()
             for i, cp in enumerate(cumprobs):
                 if r < cp:
                     centroids.append(features[i])

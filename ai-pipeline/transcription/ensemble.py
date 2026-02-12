@@ -76,7 +76,10 @@ class EnsembleClassifier:
         temperature: Temperature for probability calibration (1.0 = no change)
     """
 
-    # Default class list (should match training)
+    # Post-processed output class list (21 classes after articulation expansion)
+    # The trained MODEL outputs 12 base classes (from components.json), then
+    # post-processors expand to these 21 output classes for detailed notation.
+    # For model loading, num_classes should match the checkpoint (typically 12).
     DRUM_COMPONENTS = [
         "aux_percussion",
         "china",
@@ -90,11 +93,11 @@ class EnsembleClassifier:
         "kick",
         "ride_bell",
         "ride_bow",
-        "rimshot",
+        "rimshot",       # Detected by post-processing, not model output
         "snare",
         "snare_center",
         "snare_cross_stick",
-        "snare_rimshot",
+        "snare_rimshot",  # Detected by post-processing (RimshotDetector)
         "splash",
         "tom_high",
         "tom_low",
@@ -109,7 +112,7 @@ class EnsembleClassifier:
         device: Optional[str] = None,
         fusion_method: str = "logit",
         temperature: float = 1.0,
-        num_classes: int = 21,
+        num_classes: int = 12,  # Base model outputs 12 classes (rimshot merged into snare)
     ):
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.torch_device = torch.device(self.device)

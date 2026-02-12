@@ -226,6 +226,48 @@ public class BeatmapLoaderTests
         }
     }
 
+    [Fact]
+    public void SaveToFile_DefaultsToBsmExtensionWhenMissing()
+    {
+        var beatmap = new Beatmap
+        {
+            Metadata =
+            {
+                Title = "Unit Test Track",
+                Artist = "Test Artist",
+                Creator = "Test"
+            },
+            Audio =
+            {
+                Filename = "unit-test.mp3",
+                Duration = 1000
+            },
+            HitObjects =
+            {
+                new HitObject { Time = 250, Component = "kick", Lane = 3 }
+            }
+        };
+
+        string basePath = Path.Combine(Path.GetTempPath(), $"beatsight-test-{Guid.NewGuid()}");
+        string expectedPath = basePath + ".bsm";
+
+        try
+        {
+            BeatmapLoader.SaveToFile(beatmap, basePath);
+
+            Assert.True(File.Exists(expectedPath));
+            Assert.False(File.Exists(basePath));
+        }
+        finally
+        {
+            if (File.Exists(basePath))
+                File.Delete(basePath);
+
+            if (File.Exists(expectedPath))
+                File.Delete(expectedPath);
+        }
+    }
+
     #endregion
 
     #region Lane Heuristics Tests

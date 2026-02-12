@@ -38,6 +38,22 @@ jobs:
       - name: Run tests with coverage
         run: dotnet test desktop/BeatSight.Tests/BeatSight.Tests.csproj --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
 
+      - name: Run live visual regression
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $env:BEATSIGHT_RUN_VISUAL_TESTS='1'
+          dotnet test desktop/BeatSight.Tests/BeatSight.Tests.csproj --no-build --configuration Release --verbosity normal --filter "FullyQualifiedName~VisualRegressionSnapshotTests"
+          Remove-Item Env:BEATSIGHT_RUN_VISUAL_TESTS -ErrorAction SilentlyContinue
+
+      - name: Upload visual diff artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diff-${{ matrix.os }}
+          path: desktop/BeatSight.Tests/TestResults/visual-diff/**
+          if-no-files-found: ignore
+
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v4

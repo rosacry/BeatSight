@@ -55,6 +55,8 @@ namespace BeatSight.Game.Screens.Mapping
         private BeatSightSliderBar sensitivitySlider = null!;
         private BeatSight.Game.UI.Components.Dropdown<QuantizationGridSetting> quantizationDropdown = null!;
         private BeatSightCheckbox debugOverlayCheckbox = null!;
+        private BeatSightCheckbox mlClassifierCheckbox = null!;
+        private BeatSightCheckbox adaptiveThresholdsCheckbox = null!;
         private Container progressBarContainer = null!;
         private WeightedProgressBar weightedProgressBar = null!;
         private Container dropdownOverlay = null!;
@@ -71,6 +73,8 @@ namespace BeatSight.Game.Screens.Mapping
         private readonly Bindable<int> detectionSensitivity = new Bindable<int>();
         private readonly Bindable<QuantizationGridSetting> quantizationGrid = new Bindable<QuantizationGridSetting>();
         private readonly Bindable<bool> debugOverlayEnabled = new Bindable<bool>();
+        private readonly Bindable<bool> mlClassifierEnabled = new Bindable<bool>(true);
+        private readonly Bindable<bool> adaptiveThresholdsEnabled = new Bindable<bool>(false);
         private readonly BindableDouble sensitivityValue = new BindableDouble
         {
             Precision = 1
@@ -642,6 +646,18 @@ namespace BeatSight.Game.Screens.Mapping
                 LabelText = "Show Detection Debug Overlay"
             };
 
+            mlClassifierCheckbox = new BeatSightCheckbox
+            {
+                LabelText = "Use ML Classifier (recommended)"
+            };
+            mlClassifierCheckbox.Current.BindTo(mlClassifierEnabled);
+
+            adaptiveThresholdsCheckbox = new BeatSightCheckbox
+            {
+                LabelText = "Adaptive Thresholds (per-song, experimental)"
+            };
+            adaptiveThresholdsCheckbox.Current.BindTo(adaptiveThresholdsEnabled);
+
             detectionSensitivity.BindValueChanged(e =>
             {
                 if (Math.Abs(sensitivityValue.Value - e.NewValue) > 0.01)
@@ -719,6 +735,40 @@ namespace BeatSight.Game.Screens.Mapping
                                 RelativeSizeAxes = Axes.X,
                                 AutoSizeAxes = Axes.Y,
                                 Child = quantizationDropdown
+                            }
+                        }
+                    },
+                    new FillFlowContainer
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Vertical,
+                        Spacing = new Vector2(0, 4),
+                        Children = new Drawable[]
+                        {
+                            mlClassifierCheckbox,
+                            new SpriteText
+                            {
+                                Text = "Uses the trained multi-label CNN for drum classification",
+                                Font = BeatSightFont.Caption(12f),
+                                Colour = new Color4(180, 190, 205, 255)
+                            }
+                        }
+                    },
+                    new FillFlowContainer
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Vertical,
+                        Spacing = new Vector2(0, 4),
+                        Children = new Drawable[]
+                        {
+                            adaptiveThresholdsCheckbox,
+                            new SpriteText
+                            {
+                                Text = "Computes optimal per-class thresholds for this specific song",
+                                Font = BeatSightFont.Caption(12f),
+                                Colour = new Color4(180, 190, 205, 255)
                             }
                         }
                     },
@@ -1123,6 +1173,19 @@ namespace BeatSight.Game.Screens.Mapping
             var localModelVariant = config.GetBindable<string>(BeatSightSetting.LocalModelVariant).Value;
             var localDevice = config.GetBindable<string>(BeatSightSetting.LocalInferenceDevice).Value;
 
+            // Auto-detect thresholds path from model path
+            string? thresholdsPath = null;
+            if (useLocalInference && !string.IsNullOrEmpty(localModelPath))
+            {
+                var modelDir = System.IO.Path.GetDirectoryName(localModelPath);
+                if (!string.IsNullOrEmpty(modelDir))
+                {
+                    var candidatePath = System.IO.Path.Combine(modelDir, "thresholds.json");
+                    if (System.IO.File.Exists(candidatePath))
+                        thresholdsPath = candidatePath;
+                }
+            }
+
             return new GenerationParams(
                 importedTrack,
                 sensitivity,
@@ -1132,7 +1195,14 @@ namespace BeatSight.Game.Screens.Mapping
                 UseLocalInference: useLocalInference,
                 LocalModelPath: useLocalInference ? localModelPath : null,
                 LocalModelVariant: localModelVariant,
-                LocalInferenceDevice: localDevice);
+                LocalInferenceDevice: localDevice,
+                // ML classifier options
+                UseMlClassifier: mlClassifierEnabled.Value,
+                UseMultilabelClassifier: mlClassifierEnabled.Value,  // Use multilabel when ML is enabled
+                MultilabelThresholdsPath: thresholdsPath,
+                // Adaptive thresholds
+                UseAdaptiveThresholds: adaptiveThresholdsEnabled.Value,
+                AdaptiveThresholdMethod: "otsu");
         }
 
         private static QuantizationGrid mapQuantizationGrid(QuantizationGridSetting setting) => setting switch

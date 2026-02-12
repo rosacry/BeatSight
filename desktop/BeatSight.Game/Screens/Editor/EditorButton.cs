@@ -18,10 +18,14 @@ namespace BeatSight.Game.Screens.Editor
     /// </summary>
     public partial class EditorButton : BasicButton
     {
+        private const float horizontalLabelPadding = 10f;
         private readonly Box background;
+        private readonly Box border;
+        private readonly Box topSheen;
         private readonly Color4 hoverColour;
         private readonly Color4 idleColour;
         private readonly Color4 disabledColour;
+        private readonly Color4 borderColour;
         private readonly SpriteText label;
         private string baseText;
 
@@ -44,17 +48,32 @@ namespace BeatSight.Game.Screens.Editor
         public EditorButton(string text, Color4 colour)
         {
             baseText = text;
-            hoverColour = EditorColours.Lighten(colour, 1.15f);
+            hoverColour = EditorColours.Lighten(colour, 1.1f);
             idleColour = colour;
-            disabledColour = EditorColours.Lighten(colour, 0.6f);
+            disabledColour = EditorColours.Lighten(colour, 0.68f);
+            borderColour = EditorColours.Mix(colour, Color4.White, 0.24f).Opacity(0.85f);
 
             Masking = true;
-            CornerRadius = 8;
+            CornerRadius = 9;
 
             AddInternal(background = new Box
             {
                 RelativeSizeAxes = Axes.Both,
                 Colour = idleColour
+            });
+
+            AddInternal(topSheen = new Box
+            {
+                RelativeSizeAxes = Axes.Both,
+                Height = 0.42f,
+                Colour = Color4.White.Opacity(0.09f)
+            });
+
+            AddInternal(border = new Box
+            {
+                RelativeSizeAxes = Axes.Both,
+                Alpha = 0,
+                Colour = borderColour
             });
 
             AddInternal(hoverGlow = new Box
@@ -68,10 +87,13 @@ namespace BeatSight.Game.Screens.Editor
             AddInternal(label = new SpriteText
             {
                 Text = text,
-                Font = BeatSightFont.Section(20f),
+                Font = BeatSightFont.Button(13.4f),
                 Colour = EditorColours.TextPrimary,
                 Anchor = Anchor.Centre,
-                Origin = Anchor.Centre
+                Origin = Anchor.Centre,
+                Truncate = true,
+                UseFullGlyphHeight = false,
+                MaxWidth = 120
             });
 
             AddInternal(flash = new Box
@@ -82,6 +104,7 @@ namespace BeatSight.Game.Screens.Editor
                 Blending = BlendingParameters.Additive
             });
 
+            SetLabel(text);
             Enabled.BindValueChanged(e => updateEnabledState(e.NewValue), true);
         }
 
@@ -95,7 +118,21 @@ namespace BeatSight.Game.Screens.Editor
 
             baseText = text;
             label.Text = text;
-            base.Text = text;
+            // We draw our own label sprite to keep styling/animation consistent.
+            // Keep base text empty to avoid duplicate captions.
+            base.Text = string.Empty;
+        }
+
+        public void SetContentDensity(float labelSize, float cornerRadius)
+        {
+            label.Font = BeatSightFont.Button(labelSize);
+            CornerRadius = cornerRadius;
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+            label.MaxWidth = Math.Max(20f, DrawWidth - horizontalLabelPadding * 2f);
         }
 
         /// <summary>
@@ -130,7 +167,8 @@ namespace BeatSight.Game.Screens.Editor
 
             uiAudio.PlayHover(e.ScreenSpaceMousePosition.X / GetContainingInputManager().DrawSize.X);
             background.FadeColour(hoverColour, 200, Easing.OutQuint);
-            this.ScaleTo(1.05f, 400, Easing.OutElastic);
+            this.ScaleTo(1.015f, 220, Easing.OutQuint);
+            border.FadeTo(0.2f, 180, Easing.OutQuint);
             hoverGlow.FadeTo(0.2f, 200, Easing.OutQuint);
             return base.OnHover(e);
         }
@@ -139,7 +177,8 @@ namespace BeatSight.Game.Screens.Editor
         {
             base.OnHoverLost(e);
             background.FadeColour(Enabled.Value ? idleColour : disabledColour, 200, Easing.OutQuint);
-            this.ScaleTo(1f, 400, Easing.OutElastic);
+            this.ScaleTo(1f, 200, Easing.OutQuint);
+            border.FadeOut(180, Easing.OutQuint);
             hoverGlow.FadeOut(200);
             HoverHintChanged?.Invoke(null);
         }
@@ -152,17 +191,18 @@ namespace BeatSight.Game.Screens.Editor
 
         protected override void OnMouseUp(MouseUpEvent e)
         {
-            this.ScaleTo(IsHovered ? 1.05f : 1f, 800, Easing.OutElastic);
+            this.ScaleTo(IsHovered ? 1.02f : 1f, 250, Easing.OutQuint);
             base.OnMouseUp(e);
         }
 
         private void updateEnabledState(bool enabled)
         {
             background.FadeColour(enabled ? idleColour : disabledColour, 200, Easing.OutQuint);
-            this.FadeTo(enabled ? 1f : 0.5f, 200, Easing.OutQuint);
+            this.FadeTo(enabled ? 1f : 0.56f, 200, Easing.OutQuint);
             if (!enabled)
                 this.ScaleTo(1f, 200, Easing.OutQuint);
-            label.FadeColour(enabled ? EditorColours.TextPrimary : EditorColours.Lighten(EditorColours.TextPrimary, 0.8f), 200, Easing.OutQuint);
+            label.FadeColour(enabled ? EditorColours.TextPrimary : EditorColours.Lighten(EditorColours.TextPrimary, 0.84f), 200, Easing.OutQuint);
+            topSheen.FadeTo(enabled ? 1f : 0.75f, 160, Easing.OutQuint);
         }
     }
 }

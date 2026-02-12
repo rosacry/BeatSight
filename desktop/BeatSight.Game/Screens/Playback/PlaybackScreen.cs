@@ -184,7 +184,7 @@ namespace BeatSight.Game.Screens.Playback
         };
 
         private bool offsetSyncInProgress;
-        private string currentStatusMessage = "Loading beatmap…";
+        private string currentStatusMessage = "Loading beatmap...";
 
         private BackButton backButton = null!;
         private BufferedContainer backgroundBlurContainer = null!;
@@ -195,12 +195,32 @@ namespace BeatSight.Game.Screens.Playback
         private ScrubbableSliderBar timelineSlider = null!;
         private SpriteText timelineCurrentText = null!;
         private SpriteText timelineTotalText = null!;
+        private SpriteText timelineSeparatorText = null!;
+        private FillFlowContainer timelineTimeFlow = null!;
+        private Container headerStatusContainer = null!;
+        private PlaybackToolbarContainer playbackToolbar = null!;
+        private FillFlowContainer toolbarButtonFlow = null!;
+        private Container toolbarSliderContainer = null!;
+        private FillFlowContainer playbackRowFlow = null!;
+        private FillFlowContainer toolbarMainContentFlow = null!;
+        private readonly List<Container> toolbarGroupContainers = new();
+        private readonly List<FillFlowContainer> toolbarGroupFlows = new();
+        private readonly List<BasicButton> toolbarButtons = new();
+        private readonly List<BasicButton> sidebarControlButtons = new();
+        private readonly List<SpriteText> toolbarSectionTitles = new();
+        private readonly List<SpriteText> sliderLabelTexts = new();
+        private readonly List<SpriteText> sliderValueTexts = new();
+        private readonly List<FillFlowContainer> sliderBlocks = new();
+        private readonly List<BeatSightSliderBar> detailSliders = new();
+        private readonly List<BeatSightCheckbox> detailCheckboxes = new();
         private readonly BindableDouble playbackProgress = new BindableDouble { MinValue = 0, MaxValue = 1, Precision = 0.0001 };
         private bool suppressPlaybackProgressUpdate;
         private bool isScrubbingPlayback;
         private bool wasPlayingBeforeScrub;
         private double? pendingSeekNormalized;
         private double cachedTrackDurationMs;
+        private float lastDensityWidth = -1f;
+        private float lastDensityHeight = -1f;
 
         private LaneLayout currentLaneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
 
@@ -329,7 +349,7 @@ namespace BeatSight.Game.Screens.Playback
                         RelativeSizeAxes = Axes.Both,
                         RowDimensions = new[]
                         {
-                            new Dimension(GridSizeMode.Absolute, 86),
+                            new Dimension(GridSizeMode.AutoSize),
                             new Dimension()
                         },
                         Content = new[]
@@ -503,9 +523,10 @@ namespace BeatSight.Game.Screens.Playback
 
         private Drawable createHeader()
         {
+            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
             statusText = new SpriteText
             {
-                Font = BeatSightFont.Section(24f),
+                Font = BeatSightFont.Section(metrics.HeaderStatusFont),
                 Colour = Color4.White,
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft,
@@ -513,11 +534,17 @@ namespace BeatSight.Game.Screens.Playback
 
             applyHeaderStatus();
 
-            return new Container
+            return headerStatusContainer = new Container
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
-                Padding = new MarginPadding { Left = 150, Right = 28, Top = 20, Bottom = 6 },
+                Padding = new MarginPadding
+                {
+                    Left = metrics.HeaderPaddingLeft,
+                    Right = metrics.HeaderPaddingRight,
+                    Top = metrics.HeaderPaddingTop,
+                    Bottom = metrics.HeaderPaddingBottom
+                },
                 Child = statusText
             };
         }
@@ -546,10 +573,22 @@ namespace BeatSight.Game.Screens.Playback
 
         private Drawable createBottomToolbar()
         {
+            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
+            toolbarButtons.Clear();
+            sidebarControlButtons.Clear();
+            toolbarSectionTitles.Clear();
+            sliderLabelTexts.Clear();
+            sliderValueTexts.Clear();
+            sliderBlocks.Clear();
+            detailSliders.Clear();
+            detailCheckboxes.Clear();
+            toolbarGroupContainers.Clear();
+            toolbarGroupFlows.Clear();
+
             timelineSlider = new ScrubbableSliderBar
             {
                 RelativeSizeAxes = Axes.X,
-                Height = 12,
+                Height = metrics.TimelineSliderHeight,
                 Current = playbackProgress
             };
 
@@ -559,7 +598,7 @@ namespace BeatSight.Game.Screens.Playback
             timelineCurrentText = new SpriteText
             {
                 Text = "0:00",
-                Font = BeatSightFont.Section(18f),
+                Font = BeatSightFont.Section(metrics.TimelineTimeFont),
                 Colour = new Color4(200, 205, 220, 255),
                 Shadow = false
             };
@@ -567,7 +606,7 @@ namespace BeatSight.Game.Screens.Playback
             timelineTotalText = new SpriteText
             {
                 Text = "--:--",
-                Font = BeatSightFont.Section(18f),
+                Font = BeatSightFont.Section(metrics.TimelineTimeFont),
                 Colour = new Color4(150, 160, 185, 255),
                 Shadow = false
             };
@@ -575,7 +614,7 @@ namespace BeatSight.Game.Screens.Playback
             confidenceHeatmap = new ConfidenceHeatmap(1000) // Initial duration, will be updated
             {
                 RelativeSizeAxes = Axes.X,
-                Height = 10,
+                Height = metrics.HeatmapHeight,
                 Margin = new MarginPadding { Bottom = 5 }
             };
 
@@ -584,7 +623,7 @@ namespace BeatSight.Game.Screens.Playback
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
                 Direction = FillDirection.Horizontal,
-                Spacing = new Vector2(10, 0),
+                Spacing = new Vector2(metrics.PlaybackRowSpacingX, 0),
                 Children = new Drawable[]
                 {
                     playPauseButton = createToolbarButton("Pause", togglePlayback),
@@ -592,12 +631,19 @@ namespace BeatSight.Game.Screens.Playback
                     createToolbarButton("Mixer", () => mixerOverlay.ToggleVisibility())
                 }
             };
+            toolbarButtonFlow = buttonFlow;
 
             var sliderContainer = new Container
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
-                Padding = new MarginPadding { Left = 18, Right = 12, Top = 4, Bottom = 4 },
+                Padding = new MarginPadding
+                {
+                    Left = metrics.SliderContainerPaddingLeft,
+                    Right = metrics.SliderContainerPaddingRight,
+                    Top = metrics.SliderContainerPaddingTop,
+                    Bottom = metrics.SliderContainerPaddingBottom
+                },
                 Children = new Drawable[]
                 {
                     new FillFlowContainer
@@ -611,21 +657,21 @@ namespace BeatSight.Game.Screens.Playback
                             timelineSlider
                         }
                     },
-                    new FillFlowContainer
+                    timelineTimeFlow = new FillFlowContainer
                     {
                         AutoSizeAxes = Axes.Both,
                         Anchor = Anchor.BottomRight,
                         Origin = Anchor.BottomRight,
                         Direction = FillDirection.Horizontal,
-                        Spacing = new Vector2(6, 0),
-                        Margin = new MarginPadding { Top = 20 },
+                        Spacing = new Vector2(metrics.TimelineTimeSpacing, 0),
+                        Margin = new MarginPadding { Top = metrics.TimelineTimeTopMargin },
                         Children = new Drawable[]
                         {
                             timelineCurrentText,
-                            new SpriteText
+                            timelineSeparatorText = new SpriteText
                             {
                                 Text = "/",
-                                Font = BeatSightFont.Caption(18f),
+                                Font = BeatSightFont.Caption(metrics.TimelineSeparatorFont),
                                 Colour = new Color4(150, 160, 185, 255),
                                 Shadow = false
                             },
@@ -634,19 +680,21 @@ namespace BeatSight.Game.Screens.Playback
                     }
                 }
             };
+            toolbarSliderContainer = sliderContainer;
 
             var playbackRow = new FillFlowContainer
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
                 Direction = FillDirection.Vertical,
-                Spacing = new Vector2(8, 10),
+                Spacing = new Vector2(metrics.PlaybackRowSpacingY, metrics.PlaybackRowSpacingY),
                 Children = new Drawable[]
                 {
                     buttonFlow,
                     sliderContainer
                 }
             };
+            playbackRowFlow = playbackRow;
 
             var controlGrid = new GridContainer
             {
@@ -675,19 +723,19 @@ namespace BeatSight.Game.Screens.Playback
 
             updatePlayPauseButton();
 
-            return new PlaybackToolbarContainer
+            return playbackToolbar = new PlaybackToolbarContainer
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
                 Anchor = Anchor.BottomCentre,
                 Origin = Anchor.BottomCentre,
-                Padding = new MarginPadding { Bottom = 10 }, // Prevent clipping at screen edge
+                Padding = new MarginPadding { Bottom = metrics.ToolbarBottomPadding }, // Prevent clipping at screen edge
                 Child = new Container
                 {
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
                     Masking = true,
-                    CornerRadius = 18,
+                    CornerRadius = metrics.ToolbarCornerRadius,
                     Children = new Drawable[]
                     {
                         new Box
@@ -695,13 +743,13 @@ namespace BeatSight.Game.Screens.Playback
                             RelativeSizeAxes = Axes.Both,
                             Colour = new Color4(14, 16, 26, 180)
                         },
-                        new FillFlowContainer
+                        toolbarMainContentFlow = new FillFlowContainer
                         {
                             RelativeSizeAxes = Axes.X,
                             AutoSizeAxes = Axes.Y,
                             Direction = FillDirection.Vertical,
-                                Padding = new MarginPadding { Horizontal = 20, Vertical = 14 },
-                                Spacing = new Vector2(12, 12),
+                                Padding = new MarginPadding { Horizontal = metrics.ToolbarInnerPaddingH, Vertical = metrics.ToolbarInnerPaddingV },
+                                Spacing = new Vector2(metrics.ToolbarSectionSpacing, metrics.ToolbarSectionSpacing),
                             Children = new Drawable[]
                             {
                                 playbackRow,
@@ -715,43 +763,58 @@ namespace BeatSight.Game.Screens.Playback
 
         private BasicButton createToolbarButton(string label, Action action)
         {
-            return new BasicButton
+            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
+            var button = new BeatSightButton
             {
-                Width = 110,
-                Height = 34,
-                CornerRadius = 8,
+                Width = metrics.ToolbarButtonWidth,
+                Height = metrics.ToolbarButtonHeight,
+                CornerRadius = metrics.ToolbarButtonCorner,
                 Masking = true,
                 Text = label,
+                FontSize = metrics.ToolbarButtonFont,
                 Action = action,
                 BackgroundColour = sidebarButtonInactive
             };
+
+            toolbarButtons.Add(button);
+            return button;
         }
 
         private Drawable createControlGroup(string title, Drawable content)
         {
-            return new Container
+            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
+            var titleText = new SpriteText
+            {
+                Text = title,
+                Font = BeatSightFont.Section(metrics.GroupTitleFont),
+                Colour = Color4.White
+            };
+            toolbarSectionTitles.Add(titleText);
+
+            var groupFlow = new FillFlowContainer
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
-                Padding = new MarginPadding { Right = 16, Bottom = 8 },
-                Child = new FillFlowContainer
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(metrics.GroupFlowSpacingX, metrics.GroupFlowSpacingY),
+                Children = new Drawable[]
                 {
-                    RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y,
-                    Direction = FillDirection.Vertical,
-                    Spacing = new Vector2(8, 4),
-                    Children = new Drawable[]
-                    {
-                        new SpriteText
-                        {
-                            Text = title,
-                            Font = BeatSightFont.Section(18f),
-                            Colour = Color4.White
-                        },
-                        content
-                    }
+                    titleText,
+                    content
                 }
             };
+
+            var groupContainer = new Container
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Padding = new MarginPadding { Right = metrics.GroupPaddingRight, Bottom = metrics.GroupPaddingBottom },
+                Child = groupFlow
+            };
+            toolbarGroupFlows.Add(groupFlow);
+            toolbarGroupContainers.Add(groupContainer);
+
+            return groupContainer;
         }
 
         private void onScrubbingStateChanged(bool scrubbing)
@@ -846,7 +909,6 @@ namespace BeatSight.Game.Screens.Playback
 
             double clamped = Math.Clamp(normalized, 0, 1);
             double targetMs = clamped * duration;
-            double previousTime = track?.CurrentTime ?? fallbackElapsed;
 
             if (track != null)
             {
@@ -856,17 +918,11 @@ namespace BeatSight.Game.Screens.Playback
 
             fallbackElapsed = targetMs;
 
-            if (allowStateReset)
-            {
-                if (targetMs + 5 < previousTime)
-                    reloadBeatmapState(targetMs);
-                else
-                    playfield?.JumpToTime(targetMs);
-            }
-            else
-            {
-                playfield?.JumpToTime(targetMs);
-            }
+            // Always fully sync the playfield state when seeking.
+            // Previously, forward seeks during scrubbing only called JumpToTime
+            // while backward seeks did a full reload, causing inconsistent visuals.
+            double playfieldTime = Math.Max(0, targetMs + offsetMilliseconds);
+            playfield?.JumpToTime(playfieldTime);
 
             pendingMetronomePulse = true;
         }
@@ -876,9 +932,12 @@ namespace BeatSight.Game.Screens.Playback
             if (beatmap == null || playfield == null)
                 return;
 
+            // Ensure lane assignments match the current layout before reloading notes.
+            DrumLaneHeuristics.ApplyToBeatmap(beatmap, currentLaneLayout);
+            playfield.SetLaneLayout(currentLaneLayout);
             playfield.LoadBeatmap(beatmap);
             playfield.SetKickLineMode(KickLineEnabled);
-            playfield.JumpToTime(targetMs);
+            playfield.JumpToTime(Math.Max(0, targetMs + offsetMilliseconds));
         }
 
         private double getPlaybackDuration()
@@ -928,6 +987,7 @@ namespace BeatSight.Game.Screens.Playback
 
         private Drawable createStageContent()
         {
+            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
             viewModeToggleButton = createSidebarButton("Stage View: 2D", toggleLaneViewMode);
             updateViewModeToggle(laneViewModeSetting?.Value ?? LaneViewMode.TwoDimensional);
 
@@ -939,7 +999,7 @@ namespace BeatSight.Game.Screens.Playback
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
                 Direction = FillDirection.Vertical,
-                Spacing = new Vector2(6, 6),
+                Spacing = new Vector2(metrics.SliderBlockSpacing, metrics.SliderBlockSpacing),
                 Children = new Drawable[]
                 {
                     viewModeToggleButton,
@@ -950,9 +1010,10 @@ namespace BeatSight.Game.Screens.Playback
 
         private Drawable createVisualControls()
         {
+            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
             var zoomText = new SpriteText
             {
-                Font = BeatSightFont.Section(18f),
+                Font = BeatSightFont.Section(metrics.SliderValueFont),
                 Colour = new Color4(220, 225, 240, 255),
                 Text = "1.0x"
             };
@@ -962,7 +1023,7 @@ namespace BeatSight.Game.Screens.Playback
             var zoomSlider = new BeatSightSliderBar
             {
                 RelativeSizeAxes = Axes.X,
-                Height = 16,
+                Height = metrics.DetailSliderHeight,
                 Current = zoomLevel,
                 KeyboardStepMultiplier = 1, // 0.01 * 1 = 0.01
                 DragStepMultiplier = 5 // 0.01 * 5 = 0.05
@@ -972,7 +1033,7 @@ namespace BeatSight.Game.Screens.Playback
 
             var noteWidthText = new SpriteText
             {
-                Font = BeatSightFont.Section(18f),
+                Font = BeatSightFont.Section(metrics.SliderValueFont),
                 Colour = new Color4(220, 225, 240, 255),
                 Text = "1.0x"
             };
@@ -982,22 +1043,24 @@ namespace BeatSight.Game.Screens.Playback
             var noteWidthSlider = new BeatSightSliderBar
             {
                 RelativeSizeAxes = Axes.X,
-                Height = 16,
+                Height = metrics.DetailSliderHeight,
                 Current = noteWidthScale,
                 KeyboardStepMultiplier = 1, // 0.01 * 1 = 0.01
                 DragStepMultiplier = 5 // 0.01 * 5 = 0.05
             }; var autoZoomCheckbox = new BeatSightCheckbox
             {
                 LabelText = "Auto Zoom (BPM Scaled)",
+                LabelFontSize = metrics.CheckboxLabelFont,
                 Current = autoZoom
             };
+            detailCheckboxes.Add(autoZoomCheckbox);
 
             return new FillFlowContainer
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
                 Direction = FillDirection.Vertical,
-                Spacing = new Vector2(0, 8),
+                Spacing = new Vector2(0, metrics.SliderBlockSpacing + 2f),
                 Children = new Drawable[]
                 {
                     createSliderBlock("Zoom Level", zoomText, zoomSlider, showLabel: true),
@@ -1009,9 +1072,10 @@ namespace BeatSight.Game.Screens.Playback
 
         private Drawable createSpeedControl()
         {
+            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
             speedValueText = new SpriteText
             {
-                Font = BeatSightFont.Section(18f),
+                Font = BeatSightFont.Section(metrics.SliderValueFont),
                 Colour = new Color4(220, 225, 240, 255),
                 Text = formatSpeedLabel(speedAdjustment.Value)
             };
@@ -1019,7 +1083,7 @@ namespace BeatSight.Game.Screens.Playback
             var slider = new BeatSightSliderBar
             {
                 RelativeSizeAxes = Axes.X,
-                Height = 16,
+                Height = metrics.DetailSliderHeight,
                 Current = speedAdjustment
             };
 
@@ -1043,9 +1107,10 @@ namespace BeatSight.Game.Screens.Playback
 
         private Drawable createOffsetControl()
         {
+            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
             offsetValueText = new SpriteText
             {
-                Font = BeatSightFont.Section(18f),
+                Font = BeatSightFont.Section(metrics.SliderValueFont),
                 Colour = new Color4(220, 225, 240, 255),
                 Text = formatOffsetLabel(offsetAdjustment.Value)
             };
@@ -1053,7 +1118,7 @@ namespace BeatSight.Game.Screens.Playback
             var slider = new BeatSightSliderBar
             {
                 RelativeSizeAxes = Axes.X,
-                Height = 16,
+                Height = metrics.DetailSliderHeight,
                 Current = offsetAdjustment
             };
 
@@ -1091,11 +1156,16 @@ namespace BeatSight.Game.Screens.Playback
 
         private Drawable createSliderBlock(string label, SpriteText valueText, Drawable slider, bool showLabel = true)
         {
+            SpriteText? labelText = null;
+
             // Set anchor and origin for the value text
             valueText.Anchor = Anchor.CentreRight;
             valueText.Origin = Anchor.CentreRight;
+            sliderValueTexts.Add(valueText);
+            if (slider is BeatSightSliderBar sliderBar)
+                detailSliders.Add(sliderBar);
 
-            return new FillFlowContainer
+            var block = new FillFlowContainer
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
@@ -1110,7 +1180,7 @@ namespace BeatSight.Game.Screens.Playback
                         Children = (showLabel
                             ? new Drawable[]
                             {
-                                new SpriteText
+                                labelText = new SpriteText
                                 {
                                     Text = label,
                                     Font = BeatSightFont.Body(18f),
@@ -1128,10 +1198,17 @@ namespace BeatSight.Game.Screens.Playback
                     slider
                 }
             };
+
+            if (labelText != null)
+                sliderLabelTexts.Add(labelText);
+
+            sliderBlocks.Add(block);
+            return block;
         }
 
         private Drawable createTimingAudioContent()
         {
+            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
             mixToggleButton = createSidebarButton("Audio: Full Mix", toggleDrumMix);
             metronomeToggleButton = createSidebarButton("Metronome: Off", toggleMetronome);
             loopLowConfidenceButton = createSidebarButton("Loop Low Confidence: Off", toggleLoopLowConfidence); // New
@@ -1144,7 +1221,7 @@ namespace BeatSight.Game.Screens.Playback
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
                 Direction = FillDirection.Vertical,
-                Spacing = new Vector2(0, 8),
+                Spacing = new Vector2(0, metrics.SliderBlockSpacing + 2f),
                 Children = new Drawable[]
                 {
                     createSpeedControl(),
@@ -1158,16 +1235,20 @@ namespace BeatSight.Game.Screens.Playback
 
         private BasicButton createSidebarButton(string label, Action action)
         {
-            return new BasicButton
+            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
+            var button = new BeatSightButton
             {
                 RelativeSizeAxes = Axes.X,
-                Height = 36,
+                Height = metrics.SidebarButtonHeight,
                 Text = label,
-                CornerRadius = 8,
+                FontSize = metrics.SidebarButtonFont,
+                CornerRadius = metrics.SidebarButtonCorner,
                 Masking = true,
                 Action = action,
                 BackgroundColour = sidebarButtonInactive
             };
+            sidebarControlButtons.Add(button);
+            return button;
         }
 
         private void toggleLaneViewMode()
@@ -1204,7 +1285,7 @@ namespace BeatSight.Game.Screens.Playback
             string text = mode switch
             {
                 LaneViewMode.ThreeDimensional => "Stage View: 3D",
-                LaneViewMode.Manuscript => "Stage View: Manuscript",
+                LaneViewMode.Manuscript => "Stage View: Sheet Music",
                 _ => "Stage View: 2D"
             };
 
@@ -1623,7 +1704,11 @@ namespace BeatSight.Game.Screens.Playback
 
             playfield?.SetLaneLayout(currentLaneLayout);
             if (beatmap != null)
+            {
+                DrumLaneHeuristics.ApplyToBeatmap(beatmap, currentLaneLayout);
                 playfield?.LoadBeatmap(beatmap);
+            }
+            playfield?.SetKickLineMode(KickLineEnabled);
         }
 
         private void updateMasterVolumeOutput()
@@ -1742,6 +1827,7 @@ namespace BeatSight.Game.Screens.Playback
         protected override void Update()
         {
             base.Update();
+            applyResponsivePlaybackDensity();
 
             if (fallbackRunning && track == null)
                 fallbackElapsed += Time.Elapsed * playbackSpeed;
@@ -1776,6 +1862,142 @@ namespace BeatSight.Game.Screens.Playback
                     }
                 }
             }
+        }
+
+        private void applyResponsivePlaybackDensity(bool force = false)
+        {
+            if (DrawWidth <= 0 || DrawHeight <= 0)
+                return;
+
+            if (!force
+                && lastDensityWidth >= 0
+                && Math.Abs(DrawWidth - lastDensityWidth) < 0.2f
+                && Math.Abs(DrawHeight - lastDensityHeight) < 0.2f)
+            {
+                return;
+            }
+
+            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
+
+            if (statusText != null)
+                statusText.Font = BeatSightFont.Section(metrics.HeaderStatusFont);
+
+            if (headerStatusContainer != null)
+            {
+                headerStatusContainer.Padding = new MarginPadding
+                {
+                    Left = metrics.HeaderPaddingLeft,
+                    Right = metrics.HeaderPaddingRight,
+                    Top = metrics.HeaderPaddingTop,
+                    Bottom = metrics.HeaderPaddingBottom
+                };
+            }
+
+            if (playbackToolbar != null)
+            {
+                playbackToolbar.Padding = new MarginPadding { Bottom = metrics.ToolbarBottomPadding };
+                playbackToolbar.CornerRadius = metrics.ToolbarCornerRadius;
+            }
+
+            if (toolbarMainContentFlow != null)
+            {
+                toolbarMainContentFlow.Padding = new MarginPadding
+                {
+                    Horizontal = metrics.ToolbarInnerPaddingH,
+                    Vertical = metrics.ToolbarInnerPaddingV
+                };
+                toolbarMainContentFlow.Spacing = new Vector2(metrics.ToolbarSectionSpacing, metrics.ToolbarSectionSpacing);
+            }
+
+            if (playbackRowFlow != null)
+                playbackRowFlow.Spacing = new Vector2(metrics.PlaybackRowSpacingY, metrics.PlaybackRowSpacingY);
+
+            if (toolbarButtonFlow != null)
+                toolbarButtonFlow.Spacing = new Vector2(metrics.PlaybackRowSpacingX, 0);
+
+            if (toolbarSliderContainer != null)
+            {
+                toolbarSliderContainer.Padding = new MarginPadding
+                {
+                    Left = metrics.SliderContainerPaddingLeft,
+                    Right = metrics.SliderContainerPaddingRight,
+                    Top = metrics.SliderContainerPaddingTop,
+                    Bottom = metrics.SliderContainerPaddingBottom
+                };
+            }
+
+            if (timelineSlider != null)
+                timelineSlider.Height = metrics.TimelineSliderHeight;
+
+            if (confidenceHeatmap != null)
+                confidenceHeatmap.Height = metrics.HeatmapHeight;
+
+            if (timelineCurrentText != null)
+                timelineCurrentText.Font = BeatSightFont.Section(metrics.TimelineTimeFont);
+
+            if (timelineTotalText != null)
+                timelineTotalText.Font = BeatSightFont.Section(metrics.TimelineTimeFont);
+
+            if (timelineSeparatorText != null)
+                timelineSeparatorText.Font = BeatSightFont.Caption(metrics.TimelineSeparatorFont);
+
+            foreach (var title in toolbarSectionTitles)
+                title.Font = BeatSightFont.Section(metrics.GroupTitleFont);
+
+            foreach (var group in toolbarGroupContainers)
+            {
+                group.Padding = new MarginPadding
+                {
+                    Right = metrics.GroupPaddingRight,
+                    Bottom = metrics.GroupPaddingBottom
+                };
+            }
+
+            foreach (var flow in toolbarGroupFlows)
+                flow.Spacing = new Vector2(metrics.GroupFlowSpacingX, metrics.GroupFlowSpacingY);
+
+            foreach (var button in toolbarButtons)
+            {
+                button.Width = metrics.ToolbarButtonWidth;
+                button.Height = metrics.ToolbarButtonHeight;
+                button.CornerRadius = metrics.ToolbarButtonCorner;
+
+                if (button is BeatSightButton beatSightButton)
+                    beatSightButton.FontSize = metrics.ToolbarButtonFont;
+            }
+
+            foreach (var button in sidebarControlButtons)
+            {
+                button.Height = metrics.SidebarButtonHeight;
+                button.CornerRadius = metrics.SidebarButtonCorner;
+
+                if (button is BeatSightButton beatSightButton)
+                    beatSightButton.FontSize = metrics.SidebarButtonFont;
+            }
+
+            foreach (var text in sliderLabelTexts)
+                text.Font = BeatSightFont.Body(metrics.SliderLabelFont);
+
+            foreach (var text in sliderValueTexts)
+                text.Font = BeatSightFont.Section(metrics.SliderValueFont);
+
+            foreach (var slider in detailSliders)
+                slider.Height = metrics.DetailSliderHeight;
+
+            foreach (var block in sliderBlocks)
+                block.Spacing = new Vector2(0, metrics.SliderBlockSpacing);
+
+            foreach (var checkbox in detailCheckboxes)
+                checkbox.LabelFontSize = metrics.CheckboxLabelFont;
+
+            if (timelineTimeFlow != null)
+            {
+                timelineTimeFlow.Spacing = new Vector2(metrics.TimelineTimeSpacing, 0);
+                timelineTimeFlow.Margin = new MarginPadding { Top = metrics.TimelineTimeTopMargin };
+            }
+
+            lastDensityWidth = DrawWidth;
+            lastDensityHeight = DrawHeight;
         }
 
         protected override void Dispose(bool isDisposing)
@@ -1829,16 +2051,17 @@ namespace BeatSight.Game.Screens.Playback
                 currentLaneLayout = LaneLayoutFactory.Create(preset.NewValue);
             }
 
+            // IMPORTANT: Re-resolve lane assignments BEFORE setting the layout on the
+            // playfield so that hit.Lane values are consistent with the new layout
+            // when LoadBeatmap→resolveLane reads them.
+            if (beatmap != null)
+                DrumLaneHeuristics.ApplyToBeatmap(beatmap, currentLaneLayout);
+
             playfield?.SetLaneLayout(currentLaneLayout);
             rebuildLaneKeyBindings();
 
-            if (beatmap != null)
-            {
-                DrumLaneHeuristics.ApplyToBeatmap(beatmap, currentLaneLayout);
-
-                if (IsLoaded)
-                    playfield?.LoadBeatmap(beatmap);
-            }
+            if (beatmap != null && IsLoaded)
+                playfield?.LoadBeatmap(beatmap);
         }
 
         private void rebuildLaneKeyBindings()

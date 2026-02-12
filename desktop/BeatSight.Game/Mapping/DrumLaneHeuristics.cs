@@ -183,6 +183,9 @@ namespace BeatSight.Game.Mapping
 
         /// <summary>
         /// Ensures all hit objects in the beatmap have lanes resolved with the requested layout.
+        /// Always re-resolves from the component string to ensure consistency with the
+        /// active layout, since the stored lane values may have been computed with a
+        /// different layout order (e.g. Python pipeline's dynamic layout).
         /// </summary>
         public static void ApplyToBeatmap(Beatmap? beatmap, LaneLayout layout)
         {
@@ -190,7 +193,7 @@ namespace BeatSight.Game.Mapping
                 return;
 
             foreach (var hit in beatmap.HitObjects)
-                hit.Lane = ResolveLane(hit.Component, layout, hit.Lane);
+                hit.Lane = ResolveLane(hit.Component, layout, storedLane: null);
         }
 
         /// <summary>

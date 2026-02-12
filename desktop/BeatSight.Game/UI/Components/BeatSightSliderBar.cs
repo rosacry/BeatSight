@@ -4,7 +4,6 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Utils;
-using osuTK;
 using osuTK.Input;
 
 namespace BeatSight.Game.UI.Components
@@ -21,9 +20,11 @@ namespace BeatSight.Game.UI.Components
         private bool suppressPointerSnap;
 
         public event Action<bool>? TooltipSuppressionChanged;
+        public event Action<bool>? PointerAdjustingChanged;
         public event Action? UserChange;
 
         public bool IsTooltipSuppressed => pointerAdjusting;
+        public bool IsPointerAdjusting => pointerAdjusting;
 
         public BeatSightSliderBar()
         {
@@ -49,6 +50,7 @@ namespace BeatSight.Game.UI.Components
         {
             base.OnFocusLost(e);
             BorderThickness = 0;
+            setPointerAdjusting(false);
         }
 
         public double KeyboardStepMultiplier { get; set; } = defaultKeyboardMultiplier;
@@ -69,9 +71,11 @@ namespace BeatSight.Game.UI.Components
                 return base.OnMouseDown(e);
 
             setPointerAdjusting(true);
-            base.OnMouseDown(e);
+            adjustValueFromPointer(e);
+            bool handled = base.OnMouseDown(e);
 
-            adjustValueFromPointer(e.ScreenSpaceMousePosition);
+            if (handled)
+                snapCurrentValueIfNeeded();
             requestFocus();
             return true;
         }
@@ -83,28 +87,10 @@ namespace BeatSight.Game.UI.Components
             snapCurrentValueIfNeeded();
         }
 
-        protected override bool OnMouseMove(MouseMoveEvent e)
-        {
-            bool handled = base.OnMouseMove(e);
-
-            if (pointerAdjusting)
-            {
-                adjustValueFromPointer(e.ScreenSpaceMousePosition);
-                return true;
-            }
-
-            return handled;
-        }
-
         protected override bool OnDragStart(DragStartEvent e)
         {
             setPointerAdjusting(true);
-            var handled = base.OnDragStart(e);
-            if (!handled)
-            {
-                setPointerAdjusting(false);
-                return false;
-            }
+            base.OnDragStart(e);
 
             requestFocus();
             return true;
@@ -119,6 +105,7 @@ namespace BeatSight.Game.UI.Components
                 return base.OnClick(e);
 
             // Prevent base slider from reapplying an unsnapped value after a click.
+            adjustValueFromPointer(e);
             requestFocus();
             snapCurrentValueIfNeeded();
             return true;
@@ -162,7 +149,16 @@ namespace BeatSight.Game.UI.Components
             UserChange?.Invoke();
         }
 
-        private void adjustValueFromPointer(Vector2 screenSpacePosition)
+        private void applyKeyboardDelta(double delta)
+        {
+            double min = CurrentNumber?.MinValue ?? double.MinValue;
+            double max = CurrentNumber?.MaxValue ?? double.MaxValue;
+            double target = Math.Clamp(Current.Value + delta, min, max);
+            Current.Value = target;
+            UserChange?.Invoke();
+        }
+
+        private void adjustValueFromPointer(MouseEvent e)
         {
             if (CurrentNumber == null || DrawWidth <= 0)
                 return;
@@ -172,10 +168,12 @@ namespace BeatSight.Game.UI.Components
             if (Precision.AlmostEquals(max, min))
                 return;
 
-            Vector2 local = ToLocalSpace(screenSpacePosition);
-            double progress = Math.Clamp(local.X / DrawWidth, 0, 1);
-            double target = min + progress * (max - min);
+            float localX = e.MousePosition.X;
+            if (!float.IsFinite(localX) || localX < -DrawWidth * 2f || localX > DrawWidth * 3f)
+                localX = ToLocalSpace(e.ScreenSpaceMousePosition).X;
 
+            double progress = Math.Clamp(localX / DrawWidth, 0, 1);
+            double target = min + progress * (max - min);
             double snapped = snapToDragStep(target);
             if (Precision.AlmostEquals(snapped, Current.Value))
                 return;
@@ -183,15 +181,6 @@ namespace BeatSight.Game.UI.Components
             suppressPointerSnap = true;
             Current.Value = snapped;
             suppressPointerSnap = false;
-            UserChange?.Invoke();
-        }
-
-        private void applyKeyboardDelta(double delta)
-        {
-            double min = CurrentNumber?.MinValue ?? double.MinValue;
-            double max = CurrentNumber?.MaxValue ?? double.MaxValue;
-            double target = Math.Clamp(Current.Value + delta, min, max);
-            Current.Value = target;
             UserChange?.Invoke();
         }
 
@@ -254,6 +243,7 @@ namespace BeatSight.Game.UI.Components
 
             pointerAdjusting = value;
             TooltipSuppressionChanged?.Invoke(value);
+            PointerAdjustingChanged?.Invoke(value);
         }
     }
 }

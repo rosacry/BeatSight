@@ -1,5 +1,6 @@
 using BeatSight.Game.UI.Theming;
 using BeatSight.Game.Audio;
+using System;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Shapes;
@@ -17,9 +18,12 @@ namespace BeatSight.Game.UI.Components
     {
         private static readonly Color4 idleColour = new Color4(58, 70, 112, 255);
         private static readonly Color4 hoverColour = new Color4(98, 140, 220, 255);
+        private const float designWidth = 120f;
+        private const float designHeight = 44f;
 
         public static readonly MarginPadding DefaultMargin = new MarginPadding { Left = 24, Top = 24 };
 
+        private BeatSightSpriteText labelSprite = null!;
         private Box hoverGlow = null!;
         private Box flash = null!;
 
@@ -28,8 +32,8 @@ namespace BeatSight.Game.UI.Components
 
         public BackButton()
         {
-            Width = 120;
-            Height = 44;
+            Width = designWidth;
+            Height = designHeight;
             CornerRadius = 10;
             Masking = true;
             Anchor = Anchor.TopLeft;
@@ -58,7 +62,7 @@ namespace BeatSight.Game.UI.Components
             });
         }
 
-        protected override SpriteText CreateText() => new BeatSightSpriteText
+        protected override SpriteText CreateText() => labelSprite = new BeatSightSpriteText
         {
             Depth = -1,
             Origin = Anchor.Centre,
@@ -66,6 +70,18 @@ namespace BeatSight.Game.UI.Components
             Font = BeatSightFont.Button(20f),
             UseFullGlyphHeight = false
         };
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+            applyResponsiveSize(force: true);
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+            applyResponsiveSize();
+        }
 
         protected override bool OnHover(HoverEvent e)
         {
@@ -104,6 +120,29 @@ namespace BeatSight.Game.UI.Components
         {
             this.ScaleTo(IsHovered ? 1.05f : 1f, 800, Easing.OutElastic);
             base.OnMouseUp(e);
+        }
+
+        private void applyResponsiveSize(bool force = false)
+        {
+            if (Parent == null)
+                return;
+
+            float targetHeight = ResponsiveLayout.ClampFraction(Parent.DrawHeight, 0.05f, 38f, 58f);
+            float targetWidth = Math.Clamp(targetHeight * 2.72f, 106f, 156f);
+            float cornerRadius = Math.Clamp(targetHeight * 0.24f, 8f, 14f);
+            float labelSize = Math.Clamp(targetHeight * 0.44f, 16f, 23f);
+
+            if (force || Math.Abs(Height - targetHeight) > 0.1f)
+                Height = targetHeight;
+
+            if (force || Math.Abs(Width - targetWidth) > 0.1f)
+                Width = targetWidth;
+
+            if (force || Math.Abs(CornerRadius - cornerRadius) > 0.1f)
+                CornerRadius = cornerRadius;
+
+            if (labelSprite != null)
+                labelSprite.Font = BeatSightFont.Button(labelSize);
         }
     }
 }

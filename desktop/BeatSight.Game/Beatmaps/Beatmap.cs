@@ -65,6 +65,19 @@ namespace BeatSight.Game.Beatmaps
         public List<string> Components { get; set; } = new();
         public string? Layout { get; set; }
         public Dictionary<string, string>? CustomSamples { get; set; }
+        public LaneLayoutInfo? LaneLayout { get; set; }
+    }
+
+    public class LaneLayoutInfo
+    {
+        public List<LaneInfo>? Lanes { get; set; }
+    }
+
+    public class LaneInfo
+    {
+        public int Index { get; set; }
+        public string? Name { get; set; }
+        public string? ShortName { get; set; }
     }
 
     public class HitObject

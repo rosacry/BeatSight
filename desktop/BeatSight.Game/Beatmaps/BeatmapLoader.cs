@@ -54,11 +54,11 @@ namespace BeatSight.Game.Beatmaps
 
             beatmap.Metadata.ModifiedAt = DateTime.UtcNow;
 
-            // Ensure path has correct extension (.bs is the default)
+            // Ensure path has a supported extension, defaulting to .bsm for discoverability.
             string extension = Path.GetExtension(path).ToLowerInvariant();
             if (extension != ".bs" && extension != ".bsm")
             {
-                path = Path.ChangeExtension(path, ".bs");
+                path = Path.ChangeExtension(path, ".bsm");
             }
 
             string json = JsonConvert.SerializeObject(beatmap, Formatting.Indented);

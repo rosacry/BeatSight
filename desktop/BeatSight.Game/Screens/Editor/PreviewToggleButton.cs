@@ -17,12 +17,16 @@ using osuTK.Graphics;
 namespace BeatSight.Game.Screens.Editor
 {
     /// <summary>
-    /// Toggle button for switching between editor preview modes (2D, 3D, Manuscript).
+    /// Toggle button for switching between editor preview modes (2D, 3D, Sheet Music).
     /// Provides visual feedback for current mode and availability state.
     /// </summary>
     public partial class PreviewToggleButton : BasicButton
     {
+        private const float horizontalLabelPadding = 12f;
         private readonly Box background;
+        private readonly Box border;
+        private readonly Box topSheen;
+        private readonly FillFlowContainer contentFlow;
         private readonly SpriteIcon icon;
         private readonly SpriteText modeLabel;
         private readonly Bindable<EditorPreviewMode> previewMode;
@@ -49,13 +53,25 @@ namespace BeatSight.Game.Screens.Editor
             availabilityMessage = "Load or create a beatmap to enable 2D/3D switching.";
 
             Masking = true;
-            CornerRadius = 8;
+            CornerRadius = 9;
 
             AddRange(new Drawable[]
             {
                 background = new Box
                 {
                     RelativeSizeAxes = Axes.Both
+                },
+                topSheen = new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Height = 0.42f,
+                    Colour = Color4.White.Opacity(0.1f)
+                },
+                border = new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = new Color4(200, 223, 255, 120),
+                    Alpha = 0
                 },
                 hoverGlow = new Box
                 {
@@ -64,7 +80,7 @@ namespace BeatSight.Game.Screens.Editor
                     Alpha = 0,
                     Blending = BlendingParameters.Additive
                 },
-                new FillFlowContainer
+                contentFlow = new FillFlowContainer
                 {
                     AutoSizeAxes = Axes.Both,
                     Anchor = Anchor.Centre,
@@ -77,7 +93,7 @@ namespace BeatSight.Game.Screens.Editor
                         {
                             Anchor = Anchor.Centre,
                             Origin = Anchor.Centre,
-                            Size = new Vector2(22),
+                            Size = new Vector2(15),
                             Colour = EditorColours.TextPrimary,
                             Icon = FontAwesome.Solid.LayerGroup
                         },
@@ -85,9 +101,12 @@ namespace BeatSight.Game.Screens.Editor
                         {
                             Anchor = Anchor.Centre,
                             Origin = Anchor.Centre,
-                            Font = BeatSightFont.Title(16f),
+                            Font = BeatSightFont.Button(12.8f),
                             Colour = EditorColours.TextPrimary,
-                            Text = "2D View"
+                            Text = "2D View",
+                            Truncate = true,
+                            UseFullGlyphHeight = false,
+                            MaxWidth = 120
                         }
                     }
                 },
@@ -100,9 +119,24 @@ namespace BeatSight.Game.Screens.Editor
                 }
             });
 
+            Text = string.Empty;
             Action = toggleMode;
             this.previewMode.BindValueChanged(updateState, true);
             Enabled.BindValueChanged(_ => updateBackgroundForAvailability(), true);
+        }
+
+        public void SetContentDensity(float labelSize, float iconSize, float spacing, float cornerRadius)
+        {
+            modeLabel.Font = BeatSightFont.Button(labelSize);
+            icon.Size = new Vector2(iconSize);
+            contentFlow.Spacing = new Vector2(spacing, 0);
+            CornerRadius = cornerRadius;
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+            modeLabel.MaxWidth = Math.Max(20f, DrawWidth - 32f - horizontalLabelPadding * 2f);
         }
 
         private void toggleMode()
@@ -126,7 +160,7 @@ namespace BeatSight.Game.Screens.Editor
                     break;
                 case EditorPreviewMode.Manuscript:
                     icon.Icon = FontAwesome.Solid.Music;
-                    modeLabel.Text = "Manuscript";
+                    modeLabel.Text = "Sheet Music";
                     currentBaseColour = Color4.Goldenrod;
                     break;
                 case EditorPreviewMode.Playfield2D:
@@ -163,14 +197,15 @@ namespace BeatSight.Game.Screens.Editor
             switch (previewMode.Value)
             {
                 case EditorPreviewMode.Playfield2D: tooltip = "Switch to 3D Guitar Hero-style lane view"; break;
-                case EditorPreviewMode.Playfield3D: tooltip = "Switch to Manuscript view"; break;
+                case EditorPreviewMode.Playfield3D: tooltip = "Switch to Sheet Music view"; break;
                 case EditorPreviewMode.Manuscript: tooltip = "Switch to 2D flat osu!mania-style lane view"; break;
             }
             HoverHintChanged?.Invoke(tooltip);
 
             var targetColour = EditorColours.Lighten(currentBaseColour, 1.15f);
             background.FadeColour(targetColour, 140, Easing.OutQuint);
-            this.ScaleTo(1.05f, 400, Easing.OutElastic);
+            this.ScaleTo(1.015f, 220, Easing.OutQuint);
+            border.FadeTo(0.24f, 170, Easing.OutQuint);
             hoverGlow.FadeTo(0.2f, 200, Easing.OutQuint);
             return base.OnHover(e);
         }
@@ -180,7 +215,8 @@ namespace BeatSight.Game.Screens.Editor
             base.OnHoverLost(e);
             HoverHintChanged?.Invoke(null);
             updateBackgroundForAvailability();
-            this.ScaleTo(1f, 400, Easing.OutElastic);
+            this.ScaleTo(1f, 200, Easing.OutQuint);
+            border.FadeOut(160, Easing.OutQuint);
             hoverGlow.FadeOut(200);
         }
 
@@ -192,7 +228,7 @@ namespace BeatSight.Game.Screens.Editor
 
         protected override void OnMouseUp(MouseUpEvent e)
         {
-            this.ScaleTo(IsHovered ? 1.05f : 1f, 800, Easing.OutElastic);
+            this.ScaleTo(IsHovered ? 1.02f : 1f, 220, Easing.OutQuint);
             base.OnMouseUp(e);
         }
 
@@ -215,6 +251,7 @@ namespace BeatSight.Game.Screens.Editor
             background.FadeColour(targetColour, 180, Easing.OutQuint);
             icon.Colour = Enabled.Value ? EditorColours.TextPrimary : EditorColours.TextSecondary;
             modeLabel.Colour = Enabled.Value ? EditorColours.TextPrimary : EditorColours.TextSecondary;
+            topSheen.FadeTo(Enabled.Value ? 1f : 0.7f, 150, Easing.OutQuint);
         }
     }
 

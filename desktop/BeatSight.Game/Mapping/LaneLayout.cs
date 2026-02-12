@@ -201,69 +201,61 @@ namespace BeatSight.Game.Mapping
 
         public static LaneLayout CreateFromComponents(List<string> components)
         {
-            // 1. Identify unique categories from components
-            var categories = new HashSet<DrumComponentCategory>();
+            // 1. Classify each component using the heuristic classifier
+            //    (Enum.TryParse fails for underscore-separated names like hihat_closed, crash_1, tom_1)
+            var primaryCategories = new HashSet<DrumComponentCategory>();
             foreach (var comp in components)
             {
-                if (Enum.TryParse<DrumComponentCategory>(comp, true, out var category))
-                    categories.Add(category);
-                else
-                    categories.Add(DrumComponentCategory.Unknown);
+                var classification = DrumLaneHeuristics.ClassifyComponent(comp);
+                primaryCategories.Add(classification.PrimaryCategory);
             }
 
-            // 2. Determine lane count (N instruments -> N lanes)
-            // For a simple 1-to-1 mapping, we can just assign each component to a lane.
-            // However, we might want to group similar instruments (e.g. Toms) if we want to stick to a standard layout,
-            // but the user asked for "n many lanes/tracks as there are instruments".
-            // So let's try to map each unique instrument to a lane.
-
-            // If we have standard components, we try to arrange them in a standard drum kit order:
-            // HiHat | Snare | Kick | Tom1 | Tom2 | Tom3 | Ride | Crash
-
-            var standardOrder = new[]
+            // 2. Define category groups (related instruments share a lane)
+            var categoryGroups = new (string Name, DrumComponentCategory[] Members)[]
             {
-                DrumComponentCategory.HiHatPedal,
-                DrumComponentCategory.HiHatClosed,
-                DrumComponentCategory.HiHatOpen,
-                DrumComponentCategory.Snare,
-                DrumComponentCategory.Rimshot,
-                DrumComponentCategory.CrossStick,
-                DrumComponentCategory.Kick,
-                DrumComponentCategory.TomHigh,
-                DrumComponentCategory.TomMid,
-                DrumComponentCategory.TomLow,
-                DrumComponentCategory.Ride,
-                DrumComponentCategory.Crash,
-                DrumComponentCategory.China,
-                DrumComponentCategory.Splash,
-                DrumComponentCategory.Cowbell,
-                DrumComponentCategory.Percussion
+                ("Crash",  new[] { DrumComponentCategory.Crash, DrumComponentCategory.Crash2 }),
+                ("HiHat",  new[] { DrumComponentCategory.HiHatPedal, DrumComponentCategory.HiHatClosed, DrumComponentCategory.HiHatOpen, DrumComponentCategory.HiHatFootSplash, DrumComponentCategory.HiHatSplash }),
+                ("Snare",  new[] { DrumComponentCategory.Snare, DrumComponentCategory.SnareCenter, DrumComponentCategory.SnareRimshot, DrumComponentCategory.SnareCrossStick, DrumComponentCategory.Rimshot, DrumComponentCategory.CrossStick }),
+                ("Kick",   new[] { DrumComponentCategory.Kick }),
+                ("Tom",    new[] { DrumComponentCategory.TomHigh, DrumComponentCategory.TomMid, DrumComponentCategory.TomLow }),
+                ("Ride",   new[] { DrumComponentCategory.Ride, DrumComponentCategory.RideBow, DrumComponentCategory.RideBell }),
+                ("China",  new[] { DrumComponentCategory.China }),
+                ("Splash", new[] { DrumComponentCategory.Splash }),
+                ("Perc",   new[] { DrumComponentCategory.Cowbell, DrumComponentCategory.AuxPercussion, DrumComponentCategory.Percussion }),
             };
 
-            var presentCategories = standardOrder.Where(c => categories.Contains(c)).ToList();
-            var unknownCategories = categories.Where(c => !standardOrder.Contains(c)).ToList();
+            // 3. Determine which groups are present
+            var presentGroups = new List<(string Name, DrumComponentCategory[] Members)>();
+            foreach (var group in categoryGroups)
+            {
+                if (group.Members.Any(m => primaryCategories.Contains(m)))
+                    presentGroups.Add(group);
+            }
 
-            var allCategories = presentCategories.Concat(unknownCategories).ToList();
-            int laneCount = allCategories.Count;
+            // Handle unknown categories
+            if (primaryCategories.Contains(DrumComponentCategory.Unknown))
+                presentGroups.Add(("Unknown", new[] { DrumComponentCategory.Unknown }));
 
-            if (laneCount == 0)
+            if (presentGroups.Count == 0)
                 return Create(LanePreset.DrumFourLane); // Fallback
 
+            // 4. Assign lanes and map ALL member categories to their group's lane
+            int laneCount = presentGroups.Count;
             var map = new Dictionary<DrumComponentCategory, int[]>();
 
             for (int i = 0; i < laneCount; i++)
             {
-                var category = allCategories[i];
-                map[category] = new[] { i };
-
-                // Also map related categories to the same lane if they are not explicitly present?
-                // For now, let's just map the exact categories.
+                var group = presentGroups[i];
+                foreach (var member in group.Members)
+                    map[member] = new[] { i };
             }
 
-            // Ensure Kick is mapped if present
-            if (!map.ContainsKey(DrumComponentCategory.Kick) && categories.Contains(DrumComponentCategory.Kick))
+            // For Crash, also allow left/right side resolution if there are enough lanes
+            if (map.ContainsKey(DrumComponentCategory.Crash) && presentGroups.Count >= 6)
             {
-                // Should have been handled above
+                int crashLane = map[DrumComponentCategory.Crash][0];
+                int chinaLane = map.TryGetValue(DrumComponentCategory.China, out var cl) ? cl[0] : crashLane;
+                map[DrumComponentCategory.Crash] = new[] { crashLane, chinaLane };
             }
 
             return new LaneLayout(LanePreset.Custom, map, laneCount);

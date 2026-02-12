@@ -26,6 +26,11 @@ namespace BeatSight.Game.UI.Overlays
         private readonly bool isDangerous;
 
         private Container content = null!;
+        private BeatSightSpriteText messageText = null!;
+        private DialogButton cancelButton = null!;
+        private DialogButton confirmButton = null!;
+        private float lastDialogWidth = -1;
+        private float lastButtonHeight = -1;
 
         /// <summary>
         /// Creates a new confirmation dialog.
@@ -73,7 +78,8 @@ namespace BeatSight.Game.UI.Overlays
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
-                    AutoSizeAxes = Axes.Both,
+                    Width = 520,
+                    AutoSizeAxes = Axes.Y,
                     Masking = true,
                     CornerRadius = 12,
                     Children = new Drawable[]
@@ -85,7 +91,8 @@ namespace BeatSight.Game.UI.Overlays
                         },
                         new FillFlowContainer
                         {
-                            AutoSizeAxes = Axes.Both,
+                            RelativeSizeAxes = Axes.X,
+                            AutoSizeAxes = Axes.Y,
                             Direction = FillDirection.Vertical,
                             Padding = new MarginPadding(30),
                             Spacing = new Vector2(0, 20),
@@ -101,26 +108,29 @@ namespace BeatSight.Game.UI.Overlays
                                     Origin = Anchor.TopCentre,
                                 },
                                 // Message
-                                new BeatSightSpriteText
+                                messageText = new BeatSightSpriteText
                                 {
                                     Text = message,
                                     Font = BeatSightFont.Body(16),
                                     Colour = UITheme.TextSecondary,
                                     Anchor = Anchor.TopCentre,
                                     Origin = Anchor.TopCentre,
+                                    RelativeSizeAxes = Axes.X,
                                     MaxWidth = DesignSystem.DialogMaxWidth,
+                                    AllowMultiline = true
                                 },
                                 // Buttons
                                 new FillFlowContainer
                                 {
-                                    AutoSizeAxes = Axes.Both,
+                                    RelativeSizeAxes = Axes.X,
+                                    AutoSizeAxes = Axes.Y,
                                     Direction = FillDirection.Horizontal,
                                     Spacing = new Vector2(15, 0),
                                     Anchor = Anchor.TopCentre,
                                     Origin = Anchor.TopCentre,
                                     Children = new Drawable[]
                                     {
-                                        new DialogButton(cancelText, UITheme.SurfaceAlt)
+                                        cancelButton = new DialogButton(cancelText, UITheme.SurfaceAlt)
                                         {
                                             Action = () =>
                                             {
@@ -128,7 +138,7 @@ namespace BeatSight.Game.UI.Overlays
                                                 Hide();
                                             }
                                         },
-                                        new DialogButton(confirmText, isDangerous ? UITheme.AccentError : UITheme.AccentPrimary)
+                                        confirmButton = new DialogButton(confirmText, isDangerous ? UITheme.AccentError : UITheme.AccentPrimary)
                                         {
                                             Action = () =>
                                             {
@@ -143,6 +153,8 @@ namespace BeatSight.Game.UI.Overlays
                     }
                 }
             };
+
+            applyResponsiveLayout(force: true);
         }
 
         protected override void PopIn()
@@ -187,6 +199,49 @@ namespace BeatSight.Game.UI.Overlays
             }
 
             return base.OnKeyDown(e);
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+            applyResponsiveLayout();
+        }
+
+        private void applyResponsiveLayout(bool force = false)
+        {
+            if (DrawWidth <= 0 || DrawHeight <= 0 || content == null)
+                return;
+
+            float dialogWidth = ResponsiveLayout.ClampFraction(DrawWidth, 0.42f, 360f, 820f);
+            float buttonHeight = ResponsiveLayout.ClampFraction(DrawHeight, 0.043f, 34f, 50f);
+            float buttonWidth = ResponsiveLayout.ClampFraction(dialogWidth, 0.27f, 104f, 210f);
+
+            if (force || Math.Abs(dialogWidth - lastDialogWidth) > 0.2f)
+            {
+                content.Width = dialogWidth;
+                if (messageText != null)
+                    messageText.MaxWidth = Math.Max(220f, dialogWidth - 64f);
+                lastDialogWidth = dialogWidth;
+            }
+
+            if (force || Math.Abs(buttonHeight - lastButtonHeight) > 0.2f)
+            {
+                if (cancelButton != null)
+                {
+                    cancelButton.Width = buttonWidth;
+                    cancelButton.Height = buttonHeight;
+                    cancelButton.FontSize = Math.Clamp(buttonHeight * 0.36f, 13f, 18f);
+                }
+
+                if (confirmButton != null)
+                {
+                    confirmButton.Width = buttonWidth;
+                    confirmButton.Height = buttonHeight;
+                    confirmButton.FontSize = Math.Clamp(buttonHeight * 0.36f, 13f, 18f);
+                }
+
+                lastButtonHeight = buttonHeight;
+            }
         }
 
         /// <summary>

@@ -137,7 +137,7 @@ namespace BeatSight.Game.Screens.Onboarding
                 Description = "Practice with different visualization modes:\n\n" +
                               "• 2D Highway – Classic rhythm game style\n" +
                               "• 3D Perspective – Immersive depth view\n" +
-                              "• Manuscript – Traditional notation for reading\n\n" +
+                              "• Sheet Music – Traditional notation for reading\n\n" +
                               "Switch views anytime with the View button or keyboard shortcut.",
                 Icon = FontAwesome.Solid.Eye
             });

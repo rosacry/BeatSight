@@ -1,6 +1,9 @@
+using System;
 using BeatSight.Game.UI.Theming;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Utils;
+using osuTK;
 
 namespace BeatSight.Game.UI.Components
 {
@@ -13,15 +16,19 @@ namespace BeatSight.Game.UI.Components
         private readonly SafeAreaContainer safeArea;
         private readonly Container contentContainer;
         private readonly BeatSightScrollContainer? scrollContainer;
+        private MarginPadding basePadding;
+        private Vector2 lastDrawSize;
+        private float lastScale = -1f;
 
         public ScreenEdgeContainer(bool scrollable = true, Direction scrollDirection = Direction.Vertical)
         {
             RelativeSizeAxes = Axes.Both;
+            basePadding = UITheme.ScreenPadding;
 
             safeArea = new SafeAreaContainer
             {
                 RelativeSizeAxes = Axes.Both,
-                Padding = UITheme.ScreenPadding
+                Padding = basePadding
             };
 
             contentContainer = new Container
@@ -53,8 +60,13 @@ namespace BeatSight.Game.UI.Components
         /// </summary>
         public MarginPadding EdgePadding
         {
-            get => safeArea.Padding;
-            set => safeArea.Padding = value;
+            get => basePadding;
+            set
+            {
+                basePadding = value;
+                lastScale = -1f;
+                applyResponsivePadding(force: true);
+            }
         }
 
         /// <summary>
@@ -69,6 +81,31 @@ namespace BeatSight.Game.UI.Components
         {
             get => contentContainer.Child;
             set => contentContainer.Child = value;
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+            applyResponsivePadding();
+        }
+
+        private void applyResponsivePadding(bool force = false)
+        {
+            if (!force && Precision.AlmostEquals(DrawWidth, lastDrawSize.X) && Precision.AlmostEquals(DrawHeight, lastDrawSize.Y))
+                return;
+
+            lastDrawSize = DrawSize;
+
+            float shortAxis = Math.Min(DrawWidth, DrawHeight);
+            if (shortAxis <= 0)
+                return;
+
+            float scale = Math.Clamp(shortAxis / 1080f, 0.82f, 1.22f);
+            if (!force && Math.Abs(scale - lastScale) < 0.001f)
+                return;
+
+            lastScale = scale;
+            safeArea.Padding = ResponsiveLayout.ScalePadding(basePadding, scale);
         }
     }
 }

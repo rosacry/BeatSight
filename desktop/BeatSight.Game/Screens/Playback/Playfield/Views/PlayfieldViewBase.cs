@@ -89,12 +89,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         /// </summary>
         protected float CalculateNoteWidth(float laneWidth, float userScale)
         {
-            // Base fill: 80% of lane width
-            // User scale at 1.0x equals 75% of the base (matching legacy 0.75x)
-            // Cap at 100% of lane width for visual cleanliness
-            float effectiveScale = userScale * 0.75f;
-            float scale = Math.Min(1.25f, effectiveScale);
-            return laneWidth * 0.8f * scale;
+            // Target ~45% of lane width for balanced look across resolutions
+            float baseNoteWidth = laneWidth * 0.45f;
+            return Math.Clamp(baseNoteWidth * userScale, 40f, 160f);
         }
     }
 }

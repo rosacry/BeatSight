@@ -122,6 +122,18 @@ namespace BeatSight.Game.Screens.SongSelect
             return true;
         }
 
+        /// <summary>
+        /// Selects the next beatmap in the current filtered/sorted list.
+        /// Wraps to the first beatmap after the last one.
+        /// </summary>
+        public bool SelectNext() => selectRelative(1);
+
+        /// <summary>
+        /// Selects the previous beatmap in the current filtered/sorted list.
+        /// Wraps to the last beatmap before the first one.
+        /// </summary>
+        public bool SelectPrevious() => selectRelative(-1);
+
         public void Filter(string query)
         {
             currentFilter = query;
@@ -263,8 +275,41 @@ namespace BeatSight.Game.Screens.SongSelect
             BeatmapSelected?.Invoke(entry);
         }
 
+        private bool selectRelative(int direction)
+        {
+            var panels = flow.Children.ToList();
+            if (panels.Count == 0)
+                return false;
+
+            int currentIndex = -1;
+            if (selectedBeatmap.Value != null)
+                currentIndex = panels.FindIndex(p => p.Entry == selectedBeatmap.Value);
+
+            int targetIndex;
+            if (currentIndex < 0)
+            {
+                targetIndex = direction >= 0 ? 0 : panels.Count - 1;
+            }
+            else
+            {
+                targetIndex = currentIndex + direction;
+                if (targetIndex < 0)
+                    targetIndex = panels.Count - 1;
+                else if (targetIndex >= panels.Count)
+                    targetIndex = 0;
+            }
+
+            var targetPanel = panels[targetIndex];
+            select(targetPanel.Entry, targetPanel);
+            scroll.ScrollTo(targetPanel);
+            return true;
+        }
+
         private partial class BeatmapPanel : ClickableContainer, IHasContextMenu
         {
+            private const float collapsedHeight = 96f;
+            private const float expandedHeight = 112f;
+
             public readonly BeatmapLibrary.BeatmapEntry Entry;
             public readonly Bindable<PanelState> State = new(PanelState.NotSelected);
 
@@ -308,7 +353,7 @@ namespace BeatSight.Game.Screens.SongSelect
             {
                 Entry = entry;
                 RelativeSizeAxes = Axes.X;
-                Height = 80;
+                Height = collapsedHeight;
                 Masking = true;
                 CornerRadius = 10;
                 BorderThickness = 3;
@@ -338,7 +383,7 @@ namespace BeatSight.Game.Screens.SongSelect
                     content = new Container
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Padding = new MarginPadding { Horizontal = 25, Vertical = 10 }, // Increased left padding for bar
+                        Padding = new MarginPadding { Horizontal = 25, Vertical = 14 }, // Increased left padding for bar
                         Children = new Drawable[]
                         {
                             new FillFlowContainer
@@ -348,7 +393,7 @@ namespace BeatSight.Game.Screens.SongSelect
                                 Anchor = Anchor.CentreLeft,
                                 Origin = Anchor.CentreLeft,
                                 Direction = FillDirection.Vertical,
-                                Spacing = new Vector2(0, 10),
+                                Spacing = new Vector2(0, 6),
                                 Children = new Drawable[]
                                 {
                                     title = new BeatSight.Game.UI.Components.BeatSightSpriteText
@@ -406,7 +451,7 @@ namespace BeatSight.Game.Screens.SongSelect
                     case PanelState.Selected:
                         BorderColour = UITheme.AccentPrimary;
                         background.FadeColour(UITheme.SurfaceAlt, 200, Easing.OutQuint);
-                        this.ResizeTo(new Vector2(1.0f, 100), 300, Easing.OutElastic); // Elastic expand
+                        this.ResizeTo(new Vector2(1.0f, expandedHeight), 300, Easing.OutElastic); // Elastic expand
                         leftBar.ResizeWidthTo(8, 300, Easing.OutElastic);
                         leftBar.FadeIn(200);
                         break;
@@ -414,7 +459,7 @@ namespace BeatSight.Game.Screens.SongSelect
                     case PanelState.NotSelected:
                         BorderColour = Color4.Transparent;
                         background.FadeColour(UITheme.Surface, 200, Easing.OutQuint);
-                        this.ResizeTo(new Vector2(1.0f, 80), 200, Easing.OutQuint);
+                        this.ResizeTo(new Vector2(1.0f, collapsedHeight), 200, Easing.OutQuint);
                         leftBar.ResizeWidthTo(0, 200, Easing.OutQuint);
                         leftBar.FadeOut(200);
                         break;

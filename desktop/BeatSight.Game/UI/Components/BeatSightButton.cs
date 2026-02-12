@@ -1,3 +1,4 @@
+using System;
 using BeatSight.Game.UI.Theming;
 using BeatSight.Game.Audio;
 using osu.Framework.Allocation;
@@ -14,11 +15,25 @@ namespace BeatSight.Game.UI.Components
     public partial class BeatSightButton : BasicButton
     {
         private const float default_corner_radius = 10f;
+        private BeatSightSpriteText textSprite = null!;
+        private float fontSize = 12f;
         private Box hoverGlow = null!;
         private Box flash = null!;
 
         [Resolved]
         private UIAudioController uiAudio { get; set; } = null!;
+
+        public float FontSize
+        {
+            get => fontSize;
+            set
+            {
+                fontSize = Math.Max(8f, value);
+
+                if (textSprite != null)
+                    textSprite.Font = BeatSightFont.Button(fontSize);
+            }
+        }
 
         public BeatSightButton()
         {
@@ -86,12 +101,12 @@ namespace BeatSight.Game.UI.Components
             base.OnMouseUp(e);
         }
 
-        protected override SpriteText CreateText() => new BeatSightSpriteText
+        protected override SpriteText CreateText() => textSprite = new BeatSightSpriteText
         {
             Depth = -1,
             Origin = Anchor.Centre,
             Anchor = Anchor.Centre,
-            Font = BeatSightFont.Button(),
+            Font = BeatSightFont.Button(fontSize),
             UseFullGlyphHeight = false
         };
     }

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
+using BeatSight.Game.Screens.Playback.Playfield.Views;
+using BeatSight.Game.UI.Theming;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -20,18 +22,73 @@ namespace BeatSight.Game.Screens.Playback.Playfield
     {
         private static readonly Dictionary<string, Color4> componentColours = new Dictionary<string, Color4>
         {
-            {"kick", new Color4(186, 145, 255, 255)},
-            {"snare", new Color4(64, 156, 255, 255)},
-            {"hihat", new Color4(255, 221, 89, 255)},
-            {"hihat_closed", new Color4(255, 221, 89, 255)},
-            {"hihat_open", new Color4(255, 195, 0, 255)},
-            {"tom_high", new Color4(138, 201, 38, 255)},
-            {"tom_mid", new Color4(76, 201, 240, 255)},
-            {"tom_low", new Color4(128, 128, 255, 255)},
-            {"crash", new Color4(255, 159, 243, 255)},
-            {"ride", new Color4(250, 177, 160, 255)},
-            {"china", new Color4(255, 204, 92, 255)}
+            // Core palette tuned for strong lane contrast in 3D.
+            {"kick", new Color4(172, 116, 255, 255)},
+            {"snare", new Color4(255, 82, 102, 255)},
+            {"hihat", new Color4(246, 192, 58, 255)},
+            {"hihat_closed", new Color4(246, 192, 58, 255)},
+            {"hihat_open", new Color4(255, 210, 84, 255)},
+            {"hihat_pedal", new Color4(218, 168, 52, 255)},
+            {"tom_high", new Color4(68, 156, 255, 255)},
+            {"tom_mid", new Color4(52, 136, 236, 255)},
+            {"tom_low", new Color4(40, 118, 220, 255)},
+            {"tom", new Color4(52, 136, 236, 255)},
+            {"crash", new Color4(74, 220, 142, 255)},
+            {"ride", new Color4(255, 158, 88, 255)},
+            {"ride_bell", new Color4(255, 158, 88, 255)},
+            {"ride_bow", new Color4(244, 144, 76, 255)},
+            {"china", new Color4(255, 118, 206, 255)},
+            {"splash", new Color4(86, 218, 228, 255)},
+            {"cross_stick", new Color4(255, 206, 96, 255)},
         };
+
+        /// <summary>
+        /// Resolves the colour for a component name, stripping ranked suffixes
+        /// (e.g. "crash_1" → "crash", "china_2" → "china", "tom_1" → "tom").
+        /// </summary>
+        private static Color4 resolveComponentColour(string component)
+        {
+            string key = component.ToLowerInvariant();
+
+            // Direct match first
+            if (componentColours.TryGetValue(key, out var colour))
+                return colour;
+
+            // Strip trailing _N suffix (e.g. crash_1 → crash, ride_bell_2 → ride_bell)
+            int lastUnderscore = key.LastIndexOf('_');
+            if (lastUnderscore > 0 && lastUnderscore < key.Length - 1)
+            {
+                bool allDigits = true;
+                for (int i = lastUnderscore + 1; i < key.Length; i++)
+                {
+                    if (!char.IsDigit(key[i]))
+                    {
+                        allDigits = false;
+                        break;
+                    }
+                }
+
+                if (allDigits)
+                {
+                    string baseName = key[..lastUnderscore];
+                    if (componentColours.TryGetValue(baseName, out colour))
+                        return colour;
+                }
+            }
+
+            // Fallback: substring matching for partial hits
+            if (key.Contains("crash")) return componentColours["crash"];
+            if (key.Contains("china")) return componentColours["china"];
+            if (key.Contains("splash")) return componentColours["splash"];
+            if (key.Contains("ride")) return componentColours["ride"];
+            if (key.Contains("tom")) return componentColours["tom"];
+            if (key.Contains("hat") || key.Contains("hh")) return componentColours["hihat"];
+            if (key.Contains("snare")) return componentColours["snare"];
+            if (key.Contains("kick")) return componentColours["kick"];
+
+            // Default gray for truly unknown components
+            return new Color4(180, 180, 200, 255);
+        }
 
         public double HitTime { get; }
         public int Lane { get; private set; }
@@ -45,6 +102,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
         private readonly Box mainBox;
         private readonly Box highlightStrip;
+        private readonly Box manuscriptCrossLineA;
+        private readonly Box manuscriptCrossLineB;
         private readonly Box? glowBox;
         private readonly Box stem;
         private readonly Bindable<bool> showGlowEffects;
@@ -78,9 +137,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             CornerRadius = 8;
             Masking = true;
 
-            AccentColour = componentColours.TryGetValue(hitObject.Component.ToLowerInvariant(), out var colour)
-                ? colour
-                : new Color4(180, 180, 200, 255);
+            AccentColour = resolveComponentColour(hitObject.Component);
 
             Colour = AccentColour;
 
@@ -118,6 +175,28 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 Alpha = 0
             };
             children.Add(stem);
+
+            manuscriptCrossLineA = new Box
+            {
+                Width = 2,
+                Height = 14,
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                Colour = AccentColour,
+                Alpha = 0
+            };
+            children.Add(manuscriptCrossLineA);
+
+            manuscriptCrossLineB = new Box
+            {
+                Width = 2,
+                Height = 14,
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                Colour = AccentColour,
+                Alpha = 0
+            };
+            children.Add(manuscriptCrossLineB);
 
             highlightStrip = new Box
             {
@@ -158,19 +237,77 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             if (viewMode == LaneViewMode.Manuscript)
             {
+                bool cymbalHead = ManuscriptBackgroundEnhanced.UsesCrossNoteheadForComponent(ComponentName);
+                bool ghostNote = Velocity < 0.35;
+                bool accentNote = Velocity > 0.85;
+                float noteWidth = Math.Max(10f, Width);
+                float noteHeight = Math.Max(7f, Height);
+                Color4 manuscriptInk = AccentColour.Darken(0.18f);
                 mainBox.Shear = Vector2.Zero;
-                CornerRadius = 10;
-                Size = new Vector2(20, 20);
-                highlightStrip.Alpha = 0;
-                stem.Alpha = 1 * velocityAlpha;
+                CornerRadius = Math.Clamp(noteHeight * 0.38f, 3f, 10f);
+                mainBox.Colour = ghostNote ? DesignSystem.WithOpacity(manuscriptInk, 0.76f) : manuscriptInk;
+                mainBox.Alpha = cymbalHead ? 0f : 0.96f * velocityAlpha;
+
+                float crossLength = Math.Clamp(noteWidth * 0.95f, 9f, 24f);
+                float crossThickness = Math.Clamp(crossLength * 0.15f, 1.5f, 3f);
+                manuscriptCrossLineA.Width = crossThickness;
+                manuscriptCrossLineA.Height = crossLength;
+                manuscriptCrossLineA.Rotation = 45f;
+                manuscriptCrossLineA.Colour = manuscriptInk;
+                manuscriptCrossLineA.Alpha = cymbalHead ? 0.95f * velocityAlpha : 0f;
+
+                manuscriptCrossLineB.Width = crossThickness;
+                manuscriptCrossLineB.Height = crossLength;
+                manuscriptCrossLineB.Rotation = -45f;
+                manuscriptCrossLineB.Colour = manuscriptInk;
+                manuscriptCrossLineB.Alpha = cymbalHead ? 0.95f * velocityAlpha : 0f;
+
+                highlightStrip.Anchor = Anchor.Centre;
+                highlightStrip.Origin = Anchor.BottomCentre;
+                highlightStrip.Width = 0.9f;
+                highlightStrip.Height = Math.Clamp(noteHeight * 0.16f, 1.6f, 3f);
+                highlightStrip.Y = -noteHeight * 0.92f;
+                highlightStrip.Colour = manuscriptInk;
+                highlightStrip.Alpha = accentNote
+                    ? 0.72f * velocityAlpha
+                    : ghostNote
+                        ? 0.24f * velocityAlpha
+                        : 0f;
+
+                bool stemDown = ManuscriptBackgroundEnhanced.ShouldUseDownStemForComponent(ComponentName);
+                stem.Colour = manuscriptInk;
+                stem.Width = Math.Clamp(noteWidth * 0.1f, 1.2f, 2.5f);
+                stem.Height = Math.Clamp(noteHeight * 2.65f, 16f, 44f);
+                if (stemDown)
+                {
+                    stem.Anchor = Anchor.CentreLeft;
+                    stem.Origin = Anchor.TopCentre;
+                    stem.X = noteWidth * 0.34f;
+                    stem.Y = -noteHeight * 0.04f;
+                }
+                else
+                {
+                    stem.Anchor = Anchor.CentreRight;
+                    stem.Origin = Anchor.BottomCentre;
+                    stem.X = -noteWidth * 0.34f;
+                    stem.Y = noteHeight * 0.04f;
+                }
+                stem.Alpha = 0.92f * velocityAlpha;
 
                 if (glowBox != null)
-                    glowBox.Alpha = 0.2f * velocityAlpha;
+                {
+                    glowBox.Colour = manuscriptInk;
+                    glowBox.Alpha = 0.04f * velocityAlpha;
+                }
 
                 return;
             }
 
             stem.Alpha = 0;
+            manuscriptCrossLineA.Alpha = 0;
+            manuscriptCrossLineB.Alpha = 0;
+            mainBox.Colour = AccentColour;
+            stem.Colour = AccentColour;
 
             if (viewMode == LaneViewMode.TwoDimensional)
             {
@@ -206,33 +343,34 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             }
             else
             {
-                mainBox.Shear = new Vector2(-0.25f, 0);
+                // Keep 3D notes rectangular for lane clarity.
+                mainBox.Shear = Vector2.Zero;
                 if (isKickNote && kickGlobalMode)
                 {
                     float assumedHeight = Height > 0 ? Height : 18f;
-                    CornerRadius = Math.Min(assumedHeight / 2.2f, 10f);
+                    CornerRadius = Math.Min(assumedHeight / 2.0f, 10f);
                     highlightStrip.Anchor = Anchor.Centre;
                     highlightStrip.Origin = Anchor.Centre;
                     highlightStrip.Width = 1f;
-                    highlightStrip.Height = Math.Clamp(assumedHeight * 0.24f, 2f, 6f);
-                    highlightStrip.Alpha = 0.6f * velocityAlpha;
-                    highlightStrip.Y = -assumedHeight * 0.14f;
-                    highlightStrip.Colour = new Color4(255, 230, 210, 210);
+                    highlightStrip.Height = Math.Clamp(assumedHeight * 0.18f, 2f, 5f);
+                    highlightStrip.Alpha = 0.58f * velocityAlpha;
+                    highlightStrip.Y = -assumedHeight * 0.05f;
+                    highlightStrip.Colour = new Color4(255, 255, 255, 205);
                     if (glowBox != null)
-                        glowBox.Alpha = 0.5f * velocityAlpha;
+                        glowBox.Alpha = 0.34f * velocityAlpha;
                     return;
                 }
 
-                CornerRadius = Math.Min(Height / 2.4f, 11f);
+                CornerRadius = Math.Min(Height / 2.2f, 10f);
                 highlightStrip.Anchor = Anchor.Centre;
                 highlightStrip.Origin = Anchor.Centre;
                 highlightStrip.Width = 1f;
-                highlightStrip.Height = Math.Clamp(Height * 0.26f, 2f, 6f);
-                highlightStrip.Y = -Height * 0.16f;
-                highlightStrip.Alpha = 0.64f * velocityAlpha;
-                highlightStrip.Colour = new Color4(255, 228, 205, 210);
+                highlightStrip.Height = Math.Clamp(Height * 0.18f, 2f, 5f);
+                highlightStrip.Y = -Height * 0.06f;
+                highlightStrip.Alpha = 0.52f * velocityAlpha;
+                highlightStrip.Colour = new Color4(255, 255, 255, 195);
                 if (glowBox != null)
-                    glowBox.Alpha = 0.5f * velocityAlpha;
+                    glowBox.Alpha = 0.30f * velocityAlpha;
             }
         }
 
@@ -271,16 +409,16 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             }
             else
             {
-                CornerRadius = Math.Min(height / 2.4f, 11f);
+                CornerRadius = Math.Min(height / 2.2f, 10f);
                 highlightStrip.Anchor = Anchor.Centre;
                 highlightStrip.Origin = Anchor.Centre;
                 highlightStrip.Width = 1f;
-                highlightStrip.Height = Math.Clamp(height * 0.26f, 2f, 6f);
-                highlightStrip.Y = -height * 0.16f;
-                highlightStrip.Alpha = 0.64f * velocityAlpha;
-                highlightStrip.Colour = new Color4(255, 228, 205, 210);
+                highlightStrip.Height = Math.Clamp(height * 0.18f, 2f, 5f);
+                highlightStrip.Y = -height * 0.06f;
+                highlightStrip.Alpha = 0.52f * velocityAlpha;
+                highlightStrip.Colour = new Color4(255, 255, 255, 195);
                 if (glowBox != null)
-                    glowBox.Alpha = 0.5f;
+                    glowBox.Alpha = 0.30f * velocityAlpha;
             }
         }
 
@@ -314,7 +452,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     this.FlashColour(new Color4(255, 80, 90, 255), 90, Easing.OutQuint);
                     this.FadeColour(new Color4(120, 20, 30, 200), 120, Easing.OutQuint);
                     this.MoveToY(Y + 18, 160, Easing.OutQuint);
-                    this.FadeOut(140, Easing.OutQuint).Expire();
+                    this.FadeOut(140, Easing.OutQuint);
                     break;
 
                 case HitResult.Perfect:
@@ -323,7 +461,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     {
                         // Burst effect
                         this.ScaleTo(1.4f, 100, Easing.OutQuint);
-                        this.FadeOut(150, Easing.OutQuint).Expire();
+                        this.FadeOut(150, Easing.OutQuint);
 
                         // Glow burst
                         if (showGlowEffects.Value && glowBox != null)
@@ -334,12 +472,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     }
                     else
                     {
-                        this.FadeOut(150).Expire();
+                        this.FadeOut(150);
                     }
                     break;
 
                 default:
-                    this.FadeOut(180).ScaleTo(1.2f, 180, Easing.OutQuint).Expire();
+                    this.FadeOut(180).ScaleTo(1.2f, 180, Easing.OutQuint);
                     break;
             }
         }
@@ -348,6 +486,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         {
             IsJudged = false;
             LifetimeEnd = double.MaxValue;
+            lastAppliedDepth = float.NaN;
 
             this.ClearTransforms();
             this.Alpha = 1;
@@ -359,13 +498,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             {
                 mainBox.ClearTransforms();
                 mainBox.Colour = AccentColour;
-                mainBox.Alpha = 1;
+                mainBox.Alpha = velocityAlpha;
             }
 
             if (glowBox != null)
             {
                 glowBox.ClearTransforms();
-                glowBox.Alpha = 0.3f;
+                glowBox.Alpha = 0.3f * velocityAlpha;
                 glowBox.Scale = Vector2.One;
             }
 

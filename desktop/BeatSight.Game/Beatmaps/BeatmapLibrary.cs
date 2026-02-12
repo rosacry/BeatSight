@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using BeatSight.Game.Configuration;
 
 namespace BeatSight.Game.Beatmaps
 {
@@ -10,6 +11,8 @@ namespace BeatSight.Game.Beatmaps
     /// </summary>
     public static class BeatmapLibrary
     {
+        private static readonly string[] beatmapSearchPatterns = { "*.bsm", "*.bs" };
+
         public sealed class BeatmapEntry
         {
             public required string Path { get; init; }
@@ -29,7 +32,7 @@ namespace BeatSight.Game.Beatmaps
                 if (!Directory.Exists(directory))
                     continue;
 
-                foreach (var file in Directory.EnumerateFiles(directory, "*.bsm", SearchOption.AllDirectories))
+                foreach (var file in enumerateBeatmapFiles(directory, SearchOption.AllDirectories))
                 {
                     string normalisedPath = Path.GetFullPath(file);
                     if (!seen.Add(normalisedPath))
@@ -67,7 +70,7 @@ namespace BeatSight.Game.Beatmaps
                 if (!Directory.Exists(directory))
                     continue;
 
-                var candidate = Directory.EnumerateFiles(directory, "*.bsm", SearchOption.TopDirectoryOnly).FirstOrDefault();
+                var candidate = enumerateBeatmapFiles(directory, SearchOption.TopDirectoryOnly).FirstOrDefault();
                 if (!string.IsNullOrEmpty(candidate))
                 {
                     path = Path.GetFullPath(candidate);
@@ -87,13 +90,39 @@ namespace BeatSight.Game.Beatmaps
             yield return Path.Combine(solutionRoot, "beatmaps");
             yield return Path.Combine(solutionRoot, "shared", "formats");
 
+            // Primary user content location.
+            yield return UserAssetDirectories.GetPath(UserAssetDirectories.Songs);
+            // Legacy alternate user directory.
+            yield return UserAssetDirectories.GetPath("Beatmaps");
+
             var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             if (!string.IsNullOrEmpty(home))
             {
-                // Match osu!'s "Songs" folder convention
-                yield return Path.Combine(home, "BeatSight", "Songs");
-                // Also check legacy "Beatmaps" folder for backwards compatibility
+                // Legacy pre-roaming location for backwards compatibility.
                 yield return Path.Combine(home, "BeatSight", "Beatmaps");
+            }
+        }
+
+        private static IEnumerable<string> enumerateBeatmapFiles(string directory, SearchOption searchOption)
+        {
+            foreach (var pattern in beatmapSearchPatterns)
+            {
+                IEnumerable<string>? files = null;
+
+                try
+                {
+                    files = Directory.EnumerateFiles(directory, pattern, searchOption);
+                }
+                catch
+                {
+                    // Ignore inaccessible directories and continue scanning other roots.
+                }
+
+                if (files == null)
+                    continue;
+
+                foreach (var file in files)
+                    yield return file;
             }
         }
     }

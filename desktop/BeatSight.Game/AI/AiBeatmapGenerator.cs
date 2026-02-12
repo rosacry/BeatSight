@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BeatSight.Game.Beatmaps;
+using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
 using BeatSight.Game.Metadata;
 using Newtonsoft.Json;
@@ -44,6 +45,42 @@ namespace BeatSight.Game.AI
         /// Matches backend AIGenerationOptions.use_ml_classifier.
         /// </summary>
         public bool UseMlClassifier { get; set; } = true;
+
+        /// <summary>
+        /// Path to the ML model checkpoint (.pt or .pth file).
+        /// If not set, Python will use its default model path.
+        /// </summary>
+        public string? MlModelPath { get; set; }
+
+        /// <summary>
+        /// Device for ML inference: "cuda", "cpu", or "mps".
+        /// Defaults to "cuda" if available, otherwise "cpu".
+        /// </summary>
+        public string? MlDevice { get; set; }
+
+        /// <summary>
+        /// Use multi-label classifier that can detect simultaneous drum hits.
+        /// The new v5 model (best_multilabel_model_ema.pt) requires this.
+        /// </summary>
+        public bool UseMultilabelClassifier { get; set; } = true;
+
+        /// <summary>
+        /// Path to per-class thresholds JSON file for multi-label classifier.
+        /// If not set, Python will use default thresholds.
+        /// </summary>
+        public string? MultilabelThresholdsPath { get; set; }
+
+        /// <summary>
+        /// Use adaptive thresholds that are computed per-song based on
+        /// probability distributions. More accurate but slightly slower.
+        /// </summary>
+        public bool UseAdaptiveThresholds { get; set; } = false;
+
+        /// <summary>
+        /// Method for computing adaptive thresholds: "otsu" (bimodal detection),
+        /// "percentile" (top N%), or "knee" (elbow detection).
+        /// </summary>
+        public string AdaptiveThresholdMethod { get; set; } = "otsu";
     }
 
     public readonly struct AiGenerationProgress
@@ -513,6 +550,32 @@ namespace BeatSight.Game.AI
             if (options.EndTime.HasValue)
                 builder.Append(' ').Append("--end-time ").Append(options.EndTime.Value.ToString("0.######", CultureInfo.InvariantCulture));
 
+            // ML classifier options
+            if (options.UseMlClassifier)
+                builder.Append(" --ml");
+            else
+                builder.Append(" --no-ml");
+
+            if (!string.IsNullOrEmpty(options.MlModelPath))
+                builder.Append(" --ml-model ").Append(quote(options.MlModelPath));
+
+            if (!string.IsNullOrEmpty(options.MlDevice))
+                builder.Append(" --ml-device ").Append(options.MlDevice);
+
+            // Multi-label classifier options
+            if (options.UseMultilabelClassifier)
+                builder.Append(" --multilabel");
+
+            if (!string.IsNullOrEmpty(options.MultilabelThresholdsPath))
+                builder.Append(" --multilabel-thresholds ").Append(quote(options.MultilabelThresholdsPath));
+
+            // Adaptive thresholds for per-song optimization
+            if (options.UseAdaptiveThresholds)
+            {
+                builder.Append(" --adaptive-thresholds");
+                builder.Append(" --adaptive-threshold-method ").Append(options.AdaptiveThresholdMethod);
+            }
+
             return builder.ToString();
         }
 
@@ -544,8 +607,8 @@ namespace BeatSight.Game.AI
                 beatmap.Editor.AiGenerationMetadata.ManualEdits = false;
             }
 
-            // Use Songs folder to match osu! convention
-            string userSongsRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "BeatSight", "Songs");
+            // Store generated beatmaps in the roaming user Songs directory.
+            string userSongsRoot = UserAssetDirectories.GetPath(UserAssetDirectories.Songs);
             Directory.CreateDirectory(userSongsRoot);
 
             // Format: {Artist} - {Title} ({Creator})
@@ -604,9 +667,9 @@ namespace BeatSight.Game.AI
                 }
             }
 
-            // Use .bs extension (shorter than .bsm)
+            // Persist as .bsm so generated maps are discoverable by the in-game library.
             string beatmapSlug = createSlug($"{artist}-{title}");
-            string finalBeatmapPath = Path.Combine(beatmapFolder, beatmapSlug + ".bs");
+            string finalBeatmapPath = Path.Combine(beatmapFolder, beatmapSlug + ".bsm");
             BeatmapLoader.SaveToFile(beatmap, finalBeatmapPath);
 
             return (finalBeatmapPath, drumStemTargetPath);

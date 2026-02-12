@@ -40,7 +40,14 @@ namespace BeatSight.Game.AI.Generation
         bool UseLocalInference = false,
         string? LocalModelPath = null,
         string LocalModelVariant = "full",
-        string LocalInferenceDevice = "cuda");
+        string LocalInferenceDevice = "cuda",
+        // ML classifier options
+        bool UseMlClassifier = true,
+        bool UseMultilabelClassifier = true,
+        string? MultilabelThresholdsPath = null,
+        // Adaptive thresholds for per-song optimization
+        bool UseAdaptiveThresholds = false,
+        string AdaptiveThresholdMethod = "otsu");
 
     public readonly record struct GenerationProgress(
         GenStage Stage,
@@ -140,7 +147,16 @@ namespace BeatSight.Game.AI.Generation
                     ExportDebugAnalysis = snapshot.DebugOverlayEnabled,
                     EnableDrumSeparation = true,
                     ConfidenceThreshold = 0.3,
-                    MaxSnapErrorMilliseconds = 12.0
+                    MaxSnapErrorMilliseconds = 12.0,
+                    // ML classifier options
+                    UseMlClassifier = snapshot.UseMlClassifier,
+                    MlModelPath = snapshot.LocalModelPath,
+                    MlDevice = snapshot.LocalInferenceDevice,
+                    UseMultilabelClassifier = snapshot.UseMultilabelClassifier,
+                    MultilabelThresholdsPath = snapshot.MultilabelThresholdsPath,
+                    // Adaptive thresholds
+                    UseAdaptiveThresholds = snapshot.UseAdaptiveThresholds,
+                    AdaptiveThresholdMethod = snapshot.AdaptiveThresholdMethod
                 };
 
                 if (snapshot.TempoOverride is TempoOverride tempoOverride)

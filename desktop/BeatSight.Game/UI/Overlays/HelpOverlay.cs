@@ -25,8 +25,11 @@ namespace BeatSight.Game.UI.Overlays
 
         private Box backgroundDim = null!;
         private Container panel = null!;
+        private BasicScrollContainer sectionsScroll = null!;
         private FillFlowContainer<HelpSection> sectionsContainer = null!;
         private SpriteText contextLabel = null!;
+        private float lastPanelWidth = -1;
+        private float lastScrollHeight = -1;
 
         private HelpContext currentContext = HelpContext.General;
 
@@ -79,7 +82,7 @@ namespace BeatSight.Game.UI.Overlays
                             Children = new Drawable[]
                             {
                                 createHeader(),
-                                new BasicScrollContainer
+                                sectionsScroll = new BasicScrollContainer
                                 {
                                     RelativeSizeAxes = Axes.X,
                                     Height = panel_max_height - 120,
@@ -98,6 +101,7 @@ namespace BeatSight.Game.UI.Overlays
             };
 
             updateContent();
+            applyResponsiveLayout(force: true);
         }
 
         private Drawable createHeader()
@@ -208,7 +212,7 @@ namespace BeatSight.Game.UI.Overlays
                     {
                         ("1", "2D Lane View"),
                         ("2", "3D Highway View"),
-                        ("3", "Manuscript View"),
+                        ("3", "Sheet Music View"),
                         ("Z", "Toggle zoom"),
                         ("Tab", "Toggle HUD")
                     }));
@@ -319,6 +323,33 @@ namespace BeatSight.Game.UI.Overlays
             panel.FadeOut(200);
         }
 
+        protected override void Update()
+        {
+            base.Update();
+            applyResponsiveLayout();
+        }
+
+        private void applyResponsiveLayout(bool force = false)
+        {
+            if (DrawWidth <= 0 || DrawHeight <= 0 || panel == null || sectionsScroll == null)
+                return;
+
+            float targetPanelWidth = ResponsiveLayout.ClampFraction(DrawWidth, 0.44f, 380f, 900f);
+            float targetScrollHeight = ResponsiveLayout.ClampFraction(DrawHeight, 0.66f, 280f, 760f);
+
+            if (force || Math.Abs(targetPanelWidth - lastPanelWidth) > 0.2f)
+            {
+                panel.Width = targetPanelWidth;
+                lastPanelWidth = targetPanelWidth;
+            }
+
+            if (force || Math.Abs(targetScrollHeight - lastScrollHeight) > 0.2f)
+            {
+                sectionsScroll.Height = targetScrollHeight;
+                lastScrollHeight = targetScrollHeight;
+            }
+        }
+
         /// <summary>
         /// A section of help content with a title and list of shortcuts.
         /// </summary>
@@ -351,44 +382,55 @@ namespace BeatSight.Game.UI.Overlays
                     if (string.IsNullOrEmpty(key))
                         continue;
 
-                    content.Add(new Container
+                    content.Add(new GridContainer
                     {
                         RelativeSizeAxes = Axes.X,
                         AutoSizeAxes = Axes.Y,
-                        Children = new Drawable[]
+                        ColumnDimensions = new[]
                         {
-                            new Container
+                            new Dimension(GridSizeMode.Relative, 0.34f),
+                            new Dimension(GridSizeMode.Relative, 0.66f)
+                        },
+                        Content = new[]
+                        {
+                            new Drawable[]
                             {
-                                Width = 180,
-                                AutoSizeAxes = Axes.Y,
-                                Child = new Container
+                                new Container
                                 {
-                                    AutoSizeAxes = Axes.Both,
-                                    Masking = true,
-                                    CornerRadius = 4,
-                                    Children = new Drawable[]
+                                    RelativeSizeAxes = Axes.X,
+                                    AutoSizeAxes = Axes.Y,
+                                    Padding = new MarginPadding { Right = 10 },
+                                    Child = new Container
                                     {
-                                        new Box
+                                        AutoSizeAxes = Axes.Both,
+                                        Masking = true,
+                                        CornerRadius = 4,
+                                        Children = new Drawable[]
                                         {
-                                            RelativeSizeAxes = Axes.Both,
-                                            Colour = UITheme.SurfaceAlt
-                                        },
-                                        new SpriteText
-                                        {
-                                            Text = key,
-                                            Font = BeatSightFont.Button(14),
-                                            Colour = UITheme.TextPrimary,
-                                            Padding = new MarginPadding { Horizontal = 8, Vertical = 4 }
+                                            new Box
+                                            {
+                                                RelativeSizeAxes = Axes.Both,
+                                                Colour = UITheme.SurfaceAlt
+                                            },
+                                            new SpriteText
+                                            {
+                                                Text = key,
+                                                Font = BeatSightFont.Button(14),
+                                                Colour = UITheme.TextPrimary,
+                                                Padding = new MarginPadding { Horizontal = 8, Vertical = 4 }
+                                            }
                                         }
                                     }
+                                },
+                                new SpriteText
+                                {
+                                    RelativeSizeAxes = Axes.X,
+                                    Text = description,
+                                    Font = BeatSightFont.Body(14),
+                                    Colour = UITheme.TextSecondary,
+                                    AllowMultiline = true,
+                                    Truncate = false
                                 }
-                            },
-                            new SpriteText
-                            {
-                                X = 190,
-                                Text = description,
-                                Font = BeatSightFont.Body(14),
-                                Colour = UITheme.TextSecondary
                             }
                         }
                     });

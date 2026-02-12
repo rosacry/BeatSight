@@ -18,8 +18,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         // Staff configuration
         private const int MainStaffLines = 5;
         private const float LineSpacing = 14f;
+        private const float StaffSpacingScale = 1.8f;
         private const float LineThickness = 1.5f;
-        private const float StaffWidthRatio = 0.5f;
+        private const float StaffWidthRatio = 0.64f;
 
         // Colours for an authentic paper look
         private static readonly Color4 PaperBase = new Color4(252, 250, 242, 255);
@@ -94,7 +95,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             // Main staff lines (5 lines for standard percussion staff)
             for (int i = 0; i < MainStaffLines; i++)
             {
-                float offset = (i - (MainStaffLines - 1) / 2f) * LineSpacing;
+                float offset = (i - (MainStaffLines - 1) / 2f) * LineSpacing * StaffSpacingScale;
 
                 staffContainer.Add(new Box
                 {
@@ -110,7 +111,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             // Ledger lines above (for cymbals - crash, ride, etc.)
             for (int i = 1; i <= 3; i++)
             {
-                float offset = ((MainStaffLines - 1) / 2f + i) * LineSpacing;
+                float offset = ((MainStaffLines - 1) / 2f + i) * LineSpacing * StaffSpacingScale;
 
                 staffContainer.Add(new Box
                 {
@@ -127,7 +128,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             // Ledger lines below (for bass drum)
             for (int i = 1; i <= 2; i++)
             {
-                float offset = -((MainStaffLines - 1) / 2f + i) * LineSpacing;
+                float offset = -((MainStaffLines - 1) / 2f + i) * LineSpacing * StaffSpacingScale;
 
                 staffContainer.Add(new Box
                 {
@@ -183,14 +184,14 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             if (string.IsNullOrEmpty(component))
                 return 0f;
 
-            string key = component.ToLowerInvariant();
+            string key = normalizeComponentKey(component);
 
             // Standard drum kit positions on percussion staff
             // Positions are relative to center line (0 = middle line)
             return key switch
             {
                 // Bass drum - below staff
-                "kick" or "bass" => -2.5f * LineSpacing,
+                "kick" or "bass" => -2.5f * LineSpacing * StaffSpacingScale,
 
                 // Snare - middle of staff
                 "snare" => 0f,
@@ -199,28 +200,66 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 "sidestick" => 0f,
 
                 // Hi-hat - above top line
-                "hihat" or "hihat_closed" or "hh" => 2.5f * LineSpacing,
-                "hihat_open" or "hho" => 2.5f * LineSpacing,
-                "hihat_pedal" or "hhp" => -2f * LineSpacing,
+                "hihat" or "hihat_closed" or "hh" => 2.5f * LineSpacing * StaffSpacingScale,
+                "hihat_open" or "hho" => 2.5f * LineSpacing * StaffSpacingScale,
+                "hihat_pedal" or "hhp" => -2f * LineSpacing * StaffSpacingScale,
 
                 // Toms - spaces between lines
-                "tom_high" or "high_tom" => 1.5f * LineSpacing,
-                "tom_mid" or "mid_tom" or "tom" => 1f * LineSpacing,
-                "tom_low" or "low_tom" or "floor_tom" => 0.5f * LineSpacing,
+                "tom_high" or "high_tom" => 1.5f * LineSpacing * StaffSpacingScale,
+                "tom_mid" or "mid_tom" or "tom" => 1f * LineSpacing * StaffSpacingScale,
+                "tom_low" or "low_tom" or "floor_tom" => 0.5f * LineSpacing * StaffSpacingScale,
 
                 // Cymbals - way above staff
-                "crash" or "crash_cymbal" => 3.5f * LineSpacing,
-                "ride" or "ride_cymbal" => 3f * LineSpacing,
-                "china" or "china_cymbal" => 3.5f * LineSpacing,
-                "splash" or "splash_cymbal" => 3f * LineSpacing,
+                "crash" or "crash_cymbal" => 3.5f * LineSpacing * StaffSpacingScale,
+                "ride" or "ride_cymbal" => 3f * LineSpacing * StaffSpacingScale,
+                "china" or "china_cymbal" => 3.5f * LineSpacing * StaffSpacingScale,
+                "splash" or "splash_cymbal" => 3f * LineSpacing * StaffSpacingScale,
 
                 // Miscellaneous
-                "cowbell" => 2f * LineSpacing,
-                "tambourine" => 2f * LineSpacing,
+                "cowbell" => 2f * LineSpacing * StaffSpacingScale,
+                "tambourine" => 2f * LineSpacing * StaffSpacingScale,
 
                 // Default to center
                 _ => 0f
             };
+        }
+
+        private static string normalizeComponentKey(string component)
+        {
+            string key = component.ToLowerInvariant();
+
+            int underscore = key.LastIndexOf('_');
+            if (underscore > 0 && underscore < key.Length - 1)
+            {
+                bool numericSuffix = true;
+                for (int i = underscore + 1; i < key.Length; i++)
+                {
+                    if (!char.IsDigit(key[i]))
+                    {
+                        numericSuffix = false;
+                        break;
+                    }
+                }
+
+                if (numericSuffix)
+                    key = key[..underscore];
+            }
+
+            if (key.Contains("kick") || key.Contains("bass")) return "kick";
+            if (key.Contains("snare") || key.Contains("rim") || key.Contains("cross") || key.Contains("side"))
+                return "snare";
+            if (key.Contains("hat") || key.Contains("hh")) return key.Contains("pedal") ? "hihat_pedal" : "hihat";
+            if (key.Contains("tom_high")) return "tom_high";
+            if (key.Contains("tom_low") || key.Contains("floor")) return "tom_low";
+            if (key.Contains("tom")) return "tom_mid";
+            if (key.Contains("crash")) return "crash";
+            if (key.Contains("china")) return "china";
+            if (key.Contains("splash")) return "splash";
+            if (key.Contains("ride_bell") || key.Contains("bell")) return "ride";
+            if (key.Contains("ride")) return "ride";
+            if (key.Contains("cowbell")) return "cowbell";
+
+            return key;
         }
     }
 }

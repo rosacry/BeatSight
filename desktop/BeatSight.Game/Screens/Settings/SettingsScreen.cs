@@ -52,6 +52,10 @@ namespace BeatSight.Game.Screens.Settings
         private GameHost host = null!;
 
         private Container contentContainer = null!;
+        private GridContainer mainGrid = null!;
+        private Container headerContainer = null!;
+        private SpriteText headerTitleText = null!;
+        private FillFlowContainer sidebarButtonFlow = null!;
         private SettingsSection? currentSection;
         private BackButton backButton = null!;
         private readonly Dictionary<SettingsCategory, SettingsButton> sectionButtons = new();
@@ -63,6 +67,8 @@ namespace BeatSight.Game.Screens.Settings
         private Bindable<bool> showGlobalBackground = null!;
         private Bindable<double> globalBackgroundOpacity = null!;
         private Box rightAreaBackground = null!;
+        private float lastSidebarWidth = -1;
+        private float lastHeaderHeight = -1;
 
         private enum SettingsCategory
         {
@@ -122,6 +128,25 @@ namespace BeatSight.Game.Screens.Settings
                 }
             };
 
+            mainGrid = new GridContainer
+            {
+                Name = "SettingsLayoutGrid",
+                RelativeSizeAxes = Axes.Both,
+                ColumnDimensions = new[]
+                {
+                    new Dimension(GridSizeMode.Absolute, getSidebarWidthForViewport(DrawWidth)),
+                    new Dimension()
+                },
+                Content = new[]
+                {
+                    new Drawable[]
+                    {
+                        createSidebar(),
+                        createRightArea()
+                    }
+                }
+            };
+
             InternalChildren = new Drawable[]
             {
                 // Background matching SongSelectScreen
@@ -136,23 +161,7 @@ namespace BeatSight.Game.Screens.Settings
                     RelativeSizeAxes = Axes.Both,
                     Children = new Drawable[]
                     {
-                        new GridContainer
-                        {
-                            RelativeSizeAxes = Axes.Both,
-                            ColumnDimensions = new[]
-                            {
-                                new Dimension(GridSizeMode.Absolute, 250),
-                                new Dimension()
-                            },
-                            Content = new[]
-                            {
-                                new Drawable[]
-                                {
-                                    createSidebar(),
-                                    createRightArea()
-                                }
-                            }
-                        },
+                        mainGrid,
                         createHeader()
                     }
                 },
@@ -164,11 +173,29 @@ namespace BeatSight.Game.Screens.Settings
             showSection(SettingsCategory.Playback);
 
             updateBackgroundState();
+            applyResponsiveLayout(force: true);
         }
 
 
         private Drawable createSidebar()
         {
+            sidebarButtonFlow = new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(0, 4),
+                Padding = new MarginPadding { Top = 110, Left = 20, Right = 20, Bottom = 40 },
+                Children = new Drawable[]
+                {
+                    createSectionButton(SettingsCategory.Playback, "Playback"),
+                    createSectionButton(SettingsCategory.Audio, "Audio"),
+                    createSectionButton(SettingsCategory.Graphics, "Graphics"),
+                    createSectionButton(SettingsCategory.Controls, "Controls"),
+                    createSectionButton(SettingsCategory.AI, "AI Tools")
+                }
+            };
+
             return new Container
             {
                 RelativeSizeAxes = Axes.Both,
@@ -183,22 +210,7 @@ namespace BeatSight.Game.Screens.Settings
                     {
                         RelativeSizeAxes = Axes.Both,
                         ClampExtension = 0,
-                        Child = new FillFlowContainer
-                        {
-                            RelativeSizeAxes = Axes.X,
-                            AutoSizeAxes = Axes.Y,
-                            Direction = FillDirection.Vertical,
-                            Spacing = new Vector2(0, 4),
-                            Padding = new MarginPadding { Top = 110, Left = 20, Right = 20, Bottom = 40 },
-                            Children = new Drawable[]
-                            {
-                                createSectionButton(SettingsCategory.Playback, "Playback"),
-                                createSectionButton(SettingsCategory.Audio, "Audio"),
-                                createSectionButton(SettingsCategory.Graphics, "Graphics"),
-                                createSectionButton(SettingsCategory.Controls, "Controls"),
-                                createSectionButton(SettingsCategory.AI, "AI / Generation")
-                            }
-                        }
+                        Child = sidebarButtonFlow
                     }
                 }
             };
@@ -309,7 +321,7 @@ namespace BeatSight.Game.Screens.Settings
 
         private Drawable createHeader()
         {
-            return new Container
+            return headerContainer = new Container
             {
                 RelativeSizeAxes = Axes.X,
                 Height = 100,
@@ -327,9 +339,9 @@ namespace BeatSight.Game.Screens.Settings
                         Padding = new MarginPadding { Horizontal = 40 },
                         Children = new Drawable[]
                         {
-                            new SpriteText
+                            headerTitleText = new SpriteText
                             {
-                                Text = "SETTINGS",
+                                Text = AppCopy.SettingsHeader,
                                 Font = BeatSightFont.Title(40f),
                                 Colour = UITheme.AccentPrimary,
                                 Anchor = Anchor.Centre,
@@ -339,6 +351,75 @@ namespace BeatSight.Game.Screens.Settings
                     }
                 }
             };
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+            applyResponsiveLayout();
+        }
+
+        private void applyResponsiveLayout(bool force = false)
+        {
+            if (mainGrid == null || headerContainer == null || sidebarButtonFlow == null)
+                return;
+
+            var viewport = resolveResponsiveViewport();
+            if (viewport.X <= 0 || viewport.Y <= 0)
+                return;
+
+            float sidebarWidth = getSidebarWidthForViewport(viewport.X);
+            float headerHeight = getHeaderHeightForViewport(viewport.Y);
+
+            if (force || Math.Abs(sidebarWidth - lastSidebarWidth) > 0.2f)
+            {
+                mainGrid.ColumnDimensions = new[]
+                {
+                    new Dimension(GridSizeMode.Absolute, sidebarWidth),
+                    new Dimension()
+                };
+                lastSidebarWidth = sidebarWidth;
+            }
+
+            if (force || Math.Abs(headerHeight - lastHeaderHeight) > 0.2f)
+            {
+                headerContainer.Height = headerHeight;
+                lastHeaderHeight = headerHeight;
+            }
+
+            float horizontalInset = ResponsiveLayout.ClampFraction(viewport.X, 0.012f, 14f, 32f);
+            float topInset = headerHeight + ResponsiveLayout.ClampFraction(viewport.Y, 0.012f, 8f, 20f);
+            float bottomInset = ResponsiveLayout.ClampFraction(viewport.Y, 0.038f, 24f, 56f);
+
+            sidebarButtonFlow.Padding = new MarginPadding
+            {
+                Top = topInset,
+                Left = horizontalInset,
+                Right = horizontalInset,
+                Bottom = bottomInset
+            };
+            sidebarButtonFlow.Spacing = new Vector2(0, ResponsiveLayout.ClampFraction(viewport.Y, 0.0052f, 3f, 7f));
+
+            if (headerTitleText != null)
+                headerTitleText.Font = BeatSightFont.Title(ResponsiveLayout.ClampFraction(viewport.Y, 0.041f, 28f, 42f));
+        }
+
+        private Vector2 resolveResponsiveViewport()
+            => ResponsiveLayout.ResolveViewport(
+                this,
+                DrawWidth > 0 ? DrawWidth : 1366f,
+                DrawHeight > 0 ? DrawHeight : 768f);
+
+        private static float getSidebarWidthForViewport(float viewportWidth)
+        {
+            float width = viewportWidth > 0 ? viewportWidth : 1366f;
+            return ResponsiveLayout.ClampFraction(width, 0.19f, 210f, 370f);
+        }
+
+        private static float getHeaderHeightForViewport(float viewportHeight)
+        {
+            float height = viewportHeight > 0 ? viewportHeight : 768f;
+            return ResponsiveLayout.ClampFraction(height, 0.11f, 82f, 130f);
         }
 
         internal static void OpenDirectoryExternally(GameHost host, string relativePath)
@@ -420,6 +501,8 @@ namespace BeatSight.Game.Screens.Settings
             private bool isSelected;
             private readonly Container buttonBody;
             private Box flash = null!;
+            private float lastAppliedHeight = -1f;
+            private float lastAppliedWidth = -1f;
 
             [Resolved]
             private UIAudioController uiAudio { get; set; } = null!;
@@ -493,6 +576,33 @@ namespace BeatSight.Game.Screens.Settings
                         Blending = BlendingParameters.Additive
                     }
                 });
+            }
+
+            protected override void Update()
+            {
+                base.Update();
+
+                if (Parent == null)
+                    return;
+
+                float targetHeight = ResponsiveLayout.ClampFraction(Parent.DrawHeight, 0.062f, 42f, 56f);
+                float targetAccentWidth = ResponsiveLayout.ClampFraction(Parent.DrawWidth, 0.0045f, 4f, 7f);
+                float targetLabelLeft = ResponsiveLayout.ClampFraction(Parent.DrawWidth, 0.018f, 16f, 28f);
+                float targetLabelSize = System.Math.Clamp(targetHeight * 0.4f, 15f, 22f);
+
+                if (System.Math.Abs(targetHeight - lastAppliedHeight) > 0.2f)
+                {
+                    Height = targetHeight;
+                    label.Font = BeatSightFont.Subtitle(targetLabelSize);
+                    lastAppliedHeight = targetHeight;
+                }
+
+                if (System.Math.Abs(targetAccentWidth - lastAppliedWidth) > 0.2f)
+                {
+                    accentBar.Width = targetAccentWidth;
+                    label.Padding = new MarginPadding { Left = targetLabelLeft };
+                    lastAppliedWidth = targetAccentWidth;
+                }
             }
 
             public void SetSelected(bool selected)
@@ -573,6 +683,10 @@ namespace BeatSight.Game.Screens.Settings
         private BeatSightScrollContainer sectionScrollContainer = null!;
         private FillFlowContainer contentFlow = null!;
         private FillFlowContainer sectionBody = null!;
+        private SpriteText sectionTitleText = null!;
+        private readonly List<Action<float, float>> responsiveReflowActions = new();
+        private float lastResponsiveWidth = -1f;
+        private float lastResponsiveHeight = -1f;
         protected SettingsTooltipOverlay TooltipOverlay { get; }
         protected const float dropdown_menu_max_height = 240;
         protected BeatSightScrollContainer ScrollViewport => sectionScrollContainer;
@@ -611,7 +725,7 @@ namespace BeatSight.Game.Screens.Settings
 
             contentFlow.AddRange(new Drawable[]
             {
-                new SpriteText
+                sectionTitleText = new SpriteText
                 {
                     Text = title,
                     Font = BeatSightFont.Section(28f),
@@ -631,6 +745,7 @@ namespace BeatSight.Game.Screens.Settings
             InternalChild = sectionScrollContainer;
 
             rebuildContent();
+            applyResponsiveControlSizing(force: true);
         }
 
         protected void rebuildContent()
@@ -638,11 +753,68 @@ namespace BeatSight.Game.Screens.Settings
             if (sectionBody == null)
                 return;
 
+            responsiveReflowActions.Clear();
             sectionBody.Clear(false);
             sectionBody.Add(createContent());
+            applyResponsiveControlSizing(force: true);
         }
 
         protected abstract Drawable createContent();
+
+        protected override void Update()
+        {
+            base.Update();
+            applyResponsiveControlSizing();
+        }
+
+        private void registerResponsiveReflow(Action<float, float> action)
+        {
+            if (action == null)
+                return;
+
+            responsiveReflowActions.Add(action);
+        }
+
+        private void applyResponsiveControlSizing(bool force = false)
+        {
+            var viewport = resolveResponsiveViewport();
+            float width = viewport.X;
+            float height = viewport.Y;
+
+            if (!force
+                && System.Math.Abs(width - lastResponsiveWidth) < 0.2f
+                && System.Math.Abs(height - lastResponsiveHeight) < 0.2f)
+            {
+                return;
+            }
+
+            float sectionSpacing = ResponsiveLayout.ClampFraction(height, 0.039f, 20f, 34f);
+            if (contentFlow != null)
+                contentFlow.Spacing = new Vector2(0, sectionSpacing);
+            if (sectionBody != null)
+                sectionBody.Spacing = new Vector2(0, sectionSpacing);
+
+            if (sectionTitleText != null)
+            {
+                sectionTitleText.Font = BeatSightFont.Section(ResponsiveLayout.ClampFraction(height, 0.032f, 22f, 30f));
+                sectionTitleText.Margin = new MarginPadding
+                {
+                    Bottom = ResponsiveLayout.ClampFraction(height, 0.011f, 6f, 14f)
+                };
+            }
+
+            foreach (var action in responsiveReflowActions)
+                action(width, height);
+
+            lastResponsiveWidth = width;
+            lastResponsiveHeight = height;
+        }
+
+        private Vector2 resolveResponsiveViewport()
+            => ResponsiveLayout.ResolveViewport(
+                this,
+                DrawWidth > 0 ? DrawWidth : 1366f,
+                DrawHeight > 0 ? DrawHeight : 768f);
 
         protected SettingItem CreateSettingItem(string label, string? description, Drawable control, params ISettingsTooltipSuppressionSource[] suppressionSources)
         {
@@ -672,18 +844,29 @@ namespace BeatSight.Game.Screens.Settings
                 Origin = Anchor.Centre
             };
 
-            var setting = CreateSettingItem(label, description, new Container
+            var checkboxContainer = new Container
+            {
+                Size = new Vector2(24, 24),
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+                Child = checkbox
+            };
+
+            var controlContainer = new Container
             {
                 RelativeSizeAxes = Axes.X,
                 Height = 24,
-                Child = new Container
-                {
-                    Size = new Vector2(24, 24),
-                    Anchor = Anchor.CentreRight,
-                    Origin = Anchor.CentreRight,
-                    Child = checkbox
-                }
+                Child = checkboxContainer
+            };
+
+            registerResponsiveReflow((width, height) =>
+            {
+                float checkboxSize = ResponsiveLayout.ClampFraction(height, 0.031f, 20f, 26f);
+                controlContainer.Height = checkboxSize;
+                checkboxContainer.Size = new Vector2(checkboxSize, checkboxSize);
             });
+
+            var setting = CreateSettingItem(label, description, controlContainer);
 
             setting.SetDefaultValue(bindable.Default ? "Enabled" : "Disabled");
             bindable.BindValueChanged(_ => setting.SetModified(!bindable.IsDefault), true);
@@ -703,6 +886,11 @@ namespace BeatSight.Game.Screens.Settings
                     Origin = Anchor.CentreRight,
                     SearchEnabled = enableSearch
                 };
+
+                registerResponsiveReflow((width, height) =>
+                {
+                    directDropdown.Width = ResponsiveLayout.ClampFraction(width, 0.17f, 176f, 264f);
+                });
 
                 directDropdown.OverlayLayer = DropdownOverlay;
                 directDropdown.ScrollViewport = ScrollViewport;
@@ -725,6 +913,11 @@ namespace BeatSight.Game.Screens.Settings
                 Items = items,
                 SearchEnabled = enableSearch
             };
+
+            registerResponsiveReflow((width, height) =>
+            {
+                mappedDropdown.Width = ResponsiveLayout.ClampFraction(width, 0.17f, 176f, 264f);
+            });
 
             mappedDropdown.OverlayLayer = DropdownOverlay;
             mappedDropdown.ScrollViewport = ScrollViewport;
@@ -793,12 +986,9 @@ namespace BeatSight.Game.Screens.Settings
                 }
             };
 
-            const float rowSpacing = 8;
-            const float controlWidthWithoutToggle = 320;
-            const float controlWidthWithToggle = 360;
-            const float sliderToggleSpacing = 16;
-
-            float baseSliderWidth = Math.Max(120, controlWidthWithoutToggle - valueContainer.Width - rowSpacing);
+            const float initialControlWidthWithoutToggle = 320f;
+            const float initialControlWidthWithToggle = 360f;
+            float controlWidth = toggleBindable != null ? initialControlWidthWithToggle : initialControlWidthWithoutToggle;
 
             var sliderContainerChildren = new List<Drawable> { sliderBar };
             SliderInputBlocker? sliderInputBlocker = null;
@@ -815,14 +1005,12 @@ namespace BeatSight.Game.Screens.Settings
 
             Container sliderContainer = new Container
             {
-                Width = baseSliderWidth,
+                Width = 220,
                 Height = 18,
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft,
                 Children = sliderContainerChildren.ToArray()
             };
-
-            float controlWidth = controlWidthWithoutToggle;
 
             var sliderCluster = new FillFlowContainer
             {
@@ -830,7 +1018,7 @@ namespace BeatSight.Game.Screens.Settings
                 Direction = FillDirection.Horizontal,
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft,
-                Spacing = new Vector2(sliderToggleSpacing, 0)
+                Spacing = new Vector2(16, 0)
             };
 
             sliderCluster.Add(sliderContainer);
@@ -839,20 +1027,21 @@ namespace BeatSight.Game.Screens.Settings
             {
                 AutoSizeAxes = Axes.Y,
                 Direction = FillDirection.Horizontal,
-                Spacing = new Vector2(rowSpacing, 0),
+                Spacing = new Vector2(8, 0),
                 Anchor = Anchor.CentreRight,
                 Origin = Anchor.CentreRight
             };
 
             rowFlow.AddRange(new Drawable[] { valueContainer, sliderCluster });
 
+            Container? toggleContainer = null;
+            SpriteText? toggleLabelSprite = null;
+
             if (toggleBindable != null)
             {
-                controlWidth = controlWidthWithToggle;
-
                 const float checkboxWidth = 24;
                 float toggleAreaWidth = string.IsNullOrEmpty(toggleLabelText) ? checkboxWidth : 132;
-                float sliderWidth = Math.Max(120, controlWidthWithToggle - valueContainer.Width - rowSpacing - toggleAreaWidth - sliderToggleSpacing);
+                float sliderWidth = Math.Max(120, controlWidth - valueContainer.Width - rowFlow.Spacing.X - toggleAreaWidth - sliderCluster.Spacing.X);
                 sliderContainer.Width = sliderWidth;
 
                 var checkbox = new BeatSightCheckbox
@@ -875,7 +1064,7 @@ namespace BeatSight.Game.Screens.Settings
                         Spacing = new Vector2(4, 0),
                         Children = new Drawable[]
                         {
-                            new SpriteText
+                            toggleLabelSprite = new SpriteText
                             {
                                 Text = toggleLabelText!,
                                 Font = BeatSightFont.Caption(14f),
@@ -888,7 +1077,7 @@ namespace BeatSight.Game.Screens.Settings
                     };
                 }
 
-                var toggleContainer = new Container
+                toggleContainer = new Container
                 {
                     Width = toggleAreaWidth,
                     Height = 24,
@@ -988,6 +1177,57 @@ namespace BeatSight.Game.Screens.Settings
                 Origin = Anchor.CentreRight,
                 Child = rowFlow
             };
+
+            void applySliderResponsiveSizing(float viewportWidth, float viewportHeight)
+            {
+                float rowSpacing = ResponsiveLayout.ClampFraction(viewportWidth, 0.006f, 6f, 10f);
+                float sliderToggleSpacing = ResponsiveLayout.ClampFraction(viewportWidth, 0.011f, 10f, 18f);
+                float controlWidthWithoutToggle = ResponsiveLayout.ClampFraction(viewportWidth, 0.275f, 268f, 348f);
+                float controlWidthWithToggle = ResponsiveLayout.ClampFraction(viewportWidth, 0.315f, 300f, 392f);
+                float valueWidth = ResponsiveLayout.ClampFraction(viewportWidth, 0.047f, 56f, 74f);
+                float valueHeight = ResponsiveLayout.ClampFraction(viewportHeight, 0.031f, 22f, 28f);
+                float sliderHeight = ResponsiveLayout.ClampFraction(viewportHeight, 0.021f, 14f, 18f);
+                float sliderContainerHeight = ResponsiveLayout.ClampFraction(viewportHeight, 0.024f, 16f, 20f);
+                float toggleLabelSize = ResponsiveLayout.ClampFraction(viewportHeight, 0.017f, 12f, 15f);
+
+                rowFlow.Spacing = new Vector2(rowSpacing, 0);
+                sliderCluster.Spacing = new Vector2(sliderToggleSpacing, 0);
+                valueContainer.Width = valueWidth;
+                valueContainer.Height = valueHeight;
+                sliderBar.Height = sliderHeight;
+                sliderContainer.Height = sliderContainerHeight;
+                valueText.Font = BeatSightFont.Label(System.Math.Clamp(valueHeight * 0.66f, 12f, 17f));
+
+                if (toggleLabelSprite != null)
+                    toggleLabelSprite.Font = BeatSightFont.Caption(toggleLabelSize);
+
+                float effectiveControlWidth = toggleBindable != null ? controlWidthWithToggle : controlWidthWithoutToggle;
+                controlContainer.Width = effectiveControlWidth;
+                rowFlow.Width = effectiveControlWidth;
+
+                if (toggleBindable != null)
+                {
+                    float checkboxWidth = ResponsiveLayout.ClampFraction(viewportHeight, 0.031f, 20f, 26f);
+                    float toggleAreaWidth = string.IsNullOrEmpty(toggleLabelText)
+                        ? checkboxWidth
+                        : ResponsiveLayout.ClampFraction(viewportWidth, 0.11f, 110f, 150f);
+
+                    if (toggleContainer != null)
+                    {
+                        toggleContainer.Width = toggleAreaWidth;
+                        toggleContainer.Height = valueHeight;
+                    }
+
+                    sliderContainer.Width = System.Math.Max(120f, effectiveControlWidth - valueContainer.Width - rowFlow.Spacing.X - toggleAreaWidth - sliderCluster.Spacing.X);
+                }
+                else
+                {
+                    sliderContainer.Width = System.Math.Max(120f, effectiveControlWidth - valueContainer.Width - rowFlow.Spacing.X);
+                }
+            }
+
+            registerResponsiveReflow(applySliderResponsiveSizing);
+            applySliderResponsiveSizing(DrawWidth > 0 ? DrawWidth : 1366f, DrawHeight > 0 ? DrawHeight : 768f);
 
             var setting = CreateSettingItem(label, description, controlContainer, sliderBar);
 

@@ -5,6 +5,7 @@ using BeatSight.Game.Mapping;
 using BeatSight.Game.Screens.Playback;
 using BeatSight.Game.Screens.Playback.Playfield;
 using BeatSight.Game.UI.Theming;
+using Newtonsoft.Json;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -12,6 +13,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Logging;
 using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osuTK;
 using osuTK.Graphics;
@@ -29,6 +31,7 @@ namespace BeatSight.Game.Screens.Editor
         private Bindable<KickLaneMode> kickLaneModeSetting = null!;
         private LaneLayout currentLaneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
         private bool useGlobalKickLine;
+        private string? manuscriptFocusComponent;
 
         [Resolved]
         private BeatSightConfigManager config { get; set; } = null!;
@@ -106,53 +109,52 @@ namespace BeatSight.Game.Screens.Editor
             applyBeatmap();
         }
 
+        public void JumpToTime(double timeMs)
+        {
+            if (!IsLoaded || playfield == null)
+                return;
+
+            playfield.JumpToTime(Math.Max(0, timeMs));
+        }
+
+        public void SetManuscriptFocusComponent(string? componentName)
+        {
+            manuscriptFocusComponent = componentName;
+
+            if (!IsLoaded || playfield == null)
+                return;
+
+            playfield.SetManuscriptFocusComponent(componentName);
+        }
+
         private void applyBeatmap()
         {
             if (playfield == null)
                 return;
 
-            // Update layout if AutoDynamic
-            if (lanePresetSetting.Value == LanePreset.AutoDynamic)
-            {
-                if (beatmap != null && beatmap.DrumKit.Components.Count > 0)
-                {
-                    currentLaneLayout = LaneLayoutFactory.CreateFromComponents(beatmap.DrumKit.Components);
-                }
-                else
-                {
-                    currentLaneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
-                }
-                playfield.SetLaneLayout(currentLaneLayout);
-            }
+            currentLaneLayout = resolvePreviewLaneLayout();
 
-            if (beatmap != null)
-            {
-                playfield.LoadBeatmap(beatmap);
-            }
-            else
-            {
-                playfield.LoadBeatmap(new Beatmap());
-            }
+            playfield.SetLaneLayout(currentLaneLayout);
+            playfield.SetKickLineMode(useGlobalKickLine);
+
+            var previewBeatmap = cloneBeatmapForPreview(beatmap);
+            if (previewBeatmap.HitObjects.Count > 0)
+                DrumLaneHeuristics.ApplyToBeatmap(previewBeatmap, currentLaneLayout);
+
+            playfield.LoadBeatmap(previewBeatmap);
+            playfield.SetManuscriptFocusComponent(manuscriptFocusComponent);
+
+            playfield.JumpToTime(Math.Max(0, currentTimeProvider()));
 
             updatePlaceholderState();
         }
 
-        private void onLanePresetChanged(ValueChangedEvent<LanePreset> preset)
+        private void onLanePresetChanged(ValueChangedEvent<LanePreset> _)
         {
-            if (preset.NewValue == LanePreset.AutoDynamic && beatmap != null && beatmap.DrumKit.Components.Count > 0)
-            {
-                currentLaneLayout = LaneLayoutFactory.CreateFromComponents(beatmap.DrumKit.Components);
-            }
-            else if (preset.NewValue == LanePreset.AutoDynamic)
-            {
-                currentLaneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
-            }
-            else
-            {
-                currentLaneLayout = LaneLayoutFactory.Create(preset.NewValue);
-            }
+            if (!IsLoaded)
+                return;
 
-            playfield?.SetLaneLayout(currentLaneLayout);
+            applyBeatmap();
         }
 
         private void onKickLaneModeChanged(ValueChangedEvent<KickLaneMode> mode)
@@ -184,6 +186,37 @@ namespace BeatSight.Game.Screens.Editor
             }
         }
 
+        private LaneLayout resolvePreviewLaneLayout()
+        {
+            // Match PlaybackScreen lane-resolution behavior exactly so the editor preview
+            // stays consistent with full playback mode.
+            if (lanePresetSetting.Value == LanePreset.AutoDynamic && beatmap?.DrumKit?.Components?.Count > 0)
+            {
+                return LaneLayoutFactory.CreateFromComponents(beatmap.DrumKit.Components);
+            }
+
+            return lanePresetSetting.Value == LanePreset.AutoDynamic
+                ? LaneLayoutFactory.Create(LanePreset.DrumSevenLane)
+                : LaneLayoutFactory.Create(lanePresetSetting.Value);
+        }
+
+        private static Beatmap cloneBeatmapForPreview(Beatmap? source)
+        {
+            if (source == null)
+                return new Beatmap();
+
+            try
+            {
+                string json = JsonConvert.SerializeObject(source, Formatting.None);
+                return JsonConvert.DeserializeObject<Beatmap>(json) ?? new Beatmap();
+            }
+            catch (JsonException ex)
+            {
+                Logger.Log($"Failed to clone beatmap for preview: {ex.Message}", LoggingTarget.Runtime, LogLevel.Debug);
+                return new Beatmap();
+            }
+        }
+
         private partial class PreviewStageContainer : CompositeDrawable
         {
             private readonly Container stagePadding;
@@ -196,7 +229,7 @@ namespace BeatSight.Game.Screens.Editor
                 {
                     RelativeSizeAxes = Axes.Both,
                     Masking = true,
-                    CornerRadius = 28,
+                    CornerRadius = 20,
                     EdgeEffect = new EdgeEffectParameters
                     {
                         Type = EdgeEffectType.Shadow,
@@ -221,7 +254,7 @@ namespace BeatSight.Game.Screens.Editor
                     Child = new Container
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Padding = new MarginPadding { Horizontal = 24, Vertical = 18 },
+                        Padding = new MarginPadding { Horizontal = 10, Vertical = 8 },
                         Child = stageSurface
                     }
                 };
@@ -236,15 +269,15 @@ namespace BeatSight.Game.Screens.Editor
                 if (DrawWidth <= 0 || DrawHeight <= 0)
                     return;
 
-                float horizontal = Math.Clamp(DrawWidth * 0.012f, 12f, 60f);
-                float vertical = Math.Clamp(DrawHeight * 0.018f, 10f, 60f);
+                float horizontal = Math.Clamp(DrawWidth * 0.0075f, 6f, 24f);
+                float vertical = Math.Clamp(DrawHeight * 0.009f, 4f, 18f);
 
                 stagePadding.Padding = new MarginPadding
                 {
                     Left = horizontal,
                     Right = horizontal,
                     Top = vertical,
-                    Bottom = vertical + 18
+                    Bottom = vertical + 4
                 };
             }
         }

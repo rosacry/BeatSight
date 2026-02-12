@@ -5,6 +5,7 @@ using BeatSight.Game.Screens.Settings;
 using BeatSight.Game.Screens.SongSelect;
 using BeatSight.Game.UI.Components;
 using BeatSight.Game.UI.Theming;
+using System;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -26,6 +27,10 @@ namespace BeatSight.Game.Screens
         private GameHost host = null!;
         private readonly bool fromIntro;
         private Container logoParallax = null!;
+        private Container logoContainer = null!;
+        private SpriteText logoTitleText = null!;
+        private SpriteText logoSubtitleText = null!;
+        private FillFlowContainer buttonFlow = null!;
         private bool parallaxEnabled = false;
 
         public MainMenuScreen(bool fromIntro = false)
@@ -43,8 +48,6 @@ namespace BeatSight.Game.Screens
         {
             base.OnEntering(e);
 
-            FillFlowContainer buttonFlow;
-            Container logoContainer;
             SpriteText titleText;
             SpriteText subtitleText;
             Box scannerBeam;
@@ -56,7 +59,7 @@ namespace BeatSight.Game.Screens
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
-                    Y = -180, // Final position
+                    Y = -180, // Updated responsively in updateMenuLayout()
                     Children = new Drawable[]
                     {
                         logoParallax = new Container
@@ -67,7 +70,7 @@ namespace BeatSight.Game.Screens
                             {
                                 titleText = new SpriteText
                                 {
-                                    Text = "BeatSight",
+                                    Text = AppCopy.ProductName,
                                     Font = BeatSightFont.Title(UITheme.MainLogoTitleSize),
                                     Colour = UITheme.AccentPrimary,
                                     Anchor = Anchor.Centre,
@@ -78,7 +81,7 @@ namespace BeatSight.Game.Screens
                                 },
                                 subtitleText = new SpriteText
                                 {
-                                    Text = "Rhythm Game Analysis Tool",
+                                    Text = AppCopy.Tagline,
                                     Font = BeatSightFont.Subtitle(UITheme.MainLogoSubtitleSize),
                                     Colour = UITheme.TextSecondary,
                                     Anchor = Anchor.Centre,
@@ -105,7 +108,7 @@ namespace BeatSight.Game.Screens
                                 Direction = FillDirection.Vertical,
                                 Anchor = Anchor.Centre,
                                 Origin = Anchor.Centre,
-                                Y = 100, // Offset below center
+                                Y = 120,
                                 Spacing = new Vector2(0, 25),
                                 Children = new Drawable[]
                                 {
@@ -145,6 +148,10 @@ namespace BeatSight.Game.Screens
                     }
                 }
             };
+
+            updateMenuLayout();
+            logoTitleText = titleText;
+            logoSubtitleText = subtitleText;
 
             if (!fromIntro)
             {
@@ -242,6 +249,40 @@ namespace BeatSight.Game.Screens
             }
         }
 
+        protected override void Update()
+        {
+            base.Update();
+            updateMenuLayout();
+        }
+
+        private void updateMenuLayout()
+        {
+            if (logoContainer == null || buttonFlow == null)
+                return;
+
+            var metrics = MainMenuResponsiveLayout.Compute(DrawWidth, DrawHeight);
+
+            logoContainer.Y = metrics.LogoY;
+            buttonFlow.Spacing = new Vector2(0, metrics.ButtonFlowSpacing);
+
+            if (logoTitleText != null)
+                logoTitleText.Font = BeatSightFont.Title(metrics.LogoTitleSize);
+
+            if (logoSubtitleText != null)
+            {
+                logoSubtitleText.Font = BeatSightFont.Subtitle(metrics.LogoSubtitleSize);
+                logoSubtitleText.Y = metrics.LogoSubtitleY;
+                logoSubtitleText.Spacing = new Vector2(metrics.LogoSubtitleSpacing, 0);
+            }
+
+            if (buttonFlow.DrawHeight <= 0)
+                return;
+
+            float desiredTop = logoContainer.Y + metrics.LogoSubtitleY + metrics.SubtitleToButtonsGap;
+            float desiredCentre = desiredTop + buttonFlow.DrawHeight * 0.5f;
+            buttonFlow.Y = Math.Clamp(desiredCentre, metrics.ButtonFlowMinY, metrics.ButtonFlowMaxY);
+        }
+
         protected override bool OnMouseMove(MouseMoveEvent e)
         {
             if (logoParallax != null && parallaxEnabled)
@@ -268,6 +309,8 @@ namespace BeatSight.Game.Screens
         private Color4 baseColour;
         private BeatSightSpriteText spriteText = null!;
         private string originalText = null!;
+        private float lastWidth;
+        private float lastHeight;
 
         public MenuButton(string text, Color4 colour)
         {
@@ -288,6 +331,33 @@ namespace BeatSight.Game.Screens
         {
             // Re-apply the custom colour after the base load might have reset it
             BackgroundColour = baseColour.Opacity(0.8f);
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            if (Parent == null)
+                return;
+
+            float targetWidth = ResponsiveLayout.ClampFraction(Parent.DrawWidth, 0.24f, 230f, 440f);
+            float targetHeight = ResponsiveLayout.ClampFraction(Parent.DrawHeight, 0.095f, 50f, 88f);
+            float targetFont = Math.Clamp(targetHeight * 0.43f, 18f, 34f);
+
+            if (Math.Abs(targetWidth - lastWidth) > 0.2f)
+            {
+                Width = targetWidth;
+                lastWidth = targetWidth;
+            }
+
+            if (Math.Abs(targetHeight - lastHeight) > 0.2f)
+            {
+                Height = targetHeight;
+                lastHeight = targetHeight;
+            }
+
+            if (spriteText != null)
+                spriteText.Font = BeatSightFont.Button(targetFont);
         }
 
         public void DecryptIn(double duration)

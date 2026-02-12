@@ -4,7 +4,8 @@
 using System;
 using System.Collections.Generic;
 using osu.Framework.Allocation;
-using osu.Framework.Extensions.Color4Extensions;
+using osu.Framework.Extensions.ObjectExtensions;
+using BeatSight.Game.UI.Theming;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
@@ -30,6 +31,10 @@ namespace BeatSight.Game.UI.Components
         private FillFlowContainer categoriesContainer = null!;
         private FillFlowContainer settingsContainer = null!;
         private SearchTextBox searchBox = null!;
+        private GridContainer contentGrid = null!;
+        private float currentPanelWidth = panel_width;
+        private float lastCategoryColumnWidth = -1;
+        private float lastSearchHeight = -1;
 
         private readonly List<SettingsCategory> categories = new();
         private SettingsCategory? selectedCategory;
@@ -88,10 +93,11 @@ namespace BeatSight.Game.UI.Components
                                 },
                                 new GridContainer
                                 {
+                                    Name = "SettingsPanelContentGrid",
                                     RelativeSizeAxes = Axes.Both,
                                     ColumnDimensions = new[]
                                     {
-                                        new Dimension(GridSizeMode.Absolute, 140),
+                                        new Dimension(GridSizeMode.Absolute, getInitialCategoryColumnWidth()),
                                         new Dimension(GridSizeMode.Distributed),
                                     },
                                     Content = new[]
@@ -137,7 +143,7 @@ namespace BeatSight.Game.UI.Components
                                             },
                                         },
                                     },
-                                },
+                                }.With(g => contentGrid = g),
                             },
                         },
                     },
@@ -146,6 +152,7 @@ namespace BeatSight.Game.UI.Components
 
             searchBox.Current.BindValueChanged(e => filterSettings(e.NewValue));
             initializeDefaultCategories();
+            applyResponsiveLayout(force: true);
         }
 
         private Drawable createHeader()
@@ -267,7 +274,7 @@ namespace BeatSight.Game.UI.Components
             if (!IsOpen) return;
             IsOpen = false;
             this.FadeOut(animation_duration, Easing.OutQuint);
-            panelContainer.MoveToX(panel_width, animation_duration, Easing.OutQuint);
+            panelContainer.MoveToX(currentPanelWidth, animation_duration, Easing.OutQuint);
             OnClose?.Invoke();
         }
 
@@ -275,12 +282,77 @@ namespace BeatSight.Game.UI.Components
 
         protected override bool OnClick(ClickEvent e)
         {
-            if (e.MousePosition.X < Width - panel_width)
+            if (e.MousePosition.X < Width - currentPanelWidth)
             {
                 Close();
                 return true;
             }
             return base.OnClick(e);
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+            applyResponsiveLayout();
+        }
+
+        private void applyResponsiveLayout(bool force = false)
+        {
+            if (panelContainer == null || DrawWidth <= 0 || DrawHeight <= 0)
+                return;
+
+            float panelWidth = getPanelWidthForViewport(DrawWidth);
+            float categoryWidth = getCategoryWidthForPanel(panelWidth);
+            float searchHeight = getSearchHeightForViewport(DrawHeight);
+
+            if (force || Math.Abs(panelWidth - currentPanelWidth) > 0.2f)
+            {
+                currentPanelWidth = panelWidth;
+                panelContainer.Width = panelWidth;
+                if (!IsOpen)
+                    panelContainer.X = panelWidth;
+            }
+
+            if (contentGrid != null && (force || Math.Abs(categoryWidth - lastCategoryColumnWidth) > 0.2f))
+            {
+                contentGrid.ColumnDimensions = new[]
+                {
+                    new Dimension(GridSizeMode.Absolute, categoryWidth),
+                    new Dimension(GridSizeMode.Distributed),
+                };
+                lastCategoryColumnWidth = categoryWidth;
+            }
+
+            if (searchBox != null && (force || Math.Abs(searchHeight - lastSearchHeight) > 0.2f))
+            {
+                searchBox.Height = searchHeight;
+                lastSearchHeight = searchHeight;
+            }
+        }
+
+        private float getInitialCategoryColumnWidth()
+        {
+            float viewportWidth = DrawWidth > 0 ? DrawWidth : 1920f;
+            float panelWidth = getPanelWidthForViewport(viewportWidth);
+            return getCategoryWidthForPanel(panelWidth);
+        }
+
+        private static float getPanelWidthForViewport(float viewportWidth)
+        {
+            float width = viewportWidth > 0 ? viewportWidth : 1920f;
+            return ResponsiveLayout.ClampFraction(width, 0.32f, 420f, 720f);
+        }
+
+        private static float getCategoryWidthForPanel(float panelWidth)
+        {
+            float width = panelWidth > 0 ? panelWidth : panel_width;
+            return ResponsiveLayout.ClampFraction(width, 0.27f, 120f, 220f);
+        }
+
+        private static float getSearchHeightForViewport(float viewportHeight)
+        {
+            float height = viewportHeight > 0 ? viewportHeight : 1080f;
+            return ResponsiveLayout.ClampFraction(height, 0.04f, 38f, 52f);
         }
 
         protected override bool OnKeyDown(KeyDownEvent e)

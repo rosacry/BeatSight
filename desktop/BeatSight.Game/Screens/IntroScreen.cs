@@ -35,6 +35,8 @@ namespace BeatSight.Game.Screens
         private Box scannerLine = null!;
         private Container circlesContainer = null!;
         private FillFlowContainer<SpriteText> bootLog = null!;
+        private float lastResponsiveWidth = -1f;
+        private float lastResponsiveHeight = -1f;
 
         private Sample? impactSample;
         private Sample? shimmerSample;
@@ -48,6 +50,7 @@ namespace BeatSight.Game.Screens
             shimmerSample = audio.Samples.Get("intro_shimmer");
             glitchSample = audio.Samples.Get("intro_glitch");
             beatSample = audio.Samples.Get("metronome_tick") ?? audio.Samples.Get("button_hover");
+            var metrics = MainMenuResponsiveLayout.Compute(DrawWidth, DrawHeight);
 
             InternalChildren = new Drawable[]
             {
@@ -69,17 +72,17 @@ namespace BeatSight.Game.Screens
                         {
                             Anchor = Anchor.BottomLeft,
                             Origin = Anchor.BottomLeft,
-                            Position = new Vector2(20, -20),
+                            Position = new Vector2(metrics.IntroBootMarginX, -metrics.IntroBootMarginY),
                             AutoSizeAxes = Axes.Both,
                             Direction = FillDirection.Vertical,
-                            Spacing = new Vector2(0, 5),
+                            Spacing = new Vector2(0, metrics.IntroBootSpacing),
                             Alpha = 0.6f,
                         },
 
                         scannerLine = new Box
                         {
                             RelativeSizeAxes = Axes.X,
-                            Height = 2,
+                            Height = metrics.IntroScannerHeight,
                             Colour = UITheme.AccentSecondary,
                             Alpha = 0,
                             Origin = Anchor.CentreLeft,
@@ -109,8 +112,8 @@ namespace BeatSight.Game.Screens
                                     {
                                         mainText = new BeatSightSpriteText
                                         {
-                                            Text = "BeatSight",
-                                            Font = BeatSightFont.Title(UITheme.MainLogoTitleSize),
+                                            Text = AppCopy.ProductName,
+                                            Font = BeatSightFont.Title(metrics.LogoTitleSize),
                                             Colour = UITheme.AccentPrimary,
                                             Anchor = Anchor.Centre,
                                             Origin = Anchor.Centre,
@@ -122,14 +125,14 @@ namespace BeatSight.Game.Screens
                                         },
                                         subText = new BeatSightSpriteText
                                         {
-                                            Text = "Rhythm Game Analysis Tool",
-                                            Font = BeatSightFont.Subtitle(UITheme.MainLogoSubtitleSize),
+                                            Text = AppCopy.Tagline,
+                                            Font = BeatSightFont.Subtitle(metrics.LogoSubtitleSize),
                                             Colour = UITheme.TextSecondary,
                                             Anchor = Anchor.Centre,
                                             Origin = Anchor.Centre,
-                                            Y = UITheme.MainLogoSubtitleY,
+                                            Y = metrics.LogoSubtitleY,
                                             Alpha = 0,
-                                            Spacing = new Vector2(20, 0),
+                                            Spacing = new Vector2(metrics.LogoSubtitleSpacing * 4f, 0),
                                         }
                                     }
                                 }
@@ -237,14 +240,16 @@ namespace BeatSight.Game.Screens
             Scheduler.AddDelayed(() =>
             {
                 subText.FadeIn(800);
-                subText.TransformTo(nameof(subText.Spacing), new Vector2(5, 0), 800, Easing.OutQuint);
+                var metrics = MainMenuResponsiveLayout.Compute(DrawWidth, DrawHeight);
+                subText.TransformTo(nameof(subText.Spacing), new Vector2(metrics.LogoSubtitleSpacing, 0), 800, Easing.OutQuint);
                 if (uiAudio.AudioEnabled) shimmerSample?.Play();
             }, 2200);
 
             // Phase 4.5: Move to Main Menu Position
             Scheduler.AddDelayed(() =>
             {
-                logoContainer.MoveToY(-180, 800, Easing.OutQuint);
+                var metrics = MainMenuResponsiveLayout.Compute(DrawWidth, DrawHeight);
+                logoContainer.MoveToY(metrics.LogoY, 800, Easing.OutQuint);
             }, 3500);
 
             // Phase 5: Exit (4500ms)
@@ -258,10 +263,11 @@ namespace BeatSight.Game.Screens
         {
             Scheduler.AddDelayed(() =>
             {
+                var metrics = MainMenuResponsiveLayout.Compute(DrawWidth, DrawHeight);
                 var t = new SpriteText
                 {
                     Text = text,
-                    Font = BeatSightFont.Subtitle(14),
+                    Font = BeatSightFont.Subtitle(metrics.IntroBootFontSize),
                     Colour = UITheme.AccentSecondary,
                     Alpha = 0,
                 };
@@ -272,15 +278,19 @@ namespace BeatSight.Game.Screens
 
         private void SpawnHitCircle(Vector2 position, double pitch)
         {
+            var metrics = MainMenuResponsiveLayout.Compute(DrawWidth, DrawHeight);
+            float circleSize = metrics.IntroCircleSize;
+            float approachCircleSize = metrics.IntroApproachCircleSize;
+
             var circle = new CircularContainer
             {
-                Size = new Vector2(80),
+                Size = new Vector2(circleSize),
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
                 Position = position,
                 Masking = true,
                 BorderColour = UITheme.AccentPrimary,
-                BorderThickness = 4,
+                BorderThickness = metrics.IntroCircleBorderThickness,
                 Alpha = 0,
                 Children = new Drawable[]
                 {
@@ -289,7 +299,7 @@ namespace BeatSight.Game.Screens
                     {
                         Anchor = Anchor.Centre,
                         Origin = Anchor.Centre,
-                        Size = new Vector2(10),
+                        Size = new Vector2(metrics.IntroInnerDotSize),
                         Colour = UITheme.AccentPrimary,
                     }
                 }
@@ -297,13 +307,13 @@ namespace BeatSight.Game.Screens
 
             var approachCircle = new CircularContainer
             {
-                Size = new Vector2(200),
+                Size = new Vector2(approachCircleSize),
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
                 Position = position,
                 Masking = true,
                 BorderColour = UITheme.AccentSecondary,
-                BorderThickness = 2,
+                BorderThickness = System.Math.Max(1f, metrics.IntroCircleBorderThickness * 0.55f),
                 Alpha = 0,
                 Child = new Box { RelativeSizeAxes = Axes.Both, Alpha = 0, AlwaysPresent = true }
             };
@@ -316,7 +326,8 @@ namespace BeatSight.Game.Screens
             circle.ScaleTo(0.5f).ScaleTo(1f, 400, Easing.OutBack);
 
             approachCircle.FadeIn(200);
-            approachCircle.ScaleTo(1f).ScaleTo(0.4f, 400, Easing.InQuad); // Shrink to circle size (80/200 = 0.4)
+            float targetScale = circleSize / System.Math.Max(1f, approachCircleSize);
+            approachCircle.ScaleTo(1f).ScaleTo(targetScale, 400, Easing.InQuad);
             approachCircle.FadeOut(400, Easing.InQuad); // Fade out as it hits
 
             // Play beat with pitch
@@ -339,7 +350,7 @@ namespace BeatSight.Game.Screens
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
                     Position = position,
-                    Size = new Vector2(80),
+                    Size = new Vector2(circleSize),
                     Colour = UITheme.AccentPrimary.Opacity(0.5f),
                     Blending = BlendingParameters.Additive,
                 };
@@ -380,6 +391,50 @@ namespace BeatSight.Game.Screens
         {
             // Disable skipping
             return true;
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+            applyResponsiveIntroLayout();
+        }
+
+        private void applyResponsiveIntroLayout(bool force = false)
+        {
+            if (DrawWidth <= 0 || DrawHeight <= 0)
+                return;
+
+            if (!force
+                && System.Math.Abs(DrawWidth - lastResponsiveWidth) < 0.2f
+                && System.Math.Abs(DrawHeight - lastResponsiveHeight) < 0.2f)
+            {
+                return;
+            }
+
+            var metrics = MainMenuResponsiveLayout.Compute(DrawWidth, DrawHeight);
+
+            if (mainText != null)
+                mainText.Font = BeatSightFont.Title(metrics.LogoTitleSize);
+
+            if (subText != null)
+            {
+                subText.Font = BeatSightFont.Subtitle(metrics.LogoSubtitleSize);
+                subText.Y = metrics.LogoSubtitleY;
+            }
+
+            if (bootLog != null)
+            {
+                bootLog.Position = new Vector2(metrics.IntroBootMarginX, -metrics.IntroBootMarginY);
+                bootLog.Spacing = new Vector2(0, metrics.IntroBootSpacing);
+                foreach (var line in bootLog.Children)
+                    line.Font = BeatSightFont.Subtitle(metrics.IntroBootFontSize);
+            }
+
+            if (scannerLine != null)
+                scannerLine.Height = metrics.IntroScannerHeight;
+
+            lastResponsiveWidth = DrawWidth;
+            lastResponsiveHeight = DrawHeight;
         }
 
         protected override bool OnKeyDown(osu.Framework.Input.Events.KeyDownEvent e)

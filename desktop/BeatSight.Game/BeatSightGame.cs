@@ -330,11 +330,15 @@ namespace BeatSight.Game
                     return;
 
                 float userScale = (float)uiScaleSetting.Value * 1.15f;
-                float resolutionScale = 1.0f;
+                float resolutionScale = 1f;
 
+                int width = 0;
                 int height = 0;
                 if (boundWindow != null)
+                {
+                    width = boundWindow.ClientSize.Width;
                     height = boundWindow.ClientSize.Height;
+                }
 
                 // If in fullscreen, prefer the configured height as it might be more up-to-date during transitions
                 // or if the window hasn't fully resized yet.
@@ -343,14 +347,26 @@ namespace BeatSight.Game
                     height = Math.Max(height, windowHeightSetting.Value);
                 }
 
-                if (height > 0)
+                if (windowFullscreenSetting?.Value == true && windowWidthSetting != null)
                 {
-                    // If resolution is significantly higher than 1440p, scale up to match 1440p physical size roughly.
-                    // This ensures that on 4k monitors (2160p), the UI isn't tiny.
-                    if (height > 1440)
-                    {
-                        resolutionScale = height / 1440f;
-                    }
+                    width = Math.Max(width, windowWidthSetting.Value);
+                }
+
+                if (width > 0 && height > 0)
+                {
+                    float widthScale = width / 1920f;
+                    float heightScale = height / 1080f;
+                    float shortAxisScale = Math.Min(widthScale, heightScale);
+
+                    float aspect = width / (float)height;
+                    // Keep controls from feeling oversized on extreme ultrawide and too cramped on tall windows.
+                    float aspectCompensation = 1f;
+                    if (aspect >= 2.33f) // >= 21:9
+                        aspectCompensation = 0.95f;
+                    else if (aspect <= 1.55f)
+                        aspectCompensation = 0.94f;
+
+                    resolutionScale = Math.Clamp(shortAxisScale * aspectCompensation, 0.72f, 2.4f);
                 }
 
                 float finalScale = userScale * resolutionScale;
@@ -1168,36 +1184,8 @@ namespace BeatSight.Game
                 return;
             }
 
-            Task.Run(async () =>
-            {
-                try
-                {
-                    var imported = await importAudioFileAsync(path, CancellationToken.None).ConfigureAwait(false);
-
-                    var metadataService = dependencies.Get<MetadataDetectionService>();
-                    var metadata = await metadataService.DetectMetadataAsync(imported.StoredPath, CancellationToken.None);
-
-                    if (metadata != null && (metadata.Confidence > 0.8 || metadata.Provider == "acoustid"))
-                    {
-                        if (!string.IsNullOrEmpty(metadata.Title))
-                            imported.Title = metadata.Title;
-                        if (!string.IsNullOrEmpty(metadata.Artist))
-                            imported.Artist = metadata.Artist;
-                        if (!string.IsNullOrEmpty(metadata.Title))
-                            imported.DisplayName = metadata.Title;
-
-                        Schedule(() => screenStack.Push(new MappingChoiceScreen(imported)));
-                    }
-                    else
-                    {
-                        Schedule(() => screenStack.Push(new MetadataChoiceScreen(imported, metadata)));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error(ex, $"Failed to import dropped file '{path}'");
-                }
-            });
+            // Immediately push loading screen for instant feedback
+            screenStack.Push(new AudioImportLoadingScreen(path));
         }
 
         private void ensureCursorSettings()

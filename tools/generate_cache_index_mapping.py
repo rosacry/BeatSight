@@ -73,7 +73,11 @@ def load_labels_files(labels_path: Path) -> np.ndarray:
     print(f"Loading labels from {labels_path}...")
     start = time.time()
     
-    files = np.load(labels_path, allow_pickle=False)
+    # Try without pickle first, fall back to allow_pickle for object arrays
+    try:
+        files = np.load(labels_path, allow_pickle=False)
+    except ValueError:
+        files = np.load(labels_path, allow_pickle=True)
     print(f"  Loaded {len(files):,} file paths in {time.time() - start:.1f}s")
     return files
 

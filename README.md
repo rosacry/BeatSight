@@ -38,8 +38,8 @@ Rhythm games like Guitar Hero, Rock Band, Dance Dance Revolution, and osu! all s
 
 | Capability | BeatSight | Learning Platforms (Melodics, Beatlii) | AI Transcribers (Klangio, etc.) |
 |-----------|-----------|---------------------------------------|--------------------------------|
-| **Drum Classes** | **21 classes** (snare center, rimshot, cross-stick, 5 hi-hat types, ride bow/bell, etc.) | Basic kit detection | 6-8 basic classes |
-| **Training Data** | **14.6 million samples** | N/A (no AI) | Limited datasets |
+| **Drum Classes** | **12 classes** (kick, snare, hi-hat types, ride bow/bell, toms, crashes, china, splash) | Basic kit detection | 6-8 basic classes |
+| **Training Data** | **12.9 million samples** | N/A (no AI) | Limited datasets |
 | **Song Access** | **Any song** — AI transcription + community library | Curated lessons only | Any audio |
 | **Technique Detection** | Ghost notes, flams, drags, rolls, velocity | Structured lessons | Limited or none |
 | **Multi-hit Detection** | Simultaneous hits (kick+hi-hat, snare+crash) | N/A | Single hit per frame |
@@ -61,11 +61,12 @@ The goal isn't gamification for its own sake—it's giving drummers the same vis
 
 ## Features
 
-### AI-Powered Transcription (Industry-Leading)
-- **21 drum classes** — The most detailed detection anywhere: kick, snare (center/rimshot/cross-stick), hi-hat (5 types), ride (bow/bell), 3 toms, crash, china, splash, cymbal choke, and aux percussion
-- **Technique detection** — Identifies flams, ghost notes, rolls, accents, and dynamics
-- **Multi-hit detection** — Detects simultaneous hits (kick+hi-hat, snare+crash) unlike competitors
-- **14.6M training samples** — Trained on the largest drum transcription dataset ever assembled
+### AI-Powered Transcription
+- **12 drum classes** — Comprehensive detection: kick, snare, cross-stick, hi-hat (closed/open/pedal), ride (bow/bell), toms, crash, china, splash
+- **Multi-label detection** — Detects simultaneous hits (kick+hi-hat, snare+crash) unlike single-label competitors
+- **Pitch ranking** — Distinguishes tom_1/tom_2/tom_3 and crash_1/crash_2 by pitch analysis
+- **12.9M training samples** — Trained on one of the largest drum transcription datasets assembled
+- **0.91 F1 score** — Validated on diverse drum recordings
 
 ### Beatmap Creation
 - **Manual editor** — Build beatmaps from scratch with a full-featured timeline editor

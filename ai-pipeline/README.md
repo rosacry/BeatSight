@@ -1,84 +1,67 @@
-# BeatSight AI Pipeline
+﻿# BeatSight AI Pipeline
 
-## Setup
+Multi-label drum transcription pipeline for BeatSight.
 
-### Install Dependencies
+## Current Direction
+
+The project currently uses a dual-model ensemble strategy:
+
+- Clean continuation model for body-drum classes
+- Demucs-focused model for cymbal classes
+- Threshold calibration per model
+
+For live state and exact training commands, use:
+
+- `ai-pipeline/ACCURACY_IMPROVEMENTS_TRACKER.md`
+- `ai-pipeline/OPUS_HANDOFF_SESSION3_DUAL_MODEL_ENSEMBLE.md`
+- `ai-pipeline/CURRENT_AI_PIPELINE_STATE.md`
+
+## Quick Start
+
+### Install
 
 ```bash
 cd ai-pipeline
-python -m venv venv
-source venv/bin/activate  # or venv/bin/activate.fish for fish shell
 pip install -r requirements.txt
 ```
 
-### Download Demucs Model
+### Run Pipeline
 
 ```bash
-python -c "import demucs.pretrained; demucs.pretrained.get_model('htdemucs')"
+cd /c/github/BeatSight/ai-pipeline
+PYTHONPATH=. python -m pipeline.process \
+  --input "../test_songs/0101 - Heir of Grief.flac" \
+  --output test_beatmap/test_beatmap_ensemble.bsm \
+  --ensemble-classification \
+  --multilabel-model runs/v5_multilabel_final_v3_continued/best_multilabel_model_ema.pt \
+  --multilabel-thresholds runs/v5_multilabel_final_v3_continued/thresholds_demucs_calibrated.json \
+  --ensemble-demucs-model runs/v5_demucs_cymbal_boost/best_multilabel_model_ema.pt \
+  --ensemble-demucs-thresholds runs/v5_demucs_cymbal_boost/thresholds_demucs_only.json \
+  --adaptive-thresholds \
+  --force-time-signature 4/4 \
+  --no-genre-detection \
+  --no-pattern-repair
 ```
 
-## Usage
+## Layout
 
-### Process a Single Audio File
-
-```bash
-python -m pipeline.process --input song.mp3 --output beatmap.bsm
+```text
+ai-pipeline/
+  pipeline/          # Main process CLI and generation flow
+  transcription/     # Multi-label inference and classifiers
+  training/          # Training code
+  separation/        # Demucs separation wrappers
+  scripts/           # Utility scripts (threshold generation, diagnostics)
+  runs/              # Checkpoints and outputs
+  doc_archive/       # Archived prompt/temp markdown notes
 ```
 
-> **Tip:** The repository includes a `sitecustomize.py` shim, so the command
-> works whether you run it from the `ai-pipeline/` directory or the repository
-> root.
+## Documentation Hygiene
 
-Add `--ml-model models/best_drum_classifier.pth` to enable the trained ML classifier, or rely on environment variables described below for automation.
+- Active docs stay at `ai-pipeline/` root for compatibility.
+- One-off prompts and temporary markdown notes are archived under:
+  - `ai-pipeline/doc_archive/session-prompts/`
 
-### Enable ML Drum Classifier
+## License
 
-1. Train or obtain `best_drum_classifier.pth` (see `training/README.md`).
-2. Place the file in `ai-pipeline/models/` or point to it explicitly:
-   ```bash
-   python -m pipeline.process --input song.mp3 --output beatmap.bsm \
-       --ml-model models/best_drum_classifier.pth
-   ```
-3. Alternatively set environment variables:
-   - `BEATSIGHT_ML_MODEL_PATH` – absolute/relative path to the `.pth` file
-   - `BEATSIGHT_USE_ML_CLASSIFIER=0` – disable ML and force heuristics (default is enabled when a model is available)
-
-Runtime flags `--ml` / `--no-ml` override the environment for a single invocation.
-
-### Run as API Server
-
-```bash
-python -m pipeline.server
-```
-
-Then access at `http://localhost:8000`
-
-## API Endpoints
-
-- `POST /api/process` - Submit audio file for processing
-- `GET /api/process/{job_id}` - Check processing status
-- `GET /api/process/{job_id}/result` - Download result
-
-## Architecture
-
-1. **Audio Preprocessing** (`preprocessing.py`)
-   - Format conversion
-   - Normalization
-   - Sample rate standardization
-
-2. **Source Separation** (`separation/demucs_separator.py`)
-   - Demucs integration
-   - Isolate drum stem
-
-3. **Onset Detection** (`transcription/onset_detector.py`)
-   - Spectral flux analysis
-   - Peak picking
-
-4. **Drum Classification** (`transcription/drum_classifier.py`)
-   - ML classifier (when model is available) with heuristic fallback
-   - Component identification
-
-5. **Beatmap Generation** (`beatmap_generator.py`)
-   - Timing analysis
-   - Difficulty calculation
-   - .bsm file creation
+Training/inference code is MIT licensed. Model weights are proprietary.

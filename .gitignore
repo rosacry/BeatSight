@@ -66,6 +66,21 @@ ai-pipeline/training/data/events_*.jsonl
 ai-pipeline/training/datasets/
 ai-pipeline/training/feature_cache/
 ai-pipeline/training/runs/
+ai-pipeline/runs/
+ai-pipeline/results/
+ai-pipeline/test_beatmap/
+ai-pipeline/cwd_archive_2/
+ai-pipeline/tmpclaude-*/
+ai-pipeline/tmpclaude-*-cwd
+ai-pipeline/--*
+ai-pipeline/confused_samples/
+ai-pipeline/hihat_investigation/
+ai-pipeline/label_corrections/
+ai-pipeline/label_corrections_60pct/
+ai-pipeline/models/drum_classifier_production/
+ai-pipeline/diag_results.txt
+ai-pipeline/eval_results.txt
+ai-pipeline/eval_correct.txt
 
 # AI Pipeline Reports (generated, can be regenerated)
 ai-pipeline/training/reports/ingest/*.json
@@ -114,6 +129,11 @@ tmp/
 temp/
 *.tmp
 data/tmp/
+tmp_zoom_video*/
+tmp_editor_video_frames/
+tmpclaude-*-cwd
+cwd_archive/
+test_songs/
 
 # Dataset health artifacts
 ai-pipeline/training/reports/health/**

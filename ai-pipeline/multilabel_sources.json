@@ -1,0 +1,248 @@
+{
+  "drives_scanned": [
+    "D:/",
+    "F:/"
+  ],
+  "known_datasets": [
+    {
+      "path": "D:\\data\\raw\\cambridge\\AllenStone_Naturally_Full",
+      "dataset_id": "enst_drums",
+      "description": "ENST Drums - Isolated + mix recordings",
+      "midi_based": false
+    },
+    {
+      "path": "D:\\data\\raw\\ENST-Drums",
+      "dataset_id": "enst_drums",
+      "description": "ENST Drums - Isolated + mix recordings",
+      "midi_based": false
+    },
+    {
+      "path": "D:\\data\\raw\\ENST-Drums",
+      "dataset_id": "enst_drums",
+      "description": "ENST Drums - Isolated + mix recordings",
+      "midi_based": false
+    },
+    {
+      "path": "D:\\data\\raw\\groove_midi",
+      "dataset_id": "e-gmd",
+      "description": "Expanded Groove MIDI Dataset - MIDI with full drum kit",
+      "midi_based": true
+    },
+    {
+      "path": "D:\\data\\raw\\groove_midi",
+      "dataset_id": "groove_midi",
+      "description": "Groove MIDI Dataset - Professional drummer MIDI",
+      "midi_based": true
+    },
+    {
+      "path": "D:\\data\\raw\\idmt_smt_drums_v2",
+      "dataset_id": "idmt_smt_drums",
+      "description": "IDMT-SMT-Drums - Annotated drum loops",
+      "midi_based": false
+    },
+    {
+      "path": "D:\\data\\raw\\idmt_smt_drums_v2",
+      "dataset_id": "idmt_smt_drums",
+      "description": "IDMT-SMT-Drums - Annotated drum loops",
+      "midi_based": false
+    },
+    {
+      "path": "D:\\data\\raw\\MedleyDB",
+      "dataset_id": "mdb_drums",
+      "description": "MDB Drums - Multi-track isolated drums",
+      "midi_based": false
+    },
+    {
+      "path": "D:\\data\\raw\\slakh2100",
+      "dataset_id": "slakh",
+      "description": "Slakh2100 - Synthesized multi-track with MIDI",
+      "midi_based": true
+    },
+    {
+      "path": "D:\\data\\raw\\slakh2100",
+      "dataset_id": "slakh",
+      "description": "Slakh2100 - Synthesized multi-track with MIDI",
+      "midi_based": true
+    }
+  ],
+  "midi_sources": [
+    {
+      "path": "D:\\cold_storage\\datasets\\lakh_midi\\lmd_full\\3",
+      "count": 46
+    },
+    {
+      "path": "D:\\data\\raw\\egmd\\drummer1\\eval_session",
+      "count": 430
+    },
+    {
+      "path": "D:\\data\\raw\\egmd\\drummer1\\session1",
+      "count": 11352
+    },
+    {
+      "path": "D:\\data\\raw\\egmd\\drummer1\\session2",
+      "count": 8213
+    },
+    {
+      "path": "D:\\data\\raw\\egmd\\drummer1\\session3",
+      "count": 731
+    },
+    {
+      "path": "D:\\data\\raw\\egmd\\drummer10\\session1",
+      "count": 387
+    },
+    {
+      "path": "D:\\data\\raw\\egmd\\drummer3\\session1",
+      "count": 2150
+    },
+    {
+      "path": "D:\\data\\raw\\egmd\\drummer3\\session2",
+      "count": 2021
+    },
+    {
+      "path": "D:\\data\\raw\\egmd\\drummer4\\session1",
+      "count": 387
+    },
+    {
+      "path": "D:\\data\\raw\\egmd\\drummer5\\eval_session",
+      "count": 430
+    },
+    {
+      "path": "F:\\datasets\\lakh_midi\\lmd_full\\0",
+      "count": 11132
+    },
+    {
+      "path": "F:\\datasets\\lakh_midi\\lmd_full\\1",
+      "count": 11102
+    },
+    {
+      "path": "F:\\datasets\\lakh_midi\\lmd_full\\2",
+      "count": 11139
+    },
+    {
+      "path": "F:\\datasets\\lakh_midi\\lmd_full\\3",
+      "count": 11016
+    },
+    {
+      "path": "F:\\datasets\\lakh_midi\\lmd_full\\4",
+      "count": 11136
+    },
+    {
+      "path": "F:\\datasets\\lakh_midi\\lmd_full\\5",
+      "count": 11262
+    },
+    {
+      "path": "F:\\datasets\\lakh_midi\\lmd_full\\6",
+      "count": 11249
+    },
+    {
+      "path": "F:\\datasets\\lakh_midi\\lmd_full\\7",
+      "count": 11258
+    },
+    {
+      "path": "F:\\datasets\\lakh_midi\\lmd_full\\8",
+      "count": 11097
+    },
+    {
+      "path": "F:\\datasets\\lakh_midi\\lmd_full\\9",
+      "count": 11107
+    }
+  ],
+  "annotation_sources": [],
+  "beatsight_datasets": [
+    {
+      "path": "F:\\datasets\\prod_v5_cleaned",
+      "has_components": true,
+      "has_labels": false,
+      "has_cache": false,
+      "num_classes": 12,
+      "components": [
+        "china",
+        "crash",
+        "cross_stick",
+        "hihat_closed",
+        "hihat_open"
+      ]
+    },
+    {
+      "path": "F:\\datasets\\prod_v5_final",
+      "has_components": true,
+      "has_labels": false,
+      "has_cache": false,
+      "num_classes": 12,
+      "components": [
+        "china",
+        "crash",
+        "cross_stick",
+        "hihat_closed",
+        "hihat_open"
+      ]
+    },
+    {
+      "path": "F:\\datasets\\prod_v5_multilabel",
+      "has_components": true,
+      "has_labels": false,
+      "has_cache": false,
+      "num_classes": 12,
+      "components": [
+        "china",
+        "crash",
+        "cross_stick",
+        "hihat_closed",
+        "hihat_open"
+      ]
+    },
+    {
+      "path": "F:\\manifests\\dataset_index",
+      "has_components": true,
+      "has_labels": true,
+      "has_cache": false,
+      "num_classes": 12,
+      "components": [
+        "china",
+        "crash",
+        "cross_stick",
+        "hihat_closed",
+        "hihat_open"
+      ]
+    },
+    {
+      "path": "F:\\datasets\\prod_v5_multilabel",
+      "has_components": true,
+      "has_labels": false,
+      "has_cache": false,
+      "num_classes": 12,
+      "components": [
+        "china",
+        "crash",
+        "cross_stick",
+        "hihat_closed",
+        "hihat_open"
+      ]
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "action": "Extract multi-label from MIDI",
+      "datasets": [
+        "D:\\data\\raw\\groove_midi",
+        "D:\\data\\raw\\groove_midi",
+        "D:\\data\\raw\\slakh2100",
+        "D:\\data\\raw\\slakh2100"
+      ],
+      "reason": "MIDI files contain exact timing of all simultaneous drum hits"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Analyze MIDI files for multi-label extraction",
+      "locations": [
+        "D:\\cold_storage\\datasets\\lakh_midi\\lmd_full\\3",
+        "D:\\data\\raw\\egmd\\drummer1\\eval_session",
+        "D:\\data\\raw\\egmd\\drummer1\\session1",
+        "D:\\data\\raw\\egmd\\drummer1\\session2",
+        "D:\\data\\raw\\egmd\\drummer1\\session3"
+      ],
+      "reason": "MIDI files may contain multi-label drum data"
+    }
+  ]
+}

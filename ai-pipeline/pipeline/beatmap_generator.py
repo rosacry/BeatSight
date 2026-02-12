@@ -74,17 +74,33 @@ COMPONENT_LANE_MAP: Dict[str, int] = {
     "tom_low": 4,
     "tom_floor": 4,
     "floor_tom": 4,
+    # Ranked toms from pitch ranker (tom_1 = highest pitch → rack, tom_4 = lowest → floor)
+    "tom_1": 2,   # Highest tom → tom_high lane
+    "tom_2": 4,   # Mid tom
+    "tom_3": 4,   # Low tom / floor tom
+    "tom_4": 4,   # Lowest tom (floor)
     "ride": 6,
     "ride_bow": 6,
     "ride_bell": 6,
     "ride_edge": 6,
+    # Ranked rides from pitch ranker
+    "ride_bow_1": 6,
+    "ride_bow_2": 6,
+    "ride_bell_1": 6,
+    "ride_bell_2": 6,
     "crash": 6,
-    "crash1": 6,  # Legacy alias -> same as crash
-    "crash_1": 6,  # Legacy alias -> same as crash
-    "crash2": 6,  # Legacy alias -> same as crash
-    "crash_2": 6,  # Legacy alias -> same as crash
+    "crash1": 6,  # Legacy alias
+    "crash_1": 6, # Ranked crash (highest pitch)
+    "crash2": 6,  # Legacy alias
+    "crash_2": 6, # Ranked crash (next highest)
+    "crash_3": 6, # Ranked crash
+    "crash_4": 6, # Ranked crash (lowest pitch)
     "china": 6,
+    "china_1": 6, # Ranked china
+    "china_2": 6, # Ranked china
     "splash": 6,
+    "splash_1": 6, # Ranked splash
+    "splash_2": 6, # Ranked splash
     "stack": 6,
     "cowbell": 0,
     "tambourine": 0,
@@ -341,7 +357,7 @@ def assign_lanes_dynamic(hits: List[Dict], num_lanes: int = 7) -> List[Dict]:
         min_lanes=3,
         max_lanes=num_lanes,
         merge_ghost_notes=True,
-        merge_similar_cymbals=True,
+        merge_similar_cymbals=False,  # Keep crash, china, splash separate
         merge_tom_varieties=False,
     )
     layout = builder.build_from_hits(hits)
@@ -468,7 +484,7 @@ def detect_lane_count(hits: List[Dict]) -> Dict[str, Any]:
         min_lanes=3,
         max_lanes=12,  # Allow more for detection
         merge_ghost_notes=True,
-        merge_similar_cymbals=True,
+        merge_similar_cymbals=False,  # Keep crash, china, splash separate
         merge_tom_varieties=False,
     )
     layout = builder.build_from_hits(hits)
@@ -1062,12 +1078,13 @@ def generate_beatmap(
         },
         "drumKit": {
             "components": drum_components,
-            "layout": "standard_5piece",
+            "layout": "dynamic",
+            "laneLayout": lane_stats.get("layout_info"),
         },
         "hitObjects": hit_objects,
         "editor": {
             "snapDivisor": snap_divisor,
-            "visualLanes": 7,
+            "visualLanes": lane_stats.get("active_lanes", 7),
             "aiGenerationMetadata": {
                 "modelVersion": metadata.get("ai_version", "1.0.0"),
                 "confidence": round(

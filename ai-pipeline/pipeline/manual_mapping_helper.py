@@ -186,7 +186,7 @@ def detect_lanes_for_manual_mapping(
         min_lanes=3,
         max_lanes=max_lanes,
         merge_ghost_notes=True,
-        merge_similar_cymbals=True,
+        merge_similar_cymbals=False,  # Keep crash, china, splash separate
         merge_tom_varieties=False,
     )
     layout = builder.build_from_hits(hits)

@@ -450,6 +450,7 @@ def detect_time_signature(
     hit_times: Sequence[float],
     bpm: float,
     analysis_duration: float = 30.0,
+    hits: Optional[List[Dict]] = None,
 ) -> TimeSignature:
     """
     DYNAMICALLY detect time signature from hit timing patterns.
@@ -459,15 +460,19 @@ def detect_time_signature(
     in the hit patterns and then interprets that as a time signature.
 
     Algorithm:
-    1. Build a binary onset grid at high resolution
+    1. Build a WEIGHTED onset grid (kicks 3x, snares 2x — structural instruments)
     2. Compute autocorrelation to find periodic patterns
     3. Find dominant period via peak detection
-    4. Convert period to time signature interpretation
+    4. Apply 4/4 Bayesian prior (must beat 4/4 by >1.5x to win)
+    5. Cross-validate with kick+snare accent grid
+    6. Convert period to time signature interpretation
 
     Args:
         hit_times: Sequence of hit times in seconds
         bpm: Detected BPM
         analysis_duration: How much audio to analyze
+        hits: Optional list of classified hit dicts with 'time' and 'component' keys.
+              If provided, enables weighted onset grid and accent analysis.
 
     Returns:
         Detected TimeSignature with confidence
@@ -482,6 +487,26 @@ def detect_time_signature(
 
     beat_duration = 60.0 / bpm
 
+    # Build per-onset weight array from hit components (if available)
+    # Kicks get 3x weight, snares 2x — they define the metric structure
+    onset_weights: Dict[float, float] = {}
+    kick_snare_times: List[float] = []
+    if hits:
+        for h in hits:
+            t = h.get("time", 0)
+            if t > analysis_duration:
+                continue
+            comp = h.get("component", "").lower()
+            w = 1.0
+            if "kick" in comp or "bass" in comp:
+                w = 3.0
+                kick_snare_times.append(t)
+            elif "snare" in comp:
+                w = 2.0
+                kick_snare_times.append(t)
+            # Accumulate weights for same time (multi-label)
+            onset_weights[t] = onset_weights.get(t, 0.0) + w
+
     # === STEP 1: Build high-resolution onset grid ===
     # Resolution: 48 subdivisions per beat (supports triplets, 16ths, etc.)
     subdivisions_per_beat = 48
@@ -495,16 +520,33 @@ def detect_time_signature(
     for t in times:
         grid_idx = int(t / grid_resolution)
         if 0 <= grid_idx < grid_size:
+            # Look up weight for this onset (default 1.0 if no hits provided)
+            w = onset_weights.get(t, 1.0)
             # Gaussian window for timing tolerance
             for offset in range(-2, 3):
                 idx = grid_idx + offset
                 if 0 <= idx < grid_size:
-                    weight = np.exp(-0.5 * (offset**2))
-                    onset_grid[idx] += weight
+                    gauss_weight = np.exp(-0.5 * (offset**2))
+                    onset_grid[idx] += gauss_weight * w
 
     # Normalize
     if onset_grid.max() > 0:
         onset_grid = onset_grid / onset_grid.max()
+
+    # === STEP 1b: Build kick+snare accent grid (structural instruments only) ===
+    accent_grid = None
+    if kick_snare_times:
+        accent_grid = np.zeros(grid_size, dtype=np.float32)
+        for t in kick_snare_times:
+            grid_idx = int(t / grid_resolution)
+            if 0 <= grid_idx < grid_size:
+                for offset in range(-2, 3):
+                    idx = grid_idx + offset
+                    if 0 <= idx < grid_size:
+                        gauss_weight = np.exp(-0.5 * (offset**2))
+                        accent_grid[idx] += gauss_weight
+        if accent_grid.max() > 0:
+            accent_grid = accent_grid / accent_grid.max()
 
     # === STEP 2: Compute autocorrelation ===
     # Look for periods from 2 beats to 16 beats
@@ -516,6 +558,14 @@ def detect_time_signature(
     fft = np.fft.fft(onset_grid, n=2 * n)
     autocorr = np.fft.ifft(fft * np.conj(fft)).real[:n]
     autocorr = autocorr / (autocorr[0] + 1e-10)  # Normalize
+
+    # Also compute accent autocorrelation if available
+    accent_autocorr = None
+    if accent_grid is not None:
+        n_acc = len(accent_grid)
+        fft_acc = np.fft.fft(accent_grid, n=2 * n_acc)
+        accent_autocorr = np.fft.ifft(fft_acc * np.conj(fft_acc)).real[:n_acc]
+        accent_autocorr = accent_autocorr / (accent_autocorr[0] + 1e-10)
 
     # === STEP 3: Find dominant period via peak detection ===
     # Only look in valid range
@@ -544,8 +594,52 @@ def detect_time_signature(
     # Sort by peak height (strongest periodicity)
     peaks.sort(key=lambda x: -x[1])
 
-    # Take the strongest peak
+    # === STEP 3b: Apply 4/4 Bayesian prior ===
+    # 4/4 is by far the most common meter. Any alternative must beat it
+    # by a significant margin (1.5x) to be selected.
+    # Only apply when component info is available (hits parameter), since
+    # without structural instrument weighting, the prior can overpower
+    # legitimate odd meters (e.g., waltz 3/4 test).
+    four_four_period = 4 * subdivisions_per_beat
+    four_four_strength = 0.0
+    if four_four_period < len(autocorr):
+        four_four_strength = autocorr[four_four_period]
+
     best_period_subdivs, peak_strength = peaks[0]
+    if hits and four_four_strength > 0.2:
+        best_beats_approx = best_period_subdivs / subdivisions_per_beat
+        # Only apply prior for non-standard meters (not 3, 4, 5, 6, 7)
+        # Standard odd meters (3/4, 5/4, 7/4) should be allowed if autocorrelation is clear
+        is_common_odd_meter = any(
+            abs(best_beats_approx - m) < 0.5 for m in [3, 5, 6, 7]
+        )
+        if abs(best_beats_approx - 4.0) > 0.5 and not is_common_odd_meter:
+            # Best peak is an unusual meter — apply prior
+            if peak_strength < four_four_strength * 1.5:
+                best_period_subdivs = four_four_period
+                peak_strength = four_four_strength
+        elif abs(best_beats_approx - 4.0) > 0.5 and is_common_odd_meter:
+            # Common odd meter — only override if 4/4 is MUCH stronger (2x)
+            if peak_strength < four_four_strength * 2.0:
+                # Check if 4/4 is actually stronger — but be more lenient for known odd meters
+                if four_four_strength > peak_strength * 1.3:
+                    best_period_subdivs = four_four_period
+                    peak_strength = four_four_strength
+
+    # === STEP 3c: Cross-validate with kick+snare accent autocorrelation ===
+    if accent_autocorr is not None and four_four_period < len(accent_autocorr):
+        accent_4_4 = accent_autocorr[four_four_period]
+        best_beats_approx = best_period_subdivs / subdivisions_per_beat
+        if abs(best_beats_approx - 4.0) > 0.5 and accent_4_4 > 0.3:
+            # Accent pattern strongly suggests 4-beat periodicity
+            # but overall autocorrelation picked something else
+            accent_alt = 0.0
+            if best_period_subdivs < len(accent_autocorr):
+                accent_alt = accent_autocorr[best_period_subdivs]
+            if accent_4_4 > accent_alt * 1.2:
+                # Kick+snare accent grid prefers 4/4
+                best_period_subdivs = four_four_period
+                peak_strength = max(peak_strength, four_four_strength)
 
     # Convert to beats
     detected_period_beats = best_period_subdivs / subdivisions_per_beat
@@ -681,10 +775,12 @@ def detect_swing_ratio(
     on_beat_iois = []
     off_beat_iois = []
 
+    # eighth_mask has length N-1 (from np.diff), must index times[:-1] not times
+    interval_start_times = times[:-1][eighth_mask]
     for i, ioi in enumerate(eighth_iois):
         # Approximate beat position
         cumulative_time = (
-            times[eighth_mask][:-1][i] if i < len(times[eighth_mask]) - 1 else 0
+            interval_start_times[i] if i < len(interval_start_times) else 0
         )
         beat_pos = (cumulative_time % beat_duration) / beat_duration
 

@@ -201,6 +201,13 @@ class ChartReadabilityFilter:
 
         return Limb.EITHER_HAND
 
+    # Components that should never be removed by physical constraint checks.
+    # These represent important musical accents/transitions.
+    _PROTECTED_CYMBAL_COMPONENTS = frozenset({
+        'crash', 'china', 'splash',
+        'crash_1', 'crash_2', 'crash_3',
+    })
+
     def check_physical_constraints(
         self,
         hits: List[Dict],
@@ -209,6 +216,10 @@ class ChartReadabilityFilter:
         Check hits against physical constraints.
 
         Returns list of FilteredHit with violation details.
+
+        IMPORTANT: Multi-label hits at the same onset time represent
+        simultaneous strikes (e.g. crash + hihat), NOT sequential
+        single-hand hits. These are exempt from same-limb IOI checks.
         """
         if not hits:
             return []
@@ -221,10 +232,15 @@ class ChartReadabilityFilter:
         last_limb_time: Dict[Limb, float] = {}
         last_component_time: Dict[str, float] = {}
 
+        # Tolerance for "same onset" — multi-label hits share exact time
+        SIMULTANEOUS_TOLERANCE_MS = 2.0  # 2ms = effectively same onset
+
         for hit in sorted_hits:
             time = hit.get("time", 0) * 1000  # Convert to ms
             component = hit.get("component", "")
+            comp_lower = component.lower()
             limb = self.get_limb(component)
+            is_multilabel = hit.get("multilabel", False)
 
             filtered = FilteredHit(
                 original=hit,
@@ -232,7 +248,9 @@ class ChartReadabilityFilter:
                 limb=limb,
             )
 
-            # Check limb IOI
+            # Check limb IOI — but exempt simultaneous multi-label hits.
+            # Multi-label hits at the same onset represent a chord (e.g.
+            # crash + hihat), played with different hands in reality.
             if limb != Limb.EITHER_HAND and limb in last_limb_time:
                 ioi = time - last_limb_time[limb]
                 min_ioi = (
@@ -241,16 +259,23 @@ class ChartReadabilityFilter:
                     else self.constraints.min_ioi_hand
                 )
 
-                if ioi < min_ioi:
-                    filtered.kept = False
-                    filtered.removal_reason = (
-                        f"Too fast for {limb.value}: {ioi:.0f}ms < {min_ioi:.0f}ms"
-                    )
+                # Skip IOI check for simultaneous multi-label hits
+                is_simultaneous = ioi < SIMULTANEOUS_TOLERANCE_MS
+
+                if ioi < min_ioi and not is_simultaneous:
+                    # Never remove protected cymbal classes — they mark
+                    # important musical moments (crashes, china, splash)
+                    if comp_lower not in self._PROTECTED_CYMBAL_COMPONENTS:
+                        filtered.kept = False
+                        filtered.removal_reason = (
+                            f"Too fast for {limb.value}: {ioi:.0f}ms < {min_ioi:.0f}ms"
+                        )
 
             # Check same-component IOI
             if component in last_component_time:
                 ioi = time - last_component_time[component]
-                if ioi < self.constraints.min_ioi_same_component:
+                is_simultaneous = ioi < SIMULTANEOUS_TOLERANCE_MS
+                if ioi < self.constraints.min_ioi_same_component and not is_simultaneous:
                     filtered.kept = False
                     filtered.removal_reason = f"Same component too fast: {ioi:.0f}ms"
 
@@ -362,20 +387,26 @@ class ChartReadabilityFilter:
 
             # If too dense, thin based on confidence (keep higher confidence)
             if local_density > self.max_nps:
-                confidence = hit.get("confidence", 0.5)
+                component = hit.get("component", "").lower()
 
-                # Keep if high confidence, otherwise thin
-                if confidence < 0.8:
-                    # Check if this hit is "necessary" (on beat, high energy)
-                    is_on_beat = (
-                        hit.get("is_backbeat", False)
-                        or hit.get("beat_position", 0.5) % 1.0 < 0.1
-                    )
+                # Never thin cymbal accent hits — they mark structural moments
+                is_protected_cymbal = component in self._PROTECTED_CYMBAL_COMPONENTS
 
-                    if not is_on_beat:
-                        filtered.kept = False
-                        filtered.removal_reason = f"Density thinning: {local_density:.1f} NPS > {self.max_nps:.1f}"
-                        keep_mask[i] = False
+                if not is_protected_cymbal:
+                    confidence = hit.get("confidence", 0.5)
+
+                    # Keep if high confidence, otherwise thin
+                    if confidence < 0.8:
+                        # Check if this hit is "necessary" (on beat, high energy)
+                        is_on_beat = (
+                            hit.get("is_backbeat", False)
+                            or hit.get("beat_position", 0.5) % 1.0 < 0.1
+                        )
+
+                        if not is_on_beat:
+                            filtered.kept = False
+                            filtered.removal_reason = f"Density thinning: {local_density:.1f} NPS > {self.max_nps:.1f}"
+                            keep_mask[i] = False
 
             results.append(filtered)
 

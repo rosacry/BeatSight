@@ -153,15 +153,32 @@ COMPONENT_CATEGORIES: Dict[str, ComponentCategory] = {
     "tom_floor": ComponentCategory.TOM,
     "rack_tom": ComponentCategory.TOM,
     "floor_tom": ComponentCategory.TOM,
+    # Ranked toms from pitch ranker
+    "tom_1": ComponentCategory.TOM,
+    "tom_2": ComponentCategory.TOM,
+    "tom_3": ComponentCategory.TOM,
+    "tom_4": ComponentCategory.TOM,
     # Cymbals
     "crash": ComponentCategory.CYMBAL,
     "crash1": ComponentCategory.CYMBAL,
     "crash2": ComponentCategory.CYMBAL,
+    "crash_1": ComponentCategory.CYMBAL,
+    "crash_2": ComponentCategory.CYMBAL,
+    "crash_3": ComponentCategory.CYMBAL,
+    "crash_4": ComponentCategory.CYMBAL,
     "ride": ComponentCategory.CYMBAL,
     "ride_bell": ComponentCategory.CYMBAL,
     "ride_bow": ComponentCategory.CYMBAL,
+    "ride_bell_1": ComponentCategory.CYMBAL,
+    "ride_bell_2": ComponentCategory.CYMBAL,
+    "ride_bow_1": ComponentCategory.CYMBAL,
+    "ride_bow_2": ComponentCategory.CYMBAL,
     "china": ComponentCategory.CYMBAL,
+    "china_1": ComponentCategory.CYMBAL,
+    "china_2": ComponentCategory.CYMBAL,
     "splash": ComponentCategory.CYMBAL,
+    "splash_1": ComponentCategory.CYMBAL,
+    "splash_2": ComponentCategory.CYMBAL,
     "stack": ComponentCategory.CYMBAL,
     # Percussion
     "cowbell": ComponentCategory.PERCUSSION,
@@ -437,8 +454,8 @@ class DynamicLaneLayoutBuilder:
         if ComponentCategory.TOM in category_components:
             tom_comps = category_components[ComponentCategory.TOM]
 
-            if self.merge_tom_varieties or len(tom_comps) <= 2:
-                # Single tom lane or merge all
+            if self.merge_tom_varieties:
+                # Merge all toms into one lane explicitly
                 lanes.append(
                     LaneDefinition(
                         index=0,
@@ -452,9 +469,10 @@ class DynamicLaneLayoutBuilder:
                 )
             else:
                 # Separate by pitch (high/mid/low)
-                high_toms = [c for c, _ in tom_comps if "high" in c or "rack" in c]
-                mid_toms = [c for c, _ in tom_comps if "mid" in c]
-                low_toms = [c for c, _ in tom_comps if "low" in c or "floor" in c]
+                # Support both legacy names (tom_high, tom_low) and ranked labels (tom_1, tom_2)
+                high_toms = [c for c, _ in tom_comps if "high" in c or "rack" in c or c == "tom_1"]
+                mid_toms = [c for c, _ in tom_comps if "mid" in c or c == "tom_2"]
+                low_toms = [c for c, _ in tom_comps if "low" in c or "floor" in c or c in ("tom_3", "tom_4")]
                 generic_toms = [
                     c for c, _ in tom_comps if c not in high_toms + mid_toms + low_toms
                 ]

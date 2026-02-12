@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using BeatSight.Game.Mapping;
 using BeatSight.Game.UI.Theming;
-using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Sprites;
 using osuTK;
 using osuTK.Graphics;
 
@@ -15,504 +14,589 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 {
     internal sealed partial class ThreeDHighwayBackground : CompositeDrawable
     {
-        private readonly LaneLayout laneLayout;
-        private readonly bool kickUsesGlobalLine;
-        private readonly bool kickLaneSuppressed;
-        private Box? horizonGlow;
-        private Box? specularSweep;
-        private Box? beatPulseOverlay;
-        private Container? starfieldContainer;
-        private int visibleLaneCount;
-        private List<int> laneOrder = new();
-        private Color4[] laneAccentPalette = {
-            new Color4(64, 156, 255, 255),  // Snare blue
-            new Color4(255, 221, 89, 255),  // Hihat gold
-            new Color4(138, 201, 38, 255),  // Tom green
-            new Color4(255, 159, 243, 255)  // Crash pink
+        private const int geometrySegmentCount = 64;
+        private const int sweepLineCount = 3;
+
+        // Keep these aligned with PlaybackPlayfield.ThreeDimensionalTuning.
+        private const float vanishingPointYRatio = 0.050f;
+        private const float hitLineYRatio = 0.935f;
+        private const float highwayTopWidthRatio = 0.22f;
+        private const float highwayBottomWidthRatio = 0.88f;
+
+        private static readonly Color4[] laneAccentPalette =
+        {
+            new Color4(86, 166, 106, 255),
+            new Color4(188, 94, 104, 255),
+            new Color4(206, 181, 92, 255),
+            new Color4(88, 132, 212, 255),
+            new Color4(210, 145, 88, 255),
+            new Color4(154, 114, 208, 255),
+            new Color4(88, 172, 176, 255),
+            new Color4(188, 110, 166, 255)
         };
 
-        private readonly List<Box> timelineStripes = new();
-        private readonly List<float> timelineStripeDepth = new();
+        private readonly LaneLayout laneLayout;
+        private readonly bool kickUsesGlobalLine;
+        private readonly int visibleLaneCount;
+        private readonly IReadOnlyList<string> visibleLaneLabels;
+
+        private readonly Container perspectiveLaneLayer;
+        private readonly Container perspectiveBoundaryLayer;
+        private readonly Container laneHeaderLayer;
+        private readonly Container laneFooterLayer;
+        private readonly Container sweepLineLayer;
+
+        private readonly List<Box[]> laneSegments = new();
+        private readonly List<Box[]> boundarySegments = new();
+        private readonly List<Container> laneHeaderBoxes = new();
+        private readonly List<Box> laneHeaderFills = new();
+        private readonly List<SpriteText> laneHeaderTexts = new();
+        private readonly List<Container> laneFooterBoxes = new();
         private readonly List<Box> lanePulseLights = new();
-        private readonly List<float> lanePulseOffsets = new();
-        private readonly Stack<KickPulse> kickPulsePool = new();
-        private readonly Dictionary<DrawableNote, KickPulse> activeKickPulses = new();
-        private Container? kickPulseContainer;
-        private Container? kickGuideBand;
+        private readonly List<SpriteText> laneFooterTexts = new();
+        private readonly List<Box> sweepLines = new();
 
-        // Beat sync state
+        private Box? beatPulseOverlay;
+        private Box? horizonGlow;
+        private float lastLayoutWidth;
+        private float lastLayoutHeight;
+
+        // Beat sync state.
         private double lastBeatTime;
-        private double beatInterval = 500; // Default 120 BPM
-        private float currentBeatIntensity;
+        private double beatInterval = 500;
         private bool beatSyncEnabled = true;
-
-        // Starfield particles
-        private readonly List<StarParticle> starParticles = new();
-        private const int star_count = 40;
 
         public ThreeDHighwayBackground(LaneLayout laneLayout, bool kickUsesGlobalLine)
         {
             this.laneLayout = laneLayout;
             this.kickUsesGlobalLine = kickUsesGlobalLine;
-            this.kickLaneSuppressed = kickUsesGlobalLine;
-            RelativeSizeAxes = Axes.Both;
+            visibleLaneCount = kickUsesGlobalLine
+                ? Math.Max(1, laneLayout.LaneCount - 1)
+                : Math.Max(1, laneLayout.LaneCount);
+            visibleLaneLabels = buildVisibleLaneLabels();
 
-            visibleLaneCount = laneLayout?.LaneCount ?? 4;
-            laneOrder = Enumerable.Range(0, visibleLaneCount).ToList();
+            RelativeSizeAxes = Axes.Both;
 
             InternalChildren = new Drawable[]
             {
-                // Base starfield layer (behind everything)
-                starfieldContainer = createStarfieldLayer(),
-
+                createAtmosphereLayer(),
                 horizonGlow = new Box
                 {
-                    RelativeSizeAxes = Axes.X,
-                    Height = 100,
+                    RelativeSizeAxes = Axes.Both,
+                    Height = 0.24f,
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
-                    Colour = Color4Extensions.Opacity(Color4.Blue, 0.5f)
+                    Colour = ColourInfo.GradientVertical(
+                        new Color4(84, 112, 162, 56),
+                        Color4.Transparent)
                 },
-                specularSweep = new Box
+                perspectiveLaneLayer = new Container
                 {
-                    RelativeSizeAxes = Axes.Y,
-                    Width = 50,
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    Colour = Color4Extensions.Opacity(Color4.White, 0.2f)
+                    RelativeSizeAxes = Axes.Both
                 },
-                createLaneSurfaceLayer(),
-                // Beat pulse overlay (on top of lanes)
+                perspectiveBoundaryLayer = new Container
+                {
+                    RelativeSizeAxes = Axes.Both
+                },
+                sweepLineLayer = new Container
+                {
+                    RelativeSizeAxes = Axes.Both
+                },
+                laneHeaderLayer = new Container
+                {
+                    RelativeSizeAxes = Axes.Both
+                },
+                laneFooterLayer = new Container
+                {
+                    RelativeSizeAxes = Axes.Both
+                },
                 beatPulseOverlay = new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = Color4Extensions.Opacity(Color4.White, 0.0f),
+                    Colour = new Color4(142, 188, 255, 24),
                     Blending = BlendingParameters.Additive,
                     Alpha = 0
                 }
             };
 
-            if (kickUsesGlobalLine)
+            buildLaneGeometry();
+            buildBoundaryGeometry();
+            buildLaneGuides();
+            buildSweepLines();
+        }
+
+        private Drawable createAtmosphereLayer()
+        {
+            return new Container
             {
-                kickPulseContainer = new Container { RelativeSizeAxes = Axes.Both };
-                AddInternal(kickPulseContainer);
+                RelativeSizeAxes = Axes.Both,
+                Children = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = ColourInfo.GradientVertical(
+                            new Color4(8, 12, 22, 255),
+                            new Color4(6, 8, 14, 255))
+                    },
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Height = 0.32f,
+                        Anchor = Anchor.TopCentre,
+                        Origin = Anchor.TopCentre,
+                        Colour = ColourInfo.GradientVertical(
+                            new Color4(52, 76, 128, 28),
+                            Color4.Transparent)
+                    },
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Height = 0.46f,
+                        Anchor = Anchor.BottomCentre,
+                        Origin = Anchor.BottomCentre,
+                        Colour = ColourInfo.GradientVertical(
+                            Color4.Transparent,
+                            new Color4(0, 0, 0, 132))
+                    }
+                }
+            };
+        }
+
+        private void buildLaneGeometry()
+        {
+            laneSegments.Clear();
+            perspectiveLaneLayer.Clear();
+
+            for (int lane = 0; lane < visibleLaneCount; lane++)
+            {
+                var segments = new Box[geometrySegmentCount];
+
+                for (int i = 0; i < geometrySegmentCount; i++)
+                {
+                    var segment = new Box();
+                    segments[i] = segment;
+                    perspectiveLaneLayer.Add(segment);
+                }
+
+                laneSegments.Add(segments);
+            }
+        }
+
+        private void buildBoundaryGeometry()
+        {
+            boundarySegments.Clear();
+            perspectiveBoundaryLayer.Clear();
+
+            for (int boundary = 0; boundary <= visibleLaneCount; boundary++)
+            {
+                var segments = new Box[geometrySegmentCount];
+
+                for (int i = 0; i < geometrySegmentCount; i++)
+                {
+                    var segment = new Box();
+                    segments[i] = segment;
+                    perspectiveBoundaryLayer.Add(segment);
+                }
+
+                boundarySegments.Add(segments);
+            }
+        }
+
+        private void buildLaneGuides()
+        {
+            laneHeaderBoxes.Clear();
+            laneHeaderFills.Clear();
+            laneHeaderTexts.Clear();
+            laneFooterBoxes.Clear();
+            lanePulseLights.Clear();
+            laneFooterTexts.Clear();
+            laneHeaderLayer.Clear();
+            laneFooterLayer.Clear();
+
+            for (int lane = 0; lane < visibleLaneCount; lane++)
+            {
+                Color4 accent = laneAccentPalette[lane % laneAccentPalette.Length];
+                string label = visibleLaneLabels.Count > lane ? visibleLaneLabels[lane] : $"L{lane + 1}";
+
+                var header = new Container
+                {
+                    Anchor = Anchor.TopLeft,
+                    Origin = Anchor.TopLeft,
+                    Masking = true,
+                    CornerRadius = 5f
+                };
+
+                var headerFill = new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = new Color4(accent.R, accent.G, accent.B, 116)
+                };
+
+                header.Add(headerFill);
+                header.Add(new Box
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Height = 2f,
+                    Anchor = Anchor.BottomCentre,
+                    Origin = Anchor.BottomCentre,
+                    Colour = new Color4(255, 255, 255, 228)
+                });
+
+                var headerText = new SpriteText
+                {
+                    Text = label,
+                    Font = FrameworkFont.Regular.With(size: 13),
+                    Colour = new Color4(240, 246, 255, 242),
+                    Anchor = Anchor.TopLeft,
+                    Origin = Anchor.TopCentre
+                };
+
+                laneHeaderLayer.Add(header);
+                laneHeaderLayer.Add(headerText);
+                laneHeaderBoxes.Add(header);
+                laneHeaderFills.Add(headerFill);
+                laneHeaderTexts.Add(headerText);
+
+                var footer = new Container
+                {
+                    Anchor = Anchor.TopLeft,
+                    Origin = Anchor.TopLeft,
+                    Masking = true,
+                    CornerRadius = 5f
+                };
+
+                footer.Add(new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = new Color4(22, 28, 40, 230)
+                });
+
+                var pulseLight = new Box
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Height = 3f,
+                    Anchor = Anchor.BottomCentre,
+                    Origin = Anchor.BottomCentre,
+                    Colour = UITheme.Emphasise(accent, 1.12f),
+                    Alpha = 0,
+                    Blending = BlendingParameters.Additive
+                };
+
+                footer.Add(pulseLight);
+
+                var footerText = new SpriteText
+                {
+                    Text = label,
+                    Font = FrameworkFont.Regular.With(size: 11),
+                    Colour = new Color4(220, 232, 252, 214),
+                    Anchor = Anchor.TopLeft,
+                    Origin = Anchor.TopCentre
+                };
+
+                laneFooterLayer.Add(footer);
+                laneFooterLayer.Add(footerText);
+                laneFooterBoxes.Add(footer);
+                lanePulseLights.Add(pulseLight);
+                laneFooterTexts.Add(footerText);
+            }
+        }
+
+        private void buildSweepLines()
+        {
+            sweepLines.Clear();
+            sweepLineLayer.Clear();
+
+            for (int i = 0; i < sweepLineCount; i++)
+            {
+                var sweep = new Box
+                {
+                    Height = 1.5f,
+                    Colour = new Color4(182, 206, 238, 84),
+                    Alpha = 0.08f
+                };
+
+                sweepLineLayer.Add(sweep);
+                sweepLines.Add(sweep);
             }
         }
 
         public void ResetKickTimeline() { }
         public void SetKickGuideVisible(bool visible) { }
+        public void UpdateKickTimeline(IEnumerable<DrawableNote> notes, double time, double duration) { }
 
-        public void UpdateKickTimeline(IEnumerable<DrawableNote> notes, double time, double duration)
-        {
-            // Stub implementation
-        }
-
-        /// <summary>
-        /// Sets the BPM for beat-synchronized effects.
-        /// </summary>
         public void SetBpm(double bpm)
         {
             if (bpm > 0)
                 beatInterval = 60000.0 / bpm;
         }
 
-        /// <summary>
-        /// Enables or disables beat synchronization effects.
-        /// </summary>
         public void SetBeatSyncEnabled(bool enabled)
-        {
-            beatSyncEnabled = enabled;
-        }
+            => beatSyncEnabled = enabled;
 
-        /// <summary>
-        /// Triggers a beat pulse effect (call on each beat).
-        /// </summary>
         public void TriggerBeatPulse(double intensity = 1.0)
         {
             if (!beatSyncEnabled || beatPulseOverlay == null)
                 return;
 
-            currentBeatIntensity = (float)Math.Clamp(intensity, 0, 1);
+            float pulse = (float)Math.Clamp(intensity, 0.1, 1.0);
 
-            // Clear previous transforms to prevent accumulation
             beatPulseOverlay.ClearTransforms();
-
-            // Flash the overlay
-            beatPulseOverlay.Alpha = 0.12f * currentBeatIntensity;
+            beatPulseOverlay.Alpha = 0.05f * pulse;
             beatPulseOverlay.FadeOut(beatInterval * 0.7, Easing.OutQuad);
 
-            // Pulse the horizon glow
-            horizonGlow?.ClearTransforms();
-            horizonGlow?.TransformTo(nameof(horizonGlow.Alpha), 0.4f * currentBeatIntensity, 50)
-                .Then()
-                .TransformTo(nameof(horizonGlow.Alpha), 0.2f, (beatInterval * 0.6), Easing.OutQuad);
+            if (horizonGlow != null)
+            {
+                horizonGlow.ClearTransforms();
+                horizonGlow.TransformTo(nameof(horizonGlow.Alpha), 0.24f * pulse, 60)
+                           .Then()
+                           .TransformTo(nameof(horizonGlow.Alpha), 0.10f, beatInterval * 0.6, Easing.OutQuad);
+            }
         }
 
-        /// <summary>
-        /// Triggers a lane-specific hit flash effect.
-        /// </summary>
         public void TriggerLaneHit(int laneIndex, float intensity = 1.0f)
         {
             if (laneIndex < 0 || laneIndex >= lanePulseLights.Count)
                 return;
 
-            var glow = lanePulseLights[laneIndex];
-            glow.ClearTransforms();
-            glow.Alpha = 0.6f * intensity;
-            glow.FadeOut(250, Easing.OutQuad);
-        }
-
-        protected override void LoadComplete()
-        {
-            base.LoadComplete();
-
-            horizonGlow?.Loop(sequence => sequence
-                .FadeTo(0.35f, 1200, Easing.InOutSine)
-                .Then()
-                .FadeTo(0.18f, 1200, Easing.InOutSine));
-
-            specularSweep?.Loop(sequence => sequence
-                .MoveToX(0.45f, 2600, Easing.InOutSine)
-                .Then()
-                .MoveToX(-0.45f, 2600, Easing.InOutSine));
-
-            // Initialize starfield particles
-            initializeStarfield();
-        }
-
-        private Container createStarfieldLayer()
-        {
-            return new Container
-            {
-                RelativeSizeAxes = Axes.Both,
-                Masking = true
-            };
-        }
-
-        private void initializeStarfield()
-        {
-            if (starfieldContainer == null)
-                return;
-
-            var random = new Random(42); // Fixed seed for consistent starfield
-
-            for (int i = 0; i < star_count; i++)
-            {
-                var star = new StarParticle
-                {
-                    X = (float)(random.NextDouble() * 2 - 1), // -1 to 1
-                    Y = (float)random.NextDouble(), // 0 to 1 (top to bottom)
-                    Depth = (float)random.NextDouble(),
-                    Size = 1.5f + (float)random.NextDouble() * 2.5f,
-                    TwinkleOffset = (float)(random.NextDouble() * Math.PI * 2)
-                };
-                starParticles.Add(star);
-
-                var starBox = new Box
-                {
-                    Size = new Vector2(star.Size),
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    Colour = Color4.White,
-                    Alpha = 0.3f + star.Depth * 0.4f
-                };
-                star.Visual = starBox;
-                starfieldContainer.Add(starBox);
-            }
-        }
-
-        private Drawable createLaneSurfaceLayer()
-        {
-            var container = new Container
-            {
-                RelativeSizeAxes = Axes.Both
-            };
-
-            float laneWidthFactor = Math.Clamp(0.68f / Math.Max(1, visibleLaneCount), 0.08f, 0.18f);
-
-            for (int index = 0; index < laneOrder.Count; index++)
-            {
-                float normalized = visibleLaneCount <= 1
-                    ? 0
-                    : (index - (visibleLaneCount - 1) / 2f) / Math.Max(1, visibleLaneCount - 1);
-
-                var accentColour = laneAccentPalette[index % laneAccentPalette.Length];
-
-                var laneSurface = new Container
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Anchor = Anchor.BottomCentre,
-                    Origin = Anchor.BottomCentre,
-                    RelativePositionAxes = Axes.X,
-                    X = normalized * 0.62f,
-                    Width = laneWidthFactor,
-                    Height = 0.96f,
-                    Shear = new Vector2(-0.26f, 0),
-                    Padding = new MarginPadding { Bottom = 18 }
-                };
-
-                var laneTopColour = Color4Extensions.Opacity(UITheme.Emphasise(accentColour, 1.28f), 0.3f);
-                var laneBottomColour = Color4Extensions.Opacity(UITheme.Emphasise(UITheme.Surface, 0.88f), 0.1f);
-
-                laneSurface.Add(new Box
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Colour = ColourInfo.GradientVertical(laneTopColour, laneBottomColour)
-                });
-
-                laneSurface.Add(new Box
-                {
-                    RelativeSizeAxes = Axes.X,
-                    Height = 8,
-                    Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopCentre,
-                    Colour = UITheme.Emphasise(accentColour, 1.55f),
-                    Alpha = 0.7f
-                });
-
-                var glow = new Box
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Colour = UITheme.Emphasise(accentColour, 1.42f),
-                    Alpha = 0,
-                    Blending = BlendingParameters.Additive
-                };
-
-                laneSurface.Add(glow);
-                lanePulseLights.Add(glow);
-                lanePulseOffsets.Add(normalized);
-
-                container.Add(laneSurface);
-            }
-
-            return container;
-        }
-
-        private Drawable createDepthFogLayer()
-        {
-            return new Box
-            {
-                RelativeSizeAxes = Axes.Both,
-                Colour = ColourInfo.GradientVertical(
-                    new Color4(0, 0, 0, 0),
-                    UITheme.Emphasise(UITheme.BackgroundLayer, 0.78f)),
-                Alpha = 0.68f
-            };
-        }
-
-        private Drawable createLaneSeparatorLayer()
-        {
-            var container = new Container
-            {
-                RelativeSizeAxes = Axes.Both
-            };
-
-            container.Add(new Box
-            {
-                RelativeSizeAxes = Axes.Both,
-                Colour = UITheme.SurfaceAlt,
-                Alpha = 0.52f
-            });
-
-            for (int index = 0; index < laneOrder.Count; index++)
-            {
-                float normalized = visibleLaneCount <= 1
-                    ? 0
-                    : (index - (visibleLaneCount - 1) / 2f) / Math.Max(1, visibleLaneCount - 1);
-
-                container.Add(new Box
-                {
-                    RelativeSizeAxes = Axes.Y,
-                    Width = 4,
-                    Height = 0.9f,
-                    Anchor = Anchor.BottomCentre,
-                    Origin = Anchor.BottomCentre,
-                    RelativePositionAxes = Axes.X,
-                    X = normalized * 0.62f,
-                    Rotation = normalized * 18f,
-                    Colour = UITheme.Emphasise(UITheme.GetLaneEdgeColour(index, visibleLaneCount), 1.05f),
-                    Alpha = 0.42f
-                });
-            }
-
-            return container;
-        }
-
-        private Drawable createKickGuideLayer()
-        {
-            kickPulseContainer = null;
-
-            if (kickLaneSuppressed)
-            {
-                var kickLane = new ThreeDKickLane(laneLayout.LaneCount);
-                kickPulseContainer = kickLane.PulseContainer;
-                kickGuideBand = kickLane;
-                return kickLane;
-            }
-
-            return new Container();
-        }
-
-        private Drawable createTimelineStripeLayer()
-        {
-            var stripeLayer = new Container
-            {
-                RelativeSizeAxes = Axes.Both
-            };
-
-            const int stripeCount = 14;
-            for (int i = 0; i < stripeCount; i++)
-            {
-                float depth = stripeCount <= 1 ? 1f : i / (float)(stripeCount - 1);
-                float width = 0.55f + 0.45f * depth;
-
-                var stripe = new Box
-                {
-                    RelativeSizeAxes = Axes.X,
-                    Height = 2,
-                    Width = width,
-                    Anchor = Anchor.BottomCentre,
-                    Origin = Anchor.BottomCentre,
-                    Colour = new Color4(255, 255, 255, (byte)(40 + depth * 60)),
-                    Alpha = 0.5f,
-                    Shear = new Vector2(-0.25f, 0)
-                };
-
-                stripeLayer.Add(stripe);
-                timelineStripes.Add(stripe);
-                timelineStripeDepth.Add(depth);
-            }
-
-            return stripeLayer;
-        }
-
-        private KickPulse getOrCreatePulse(DrawableNote note)
-        {
-            if (activeKickPulses.TryGetValue(note, out var existing))
-                return (KickPulse)existing;
-
-            var pulse = new KickPulse();
-            if (kickPulseContainer != null)
-                kickPulseContainer.Add(pulse);
-
-            activeKickPulses[note] = pulse;
-            return pulse;
-        }
-
-        private void releasePulse(DrawableNote note)
-        {
-            if (activeKickPulses.TryGetValue(note, out var pulse))
-            {
-                activeKickPulses.Remove(note);
-                pulse.Expire();
-            }
+            var pulse = lanePulseLights[laneIndex];
+            pulse.ClearTransforms();
+            pulse.Alpha = 0.44f * Math.Clamp(intensity, 0.2f, 1.0f);
+            pulse.ScaleTo(new Vector2(1.08f, 1f), 70, Easing.OutQuint)
+                 .Then()
+                 .ScaleTo(Vector2.One, 180, Easing.OutQuad);
+            pulse.FadeOut(220, Easing.OutQuad);
         }
 
         public void UpdateScroll(double currentTime)
         {
-            if (DrawHeight <= 0)
+            if (DrawWidth <= 0 || DrawHeight <= 0)
                 return;
 
-            // Update starfield
-            updateStarfield(currentTime);
+            updatePerspectiveLayout();
+            updateSweepLines(currentTime);
 
-            // Check for beat pulse based on time
-            if (beatSyncEnabled && beatInterval > 0)
+            if (!beatSyncEnabled || beatInterval <= 0)
+                return;
+
+            double beatProgress = (currentTime - lastBeatTime) / beatInterval;
+            if (beatProgress >= 1.0)
             {
-                double beatProgress = (currentTime - lastBeatTime) / beatInterval;
-                if (beatProgress >= 1.0)
-                {
-                    lastBeatTime = currentTime - (currentTime % beatInterval);
-                    TriggerBeatPulse(0.6);
-                }
-            }
-
-            if (timelineStripes.Count > 0)
-            {
-                float baseOffset = (float)((currentTime * 0.0006) % 1.0);
-
-                for (int i = 0; i < timelineStripes.Count; i++)
-                {
-                    float offset = (i / (float)timelineStripes.Count) + baseOffset;
-                    offset -= MathF.Floor(offset);
-                    float depth = timelineStripeDepth[i];
-                    float parallax = 0.65f + depth * 0.45f;
-                    float y = -offset * DrawHeight * parallax;
-                    var stripe = timelineStripes[i];
-                    stripe.Y = y;
-                    stripe.Scale = new Vector2(parallax, 1);
-                    stripe.Alpha = 0.25f + depth * 0.45f;
-                }
-            }
-
-            if (lanePulseLights.Count > 0)
-            {
-                for (int i = 0; i < lanePulseLights.Count; i++)
-                {
-                    var glow = lanePulseLights[i];
-                    float offset = lanePulseOffsets.Count > i ? lanePulseOffsets[i] : 0;
-                    float wave = (float)Math.Sin(currentTime * 0.002 + offset * MathF.PI);
-                    float intensity = 0.18f + MathF.Max(0, wave) * 0.32f;
-
-                    // Only apply ambient pulse if not currently flashing from a hit
-                    if (glow.Alpha < intensity)
-                        glow.Alpha = intensity;
-
-                    glow.Scale = new Vector2(1f, 1.05f + MathF.Max(0, (float)Math.Sin(currentTime * 0.003 + offset * 2)) * 0.08f);
-                }
+                lastBeatTime = currentTime - (currentTime % beatInterval);
+                TriggerBeatPulse(0.55);
             }
         }
 
-        private void updateStarfield(double currentTime)
+        protected override void Update()
         {
-            if (starfieldContainer == null || DrawWidth <= 0 || DrawHeight <= 0)
+            base.Update();
+            updatePerspectiveLayout();
+        }
+
+        private void updatePerspectiveLayout()
+        {
+            if (Math.Abs(lastLayoutWidth - DrawWidth) < 0.5f && Math.Abs(lastLayoutHeight - DrawHeight) < 0.5f)
                 return;
 
-            float scrollSpeed = 0.00015f;
+            lastLayoutWidth = DrawWidth;
+            lastLayoutHeight = DrawHeight;
 
-            foreach (var star in starParticles)
+            if (DrawWidth <= 0 || DrawHeight <= 0)
+                return;
+
+            float vanishingY = DrawHeight * vanishingPointYRatio;
+            float hitY = DrawHeight * hitLineYRatio;
+            float topY = vanishingY + 6f;
+            float bottomY = hitY - 6f;
+            float depthHeight = Math.Max(20f, bottomY - topY);
+
+            float topWidth = DrawWidth * highwayTopWidthRatio;
+            float bottomWidth = DrawWidth * highwayBottomWidthRatio;
+
+            for (int segmentIndex = 0; segmentIndex < geometrySegmentCount; segmentIndex++)
             {
-                if (star.Visual == null)
-                    continue;
+                float depthStart = segmentIndex / (float)geometrySegmentCount;
+                float depthEnd = (segmentIndex + 1f) / geometrySegmentCount;
+                float depthMid = (depthStart + depthEnd) * 0.5f;
 
-                // Move stars down based on depth (parallax effect)
-                float speed = scrollSpeed * (0.3f + star.Depth * 0.7f);
-                star.Y += (float)(speed * 16.67); // Approximate frame time
+                float yStart = topY + depthHeight * depthStart;
+                float yEnd = topY + depthHeight * depthEnd;
+                float segmentHeight = Math.Max(1f, yEnd - yStart + 1.4f);
 
-                // Wrap around when reaching bottom
-                if (star.Y > 1.2f)
+                float curvedDepth = MathF.Pow(depthMid, 1.2f);
+                float widthAtDepth = lerp(topWidth, bottomWidth, curvedDepth);
+                float laneWidth = widthAtDepth / visibleLaneCount;
+                float left = (DrawWidth - widthAtDepth) * 0.5f;
+                float laneInset = Math.Clamp(laneWidth * 0.035f, 1.0f, 3.5f);
+
+                for (int lane = 0; lane < visibleLaneCount; lane++)
                 {
-                    star.Y = -0.2f;
-                    star.X = (float)(new Random().NextDouble() * 2 - 1);
+                    var segment = laneSegments[lane][segmentIndex];
+                    Color4 accent = laneAccentPalette[lane % laneAccentPalette.Length];
+                    Color4 laneBase = UITheme.Mix(new Color4(16, 22, 34, 255), accent, lane % 2 == 0 ? 0.08f : 0.055f);
+                    byte laneAlpha = (byte)(52 + curvedDepth * 38);
+
+                    segment.X = left + lane * laneWidth + laneInset;
+                    segment.Y = yStart - 0.7f;
+                    segment.Width = Math.Max(1f, laneWidth - laneInset * 2f);
+                    segment.Height = segmentHeight;
+                    segment.Colour = new Color4(laneBase.R, laneBase.G, laneBase.B, laneAlpha);
                 }
 
-                // Apply position
-                star.Visual.Position = new Vector2(
-                    star.X * DrawWidth * 0.5f,
-                    (star.Y - 0.5f) * DrawHeight
-                );
+                for (int boundary = 0; boundary <= visibleLaneCount; boundary++)
+                {
+                    bool edge = boundary == 0 || boundary == visibleLaneCount;
+                    var segment = boundarySegments[boundary][segmentIndex];
+                    float boundaryX = left + laneWidth * boundary;
+                    byte alpha = edge ? (byte)(86 + curvedDepth * 30) : (byte)(62 + curvedDepth * 24);
 
-                // Twinkle effect
-                float twinkle = 0.5f + 0.5f * MathF.Sin((float)(currentTime * 0.003 + star.TwinkleOffset));
-                star.Visual.Alpha = (0.2f + star.Depth * 0.5f) * twinkle;
+                    segment.X = boundaryX - (edge ? 1.1f : 0.7f);
+                    segment.Y = yStart - 0.7f;
+                    segment.Width = edge ? 2.2f : 1.4f;
+                    segment.Height = segmentHeight;
+                    segment.Colour = new Color4(198, 216, 246, alpha);
+                }
+            }
 
-                // Size variation with depth
-                float depthScale = 0.5f + star.Depth * 0.5f;
-                star.Visual.Size = new Vector2(star.Size * depthScale);
+            layoutLaneGuides(topY, hitY, topWidth, bottomWidth);
+        }
+
+        private void layoutLaneGuides(float topY, float hitY, float topWidth, float bottomWidth)
+        {
+            float compactBoost = DrawHeight <= 760f ? 1.12f : 1f;
+            float headerFontSize = Math.Clamp(12f * compactBoost, 11f, 15f);
+            float footerFontSize = Math.Clamp(10f * compactBoost, 10f, 13f);
+            float headerHeight = Math.Clamp(24f * compactBoost, 22f, 32f);
+            float footerHeight = Math.Clamp(15f * compactBoost, 13f, 20f);
+
+            float headerDepth = 0.075f;
+            float headerWidth = lerp(topWidth, bottomWidth, headerDepth) / visibleLaneCount;
+            float headerLeft = (DrawWidth - lerp(topWidth, bottomWidth, headerDepth)) * 0.5f;
+            float headerY = Math.Max(6f, topY + 4f);
+
+            float footerDepth = 1f;
+            float footerWidth = lerp(topWidth, bottomWidth, footerDepth) / visibleLaneCount;
+            float footerLeft = (DrawWidth - lerp(topWidth, bottomWidth, footerDepth)) * 0.5f;
+            float footerY = hitY - footerHeight - 5f;
+
+            for (int lane = 0; lane < visibleLaneCount; lane++)
+            {
+                Color4 accent = laneAccentPalette[lane % laneAccentPalette.Length];
+
+                var header = laneHeaderBoxes[lane];
+                header.X = headerLeft + lane * headerWidth + 1f;
+                header.Y = headerY;
+                header.Width = Math.Max(1f, headerWidth - 2f);
+                header.Height = headerHeight;
+
+                laneHeaderFills[lane].Colour = new Color4(accent.R, accent.G, accent.B, 160);
+
+                var headerText = laneHeaderTexts[lane];
+                headerText.Font = FrameworkFont.Regular.With(size: headerFontSize);
+                headerText.X = header.X + header.Width * 0.5f;
+                headerText.Y = headerY + (header.Height - headerFontSize) * 0.5f - 1f;
+
+                var footer = laneFooterBoxes[lane];
+                footer.X = footerLeft + lane * footerWidth + 1f;
+                footer.Y = footerY;
+                footer.Width = Math.Max(1f, footerWidth - 2f);
+                footer.Height = footerHeight;
+
+                var footerText = laneFooterTexts[lane];
+                footerText.Font = FrameworkFont.Regular.With(size: footerFontSize);
+                footerText.X = footer.X + footer.Width * 0.5f;
+                footerText.Y = footerY + (footer.Height - footerFontSize) * 0.5f - 1f;
             }
         }
-    }
 
-    /// <summary>
-    /// Represents a star particle in the background starfield.
-    /// </summary>
-    internal class StarParticle
-    {
-        public float X { get; set; }
-        public float Y { get; set; }
-        public float Depth { get; set; }
-        public float Size { get; set; }
-        public float TwinkleOffset { get; set; }
-        public Box? Visual { get; set; }
+        private void updateSweepLines(double currentTime)
+        {
+            float vanishingY = DrawHeight * vanishingPointYRatio + 3f;
+            float hitY = DrawHeight * hitLineYRatio - 8f;
+            float depthHeight = Math.Max(20f, hitY - vanishingY);
+            float topWidth = DrawWidth * highwayTopWidthRatio;
+            float bottomWidth = DrawWidth * highwayBottomWidthRatio;
+
+            for (int i = 0; i < sweepLines.Count; i++)
+            {
+                float cycle = (float)((currentTime * 0.00045 + i / (float)sweepLines.Count) % 1.0);
+                float depth = 1f - cycle;
+                float y = vanishingY + depthHeight * depth;
+                float width = lerp(topWidth, bottomWidth, MathF.Pow(depth, 1.15f));
+
+                var line = sweepLines[i];
+                line.X = (DrawWidth - width) * 0.5f;
+                line.Y = y;
+                line.Width = width;
+                line.Height = depth > 0.78f ? 1.6f : 1.0f;
+                line.Alpha = 0.008f + (1f - depth) * 0.038f;
+            }
+        }
+
+        private IReadOnlyList<string> buildVisibleLaneLabels()
+        {
+            var labels = new List<string>(visibleLaneCount);
+            for (int visualLane = 0; visualLane < visibleLaneCount; visualLane++)
+            {
+                int actualLane = getActualLaneIndex(visualLane);
+                labels.Add(resolveLaneLabel(actualLane));
+            }
+
+            return labels;
+        }
+
+        private int getActualLaneIndex(int visualLane)
+        {
+            if (!kickUsesGlobalLine)
+                return visualLane;
+
+            return visualLane >= laneLayout.KickLane
+                ? visualLane + 1
+                : visualLane;
+        }
+
+        private string resolveLaneLabel(int actualLane)
+        {
+            if (actualLane == laneLayout.KickLane)
+                return "K";
+            if (actualLane == laneLayout.SnareLane)
+                return "SN";
+            if (actualLane == laneLayout.HiHatLane)
+                return "HH";
+            if (actualLane == laneLayout.RideLane)
+                return "RD";
+
+            if (laneContains(DrumComponentCategory.Crash, actualLane) || laneContains(DrumComponentCategory.Crash2, actualLane))
+                return "CR";
+            if (laneContains(DrumComponentCategory.China, actualLane))
+                return "CH";
+            if (laneContains(DrumComponentCategory.Splash, actualLane))
+                return "SP";
+            if (laneContains(DrumComponentCategory.TomHigh, actualLane))
+                return "T1";
+            if (laneContains(DrumComponentCategory.TomMid, actualLane))
+                return "T2";
+            if (laneContains(DrumComponentCategory.TomLow, actualLane))
+                return "T3";
+            if (laneContains(DrumComponentCategory.Percussion, actualLane) || laneContains(DrumComponentCategory.AuxPercussion, actualLane))
+                return "PR";
+
+            return $"L{actualLane + 1}";
+        }
+
+        private bool laneContains(DrumComponentCategory category, int lane)
+        {
+            var lanes = laneLayout.GetLanesFor(category);
+            for (int i = 0; i < lanes.Count; i++)
+            {
+                if (lanes[i] == lane)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static float lerp(float start, float end, float amount)
+            => start + (end - start) * amount;
     }
 }

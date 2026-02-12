@@ -151,6 +151,20 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
     /// </summary>
     internal partial class ManuscriptBackgroundEnhanced : CompositeDrawable
     {
+        public enum ManuscriptNotationVoice
+        {
+            Lower = 0,
+            Upper = 1
+        }
+
+        private const float ManuscriptStaffWidthRatio = 0.88f;
+        private const float ManuscriptStaffHeightRatio = 0.86f;
+        private const float ManuscriptStaffCenterYRatio = 0.56f;
+        private const float StaffUnitMin = -3.5f;
+        private const float StaffUnitMax = 3.5f;
+        private const float StaffUnitRange = StaffUnitMax - StaffUnitMin;
+        private const float BaseGuideAlpha = 0.012f;
+
         // Staff dimensions
         private const int StaffLineCount = 5;
         private const float LineThickness = 1.2f;
@@ -158,14 +172,71 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         private const int LedgerLinesAbove = 2;
         private const int LedgerLinesBelow = 2;
 
-        // Classic sheet music colors
-        private static readonly Color4 PaperBackground = new Color4(252, 250, 244, 255);
-        private static readonly Color4 PaperVignette = new Color4(245, 242, 232, 255);
-        private static readonly Color4 StaffLineColor = new Color4(35, 38, 45, 255);
-        private static readonly Color4 LedgerLineColor = new Color4(75, 78, 88, 180);
+        // Dark sheet music colors inspired by modern tab readers.
+        private static readonly Color4 PaperBackground = new Color4(16, 22, 33, 255);
+        private static readonly Color4 PaperVignette = new Color4(10, 14, 22, 255);
+        private static readonly Color4 StaffLineColor = new Color4(196, 206, 226, 164);
+        private static readonly Color4 LedgerLineColor = new Color4(152, 168, 198, 106);
+        private static readonly Color4 LabelColor = new Color4(212, 224, 244, 200);
 
         private Container? staffContainer;
+        private Container? timelineMarkerLayer;
         private ClefIndicatorEnhanced? clefIndicator;
+        private readonly List<(Box Line, float Unit)> staffGuideLines = new();
+        private readonly List<ComponentGuideVisual> componentGuideVisuals = new();
+        private readonly List<Box> timelineMarkers = new();
+        private string? focusedGuideKey;
+        private double timelineStartMs;
+        private double timelineDurationMs;
+        private float timelineLeftX;
+        private float timelineRightX;
+        private bool hasTimelineWindow;
+        private double timelineBpm = 120;
+        private bool timelineWindowDirty;
+
+        private sealed record ComponentGuide(string Key, string Label, float Unit, Color4 Color);
+
+        private sealed class ComponentGuideVisual
+        {
+            public ComponentGuideVisual(ComponentGuide guide, Box fill, Box rail, SpriteText topLabel, SpriteText bottomLabel)
+            {
+                Guide = guide;
+                Fill = fill;
+                Rail = rail;
+                TopLabel = topLabel;
+                BottomLabel = bottomLabel;
+            }
+
+            public ComponentGuide Guide { get; }
+            public Box Fill { get; }
+            public Box Rail { get; }
+            public SpriteText TopLabel { get; }
+            public SpriteText BottomLabel { get; }
+        }
+
+        private static readonly ComponentGuide[] componentGuides =
+        {
+            new("kick", "KK", -3.5f, DesignSystem.ColorKick),
+            new("hihat", "HH", -2.5f, DesignSystem.ColorHiHat),
+            new("snare", "SN", -1.5f, DesignSystem.ColorSnare),
+            new("tom_high", "T1", -0.5f, DesignSystem.ColorTomHigh),
+            new("tom_mid", "T2", 0.5f, DesignSystem.ColorTomMid),
+            new("tom_low", "T3", 1.5f, DesignSystem.ColorTomLow),
+            new("ride", "RD", 2.5f, DesignSystem.ColorRide),
+            new("crash", "CR", 3.5f, DesignSystem.ColorCrash)
+        };
+
+        private static readonly string[] notationCycleComponents =
+        {
+            "kick",
+            "hihat",
+            "snare",
+            "tom_high",
+            "tom_mid",
+            "tom_low",
+            "ride",
+            "crash"
+        };
 
         /// <summary>
         /// The playback position highlighter that sweeps across the staff.
@@ -192,7 +263,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             {
                 RelativeSizeAxes = Axes.Both,
                 Colour = ColourInfo.GradientVertical(
-                    new Color4(0, 0, 0, 12),
+                    new Color4(88, 118, 168, 24),
                     Color4.Transparent),
                 Anchor = Anchor.TopCentre,
                 Origin = Anchor.TopCentre
@@ -204,7 +275,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 RelativeSizeAxes = Axes.Both,
                 Colour = ColourInfo.GradientVertical(
                     Color4.Transparent,
-                    new Color4(0, 0, 0, 18)),
+                    new Color4(0, 0, 0, 36)),
                 Anchor = Anchor.BottomCentre,
                 Origin = Anchor.BottomCentre
             });
@@ -212,61 +283,21 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             // Staff container
             staffContainer = new Container
             {
-                RelativeSizeAxes = Axes.Y,
-                Width = DrawWidth * DesignSystem.StaffWidthRatio,
+                RelativeSizeAxes = Axes.Both,
+                Width = ManuscriptStaffWidthRatio,
+                Height = ManuscriptStaffHeightRatio,
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre
             };
 
-            // Draw the 5 main staff lines as vertical lines (since notes scroll vertically)
-            for (int i = 0; i < StaffLineCount; i++)
+            timelineMarkerLayer = new Container
             {
-                float x = (i - (StaffLineCount - 1) / 2f) * DesignSystem.StaffLineSpacing;
+                RelativeSizeAxes = Axes.Both
+            };
+            staffContainer.Add(timelineMarkerLayer);
 
-                staffContainer.Add(new Box
-                {
-                    RelativeSizeAxes = Axes.Y,
-                    Width = LineThickness,
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    X = x,
-                    Colour = StaffLineColor
-                });
-            }
-
-            // Ledger lines above staff (for cymbals)
-            for (int i = 1; i <= LedgerLinesAbove; i++)
-            {
-                float x = ((StaffLineCount - 1) / 2f + i) * DesignSystem.StaffLineSpacing;
-
-                staffContainer.Add(new Box
-                {
-                    RelativeSizeAxes = Axes.Y,
-                    Width = LedgerLineThickness,
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    X = x,
-                    Colour = LedgerLineColor,
-                    Alpha = DesignSystem.LedgerLineOpacity
-                });
-            }
-
-            // Ledger lines below staff (for bass drum)
-            for (int i = 1; i <= LedgerLinesBelow; i++)
-            {
-                float x = -((StaffLineCount - 1) / 2f + i) * DesignSystem.StaffLineSpacing;
-
-                staffContainer.Add(new Box
-                {
-                    RelativeSizeAxes = Axes.Y,
-                    Width = LedgerLineThickness,
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    X = x,
-                    Colour = LedgerLineColor,
-                    Alpha = DesignSystem.LedgerLineOpacity
-                });
-            }
+            buildComponentGuides();
+            buildStaffLines();
 
             AddInternal(staffContainer);
 
@@ -285,7 +316,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             {
                 Anchor = Anchor.TopCentre,
                 Origin = Anchor.TopCentre,
-                Y = 25
+                Y = 20
             };
             AddInternal(clefIndicator);
 
@@ -297,15 +328,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         {
             base.Update();
 
-            // Update staff container width based on current draw width
             if (staffContainer != null)
             {
-                staffContainer.Width = DrawWidth * DesignSystem.StaffWidthRatio;
-
-                // Update highlighter staff dimensions
-                float staffWidth = DrawWidth * DesignSystem.StaffWidthRatio;
-                float staffCenterX = DrawWidth / 2f;
-                PlaybackHighlighter?.SetStaffDimensions(staffCenterX, staffWidth);
+                updateStaffGeometry(DrawWidth, DrawHeight);
             }
         }
 
@@ -314,51 +339,310 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         /// </summary>
         public void UpdatePlaybackPosition(double timeMs, double bpm)
         {
+            double sanitizedBpm = Math.Max(1, bpm);
+            if (Math.Abs(timelineBpm - sanitizedBpm) > 0.01)
+            {
+                timelineBpm = sanitizedBpm;
+                timelineWindowDirty = true;
+            }
+
             PlaybackHighlighter?.UpdatePlaybackPosition(timeMs, bpm);
+        }
+
+        public void SetTimelineWindow(double startTimeMs, double durationMs, float playheadX, float leftX, float rightX)
+        {
+            timelineStartMs = startTimeMs;
+            timelineDurationMs = durationMs;
+            timelineLeftX = leftX;
+            timelineRightX = rightX;
+            hasTimelineWindow = durationMs > 1 && rightX > leftX;
+            timelineWindowDirty = true;
+            PlaybackHighlighter?.SetTimelineWindow(startTimeMs, durationMs, playheadX, leftX, rightX);
+        }
+
+        public void SetFocusedComponent(string? component)
+        {
+            string? next = string.IsNullOrWhiteSpace(component)
+                ? null
+                : mapGuideKey(normalizeComponentKey(component));
+
+            if (string.Equals(focusedGuideKey, next, StringComparison.Ordinal))
+                return;
+
+            focusedGuideKey = next;
+            updateGuideFocusVisuals();
+        }
+
+        private void buildStaffLines()
+        {
+            if (staffContainer == null)
+                return;
+
+            // Main 5-line percussion staff.
+            for (int i = 0; i < StaffLineCount; i++)
+            {
+                float unit = i - (StaffLineCount - 1) / 2f;
+                addStaffGuideLine(unit, LineThickness, StaffLineColor, 1f);
+            }
+
+            for (int i = 1; i <= LedgerLinesAbove; i++)
+            {
+                float unit = ((StaffLineCount - 1) / 2f) + i;
+                addStaffGuideLine(unit, LedgerLineThickness, LedgerLineColor, DesignSystem.LedgerLineOpacity);
+            }
+
+            for (int i = 1; i <= LedgerLinesBelow; i++)
+            {
+                float unit = -(((StaffLineCount - 1) / 2f) + i);
+                addStaffGuideLine(unit, LedgerLineThickness, LedgerLineColor, DesignSystem.LedgerLineOpacity);
+            }
+        }
+
+        private void addStaffGuideLine(float unit, float thickness, Color4 color, float alpha)
+        {
+            if (staffContainer == null)
+                return;
+
+            var line = new Box
+            {
+                RelativeSizeAxes = Axes.X,
+                Height = thickness,
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                Colour = color,
+                Alpha = alpha
+            };
+
+            staffContainer.Add(line);
+            staffGuideLines.Add((line, unit));
+        }
+
+        private void buildComponentGuides()
+        {
+            if (staffContainer == null)
+                return;
+
+            foreach (ComponentGuide guide in componentGuides)
+            {
+                var fill = new Box
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    Height = 28f,
+                    Colour = DesignSystem.WithOpacity(guide.Color, BaseGuideAlpha)
+                };
+
+                var rail = new Box
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    Height = 1.5f,
+                    Colour = DesignSystem.WithOpacity(guide.Color, 0.14f)
+                };
+
+                var topLabel = new SpriteText
+                {
+                    Text = guide.Label,
+                    Font = new FontUsage("Roboto", 11f),
+                    Colour = LabelColor,
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft
+                };
+
+                var bottomLabel = new SpriteText
+                {
+                    Text = guide.Label,
+                    Font = new FontUsage("Roboto", 10f),
+                    Colour = LabelColor,
+                    Anchor = Anchor.CentreRight,
+                    Origin = Anchor.CentreRight,
+                    Alpha = 0f
+                };
+
+                staffContainer.Add(fill);
+                staffContainer.Add(rail);
+                staffContainer.Add(topLabel);
+                staffContainer.Add(bottomLabel);
+
+                componentGuideVisuals.Add(new ComponentGuideVisual(guide, fill, rail, topLabel, bottomLabel));
+            }
+
+            updateGuideFocusVisuals();
+        }
+
+        private void updateStaffGeometry(float drawWidth, float drawHeight)
+        {
+            float spacing = GetStaffSpacingForDrawArea(drawWidth, drawHeight);
+            float laneHeight = Math.Clamp(spacing * 0.80f, 14f, 36f);
+            float labelSize = Math.Clamp(drawWidth / 168f, 9.2f, 13.6f);
+            float leftLabelInset = Math.Clamp(drawWidth * 0.024f, 18f, 38f);
+            float rightLabelInset = Math.Clamp(drawWidth * 0.018f, 14f, 30f);
+            float centerY = GetStaffCenterYForDrawHeight(drawHeight);
+            float localWidth = staffContainer?.DrawWidth > 0
+                ? staffContainer.DrawWidth
+                : GetTimelineWidthForDrawWidth(drawWidth);
+
+            foreach (var (line, unit) in staffGuideLines)
+                line.Y = centerY - unit * spacing;
+
+            foreach (ComponentGuideVisual visual in componentGuideVisuals)
+            {
+                float y = centerY - visual.Guide.Unit * spacing;
+                visual.Fill.Y = y;
+                visual.Fill.Height = laneHeight;
+                visual.Fill.Width = 1f;
+                visual.Rail.Y = y;
+                visual.TopLabel.Y = y;
+                visual.BottomLabel.Y = y;
+                visual.TopLabel.Font = new FontUsage("Roboto", labelSize);
+                visual.BottomLabel.Font = new FontUsage("Roboto", Math.Max(8.4f, labelSize - 0.9f));
+                visual.TopLabel.X = leftLabelInset;
+                visual.BottomLabel.X = Math.Max(rightLabelInset, localWidth - rightLabelInset);
+            }
+
+            float timelineWidth = GetTimelineWidthForDrawWidth(drawWidth);
+            PlaybackHighlighter?.SetStaffDimensions(drawWidth / 2f, timelineWidth);
+            timelineWindowDirty = true;
+            updateTimelineMarkersIfNeeded();
+        }
+
+        private void updateGuideFocusVisuals()
+        {
+            bool hasFocus = !string.IsNullOrWhiteSpace(focusedGuideKey);
+
+            foreach (ComponentGuideVisual visual in componentGuideVisuals)
+            {
+                bool isFocused = hasFocus && string.Equals(visual.Guide.Key, focusedGuideKey, StringComparison.Ordinal);
+                float fillAlpha = hasFocus ? (isFocused ? 0.22f : 0.012f) : BaseGuideAlpha;
+                float railAlpha = hasFocus ? (isFocused ? 0.34f : 0.05f) : 0.07f;
+                float labelAlpha = hasFocus ? (isFocused ? 0.90f : 0.22f) : 0.26f;
+
+                visual.Fill.Colour = DesignSystem.WithOpacity(visual.Guide.Color, fillAlpha);
+                visual.Rail.Colour = DesignSystem.WithOpacity(visual.Guide.Color, railAlpha);
+                visual.TopLabel.Alpha = labelAlpha;
+                visual.BottomLabel.Alpha = hasFocus && isFocused ? labelAlpha * 0.42f : 0f;
+            }
+        }
+
+        private void updateTimelineMarkersIfNeeded()
+        {
+            if (!timelineWindowDirty)
+                return;
+
+            timelineWindowDirty = false;
+
+            if (timelineMarkerLayer == null)
+                return;
+
+            if (!hasTimelineWindow || timelineDurationMs <= 1)
+            {
+                for (int i = 0; i < timelineMarkers.Count; i++)
+                    timelineMarkers[i].Alpha = 0f;
+                return;
+            }
+
+            if (timelineRightX - timelineLeftX <= 1f)
+            {
+                for (int i = 0; i < timelineMarkers.Count; i++)
+                    timelineMarkers[i].Alpha = 0f;
+                return;
+            }
+
+            double beatDuration = 60000.0 / Math.Max(1.0, timelineBpm);
+            if (beatDuration <= 1)
+                return;
+
+            double windowStart = timelineStartMs;
+            double windowEnd = windowStart + timelineDurationMs;
+            int firstBeatIndex = (int)Math.Floor(windowStart / beatDuration) - 1;
+            int lastBeatIndex = (int)Math.Ceiling(windowEnd / beatDuration) + 1;
+
+            int markerCount = 0;
+            for (int beatIndex = firstBeatIndex; beatIndex <= lastBeatIndex; beatIndex++)
+            {
+                double beatTime = beatIndex * beatDuration;
+                float progress = (float)((beatTime - windowStart) / timelineDurationMs);
+                if (progress < -0.02f || progress > 1.02f)
+                    continue;
+
+                bool isMeasure = beatIndex % 4 == 0;
+                if (!isMeasure && beatIndex % 2 != 0)
+                    continue;
+                Box marker = getTimelineMarker(markerCount++);
+                marker.X = Math.Clamp(progress, 0f, 1f);
+                marker.Width = isMeasure ? 1.6f : 0.9f;
+                marker.Colour = isMeasure
+                    ? new Color4(214, 226, 248, 96)
+                    : new Color4(164, 178, 204, 68);
+                marker.Alpha = isMeasure ? 0.36f : 0.18f;
+            }
+
+            for (int i = markerCount; i < timelineMarkers.Count; i++)
+                timelineMarkers[i].Alpha = 0f;
+        }
+
+        private Box getTimelineMarker(int index)
+        {
+            while (timelineMarkers.Count <= index)
+            {
+                var marker = new Box
+                {
+                    RelativeSizeAxes = Axes.Y,
+                    Height = 1f,
+                    RelativePositionAxes = Axes.X,
+                    Anchor = Anchor.TopLeft,
+                    Origin = Anchor.TopCentre,
+                    Alpha = 0f
+                };
+                timelineMarkers.Add(marker);
+                timelineMarkerLayer?.Add(marker);
+            }
+
+            return timelineMarkers[index];
         }
 
         private Drawable CreateComponentLegend()
         {
-            // Small legend showing what each staff position represents
+            // Compact notation hint panel.
             var legend = new FillFlowContainer
             {
                 AutoSizeAxes = Axes.Both,
                 Direction = FillDirection.Vertical,
-                Spacing = new Vector2(0, 3),
+                Spacing = new Vector2(0, 2),
                 Anchor = Anchor.TopRight,
                 Origin = Anchor.TopRight,
-                Margin = new MarginPadding { Top = 15, Right = 15 },
-                Alpha = 0.65f
+                Margin = new MarginPadding { Top = 12, Right = 12 },
+                Alpha = 0.82f
             };
 
-            var items = new[]
+            legend.Add(new SpriteText
             {
-                ("Cymbals", DesignSystem.ColorCrash),
-                ("Hi-Hat", DesignSystem.ColorHiHat),
-                ("Toms", DesignSystem.ColorTomMid),
-                ("Snare", DesignSystem.ColorSnare),
-                ("Kick", DesignSystem.ColorKick)
-            };
+                Text = "Notation focus follows selection",
+                Font = new FontUsage("Roboto", 11f),
+                Colour = new Color4(206, 220, 242, 255)
+            });
 
-            foreach (var (label, color) in items)
+            foreach (ComponentGuide guide in componentGuides)
             {
                 legend.Add(new FillFlowContainer
                 {
                     AutoSizeAxes = Axes.Both,
                     Direction = FillDirection.Horizontal,
-                    Spacing = new Vector2(6, 0),
+                    Spacing = new Vector2(4, 0),
                     Children = new Drawable[]
                     {
                         new Circle
                         {
-                            Size = new Vector2(8, 8),
-                            Colour = color
+                            Size = new Vector2(7, 7),
+                            Colour = guide.Color
                         },
                         new SpriteText
                         {
-                            Text = label,
-                            Font = new FontUsage("Roboto", 11),
-                            Colour = new Color4(60, 65, 75, 255)
+                            Text = $"{guide.Label}  {getGuideDisplayName(guide.Key)}",
+                            Font = new FontUsage("Roboto", 10f),
+                            Colour = new Color4(182, 196, 222, 255)
                         }
                     }
                 });
@@ -367,46 +651,186 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             return legend;
         }
 
+        private static string getGuideDisplayName(string key)
+        {
+            return key switch
+            {
+                "kick" => "Kick",
+                "hihat" => "Hi-Hat",
+                "snare" => "Snare",
+                "tom_high" => "Tom High",
+                "tom_mid" => "Tom Mid",
+                "tom_low" => "Tom Low",
+                "ride" => "Ride",
+                "crash" => "Crash/China",
+                _ => "Perc"
+            };
+        }
+
         /// <summary>
         /// Get the X offset for a component on the staff.
         /// Static utility method for use by other classes.
         /// </summary>
         public static float GetStaffPositionForComponent(string component)
+            => GetStaffPositionForComponent(component, 1920f);
+
+        public static float GetStaffPositionForComponent(string component, float drawWidth)
+            => GetStaffUnitForComponent(component) * GetStaffSpacingForDrawWidth(drawWidth);
+
+        public static IReadOnlyList<string> GetNotationCycleComponents()
+            => notationCycleComponents;
+
+        public static int GetNotationIndexForComponent(string? component)
+        {
+            if (string.IsNullOrWhiteSpace(component))
+                return 2; // snare center lane
+
+            string mapped = mapGuideKey(normalizeComponentKey(component));
+            for (int i = 0; i < notationCycleComponents.Length; i++)
+            {
+                if (string.Equals(notationCycleComponents[i], mapped, StringComparison.Ordinal))
+                    return i;
+            }
+
+            return 2;
+        }
+
+        public static string GetAdjacentNotationComponent(string? component, int direction)
+        {
+            int step = Math.Sign(direction);
+            if (step == 0)
+                return notationCycleComponents[GetNotationIndexForComponent(component)];
+
+            int current = GetNotationIndexForComponent(component);
+            int next = Math.Clamp(current + step, 0, notationCycleComponents.Length - 1);
+            return notationCycleComponents[next];
+        }
+
+        public static float GetStaffUnitForComponent(string component)
         {
             if (string.IsNullOrEmpty(component))
                 return 0f;
 
-            string key = component.ToLowerInvariant();
+            string key = normalizeComponentKey(component);
+            key = mapGuideKey(key);
 
-            // Standard drum kit positions on percussion staff
-            // Positions are relative to center line (0 = middle line)
             return key switch
             {
-                // Bass drum - below staff
-                "kick" or "bass" => -2.5f * DesignSystem.StaffLineSpacing,
-
-                // Snare - middle of staff
-                "snare" or "rimshot" or "cross_stick" or "crossstick" or "sidestick" => 0f,
-
-                // Hi-hat - above top line
-                "hihat" or "hihat_closed" or "hh" or "hihat_open" or "hho" => 2.5f * DesignSystem.StaffLineSpacing,
-                "hihat_pedal" or "hhp" => -2f * DesignSystem.StaffLineSpacing,
-
-                // Toms - spaces between lines
-                "tom_high" or "high_tom" => 1.5f * DesignSystem.StaffLineSpacing,
-                "tom_mid" or "mid_tom" or "tom" => 1f * DesignSystem.StaffLineSpacing,
-                "tom_low" or "low_tom" or "floor_tom" => 0.5f * DesignSystem.StaffLineSpacing,
-
-                // Cymbals - above staff
-                "crash" or "crash_cymbal" or "china" or "china_cymbal" => 3.5f * DesignSystem.StaffLineSpacing,
-                "ride" or "ride_cymbal" or "splash" or "splash_cymbal" => 3f * DesignSystem.StaffLineSpacing,
-
-                // Miscellaneous
-                "cowbell" or "tambourine" => 2f * DesignSystem.StaffLineSpacing,
-
-                // Default to center
-                _ => 0f
+                "kick" => -3.5f,
+                "hihat" => -2.5f,
+                "snare" => -1.5f,
+                "tom_high" => -0.5f,
+                "tom_mid" => 0.5f,
+                "tom_low" => 1.5f,
+                "ride" => 2.5f,
+                "crash" => 3.5f,
+                _ => -1.5f
             };
+        }
+
+        public static ManuscriptNotationVoice GetNotationVoiceForComponent(string component)
+        {
+            if (string.IsNullOrWhiteSpace(component))
+                return ManuscriptNotationVoice.Lower;
+
+            string key = mapGuideKey(normalizeComponentKey(component));
+            return key switch
+            {
+                "kick" => ManuscriptNotationVoice.Lower,
+                "snare" => ManuscriptNotationVoice.Lower,
+                _ => ManuscriptNotationVoice.Upper
+            };
+        }
+
+        public static bool ShouldUseDownStemForComponent(string component)
+            => GetNotationVoiceForComponent(component) == ManuscriptNotationVoice.Lower;
+
+        public static bool UsesCrossNoteheadForComponent(string component)
+        {
+            if (string.IsNullOrWhiteSpace(component))
+                return false;
+
+            string key = mapGuideKey(normalizeComponentKey(component));
+            return key is "hihat" or "ride" or "crash";
+        }
+
+        public static float GetStaffSpacingForDrawWidth(float drawWidth)
+        {
+            float staffWidth = Math.Max(320f, drawWidth * ManuscriptStaffWidthRatio);
+            float usableWidth = staffWidth * 0.92f;
+            return Math.Clamp(usableWidth / (StaffUnitRange + 1f), 42f, 140f);
+        }
+
+        public static float GetTimelineWidthForDrawWidth(float drawWidth)
+            => Math.Max(320f, drawWidth * ManuscriptStaffWidthRatio);
+
+        public static float GetStaffCenterYForDrawHeight(float drawHeight)
+            => drawHeight * ManuscriptStaffCenterYRatio;
+
+        public static float GetStaffSpacingForDrawArea(float drawWidth, float drawHeight)
+        {
+            float spacingByWidth = GetTimelineWidthForDrawWidth(drawWidth) / (StaffUnitRange + 2.4f);
+            float staffHeight = Math.Max(180f, drawHeight * ManuscriptStaffHeightRatio);
+            float spacingByHeight = staffHeight / (StaffUnitRange + 6f);
+            return Math.Clamp(Math.Min(spacingByWidth, spacingByHeight), 18f, 88f);
+        }
+
+        public static float GetStaffYForComponent(string component, float drawWidth, float drawHeight)
+        {
+            float centerY = GetStaffCenterYForDrawHeight(drawHeight);
+            float spacing = GetStaffSpacingForDrawArea(drawWidth, drawHeight);
+            return centerY - GetStaffUnitForComponent(component) * spacing;
+        }
+
+        private static string mapGuideKey(string key)
+        {
+            return key switch
+            {
+                "hihat_pedal" => "hihat",
+                "china" => "crash",
+                "splash" => "crash",
+                "cowbell" => "tom_mid",
+                _ => key
+            };
+        }
+
+        private static string normalizeComponentKey(string component)
+        {
+            string key = component.ToLowerInvariant();
+
+            // Strip ranked suffix: crash_1 -> crash, ride_bell_2 -> ride_bell
+            int underscore = key.LastIndexOf('_');
+            if (underscore > 0 && underscore < key.Length - 1)
+            {
+                bool numericSuffix = true;
+                for (int i = underscore + 1; i < key.Length; i++)
+                {
+                    if (!char.IsDigit(key[i]))
+                    {
+                        numericSuffix = false;
+                        break;
+                    }
+                }
+
+                if (numericSuffix)
+                    key = key[..underscore];
+            }
+
+            if (key.Contains("kick") || key.Contains("bass")) return "kick";
+            if (key.Contains("snare") || key.Contains("rim") || key.Contains("cross") || key.Contains("side"))
+                return "snare";
+            if (key.Contains("hat") || key.Contains("hh")) return key.Contains("pedal") ? "hihat_pedal" : "hihat";
+            if (key.Contains("tom_high")) return "tom_high";
+            if (key.Contains("tom_low") || key.Contains("floor")) return "tom_low";
+            if (key.Contains("tom")) return "tom_mid";
+            if (key.Contains("crash")) return "crash";
+            if (key.Contains("china")) return "china";
+            if (key.Contains("splash")) return "splash";
+            if (key.Contains("ride_bell") || key.Contains("bell")) return "ride";
+            if (key.Contains("ride")) return "ride";
+            if (key.Contains("cowbell")) return "cowbell";
+
+            return key;
         }
     }
 

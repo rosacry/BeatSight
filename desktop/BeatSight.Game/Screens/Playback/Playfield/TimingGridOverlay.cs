@@ -68,6 +68,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             }
 
             viewMode = mode;
+            if (viewMode == LaneViewMode.Manuscript)
+            {
+                // Manuscript now draws timeline markers in its own background layer.
+                deactivateLines(0);
+                return;
+            }
+
             useGlobalKick = kickGlobal;
             _ = laneWidth;
             _ = totalLanes;
@@ -75,23 +82,51 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             _ = kickLaneIndex;
             _ = spawnTop;
 
-            double previewWindow = (playfield?.ApproachDuration ?? 5000) * previewMultiplier;
+            double approachDuration = playfield?.ApproachDuration ?? 5000;
+            bool simplifyForThreeDimensional = viewMode == LaneViewMode.ThreeDimensional;
+            double previewWindow = simplifyForThreeDimensional
+                ? approachDuration * 0.72
+                : approachDuration * previewMultiplier;
             double cutoffPast = -pastAllowance;
+            float previousRenderedY = float.NegativeInfinity;
 
             int activeCount = 0;
             foreach (var marker in markers)
             {
+                if (simplifyForThreeDimensional && marker.Type == GridMarkerType.Subdivision)
+                    continue;
+
+                if (simplifyForThreeDimensional
+                    && marker.Type == GridMarkerType.Beat
+                    && marker.BeatInMeasure != 2)
+                    continue;
+
                 double delta = marker.Time - currentTime;
                 if (delta < cutoffPast)
                     continue;
 
+                if (simplifyForThreeDimensional && marker.Type == GridMarkerType.Beat)
+                {
+                    float beatProgress = (float)(1 - (delta / approachDuration));
+                    if (beatProgress < 0.28f)
+                        continue;
+                }
+
                 if (delta > previewWindow)
                     break;
 
-                float progress = (float)(1 - (delta / (playfield?.ApproachDuration ?? 5000)));
+                float progress = (float)(1 - (delta / approachDuration));
                 float clampedProgress = Math.Clamp(progress, 0f, 1.1f);
                 float y = hitLineY - travelDistance * (1 - clampedProgress);
                 y = Math.Clamp(y, spawnTop, hitLineY + 32f);
+
+                if (simplifyForThreeDimensional)
+                {
+                    if (Math.Abs(y - previousRenderedY) < 38f)
+                        continue;
+
+                    previousRenderedY = y;
+                }
 
                 var line = getLine(activeCount++);
                 line.UpdateVisual(drawHeight, y, marker.Type, viewMode);
@@ -185,7 +220,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             {
                 for (int beat = 0; beat < beatsPerMeasure && time <= endTime; beat++)
                 {
-                    markers.Add(new GridMarker(time, beat == 0 ? GridMarkerType.Measure : GridMarkerType.Beat));
+                    markers.Add(new GridMarker(time, beat == 0 ? GridMarkerType.Measure : GridMarkerType.Beat, beat));
 
                     int subdivisions = beatUnit switch
                     {
@@ -204,7 +239,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                             if (subTime > endTime)
                                 break;
 
-                            markers.Add(new GridMarker(subTime, GridMarkerType.Subdivision));
+                            markers.Add(new GridMarker(subTime, GridMarkerType.Subdivision, beat));
                         }
                     }
 
@@ -239,14 +274,16 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
         private readonly struct GridMarker
         {
-            public GridMarker(double time, GridMarkerType type)
+            public GridMarker(double time, GridMarkerType type, int beatInMeasure = 0)
             {
                 Time = time;
                 Type = type;
+                BeatInMeasure = beatInMeasure;
             }
 
             public double Time { get; }
             public GridMarkerType Type { get; }
+            public int BeatInMeasure { get; }
         }
 
         private enum GridMarkerType
@@ -296,18 +333,16 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
                 if (mode == LaneViewMode.Manuscript)
                 {
-                    Height = type == GridMarkerType.Measure ? 3f : 1f;
-                    Width = 0.6f; // Narrower, just covering the staff
+                    Height = 2.2f;
+                    Width = 0.66f;
                     Shear = Vector2.Zero;
 
-                    Color4 inkColour = type == GridMarkerType.Measure
-                        ? Color4.Black
-                        : new Color4(0, 0, 0, 100);
+                    Color4 inkColour = new Color4(18, 22, 30, 184);
 
                     line.Colour = inkColour;
                     glow.Alpha = 0;
                     // Set alpha directly instead of using transforms to prevent accumulation
-                    Alpha = 1f;
+                    Alpha = 0.56f;
                     return;
                 }
 
@@ -317,30 +352,46 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     GridMarkerType.Beat => 3f,
                     _ => 2f
                 };
+                if (mode == LaneViewMode.ThreeDimensional)
+                    thickness *= 0.46f;
 
                 Height = thickness;
 
-                float widthFactor = mode == LaneViewMode.ThreeDimensional ? 0.9f : 1.0f;
+                float widthFactor = mode == LaneViewMode.ThreeDimensional ? 0.72f : 1.0f;
                 Width = widthFactor;
-                Shear = mode == LaneViewMode.ThreeDimensional ? new Vector2(-0.24f, 0) : Vector2.Zero;
+                Shear = Vector2.Zero;
 
-                Color4 lineColour = type switch
-                {
-                    GridMarkerType.Measure => new Color4(255, 216, 180, 235),
-                    GridMarkerType.Beat => new Color4(186, 205, 255, 220),
-                    _ => new Color4(120, 132, 182, 180)
-                };
+                Color4 lineColour = mode == LaneViewMode.ThreeDimensional
+                    ? type switch
+                    {
+                        GridMarkerType.Measure => new Color4(210, 198, 176, 188),
+                        GridMarkerType.Beat => new Color4(118, 148, 194, 148),
+                        _ => new Color4(76, 96, 130, 94)
+                    }
+                    : type switch
+                    {
+                        GridMarkerType.Measure => new Color4(255, 216, 180, 235),
+                        GridMarkerType.Beat => new Color4(186, 205, 255, 220),
+                        _ => new Color4(120, 132, 182, 180)
+                    };
 
-                float targetAlpha = type switch
-                {
-                    GridMarkerType.Measure => 0.82f,
-                    GridMarkerType.Beat => 0.58f,
-                    _ => 0.36f
-                };
+                float targetAlpha = mode == LaneViewMode.ThreeDimensional
+                    ? type switch
+                    {
+                        GridMarkerType.Measure => 0.18f,
+                        GridMarkerType.Beat => 0.07f,
+                        _ => 0.04f
+                    }
+                    : type switch
+                    {
+                        GridMarkerType.Measure => 0.82f,
+                        GridMarkerType.Beat => 0.58f,
+                        _ => 0.36f
+                    };
 
                 line.Colour = lineColour;
-                glow.Colour = UITheme.Emphasise(lineColour, 1.25f);
-                glow.Alpha = targetAlpha * 0.4f;
+                glow.Colour = UITheme.Emphasise(lineColour, mode == LaneViewMode.ThreeDimensional ? 1.08f : 1.25f);
+                glow.Alpha = targetAlpha * (mode == LaneViewMode.ThreeDimensional ? 0.12f : 0.4f);
                 // Set alpha directly instead of using transforms to prevent accumulation
                 Alpha = targetAlpha;
             }

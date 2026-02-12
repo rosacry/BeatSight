@@ -28,20 +28,20 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
     {
         #region Configuration
 
-        /// <summary>The color of the highlight overlay (low opacity).</summary>
-        private static readonly Color4 HighlightColor = new Color4(255, 200, 100, 45); // Warm amber tint
+        /// <summary>The color of the cursor body.</summary>
+        private static readonly Color4 HighlightColor = new Color4(120, 255, 172, 24);
 
         /// <summary>The color of the leading edge indicator.</summary>
-        private static readonly Color4 EdgeColor = new Color4(255, 160, 60, 180); // Brighter amber
+        private static readonly Color4 EdgeColor = new Color4(144, 255, 190, 228);
 
         /// <summary>The color of the "now playing" glow.</summary>
-        private static readonly Color4 GlowColor = new Color4(255, 220, 140, 100);
+        private static readonly Color4 GlowColor = new Color4(116, 255, 176, 94);
 
         /// <summary>Width of the leading edge line.</summary>
-        private const float EdgeLineWidth = 3f;
+        private const float EdgeLineWidth = 2.4f;
 
         /// <summary>Width of the glow effect around the edge.</summary>
-        private const float GlowWidth = 12f;
+        private const float GlowWidth = 10f;
 
         /// <summary>How many milliseconds of audio the highlight covers (lookahead window).</summary>
         private const double DefaultLookaheadMs = 500;
@@ -64,6 +64,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         private float staffStartX;
         private float staffEndX;
         private float staffCenterX;
+        private bool hasTimelineWindow;
+        private double timelineStartMs;
+        private double timelineDurationMs;
+        private float timelineLeftX;
+        private float timelineRightX;
+        private float timelinePlayheadX;
         private List<HitObjectInfo>? currentHitObjects;
         private readonly Dictionary<int, NoteHighlightRing> activeHighlights = new();
 
@@ -82,7 +88,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         };
 
         /// <summary>Whether to show per-note glow rings.</summary>
-        public readonly BindableBool ShowNoteHighlights = new BindableBool(true);
+        public readonly BindableBool ShowNoteHighlights = new BindableBool(false);
 
         #endregion
 
@@ -94,13 +100,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         [BackgroundDependencyLoader]
         private void load()
         {
-            // Main highlight overlay - starts from left edge, width controlled by playback position
+            // Main cursor body.
             highlightOverlay = new Box
             {
                 RelativeSizeAxes = Axes.Y,
-                Width = 0,
+                Width = 7,
                 Anchor = Anchor.CentreLeft,
-                Origin = Anchor.CentreLeft,
+                Origin = Anchor.Centre,
                 Colour = ColourInfo.GradientHorizontal(
                     DesignSystem.WithOpacity(HighlightColor, 0.1f),
                     HighlightColor)
@@ -123,7 +129,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             leadingEdge = new Box
             {
                 RelativeSizeAxes = Axes.Y,
-                Width = EdgeLineWidth,
+                Width = EdgeLineWidth + 1f,
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.Centre,
                 Colour = EdgeColor
@@ -163,6 +169,22 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             staffCenterX = centerX;
             staffStartX = centerX - staffWidth / 2f;
             staffEndX = centerX + staffWidth / 2f;
+
+            if (!hasTimelineWindow)
+                timelinePlayheadX = staffStartX;
+        }
+
+        /// <summary>
+        /// Supplies the active sheet timeline window so the cursor follows musical time, not a synthetic loop.
+        /// </summary>
+        public void SetTimelineWindow(double startTimeMs, double durationMs, float playheadX, float leftX, float rightX)
+        {
+            timelineStartMs = startTimeMs;
+            timelineDurationMs = durationMs;
+            timelinePlayheadX = playheadX;
+            timelineLeftX = leftX;
+            timelineRightX = rightX;
+            hasTimelineWindow = durationMs > 1 && rightX > leftX;
         }
 
         /// <summary>
@@ -190,37 +212,41 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         public void UpdatePlaybackPosition(double timeMs, double bpm)
         {
             currentTimeMs = timeMs;
+            float edgeX = resolveCursorX(timeMs, bpm);
+            float staffWidth = Math.Max(1f, staffEndX - staffStartX);
+            float cursorWidth = Math.Clamp(staffWidth * 0.0034f, 2.8f, 5.2f);
+            float glowWidth = Math.Clamp(cursorWidth * 2.4f, 9f, 13f);
 
-            // Calculate highlight width based on playback position
-            // The highlight represents the "played" portion of the measure
-            // We use a cyclic pattern based on BPM to create a sweeping effect
-            float beatDurationMs = 60000f / (float)bpm;
-            float measureDurationMs = beatDurationMs * 4; // Assuming 4/4 time
+            highlightOverlay.Width = cursorWidth;
+            highlightOverlay.X = edgeX;
 
-            // Calculate position within the current measure (0-1)
-            float measureProgress = (float)((timeMs % measureDurationMs) / measureDurationMs);
-
-            // Map measure progress to staff width
-            float staffWidth = staffEndX - staffStartX;
-            float highlightWidth = staffWidth * measureProgress;
-
-            // Update highlight overlay
-            highlightOverlay.X = staffStartX;
-            highlightOverlay.Width = highlightWidth;
-
-            // Update leading edge position
-            float edgeX = staffStartX + highlightWidth;
+            leadingEdge.Width = Math.Clamp(cursorWidth * 0.66f, 1.6f, 2.8f);
             leadingEdge.X = edgeX;
+
+            leadingGlow.Width = glowWidth;
             leadingGlow.X = edgeX;
 
-            // Update per-note highlights if enabled
+            // Per-note glow rings are intentionally disabled by default for sheet readability.
             if (ShowNoteHighlights.Value && currentHitObjects != null)
-            {
-                UpdateNoteHighlights(timeMs, measureProgress);
-            }
+                UpdateNoteHighlights(timeMs);
         }
 
-        private void UpdateNoteHighlights(double timeMs, float measureProgress)
+        private float resolveCursorX(double timeMs, double bpm)
+        {
+            if (hasTimelineWindow)
+            {
+                // Keep playhead anchored for Songsterr-like readability while notation scrolls beneath it.
+                return timelinePlayheadX;
+            }
+
+            // Fallback for legacy paths without an explicit timeline window.
+            float beatDurationMs = 60000f / (float)Math.Max(1.0, bpm);
+            float measureDurationMs = beatDurationMs * 4;
+            float measureProgress = (float)((timeMs % measureDurationMs) / measureDurationMs);
+            return staffStartX + (staffEndX - staffStartX) * measureProgress;
+        }
+
+        private void UpdateNoteHighlights(double timeMs)
         {
             if (currentHitObjects == null) return;
 
@@ -288,9 +314,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         public void Reset()
         {
             currentTimeMs = 0;
-            highlightOverlay.Width = 0;
-            leadingEdge.X = staffStartX;
-            leadingGlow.X = staffStartX;
+            float resetX = hasTimelineWindow ? timelineLeftX : staffStartX;
+            highlightOverlay.X = resetX;
+            leadingEdge.X = resetX;
+            leadingGlow.X = resetX;
             ClearNoteHighlights();
         }
     }

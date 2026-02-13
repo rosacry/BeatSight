@@ -43,6 +43,16 @@ PYTHONPATH=. python -m pipeline.process \
   --no-pattern-repair
 ```
 
+Production-candidate tuning path (accuracy-first per song):
+
+- `--mode transcription`
+- `--auto-sensitivity`
+- `--auto-quantization`
+
+See full run matrix in:
+
+- `ai-pipeline/documentation/current/STEP5_EVALUATION_COMMANDS.md`
+
 ## Layout
 
 ```text

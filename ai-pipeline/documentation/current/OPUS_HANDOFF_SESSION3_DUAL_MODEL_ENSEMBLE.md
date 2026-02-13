@@ -1,19 +1,17 @@
-﻿# BeatSight AI Pipeline Handoff - Session 3 Dual-Model Ensemble (Updated)
+# BeatSight AI Pipeline Handoff - Session 3 Dual-Model Ensemble
 
-Last updated: 2026-02-12
+Last updated: 2026-02-13
 
-This handoff replaces stale Session 3 status assumptions and reflects the current training/evaluation path.
+This handoff reflects the current training plan and command matrix in active use.
 
 ## Quick State Summary
 
-- Dual-model ensemble architecture is implemented and available in pipeline code.
-- Step 1 (Demucs LR 2e-5 run completion) is complete.
-- Step 2 (clean-model continuation) is in progress and has reached epoch 11 in the provided logs.
-- Step 3/4/5 are pending and should proceed after Step 2 checkpoint decision.
+- Dual-model ensemble architecture is implemented in pipeline code.
+- Step 1 is complete.
+- Step 2 is still running and now has logs through epoch 20 (partial), with best micro-F1 0.9147 (epoch 18).
+- Steps 3/4/5 remain pending and should proceed exactly in sequence after Step 2 checkpoint selection.
 
 ## Ensemble Architecture (Current)
-
-Goal: use model specialization rather than a single model for all classes.
 
 - Clean continuation model (body drums):
   - kick, snare, hihat_closed, hihat_open, hihat_pedal, tom, cross_stick, ride_bell, ride_bow
@@ -22,51 +20,40 @@ Goal: use model specialization rather than a single model for all classes.
 
 Production path:
 
-- Use ensemble mode with both model checkpoints and both threshold JSON files.
+- Use ensemble mode with both model checkpoints plus both threshold JSON files.
 
-## What Is Already Done
+## Current Decision Rules
 
-1. Dual-model arguments and wiring exist in the pipeline stack.
-2. Training/threshold command plans are defined and validated.
-3. Step 2 training is actively running with non-Demucs datasets excluded.
-4. Recent Step 2 logs show best micro-F1 around 0.9133 (epoch 10), with weak-class plateau on hi-hat open/pedal.
+### Step 2
 
-## Active Decision Rule For Step 2
+- Keep current run until completion (epoch 30), unless significant divergence appears.
+- At completion, select checkpoint by:
+  - micro-F1
+  - macro-F1
+  - weak-class F1 trend (`hihat_open`, `hihat_pedal`)
 
-Use this stop/continue rule for the running clean continuation:
+### Step 5
 
-- Continue while micro-F1 or weak-class F1s improve materially.
-- If gains flatten by epochs 12-15, stop Step 2 and move to Step 3.
+- Compare both inference matrices:
+  1. manual baseline matrix (fixed sensitivity/quantization/no-readability-filter path)
+  2. production-candidate matrix (`--mode transcription --auto-sensitivity --auto-quantization`)
+- Decide default production mode by quality/runtime tradeoff.
 
-Reason: maximize total iteration throughput instead of spending many hours for marginal gain.
+## Canonical Execution Order
 
-## Next Steps (Canonical)
-
-1. Finish Step 2 and choose final checkpoint (`runs/v5_multilabel_final_v3_continued`).
+1. Finish Step 2 and select final clean checkpoint.
 2. Run Step 3 Version A (`runs/v5_demucs_cymbal_boost`).
-3. Generate Step 4 thresholds for both models.
-4. Run Step 5 real-song bakeoff on `0101 - Heir of Grief.flac`:
-   - baseline
-   - multi-pass
-   - global TTA
-   - multi-window
-   - checkpoint ensemble
-5. Select default production inference mode by quality/runtime tradeoff.
+3. Generate Step 4 thresholds:
+   - `thresholds_demucs_calibrated.json`
+   - `thresholds_demucs_only.json`
+4. Run Step 5 bakeoff on `0101 - Heir of Grief.flac`.
+5. Select default inference mode and document rationale.
 
-## Commands
+## Source of Truth for Commands
 
-The authoritative command set is maintained in:
+Use this file for workflow context and use the tracker for exact command text:
 
 - `ai-pipeline/documentation/current/ACCURACY_IMPROVEMENTS_TRACKER.md`
-
-Use that file as the operational source for exact command invocations.
-
-## Validation Checklist Before Promotion
-
-- Threshold files exist and match their target model checkpoints.
-- Real-song output counts are musically plausible (especially cymbal and hi-hat balance).
-- At least one dense metal/prog song and one cleaner song are reviewed qualitatively.
-- Final chosen runtime mode has documented speed impact and quality rationale.
 
 ## Files That Must Stay In Sync
 
@@ -76,9 +63,11 @@ Use that file as the operational source for exact command invocations.
 - `ai-pipeline/scripts/generate_thresholds.py`
 - `ai-pipeline/documentation/current/ACCURACY_IMPROVEMENTS_TRACKER.md`
 
-## Notes For Future Sessions
+## Risk Notes
 
-- Do not regress to stale assumptions that Step 1 is pending.
-- Prefer updating this file and `ACCURACY_IMPROVEMENTS_TRACKER.md` together after each major run.
-- Keep archived prompt-style working notes under
-  `ai-pipeline/documentation/archive/prompts/session/`.
+- Weak classes still lag (`hihat_open`, `hihat_pedal`) despite overall gains.
+- If adaptive thresholds reduce quality on real songs, keep non-adaptive baseline as fallback.
+- Desktop parity for pipeline flags is now explicitly wired and test-covered:
+  - `--mode`
+  - `--auto-sensitivity`
+  - `--auto-quantization`

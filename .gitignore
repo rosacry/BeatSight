@@ -88,8 +88,32 @@ ai-pipeline/training/reports/metrics/*.json
 ai-pipeline/training/reports/provenance/*.json
 ai-pipeline/training/reports/training_smoke/*.json
 
-# Private training code and data source documentation (proprietary)
-ai-pipeline/training/
+# Training workspace
+# Keep large/generated artifacts local while allowing training source/docs to be versioned.
+ai-pipeline/training/**
+!ai-pipeline/training/**/
+!ai-pipeline/training/**/*.py
+!ai-pipeline/training/**/*.md
+!ai-pipeline/training/**/*.sh
+!ai-pipeline/training/**/*.yaml
+!ai-pipeline/training/**/*.yml
+!ai-pipeline/training/**/*.toml
+!ai-pipeline/training/**/.gitkeep
+ai-pipeline/training/**/*.log
+ai-pipeline/training/**/__pycache__/**
+ai-pipeline/training/data/**
+ai-pipeline/training/datasets/**
+ai-pipeline/training/feature_cache/**
+ai-pipeline/training/runs/**
+ai-pipeline/training/reports/**
+ai-pipeline/training/outputs/**
+ai-pipeline/training/sessions/**
+ai-pipeline/training/splits/**
+ai-pipeline/training/test_ood_unknown/**
+ai-pipeline/training/boundary_pack/**
+ai-pipeline/training/negatives/**
+ai-pipeline/training/dev_dataset/**
+ai-pipeline/training/dev_models/**
 ai-pipeline/tests/test_ingest_*.py
 data/README.md
 
@@ -101,9 +125,6 @@ yarn-error.log
 .eslintcache
 frontend/.playwright/
 frontend/.playwright/.auth/
-
-# Personal documentation (private notes)
-docs/
 
 # Test reports
 frontend/playwright-report/
@@ -234,6 +255,4 @@ exp/
 data/dataset_index/
 docs-site/.docusaurus/
 
-# Private documentation and notes (not for public repo)
-personal_docs/
 nul

@@ -96,6 +96,19 @@ except ImportError:
     HAS_PATTERN_LIBRARY = False
     repair_with_patterns = None
 
+# Auto-parameter estimation (sensitivity + quantization)
+try:
+    from .auto_parameters import (
+        estimate_optimal_sensitivity,
+        estimate_optimal_quantization,
+    )
+
+    HAS_AUTO_PARAMS = True
+except ImportError:
+    HAS_AUTO_PARAMS = False
+    estimate_optimal_sensitivity = None
+    estimate_optimal_quantization = None
+
 
 def process_audio_file(
     input_path: str,
@@ -140,7 +153,7 @@ def process_audio_file(
     use_adaptive_thresholds: bool = False,  # Compute optimal thresholds for this song
     adaptive_threshold_method: str = "otsu",  # "otsu", "percentile", "knee"
     # Domain gap threshold scaling for Demucs-separated audio
-    threshold_scale: float = 0.7,  # Scale file thresholds (0.7 = 70% of calibrated values)
+    threshold_scale: float = 1.0,  # Scale file thresholds (1.0 = no scaling when thresholds match inference domain)
     # Hybrid classification: use Demucs for onset detection, original audio for classification
     hybrid_classification: bool = False,
     # Ensemble classification: body drums from original audio, cymbals from Demucs
@@ -159,6 +172,11 @@ def process_audio_file(
     multi_window_sizes: Optional[List[float]] = None,  # Window sizes in ms
     checkpoint_ensemble_paths: Optional[List[str]] = None,  # Checkpoint paths for ensemble
     use_multi_pass: bool = False,  # Multi-pass onset refinement
+    # Auto-parameter estimation
+    auto_sensitivity: bool = False,  # Auto-detect optimal sensitivity from audio
+    auto_quantization: bool = False,  # Auto-detect optimal quantization grid
+    # Pipeline mode: "gameplay" (full readability) or "transcription" (accuracy-first)
+    pipeline_mode: str = "gameplay",
     # Progress callback for external progress reporting (e.g., Modal deployment)
     progress_callback: Optional[
         callable
@@ -242,9 +260,36 @@ def process_audio_file(
     # Step 3: Onset Detection
     print("[3/5] Detecting drum hits...")
     _report_progress(40, "Detecting drum onsets...")
+
+    # Auto-sensitivity: analyze audio to pick optimal sensitivity
+    effective_sensitivity = detection_sensitivity
+    auto_sensitivity_info = None
+    if auto_sensitivity and HAS_AUTO_PARAMS:
+        try:
+            drum_data, drum_sr = drum_audio
+            sens_estimate = estimate_optimal_sensitivity(
+                drum_data, drum_sr,
+                bpm=forced_bpm,
+                genre=forced_genre,
+            )
+            effective_sensitivity = sens_estimate.sensitivity
+            auto_sensitivity_info = {
+                "sensitivity": sens_estimate.sensitivity,
+                "dynamic_range_db": sens_estimate.dynamic_range_db,
+                "spectral_flux_density": sens_estimate.spectral_flux_density,
+                "explanation": sens_estimate.explanation,
+            }
+            print(f"   🎚️  {sens_estimate.explanation}")
+        except Exception as e:
+            print(f"   [WARN] Auto-sensitivity failed ({e}), using {detection_sensitivity}")
+    elif pipeline_mode == "transcription" and detection_sensitivity == 60.0:
+        # Transcription mode with default sensitivity: bump to 78 for better coverage
+        effective_sensitivity = 78.0
+        print(f"   🎚️  Transcription mode: sensitivity raised to {effective_sensitivity}")
+
     detection_result = detect_onsets(
         drum_audio,
-        sensitivity=detection_sensitivity,
+        sensitivity=effective_sensitivity,
         min_ioi_ms=min_ioi_ms,
     )
 
@@ -591,6 +636,13 @@ def process_audio_file(
 
         # Apply structured decoding
         try:
+            # Determine time_signature to pass:
+            # - If user forced a time signature → pass it (whole-song override)
+            # - Otherwise → pass None (enables sectional detection internally)
+            ts_override = None
+            if forced_time_signature:
+                ts_override = (detected_ts.numerator, detected_ts.denominator)
+
             # Use advanced decoder if available and requested
             if HAS_ADVANCED_DECODER and decoder_type in [
                 "beam",
@@ -603,16 +655,19 @@ def process_audio_file(
                     classified_hits,
                     bpm=estimated_bpm,
                     offset=0.0,
-                    time_signature=(detected_ts.numerator, detected_ts.denominator),
+                    time_signature=ts_override or (detected_ts.numerator, detected_ts.denominator),
                     decoder_type=decoder_type,
                 )
             elif HAS_STRUCTURED_DECODER:
-                print("   Applying Viterbi decoder...")
+                if ts_override is None:
+                    print("   Applying Viterbi decoder (sectional time signature detection)...")
+                else:
+                    print(f"   Applying Viterbi decoder (forced: {forced_time_signature})...")
                 classified_hits = apply_structured_decoding(
                     classified_hits,
                     bpm=estimated_bpm,
                     offset=0.0,
-                    time_signature=(detected_ts.numerator, detected_ts.denominator),
+                    time_signature=ts_override,  # None = sectional detection
                 )
 
             # Count refined states
@@ -625,7 +680,9 @@ def process_audio_file(
         except Exception as e:
             print(f"   [WARN] Structured decoding failed: {e} (continuing without)")
 
-    # Step 4b2: Genre-Aware Decoding (NEW)
+    # Step 4b2: Genre-Aware Decoding
+    # In transcription mode: lightweight annotation only (no Viterbi re-pass)
+    # In gameplay mode: full genre-aware Viterbi decoding
     detected_genre_info = None
 
     if use_genre_detection and HAS_GENRE_DECODER and classified_hits:
@@ -652,12 +709,15 @@ def process_audio_file(
                 genre, genre_confidence = detect_genre(
                     classified_hits, estimated_bpm, swing_ratio
                 )
-                print("🎸 Step 4b2: Genre detection...")
+                if pipeline_mode == "transcription":
+                    print(f"🎸 Step 4b2: Genre annotation (transcription mode, no Viterbi re-pass)")
+                else:
+                    print("🎸 Step 4b2: Genre-aware decoding...")
                 print(
                     f"   Detected genre: {genre.value} (confidence: {genre_confidence:.2f})"
                 )
 
-            # Apply genre-aware decoding
+            # Apply genre-aware decoding (mode-aware: transcription = annotate only)
             classified_hits = apply_genre_aware_decoding(
                 classified_hits,
                 bpm=estimated_bpm,
@@ -665,6 +725,7 @@ def process_audio_file(
                 time_signature=(detected_ts.numerator, detected_ts.denominator),
                 swing_ratio=swing_ratio,
                 genre=genre if forced_genre else None,  # None = auto-detect
+                mode=pipeline_mode,
             )
 
             detected_genre_info = {
@@ -676,19 +737,25 @@ def process_audio_file(
         except Exception as e:
             print(f"   [WARN] Genre-aware decoding failed: {e} (continuing without)")
 
-    # Step 4b3: Pattern-Based Repair (NEW)
+    # Step 4b3: Pattern-Based Repair
+    # In transcription mode: skipped entirely (preserves raw model accuracy)
+    # In gameplay mode: conservative repair of very low-confidence hits only
     pattern_repair_stats = None
 
     if use_pattern_repair and HAS_PATTERN_LIBRARY and classified_hits:
         try:
             estimated_bpm = tempo_candidates[0] if tempo_candidates else 120.0
-            print("🎼 Step 4b3: Pattern library analysis...")
+            if pipeline_mode == "transcription":
+                print("🎼 Step 4b3: Pattern repair skipped (transcription mode)")
+            else:
+                print("🎼 Step 4b3: Pattern library analysis...")
 
             _original_hits = classified_hits.copy()
             classified_hits = repair_with_patterns(
                 classified_hits,
                 bpm=estimated_bpm,
-                confidence_threshold=0.6,  # Repair hits below this confidence
+                confidence_threshold=0.35,  # Conservative: only very ambiguous hits
+                mode=pipeline_mode,
             )
 
             repaired_count = sum(
@@ -714,13 +781,43 @@ def process_audio_file(
         except Exception as e:
             print(f"   [WARN] Pattern repair failed: {e} (continuing without)")
 
-    # Step 4c: Readability Filtering (playability rules)
+    # Step 4c: Auto-Quantization (estimate optimal grid if requested)
+    auto_quantization_info = None
+    effective_quantization_grid = quantization_grid
+
+    if auto_quantization and HAS_AUTO_PARAMS and classified_hits:
+        try:
+            estimated_bpm = tempo_candidates[0] if tempo_candidates else 120.0
+            hit_times = [h.get("time", 0) for h in classified_hits]
+            quant_estimate = estimate_optimal_quantization(
+                hit_times, estimated_bpm, genre=forced_genre,
+            )
+            effective_quantization_grid = quant_estimate.grid
+            auto_quantization_info = {
+                "grid": quant_estimate.grid,
+                "finest_ioi_ms": quant_estimate.finest_ioi_ms,
+                "median_ioi_ms": quant_estimate.median_ioi_ms,
+                "pct_sub_sixteenth": quant_estimate.pct_sub_sixteenth,
+                "explanation": quant_estimate.explanation,
+            }
+            print(f"   📐 {quant_estimate.explanation}")
+        except Exception as e:
+            print(f"   [WARN] Auto-quantization failed ({e}), using {quantization_grid}")
+    elif pipeline_mode == "transcription" and quantization_grid == "sixteenth":
+        # Transcription mode with default grid: use thirtysecond for maximum accuracy
+        effective_quantization_grid = "thirtysecond"
+        print(f"   📐 Transcription mode: quantization grid set to {effective_quantization_grid}")
+
+    # Step 4d: Readability Filtering (playability rules)
     readability_stats = None
     sections_info = None
 
-    if use_readability_filter and HAS_READABILITY_FILTER and classified_hits:
+    # In transcription mode, skip readability filter entirely (accuracy over playability)
+    effective_readability = use_readability_filter and pipeline_mode != "transcription"
+
+    if effective_readability and HAS_READABILITY_FILTER and classified_hits:
         print(
-            f"[4c] Applying readability filter (target: {target_difficulty})..."
+            f"[4d] Applying readability filter (target: {target_difficulty}, mode: {pipeline_mode})..."
         )
         try:
             estimated_bpm = tempo_candidates[0] if tempo_candidates else 120.0
@@ -734,12 +831,14 @@ def process_audio_file(
                     section_summary[stype] = section_summary.get(stype, 0) + 1
                 print(f"   Detected sections: {section_summary}")
 
-                # Apply difficulty curve
+                # Apply difficulty curve (now BPM-aware)
                 original_count = len(classified_hits)
                 classified_hits = apply_difficulty_curve(
                     classified_hits,
                     sections_info,
                     target_difficulty=target_difficulty,
+                    bpm=estimated_bpm,
+                    mode=pipeline_mode,
                 )
                 readability_stats = {
                     "original": original_count,
@@ -747,11 +846,12 @@ def process_audio_file(
                     "difficulty_shaped": True,
                 }
             else:
-                # Just apply readability filter
+                # Just apply readability filter (now BPM-aware)
                 classified_hits, readability_stats = filter_chart_for_readability(
                     classified_hits,
                     difficulty=target_difficulty,
                     bpm=estimated_bpm,
+                    mode=pipeline_mode,
                 )
 
             removed = readability_stats.get("original", len(classified_hits)) - len(
@@ -767,8 +867,10 @@ def process_audio_file(
 
         except Exception as e:
             print(f"   [WARN] Readability filter failed: {e} (continuing without)")
+    elif pipeline_mode == "transcription" and classified_hits:
+        print(f"[4d] Readability filter skipped (transcription mode)")
 
-    # Step 4d: Pitch Ranking (produces crash_1/crash_2, tom_1/tom_2 etc.)
+    # Step 4e: Pitch Ranking (produces crash_1/crash_2, tom_1/tom_2 etc.)
     pitch_ranking_applied = False
     if classified_hits and use_multilabel:
         try:
@@ -898,7 +1000,7 @@ def process_audio_file(
         analysis_sr=sample_rate,
         tempo_candidates=tempo_candidates,
         tempo_hint_count=tempo_hint_count,
-        quantization_grid=quantization_grid,
+        quantization_grid=effective_quantization_grid,
         max_snap_error_ms=max_snap_error_ms,
         detection_debug=detection_result.to_debug_payload(),
         forced_bpm=forced_bpm,
@@ -926,9 +1028,14 @@ def process_audio_file(
         debug_payload = {
             "input": str(input_path),
             "generated_at": time.time(),
-            "sensitivity": detection_sensitivity,
+            "sensitivity": effective_sensitivity,
+            "sensitivity_requested": detection_sensitivity,
+            "auto_sensitivity": auto_sensitivity_info,
             "confidence_threshold": confidence_threshold,
-            "quantization_grid": quantization_grid,
+            "quantization_grid": effective_quantization_grid,
+            "quantization_requested": quantization_grid,
+            "auto_quantization": auto_quantization_info,
+            "pipeline_mode": pipeline_mode,
             "max_snap_error_ms": max_snap_error_ms,
             "forced_bpm": forced_bpm,
             "forced_offset": forced_offset,
@@ -1091,10 +1198,10 @@ def main():
     parser.add_argument(
         "--threshold-scale",
         type=float,
-        default=0.7,
-        help="Scale factor for file thresholds (default 0.7). Accounts for domain gap "
-             "between clean training data and Demucs-separated inference audio. "
-             "Lower values detect more hits (e.g. 0.5 = aggressive, 0.7 = balanced, 1.0 = strict).",
+        default=1.0,
+        help="Scale factor for file thresholds (default 1.0). When thresholds are calibrated "
+             "on the same domain as inference audio (e.g. both Demucs), use 1.0. "
+             "Lower values detect more hits (e.g. 0.5 = aggressive, 0.7 = compensate domain gap, 1.0 = matched).",
     )
     parser.add_argument(
         "--start-time", type=float, help="Start time in seconds for partial processing"
@@ -1155,7 +1262,9 @@ def main():
     parser.add_argument(
         "--no-genre-detection",
         action="store_true",
-        help="Disable automatic genre detection and style-aware decoding",
+        help="Disable genre detection entirely. Without this flag, genre detection "
+             "is mode-aware: transcription mode adds lightweight annotations only "
+             "(no Viterbi re-pass), gameplay mode runs full genre-aware decoding.",
     )
     parser.add_argument(
         "--genre",
@@ -1179,7 +1288,9 @@ def main():
     parser.add_argument(
         "--no-pattern-repair",
         action="store_true",
-        help="Disable pattern library repair for ambiguous hits",
+        help="Disable pattern library repair. Without this flag, pattern repair "
+             "is mode-aware: transcription mode skips repair entirely, gameplay mode "
+             "conservatively repairs only very low-confidence hits (< 0.35).",
     )
 
     # Accuracy improvement options
@@ -1232,6 +1343,31 @@ def main():
         "--no-ghost-notes",
         action="store_true",
         help="Disable ghost notes in beatmap (ghost note detection is experimental)",
+    )
+
+    # Auto-parameter estimation
+    parser.add_argument(
+        "--auto-sensitivity",
+        action="store_true",
+        help="Automatically detect optimal onset sensitivity from audio characteristics "
+             "(dynamic range, spectral density, BPM). Overrides --sensitivity.",
+    )
+    parser.add_argument(
+        "--auto-quantization",
+        action="store_true",
+        help="Automatically detect optimal quantization grid from onset distribution. "
+             "Overrides --quantization.",
+    )
+
+    # Pipeline mode
+    parser.add_argument(
+        "--mode",
+        type=str,
+        default="gameplay",
+        choices=["gameplay", "transcription"],
+        help="Pipeline mode: 'gameplay' (full readability filtering for rhythm games) "
+             "or 'transcription' (accuracy-first: auto-bumps sensitivity, uses fine grid, "
+             "disables readability filter). Default: gameplay.",
     )
 
     # Hybrid classification: Demucs for onset detection, original audio for classification
@@ -1374,6 +1510,10 @@ def main():
             multi_window_sizes=[float(x) for x in getattr(args, 'multi_window_sizes', '80,100,120').split(',')] if getattr(args, 'multi_window', False) else None,
             checkpoint_ensemble_paths=getattr(args, 'checkpoint_ensemble', None),
             use_multi_pass=getattr(args, 'multi_pass', False),
+            # Auto-parameter estimation
+            auto_sensitivity=getattr(args, 'auto_sensitivity', False),
+            auto_quantization=getattr(args, 'auto_quantization', False),
+            pipeline_mode=getattr(args, 'mode', 'gameplay'),
         )
         return 0 if result["success"] else 1
     except Exception as e:

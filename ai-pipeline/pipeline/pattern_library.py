@@ -741,7 +741,8 @@ def repair_with_patterns(
     hits: List[Dict],
     bpm: float,
     library: Optional[PatternLibrary] = None,
-    confidence_threshold: float = 0.6,
+    confidence_threshold: float = 0.35,
+    mode: str = "gameplay",
 ) -> List[Dict]:
     """
     Repair low-confidence hits using pattern matching.
@@ -749,20 +750,29 @@ def repair_with_patterns(
     If a sequence of hits matches a known pattern, use the pattern's
     canonical form to repair ambiguous classifications.
 
+    In "transcription" mode, returns hits unchanged (preserves raw accuracy).
+    In "gameplay" mode, repairs only very low-confidence hits (< confidence_threshold)
+    for better chart readability.
+
     Args:
         hits: Classified hits with confidence scores
         bpm: Tempo
         library: Pattern library (uses default if None)
-        confidence_threshold: Below this, attempt repair
+        confidence_threshold: Below this, attempt repair (default 0.35 — very conservative)
+        mode: "gameplay" or "transcription"
 
     Returns:
         Repaired hit list
     """
+    # Transcription mode: never modify model output
+    if mode == "transcription":
+        return hits
+
     if library is None:
         library = PatternLibrary()
 
-    # Find pattern matches
-    matches = library.match_pattern(hits, bpm, min_match_ratio=0.6)
+    # Find pattern matches — require strong matches only
+    matches = library.match_pattern(hits, bpm, min_match_ratio=0.75)
 
     if not matches:
         return hits
@@ -772,9 +782,27 @@ def repair_with_patterns(
     repaired = [h.copy() for h in sorted_hits]
 
     beat_duration = 60.0 / bpm
+    measure_duration = beat_duration * 4  # Assume 4/4 for safety
 
     # Apply best matching patterns
     applied_regions = set()  # Track which time regions we've already repaired
+    repairs_per_measure = {}  # Limit repairs per measure to prevent cascading
+    max_repairs_per_measure = 2  # Conservative: at most 2 repairs per measure
+
+    # Instrument families — only allow repair within the same family
+    _body_drums = frozenset({"kick", "snare", "cross_stick", "ghost"})
+    _cymbals = frozenset({"crash", "china", "splash", "ride_bow", "ride_bell",
+                          "hihat_closed", "hihat_open", "hihat_pedal"})
+    _toms = frozenset({"tom", "tom_high", "tom_mid", "tom_low"})
+
+    def _get_family(comp: str) -> str:
+        if comp in _body_drums:
+            return "body"
+        if comp in _cymbals:
+            return "cymbal"
+        if comp in _toms:
+            return "tom"
+        return "other"
 
     for pattern, score, start_time in matches:
         # Skip if this region already repaired
@@ -785,7 +813,7 @@ def repair_with_patterns(
             continue
 
         # Only apply if pattern is a strong match
-        if score < 0.7:
+        if score < 0.75:
             continue
 
         # Get pattern events
@@ -800,24 +828,39 @@ def repair_with_patterns(
             if hit.get("confidence", 1.0) >= confidence_threshold:
                 continue  # Don't repair high-confidence hits
 
+            # Check per-measure repair limit
+            measure_idx = int(hit_time / measure_duration)
+            current_repairs = repairs_per_measure.get(measure_idx, 0)
+            if current_repairs >= max_repairs_per_measure:
+                continue
+
+            hit_comp = hit.get("component", "")
+
             # Don't reassign cymbal components — the multi-label
             # classifier's cymbal detections are more reliable than
             # pattern-based guessing for these timbral classes.
-            _cymbal_components = frozenset({
+            _cymbal_no_repair = frozenset({
                 'crash', 'china', 'splash', 'ride_bow', 'ride_bell',
             })
-            if hit.get("component", "") in _cymbal_components:
+            if hit_comp in _cymbal_no_repair:
                 continue
 
             # Find matching pattern event
             for p_event in pattern_events:
-                if abs(p_event["time"] - hit_time) < 0.05:  # 50ms tolerance
+                if abs(p_event["time"] - hit_time) < 0.04:  # 40ms tolerance (tighter)
+                    proposed_comp = p_event["component"]
+
+                    # Only allow repair within the same instrument family
+                    if _get_family(hit_comp) != _get_family(proposed_comp):
+                        continue
+
                     # Repair with pattern's component
                     repaired[i] = hit.copy()
-                    repaired[i]["component"] = p_event["component"]
+                    repaired[i]["component"] = proposed_comp
                     repaired[i]["pattern_repaired"] = True
                     repaired[i]["pattern_id"] = pattern.id
                     repaired[i]["pattern_confidence"] = score
+                    repairs_per_measure[measure_idx] = current_repairs + 1
                     break
 
         applied_regions.add(region_key)

@@ -502,16 +502,19 @@ def train_ensemble(
         print(f"Training model {i + 1}/{num_models} with seed {seed}")
         print(f"{'=' * 60}\n")
 
-        # Import train function
-        # Note: This would need to be adapted to your actual training script
-        # For now, we just note where models should be saved
+        # This helper currently does not invoke the training loop directly.
+        # It emits reproducible commands and expects an external trainer to
+        # produce model artifacts at the expected path.
         model_path = run_dir / "best_drum_classifier.pth"
 
         if model_path.exists():
             print(f"Model already exists at {model_path}, skipping training")
         else:
-            print(f"TODO: Train model with seed={seed}, save to {model_path}")
-            print("  Run: python train_classifier.py --seed {seed} --output {run_dir}")
+            print(f"[INFO] Missing model artifact for seed={seed}: {model_path}")
+            print(
+                f"  Suggested command: python train_classifier.py --seed {seed} "
+                f"--output \"{run_dir}\""
+            )
 
         model_paths.append(model_path)
 

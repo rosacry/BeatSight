@@ -816,6 +816,183 @@ def detect_swing_ratio(
     return swing_ratio, confidence
 
 
+@dataclass
+class SectionTimeSignature:
+    """Time signature detected for a specific section of the song."""
+    start_time: float
+    end_time: float
+    time_signature: TimeSignature
+    hit_count: int  # Number of hits in this section
+
+
+def detect_sectional_time_signatures(
+    hit_times: Sequence[float],
+    bpm: float,
+    hits: Optional[List[Dict]] = None,
+    window_duration: float = 20.0,
+    stride_duration: float = 10.0,
+    min_hits_per_window: int = 16,
+    change_threshold: float = 0.4,
+) -> List[SectionTimeSignature]:
+    """
+    Detect time signature changes throughout a song by analyzing overlapping windows.
+
+    Algorithm:
+    1. Slide a window across the song with overlap
+    2. Run detect_time_signature on each window
+    3. Find change points where the detected time signature shifts
+    4. Merge adjacent sections with the same time signature
+    5. Require a minimum confidence gap to declare a real change
+
+    Args:
+        hit_times: All hit times in seconds (sorted)
+        bpm: Detected BPM
+        hits: Optional classified hits for weighted analysis
+        window_duration: Analysis window in seconds (default 20s)
+        stride_duration: How far to advance between windows (default 10s)
+        min_hits_per_window: Minimum hits needed to analyze a window
+        change_threshold: Minimum autocorrelation difference to declare a change
+
+    Returns:
+        List of SectionTimeSignature objects covering the full song,
+        sorted by start_time. If no changes found, returns a single section.
+    """
+    if len(hit_times) < min_hits_per_window:
+        ts = detect_time_signature(hit_times, bpm, hits=hits)
+        return [SectionTimeSignature(
+            start_time=0.0,
+            end_time=float(hit_times[-1]) + 1.0 if len(hit_times) > 0 else 1.0,
+            time_signature=ts,
+            hit_count=len(hit_times),
+        )]
+
+    times_arr = np.array(sorted(hit_times))
+    song_end = float(times_arr[-1]) + 1.0
+
+    # Build a dict for quick hit lookup by time (for weighted analysis)
+    hits_by_time: Dict[float, List[Dict]] = {}
+    if hits:
+        for h in hits:
+            t = h.get("time", 0)
+            hits_by_time.setdefault(t, []).append(h)
+
+    # === STEP 1: Analyze each window ===
+    window_results: List[Tuple[float, float, TimeSignature, int]] = []
+    window_start = 0.0
+
+    while window_start < song_end:
+        window_end = window_start + window_duration
+
+        # Get hits in this window
+        mask = (times_arr >= window_start) & (times_arr < window_end)
+        window_times = times_arr[mask]
+
+        if len(window_times) >= min_hits_per_window:
+            # Get corresponding classified hits for this window (if available)
+            window_hits = None
+            if hits:
+                window_hits = []
+                for t in window_times:
+                    if t in hits_by_time:
+                        window_hits.extend(hits_by_time[t])
+
+            # Shift times to be relative to window start for consistent analysis
+            relative_times = window_times - window_start
+
+            ts = detect_time_signature(
+                relative_times.tolist(),
+                bpm,
+                analysis_duration=window_duration,
+                hits=window_hits,
+            )
+            window_results.append((window_start, window_end, ts, len(window_times)))
+
+        window_start += stride_duration
+
+    if not window_results:
+        ts = detect_time_signature(hit_times, bpm, hits=hits)
+        return [SectionTimeSignature(
+            start_time=0.0, end_time=song_end,
+            time_signature=ts, hit_count=len(hit_times),
+        )]
+
+    # === STEP 2: Find change points ===
+    # A change point occurs when adjacent windows disagree on time signature
+    # AND the alternative has sufficient confidence
+    sections: List[SectionTimeSignature] = []
+    current_ts = window_results[0][2]
+    current_start = 0.0
+    current_hit_count = window_results[0][3]
+
+    for i in range(1, len(window_results)):
+        prev_ts = window_results[i - 1][2]
+        curr_ts = window_results[i][2]
+        w_start = window_results[i][0]
+        w_hits = window_results[i][3]
+
+        same_meter = (curr_ts.numerator == current_ts.numerator and
+                      curr_ts.denominator == current_ts.denominator)
+
+        if not same_meter:
+            # Check confidence: the new detection must be reasonably confident
+            # AND significantly different from the running detection
+            confidence_gap = curr_ts.confidence - change_threshold
+            if confidence_gap > 0 and curr_ts.confidence > 0.45:
+                # Verify: check if the NEXT window also agrees (if it exists)
+                # This prevents single-window glitches from creating transitions
+                next_agrees = False
+                if i + 1 < len(window_results):
+                    next_ts = window_results[i + 1][2]
+                    next_agrees = (next_ts.numerator == curr_ts.numerator and
+                                   next_ts.denominator == curr_ts.denominator)
+                else:
+                    # Last window — trust it if confidence is high enough
+                    next_agrees = curr_ts.confidence > 0.55
+
+                if next_agrees:
+                    # Real change point — close current section, start new one
+                    sections.append(SectionTimeSignature(
+                        start_time=current_start,
+                        end_time=w_start,
+                        time_signature=current_ts,
+                        hit_count=current_hit_count,
+                    ))
+                    current_ts = curr_ts
+                    current_start = w_start
+                    current_hit_count = w_hits
+                    continue
+
+        current_hit_count += w_hits
+
+    # Close final section
+    sections.append(SectionTimeSignature(
+        start_time=current_start,
+        end_time=song_end,
+        time_signature=current_ts,
+        hit_count=current_hit_count,
+    ))
+
+    # === STEP 3: Merge very short sections ===
+    # Sections shorter than 2 measures are likely glitches
+    min_section_duration = (60.0 / bpm) * 4 * 2  # 2 measures
+    merged: List[SectionTimeSignature] = []
+
+    for section in sections:
+        duration = section.end_time - section.start_time
+        if duration < min_section_duration and merged:
+            # Too short — merge into previous section
+            merged[-1] = SectionTimeSignature(
+                start_time=merged[-1].start_time,
+                end_time=section.end_time,
+                time_signature=merged[-1].time_signature,
+                hit_count=merged[-1].hit_count + section.hit_count,
+            )
+        else:
+            merged.append(section)
+
+    return merged if merged else sections
+
+
 def apply_structured_decoding(
     classified_hits: List[Dict],
     bpm: float,
@@ -825,13 +1002,16 @@ def apply_structured_decoding(
     """
     Apply structured decoding to classified hits.
 
-    This is the main entry point for structured decoding.
+    This is the main entry point for structured decoding. Supports
+    sectional time signature detection — if no time_signature is forced,
+    the song is analyzed for time signature changes and each section
+    gets decoded with its own time signature.
 
     Args:
         classified_hits: Raw classified hits from ML model
         bpm: Detected BPM
         offset: Beat offset in seconds
-        time_signature: Optional time signature override
+        time_signature: Optional time signature override (applies to whole song)
 
     Returns:
         List of hits with refined states and additional context
@@ -839,37 +1019,74 @@ def apply_structured_decoding(
     if not classified_hits:
         return classified_hits
 
-    # Detect time signature if not provided
     times = [h.get("time", 0) for h in classified_hits]
-    if time_signature is None:
-        detected_ts = detect_time_signature(times, bpm)
-        time_signature = (detected_ts.numerator, detected_ts.denominator)
 
-    # Detect swing
+    # Detect swing (global — swing doesn't typically change mid-song)
     swing_ratio, swing_confidence = detect_swing_ratio(times, bpm)
 
-    # Run Viterbi decoding
-    decoder = ViterbiDecoder(bpm=bpm, time_signature=time_signature)
-    decoded_events = decoder.decode(classified_hits, offset)
+    if time_signature is not None:
+        # Fixed time signature — apply to entire song (original behavior)
+        sections = [SectionTimeSignature(
+            start_time=0.0,
+            end_time=max(times) + 1.0,
+            time_signature=TimeSignature(
+                time_signature[0], time_signature[1], 1.0, float(time_signature[0])
+            ),
+            hit_count=len(classified_hits),
+        )]
+    else:
+        # Sectional detection — find time signature changes throughout the song
+        sections = detect_sectional_time_signatures(
+            times, bpm, hits=classified_hits,
+        )
 
-    # Merge decoded info back into hits
+    # Build a section lookup: for each hit, find which section it belongs to
     result = []
-    for hit, decoded in zip(classified_hits, decoded_events):
-        enhanced_hit = dict(hit)
-        enhanced_hit["decoded_state"] = decoded.state.name.lower()
-        enhanced_hit["viterbi_confidence"] = decoded.viterbi_prob
-        enhanced_hit["beat_position"] = decoded.beat_position
-        enhanced_hit["is_backbeat"] = decoded.is_backbeat
-        enhanced_hit["swing_ratio"] = swing_ratio
-        enhanced_hit["swing_confidence"] = swing_confidence
-        enhanced_hit["time_signature"] = f"{time_signature[0]}/{time_signature[1]}"
+    section_idx = 0
 
-        # If Viterbi strongly disagrees with original classification, flag it
-        original_state = DrumState.from_component(hit.get("component", ""))
-        if decoded.state != original_state and decoded.viterbi_prob > 0.7:
-            enhanced_hit["state_refined"] = True
-            enhanced_hit["original_state"] = original_state.name.lower()
+    # Sort hits by time for section assignment
+    sorted_indices = sorted(range(len(classified_hits)),
+                            key=lambda i: classified_hits[i].get("time", 0))
 
-        result.append(enhanced_hit)
+    # Process each section separately with its own Viterbi decoder
+    for section in sections:
+        # Collect hits in this section
+        section_hit_indices = []
+        for i in sorted_indices:
+            t = classified_hits[i].get("time", 0)
+            if section.start_time <= t < section.end_time:
+                section_hit_indices.append(i)
+
+        if not section_hit_indices:
+            continue
+
+        section_hits = [classified_hits[i] for i in section_hit_indices]
+        sec_ts = (section.time_signature.numerator, section.time_signature.denominator)
+
+        # Run Viterbi decoding for this section
+        decoder = ViterbiDecoder(bpm=bpm, time_signature=sec_ts)
+        decoded_events = decoder.decode(section_hits, offset)
+
+        # Merge decoded info back into hits
+        for hit, decoded in zip(section_hits, decoded_events):
+            enhanced_hit = dict(hit)
+            enhanced_hit["decoded_state"] = decoded.state.name.lower()
+            enhanced_hit["viterbi_confidence"] = decoded.viterbi_prob
+            enhanced_hit["beat_position"] = decoded.beat_position
+            enhanced_hit["is_backbeat"] = decoded.is_backbeat
+            enhanced_hit["swing_ratio"] = swing_ratio
+            enhanced_hit["swing_confidence"] = swing_confidence
+            enhanced_hit["time_signature"] = f"{sec_ts[0]}/{sec_ts[1]}"
+
+            # If Viterbi strongly disagrees with original, flag it
+            original_state = DrumState.from_component(hit.get("component", ""))
+            if decoded.state != original_state and decoded.viterbi_prob > 0.7:
+                enhanced_hit["state_refined"] = True
+                enhanced_hit["original_state"] = original_state.name.lower()
+
+            result.append(enhanced_hit)
+
+    # Sort result by time to maintain original order
+    result.sort(key=lambda h: h.get("time", 0))
 
     return result

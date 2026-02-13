@@ -760,11 +760,18 @@ def apply_genre_aware_decoding(
     time_signature: Tuple[int, int] = (4, 4),
     swing_ratio: float = 1.0,
     genre: Optional[Genre] = None,
+    mode: str = "gameplay",
 ) -> List[Dict]:
     """
     Apply genre-aware structured decoding to classified hits.
 
     This is the main entry point for genre-aware processing.
+
+    In "transcription" mode, only lightweight genre annotation is applied
+    (no Viterbi re-pass) to preserve raw model accuracy.
+
+    In "gameplay" mode, full Viterbi decoding with genre-aware transitions
+    is applied to produce more stylistically consistent charts.
 
     Args:
         classified_hits: List of classified drum hits
@@ -773,21 +780,51 @@ def apply_genre_aware_decoding(
         time_signature: Time signature
         swing_ratio: Detected swing ratio
         genre: Optional forced genre (None = auto-detect)
+        mode: "gameplay" or "transcription"
 
     Returns:
         List of refined hits with genre-aware classification
     """
+    # Detect genre (lightweight — no Viterbi needed for this)
+    if genre is None:
+        detected_genre, detected_confidence = detect_genre(
+            classified_hits, bpm, swing_ratio
+        )
+    else:
+        detected_genre = genre
+        detected_confidence = 1.0
+
+    # In transcription mode, only annotate with genre metadata — skip Viterbi
+    # re-pass to preserve raw model accuracy.
+    if mode == "transcription":
+        sorted_hits = sorted(classified_hits, key=lambda h: h.get("time", 0))
+        beat_duration = 60.0 / max(bpm, 1.0)
+        annotated = []
+        for hit in sorted_hits:
+            refined = hit.copy()
+            refined["genre"] = detected_genre.value
+            refined["genre_confidence"] = detected_confidence
+            hit_time = hit.get("time", 0)
+            beat_pos = (hit_time / beat_duration) % time_signature[0]
+            refined["beat_position"] = beat_pos
+            beat_frac = (hit_time % beat_duration) / beat_duration
+            beat_idx = int(beat_pos)
+            refined["is_backbeat"] = beat_idx in [1, 3] and beat_frac < 0.1
+            annotated.append(refined)
+        return annotated
+
+    # Gameplay mode: full Viterbi decode with genre-aware transitions
     decoder = GenreAwareDecoder(
         bpm=bpm,
         time_signature=time_signature,
-        genre=genre,
+        genre=detected_genre,
         swing_ratio=swing_ratio,
     )
 
     decoded, metadata = decoder.decode(
         classified_hits,
         offset=offset,
-        auto_detect_genre=(genre is None),
+        auto_detect_genre=False,  # Already detected above
     )
 
     # Convert back to hit dictionaries

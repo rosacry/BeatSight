@@ -1,11 +1,19 @@
 # Files to Attach for Post-Training Session
 
+## Archive Metadata
+
+- **Document Type:** Session prompt (archived)
+- **Status:** Historical reference only
+- **Normalized On:** 2026-02-13
+- **Canonical Location:** `ai-pipeline/documentation/archive/prompts/session/`
+- **Current Source of Truth:** `ai-pipeline/documentation/current/`
+
 ## 📎 Essential Files (Must Attach)
 
 Open these files in VS Code tabs before starting the Claude session:
 
 ### Core Scripts
-1. **`ai-pipeline/OPUS_POST_TRAINING_PROMPT.md`** ← THE MAIN PROMPT
+1. **`ai-pipeline/documentation/archive/prompts/session/OPUS_POST_TRAINING_PROMPT.md`** ← THE MAIN PROMPT
 2. **`ai-pipeline/training/multilabel/tune_thresholds.py`** - Needs updating for threshold tuning
 3. **`ai-pipeline/training/multilabel/dataset.py`** - BatchedMultiLabelDataset reference
 4. **`ai-pipeline/transcription/multilabel_inference.py`** - Inference module

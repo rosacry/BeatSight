@@ -1,11 +1,19 @@
 # Files to Attach in New Opus Session
 
+## Archive Metadata
+
+- **Document Type:** Session prompt (archived)
+- **Status:** Historical reference only
+- **Normalized On:** 2026-02-13
+- **Canonical Location:** `ai-pipeline/documentation/archive/prompts/session/`
+- **Current Source of Truth:** `ai-pipeline/documentation/current/`
+
 When starting the new session, attach these files (or paste their paths) so the agent has direct access:
 
 ## REQUIRED — Attach These Files
 
 ### 1. The Handoff Prompt (this session's output)
-- `ai-pipeline/OPUS_INVESTIGATE_OUTPUT_QUALITY.md`
+- `ai-pipeline/documentation/archive/prompts/session/OPUS_INVESTIGATE_OUTPUT_QUALITY.md`
 
 ### 2. Core Inference & Pipeline Code
 - `ai-pipeline/transcription/multilabel_inference.py` — Core inference (1,376 lines, threshold scaling, feature extraction)

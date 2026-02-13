@@ -1,5 +1,13 @@
 # Opus Session Prompt: Desktop App Integration with Trained ML Model
 
+## Archive Metadata
+
+- **Document Type:** Session prompt (archived)
+- **Status:** Historical reference only
+- **Normalized On:** 2026-02-13
+- **Canonical Location:** `ai-pipeline/documentation/archive/prompts/session/`
+- **Current Source of Truth:** `ai-pipeline/documentation/current/`
+
 ## 🎯 Session Context
 
 A **world-class 12-class multi-label drum transcription model** has been trained and optimized:

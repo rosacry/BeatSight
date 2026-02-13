@@ -1,5 +1,13 @@
 # Opus Session Prompt: Post-Training Optimization & Production Deployment
 
+## Archive Metadata
+
+- **Document Type:** Session prompt (archived)
+- **Status:** Historical reference only
+- **Normalized On:** 2026-02-13
+- **Canonical Location:** `ai-pipeline/documentation/archive/prompts/session/`
+- **Current Source of Truth:** `ai-pipeline/documentation/current/`
+
 ## 🎉 Session Context: World-Class Drum Transcription Model
 
 A 12-class multi-label drum classifier has been successfully trained to **0.90+ F1** (and climbing). This model may represent the **best publicly-available drum transcription system** based on:

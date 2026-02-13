@@ -1,5 +1,13 @@
 # Opus Session Prompt: Fix the Broken Inference Pipeline
 
+## Archive Metadata
+
+- **Document Type:** Session prompt (archived)
+- **Status:** Historical reference only
+- **Normalized On:** 2026-02-13
+- **Canonical Location:** `ai-pipeline/documentation/archive/prompts/session/`
+- **Current Source of Truth:** `ai-pipeline/documentation/current/`
+
 ## Context — Read This First
 
 I've spent **6 months** building BeatSight — a rhythm game with AI-generated beatmaps from real songs. The ML pipeline trains a 12-class multi-label drum transcription model (CNN V5 Large, 7.1M params) that reached **0.907 Micro-F1** on validation. The model genuinely works during training/evaluation.

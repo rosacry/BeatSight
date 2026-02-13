@@ -1,5 +1,13 @@
 # BeatSight AI Pipeline — Transcription Investigation Prompt
 
+## Archive Metadata
+
+- **Document Type:** Session prompt (archived)
+- **Status:** Historical reference only
+- **Normalized On:** 2026-02-13
+- **Canonical Location:** `ai-pipeline/documentation/archive/prompts/session/`
+- **Current Source of Truth:** `ai-pipeline/documentation/current/`
+
 > **Context:** The ML pipeline transcribes drums from audio into `.bsm` beatmaps played
 > in a C# desktop rhythm game. The model achieves F1=0.9397 on clean training data, but
 > **when the generated beatmap is played alongside the music, it sounds obviously wrong**.

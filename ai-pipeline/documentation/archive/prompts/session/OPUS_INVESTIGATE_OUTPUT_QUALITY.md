@@ -1,5 +1,13 @@
 # BeatSight AI Pipeline — Investigate & Fix Finetuned Model Output Quality
 
+## Archive Metadata
+
+- **Document Type:** Session prompt (archived)
+- **Status:** Historical reference only
+- **Normalized On:** 2026-02-13
+- **Canonical Location:** `ai-pipeline/documentation/archive/prompts/session/`
+- **Current Source of Truth:** `ai-pipeline/documentation/current/`
+
 ## YOUR MISSION
 
 You are continuing development on **BeatSight**, a commercial AI drum transcription system. The goal: **the best AI drum transcription model in the world** — where any user uploads any song and gets the most accurate visual drum transcription possible.

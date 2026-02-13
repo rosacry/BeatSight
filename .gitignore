@@ -99,6 +99,8 @@ npm-debug.log
 yarn-error.log
 .npm
 .eslintcache
+frontend/.playwright/
+frontend/.playwright/.auth/
 
 # Personal documentation (private notes)
 docs/
@@ -134,6 +136,11 @@ tmp_editor_video_frames/
 tmpclaude-*-cwd
 cwd_archive/
 test_songs/
+F?datasets/
+F?feature_cache/
+F?manifests/
+F?models/
+F?temp_dataset/
 
 # Dataset health artifacts
 ai-pipeline/training/reports/health/**
@@ -188,6 +195,7 @@ appsettings.Development.json
 publish/
 Release/
 Debug/
+desktop/BeatSight.Desktop/build_log*.txt
 
 # Test outputs
 test-results/

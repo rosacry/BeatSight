@@ -47,7 +47,11 @@ namespace BeatSight.Game.AI.Generation
         string? MultilabelThresholdsPath = null,
         // Adaptive thresholds for per-song optimization
         bool UseAdaptiveThresholds = false,
-        string AdaptiveThresholdMethod = "otsu");
+        string AdaptiveThresholdMethod = "otsu",
+        // CLI parity flags
+        AiPipelineMode PipelineMode = AiPipelineMode.Gameplay,
+        bool AutoSensitivity = false,
+        bool AutoQuantization = false);
 
     public readonly record struct GenerationProgress(
         GenStage Stage,
@@ -148,6 +152,9 @@ namespace BeatSight.Game.AI.Generation
                     EnableDrumSeparation = true,
                     ConfidenceThreshold = 0.3,
                     MaxSnapErrorMilliseconds = 12.0,
+                    PipelineMode = snapshot.PipelineMode,
+                    AutoSensitivity = snapshot.AutoSensitivity,
+                    AutoQuantization = snapshot.AutoQuantization,
                     // ML classifier options
                     UseMlClassifier = snapshot.UseMlClassifier,
                     MlModelPath = snapshot.LocalModelPath,

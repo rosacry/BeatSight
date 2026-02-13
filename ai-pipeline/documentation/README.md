@@ -10,8 +10,10 @@ This directory is the canonical home for AI pipeline markdown documentation.
   - Active run-state and handoff documents that should reflect the present pipeline/training state.
 - `ai-pipeline/documentation/archive/handoffs/`
   - Historical handoffs and superseded execution plans kept for reference.
+  - Local index: `ai-pipeline/documentation/archive/handoffs/README.md`
 - `ai-pipeline/documentation/archive/prompts/session/`
   - Session prompts, file-attachment notes, and one-off temporary working docs.
+  - Local index: `ai-pipeline/documentation/archive/prompts/session/README.md`
 
 ## Active Source Of Truth
 

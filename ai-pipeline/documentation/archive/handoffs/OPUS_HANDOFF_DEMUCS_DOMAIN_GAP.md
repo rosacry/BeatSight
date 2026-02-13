@@ -1,5 +1,13 @@
 # BeatSight AI Pipeline Handoff — Demucs Domain Gap & Model Optimization (Feb 9, 2026)
 
+## Archive Metadata
+
+- **Document Type:** Handoff / investigation brief (archived)
+- **Status:** Historical reference only
+- **Normalized On:** 2026-02-13
+- **Canonical Location:** `ai-pipeline/documentation/archive/handoffs/`
+- **Current Source of Truth:** `ai-pipeline/documentation/current/`
+
 ## PURPOSE
 
 This document is a handoff for a new Claude Opus 4.6 session to continue optimizing the BeatSight drum transcription model. The goal is to achieve the best possible drum classification F1 on real-world (Demucs-separated) audio. The new session is free to modify code, recommend changes, evaluate approaches, and propose new strategies.

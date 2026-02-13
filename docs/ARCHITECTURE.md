@@ -1,0 +1,483 @@
+# BeatSight Architecture
+
+## Overview
+
+BeatSight is designed as a modular, scalable system with clear separation between the playback client, AI processing pipeline, and community backend services.
+
+## System Components
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         User Devices                             │
+├──────────────────┬──────────────────┬──────────────────────────┤
+│  Desktop Client  │   iOS Client     │   Android Client         │
+│  (osu-framework) │   (Flutter)      │   (Flutter)              │
+└────────┬─────────┴────────┬─────────┴──────────┬───────────────┘
+         │                  │                    │
+         └──────────────────┼────────────────────┘
+                            │
+                   ┌────────▼────────┐
+                   │   Backend API   │
+                   │   (FastAPI)     │
+                   └────────┬────────┘
+                            │
+         ┌──────────────────┼──────────────────┐
+         │                  │                  │
+    ┌────▼────┐      ┌─────▼──────┐    ┌─────▼─────┐
+    │PostgreSQL│      │ S3/CDN     │    │AI Pipeline│
+    │Database  │      │Audio Store │    │  (Python) │
+    └──────────┘      └────────────┘    └───────────┘
+```
+
+## 1. Desktop Client (Primary Platform)
+
+### Technology Stack
+- **Framework**: osu-framework (C# / .NET 8.0)
+- **Graphics**: OpenGL via framework abstraction
+- **Audio**: BASS audio library (via framework)
+- **Build**: .NET SDK, cross-platform compilation
+
+### Core Modules
+
+#### Game Engine (`BeatSight.Game`)
+- **Screens**:
+  - `MainMenuScreen`: Navigation hub
+  - `SongSelectScreen`: Browse local/downloaded beatmaps
+  - `PlaybackScreen`: Primary playback/practice interface (2D/3D/manuscript views)
+  - `EditorScreen`: Beatmap creation/editing
+  - `SettingsScreen`: Configuration
+
+- **Playback Components**:
+  - `PlaybackPlayfield`: Visualises lanes across 2D, 3D, and manuscript sessions
+  - `DrumKitDisplay`: Shows drum kit layout for quick instrument context
+  - `TimingOrchestrator`: Applies offsets, metronome accents, and tempo scaling without affecting pitch
+  - `LoopController`: Handles sectional looping, rehearsal blocks, and preview ranges
+  - `HitObjectManager`: Manages note timing and rendering pipelines for each view mode
+
+- **Enhanced Playfield Views** (November 2025):
+  - `TwoDimensionalLaneViewEnhanced`: Professional 2D lane rendering with improved note sizing, lane gradients, and better visual hierarchy
+  - `ThreeDimensionalHighwayViewEnhanced`: 3D highway view with depth-based perspective, scanline effects, and highway pulse animations
+  - `ManuscriptViewEnhanced`: Traditional drum notation view with staff lines, component-based positioning, and music notation styling
+  - `PlayfieldViewBaseEnhanced`: Shared base class providing coordinate system conventions, timing calculations, and common utilities
+  - `PlayfieldViewManager`: Coordinates view switching with support for enhanced view toggle
+  - `ViewTransitionManager`: Handles smooth animated transitions between view modes
+
+- **Enhanced UI Components**:
+  - `DesignSystem`: Centralized design constants (typography, spacing, colors, animations)
+  - `NoteRenderer`: Unified note rendering with velocity/dynamics visualization
+  - `TimingGridOverlayEnhanced`: Beat/measure grid lines with tempo-aware density
+  - `TimingStrikeZoneEnhanced`: Professional hit line visualization with judgment feedback
+  - `JudgmentFeedbackSystem`: Visual feedback for auto-hit timing display
+  - `PracticeOverlay`: Enhanced loop selection UI with progress visualization
+
+- **Data Models for AI**:
+  - `HitObjectExtended`: Extended hit objects with articulation data (ghost notes, accents, rimshots, etc.)
+  - `DrumArticulation`: Enum for detected articulation types
+  - `DynamicsLevel`: Musical dynamics (pp to fff)
+  - `DrumPattern`: Detected musical patterns (grooves, fills, transitions)
+  - `TranscriptionStatistics`: Statistics about AI transcription quality
+
+- **Audio System**:
+  - `AudioEngine`: Playback with pitch-independent speed control
+  - `MetronomeOverlay`: Configurable click track
+  - `TrackIsolation`: Toggle between full mix and stems
+
+- **Editor Components**:
+  - `TimelineView`: Waveform display with zoom
+  - `NoteEditor`: Place/move/delete notes
+  - `DrumPartMapper`: Assign notes to drum components
+  - `SnapDivisor`: Timing quantization
+  - `HitsoundPlayer`: Audio feedback while editing
+
+#### Desktop Runner (`BeatSight.Desktop`)
+- Platform-specific initialization
+- Window management
+- File system integration
+- OS-specific features (notifications, file associations)
+
+### File Handling
+- Local beatmap library management
+- Import/export `.bsm` files
+- Audio file format support (via BASS)
+- Auto-download from community server
+
+### Performance Targets
+- **Latency**: <10ms audio-visual sync
+- **Frame Rate**: 60 FPS minimum, 240 FPS capable
+- **UI Interaction Latency**: <5ms so timeline scrubs and overlays feel immediate
+
+### Retired Experiments (November 2025)
+- Live microphone tracking (`MicrophoneCapture`, `RealtimeOnsetDetector`, `LiveInputHudOverlay`, `LiveInputModeScreen`) has been removed while we focus on guided playback polish.
+- Practice-specific surface (`PracticeModeScreen`, the legacy replay host, `ResultsScreen`) was shelved; future UX will fold these ideas back into the core `PlaybackScreen` when they return.
+- Configuration hooks for microphone calibration (`MicCalibration*` settings) no longer ship with the default ini.
+
+## 2. Mobile Clients (iOS/Android)
+
+### Technology Stack
+- **Framework**: Flutter 3.16+
+- **Audio**: flutter_sound + audioplayers
+- **State Management**: Riverpod or Bloc
+- **Networking**: Dio (HTTP client)
+- **Storage**: sqlite + hive (local cache)
+
+### Design Philosophy
+- Touch-optimized playback (tap to spotlight lanes or scrub sections)
+- Simplified editor (view-only or basic adjustments)
+- Beatmap browser and downloader
+- Offline playback support
+- Cloud sync for annotations/progress notes
+
+### Platform-Specific
+- **iOS**: 
+  - AVFoundation for low-latency audio
+  - App Store distribution
+  - IAP for donations (optional)
+  
+- **Android**:
+  - OpenSL ES for audio
+  - Google Play distribution
+  - Google Play Billing for donations
+
+## 3. AI Processing Pipeline
+
+### Technology Stack
+- **Language**: Python 3.10+
+- **ML Framework**: PyTorch 2.0+
+- **Audio Processing**: librosa, soundfile, pydub
+- **Source Separation**: Demucs (Meta)
+- **Deployment**: Docker containers
+- **API**: FastAPI (async Python)
+
+### Processing Stages
+
+#### Stage 1: Audio Preprocessing
+```python
+Input: Audio file (any format)
+│
+├── Format conversion (ffmpeg)
+├── Sample rate normalization (44.1kHz)
+├── Stereo to mono conversion (optional)
+└── Output: WAV/FLAC standardized
+```
+
+#### Stage 2: Source Separation (Demucs)
+```python
+Input: Full mix audio
+│
+├── Demucs HTDemucs model (v4)
+├── Separate: drums, bass, vocals, other
+├── Quality: ~9 SDR (Signal-to-Distortion Ratio)
+└── Output: Isolated drum stem
+```
+
+#### Stage 3: Onset Detection
+```python
+Input: Drum stem
+│
+├── Spectral flux analysis
+├── Envelope following
+├── Peak picking with adaptive threshold
+├── Confidence scoring
+└── Output: Timestamp list with confidence
+```
+
+#### Stage 4: Drum Classification
+```python
+Input: Onset timestamps + audio
+│
+├── Extract audio windows around onsets (0.1s)
+├── Compute log-mel spectrograms (128 bins × 256 frames)
+├── Multi-label CNN classifier (per onset)
+│   ├── kick
+│   ├── snare
+│   ├── cross_stick
+│   ├── hihat_closed
+│   ├── hihat_open
+│   ├── hihat_pedal
+│   ├── ride_bow
+│   ├── ride_bell
+│   ├── tom (pitch-ranked to tom_1/2/3)
+│   ├── crash (pitch-ranked to crash_1/2)
+│   ├── china
+│   └── splash
+├── Per-class threshold filtering
+├── Pitch ranking for toms/crashes
+└── Output: Multi-labeled hits with confidence
+```
+
+#### Stage 5: Beatmap Generation
+```python
+Input: Labeled hits + metadata
+│
+├── BPM detection (librosa)
+├── Time signature inference
+├── Quantization to beat grid
+├── Difficulty calculation
+├── Pattern analysis (rolls, fills)
+├── Visual lane assignment
+└── Output: .bsm beatmap file
+```
+
+### Machine Learning Models
+
+#### Current Model: CNN V5 Large (v5_multilabel_final_v3)
+- **Architecture**: Multi-scale CNN with auxiliary heads
+- **Parameters**: 7.1M
+- **Input**: Log-mel spectrogram (128 bins × 256 frames)
+- **Output**: 12-class multi-label classification
+- **Classes**: kick, snare, cross_stick, hihat_closed, hihat_open, hihat_pedal, ride_bow, ride_bell, tom, crash, china, splash
+- **Training Data**: 12.9M samples from 11 sources
+- **Performance**: 0.91 Micro-F1, 0.75 Macro-F1
+- **Inference**: ~2ms per onset on GPU, ~15ms on CPU
+
+#### Pitch Ranking Module
+- **Purpose**: Distinguish tom_1/tom_2/tom_3 and crash_1/crash_2 by pitch
+- **Method**: Spectral centroid analysis per instrument class
+- **No additional training required**: Uses acoustic features directly
+
+### Training Infrastructure
+- **Hardware**: NVIDIA RTX GPU (local training)
+- **Framework**: PyTorch 2.0+ with AMP (bfloat16)
+- **Tracking**: Weights & Biases (wandb)
+- **Key Techniques**:
+  - Class-balanced focal loss
+  - EMA weight averaging
+  - Cosine learning rate schedule
+  - SpecAugment data augmentation
+  - Acoustic oversampling (10x)
+
+## 4. Backend Services
+
+### Technology Stack
+- **API Framework**: FastAPI (Python) or ASP.NET Core (C#)
+- **Database**: PostgreSQL 15+
+- **Cache**: Redis
+- **Storage**: S3-compatible (AWS S3 / MinIO / Backblaze B2)
+- **CDN**: CloudFlare
+- **Auth**: JWT tokens + OAuth2
+- **Deployment**: Docker + Kubernetes
+
+### API Endpoints
+
+#### Beatmap Management
+```
+GET    /api/v1/beatmaps              # List/search beatmaps
+GET    /api/v1/beatmaps/:id          # Get beatmap metadata
+GET    /api/v1/beatmaps/:id/download # Download .bsm file
+POST   /api/v1/beatmaps              # Upload new beatmap
+PUT    /api/v1/beatmaps/:id          # Update metadata
+DELETE /api/v1/beatmaps/:id          # Delete (creator only)
+POST   /api/v1/beatmaps/:id/rate     # Rate beatmap
+```
+
+#### Audio Processing
+```
+POST   /api/v1/process               # Submit audio for AI processing
+GET    /api/v1/process/:job_id       # Check processing status
+GET    /api/v1/process/:job_id/result # Download generated beatmap
+```
+
+#### User Management
+```
+POST   /api/v1/auth/register         # Create account
+POST   /api/v1/auth/login            # Authenticate
+GET    /api/v1/users/:id             # Get profile
+PUT    /api/v1/users/:id             # Update profile
+GET    /api/v1/users/:id/beatmaps    # User's uploads
+GET    /api/v1/users/:id/scores      # User's scores
+```
+
+#### Donations
+```
+POST   /api/v1/donate                # Create donation session (Stripe)
+GET    /api/v1/donate/status         # Check donation status
+```
+
+### Database Schema
+
+```sql
+-- Users
+CREATE TABLE users (
+    id UUID PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    last_login TIMESTAMP
+);
+
+-- Beatmaps
+CREATE TABLE beatmaps (
+    id UUID PRIMARY KEY,
+    creator_id UUID REFERENCES users(id),
+    title VARCHAR(255) NOT NULL,
+    artist VARCHAR(255) NOT NULL,
+    audio_hash VARCHAR(64), -- SHA256 of audio
+    difficulty_rating FLOAT,
+    bpm FLOAT,
+    duration_seconds INT,
+    drum_parts TEXT[], -- Array of detected parts
+    upload_date TIMESTAMP DEFAULT NOW(),
+    download_count INT DEFAULT 0,
+    rating_avg FLOAT,
+    rating_count INT DEFAULT 0,
+    file_size_bytes BIGINT,
+    storage_url TEXT -- S3 URL
+);
+
+-- Scores
+CREATE TABLE scores (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES users(id),
+    beatmap_id UUID REFERENCES beatmaps(id),
+    score INT NOT NULL,
+    accuracy FLOAT NOT NULL,
+    max_combo INT,
+    count_300 INT,
+    count_100 INT,
+    count_50 INT,
+    count_miss INT,
+    played_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(user_id, beatmap_id) -- Keep only best score
+);
+
+-- Processing Jobs
+CREATE TABLE processing_jobs (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES users(id),
+    status VARCHAR(20), -- pending, processing, completed, failed
+    audio_hash VARCHAR(64),
+    result_beatmap_id UUID REFERENCES beatmaps(id),
+    error_message TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    completed_at TIMESTAMP
+);
+
+-- Donations
+CREATE TABLE donations (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES users(id) NULL, -- Optional (anonymous)
+    amount_cents INT NOT NULL,
+    currency VARCHAR(3) DEFAULT 'USD',
+    stripe_session_id VARCHAR(255),
+    status VARCHAR(20),
+    donated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+## 5. Beatmap Format (`.bsm`)
+
+See [BEATMAP_FORMAT.md](BEATMAP_FORMAT.md) for detailed specification.
+
+**Key Design Principles**:
+- Human-readable JSON
+- Version-controlled format (schema versioning)
+- Extensible for future features
+- Compact but not compressed (allow git diffs)
+
+## 6. Cross-Platform Considerations
+
+### File Format Compatibility
+- `.bsm` files are identical across all platforms
+- Audio files referenced relatively (platform paths normalized)
+- Metadata includes platform-agnostic timestamps
+
+### Synchronization
+- Optional cloud sync for scores/progress
+- Local-first design (offline capable)
+- Conflict resolution for edited beatmaps
+
+### Performance Scaling
+- Desktop: Full visual effects, high frame rates
+- Mobile: Reduced particle effects, battery optimization
+- All platforms: Same core timing/cue logic
+
+## 7. Security & Privacy
+
+### Data Protection
+- Passwords: bcrypt hashing (cost factor 12)
+- API: Rate limiting per IP/user
+- File uploads: Virus scanning, size limits
+- User data: GDPR compliant, deletion requests honored
+
+### Copyright Considerations
+- Users upload audio at own risk (ToS disclaimer)
+- Optional: Store only drum stems (transformative)
+- DMCA takedown process
+- No direct audio redistribution without stems
+
+## 8. Scalability Plan
+
+### Phase 1: MVP (Months 1-3)
+- Desktop app with local processing
+- Basic AI pipeline (Demucs + simple onset detection)
+- No backend (local files only)
+
+### Phase 2: Community (Months 4-6)
+- Backend API deployment
+- User accounts and beatmap uploads
+- Cloud processing queue
+
+### Phase 3: Mobile (Months 7-9)
+- iOS/Android apps
+- Cross-platform sync
+- Mobile-optimized playback
+
+### Phase 4: Advanced (Months 10-12)
+- Real-time mic input monitoring
+- Distributed training platform
+- Advanced AI models (transformer-based)
+- Sample extraction tools
+
+## 9. Development Tools
+
+### CI/CD Pipeline
+- **GitHub Actions**: Automated builds
+- **Testing**: Unit tests (xUnit for C#, pytest for Python)
+- **Code Quality**: ESLint, Pylint, StyleCop
+- **Docker**: Containerized deployments
+
+### Monitoring
+- **Sentry**: Error tracking
+- **Prometheus + Grafana**: Metrics
+- **Application Insights**: Performance monitoring
+
+### Version Control
+- **Git**: Monorepo structure
+- **Git LFS**: Large binary assets
+- **Conventional Commits**: Standardized commit messages
+
+---
+
+## Technology Decision Rationale
+
+### Why osu-framework?
+- Battle-tested for rhythm games (osu! lazer)
+- Cross-platform (Windows/macOS/Linux native)
+- High-performance rendering and audio
+- Built-in input handling with minimal latency
+- Active development and community
+
+### Why Demucs?
+- State-of-the-art source separation (2023)
+- No training required (pre-trained models)
+- Open-source and free
+- Python-based (easy integration)
+
+### Why FastAPI (Python) vs ASP.NET Core (C#)?
+- **Recommendation**: FastAPI
+  - Same language as AI pipeline (Python)
+  - Async-first design (better for I/O-heavy workloads)
+  - Automatic OpenAPI docs
+  - Faster development iteration
+- **Alternative**: ASP.NET Core if team prefers C# consistency
+
+### Why Flutter for mobile?
+- Single codebase for iOS/Android
+- Good performance for UI-heavy apps
+- Easier than maintaining native codebases
+- Can share beatmap parsing logic with desktop (via FFI if needed)
+
+---
+
+**Next Steps**: See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup.

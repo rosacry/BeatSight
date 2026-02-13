@@ -1,5 +1,13 @@
 # Opus Session Prompt: Post-Training Pipeline Integration
 
+## Archive Metadata
+
+- **Document Type:** Session prompt (archived)
+- **Status:** Historical reference only
+- **Normalized On:** 2026-02-13
+- **Canonical Location:** `ai-pipeline/documentation/archive/prompts/session/`
+- **Current Source of Truth:** `ai-pipeline/documentation/current/`
+
 ## Context
 
 I'm currently training a 12-class multi-label drum classifier that achieved **F1 = 0.9342** (and likely higher by now). The model is in `runs/v5_real_4.8M_cbfocal/best_checkpoint.pt`. I'm still training it but i would like for you to assume that i've completed it since it's likely a good enough model to go forward with. (but when i finish training completely i'll run the exact same things i did for the current best checkpoint you'll be working with)

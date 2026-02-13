@@ -1,5 +1,13 @@
 # BeatSight AI Pipeline — Continuation Session Prompt
 
+## Archive Metadata
+
+- **Document Type:** Session prompt (archived)
+- **Status:** Historical reference only
+- **Normalized On:** 2026-02-13
+- **Canonical Location:** `ai-pipeline/documentation/archive/prompts/session/`
+- **Current Source of Truth:** `ai-pipeline/documentation/current/`
+
 > **Context:** You are continuing multi-session work on BeatSight's ML drum transcription pipeline. The model is good (F1=0.94 on training data), but inference on real songs produces wrong output. Several fixes have been applied. You need to diagnose and fix the remaining issues.
 
 ---

@@ -1,5 +1,13 @@
 # BeatSight — Full Fix Handoff Prompt (Generation + Rendering + Lanes)
 
+## Archive Metadata
+
+- **Document Type:** Session prompt (archived)
+- **Status:** Historical reference only
+- **Normalized On:** 2026-02-13
+- **Canonical Location:** `ai-pipeline/documentation/archive/prompts/session/`
+- **Current Source of Truth:** `ai-pipeline/documentation/current/`
+
 > **Purpose:** Comprehensive handoff for continuing multi-session work on BeatSight. This prompt covers ALL outstanding issues: ML pipeline generation (crash/china under-detection, tom clustering), desktop rendering (note alignment within lanes), and lane system correctness. You have full authority to modify the pipeline, rendering pipeline, desktop code, or any other code. The ONLY restriction is: **do NOT retrain the ML model**.
 
 ---

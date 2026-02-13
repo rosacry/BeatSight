@@ -12,7 +12,7 @@ Open these files in VS Code tabs before starting the Claude session:
 5. **`ai-pipeline/transcription/full_pipeline.py`** - Pipeline to test
 
 ### Documentation
-6. **`ai-pipeline/NEXT_STEPS_POST_TRAINING.md`** - Previous session context
+6. **`ai-pipeline/documentation/archive/handoffs/NEXT_STEPS_POST_TRAINING.md`** - Previous session context
 
 ## 📎 Optional (For Deep Dives)
 

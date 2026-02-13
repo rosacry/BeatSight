@@ -77,7 +77,7 @@ kick, ride_bell, ride_bow, snare, splash, tom
 ## Files to Attach as Context
 
 **Required (open these in VS Code before starting):**
-1. `ai-pipeline/NEXT_STEPS_POST_TRAINING.md` - Complete technical reference
+1. `ai-pipeline/documentation/archive/handoffs/NEXT_STEPS_POST_TRAINING.md` - Complete technical reference
 2. `ai-pipeline/tools/find_optimal_thresholds.py` - Needs updating
 3. `ai-pipeline/training/multilabel/dataset.py` - Reference for BatchedMultiLabelDataset
 4. `ai-pipeline/transcription/multilabel_inference.py` - Inference code

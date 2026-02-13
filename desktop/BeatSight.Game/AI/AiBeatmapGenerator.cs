@@ -27,6 +27,9 @@ namespace BeatSight.Game.AI
         public double ConfidenceThreshold { get; set; } = 0.3;  // Lowered from 0.7 to detect more real drum hits
         public bool EnableDrumSeparation { get; set; } = true;
         public string? PythonExecutablePath { get; set; }
+        public AiPipelineMode PipelineMode { get; set; } = AiPipelineMode.Gameplay;
+        public bool AutoSensitivity { get; set; }
+        public bool AutoQuantization { get; set; }
         public int DetectionSensitivity { get; set; } = 60;
         public QuantizationGrid QuantizationGrid { get; set; } = QuantizationGrid.Sixteenth;
         public double MaxSnapErrorMilliseconds { get; set; } = 12.0;
@@ -342,7 +345,11 @@ namespace BeatSight.Game.AI
             int noteCount = beatmap.HitObjects?.Count ?? 0;
             double bpm = beatmap.Timing?.Bpm ?? options.ForcedBpm ?? 0;
             double offsetMs = beatmap.Timing?.Offset ?? 0;
-            string grid = options.QuantizationGrid.ToString();
+            string mode = options.PipelineMode == AiPipelineMode.Transcription ? "transcription" : "gameplay";
+            string sensitivity = options.AutoSensitivity
+                ? "auto"
+                : Math.Clamp(options.DetectionSensitivity, 0, 100).ToString(CultureInfo.InvariantCulture);
+            string grid = options.AutoQuantization ? "auto" : options.QuantizationGrid.ToString();
 
             // Count notes by lane for distribution insight
             var laneCounts = new Dictionary<int, int>();
@@ -359,7 +366,7 @@ namespace BeatSight.Game.AI
                 ? string.Join(" ", laneCounts.OrderBy(kv => kv.Key).Select(kv => $"L{kv.Key}:{kv.Value}"))
                 : "none";
 
-            logs.Add($"[gen] notes={noteCount} bpm={bpm:0.###} offset={offsetMs:0}ms grid={grid} lanes=[{laneDistribution}]");
+            logs.Add($"[gen] mode={mode} notes={noteCount} bpm={bpm:0.###} offset={offsetMs:0}ms sensitivity={sensitivity} grid={grid} lanes=[{laneDistribution}]");
 
             // Log duration coverage if we have timing info
             if (noteCount > 0 && beatmap.HitObjects != null)
@@ -499,16 +506,17 @@ namespace BeatSight.Game.AI
             builder.Append(' ').Append("--input ").Append(quote(inputPath));
             builder.Append(' ').Append("--output ").Append(quote(outputPath));
             builder.Append(' ').Append("--confidence ").Append(options.ConfidenceThreshold.ToString("0.###", CultureInfo.InvariantCulture));
-            builder.Append(' ').Append("--sensitivity ").Append(Math.Clamp(options.DetectionSensitivity, 0, 100).ToString(CultureInfo.InvariantCulture));
-            builder.Append(' ').Append("--quantization ").Append(options.QuantizationGrid switch
-            {
-                QuantizationGrid.Quarter => "quarter",
-                QuantizationGrid.Eighth => "eighth",
-                QuantizationGrid.Sixteenth => "sixteenth",
-                QuantizationGrid.Triplet => "triplet",
-                QuantizationGrid.ThirtySecond => "thirtysecond",
-                _ => "sixteenth"
-            });
+            builder.Append(' ').Append("--mode ").Append(options.PipelineMode == AiPipelineMode.Transcription ? "transcription" : "gameplay");
+
+            if (options.AutoSensitivity)
+                builder.Append(" --auto-sensitivity");
+            else
+                builder.Append(' ').Append("--sensitivity ").Append(Math.Clamp(options.DetectionSensitivity, 0, 100).ToString(CultureInfo.InvariantCulture));
+
+            if (options.AutoQuantization)
+                builder.Append(" --auto-quantization");
+            else
+                builder.Append(' ').Append("--quantization ").Append(toQuantizationCliValue(options.QuantizationGrid));
             builder.Append(' ').Append("--max-snap-error ").Append(Math.Clamp(options.MaxSnapErrorMilliseconds, 2.0, 40.0).ToString("0.###", CultureInfo.InvariantCulture));
 
             if (options.ExportDebugAnalysis)
@@ -586,6 +594,16 @@ namespace BeatSight.Game.AI
 
             return "\"" + text.Replace("\"", "\\\"") + "\"";
         }
+
+        private static string toQuantizationCliValue(QuantizationGrid grid) => grid switch
+        {
+            QuantizationGrid.Quarter => "quarter",
+            QuantizationGrid.Eighth => "eighth",
+            QuantizationGrid.Sixteenth => "sixteenth",
+            QuantizationGrid.Triplet => "triplet",
+            QuantizationGrid.ThirtySecond => "thirtysecond",
+            _ => "sixteenth"
+        };
 
         private async Task<(string BeatmapPath, string? DrumStemPath)> persistBeatmapAsync(Beatmap beatmap, ImportedAudioTrack track, string? drumStemSourcePath, CancellationToken cancellationToken)
         {
@@ -725,6 +743,12 @@ namespace BeatSight.Game.AI
             return string.IsNullOrEmpty(slug) ? "beatmap" : slug;
         }
 
+    }
+
+    public enum AiPipelineMode
+    {
+        Gameplay,
+        Transcription
     }
 
     /// <summary>

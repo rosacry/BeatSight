@@ -153,6 +153,11 @@ class ChartReadabilityFilter:
 
     This is the key post-processing step that transforms ML output
     into human-quality charts.
+
+    The filter is BPM-aware: density limits scale with tempo so that
+    natural note densities at fast tempos aren't incorrectly filtered.
+    For example, at 200 BPM, straight 16th notes are ~13.3 NPS — the
+    "expert" limit scales up to accommodate this.
     """
 
     def __init__(
@@ -160,6 +165,8 @@ class ChartReadabilityFilter:
         difficulty: str = "expert",
         physical_constraints: Optional[PhysicalConstraints] = None,
         readability_rules: Optional[ReadabilityRules] = None,
+        bpm: float = 120.0,
+        mode: str = "gameplay",
     ):
         """
         Initialize filter.
@@ -168,14 +175,38 @@ class ChartReadabilityFilter:
             difficulty: Target difficulty level
             physical_constraints: Physical playability limits
             readability_rules: Readability/visual clarity rules
+            bpm: Song tempo in BPM — used to scale density limits
+            mode: "gameplay" (applies all filtering) or "transcription"
+                  (only physical constraints, no density thinning)
         """
         self.difficulty = difficulty.lower()
         self.constraints = physical_constraints or PhysicalConstraints()
         self.rules = readability_rules or ReadabilityRules()
+        self.bpm = max(bpm, 40.0)  # Sanity floor
+        self.mode = mode.lower()
 
-        self.max_nps = self.rules.max_nps_by_difficulty.get(
+        # === BPM-Scaled Density Limits ===
+        # Base limits are calibrated at 120 BPM.
+        # Scale factor increases with BPM so that natural subdivisions
+        # at fast tempos aren't filtered out.
+        #
+        # Formula: scale = 1.0 + 0.4 * ((bpm - 120) / 80)
+        #   120 BPM → scale = 1.0 (base values)
+        #   160 BPM → scale = 1.2
+        #   200 BPM → scale = 1.4
+        #   240 BPM → scale = 1.6
+        # Clamped to [0.8, 2.0] to avoid extremes.
+        bpm_scale = 1.0 + 0.4 * ((self.bpm - 120.0) / 80.0)
+        bpm_scale = max(0.8, min(2.0, bpm_scale))
+
+        base_nps = self.rules.max_nps_by_difficulty.get(
             self.difficulty, self.rules.max_nps_by_difficulty["expert"]
         )
+        self.max_nps = base_nps * bpm_scale
+
+        # In transcription mode, effectively disable density filtering
+        if self.mode == "transcription":
+            self.max_nps = 999.0
 
     def get_limb(self, component: str) -> Limb:
         """Get the limb used to play a component."""
@@ -577,6 +608,7 @@ def filter_chart_for_readability(
     hits: List[Dict],
     difficulty: str = "expert",
     bpm: float = 120.0,
+    mode: str = "gameplay",
 ) -> Tuple[List[Dict], Dict]:
     """
     Convenience function to filter hits for readability.
@@ -584,13 +616,14 @@ def filter_chart_for_readability(
     Args:
         hits: Raw classified hits
         difficulty: Target difficulty level
-        bpm: Song tempo (for density calculations)
+        bpm: Song tempo (used for BPM-scaled density limits)
+        mode: "gameplay" (full filtering) or "transcription" (physical only)
 
     Returns:
         Tuple of (filtered_hits, statistics)
     """
-    filter = ChartReadabilityFilter(difficulty=difficulty)
-    return filter.filter(hits)
+    filter_obj = ChartReadabilityFilter(difficulty=difficulty, bpm=bpm, mode=mode)
+    return filter_obj.filter(hits)
 
 
 def detect_sections(
@@ -669,13 +702,17 @@ def apply_difficulty_curve(
     hits: List[Dict],
     sections: List[Dict],
     target_difficulty: str = "expert",
+    bpm: float = 120.0,
+    mode: str = "gameplay",
 ) -> List[Dict]:
     """
     Apply difficulty modulation across sections.
 
     Makes intros easier, builds to choruses, and provides breaks.
     """
-    filter = ChartReadabilityFilter(difficulty=target_difficulty)
+    filter_obj = ChartReadabilityFilter(
+        difficulty=target_difficulty, bpm=bpm, mode=mode,
+    )
     result = []
 
     for section in sections:
@@ -690,17 +727,21 @@ def apply_difficulty_curve(
         if section_type == "intro":
             # Simplify intro
             effective_difficulty = _lower_difficulty(target_difficulty)
-            section_filter = ChartReadabilityFilter(difficulty=effective_difficulty)
+            section_filter = ChartReadabilityFilter(
+                difficulty=effective_difficulty, bpm=bpm, mode=mode,
+            )
         elif section_type == "outro":
             # Slightly easier outro
             effective_difficulty = _lower_difficulty(target_difficulty)
-            section_filter = ChartReadabilityFilter(difficulty=effective_difficulty)
+            section_filter = ChartReadabilityFilter(
+                difficulty=effective_difficulty, bpm=bpm, mode=mode,
+            )
         elif section_type == "verse":
             # Standard difficulty for verses
-            section_filter = filter
+            section_filter = filter_obj
         else:
             # Full difficulty for chorus/solo
-            section_filter = filter
+            section_filter = filter_obj
 
         filtered_section, _ = section_filter.filter(section_hits)
 

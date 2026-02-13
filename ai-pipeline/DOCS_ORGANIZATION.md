@@ -1,27 +1,16 @@
-﻿# AI Pipeline Documentation Organization
+# AI Pipeline Documentation Organization
 
-Last updated: 2026-02-12
+Last updated: 2026-02-13
 
-## Active Root Docs
+This file is a compatibility entry point. The canonical docs index is:
 
-These files are active and should stay at `ai-pipeline/` root:
+- `ai-pipeline/documentation/README.md`
 
-- `ACCURACY_IMPROVEMENTS_TRACKER.md`
-- `CURRENT_AI_PIPELINE_STATE.md`
-- `NEXT_STEPS_POST_TRAINING.md`
-- `OPUS_HANDOFF_SESSION3_DUAL_MODEL_ENSEMBLE.md`
-- `OPUS_HANDOFF_DEMUCS_DOMAIN_GAP.md`
+## Quick Map
 
-## Archived Prompt/Temp Docs
-
-Legacy prompt-style or one-off markdown notes are archived here:
-
-- `ai-pipeline/doc_archive/session-prompts/`
-
-## Update Rule
-
-After each major training/evaluation milestone:
-
-1. Update `ACCURACY_IMPROVEMENTS_TRACKER.md` first.
-2. Update handoff doc(s) second.
-3. Move obsolete prompt docs into `doc_archive/session-prompts`.
+- Active tracker/handoff docs:
+  - `ai-pipeline/documentation/current/`
+- Historical handoffs and superseded plans:
+  - `ai-pipeline/documentation/archive/handoffs/`
+- Session prompts and temporary working notes:
+  - `ai-pipeline/documentation/archive/prompts/session/`

@@ -442,7 +442,7 @@ The user wants to build the best drum classifier model possible and achieve the 
 ## FILES TO READ FIRST
 
 1. This document
-2. `ai-pipeline/CURRENT_AI_PIPELINE_STATE.md` (older state doc, some info superseded by this)
+2. `ai-pipeline/documentation/current/CURRENT_AI_PIPELINE_STATE.md` (older state doc, some info superseded by this)
 3. `ai-pipeline/training/multilabel/train_multilabel.py` — the training script with all fixes
 4. `ai-pipeline/transcription/multilabel_inference.py` — inference with domain gap scaling (FIXED in Session 2)
 5. `ai-pipeline/transcription/drum_classifier.py` — integration layer between pipeline and multilabel classifier

@@ -57,7 +57,7 @@ Reason: maximize total iteration throughput instead of spending many hours for m
 
 The authoritative command set is maintained in:
 
-- `ai-pipeline/ACCURACY_IMPROVEMENTS_TRACKER.md`
+- `ai-pipeline/documentation/current/ACCURACY_IMPROVEMENTS_TRACKER.md`
 
 Use that file as the operational source for exact command invocations.
 
@@ -74,10 +74,11 @@ Use that file as the operational source for exact command invocations.
 - `ai-pipeline/transcription/drum_classifier.py`
 - `ai-pipeline/transcription/multilabel_inference.py`
 - `ai-pipeline/scripts/generate_thresholds.py`
-- `ai-pipeline/ACCURACY_IMPROVEMENTS_TRACKER.md`
+- `ai-pipeline/documentation/current/ACCURACY_IMPROVEMENTS_TRACKER.md`
 
 ## Notes For Future Sessions
 
 - Do not regress to stale assumptions that Step 1 is pending.
 - Prefer updating this file and `ACCURACY_IMPROVEMENTS_TRACKER.md` together after each major run.
-- Keep archived prompt-style working notes under `ai-pipeline/doc_archive/`.
+- Keep archived prompt-style working notes under
+  `ai-pipeline/documentation/archive/prompts/session/`.

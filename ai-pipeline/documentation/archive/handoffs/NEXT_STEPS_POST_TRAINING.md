@@ -2,8 +2,8 @@
 
 > Status note (February 12, 2026): this document captures an earlier `multilabel_real_v2` planning pass.
 > For the currently active `multilabel_real_v3` dual-model workflow, use
-> `ai-pipeline/OPUS_HANDOFF_SESSION3_DUAL_MODEL_ENSEMBLE.md` and
-> `ai-pipeline/CURRENT_AI_PIPELINE_STATE.md` as the source of truth.
+> `ai-pipeline/documentation/current/OPUS_HANDOFF_SESSION3_DUAL_MODEL_ENSEMBLE.md` and
+> `ai-pipeline/documentation/current/CURRENT_AI_PIPELINE_STATE.md` as the source of truth.
 
 ## Current State (February 2, 2026)
 

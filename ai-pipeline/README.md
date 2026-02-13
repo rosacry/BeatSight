@@ -1,4 +1,4 @@
-﻿# BeatSight AI Pipeline
+# BeatSight AI Pipeline
 
 Multi-label drum transcription pipeline for BeatSight.
 
@@ -12,9 +12,9 @@ The project currently uses a dual-model ensemble strategy:
 
 For live state and exact training commands, use:
 
-- `ai-pipeline/ACCURACY_IMPROVEMENTS_TRACKER.md`
-- `ai-pipeline/OPUS_HANDOFF_SESSION3_DUAL_MODEL_ENSEMBLE.md`
-- `ai-pipeline/CURRENT_AI_PIPELINE_STATE.md`
+- `ai-pipeline/documentation/current/ACCURACY_IMPROVEMENTS_TRACKER.md`
+- `ai-pipeline/documentation/current/OPUS_HANDOFF_SESSION3_DUAL_MODEL_ENSEMBLE.md`
+- `ai-pipeline/documentation/current/CURRENT_AI_PIPELINE_STATE.md`
 
 ## Quick Start
 
@@ -53,14 +53,21 @@ ai-pipeline/
   separation/        # Demucs separation wrappers
   scripts/           # Utility scripts (threshold generation, diagnostics)
   runs/              # Checkpoints and outputs
-  doc_archive/       # Archived prompt/temp markdown notes
+  documentation/
+    current/         # Active state trackers and current handoffs
+    archive/
+      handoffs/      # Historical handoffs and superseded plans
+      prompts/       # Session prompts and one-off working notes
 ```
 
 ## Documentation Hygiene
 
-- Active docs stay at `ai-pipeline/` root for compatibility.
-- One-off prompts and temporary markdown notes are archived under:
-  - `ai-pipeline/doc_archive/session-prompts/`
+- Active docs live in `ai-pipeline/documentation/current/`.
+- Historical/superseded docs live in `ai-pipeline/documentation/archive/handoffs/`.
+- One-off prompts and temporary working notes live in:
+  - `ai-pipeline/documentation/archive/prompts/session/`
+- Index and maintenance rules:
+  - `ai-pipeline/documentation/README.md`
 
 ## License
 

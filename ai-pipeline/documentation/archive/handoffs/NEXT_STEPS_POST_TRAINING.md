@@ -1,5 +1,13 @@
 # Post-Training Next Steps: Multi-Label Drum Classifier
 
+## Archive Metadata
+
+- **Document Type:** Handoff / execution plan (archived)
+- **Status:** Historical reference only
+- **Normalized On:** 2026-02-13
+- **Canonical Location:** `ai-pipeline/documentation/archive/handoffs/`
+- **Current Source of Truth:** `ai-pipeline/documentation/current/`
+
 > Status note (February 12, 2026): this document captures an earlier `multilabel_real_v2` planning pass.
 > For the currently active `multilabel_real_v3` dual-model workflow, use
 > `ai-pipeline/documentation/current/OPUS_HANDOFF_SESSION3_DUAL_MODEL_ENSEMBLE.md` and

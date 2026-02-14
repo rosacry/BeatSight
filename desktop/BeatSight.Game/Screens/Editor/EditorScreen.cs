@@ -40,6 +40,13 @@ namespace BeatSight.Game.Screens.Editor
 {
     public partial class EditorScreen : BeatSightScreen
     {
+        // Final decomposition map (phase-28 freeze, no behavior changes):
+        // - EditorScreen.cs: shared state/constants + cross-partial wiring.
+        // - EditorScreen.Initialization/Header/EditorLayout/FooterHistory: primary composition and layout.
+        // - EditorScreen.Timeline*/Inspector*/Selection*/Notation*: editing interaction surfaces.
+        // - EditorScreen.PlaybackTransport/WaveformTimeline/SaveOperations/SnapshotHistory: persistence + playback/data flows.
+        // - EditorScreen.InputHotkeys/RuntimeLoop/Lifecycle/Responsive*: runtime lifecycle and responsiveness.
+
         private Beatmap? beatmap;
         private string? beatmapPath;
         private Track? track;

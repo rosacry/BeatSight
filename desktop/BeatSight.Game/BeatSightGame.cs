@@ -534,13 +534,10 @@ namespace BeatSight.Game
                 initialiseWindowBindings(dependencies.Get<BeatSightConfigManager>());
 
             if (Host.Window != null)
-            {
                 Host.Window.DragDrop += onWindowDragDrop;
-                Host.Window.CursorConfineRect = null;
-                Host.Window.CursorState = CursorState.Default;
-            }
 
             ensureCursorSettings();
+            normaliseCursorRuntimeState();
 
             bootstrapDefaultUserAssets();
 
@@ -837,6 +834,7 @@ namespace BeatSight.Game
             }
 
             applyWindowSize();
+            normaliseCursorRuntimeState();
         }
 
         private void applyNativeFullscreenResolution()
@@ -1191,16 +1189,12 @@ namespace BeatSight.Game
         private void ensureCursorSettings()
         {
             const string frameworkConfigFile = "framework.ini";
-            bool skipCursorNormalisation = string.Equals(
-                Environment.GetEnvironmentVariable("BEATSIGHT_SKIP_CURSOR_NORMALISATION"),
-                "1",
-                StringComparison.OrdinalIgnoreCase);
             bool forceCursorNormalisation = string.Equals(
                 Environment.GetEnvironmentVariable("BEATSIGHT_FORCE_CURSOR_NORMALISATION"),
                 "1",
                 StringComparison.OrdinalIgnoreCase);
 
-            if (skipCursorNormalisation)
+            if (isCursorNormalisationDisabled())
                 return;
 
             try
@@ -1238,6 +1232,24 @@ namespace BeatSight.Game
             {
                 Logger.Log($"Failed to normalise cursor settings: {ex.Message}", LoggingTarget.Runtime, LogLevel.Debug);
             }
+        }
+
+        private static bool isCursorNormalisationDisabled()
+            => string.Equals(
+                Environment.GetEnvironmentVariable("BEATSIGHT_SKIP_CURSOR_NORMALISATION"),
+                "1",
+                StringComparison.OrdinalIgnoreCase);
+
+        private void normaliseCursorRuntimeState()
+        {
+            if (isCursorNormalisationDisabled() || Host.Window == null)
+                return;
+
+            if (Host.Window.CursorState != CursorState.Default)
+                Host.Window.CursorState = CursorState.Default;
+
+            if (Host.Window.CursorConfineRect != null)
+                Host.Window.CursorConfineRect = null;
         }
 
         private static bool upsertConfigValue(List<string> lines, string key, string value, bool overwriteExisting = true)
@@ -1304,16 +1316,6 @@ namespace BeatSight.Game
                 audioEngine.Attach(audioManager);
                 audioAttached = true;
             }
-
-            if (Host.Window != null)
-            {
-                if (Host.Window.CursorState != CursorState.Default)
-                    Host.Window.CursorState = CursorState.Default;
-
-                if (Host.Window.CursorConfineRect != null)
-                    Host.Window.CursorConfineRect = null;
-            }
-
         }
 
         private void centerWindowOnCurrentDisplay(Size windowSize, bool applySize, bool logHandleFailure = true)

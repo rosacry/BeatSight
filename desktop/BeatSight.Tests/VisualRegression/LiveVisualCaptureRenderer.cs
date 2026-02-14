@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text;
 using BeatSight.Game.Beatmaps;
 using BeatSight.Game;
 using BeatSight.Game.Configuration;
@@ -34,6 +35,23 @@ namespace BeatSight.Tests.VisualRegression
 
     internal static class LiveVisualCaptureRenderer
     {
+        private const string suppressedInputHandlersCsv = "OpenTabletDriverHandler PenHandler JoystickHandler TouchHandler";
+        private static readonly char[] inputHandlerSeparators = { ',', ';', ' ' };
+        private static readonly string[] inputSuppressionEnvKeys =
+        {
+            "SDL_JOYSTICK_HIDAPI",
+            "SDL_JOYSTICK_RAWINPUT",
+            "SDL_JOYSTICK_WGI",
+            "SDL_DIRECTINPUT_ENABLED",
+            "SDL_XINPUT_ENABLED",
+            "SDL_AUTO_UPDATE_JOYSTICKS",
+            "SDL_HINT_JOYSTICK_HIDAPI",
+            "SDL_HINT_JOYSTICK_RAWINPUT",
+            "SDL_HINT_JOYSTICK_WGI",
+            "SDL_HINT_DIRECTINPUT_ENABLED",
+            "SDL_HINT_XINPUT_ENABLED",
+            "SDL_HINT_AUTO_UPDATE_JOYSTICKS",
+        };
         private static readonly BindingFlags instanceFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
         private static readonly string[] windowSizePropertyCandidates =
@@ -117,21 +135,27 @@ namespace BeatSight.Tests.VisualRegression
                 throw new VisualCaptureUnavailableException("Live visual capture currently runs only on Windows desktop hosts.");
 
             resetFrameworkRandomState();
+            preseedSuppressedInputHandlersConfig();
 
             string? previousUserAssetRoot = Environment.GetEnvironmentVariable("BEATSIGHT_USER_ASSET_ROOT");
             string? previousCursorNormalisationSkip = Environment.GetEnvironmentVariable("BEATSIGHT_SKIP_CURSOR_NORMALISATION");
             string? visualUserAssetRoot = null;
             string beatmapPath = resolveReferenceBeatmapPath();
             string hostName = $"BeatSight.VisualRegression.{scene}-{width}x{height}.{Guid.NewGuid():N}";
-            var host = Host.GetSuitableDesktopHost(hostName, new HostOptions { PortableInstallation = true });
-            var game = new BeatSightGame();
+            var host = (GameHost?)null;
+            var game = (BeatSightGame?)null;
+            Dictionary<string, string?>? previousInputSuppressionEnv = null;
             Task? runTask = null;
 
             try
             {
+                previousInputSuppressionEnv = captureEnvironmentValues(inputSuppressionEnvKeys);
+                applyInputSubsystemHints();
                 visualUserAssetRoot = prepareDeterministicUserAssetRoot(scene);
                 Environment.SetEnvironmentVariable("BEATSIGHT_USER_ASSET_ROOT", visualUserAssetRoot);
                 Environment.SetEnvironmentVariable("BEATSIGHT_SKIP_CURSOR_NORMALISATION", "1");
+                host = Host.GetSuitableDesktopHost(hostName, new HostOptions { PortableInstallation = true });
+                game = new BeatSightGame();
 
                 runTask = Task.Factory.StartNew(
                     () => host.Run(game),
@@ -189,7 +213,7 @@ namespace BeatSight.Tests.VisualRegression
             }
             finally
             {
-                if (runTask != null)
+                if (runTask != null && host != null && game != null)
                 {
                     try
                     {
@@ -210,6 +234,7 @@ namespace BeatSight.Tests.VisualRegression
 
                 Environment.SetEnvironmentVariable("BEATSIGHT_USER_ASSET_ROOT", previousUserAssetRoot);
                 Environment.SetEnvironmentVariable("BEATSIGHT_SKIP_CURSOR_NORMALISATION", previousCursorNormalisationSkip);
+                restoreEnvironmentValues(previousInputSuppressionEnv);
                 if (!string.IsNullOrWhiteSpace(visualUserAssetRoot))
                 {
                     try
@@ -222,6 +247,108 @@ namespace BeatSight.Tests.VisualRegression
                     }
                 }
             }
+        }
+
+        private static Dictionary<string, string?> captureEnvironmentValues(IEnumerable<string> keys)
+        {
+            var snapshot = new Dictionary<string, string?>(StringComparer.Ordinal);
+            foreach (string key in keys)
+                snapshot[key] = Environment.GetEnvironmentVariable(key);
+            return snapshot;
+        }
+
+        private static void restoreEnvironmentValues(Dictionary<string, string?>? snapshot)
+        {
+            if (snapshot == null)
+                return;
+
+            foreach (var entry in snapshot)
+                Environment.SetEnvironmentVariable(entry.Key, entry.Value);
+        }
+
+        private static void applyInputSubsystemHints()
+        {
+            foreach (string key in inputSuppressionEnvKeys)
+                Environment.SetEnvironmentVariable(key, "0");
+        }
+
+        private static void preseedSuppressedInputHandlersConfig()
+        {
+            try
+            {
+                string configPath = Path.Combine(AppContext.BaseDirectory, "framework.ini");
+                var lines = File.Exists(configPath)
+                    ? File.ReadAllLines(configPath).ToList()
+                    : new List<string>();
+
+                if (!ensureIgnoredInputHandlers(lines))
+                    return;
+
+                File.WriteAllLines(configPath, lines, Encoding.UTF8);
+            }
+            catch
+            {
+                // Best effort only; capture path already has retry and teardown handling.
+            }
+        }
+
+        private static bool ensureIgnoredInputHandlers(List<string> lines)
+        {
+            const string key = "IgnoredInputHandlers";
+            string prefix = key + " =";
+
+            for (int i = 0; i < lines.Count; i++)
+            {
+                if (!lines[i].StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                string currentValue = extractConfigValue(lines[i]);
+                var merged = mergeInputHandlerNames(currentValue);
+                string updated = $"{key} = {string.Join(" ", merged)}";
+
+                if (string.Equals(lines[i].Trim(), updated, StringComparison.OrdinalIgnoreCase))
+                    return false;
+
+                lines[i] = updated;
+                return true;
+            }
+
+            lines.Add($"{key} = {suppressedInputHandlersCsv}");
+            return true;
+        }
+
+        private static string[] mergeInputHandlerNames(string value)
+        {
+            var merged = new List<string>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var handler in splitInputHandlerNames(value))
+            {
+                if (seen.Add(handler))
+                    merged.Add(handler);
+            }
+
+            foreach (var handler in splitInputHandlerNames(suppressedInputHandlersCsv))
+            {
+                if (seen.Add(handler))
+                    merged.Add(handler);
+            }
+
+            return merged.ToArray();
+        }
+
+        private static IEnumerable<string> splitInputHandlerNames(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return Array.Empty<string>();
+
+            return value.Split(inputHandlerSeparators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        }
+
+        private static string extractConfigValue(string line)
+        {
+            int index = line.IndexOf('=');
+            return index >= 0 ? line[(index + 1)..].Trim() : string.Empty;
         }
 
         private static string prepareDeterministicUserAssetRoot(VisualScene scene)

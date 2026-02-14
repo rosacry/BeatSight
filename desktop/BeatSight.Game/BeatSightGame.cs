@@ -1197,9 +1197,7 @@ namespace BeatSight.Game
                 Environment.GetEnvironmentVariable("BEATSIGHT_FORCE_CURSOR_NORMALISATION"),
                 "1",
                 StringComparison.OrdinalIgnoreCase);
-
-            if (isCursorNormalisationDisabled())
-                return;
+            bool skipCursorNormalisation = isCursorNormalisationDisabled();
 
             try
             {
@@ -1212,11 +1210,18 @@ namespace BeatSight.Game
                     lines.Add(line);
 
                 bool changed = false;
-                changed |= upsertConfigValue(lines, "WindowMode", "Windowed", overwriteExisting: forceCursorNormalisation);
-                changed |= upsertConfigValue(lines, "Fullscreen", "False", overwriteExisting: forceCursorNormalisation);
-                changed |= upsertConfigValue(lines, "ConfineMouseMode", "Fullscreen", overwriteExisting: forceCursorNormalisation);
-                changed |= upsertConfigValue(lines, "MapAbsoluteInputToWindow", "False", overwriteExisting: forceCursorNormalisation);
+
+                // Keep optional input handlers suppressed even when cursor/window normalisation is skipped
+                // (for example in visual regression hosts) to avoid HID churn on startup.
                 changed |= upsertConfigValue(lines, "IgnoredInputHandlers", suppressedInputHandlersCsv, overwriteExisting: true);
+
+                if (!skipCursorNormalisation)
+                {
+                    changed |= upsertConfigValue(lines, "WindowMode", "Windowed", overwriteExisting: forceCursorNormalisation);
+                    changed |= upsertConfigValue(lines, "Fullscreen", "False", overwriteExisting: forceCursorNormalisation);
+                    changed |= upsertConfigValue(lines, "ConfineMouseMode", "Fullscreen", overwriteExisting: forceCursorNormalisation);
+                    changed |= upsertConfigValue(lines, "MapAbsoluteInputToWindow", "False", overwriteExisting: forceCursorNormalisation);
+                }
 
                 if (changed)
                 {

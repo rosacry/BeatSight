@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BeatSight.Game;
@@ -49,7 +51,7 @@ namespace BeatSight.Desktop
         private const uint OPEN_EXISTING = 3;
         private static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
         private static readonly string[] suppressedInputHandlerNames = { "OpenTabletDriverHandler", "PenHandler", "JoystickHandler", "TouchHandler" };
-        private static readonly char[] inputHandlerSeparators = { ',', ';' };
+        private static readonly char[] inputHandlerSeparators = { ',', ';', ' ' };
 
         private static TextWriter? attachedStdOutWriter;
         private static TextWriter? attachedStdErrWriter;
@@ -70,6 +72,7 @@ namespace BeatSight.Desktop
             if (suppressTabletInputHandlers)
             {
                 preseedSuppressedInputHandlersConfig();
+                preseedSuppressedInputHandlersProfile();
                 applyInputSubsystemHints();
             }
 
@@ -442,12 +445,34 @@ namespace BeatSight.Desktop
 
             setEnvIfMissing("SDL_JOYSTICK_HIDAPI", "0");
             setEnvIfMissing("SDL_JOYSTICK_RAWINPUT", "0");
+            setEnvIfMissing("SDL_JOYSTICK_WGI", "0");
+            setEnvIfMissing("SDL_DIRECTINPUT_ENABLED", "0");
             setEnvIfMissing("SDL_XINPUT_ENABLED", "0");
+            setEnvIfMissing("SDL_AUTO_UPDATE_JOYSTICKS", "0");
 
             // Keep hint-name variants for SDL builds that resolve hints from env directly.
             setEnvIfMissing("SDL_HINT_JOYSTICK_HIDAPI", "0");
             setEnvIfMissing("SDL_HINT_JOYSTICK_RAWINPUT", "0");
+            setEnvIfMissing("SDL_HINT_JOYSTICK_WGI", "0");
+            setEnvIfMissing("SDL_HINT_DIRECTINPUT_ENABLED", "0");
             setEnvIfMissing("SDL_HINT_XINPUT_ENABLED", "0");
+            setEnvIfMissing("SDL_HINT_AUTO_UPDATE_JOYSTICKS", "0");
+
+            string? configuredIgnoredDevices = Environment.GetEnvironmentVariable("BEATSIGHT_SDL_IGNORE_USB_DEVICES");
+            if (!string.Equals(configuredIgnoredDevices, "off", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(configuredIgnoredDevices, "none", StringComparison.OrdinalIgnoreCase))
+            {
+                string ignoredDevices = string.IsNullOrWhiteSpace(configuredIgnoredDevices)
+                    ? "0x26CE/0x01A2"
+                    : configuredIgnoredDevices.Trim();
+
+                setEnvIfMissing("SDL_JOYSTICK_BLACKLIST_DEVICES", ignoredDevices);
+                setEnvIfMissing("SDL_GAMECONTROLLER_IGNORE_DEVICES", ignoredDevices);
+                setEnvIfMissing("SDL_HIDAPI_IGNORE_DEVICES", ignoredDevices);
+                setEnvIfMissing("SDL_HINT_JOYSTICK_BLACKLIST_DEVICES", ignoredDevices);
+                setEnvIfMissing("SDL_HINT_GAMECONTROLLER_IGNORE_DEVICES", ignoredDevices);
+                setEnvIfMissing("SDL_HINT_HIDAPI_IGNORE_DEVICES", ignoredDevices);
+            }
         }
 
         private static void setEnvIfMissing(string key, string value)
@@ -495,7 +520,7 @@ namespace BeatSight.Desktop
 
                 string currentValue = extractConfigValue(lines[i]);
                 var merged = mergeInputHandlerNames(currentValue);
-                string updated = $"{key} = {string.Join(",", merged)}";
+                string updated = $"{key} = {string.Join(" ", merged)}";
 
                 if (string.Equals(lines[i].Trim(), updated, StringComparison.OrdinalIgnoreCase))
                     return false;
@@ -504,19 +529,92 @@ namespace BeatSight.Desktop
                 return true;
             }
 
-            lines.Add($"{key} = {string.Join(",", suppressedInputHandlerNames)}");
+            lines.Add($"{key} = {string.Join(" ", suppressedInputHandlerNames)}");
             return true;
+        }
+
+        private static void preseedSuppressedInputHandlersProfile()
+        {
+            try
+            {
+                string appDataRoot = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                if (string.IsNullOrWhiteSpace(appDataRoot))
+                    return;
+
+                string inputConfigPath = Path.Combine(appDataRoot, "BeatSight", "input.json");
+                if (!File.Exists(inputConfigPath))
+                    return;
+
+                JsonNode? rootNode = JsonNode.Parse(File.ReadAllText(inputConfigPath));
+                if (rootNode is not JsonObject rootObject)
+                    return;
+
+                if (rootObject["InputHandlers"] is not JsonArray handlers)
+                    return;
+
+                bool changed = false;
+
+                foreach (JsonNode? handlerNode in handlers)
+                {
+                    if (handlerNode is not JsonObject handlerObject)
+                        continue;
+
+                    string? typeName = handlerObject["$type"]?.GetValue<string>();
+                    if (!shouldSuppressInputHandler(typeName))
+                        continue;
+
+                    bool isEnabled = true;
+                    if (handlerObject["Enabled"] is JsonValue enabledValue && enabledValue.TryGetValue<bool>(out bool parsedEnabled))
+                        isEnabled = parsedEnabled;
+
+                    if (!isEnabled)
+                        continue;
+
+                    handlerObject["Enabled"] = false;
+                    changed = true;
+                }
+
+                if (!changed)
+                    return;
+
+                File.WriteAllText(inputConfigPath, rootObject.ToJsonString(new JsonSerializerOptions { WriteIndented = false }));
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Failed to preseed input profile suppression: {ex.Message}", LoggingTarget.Runtime, LogLevel.Debug);
+            }
+        }
+
+        private static bool shouldSuppressInputHandler(string? typeName)
+        {
+            if (string.IsNullOrWhiteSpace(typeName))
+                return false;
+
+            foreach (string suppressedName in suppressedInputHandlerNames)
+            {
+                if (typeName.Contains(suppressedName, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
         }
 
         private static string[] mergeInputHandlerNames(string value)
         {
-            var merged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var merged = new List<string>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var handler in splitInputHandlerNames(value))
-                merged.Add(handler);
+            {
+                if (seen.Add(handler))
+                    merged.Add(handler);
+            }
 
             foreach (string handler in suppressedInputHandlerNames)
-                merged.Add(handler);
+            {
+                if (seen.Add(handler))
+                    merged.Add(handler);
+            }
 
             return merged.ToArray();
         }

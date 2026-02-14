@@ -22,6 +22,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+$helperScriptPath = Join-Path $PSScriptRoot "visual_regression_rollup_helpers.ps1"
+if (-not (Test-Path $helperScriptPath)) {
+    throw "Missing helper script: $helperScriptPath"
+}
+. $helperScriptPath
+
 function Resolve-ProjectPath {
     param(
         [string]$ProjectPath
@@ -145,6 +151,8 @@ function Invoke-VisualBatch {
             Scenes = $Scenes
             StartupSeconds = $null
             TotalSeconds = 0.0
+            TrxDurationSeconds = $null
+            TrxPath = $null
             Passed = 0
             Total = 0
         }
@@ -201,7 +209,11 @@ function Invoke-VisualBatch {
     $total = [int]$counters.total
     $passed = [int]$counters.passed
     $failed = [int]$counters.failed
+    $trxDurationSeconds = Get-VisualTrxDurationSeconds -TrxPath $trxPath
     Write-Host "[visual-gate] trx outcome: $outcome ($passed/$total passed, $failed failed)"
+    if ($null -ne $trxDurationSeconds) {
+        Write-Host "[visual-gate] trx duration: $trxDurationSeconds s"
+    }
 
     if ($failed -gt 0 -or ($outcome -ne "Passed" -and $outcome -ne "Completed")) {
         throw "Visual batch failed by TRX outcome ($outcome, failed=$failed) for scenes: $Scenes"
@@ -216,25 +228,11 @@ function Invoke-VisualBatch {
         Scenes = $Scenes
         StartupSeconds = if ($trxSeenAtSeconds -lt 0) { $null } else { [double]$trxSeenAtSeconds }
         TotalSeconds = [double]$totalSeconds
+        TrxDurationSeconds = $trxDurationSeconds
+        TrxPath = $trxPath
         Passed = $passed
         Total = $total
     }
-}
-
-function Get-PercentileValue {
-    param(
-        [double[]]$Values,
-        [double]$Percentile
-    )
-
-    if (-not $Values -or $Values.Count -eq 0) {
-        return $null
-    }
-
-    $sorted = $Values | Sort-Object
-    $rank = [Math]::Ceiling(($Percentile / 100.0) * $sorted.Count)
-    $index = [Math]::Min([Math]::Max([int]$rank - 1, 0), $sorted.Count - 1)
-    return [double]$sorted[$index]
 }
 
 function Write-BatchTimingRollup {
@@ -246,24 +244,20 @@ function Write-BatchTimingRollup {
         return
     }
 
-    $totalDurations = @($BatchResults | ForEach-Object { [double]$_.TotalSeconds })
-    $startupDurations = @($BatchResults | Where-Object { $null -ne $_.StartupSeconds } | ForEach-Object { [double]$_.StartupSeconds })
-
-    $totalMean = [double]($totalDurations | Measure-Object -Average).Average
-    $totalP95 = Get-PercentileValue -Values $totalDurations -Percentile 95
-
-    if ($startupDurations.Count -gt 0) {
-        $startupMean = [double]($startupDurations | Measure-Object -Average).Average
-        $startupP95 = Get-PercentileValue -Values $startupDurations -Percentile 95
-        Write-Host "[visual-gate] timing rollup: batches=$($BatchResults.Count), startup_mean=$([Math]::Round($startupMean, 1))s, startup_p95=$([Math]::Round($startupP95, 1))s, total_mean=$([Math]::Round($totalMean, 1))s, total_p95=$([Math]::Round($totalP95, 1))s"
-    }
-    else {
-        Write-Host "[visual-gate] timing rollup: batches=$($BatchResults.Count), startup_mean=n/a, startup_p95=n/a, total_mean=$([Math]::Round($totalMean, 1))s, total_p95=$([Math]::Round($totalP95, 1))s"
+    $rollup = Get-VisualTimingRollup -BatchResults $BatchResults
+    if ($null -eq $rollup) {
+        return
     }
 
-    $slowest = $BatchResults | Sort-Object TotalSeconds -Descending | Select-Object -First 1
-    if ($null -ne $slowest) {
-        Write-Host "[visual-gate] slowest batch: '$($slowest.Scenes)' at $([Math]::Round([double]$slowest.TotalSeconds, 1))s"
+    $startupMean = if ($null -eq $rollup.StartupMeanSeconds) { "n/a" } else { "$([Math]::Round([double]$rollup.StartupMeanSeconds, 1))s" }
+    $startupP95 = if ($null -eq $rollup.StartupP95Seconds) { "n/a" } else { "$([Math]::Round([double]$rollup.StartupP95Seconds, 1))s" }
+    $trxMean = if ($null -eq $rollup.TrxMeanSeconds) { "n/a" } else { "$([Math]::Round([double]$rollup.TrxMeanSeconds, 1))s" }
+    $trxP95 = if ($null -eq $rollup.TrxP95Seconds) { "n/a" } else { "$([Math]::Round([double]$rollup.TrxP95Seconds, 1))s" }
+
+    Write-Host "[visual-gate] timing rollup: batches=$($rollup.BatchCount), startup_mean=$startupMean, startup_p95=$startupP95, total_mean=$([Math]::Round([double]$rollup.TotalMeanSeconds, 1))s, total_p95=$([Math]::Round([double]$rollup.TotalP95Seconds, 1))s, trx_mean=$trxMean, trx_p95=$trxP95"
+
+    if (-not [string]::IsNullOrWhiteSpace([string]$rollup.SlowestBatchScenes) -and $null -ne $rollup.SlowestBatchTotalSeconds) {
+        Write-Host "[visual-gate] slowest batch: '$($rollup.SlowestBatchScenes)' at $([Math]::Round([double]$rollup.SlowestBatchTotalSeconds, 1))s"
     }
 }
 

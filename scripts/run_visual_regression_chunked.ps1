@@ -237,16 +237,18 @@ function Invoke-VisualBatch {
 
 function Write-BatchTimingRollup {
     param(
-        [object[]]$BatchResults
+        [object[]]$BatchResults,
+        [string]$ResultsDirectory,
+        [object]$RunMetadata = $null
     )
 
     if (-not $BatchResults -or $BatchResults.Count -eq 0) {
-        return
+        return $null
     }
 
     $rollup = Get-VisualTimingRollup -BatchResults $BatchResults
     if ($null -eq $rollup) {
-        return
+        return $null
     }
 
     $startupMean = if ($null -eq $rollup.StartupMeanSeconds) { "n/a" } else { "$([Math]::Round([double]$rollup.StartupMeanSeconds, 1))s" }
@@ -263,6 +265,27 @@ function Write-BatchTimingRollup {
     if (-not [string]::IsNullOrWhiteSpace([string]$rollup.SlowestBatchScenes) -and $null -ne $rollup.SlowestBatchTotalSeconds) {
         Write-Host "[visual-gate] slowest batch: '$($rollup.SlowestBatchScenes)' at $([Math]::Round([double]$rollup.SlowestBatchTotalSeconds, 1))s"
     }
+
+    if (-not [string]::IsNullOrWhiteSpace($ResultsDirectory)) {
+        $resolvedResultsDirectory = if ([System.IO.Path]::IsPathRooted($ResultsDirectory)) {
+            $ResultsDirectory
+        }
+        else {
+            Join-Path (Get-Location).Path $ResultsDirectory
+        }
+
+        $artifactPath = Save-VisualTimingRollupArtifact `
+            -ResultsDirectory $resolvedResultsDirectory `
+            -BatchResults $BatchResults `
+            -Rollup $rollup `
+            -RunMetadata $RunMetadata
+
+        if (-not [string]::IsNullOrWhiteSpace([string]$artifactPath)) {
+            Write-Host "[visual-gate] timing artifact: $artifactPath"
+        }
+    }
+
+    return $rollup
 }
 
 try {
@@ -298,7 +321,21 @@ try {
         }
     }
 
-    Write-BatchTimingRollup -BatchResults $batchResults
+    $runMetadata = [pscustomobject]@{
+        ProjectPath = $resolvedProjectPath
+        Configuration = $Configuration
+        Resolutions = $Resolutions
+        SceneBatches = @($SceneBatches)
+        BatchTimeoutSeconds = $BatchTimeoutSeconds
+        HeartbeatSeconds = $HeartbeatSeconds
+        DryRun = [bool]$DryRun
+        RunFullDesktopSuite = [bool]$RunFullDesktopSuite
+    }
+
+    Write-BatchTimingRollup `
+        -BatchResults $batchResults `
+        -ResultsDirectory $ResultsDirectory `
+        -RunMetadata $runMetadata | Out-Null
 
     if ($RunFullDesktopSuite) {
         Write-Host ""

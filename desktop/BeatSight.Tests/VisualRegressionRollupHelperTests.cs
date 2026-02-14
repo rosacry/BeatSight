@@ -169,6 +169,73 @@ public class VisualRegressionRollupHelperTests
         Assert.InRange(root.GetProperty("TrxP95Seconds").GetDouble(), 18.99, 19.01);
     }
 
+    [Fact]
+    public void RollupHelperWritesTimingArtifactJson()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        string repoRoot = TestPathResolver.ResolveRepositoryRoot();
+        string helperPath = Path.Combine(repoRoot, "scripts", "visual_regression_rollup_helpers.ps1");
+        Assert.True(File.Exists(helperPath), $"Expected helper script missing: {helperPath}");
+
+        string tempRoot = Path.Combine(Path.GetTempPath(), "BeatSight.RollupHelperTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempRoot);
+
+        try
+        {
+            string payload = runHelperAndGetJson(
+                helperPath,
+                $$"""
+                $results = @(
+                  [pscustomobject]@{ Scenes='Settings'; StartupSeconds=1.2; TotalSeconds=12.3; TrxDurationSeconds=10.9; TrxPath='settings.trx'; Passed=1; Total=1 },
+                  [pscustomobject]@{ Scenes='Editor'; StartupSeconds=2.5; TotalSeconds=22.2; TrxDurationSeconds=20.1; TrxPath='editor.trx'; Passed=1; Total=1 }
+                )
+                $rollup = Get-VisualTimingRollup -BatchResults $results
+                $metadata = [pscustomobject]@{ Profile='smoke'; BatchCount=2; DryRun=$false }
+                $path = Save-VisualTimingRollupArtifact -ResultsDirectory '{{toSingleQuotedLiteral(tempRoot)}}' -BatchResults $results -Rollup $rollup -RunMetadata $metadata
+                [pscustomobject]@{
+                  path = $path
+                  exists = (Test-Path $path)
+                }
+                """);
+
+            using JsonDocument result = JsonDocument.Parse(payload);
+            JsonElement resultRoot = result.RootElement;
+
+            Assert.True(resultRoot.GetProperty("exists").GetBoolean());
+
+            string? artifactPath = resultRoot.GetProperty("path").GetString();
+            Assert.False(string.IsNullOrWhiteSpace(artifactPath));
+            Assert.True(File.Exists(artifactPath), $"Expected artifact file missing: {artifactPath}");
+            Assert.StartsWith("visual_rollup_", Path.GetFileName(artifactPath), StringComparison.OrdinalIgnoreCase);
+
+            using JsonDocument artifact = JsonDocument.Parse(File.ReadAllText(artifactPath));
+            JsonElement artifactRoot = artifact.RootElement;
+
+            Assert.False(string.IsNullOrWhiteSpace(artifactRoot.GetProperty("GeneratedAtUtc").GetString()));
+            Assert.Equal("smoke", artifactRoot.GetProperty("Metadata").GetProperty("Profile").GetString());
+            Assert.Equal(2, artifactRoot.GetProperty("Rollup").GetProperty("BatchCount").GetInt32());
+            Assert.Equal("Editor", artifactRoot.GetProperty("Rollup").GetProperty("SlowestBatchScenes").GetString());
+
+            JsonElement batches = artifactRoot.GetProperty("Batches");
+            Assert.Equal(2, batches.GetArrayLength());
+            Assert.Equal("Settings", batches[0].GetProperty("Scenes").GetString());
+            Assert.Equal("Editor", batches[1].GetProperty("Scenes").GetString());
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+            catch
+            {
+                // Best effort cleanup.
+            }
+        }
+    }
+
     private static string runHelperAndGetJson(string helperPath, string scriptBody)
     {
         string command = "$ErrorActionPreference='Stop'; . '" +

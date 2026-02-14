@@ -91,3 +91,34 @@ function Get-VisualTimingRollup {
         SlowestBatchTotalSeconds = if ($null -eq $slowest) { $null } else { [double]$slowest.TotalSeconds }
     }
 }
+
+function Save-VisualTimingRollupArtifact {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ResultsDirectory,
+        [Parameter(Mandatory = $true)]
+        [object[]]$BatchResults,
+        [Parameter(Mandatory = $true)]
+        [object]$Rollup,
+        [object]$RunMetadata = $null
+    )
+
+    if ([string]::IsNullOrWhiteSpace($ResultsDirectory)) {
+        return $null
+    }
+
+    New-Item -ItemType Directory -Path $ResultsDirectory -Force | Out-Null
+
+    $artifactFileName = "visual_rollup_$(Get-Date -Format 'yyyyMMdd_HHmmss_fff').json"
+    $artifactPath = Join-Path $ResultsDirectory $artifactFileName
+
+    $payload = [pscustomobject]@{
+        GeneratedAtUtc = [DateTimeOffset]::UtcNow.ToString("o")
+        Metadata = $RunMetadata
+        Rollup = $Rollup
+        Batches = $BatchResults
+    }
+
+    $payload | ConvertTo-Json -Depth 8 | Set-Content -Path $artifactPath -Encoding UTF8
+    return $artifactPath
+}

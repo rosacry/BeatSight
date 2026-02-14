@@ -256,6 +256,10 @@ function Write-BatchTimingRollup {
 
     Write-Host "[visual-gate] timing rollup: batches=$($rollup.BatchCount), startup_mean=$startupMean, startup_p95=$startupP95, total_mean=$([Math]::Round([double]$rollup.TotalMeanSeconds, 1))s, total_p95=$([Math]::Round([double]$rollup.TotalP95Seconds, 1))s, trx_mean=$trxMean, trx_p95=$trxP95"
 
+    if ([int]$rollup.TrxDurationMissingCount -gt 0) {
+        Write-Host "[visual-gate][warn] trx duration unavailable for $($rollup.TrxDurationMissingCount)/$($rollup.BatchCount) batches; trx rollup uses available samples only."
+    }
+
     if (-not [string]::IsNullOrWhiteSpace([string]$rollup.SlowestBatchScenes) -and $null -ne $rollup.SlowestBatchTotalSeconds) {
         Write-Host "[visual-gate] slowest batch: '$($rollup.SlowestBatchScenes)' at $([Math]::Round([double]$rollup.SlowestBatchTotalSeconds, 1))s"
     }

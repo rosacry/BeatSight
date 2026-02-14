@@ -86,11 +86,15 @@ powershell -ExecutionPolicy Bypass -File scripts/run_visual_regression_chunked.p
 ```
 
 This helper:
+- optionally cleans up stale BeatSight testhost/dotnet test processes before run (`-SkipStaleProcessCleanup` to disable),
+- runs one upfront build by default (`-SkipInitialBuild` to disable),
 - runs the full scene catalog in chunked scene batches,
 - splits the heaviest editor/playback cluster into per-scene batches,
 - prints heartbeat logs while each batch is running,
 - applies a per-batch timeout,
 - validates each batch from generated TRX results,
+- runs each test invocation with `--no-build` after the upfront build,
+- clears visual-env filters before `-RunFullDesktopSuite` so full-suite counts are not scope-trimmed,
 - and clears visual test environment variables on exit.
 
 ## Chunked scoped runner (recommended for editor/settings work)

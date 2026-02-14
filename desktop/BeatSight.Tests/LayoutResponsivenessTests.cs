@@ -165,6 +165,19 @@ namespace BeatSight.Tests
         }
 
         [Fact]
+        public void PlaybackStageControlsIncludeThreeDProfileToggle()
+        {
+            string root = resolveRepositoryRoot();
+            string playbackPath = Path.Combine(root, "desktop", "BeatSight.Game", "Screens", "Playback", "PlaybackScreen.cs");
+            Assert.True(File.Exists(playbackPath), $"Expected file missing: {playbackPath}");
+
+            string source = File.ReadAllText(playbackPath);
+            Assert.Contains("toggleThreeDStageProfile", source);
+            Assert.Contains("3D Profile:", source);
+            Assert.Contains("FormatThreeDStageProfileLabel", source);
+        }
+
+        [Fact]
         public void SettingsScreenClearsDropdownOverlayBeforeSectionSwap()
         {
             string root = resolveRepositoryRoot();

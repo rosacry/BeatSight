@@ -110,6 +110,7 @@ namespace BeatSight.Game.Screens.Playback
         private BasicButton playPauseButton = null!;
         private BasicButton viewModeToggleButton = null!;
         private BasicButton kickLayoutToggleButton = null!;
+        private BasicButton threeDProfileToggleButton = null!;
         private BasicButton metronomeToggleButton = null!;
         private BasicButton mixToggleButton = null!;
         private BasicButton loopLowConfidenceButton = null!; // New
@@ -159,6 +160,7 @@ namespace BeatSight.Game.Screens.Playback
         private Bindable<double> speedMinSetting = null!;
         private Bindable<double> speedMaxSetting = null!;
         private Bindable<KickLaneMode> kickLaneModeSetting = null!;
+        private Bindable<ThreeDStageProfile> threeDStageProfileSetting = null!;
         private Bindable<double> audioOffsetSetting = null!;
         private Bindable<double> hitsoundOffsetSetting = null!;
         private Bindable<LanePreset> lanePresetSetting = null!;
@@ -271,6 +273,7 @@ namespace BeatSight.Game.Screens.Playback
 
             laneViewModeSetting = config.GetBindable<LaneViewMode>(BeatSightSetting.LaneViewMode);
             kickLaneModeSetting = config.GetBindable<KickLaneMode>(BeatSightSetting.KickLaneMode);
+            threeDStageProfileSetting = config.GetBindable<ThreeDStageProfile>(BeatSightSetting.ThreeDStageProfile);
 
             // Bind zoom and note width to config
             var configZoom = config.GetBindable<double>(BeatSightSetting.PlaybackZoomLevel);
@@ -425,6 +428,7 @@ namespace BeatSight.Game.Screens.Playback
             lanePresetSetting.BindValueChanged(onLanePresetChanged, true);
             laneViewModeSetting.BindValueChanged(e => updateViewModeToggle(e.NewValue), true);
             kickLaneModeSetting.BindValueChanged(e => updateKickLayoutToggle(e.NewValue), true);
+            threeDStageProfileSetting.BindValueChanged(e => updateThreeDStageProfileToggle(e.NewValue), true);
             // Ensure playback speed starts at default before clamping to configured bounds.
             speedAdjustment.Value = speedAdjustment.Default;
             playbackSpeed = speedAdjustment.Value;
@@ -562,6 +566,7 @@ namespace BeatSight.Game.Screens.Playback
             playfield.ZoomLevel.BindTo(zoomLevel);
             playfield.AutoZoom.BindTo(autoZoom);
             playfield.NoteWidthScale.BindTo(noteWidthScale);
+            playfield.StageProfile.BindTo(threeDStageProfileSetting);
 
             playfield.ResultApplied += onPlayfieldResult;
             playfield.SetLaneLayout(currentLaneLayout);
@@ -994,6 +999,9 @@ namespace BeatSight.Game.Screens.Playback
             kickLayoutToggleButton = createSidebarButton("Kick Lane: Global Line", toggleKickLayout);
             updateKickLayoutToggle(kickLaneModeSetting?.Value ?? KickLaneMode.GlobalLine);
 
+            threeDProfileToggleButton = createSidebarButton("3D Profile: GH Classic", toggleThreeDStageProfile);
+            updateThreeDStageProfileToggle(threeDStageProfileSetting?.Value ?? ThreeDStageProfile.GhClassic);
+
             return new FillFlowContainer
             {
                 RelativeSizeAxes = Axes.X,
@@ -1003,7 +1011,8 @@ namespace BeatSight.Game.Screens.Playback
                 Children = new Drawable[]
                 {
                     viewModeToggleButton,
-                    kickLayoutToggleButton
+                    kickLayoutToggleButton,
+                    threeDProfileToggleButton
                 }
             };
         }
@@ -1277,6 +1286,14 @@ namespace BeatSight.Game.Screens.Playback
                 : KickLaneMode.GlobalLine;
         }
 
+        private void toggleThreeDStageProfile()
+        {
+            if (threeDStageProfileSetting == null)
+                return;
+
+            threeDStageProfileSetting.Value = GetNextThreeDStageProfile(threeDStageProfileSetting.Value);
+        }
+
         private void updateViewModeToggle(LaneViewMode mode)
         {
             if (viewModeToggleButton == null)
@@ -1291,6 +1308,7 @@ namespace BeatSight.Game.Screens.Playback
 
             viewModeToggleButton.Text = text;
             setButtonState(viewModeToggleButton, mode != LaneViewMode.TwoDimensional);
+            updateThreeDStageProfileToggle(threeDStageProfileSetting?.Value ?? ThreeDStageProfile.GhClassic);
         }
 
         private void updateKickLayoutToggle(KickLaneMode mode)
@@ -1305,6 +1323,39 @@ namespace BeatSight.Game.Screens.Playback
 
             playfield?.SetKickLineMode(useGlobalLine);
             applyHeaderStatus();
+        }
+
+        private void updateThreeDStageProfileToggle(ThreeDStageProfile profile)
+        {
+            if (threeDProfileToggleButton == null)
+                return;
+
+            bool is3DView = laneViewModeSetting?.Value == LaneViewMode.ThreeDimensional;
+            threeDProfileToggleButton.Text = $"3D Profile: {FormatThreeDStageProfileLabel(profile)}";
+            setButtonState(threeDProfileToggleButton, is3DView);
+            threeDProfileToggleButton.Alpha = is3DView ? 1f : 0.72f;
+        }
+
+        internal static ThreeDStageProfile GetNextThreeDStageProfile(ThreeDStageProfile current)
+        {
+            return current switch
+            {
+                ThreeDStageProfile.Arcade => ThreeDStageProfile.GhClassic,
+                ThreeDStageProfile.GhClassic => ThreeDStageProfile.Tight,
+                ThreeDStageProfile.Tight => ThreeDStageProfile.Arcade,
+                _ => ThreeDStageProfile.GhClassic
+            };
+        }
+
+        internal static string FormatThreeDStageProfileLabel(ThreeDStageProfile profile)
+        {
+            return profile switch
+            {
+                ThreeDStageProfile.Arcade => "Arcade",
+                ThreeDStageProfile.GhClassic => "GH Classic",
+                ThreeDStageProfile.Tight => "Tight",
+                _ => "GH Classic"
+            };
         }
 
         private void setStatusMessage(string message)

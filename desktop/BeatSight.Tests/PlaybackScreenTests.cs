@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
+using BeatSight.Game.Screens.Playback;
 using osu.Framework.Bindables;
 
 namespace BeatSight.Tests;
@@ -57,6 +58,30 @@ public class PlaybackScreenTests
 
         Assert.True(eventFired);
         Assert.Equal(LaneViewMode.ThreeDimensional, newValue);
+    }
+
+    [Fact]
+    public void ThreeDStageProfileCyclesThroughAllProfiles()
+    {
+        var profiles = new[] { ThreeDStageProfile.Arcade, ThreeDStageProfile.GhClassic, ThreeDStageProfile.Tight };
+        var current = ThreeDStageProfile.Arcade;
+
+        for (int i = 0; i < profiles.Length; i++)
+        {
+            Assert.Equal(profiles[i], current);
+            current = PlaybackScreen.GetNextThreeDStageProfile(current);
+        }
+
+        Assert.Equal(ThreeDStageProfile.Arcade, current);
+    }
+
+    [Theory]
+    [InlineData(ThreeDStageProfile.Arcade, "Arcade")]
+    [InlineData(ThreeDStageProfile.GhClassic, "GH Classic")]
+    [InlineData(ThreeDStageProfile.Tight, "Tight")]
+    public void ThreeDStageProfileLabelsAreStable(ThreeDStageProfile profile, string expectedLabel)
+    {
+        Assert.Equal(expectedLabel, PlaybackScreen.FormatThreeDStageProfileLabel(profile));
     }
 
     #endregion

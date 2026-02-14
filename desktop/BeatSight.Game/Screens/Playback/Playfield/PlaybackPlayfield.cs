@@ -74,22 +74,136 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             public const float TwoDimensional = 5f;
         }
 
-        /// <summary>Shared 3D playfield geometry tuning for playback and editor preview.</summary>
-        private static class ThreeDimensionalTuning
+        private readonly struct ThreeDProfileTuning
         {
-            public const float VanishingPointYRatio = 0.095f;
-            public const float HighwayBottomWidthRatio = 0.82f;
-            public const float HighwayTopWidthRatio = 0.09f;
-            public const float ProgressMin = 0.0f;
-            public const float ProgressMax = 1.20f;
-            public const float LaneNoteWidthAtTop = 0.28f;
-            public const float LaneNoteWidthAtBottom = 0.70f;
-            public const float MinNoteWidth = 16f;
-            public const float MaxNoteWidth = 122f;
-            public const float MinNoteHeight = 9f;
-            public const float MaxNoteHeight = 30f;
-            public const float KickWidthAtTop = 0.095f;
-            public const float KickWidthAtBottom = 0.34f;
+            public ThreeDProfileTuning(
+                float vanishingPointYRatio,
+                float highwayBottomWidthRatio,
+                float highwayTopWidthRatio,
+                float progressMax,
+                float laneNoteWidthAtTop,
+                float laneNoteWidthAtBottom,
+                float minNoteWidth,
+                float maxNoteWidth,
+                float minNoteHeight,
+                float maxNoteHeight,
+                float kickWidthAtTop,
+                float kickWidthAtBottom,
+                float perspectiveExponent,
+                float widthExponent,
+                float yExponent,
+                float noteHeightRatioAtTop,
+                float noteHeightRatioAtBottom,
+                float rotationStrength)
+            {
+                VanishingPointYRatio = vanishingPointYRatio;
+                HighwayBottomWidthRatio = highwayBottomWidthRatio;
+                HighwayTopWidthRatio = highwayTopWidthRatio;
+                ProgressMax = progressMax;
+                LaneNoteWidthAtTop = laneNoteWidthAtTop;
+                LaneNoteWidthAtBottom = laneNoteWidthAtBottom;
+                MinNoteWidth = minNoteWidth;
+                MaxNoteWidth = maxNoteWidth;
+                MinNoteHeight = minNoteHeight;
+                MaxNoteHeight = maxNoteHeight;
+                KickWidthAtTop = kickWidthAtTop;
+                KickWidthAtBottom = kickWidthAtBottom;
+                PerspectiveExponent = perspectiveExponent;
+                WidthExponent = widthExponent;
+                YExponent = yExponent;
+                NoteHeightRatioAtTop = noteHeightRatioAtTop;
+                NoteHeightRatioAtBottom = noteHeightRatioAtBottom;
+                RotationStrength = rotationStrength;
+            }
+
+            public float VanishingPointYRatio { get; }
+            public float HighwayBottomWidthRatio { get; }
+            public float HighwayTopWidthRatio { get; }
+            public float ProgressMax { get; }
+            public float LaneNoteWidthAtTop { get; }
+            public float LaneNoteWidthAtBottom { get; }
+            public float MinNoteWidth { get; }
+            public float MaxNoteWidth { get; }
+            public float MinNoteHeight { get; }
+            public float MaxNoteHeight { get; }
+            public float KickWidthAtTop { get; }
+            public float KickWidthAtBottom { get; }
+            public float PerspectiveExponent { get; }
+            public float WidthExponent { get; }
+            public float YExponent { get; }
+            public float NoteHeightRatioAtTop { get; }
+            public float NoteHeightRatioAtBottom { get; }
+            public float RotationStrength { get; }
+        }
+
+        private static ThreeDProfileTuning resolveThreeDProfileTuning(ThreeDStageProfile profile)
+        {
+            return profile switch
+            {
+                ThreeDStageProfile.Arcade => new ThreeDProfileTuning(
+                    vanishingPointYRatio: 0.120f,
+                    highwayBottomWidthRatio: 0.76f,
+                    highwayTopWidthRatio: 0.14f,
+                    progressMax: 1.08f,
+                    laneNoteWidthAtTop: 0.26f,
+                    laneNoteWidthAtBottom: 0.62f,
+                    minNoteWidth: 15f,
+                    maxNoteWidth: 112f,
+                    minNoteHeight: 8f,
+                    maxNoteHeight: 28f,
+                    kickWidthAtTop: 0.090f,
+                    kickWidthAtBottom: 0.31f,
+                    perspectiveExponent: 1.86f,
+                    widthExponent: 1.24f,
+                    yExponent: 1.15f,
+                    noteHeightRatioAtTop: 0.34f,
+                    noteHeightRatioAtBottom: 0.23f,
+                    rotationStrength: 12f),
+                ThreeDStageProfile.Tight => new ThreeDProfileTuning(
+                    vanishingPointYRatio: 0.080f,
+                    highwayBottomWidthRatio: 0.86f,
+                    highwayTopWidthRatio: 0.07f,
+                    progressMax: 1.30f,
+                    laneNoteWidthAtTop: 0.31f,
+                    laneNoteWidthAtBottom: 0.75f,
+                    minNoteWidth: 17f,
+                    maxNoteWidth: 128f,
+                    minNoteHeight: 9f,
+                    maxNoteHeight: 32f,
+                    kickWidthAtTop: 0.10f,
+                    kickWidthAtBottom: 0.36f,
+                    perspectiveExponent: 2.28f,
+                    widthExponent: 1.52f,
+                    yExponent: 1.30f,
+                    noteHeightRatioAtTop: 0.37f,
+                    noteHeightRatioAtBottom: 0.26f,
+                    rotationStrength: 15.5f),
+                _ => new ThreeDProfileTuning(
+                    vanishingPointYRatio: 0.095f,
+                    highwayBottomWidthRatio: 0.82f,
+                    highwayTopWidthRatio: 0.09f,
+                    progressMax: 1.20f,
+                    laneNoteWidthAtTop: 0.28f,
+                    laneNoteWidthAtBottom: 0.70f,
+                    minNoteWidth: 16f,
+                    maxNoteWidth: 122f,
+                    minNoteHeight: 9f,
+                    maxNoteHeight: 30f,
+                    kickWidthAtTop: 0.095f,
+                    kickWidthAtBottom: 0.34f,
+                    perspectiveExponent: 2.12f,
+                    widthExponent: 1.42f,
+                    yExponent: 1.24f,
+                    noteHeightRatioAtTop: 0.36f,
+                    noteHeightRatioAtBottom: 0.25f,
+                    rotationStrength: 14f)
+            };
+        }
+
+        internal static (float VanishingPointYRatio, float HighwayBottomWidthRatio, float HighwayTopWidthRatio, float PerspectiveExponent) GetThreeDProfileTuningSnapshot(ThreeDStageProfile profile)
+        {
+            ThreeDProfileTuning tuning = resolveThreeDProfileTuning(profile);
+            return (tuning.VanishingPointYRatio, tuning.HighwayBottomWidthRatio, tuning.HighwayTopWidthRatio, tuning.PerspectiveExponent);
         }
 
         private static class SheetMusicTuning
@@ -154,6 +268,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         public readonly Bindable<double> ZoomLevel = new Bindable<double>(1.0);
         public readonly Bindable<bool> AutoZoom = new Bindable<bool>(true);
         public readonly Bindable<double> NoteWidthScale = new Bindable<double>(1.0);
+        public readonly Bindable<ThreeDStageProfile> StageProfile = new Bindable<ThreeDStageProfile>(ThreeDStageProfile.GhClassic);
 
         public event Action<HitResult, double, Color4, string>? ResultApplied;
 
@@ -172,6 +287,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private const double TripleBeamThresholdBeats = 0.19;
         private static readonly Color4 manuscriptBeamColor = new Color4(42, 50, 66, 255);
         private static readonly Color4 manuscriptRestColor = new Color4(210, 220, 236, 255);
+        private ThreeDProfileTuning currentThreeDProfileTuning = resolveThreeDProfileTuning(ThreeDStageProfile.GhClassic);
 
         private readonly List<DrawableManuscriptRest> manuscriptRestPool = new();
 
@@ -231,6 +347,14 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         public PlaybackPlayfield(Func<double> currentTimeProvider)
         {
             this.currentTimeProvider = currentTimeProvider;
+
+            StageProfile.BindValueChanged(e =>
+            {
+                currentThreeDProfileTuning = resolveThreeDProfileTuning(e.NewValue);
+                threeDHighwayBackground?.SetProfile(e.NewValue);
+                if (currentLaneViewMode == LaneViewMode.ThreeDimensional)
+                    layoutDirty = true;
+            }, true);
 
             RelativeSizeAxes = Axes.Both;
             Masking = true;
@@ -1491,45 +1615,45 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         {
             note.Anchor = Anchor.TopLeft;
             note.RelativePositionAxes = Axes.None;
-            float clampedProgress = Math.Clamp(progress, ThreeDimensionalTuning.ProgressMin, ThreeDimensionalTuning.ProgressMax);
-            float normalizedProgress = (clampedProgress - ThreeDimensionalTuning.ProgressMin)
-                                       / (ThreeDimensionalTuning.ProgressMax - ThreeDimensionalTuning.ProgressMin);
+            var tuning = currentThreeDProfileTuning;
+            float clampedProgress = Math.Clamp(progress, 0f, tuning.ProgressMax);
+            float normalizedProgress = clampedProgress / Math.Max(0.001f, tuning.ProgressMax);
             normalizedProgress = Math.Clamp(normalizedProgress, 0f, 1f);
             // Stronger easing exaggerates stage depth so 3D does not collapse into a flat 2D look.
-            float perspectiveProgress = 1f - MathF.Pow(1f - normalizedProgress, 2.12f);
+            float perspectiveProgress = 1f - MathF.Pow(1f - normalizedProgress, tuning.PerspectiveExponent);
 
-            float vanishingPointY = drawHeight * ThreeDimensionalTuning.VanishingPointYRatio;
-            float highwayWidthAtBottom = drawWidth * ThreeDimensionalTuning.HighwayBottomWidthRatio;
-            float highwayWidthAtTop = drawWidth * ThreeDimensionalTuning.HighwayTopWidthRatio;
+            float vanishingPointY = drawHeight * tuning.VanishingPointYRatio;
+            float highwayWidthAtBottom = drawWidth * tuning.HighwayBottomWidthRatio;
+            float highwayWidthAtTop = drawWidth * tuning.HighwayTopWidthRatio;
 
             int activeLaneCount = cachedActiveLaneCount;
-            float widthProgress = MathF.Pow(perspectiveProgress, 1.42f);
+            float widthProgress = MathF.Pow(perspectiveProgress, tuning.WidthExponent);
             float currentHighwayWidth = lerp(highwayWidthAtTop, highwayWidthAtBottom, widthProgress);
             float currentLaneWidth = currentHighwayWidth / activeLaneCount;
-            float y = lerp(vanishingPointY, hitLineY, MathF.Pow(perspectiveProgress, 1.24f));
+            float y = lerp(vanishingPointY, hitLineY, MathF.Pow(perspectiveProgress, tuning.YExponent));
             float noteScaleSetting = (float)Math.Clamp(NoteWidthScale.Value, 0.65, 1.75);
             float laneNoteWidthFactor = lerp(
-                ThreeDimensionalTuning.LaneNoteWidthAtTop,
-                ThreeDimensionalTuning.LaneNoteWidthAtBottom,
+                tuning.LaneNoteWidthAtTop,
+                tuning.LaneNoteWidthAtBottom,
                 perspectiveProgress);
             float noteWidth = Math.Clamp(
                 currentLaneWidth * laneNoteWidthFactor * noteScaleSetting,
-                ThreeDimensionalTuning.MinNoteWidth,
-                ThreeDimensionalTuning.MaxNoteWidth);
+                tuning.MinNoteWidth,
+                tuning.MaxNoteWidth);
             float noteHeight = Math.Clamp(
-                noteWidth * lerp(0.36f, 0.25f, perspectiveProgress),
-                ThreeDimensionalTuning.MinNoteHeight,
-                ThreeDimensionalTuning.MaxNoteHeight);
+                noteWidth * lerp(tuning.NoteHeightRatioAtTop, tuning.NoteHeightRatioAtBottom, perspectiveProgress),
+                tuning.MinNoteHeight,
+                tuning.MaxNoteHeight);
 
             bool isGlobalKickVisual = kickUsesGlobalLine && note.IsKick;
             float finalNoteWidth = isGlobalKickVisual
                 ? Math.Clamp(
-                    currentHighwayWidth * lerp(ThreeDimensionalTuning.KickWidthAtTop, ThreeDimensionalTuning.KickWidthAtBottom, perspectiveProgress) * noteScaleSetting,
+                    currentHighwayWidth * lerp(tuning.KickWidthAtTop, tuning.KickWidthAtBottom, perspectiveProgress) * noteScaleSetting,
                     28f,
                     152f)
                 : noteWidth;
             float finalNoteHeight = isGlobalKickVisual
-                ? Math.Clamp(noteHeight * 0.88f, ThreeDimensionalTuning.MinNoteHeight, 26f)
+                ? Math.Clamp(noteHeight * 0.88f, tuning.MinNoteHeight, 26f)
                 : noteHeight;
 
             note.Width = finalNoteWidth;
@@ -1557,7 +1681,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             note.Position = new Vector2(x, y);
             note.Scale = Vector2.One;
             float lateral = (x - drawWidth * 0.5f) / Math.Max(1f, drawWidth * 0.5f);
-            note.Rotation = -lateral * (1f - perspectiveProgress) * 14.0f;
+            note.Rotation = -lateral * (1f - perspectiveProgress) * tuning.RotationStrength;
 
             setNoteDepth(note, perspectiveProgress);
 
@@ -1775,7 +1899,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             if (currentLaneViewMode == LaneViewMode.ThreeDimensional)
             {
-                threeDHighwayBackground = new ThreeDHighwayBackground(laneLayout, kickUsesGlobalLine);
+                threeDHighwayBackground = new ThreeDHighwayBackground(laneLayout, kickUsesGlobalLine, StageProfile.Value);
                 manuscriptBackground = null;
                 laneBackgroundContainer.Add(threeDHighwayBackground);
 

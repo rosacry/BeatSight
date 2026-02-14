@@ -63,6 +63,7 @@ namespace BeatSight.Game.Configuration
             setDefault(BeatSightSetting.LaneViewMode, LaneViewMode.TwoDimensional);
             setDefault(BeatSightSetting.LanePreset, LanePreset.DrumSevenLane);
             setDefault(BeatSightSetting.KickLaneMode, KickLaneMode.GlobalLine);
+            setDefault(BeatSightSetting.ThreeDStageProfile, ThreeDStageProfile.GhClassic);
 
             // Visual Settings
             setDefault(BeatSightSetting.ShowParticleEffects, true);
@@ -229,6 +230,7 @@ namespace BeatSight.Game.Configuration
         LaneViewMode,
         LanePreset,
         KickLaneMode,
+        ThreeDStageProfile,
 
         // Visual
         ShowParticleEffects,
@@ -330,6 +332,13 @@ namespace BeatSight.Game.Configuration
     {
         GlobalLine,
         DedicatedLane
+    }
+
+    public enum ThreeDStageProfile
+    {
+        Arcade,
+        GhClassic,
+        Tight
     }
 
     public enum LanePreset

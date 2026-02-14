@@ -138,4 +138,34 @@ For machine-readable output:
 
 CI now uploads chunked rollup artifacts from Windows runs as `visual-rollup-windows-latest`.
 
+## Rollup threshold gate helper
+To evaluate the latest rollup artifact against timing/coverage thresholds:
+
+```powershell
+& ./scripts/evaluate_visual_rollup.ps1 `
+  -ResultsDirectory 'desktop/BeatSight.Tests/TestResults/visual-chunked' `
+  -MaxTotalP95Seconds 300 `
+  -MaxStartupP95Seconds 180 `
+  -MaxTrxMissingRatio 0.30 `
+  -FailOnThresholdBreach
+```
+
+To evaluate a specific artifact:
+
+```powershell
+& ./scripts/evaluate_visual_rollup.ps1 `
+  -RollupPath 'desktop/BeatSight.Tests/TestResults/visual-chunked/visual_rollup_20260214_171741_596.json' `
+  -MaxTotalP95Seconds 300 `
+  -MaxStartupP95Seconds 180 `
+  -MaxTrxMissingRatio 0.30
+```
+
+For machine-readable output:
+
+```powershell
+& ./scripts/evaluate_visual_rollup.ps1 -OutputJson
+```
+
+The desktop CI workflow now runs this threshold gate after the chunked visual pass on Windows.
+
 CI runs visual regression in `Release`, so prefer `-c Release` when updating baselines.

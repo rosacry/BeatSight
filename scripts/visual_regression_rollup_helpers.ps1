@@ -188,3 +188,39 @@ function Compare-VisualTimingRollups {
         Metrics = $metricDiffs
     }
 }
+
+function Test-VisualTimingRollupThresholds {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Rollup,
+        [double]$MaxTotalP95Seconds = 0,
+        [double]$MaxStartupP95Seconds = 0,
+        [double]$MaxTrxMissingRatio = 0
+    )
+
+    $failures = @()
+
+    if ($null -ne $Rollup.TotalP95Seconds -and $MaxTotalP95Seconds -gt 0 -and [double]$Rollup.TotalP95Seconds -gt $MaxTotalP95Seconds) {
+        $failures += "total_p95=$([Math]::Round([double]$Rollup.TotalP95Seconds, 3))s exceeds limit ${MaxTotalP95Seconds}s"
+    }
+
+    if ($null -ne $Rollup.StartupP95Seconds -and $MaxStartupP95Seconds -gt 0 -and [double]$Rollup.StartupP95Seconds -gt $MaxStartupP95Seconds) {
+        $failures += "startup_p95=$([Math]::Round([double]$Rollup.StartupP95Seconds, 3))s exceeds limit ${MaxStartupP95Seconds}s"
+    }
+
+    if ($MaxTrxMissingRatio -gt 0 -and $null -ne $Rollup.BatchCount -and [int]$Rollup.BatchCount -gt 0) {
+        $missingCount = if ($null -eq $Rollup.TrxDurationMissingCount) { 0 } else { [double]$Rollup.TrxDurationMissingCount }
+        $batchCount = [double]$Rollup.BatchCount
+        $missingRatio = $missingCount / $batchCount
+
+        if ($missingRatio -gt $MaxTrxMissingRatio) {
+            $failures += "trx_missing_ratio=$([Math]::Round($missingRatio, 4)) exceeds limit $([Math]::Round($MaxTrxMissingRatio, 4))"
+        }
+    }
+
+    return [pscustomobject]@{
+        Passed = $failures.Count -eq 0
+        FailureCount = $failures.Count
+        Failures = $failures
+    }
+}

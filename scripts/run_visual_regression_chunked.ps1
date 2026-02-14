@@ -2,6 +2,7 @@ param(
     [string]$ProjectPath = "desktop/BeatSight.Tests/BeatSight.Tests.csproj",
     [string]$Configuration = "Release",
     [string]$Resolutions = "720p,1080p,1440p,ultrawide",
+    [string]$ResultsDirectory = "desktop/BeatSight.Tests/TestResults/visual-chunked",
     [string[]]$SceneBatches = @(
         "Intro,MainMenu,SongSelect,SongSelectEditor,Settings",
         "Recording,Onboarding,AudioImportLoading,MappingChoice,MetadataChoice",
@@ -25,6 +26,7 @@ function Invoke-VisualBatch {
         [string]$Resolutions,
         [string]$ProjectPath,
         [string]$Configuration,
+        [string]$ResultsDirectory,
         [int]$TimeoutSeconds,
         [int]$HeartbeatSeconds,
         [switch]$DryRun
@@ -34,19 +36,38 @@ function Invoke-VisualBatch {
     $env:BEATSIGHT_VISUAL_SCENES = $Scenes
     $env:BEATSIGHT_VISUAL_RESOLUTIONS = $Resolutions
 
+    $resolvedResultsDirectory = if ([System.IO.Path]::IsPathRooted($ResultsDirectory)) {
+        $ResultsDirectory
+    }
+    else {
+        Join-Path (Get-Location).Path $ResultsDirectory
+    }
+    New-Item -ItemType Directory -Path $resolvedResultsDirectory -Force | Out-Null
+    $sceneSlug = ($Scenes -replace '[^A-Za-z0-9]+', '_').Trim('_')
+    if ([string]::IsNullOrWhiteSpace($sceneSlug)) {
+        $sceneSlug = "batch"
+    }
+    $trxFileName = "visual_batch_${sceneSlug}_$(Get-Date -Format 'yyyyMMdd_HHmmss_fff').trx"
+    $trxPath = Join-Path $resolvedResultsDirectory $trxFileName
+
     $args = @(
         "test",
         $ProjectPath,
         "-c",
         $Configuration,
         "--filter",
-        "FullyQualifiedName~VisualRegressionSnapshotTests"
+        "FullyQualifiedName~VisualRegressionSnapshotTests",
+        "--logger",
+        "trx;LogFileName=$trxFileName",
+        "--results-directory",
+        $resolvedResultsDirectory
     )
 
     Write-Host ""
     Write-Host "[visual-gate] scenes: $Scenes"
     Write-Host "[visual-gate] resolutions: $Resolutions"
     Write-Host "[visual-gate] timeout: ${TimeoutSeconds}s"
+    Write-Host "[visual-gate] trx: $trxPath"
 
     if ($DryRun) {
         Write-Host "[visual-gate][dry-run] dotnet $($args -join ' ')"
@@ -77,8 +98,25 @@ function Invoke-VisualBatch {
     $process.Refresh()
     $exitCode = $process.ExitCode
     if ($null -eq $exitCode) {
-        Write-Warning "Visual batch did not report an exit code; assuming success for scenes: $Scenes"
+        Write-Warning "Visual batch did not report an exit code for scenes: $Scenes (will verify TRX outcome)."
         $exitCode = 0
+    }
+
+    if (-not (Test-Path $trxPath)) {
+        throw "Visual batch did not produce TRX results: $trxPath"
+    }
+
+    [xml]$trx = Get-Content -Path $trxPath -Raw
+    $summary = $trx.TestRun.ResultSummary
+    $counters = $summary.Counters
+    $outcome = [string]$summary.outcome
+    $total = [int]$counters.total
+    $passed = [int]$counters.passed
+    $failed = [int]$counters.failed
+    Write-Host "[visual-gate] trx outcome: $outcome ($passed/$total passed, $failed failed)"
+
+    if ($failed -gt 0 -or ($outcome -ne "Passed" -and $outcome -ne "Completed")) {
+        throw "Visual batch failed by TRX outcome ($outcome, failed=$failed) for scenes: $Scenes"
     }
 
     if ($exitCode -ne 0) {
@@ -103,6 +141,7 @@ try {
             -Resolutions $Resolutions `
             -ProjectPath $ProjectPath `
             -Configuration $Configuration `
+            -ResultsDirectory $ResultsDirectory `
             -TimeoutSeconds $BatchTimeoutSeconds `
             -HeartbeatSeconds $HeartbeatSeconds `
             -DryRun:$DryRun)

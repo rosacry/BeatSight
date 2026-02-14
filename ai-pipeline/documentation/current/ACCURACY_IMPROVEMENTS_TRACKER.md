@@ -1,6 +1,6 @@
 # BeatSight AI Pipeline - Accuracy Improvements Tracker
 
-Last updated: 2026-02-13
+Last updated: 2026-02-14
 
 This is the live status doc for the dual-model ensemble train/eval loop.
 
@@ -228,7 +228,8 @@ Before promotion:
 - `hihat_open` and `hihat_pedal` remain the weakest classes even with improvements.
 - Overproduction of cymbals after threshold/class weighting changes.
 - Runtime regression if TTA/multi-window is used as global default.
-- Desktop contract drift risk has been mitigated by explicit parity wiring and tests:
+- Desktop contract drift risk has been mitigated by explicit parity wiring and expanded tests:
   - `desktop/BeatSight.Game/AI/AiBeatmapGenerator.cs`
   - `desktop/BeatSight.Game/AI/Generation/GenerationCoordinator.cs`
   - `desktop/BeatSight.Tests/AiBeatmapGeneratorArgumentsTests.cs`
+  - `desktop/BeatSight.Tests/GenerationCoordinatorTests.cs`

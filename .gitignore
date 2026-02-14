@@ -162,6 +162,7 @@ F?feature_cache/
 F?manifests/
 F?models/
 F?temp_dataset/
+personal_docs/
 
 # Dataset health artifacts
 ai-pipeline/training/reports/health/**

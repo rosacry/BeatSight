@@ -192,6 +192,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         private float timelineRightX;
         private bool hasTimelineWindow;
         private double timelineBpm = 120;
+        private double timelineBeatOriginMs;
+        private int timelineBeatsPerMeasure = 4;
+        private int timelineSubdivisionDivisor = 1;
         private bool timelineWindowDirty;
 
         private sealed record ComponentGuide(string Key, string Label, float Unit, Color4 Color);
@@ -349,13 +352,24 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             PlaybackHighlighter?.UpdatePlaybackPosition(timeMs, bpm);
         }
 
-        public void SetTimelineWindow(double startTimeMs, double durationMs, float playheadX, float leftX, float rightX)
+        public void SetTimelineWindow(
+            double startTimeMs,
+            double durationMs,
+            float playheadX,
+            float leftX,
+            float rightX,
+            int beatsPerMeasure = 4,
+            double beatOriginMs = 0,
+            int subdivisionDivisor = 1)
         {
             timelineStartMs = startTimeMs;
             timelineDurationMs = durationMs;
             timelineLeftX = leftX;
             timelineRightX = rightX;
             hasTimelineWindow = durationMs > 1 && rightX > leftX;
+            timelineBeatsPerMeasure = Math.Max(1, beatsPerMeasure);
+            timelineBeatOriginMs = beatOriginMs;
+            timelineSubdivisionDivisor = Math.Clamp(subdivisionDivisor, 1, 8);
             timelineWindowDirty = true;
             PlaybackHighlighter?.SetTimelineWindow(startTimeMs, durationMs, playheadX, leftX, rightX);
         }
@@ -556,27 +570,64 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
 
             double windowStart = timelineStartMs;
             double windowEnd = windowStart + timelineDurationMs;
-            int firstBeatIndex = (int)Math.Floor(windowStart / beatDuration) - 1;
-            int lastBeatIndex = (int)Math.Ceiling(windowEnd / beatDuration) + 1;
+            int beatsPerMeasure = Math.Max(1, timelineBeatsPerMeasure);
+            int subdivision = Math.Clamp(timelineSubdivisionDivisor, 1, 8);
+            double subDuration = beatDuration / subdivision;
+            int ticksPerMeasure = beatsPerMeasure * subdivision;
+            int firstTickIndex = (int)Math.Floor((windowStart - timelineBeatOriginMs) / subDuration) - 1;
+            int lastTickIndex = (int)Math.Ceiling((windowEnd - timelineBeatOriginMs) / subDuration) + 1;
 
             int markerCount = 0;
-            for (int beatIndex = firstBeatIndex; beatIndex <= lastBeatIndex; beatIndex++)
+            for (int tickIndex = firstTickIndex; tickIndex <= lastTickIndex; tickIndex++)
             {
-                double beatTime = beatIndex * beatDuration;
-                float progress = (float)((beatTime - windowStart) / timelineDurationMs);
+                double tickTime = timelineBeatOriginMs + tickIndex * subDuration;
+                float progress = (float)((tickTime - windowStart) / timelineDurationMs);
                 if (progress < -0.02f || progress > 1.02f)
                     continue;
 
-                bool isMeasure = beatIndex % 4 == 0;
-                if (!isMeasure && beatIndex % 2 != 0)
+                int measureRemainder = positiveModulo(tickIndex, ticksPerMeasure);
+                bool isMeasure = measureRemainder == 0;
+                bool isBeat = !isMeasure && positiveModulo(tickIndex, subdivision) == 0;
+                bool isHalfBeat = !isMeasure
+                                  && !isBeat
+                                  && subdivision % 2 == 0
+                                  && positiveModulo(tickIndex, subdivision / 2) == 0;
+                bool isTripletGuide = !isMeasure
+                                      && !isBeat
+                                      && subdivision % 3 == 0
+                                      && positiveModulo(tickIndex, subdivision / 3) == 0;
+                bool isSubBeat = !isMeasure && !isBeat && (isHalfBeat || isTripletGuide);
+                bool showMinorSubdivision = !isMeasure && !isBeat && !isSubBeat && subdivision >= 6;
+
+                if (!isMeasure && !isBeat && !isSubBeat && !showMinorSubdivision)
                     continue;
+
                 Box marker = getTimelineMarker(markerCount++);
                 marker.X = Math.Clamp(progress, 0f, 1f);
-                marker.Width = isMeasure ? 1.6f : 0.9f;
-                marker.Colour = isMeasure
-                    ? new Color4(214, 226, 248, 96)
-                    : new Color4(164, 178, 204, 68);
-                marker.Alpha = isMeasure ? 0.36f : 0.18f;
+                if (isMeasure)
+                {
+                    marker.Width = 1.8f;
+                    marker.Colour = new Color4(214, 226, 248, 108);
+                    marker.Alpha = 0.42f;
+                }
+                else if (isBeat)
+                {
+                    marker.Width = 1.2f;
+                    marker.Colour = new Color4(184, 198, 224, 88);
+                    marker.Alpha = 0.28f;
+                }
+                else if (isSubBeat)
+                {
+                    marker.Width = 0.9f;
+                    marker.Colour = new Color4(164, 178, 204, 72);
+                    marker.Alpha = 0.20f;
+                }
+                else
+                {
+                    marker.Width = 0.8f;
+                    marker.Colour = new Color4(156, 170, 198, 54);
+                    marker.Alpha = 0.13f;
+                }
             }
 
             for (int i = markerCount; i < timelineMarkers.Count; i++)
@@ -601,6 +652,15 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             }
 
             return timelineMarkers[index];
+        }
+
+        private static int positiveModulo(int value, int divisor)
+        {
+            if (divisor <= 0)
+                return 0;
+
+            int remainder = value % divisor;
+            return remainder < 0 ? remainder + divisor : remainder;
         }
 
         private Drawable CreateComponentLegend()

@@ -1,6 +1,6 @@
 # BeatSight AI Pipeline - Current State
 
-Last updated: 2026-02-13
+Last updated: 2026-02-14
 
 ## Purpose
 
@@ -18,7 +18,7 @@ For handoff context:
 ### Training state
 
 - Step 1: COMPLETE
-- Step 2: IN PROGRESS (running through epoch 20 partial in latest shared logs)
+- Step 2: IN PROGRESS (running through epoch 20 partial in latest shared logs; no completion signal yet)
 - Step 3: PENDING (start after Step 2 checkpoint selection)
 - Step 4: PENDING (threshold generation after Steps 2 and 3)
 - Step 5: PENDING (real-song bakeoff + production mode decision)

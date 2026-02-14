@@ -202,6 +202,7 @@ namespace BeatSight.Tests.VisualRegression
 
                 await stabiliseScene(host, scene, targetScreen).ConfigureAwait(false);
                 await applyWindowSize(host, width, height).ConfigureAwait(false);
+                await runOnUpdateThread(host, () => validateEditorCompactInspectorLayout(targetScreen, width)).ConfigureAwait(false);
 
                 return await captureStableScreenshot(host, targetScreen, width, height).ConfigureAwait(false);
             }
@@ -686,6 +687,53 @@ namespace BeatSight.Tests.VisualRegression
             editorStopMethod?.Invoke(editor, new object?[] { true });
             editorSeekMethod?.Invoke(editor, new object?[] { 2000d });
         }
+
+        private static void validateEditorCompactInspectorLayout(Screen screen, int captureWidth)
+        {
+            if (captureWidth > 1366)
+                return;
+
+            if (screen is not EditorScreen editor)
+                return;
+
+            var contract = editor.CaptureInspectorLayoutContract();
+            if (!contract.IsStackedLayout)
+                return;
+
+            if (contract.ActionRows.Length == 0)
+            {
+                throw new VisualCaptureUnavailableException(
+                    "Editor compact layout contract failed: inspector action rows were not initialized in stacked mode.");
+            }
+
+            foreach (var row in contract.ActionRows)
+            {
+                if (row.ColumnCount < 1)
+                    continue;
+
+                (float min, float max) = getCompactRowWidthBounds(row.ColumnCount);
+                if (row.WidthFraction < min || row.WidthFraction > max)
+                {
+                    throw new VisualCaptureUnavailableException(
+                        $"Editor compact layout contract failed: columnCount={row.ColumnCount}, width={row.WidthFraction:0.###}, expected range={min:0.###}-{max:0.###}.");
+                }
+
+                if (row.WidthFraction < 0.999f && (row.Anchor != Anchor.TopCentre || row.Origin != Anchor.TopCentre))
+                {
+                    throw new VisualCaptureUnavailableException(
+                        $"Editor compact layout contract failed: bounded rows must be centered (anchor={row.Anchor}, origin={row.Origin}).");
+                }
+            }
+        }
+
+        private static (float Min, float Max) getCompactRowWidthBounds(int columnCount)
+            => columnCount switch
+            {
+                <= 1 => (0.17f, 0.34f),
+                2 => (0.34f, 0.64f),
+                3 => (0.50f, 0.91f),
+                _ => (0.99f, 1.01f)
+            };
 
         private static void freezeMainMenuIfSupported(Screen screen)
         {

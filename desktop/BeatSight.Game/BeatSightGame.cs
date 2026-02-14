@@ -1815,7 +1815,7 @@ namespace BeatSight.Game
         /// - SDL2's window management APIs require the native window handle
         /// 
         /// Alternatives considered:
-        /// - Filed upstream: https://github.com/ppy/osu-framework/issues/XXXX (request native handle exposure)
+        /// - Upstream native-handle exposure request is pending; replace with tracked issue link when available.
         /// - Could use P/Invoke to find window by title, but that's even more fragile
         /// - Could accept framework's fullscreen which has minor rendering artifacts
         /// 

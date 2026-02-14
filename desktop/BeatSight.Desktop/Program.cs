@@ -241,7 +241,7 @@ namespace BeatSight.Desktop
 
         private static void disableFrameworkConsoleEcho()
         {
-            // HACK: Suppress verbose osu-framework debug output in release builds.
+            // Compatibility shim: suppress verbose osu-framework debug output in release builds.
             // The framework echoes internal state to console unless is_debug_build is true.
             // Since this field is private, we use reflection to override it.
             //

@@ -109,4 +109,19 @@ public class ManuscriptNotationMappingTests
         Assert.False(ManuscriptBackgroundEnhanced.UsesCrossNoteheadForComponent("snare"));
         Assert.False(ManuscriptBackgroundEnhanced.UsesCrossNoteheadForComponent("kick"));
     }
+
+    [Fact]
+    public void HiHatArticulationHelpersDistinguishOpenAndClosed()
+    {
+        Assert.True(ManuscriptBackgroundEnhanced.IsHiHatFamilyComponent("hihat_open"));
+        Assert.True(ManuscriptBackgroundEnhanced.IsOpenHiHatComponent("hihat_open"));
+        Assert.False(ManuscriptBackgroundEnhanced.IsClosedHiHatComponent("hihat_open"));
+
+        Assert.True(ManuscriptBackgroundEnhanced.IsClosedHiHatComponent("hihat_closed"));
+        Assert.True(ManuscriptBackgroundEnhanced.IsClosedHiHatComponent("hihat_pedal"));
+        Assert.True(ManuscriptBackgroundEnhanced.IsClosedHiHatComponent("hihat"));
+        Assert.False(ManuscriptBackgroundEnhanced.IsOpenHiHatComponent("hihat_closed"));
+
+        Assert.False(ManuscriptBackgroundEnhanced.IsHiHatFamilyComponent("snare"));
+    }
 }

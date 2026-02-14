@@ -29,6 +29,7 @@ namespace BeatSight.Game.Screens.Editor
         private Beatmap? beatmap;
         private Bindable<LanePreset> lanePresetSetting = null!;
         private Bindable<KickLaneMode> kickLaneModeSetting = null!;
+        private Bindable<ThreeDStageProfile> threeDStageProfileSetting = null!;
         private LaneLayout currentLaneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
         private bool useGlobalKickLine;
         private string? manuscriptFocusComponent;
@@ -81,6 +82,9 @@ namespace BeatSight.Game.Screens.Editor
 
             kickLaneModeSetting = config.GetBindable<KickLaneMode>(BeatSightSetting.KickLaneMode);
             kickLaneModeSetting.BindValueChanged(onKickLaneModeChanged, true);
+
+            threeDStageProfileSetting = config.GetBindable<ThreeDStageProfile>(BeatSightSetting.ThreeDStageProfile);
+            playfield.StageProfile.BindTo(threeDStageProfileSetting);
 
             updatePlaceholderState();
         }

@@ -178,6 +178,18 @@ namespace BeatSight.Tests
         }
 
         [Fact]
+        public void EditorPreviewBindsThreeDProfileSettingToPlaybackPlayfield()
+        {
+            string root = resolveRepositoryRoot();
+            string previewPath = Path.Combine(root, "desktop", "BeatSight.Game", "Screens", "Editor", "PlaybackPreview.cs");
+            Assert.True(File.Exists(previewPath), $"Expected file missing: {previewPath}");
+
+            string source = File.ReadAllText(previewPath);
+            Assert.Contains("BeatSightSetting.ThreeDStageProfile", source);
+            Assert.Contains("playfield.StageProfile.BindTo(threeDStageProfileSetting)", source);
+        }
+
+        [Fact]
         public void SettingsScreenClearsDropdownOverlayBeforeSectionSwap()
         {
             string root = resolveRepositoryRoot();

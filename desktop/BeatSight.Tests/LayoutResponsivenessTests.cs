@@ -190,6 +190,20 @@ namespace BeatSight.Tests
         }
 
         [Fact]
+        public void ThreeDHighwayBackgroundIncludesLaneReceptorGuides()
+        {
+            string root = resolveRepositoryRoot();
+            string highwayPath = Path.Combine(root, "desktop", "BeatSight.Game", "Screens", "Playback", "Playfield", "ThreeDHighwayBackground.cs");
+            Assert.True(File.Exists(highwayPath), $"Expected file missing: {highwayPath}");
+
+            string source = File.ReadAllText(highwayPath);
+            Assert.Contains("buildLaneReceptors", source);
+            Assert.Contains("layoutLaneReceptors", source);
+            Assert.Contains("receptorRail", source);
+            Assert.Contains("laneReceptorGlows", source);
+        }
+
+        [Fact]
         public void SettingsScreenClearsDropdownOverlayBeforeSectionSwap()
         {
             string root = resolveRepositoryRoot();

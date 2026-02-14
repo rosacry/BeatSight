@@ -1,4 +1,5 @@
 using System.Reflection;
+using BeatSight.Game.Beatmaps;
 using BeatSight.Game;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
@@ -117,6 +118,8 @@ namespace BeatSight.Tests.VisualRegression
 
             resetFrameworkRandomState();
 
+            string? previousUserAssetRoot = Environment.GetEnvironmentVariable("BEATSIGHT_USER_ASSET_ROOT");
+            string? visualUserAssetRoot = null;
             string beatmapPath = resolveReferenceBeatmapPath();
             string hostName = $"BeatSight.VisualRegression.{scene}-{width}x{height}.{Guid.NewGuid():N}";
             var host = Host.GetSuitableDesktopHost(hostName, new HostOptions { PortableInstallation = true });
@@ -125,6 +128,9 @@ namespace BeatSight.Tests.VisualRegression
 
             try
             {
+                visualUserAssetRoot = prepareDeterministicUserAssetRoot(scene);
+                Environment.SetEnvironmentVariable("BEATSIGHT_USER_ASSET_ROOT", visualUserAssetRoot);
+
                 runTask = Task.Factory.StartNew(
                     () => host.Run(game),
                     CancellationToken.None,
@@ -199,7 +205,94 @@ namespace BeatSight.Tests.VisualRegression
 
                 safeDispose(game);
                 safeDispose(host);
+
+                Environment.SetEnvironmentVariable("BEATSIGHT_USER_ASSET_ROOT", previousUserAssetRoot);
+                if (!string.IsNullOrWhiteSpace(visualUserAssetRoot))
+                {
+                    try
+                    {
+                        Directory.Delete(visualUserAssetRoot, recursive: true);
+                    }
+                    catch
+                    {
+                        // Best-effort cleanup only.
+                    }
+                }
             }
+        }
+
+        private static string prepareDeterministicUserAssetRoot(VisualScene scene)
+        {
+            string root = Path.Combine(
+                Path.GetTempPath(),
+                "BeatSight.VisualRegression.Assets",
+                Guid.NewGuid().ToString("N"));
+
+            string songsPath = Path.Combine(root, UserAssetDirectories.Songs);
+            Directory.CreateDirectory(songsPath);
+
+            string templateBeatmapPath = resolveReferenceBeatmapPath();
+            string templateAudioPath = resolveReferenceAudioPath();
+            string fixtureAudioPath = Path.Combine(songsPath, "simple_beat.wav");
+            File.Copy(templateAudioPath, fixtureAudioPath, overwrite: true);
+
+            writeSongSelectFixture(
+                templateBeatmapPath,
+                songsPath,
+                title: "Heir of Grief",
+                artist: "RichaadEB",
+                creator: "BeatSight AI",
+                beatmapId: "heir-of-grief-demo",
+                confidence: 0.50,
+                modelVersion: "v1.0.0");
+
+            // Existing baselines include this extra generated entry in editor mode.
+            if (scene == VisualScene.SongSelectEditor)
+            {
+                writeSongSelectFixture(
+                    templateBeatmapPath,
+                    songsPath,
+                    title: "The Sin and the Sentence",
+                    artist: "Trivium",
+                    creator: "BeatSight AI",
+                    beatmapId: "sin-and-sentence-demo",
+                    confidence: 0.54,
+                    modelVersion: "v1.0.0");
+            }
+
+            return root;
+        }
+
+        private static void writeSongSelectFixture(
+            string templateBeatmapPath,
+            string songsPath,
+            string title,
+            string artist,
+            string creator,
+            string beatmapId,
+            double confidence,
+            string modelVersion)
+        {
+            var beatmap = BeatmapLoader.LoadFromFile(templateBeatmapPath);
+            beatmap.Metadata.Title = title;
+            beatmap.Metadata.Artist = artist;
+            beatmap.Metadata.Creator = creator;
+            beatmap.Metadata.Difficulty = 10.0;
+            beatmap.Metadata.BeatmapId = beatmapId;
+            beatmap.Metadata.ModifiedAt = new DateTime(2026, 2, 11, 0, 0, 0, DateTimeKind.Utc);
+
+            beatmap.Audio.Filename = "simple_beat.wav";
+            beatmap.Audio.DrumStem = "simple_beat.wav";
+
+            beatmap.Editor ??= new EditorInfo();
+            beatmap.Editor.AiGenerationMetadata ??= new AIGenerationMetadata();
+            beatmap.Editor.AiGenerationMetadata.Confidence = confidence;
+            beatmap.Editor.AiGenerationMetadata.ModelVersion = modelVersion;
+            beatmap.Editor.AiGenerationMetadata.ProcessedAt = new DateTime(2026, 2, 11, 0, 0, 0, DateTimeKind.Utc);
+            beatmap.Editor.AiGenerationMetadata.ManualEdits = false;
+
+            string beatmapPath = Path.Combine(songsPath, $"{beatmapId}.bsm");
+            BeatmapLoader.SaveToFile(beatmap, beatmapPath);
         }
 
         private static string resolveReferenceBeatmapPath()

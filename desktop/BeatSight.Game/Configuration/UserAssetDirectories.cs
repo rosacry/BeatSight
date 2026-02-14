@@ -9,9 +9,19 @@ namespace BeatSight.Game.Configuration
         public const string Skins = "Skins";
         public const string Songs = "Songs";
 
-        public static string RootPath => Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "BeatSight");
+        public static string RootPath
+        {
+            get
+            {
+                string? overrideRoot = Environment.GetEnvironmentVariable("BEATSIGHT_USER_ASSET_ROOT");
+                if (!string.IsNullOrWhiteSpace(overrideRoot))
+                    return Path.GetFullPath(overrideRoot);
+
+                return Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "BeatSight");
+            }
+        }
 
         public static string GetPath(string relativePath) => Path.Combine(RootPath, relativePath);
     }

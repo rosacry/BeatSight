@@ -91,6 +91,7 @@ This helper:
 - runs the full scene catalog in chunked scene batches,
 - splits the heaviest editor/playback cluster into per-scene batches,
 - prints heartbeat logs while each batch is running,
+- prints per-batch timing telemetry (`startup` from first TRX appearance + `total` duration),
 - applies a per-batch timeout,
 - validates each batch from generated TRX results,
 - runs each test invocation with `--no-build` after the upfront build,

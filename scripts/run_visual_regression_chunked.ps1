@@ -145,11 +145,17 @@ function Invoke-VisualBatch {
     }
 
     $process = Start-Process -FilePath "dotnet" -ArgumentList $args -NoNewWindow -PassThru
+    $batchTimer = [System.Diagnostics.Stopwatch]::StartNew()
+    [double]$trxSeenAtSeconds = -1
     $elapsed = 0
 
     while (-not $process.HasExited) {
         Start-Sleep -Seconds $HeartbeatSeconds
         $elapsed += $HeartbeatSeconds
+        if ($trxSeenAtSeconds -lt 0 -and (Test-Path $trxPath)) {
+            $trxSeenAtSeconds = [Math]::Round($batchTimer.Elapsed.TotalSeconds, 1)
+            Write-Host "[visual-gate] startup telemetry: trx first seen at ${trxSeenAtSeconds}s."
+        }
         if (-not $process.HasExited) {
             Write-Host "[visual-gate] batch still running (${elapsed}s elapsed)..."
         }
@@ -166,6 +172,12 @@ function Invoke-VisualBatch {
 
     $process.WaitForExit()
     $process.Refresh()
+    $totalSeconds = [Math]::Round($batchTimer.Elapsed.TotalSeconds, 1)
+    if ($trxSeenAtSeconds -lt 0 -and (Test-Path $trxPath)) {
+        $trxSeenAtSeconds = $totalSeconds
+    }
+    $startupDisplay = if ($trxSeenAtSeconds -lt 0) { "n/a" } else { "$trxSeenAtSeconds" }
+    Write-Host "[visual-gate] batch timing: startup=${startupDisplay}s, total=${totalSeconds}s"
     $exitCode = $process.ExitCode
     if ($null -eq $exitCode) {
         Write-Host "[visual-gate][info] batch did not report an exit code for scenes: $Scenes; verifying via TRX outcome."

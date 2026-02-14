@@ -31,6 +31,18 @@ except ImportError:
     pickle = None
 
 
+def _safe_n_fft(signal_length: int, preferred: int, minimum: int = 4) -> int:
+    """Choose an FFT window that never exceeds the available signal length."""
+    if signal_length <= 2:
+        return max(2, signal_length)
+
+    clipped = min(preferred, signal_length)
+    if clipped < minimum:
+        return clipped
+
+    return 1 << int(np.floor(np.log2(clipped)))
+
+
 # =============================================================================
 # GENRE/STYLE DETECTION
 # =============================================================================
@@ -114,47 +126,90 @@ class AudioCharacteristics:
         # Ensure mono
         if audio.ndim > 1:
             audio = np.mean(audio, axis=0)
+        audio_len = int(audio.shape[-1])
+        if audio_len < 16:
+            return cls(estimated_bpm=float(bpm) if bpm is not None else 120.0)
+
+        analysis_n_fft = _safe_n_fft(audio_len, preferred=2048, minimum=16)
+        analysis_hop = max(1, analysis_n_fft // 4)
 
         # Basic spectral analysis
-        spectral_centroids = librosa.feature.spectral_centroid(y=audio, sr=sr)[0]
+        spectral_centroids = librosa.feature.spectral_centroid(
+            y=audio,
+            sr=sr,
+            n_fft=analysis_n_fft,
+            hop_length=analysis_hop,
+        )[0]
         spectral_centroid_mean = float(np.mean(spectral_centroids))
 
         # Brightness (ratio of high to low frequency energy)
-        spec = np.abs(librosa.stft(audio))
-        freq_bins = librosa.fft_frequencies(sr=sr)
+        spec = np.abs(librosa.stft(audio, n_fft=analysis_n_fft, hop_length=analysis_hop))
+        freq_bins = librosa.fft_frequencies(sr=sr, n_fft=analysis_n_fft)
         mid_freq_idx = np.searchsorted(freq_bins, 2000)
         low_energy = np.mean(spec[:mid_freq_idx])
         high_energy = np.mean(spec[mid_freq_idx:])
         brightness = high_energy / (low_energy + high_energy + 1e-10)
 
         # Flatness
-        flatness = librosa.feature.spectral_flatness(y=audio)[0]
+        flatness = librosa.feature.spectral_flatness(
+            y=audio,
+            n_fft=analysis_n_fft,
+            hop_length=analysis_hop,
+        )[0]
         mean_flatness = float(np.mean(flatness))
 
         # Dynamics
-        rms = librosa.feature.rms(y=audio)[0]
+        rms = librosa.feature.rms(
+            y=audio,
+            frame_length=analysis_n_fft,
+            hop_length=analysis_hop,
+        )[0]
         peak = np.max(np.abs(audio))
         rms_mean = np.mean(rms)
         dynamic_range = 20 * np.log10(np.max(rms) / (np.min(rms) + 1e-10) + 1e-10)
         crest_factor = peak / (rms_mean + 1e-10)
 
+        onset_env = librosa.onset.onset_strength(
+            y=audio,
+            sr=sr,
+            n_fft=analysis_n_fft,
+            hop_length=analysis_hop,
+        )
+
         # Tempo
         if bpm is None:
-            tempo, _ = librosa.beat.beat_track(y=audio, sr=sr)
+            tempo, _ = librosa.beat.beat_track(
+                onset_envelope=onset_env,
+                sr=sr,
+                hop_length=analysis_hop,
+            )
             bpm = float(tempo) if np.isscalar(tempo) else float(tempo[0])
 
         # Tempo stability (variance of inter-beat intervals)
-        _, beat_frames = librosa.beat.beat_track(y=audio, sr=sr)
+        _, beat_frames = librosa.beat.beat_track(
+            onset_envelope=onset_env,
+            sr=sr,
+            hop_length=analysis_hop,
+        )
         if len(beat_frames) > 2:
-            beat_times = librosa.frames_to_time(beat_frames, sr=sr)
+            beat_times = librosa.frames_to_time(
+                beat_frames,
+                sr=sr,
+                hop_length=analysis_hop,
+            )
             ibis = np.diff(beat_times)
             tempo_stability = 1.0 - min(1.0, np.std(ibis) / (np.mean(ibis) + 1e-10))
         else:
             tempo_stability = 0.5
 
         # Onset analysis for rhythmic complexity
-        onset_env = librosa.onset.onset_strength(y=audio, sr=sr)
-        pulse = librosa.beat.plp(onset_envelope=onset_env, sr=sr)
+        pulse_win_length = _safe_n_fft(len(onset_env), preferred=384, minimum=16)
+        pulse = librosa.beat.plp(
+            onset_envelope=onset_env,
+            sr=sr,
+            hop_length=analysis_hop,
+            win_length=pulse_win_length,
+        )
         pulse_clarity = float(np.max(pulse)) if len(pulse) > 0 else 0.5
 
         # Infer style from characteristics

@@ -34,6 +34,17 @@ Run deterministic visual QA using **real rendered game screens** (not synthetic 
 - Baselines live in:
   - `desktop/BeatSight.Tests/VisualBaselines/*.png`
 
+## 2026-02-14 Stabilization Update
+
+- Visual full-matrix gate currently passes (`60/60`) in compare mode.
+- Deterministic user-asset root override is now part of the capture harness:
+  - `BEATSIGHT_USER_ASSET_ROOT`
+  - wired through `desktop/BeatSight.Game/Configuration/UserAssetDirectories.cs`
+- SongSelect/SongSelectEditor fixture seeding is scene-aware in capture:
+  - `SongSelect` seeds one deterministic user beatmap (`Heir of Grief`)
+  - `SongSelectEditor` seeds two deterministic user beatmaps (`Heir of Grief`, `The Sin and the Sentence`)
+- Purpose: keep song-card count/content stable across machines and prevent `%AppData%` drift from breaking visual baselines.
+
 ## Core Files and Responsibilities
 
 - `desktop/BeatSight.Tests/VisualRegressionSnapshotTests.cs`
@@ -174,6 +185,7 @@ These controls already exist in code and should remain unless replaced with some
 - Screenshot alpha normalised to fully opaque (`A=255`) for deterministic diffing.
 - Near-black screenshot retry loop.
 - Visual tests run serially (collection-level parallel disabled).
+- User asset root isolation for visual runs (`BEATSIGHT_USER_ASSET_ROOT`) to avoid local song library variance.
 
 ## Diff Thresholds (Current)
 
@@ -228,6 +240,16 @@ Behavior:
 
 - Cause: baseline PNG absent for a case.
 - Fix: run update mode and commit the generated PNG.
+
+### SongSelect/SongSelectEditor card-count mismatch
+
+- Cause: local `%AppData%/BeatSight/Songs` drift being picked up by discovery.
+- Existing mitigation:
+  - live visual capture sets `BEATSIGHT_USER_ASSET_ROOT` to a temp deterministic root.
+  - harness seeds deterministic SongSelect fixture beatmaps by scene.
+- If this regresses:
+  1. verify `UserAssetDirectories.RootPath` still honors `BEATSIGHT_USER_ASSET_ROOT`,
+  2. verify `prepareDeterministicUserAssetRoot(VisualScene scene)` still seeds expected fixtures.
 
 ### Near-black capture / blank frame
 

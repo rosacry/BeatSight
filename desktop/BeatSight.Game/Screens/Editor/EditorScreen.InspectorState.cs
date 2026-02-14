@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using BeatSight.Game.UI.Components;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -9,6 +11,16 @@ using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 
 namespace BeatSight.Game.Screens.Editor
 {
+    internal readonly record struct InspectorActionRowContract(
+        int ColumnCount,
+        float WidthFraction,
+        Anchor Anchor,
+        Anchor Origin);
+
+    internal readonly record struct InspectorLayoutContract(
+        bool IsStackedLayout,
+        InspectorActionRowContract[] ActionRows);
+
     public partial class EditorScreen
     {
         private bool inspectorStackedLayout;
@@ -59,5 +71,18 @@ namespace BeatSight.Game.Screens.Editor
         private SpriteText bpmStatValue = null!;
         private BeatSight.Game.UI.Components.Dropdown<string> componentReassignDropdown = null!;
         private readonly Bindable<string> componentReassignSelection = new Bindable<string>("kick");
+
+        internal InspectorLayoutContract CaptureInspectorLayoutContract()
+        {
+            var rows = inspectorActionRowContainers
+                .Select(entry => new InspectorActionRowContract(
+                    entry.ColumnCount,
+                    entry.RowContainer.Width,
+                    entry.RowContainer.Anchor,
+                    entry.RowContainer.Origin))
+                .ToArray();
+
+            return new InspectorLayoutContract(inspectorStackedLayout, rows);
+        }
     }
 }

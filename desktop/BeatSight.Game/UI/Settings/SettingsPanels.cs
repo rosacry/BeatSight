@@ -515,9 +515,6 @@ namespace BeatSight.Game.UI.Settings
         private readonly string[] options;
         private int selectedIndex;
         private SpriteText selectedText = null!;
-        private Container dropdownMenu = null!;
-        private bool isOpen;
-
         public System.Action<int, string>? OnSelectionChanged { get; set; }
 
         private static readonly Color4 TextPrimary = Color4.White;

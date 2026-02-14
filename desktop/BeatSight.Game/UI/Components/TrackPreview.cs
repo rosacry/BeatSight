@@ -84,7 +84,6 @@ namespace BeatSight.Game.UI.Components
 
         private float progress;
         private bool isPlaying;
-        private bool isHovered;
 
         private Container albumArtContainer = null!;
         private SpriteText titleText = null!;
@@ -367,7 +366,6 @@ namespace BeatSight.Game.UI.Components
 
         protected override bool OnHover(HoverEvent e)
         {
-            isHovered = true;
             playButton.FadeIn(200, Easing.OutQuad);
             hoverOverlay.FadeIn(200, Easing.OutQuad);
             this.ScaleTo(1.02f, 200, Easing.OutQuad);
@@ -376,7 +374,6 @@ namespace BeatSight.Game.UI.Components
 
         protected override void OnHoverLost(HoverLostEvent e)
         {
-            isHovered = false;
             if (!isPlaying)
             {
                 playButton.FadeOut(200, Easing.OutQuad);

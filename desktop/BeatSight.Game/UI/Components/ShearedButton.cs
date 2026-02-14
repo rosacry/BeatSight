@@ -42,7 +42,6 @@ namespace BeatSight.Game.UI.Components
         private Color4 lighterColour;
         private Color4 textColour = Color4.White;
         private Color4 glowColour;
-        private bool isPressed;
 
         [Resolved]
         private UIAudioController uiAudio { get; set; } = null!;
@@ -290,14 +289,12 @@ namespace BeatSight.Game.UI.Components
         {
             if (!Enabled) return false;
 
-            isPressed = true;
             content.ScaleTo(0.92f, 2000, Easing.OutQuint);
             return true;
         }
 
         protected override void OnMouseUp(MouseUpEvent e)
         {
-            isPressed = false;
             content.ScaleTo(1f, 800, Easing.OutElastic);
             base.OnMouseUp(e);
         }

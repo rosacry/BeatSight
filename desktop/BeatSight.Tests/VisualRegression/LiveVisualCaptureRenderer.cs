@@ -1,5 +1,7 @@
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using BeatSight.Game.Beatmaps;
 using BeatSight.Game;
 using BeatSight.Game.Configuration;
@@ -136,6 +138,7 @@ namespace BeatSight.Tests.VisualRegression
 
             resetFrameworkRandomState();
             preseedSuppressedInputHandlersConfig();
+            preseedSuppressedInputHandlersProfile();
 
             string? previousUserAssetRoot = Environment.GetEnvironmentVariable("BEATSIGHT_USER_ASSET_ROOT");
             string? previousCursorNormalisationSkip = Environment.GetEnvironmentVariable("BEATSIGHT_SKIP_CURSOR_NORMALISATION");
@@ -290,6 +293,68 @@ namespace BeatSight.Tests.VisualRegression
             {
                 // Best effort only; capture path already has retry and teardown handling.
             }
+        }
+
+        private static void preseedSuppressedInputHandlersProfile()
+        {
+            try
+            {
+                string inputConfigPath = Path.Combine(AppContext.BaseDirectory, "input.json");
+                if (!File.Exists(inputConfigPath))
+                    return;
+
+                JsonNode? rootNode = JsonNode.Parse(File.ReadAllText(inputConfigPath));
+                if (rootNode is not JsonObject rootObject)
+                    return;
+
+                if (rootObject["InputHandlers"] is not JsonArray handlers)
+                    return;
+
+                bool changed = false;
+
+                foreach (JsonNode? handlerNode in handlers)
+                {
+                    if (handlerNode is not JsonObject handlerObject)
+                        continue;
+
+                    string? typeName = handlerObject["$type"]?.GetValue<string>();
+                    if (!shouldSuppressInputHandler(typeName))
+                        continue;
+
+                    bool isEnabled = true;
+                    if (handlerObject["Enabled"] is JsonValue enabledValue && enabledValue.TryGetValue<bool>(out bool parsedEnabled))
+                        isEnabled = parsedEnabled;
+
+                    if (!isEnabled)
+                        continue;
+
+                    handlerObject["Enabled"] = false;
+                    changed = true;
+                }
+
+                if (!changed)
+                    return;
+
+                File.WriteAllText(inputConfigPath, rootObject.ToJsonString(new JsonSerializerOptions { WriteIndented = false }));
+            }
+            catch
+            {
+                // Best effort only; capture path already has retry and teardown handling.
+            }
+        }
+
+        private static bool shouldSuppressInputHandler(string? typeName)
+        {
+            if (string.IsNullOrWhiteSpace(typeName))
+                return false;
+
+            foreach (string suppressedName in splitInputHandlerNames(suppressedInputHandlersCsv))
+            {
+                if (typeName.Contains(suppressedName, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
         }
 
         private static bool ensureIgnoredInputHandlers(List<string> lines)

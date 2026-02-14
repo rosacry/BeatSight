@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Globalization;
 using Xunit;
 
 namespace BeatSight.Tests
@@ -102,6 +103,33 @@ namespace BeatSight.Tests
         }
 
         [Fact]
+        public void EditorCompactDensityPreservesActionHierarchyAt720p()
+        {
+            string root = resolveRepositoryRoot();
+            string responsiveDensityPath = Path.Combine(root, "desktop", "BeatSight.Game", "Screens", "Editor", "EditorScreen.ResponsiveDensity.cs");
+            Assert.True(File.Exists(responsiveDensityPath), $"Expected file missing: {responsiveDensityPath}");
+
+            string source = File.ReadAllText(responsiveDensityPath);
+
+            (_, float playCompact) = readBlendPair(source, "playButtonWidth");
+            (_, float saveCompact) = readBlendPair(source, "saveButtonWidth");
+            (_, float undoCompact) = readBlendPair(source, "undoButtonWidth");
+            (_, float redoCompact) = readBlendPair(source, "redoButtonWidth");
+            (_, float previewCompact) = readBlendPair(source, "previewButtonWidth");
+
+            Assert.True(playCompact >= 100f, $"Play button compact width too small for 720p density: {playCompact:0.##}");
+            Assert.True(saveCompact >= 100f, $"Save button compact width too small for 720p density: {saveCompact:0.##}");
+            Assert.True(undoCompact >= 88f, $"Undo button compact width too small for 720p density: {undoCompact:0.##}");
+            Assert.True(redoCompact >= 88f, $"Redo button compact width too small for 720p density: {redoCompact:0.##}");
+            Assert.True(previewCompact >= 120f, $"Preview button compact width too small for 720p density: {previewCompact:0.##}");
+
+            // Primary actions should remain more prominent than secondary undo/redo actions.
+            Assert.True(playCompact >= undoCompact + 10f, $"Play action hierarchy regressed: play={playCompact:0.##}, undo={undoCompact:0.##}");
+            Assert.True(saveCompact >= redoCompact + 10f, $"Save action hierarchy regressed: save={saveCompact:0.##}, redo={redoCompact:0.##}");
+            Assert.True(previewCompact > playCompact, $"Preview prominence regressed: preview={previewCompact:0.##}, play={playCompact:0.##}");
+        }
+
+        [Fact]
         public void SongSelectHeaderUsesHorizontalScrollContainerForOverflowSafety()
         {
             string root = resolveRepositoryRoot();
@@ -139,6 +167,20 @@ namespace BeatSight.Tests
             }
 
             throw new DirectoryNotFoundException("Could not locate repository root from test output directory.");
+        }
+
+        private static (float Normal, float Compact) readBlendPair(string source, string variableName)
+        {
+            var pattern = new Regex(
+                $@"float\s+{Regex.Escape(variableName)}\s*=\s*blend\(\s*([0-9.]+)f\s*,\s*([0-9.]+)f\s*,\s*compactBlend\)",
+                RegexOptions.Compiled);
+
+            Match match = pattern.Match(source);
+            Assert.True(match.Success, $"Could not parse blend pair for '{variableName}'.");
+
+            float normal = float.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+            float compact = float.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
+            return (normal, compact);
         }
     }
 }

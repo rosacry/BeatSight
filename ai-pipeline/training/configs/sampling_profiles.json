@@ -1,0 +1,80 @@
+{
+    "slakh": {
+        "description": "Slakh2100 rendered stems with onset dedupe and bark boost",
+        "group_field": "audio_path",
+        "min_count": 1,
+        "smoothing": 0.0,
+        "exponent": 0.5,
+        "technique_boosts": {
+            "hihat_bark": 0.75
+        },
+        "dedupe_fields": [
+            "session_id",
+            "onset_time"
+        ],
+        "max_events_per_group": null,
+        "technique_filter": null,
+        "filter_match_all": false,
+        "include_unmatched": true,
+        "min_weight": 0.05,
+        "max_weight": 0.2
+    },
+    "groove": {
+        "description": "Groove MIDI loops with session dedupe and repetition cap",
+        "group_field": "audio_path",
+        "min_count": 1,
+        "smoothing": 0.0,
+        "exponent": 0.5,
+        "technique_boosts": {
+            "hihat_bark": 0.75
+        },
+        "dedupe_fields": [
+            "session_id",
+            "onset_time"
+        ],
+        "max_events_per_group": 256,
+        "technique_filter": null,
+        "filter_match_all": false,
+        "include_unmatched": true,
+        "min_weight": 0.05,
+        "max_weight": 0.5
+    },
+    "enst": {
+        "description": "ENST-Drums recordings with bark emphasis",
+        "group_field": "audio_path",
+        "min_count": 1,
+        "smoothing": 0.0,
+        "exponent": 0.5,
+        "technique_boosts": {
+            "hihat_bark": 0.75
+        },
+        "dedupe_fields": null,
+        "max_events_per_group": null,
+        "technique_filter": null,
+        "filter_match_all": false,
+        "include_unmatched": true,
+        "min_weight": 0.075,
+        "max_weight": 0.4
+    },
+    "prod_combined": {
+        "description": "Production combined events manifest with crash dual-label emphasis",
+        "group_field": "session_id",
+        "min_count": 1,
+        "smoothing": 0.0,
+        "exponent": 0.5,
+        "technique_boosts": {
+            "crash_dual_label": 0.85
+        },
+        "dedupe_fields": [
+            "session_id",
+            "onset_time",
+            "components"
+        ],
+        "max_events_per_group": 512,
+        "technique_filter": null,
+        "filter_match_all": false,
+        "include_unmatched": true,
+        "min_weight": 0.05,
+        "max_weight": 0.5
+    }
+}

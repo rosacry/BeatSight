@@ -1,0 +1,147 @@
+{
+    "_comment": "Hardware-optimized training configurations for BeatSight drum classifier",
+    "_hardware_profile": {
+        "gpu": "RTX 3080 Ti FE (12GB VRAM)",
+        "cpu": "AMD Ryzen 9800X3D (8-core, 104MB cache)",
+        "ram": "32GB DDR5-6000 MT/s",
+        "storage": "Samsung 990 Pro 2TB NVMe (7000/5100 MB/s R/W)"
+    },
+    "warmup_probe": {
+        "description": "Quick validation run to verify pipeline end-to-end (~30-45 min with warm cache)",
+        "epochs": 8,
+        "warmup_epochs": 4,
+        "batch_size": 32,
+        "grad_accum_steps": 4,
+        "effective_batch_size": 128,
+        "learning_rate": 0.00045,
+        "min_lr": 0.00002,
+        "scheduler": "cosine",
+        "weight_decay": 0.0001,
+        "grad_clip_norm": 1.0,
+        "num_workers": 2,
+        "val_num_workers": 2,
+        "prefetch_factor": 2,
+        "val_prefetch_factor": 2,
+        "persistent_workers": false,
+        "cache_dtype": "float16",
+        "amp_enabled": true,
+        "amp_dtype": "float16",
+        "channels_last": true,
+        "torch_compile": true,
+        "torch_compile_mode": "reduce-overhead",
+        "val_fraction": 0.12,
+        "checkpoint_every": 1,
+        "expected_vram_usage_gb": 6.5,
+        "expected_gpu_utilization": "85-95%",
+        "notes": "Conservative settings to validate data pipeline and model convergence"
+    },
+    "quick_refresh": {
+        "description": "Production refresh run (~2-3 hours with warm cache)",
+        "epochs": 60,
+        "warmup_epochs": 8,
+        "batch_size": 48,
+        "grad_accum_steps": 3,
+        "effective_batch_size": 144,
+        "learning_rate": 0.0005,
+        "min_lr": 0.00001,
+        "scheduler": "cosine",
+        "weight_decay": 0.0001,
+        "grad_clip_norm": 1.0,
+        "num_workers": 4,
+        "val_num_workers": 4,
+        "prefetch_factor": 2,
+        "val_prefetch_factor": 2,
+        "persistent_workers": true,
+        "cache_dtype": "float16",
+        "amp_enabled": true,
+        "amp_dtype": "float16",
+        "channels_last": true,
+        "torch_compile": true,
+        "torch_compile_mode": "reduce-overhead",
+        "val_fraction": 0.2,
+        "checkpoint_every": 10,
+        "expected_vram_usage_gb": 8.5,
+        "expected_gpu_utilization": "90-98%",
+        "notes": "Balanced throughput and VRAM usage for production refreshes"
+    },
+    "long_run": {
+        "description": "Extended training for maximum accuracy (~10-14 hours)",
+        "epochs": 220,
+        "warmup_epochs": 16,
+        "batch_size": 32,
+        "grad_accum_steps": 4,
+        "effective_batch_size": 128,
+        "learning_rate": 0.00028,
+        "min_lr": 0.00002,
+        "scheduler": "cosine",
+        "weight_decay": 0.0001,
+        "grad_clip_norm": 1.0,
+        "num_workers": 4,
+        "val_num_workers": 4,
+        "prefetch_factor": 2,
+        "val_prefetch_factor": 2,
+        "persistent_workers": true,
+        "cache_dtype": "float16",
+        "amp_enabled": true,
+        "amp_dtype": "float16",
+        "channels_last": true,
+        "torch_compile": true,
+        "torch_compile_mode": "reduce-overhead",
+        "train_fraction": 1.0,
+        "val_fraction": 0.3,
+        "checkpoint_every": 20,
+        "expected_vram_usage_gb": 7.0,
+        "expected_gpu_utilization": "92-98%",
+        "notes": "Lower LR for fine-grained convergence; resume from warmup checkpoint"
+    },
+    "cache_precompute": {
+        "description": "Feature cache precomputation settings",
+        "batch_size": 96,
+        "num_workers": 6,
+        "persistent_workers": true,
+        "cache_dtype": "float16",
+        "expected_time_per_10k_samples_seconds": 45,
+        "notes": "Higher workers OK since cache I/O is the bottleneck, not GPU"
+    },
+    "hardware_tuning_notes": {
+        "windows_specific": [
+            "Use 2-4 workers max due to Windows multiprocessing overhead",
+            "Git Bash terminal recommended over PowerShell for script compatibility",
+            "Set CUDA_LAUNCH_BLOCKING=0 for async kernel execution",
+            "Ensure NVIDIA driver is ≥535 for best PyTorch 2.x support"
+        ],
+        "nvme_optimization": [
+            "Feature cache on NVMe eliminates I/O bottlenecks completely",
+            "float16 cache cuts storage by 50% with negligible precision loss",
+            "No need for memory-mapped files with 7GB/s read speeds"
+        ],
+        "vram_management": [
+            "12GB VRAM supports batch_size=48 comfortably with AMP",
+            "channels_last memory format improves tensor core utilization",
+            "torch.compile with reduce-overhead mode minimizes graph overhead",
+            "Gradient accumulation allows large effective batches without VRAM increase"
+        ],
+        "cpu_optimization": [
+            "9800X3D's 104MB L3 cache helps with DataLoader prefetching",
+            "8 cores means 2-4 workers per DataLoader is optimal",
+            "pin_memory=True recommended for CUDA to leverage DMA transfers"
+        ]
+    },
+    "benchmark_expectations": {
+        "warmup_probe": {
+            "samples_per_second": "1200-1500",
+            "gpu_memory_peak_gb": 6.5,
+            "time_per_epoch_minutes": 3.5
+        },
+        "quick_refresh": {
+            "samples_per_second": "1400-1700",
+            "gpu_memory_peak_gb": 8.5,
+            "time_per_epoch_minutes": 2.8
+        },
+        "long_run": {
+            "samples_per_second": "1300-1600",
+            "gpu_memory_peak_gb": 7.0,
+            "time_per_epoch_minutes": 3.2
+        }
+    }
+}

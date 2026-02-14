@@ -1,0 +1,22 @@
+{
+    "session_id": "session_001",
+    "notes": "Example manifest consumed by align_qc.py. Provide absolute or relative paths to per-mic audio files.",
+    "mics": [
+        {
+            "name": "snare_top",
+            "path": "../sessions/session_001/snare_top.wav"
+        },
+        {
+            "name": "kick_in",
+            "path": "../sessions/session_001/kick_in.wav"
+        },
+        {
+            "name": "overhead_l",
+            "path": "../sessions/session_001/overhead_l.wav"
+        },
+        {
+            "name": "overhead_r",
+            "path": "../sessions/session_001/overhead_r.wav"
+        }
+    ]
+}

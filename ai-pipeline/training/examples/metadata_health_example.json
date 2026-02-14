@@ -1,0 +1,20 @@
+{
+    "split_durations_seconds": {
+        "train": 1800.0,
+        "val": 600.0
+    },
+    "run_split_durations_seconds": {
+        "train": 120.0,
+        "val": 45.0
+    },
+    "duration_seconds_by_source": {
+        "BeatSight": 900.0,
+        "Groove": 600.0,
+        "ENST": 300.0
+    },
+    "run_duration_seconds_by_source": {
+        "BeatSight": 60.0,
+        "Groove": 45.0,
+        "ENST": 30.0
+    }
+}

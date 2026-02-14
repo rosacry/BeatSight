@@ -1,0 +1,5 @@
+# Techniques that must appear in production manifests
+hihat_bark
+metric_modulation
+variable_meter
+multi_cymbal_same_class

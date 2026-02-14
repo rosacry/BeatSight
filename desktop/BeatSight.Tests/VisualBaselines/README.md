@@ -92,6 +92,7 @@ This helper:
 - splits the heaviest editor/playback cluster into per-scene batches,
 - prints heartbeat logs while each batch is running,
 - prints per-batch timing telemetry (`startup` from first TRX appearance + `total` duration),
+- prints end-of-run timing rollups (`startup_mean`, `startup_p95`, `total_mean`, `total_p95`, and slowest batch),
 - applies a per-batch timeout,
 - validates each batch from generated TRX results,
 - runs each test invocation with `--no-build` after the upfront build,

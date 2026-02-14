@@ -236,6 +236,180 @@ public class VisualRegressionRollupHelperTests
         }
     }
 
+    [Fact]
+    public void RollupHelperComparesTimingRollups()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        string repoRoot = TestPathResolver.ResolveRepositoryRoot();
+        string helperPath = Path.Combine(repoRoot, "scripts", "visual_regression_rollup_helpers.ps1");
+        Assert.True(File.Exists(helperPath), $"Expected helper script missing: {helperPath}");
+
+        string payload = runHelperAndGetJson(
+            helperPath,
+            """
+            $baseline = [pscustomobject]@{
+              BatchCount=2
+              StartupMeanSeconds=0
+              StartupP95Seconds=3
+              TotalMeanSeconds=20
+              TotalP95Seconds=25
+              TrxMeanSeconds=18
+              TrxP95Seconds=24
+              TrxDurationSampleCount=2
+              TrxDurationMissingCount=1
+              SlowestBatchScenes='Editor'
+              SlowestBatchTotalSeconds=30
+            }
+            $current = [pscustomobject]@{
+              BatchCount=2
+              StartupMeanSeconds=2
+              StartupP95Seconds=4
+              TotalMeanSeconds=24
+              TotalP95Seconds=29
+              TrxMeanSeconds=20
+              TrxP95Seconds=27
+              TrxDurationSampleCount=2
+              TrxDurationMissingCount=0
+              SlowestBatchScenes='Playback'
+              SlowestBatchTotalSeconds=34
+            }
+            Compare-VisualTimingRollups -BaselineRollup $baseline -CurrentRollup $current
+            """);
+
+        using JsonDocument document = JsonDocument.Parse(payload);
+        JsonElement root = document.RootElement;
+
+        Assert.Equal(2, root.GetProperty("BatchCountBaseline").GetInt32());
+        Assert.Equal(2, root.GetProperty("BatchCountCurrent").GetInt32());
+        Assert.Equal(0, root.GetProperty("BatchCountDelta").GetInt32());
+        Assert.Equal(1, root.GetProperty("TrxDurationMissingCountBaseline").GetInt32());
+        Assert.Equal(0, root.GetProperty("TrxDurationMissingCountCurrent").GetInt32());
+        Assert.Equal(-1, root.GetProperty("TrxDurationMissingCountDelta").GetInt32());
+        Assert.Equal("Editor", root.GetProperty("SlowestBatchScenesBaseline").GetString());
+        Assert.Equal("Playback", root.GetProperty("SlowestBatchScenesCurrent").GetString());
+        Assert.InRange(root.GetProperty("SlowestBatchTotalSecondsDelta").GetDouble(), 3.99, 4.01);
+
+        JsonElement metrics = root.GetProperty("Metrics");
+        Assert.Equal(6, metrics.GetArrayLength());
+
+        JsonElement startupMean = metrics[0];
+        Assert.Equal("StartupMeanSeconds", startupMean.GetProperty("Name").GetString());
+        Assert.InRange(startupMean.GetProperty("Delta").GetDouble(), 1.99, 2.01);
+        Assert.Equal(JsonValueKind.Null, startupMean.GetProperty("DeltaPercent").ValueKind);
+
+        JsonElement totalMean = metrics[2];
+        Assert.Equal("TotalMeanSeconds", totalMean.GetProperty("Name").GetString());
+        Assert.InRange(totalMean.GetProperty("Delta").GetDouble(), 3.99, 4.01);
+        Assert.InRange(totalMean.GetProperty("DeltaPercent").GetDouble(), 19.99, 20.01);
+    }
+
+    [Fact]
+    public void CompareVisualRollupsScriptProducesExpectedJson()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        string repoRoot = TestPathResolver.ResolveRepositoryRoot();
+        string scriptPath = Path.Combine(repoRoot, "scripts", "compare_visual_rollups.ps1");
+        Assert.True(File.Exists(scriptPath), $"Expected compare script missing: {scriptPath}");
+
+        string tempRoot = Path.Combine(Path.GetTempPath(), "BeatSight.RollupCompareTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempRoot);
+        string baselinePath = Path.Combine(tempRoot, "visual_rollup_baseline.json");
+        string currentPath = Path.Combine(tempRoot, "visual_rollup_current.json");
+
+        try
+        {
+            File.WriteAllText(
+                baselinePath,
+                """
+{
+  "GeneratedAtUtc": "2026-02-14T16:00:00.0000000+00:00",
+  "Metadata": { "Label": "baseline" },
+  "Rollup": {
+    "BatchCount": 2,
+    "StartupMeanSeconds": 0,
+    "StartupP95Seconds": 3,
+    "TotalMeanSeconds": 20,
+    "TotalP95Seconds": 25,
+    "TrxMeanSeconds": 18,
+    "TrxP95Seconds": 24,
+    "TrxDurationSampleCount": 2,
+    "TrxDurationMissingCount": 1,
+    "SlowestBatchScenes": "Editor",
+    "SlowestBatchTotalSeconds": 30
+  },
+  "Batches": []
+}
+""");
+
+            File.WriteAllText(
+                currentPath,
+                """
+{
+  "GeneratedAtUtc": "2026-02-14T16:05:00.0000000+00:00",
+  "Metadata": { "Label": "current" },
+  "Rollup": {
+    "BatchCount": 2,
+    "StartupMeanSeconds": 2,
+    "StartupP95Seconds": 4,
+    "TotalMeanSeconds": 24,
+    "TotalP95Seconds": 29,
+    "TrxMeanSeconds": 20,
+    "TrxP95Seconds": 27,
+    "TrxDurationSampleCount": 2,
+    "TrxDurationMissingCount": 0,
+    "SlowestBatchScenes": "Playback",
+    "SlowestBatchTotalSeconds": 34
+  },
+  "Batches": []
+}
+""");
+
+            string payload = runPowerShellFileAndGetOutput(
+                scriptPath,
+                "-BaselinePath",
+                baselinePath,
+                "-CurrentPath",
+                currentPath,
+                "-OutputJson");
+
+            using JsonDocument document = JsonDocument.Parse(payload);
+            JsonElement root = document.RootElement;
+
+            Assert.Equal("baseline", root.GetProperty("BaselineMetadata").GetProperty("Label").GetString());
+            Assert.Equal("current", root.GetProperty("CurrentMetadata").GetProperty("Label").GetString());
+
+            JsonElement comparison = root.GetProperty("Comparison");
+            Assert.Equal(0, comparison.GetProperty("BatchCountDelta").GetInt32());
+            Assert.Equal(-1, comparison.GetProperty("TrxDurationMissingCountDelta").GetInt32());
+            Assert.Equal("Editor", comparison.GetProperty("SlowestBatchScenesBaseline").GetString());
+            Assert.Equal("Playback", comparison.GetProperty("SlowestBatchScenesCurrent").GetString());
+
+            JsonElement metrics = comparison.GetProperty("Metrics");
+            JsonElement startupMean = findMetric(metrics, "StartupMeanSeconds");
+            Assert.InRange(startupMean.GetProperty("Delta").GetDouble(), 1.99, 2.01);
+            Assert.Equal(JsonValueKind.Null, startupMean.GetProperty("DeltaPercent").ValueKind);
+
+            JsonElement totalMean = findMetric(metrics, "TotalMeanSeconds");
+            Assert.InRange(totalMean.GetProperty("Delta").GetDouble(), 3.99, 4.01);
+            Assert.InRange(totalMean.GetProperty("DeltaPercent").GetDouble(), 19.99, 20.01);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+            catch
+            {
+                // Best effort cleanup.
+            }
+        }
+    }
+
     private static string runHelperAndGetJson(string helperPath, string scriptBody)
     {
         string command = "$ErrorActionPreference='Stop'; . '" +
@@ -273,6 +447,40 @@ public class VisualRegressionRollupHelperTests
         return stdout.Trim();
     }
 
+    private static string runPowerShellFileAndGetOutput(string scriptPath, params string[] arguments)
+    {
+        var processStart = new ProcessStartInfo
+        {
+            FileName = resolvePowerShellExecutable(),
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        processStart.ArgumentList.Add("-NoProfile");
+        processStart.ArgumentList.Add("-NonInteractive");
+        processStart.ArgumentList.Add("-ExecutionPolicy");
+        processStart.ArgumentList.Add("Bypass");
+        processStart.ArgumentList.Add("-File");
+        processStart.ArgumentList.Add(scriptPath);
+
+        foreach (string argument in arguments)
+            processStart.ArgumentList.Add(argument);
+
+        using var process = Process.Start(processStart);
+        Assert.NotNull(process);
+
+        string stdout = process!.StandardOutput.ReadToEnd();
+        string stderr = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+
+        Assert.True(
+            process.ExitCode == 0,
+            $"PowerShell script failed with exit code {process.ExitCode}.{Environment.NewLine}STDERR:{Environment.NewLine}{stderr}{Environment.NewLine}STDOUT:{Environment.NewLine}{stdout}");
+
+        return stdout.Trim();
+    }
+
     private static string resolvePowerShellExecutable()
     {
         if (OperatingSystem.IsWindows())
@@ -292,4 +500,15 @@ public class VisualRegressionRollupHelperTests
 
     private static string toSingleQuotedLiteral(string value)
         => value.Replace("'", "''");
+
+    private static JsonElement findMetric(JsonElement metrics, string metricName)
+    {
+        foreach (JsonElement metric in metrics.EnumerateArray())
+        {
+            if (string.Equals(metric.GetProperty("Name").GetString(), metricName, StringComparison.Ordinal))
+                return metric;
+        }
+
+        throw new InvalidOperationException($"Metric not found: {metricName}");
+    }
 }

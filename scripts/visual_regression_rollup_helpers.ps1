@@ -122,3 +122,69 @@ function Save-VisualTimingRollupArtifact {
     $payload | ConvertTo-Json -Depth 8 | Set-Content -Path $artifactPath -Encoding UTF8
     return $artifactPath
 }
+
+function Compare-VisualTimingRollups {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$BaselineRollup,
+        [Parameter(Mandatory = $true)]
+        [object]$CurrentRollup
+    )
+
+    $metricNames = @(
+        "StartupMeanSeconds",
+        "StartupP95Seconds",
+        "TotalMeanSeconds",
+        "TotalP95Seconds",
+        "TrxMeanSeconds",
+        "TrxP95Seconds"
+    )
+
+    $metricDiffs = @()
+    foreach ($metricName in $metricNames) {
+        $baselineRaw = $BaselineRollup.$metricName
+        $currentRaw = $CurrentRollup.$metricName
+        $baseline = if ($null -eq $baselineRaw) { $null } else { [double]$baselineRaw }
+        $current = if ($null -eq $currentRaw) { $null } else { [double]$currentRaw }
+        $delta = if ($null -eq $baseline -or $null -eq $current) { $null } else { [double]($current - $baseline) }
+        $deltaPercent = if ($null -eq $delta -or $null -eq $baseline -or [Math]::Abs([double]$baseline) -lt 0.000001) {
+            $null
+        }
+        else {
+            [double](($delta / [Math]::Abs([double]$baseline)) * 100.0)
+        }
+
+        $metricDiffs += [pscustomobject]@{
+            Name = $metricName
+            Baseline = $baseline
+            Current = $current
+            Delta = $delta
+            DeltaPercent = $deltaPercent
+        }
+    }
+
+    $baselineBatchCount = if ($null -eq $BaselineRollup.BatchCount) { $null } else { [int]$BaselineRollup.BatchCount }
+    $currentBatchCount = if ($null -eq $CurrentRollup.BatchCount) { $null } else { [int]$CurrentRollup.BatchCount }
+    $baselineTrxSamples = if ($null -eq $BaselineRollup.TrxDurationSampleCount) { $null } else { [int]$BaselineRollup.TrxDurationSampleCount }
+    $currentTrxSamples = if ($null -eq $CurrentRollup.TrxDurationSampleCount) { $null } else { [int]$CurrentRollup.TrxDurationSampleCount }
+    $baselineTrxMissing = if ($null -eq $BaselineRollup.TrxDurationMissingCount) { $null } else { [int]$BaselineRollup.TrxDurationMissingCount }
+    $currentTrxMissing = if ($null -eq $CurrentRollup.TrxDurationMissingCount) { $null } else { [int]$CurrentRollup.TrxDurationMissingCount }
+
+    return [pscustomobject]@{
+        BatchCountBaseline = $baselineBatchCount
+        BatchCountCurrent = $currentBatchCount
+        BatchCountDelta = if ($null -eq $baselineBatchCount -or $null -eq $currentBatchCount) { $null } else { [int]($currentBatchCount - $baselineBatchCount) }
+        TrxDurationSampleCountBaseline = $baselineTrxSamples
+        TrxDurationSampleCountCurrent = $currentTrxSamples
+        TrxDurationSampleCountDelta = if ($null -eq $baselineTrxSamples -or $null -eq $currentTrxSamples) { $null } else { [int]($currentTrxSamples - $baselineTrxSamples) }
+        TrxDurationMissingCountBaseline = $baselineTrxMissing
+        TrxDurationMissingCountCurrent = $currentTrxMissing
+        TrxDurationMissingCountDelta = if ($null -eq $baselineTrxMissing -or $null -eq $currentTrxMissing) { $null } else { [int]($currentTrxMissing - $baselineTrxMissing) }
+        SlowestBatchScenesBaseline = if ($null -eq $BaselineRollup.SlowestBatchScenes) { $null } else { [string]$BaselineRollup.SlowestBatchScenes }
+        SlowestBatchScenesCurrent = if ($null -eq $CurrentRollup.SlowestBatchScenes) { $null } else { [string]$CurrentRollup.SlowestBatchScenes }
+        SlowestBatchTotalSecondsBaseline = if ($null -eq $BaselineRollup.SlowestBatchTotalSeconds) { $null } else { [double]$BaselineRollup.SlowestBatchTotalSeconds }
+        SlowestBatchTotalSecondsCurrent = if ($null -eq $CurrentRollup.SlowestBatchTotalSeconds) { $null } else { [double]$CurrentRollup.SlowestBatchTotalSeconds }
+        SlowestBatchTotalSecondsDelta = if ($null -eq $BaselineRollup.SlowestBatchTotalSeconds -or $null -eq $CurrentRollup.SlowestBatchTotalSeconds) { $null } else { [double]$CurrentRollup.SlowestBatchTotalSeconds - [double]$BaselineRollup.SlowestBatchTotalSeconds }
+        Metrics = $metricDiffs
+    }
+}

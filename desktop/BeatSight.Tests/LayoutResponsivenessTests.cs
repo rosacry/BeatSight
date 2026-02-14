@@ -1,7 +1,9 @@
+using System;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Globalization;
+using BeatSight.Game.Screens.Editor;
 using Xunit;
 
 namespace BeatSight.Tests
@@ -127,6 +129,25 @@ namespace BeatSight.Tests
             Assert.True(playCompact >= undoCompact + 10f, $"Play action hierarchy regressed: play={playCompact:0.##}, undo={undoCompact:0.##}");
             Assert.True(saveCompact >= redoCompact + 10f, $"Save action hierarchy regressed: save={saveCompact:0.##}, redo={redoCompact:0.##}");
             Assert.True(previewCompact > playCompact, $"Preview prominence regressed: preview={previewCompact:0.##}, play={playCompact:0.##}");
+        }
+
+        [Fact]
+        public void EditorStackedInspectorActionRowsUseBoundedWidthsAt720p()
+        {
+            const float viewportWidth = 1280f;
+            const float compactBlend = 1f;
+
+            float singleColumn = EditorResponsiveLayout.ResolveInspectorActionRowWidthFraction(viewportWidth, stackedLayout: true, columnCount: 1, compactBlend);
+            float dualColumn = EditorResponsiveLayout.ResolveInspectorActionRowWidthFraction(viewportWidth, stackedLayout: true, columnCount: 2, compactBlend);
+            float tripleColumn = EditorResponsiveLayout.ResolveInspectorActionRowWidthFraction(viewportWidth, stackedLayout: true, columnCount: 3, compactBlend);
+            float unstacked = EditorResponsiveLayout.ResolveInspectorActionRowWidthFraction(viewportWidth, stackedLayout: false, columnCount: 2, compactBlend);
+
+            Assert.InRange(singleColumn, 0.17f, 0.33f);
+            Assert.InRange(dualColumn, 0.34f, 0.63f);
+            Assert.InRange(tripleColumn, 0.50f, 0.90f);
+            Assert.True(singleColumn < dualColumn, $"Expected 1-column row to be narrower than 2-column row ({singleColumn:0.###} vs {dualColumn:0.###}).");
+            Assert.True(dualColumn < tripleColumn, $"Expected 2-column row to be narrower than 3-column row ({dualColumn:0.###} vs {tripleColumn:0.###}).");
+            Assert.True(Math.Abs(unstacked - 1f) < 0.001f, $"Expected unstacked action rows to stay full width, got {unstacked:0.###}.");
         }
 
         [Fact]

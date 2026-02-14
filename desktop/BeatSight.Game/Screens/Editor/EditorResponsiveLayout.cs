@@ -1,3 +1,4 @@
+using System;
 using BeatSight.Game.UI.Theming;
 
 namespace BeatSight.Game.Screens.Editor
@@ -43,5 +44,27 @@ namespace BeatSight.Game.Screens.Editor
                 stackedInspectorHeight,
                 shouldStack);
         }
+
+        internal static float ResolveInspectorActionRowWidthFraction(float viewportWidth, bool stackedLayout, int columnCount, float compactBlend)
+        {
+            if (!stackedLayout || columnCount >= 4)
+                return 1f;
+
+            float width = viewportWidth > 0 ? viewportWidth : 1280f;
+            float t = Math.Clamp(compactBlend, 0f, 1f);
+
+            float targetWidth = columnCount switch
+            {
+                1 => ResponsiveLayout.ClampFraction(width, lerp(0.35f, 0.32f, t), 228f, 420f),
+                2 => ResponsiveLayout.ClampFraction(width, lerp(0.62f, 0.56f, t), 440f, 760f),
+                3 => ResponsiveLayout.ClampFraction(width, lerp(0.90f, 0.82f, t), 660f, 1080f),
+                _ => width
+            };
+
+            return Math.Clamp(targetWidth / width, 0.18f, 1f);
+        }
+
+        private static float lerp(float start, float end, float t)
+            => start + (end - start) * t;
     }
 }

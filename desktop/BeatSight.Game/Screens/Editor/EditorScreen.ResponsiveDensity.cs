@@ -207,6 +207,7 @@ namespace BeatSight.Game.Screens.Editor
                 label.Font = BeatSightFont.Button(buttonFont);
 
             refreshInspectorActionLabelWidths();
+            applyInspectorActionRowWidths(compactBlend, viewport);
 
             foreach (var titleText in inspectorSectionTitleTexts)
                 titleText.Font = BeatSightFont.Section(sectionTitleFont);
@@ -227,6 +228,36 @@ namespace BeatSight.Game.Screens.Editor
             {
                 inspectorSectionsFlow.Spacing = new Vector2(0, sectionsSpacing);
                 inspectorSectionsFlow.Padding = new MarginPadding { Horizontal = outerPaddingH, Vertical = outerPaddingV };
+            }
+        }
+
+        private void applyInspectorActionRowWidths(float compactBlend, Vector2 viewport)
+        {
+            if (inspectorActionRowContainers.Count == 0)
+                return;
+
+            float viewportWidth = viewport.X > 0 ? viewport.X : 1280f;
+
+            foreach (var (rowContainer, columnCount) in inspectorActionRowContainers)
+            {
+                float widthFraction = EditorResponsiveLayout.ResolveInspectorActionRowWidthFraction(
+                    viewportWidth,
+                    inspectorStackedLayout,
+                    columnCount,
+                    compactBlend);
+
+                if (inspectorStackedLayout && widthFraction < 0.999f)
+                {
+                    rowContainer.Anchor = Anchor.TopCentre;
+                    rowContainer.Origin = Anchor.TopCentre;
+                    rowContainer.Width = widthFraction;
+                }
+                else
+                {
+                    rowContainer.Anchor = Anchor.TopLeft;
+                    rowContainer.Origin = Anchor.TopLeft;
+                    rowContainer.Width = 1f;
+                }
             }
         }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
@@ -47,6 +48,8 @@ namespace BeatSight.Desktop
         private const uint FILE_SHARE_WRITE = 0x00000002;
         private const uint OPEN_EXISTING = 3;
         private static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
+        private static readonly string[] suppressedInputHandlerNames = { "OpenTabletDriverHandler", "PenHandler" };
+        private static readonly char[] inputHandlerSeparators = { ',', ';' };
 
         private static TextWriter? attachedStdOutWriter;
         private static TextWriter? attachedStdErrWriter;
@@ -63,8 +66,18 @@ namespace BeatSight.Desktop
             initialiseGlobalDiagnostics();
             configureLogging(loggingOptions);
 
+            bool suppressTabletInputHandlers = shouldSuppressTabletInputHandlers(args);
+            if (suppressTabletInputHandlers)
+                preseedSuppressedInputHandlersConfig();
+
             using GameHost host = Host.GetSuitableDesktopHost("BeatSight");
             ensureCookieFile(host);
+
+            if (suppressTabletInputHandlers)
+            {
+                persistSuppressedInputHandlers(host);
+                disableSuppressedInputHandlers(host);
+            }
 
             using osu.Framework.Game game = new BeatSightGame();
 
@@ -408,6 +421,156 @@ namespace BeatSight.Desktop
             catch
             {
                 // Non-fatal; the framework will emit warnings if creation fails.
+            }
+        }
+
+        private static bool shouldSuppressTabletInputHandlers(string[] args)
+        {
+            if (string.Equals(Environment.GetEnvironmentVariable("BEATSIGHT_ENABLE_TABLET_INPUT"), "1", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            foreach (string arg in args)
+            {
+                if (arg.Equals("--enable-tablet-input", StringComparison.OrdinalIgnoreCase))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static void persistSuppressedInputHandlers(GameHost host)
+        {
+            try
+            {
+                const string frameworkConfigFile = "framework.ini";
+
+                using var stream = host.Storage.GetStream(frameworkConfigFile, FileAccess.ReadWrite, FileMode.OpenOrCreate);
+                using var reader = new StreamReader(stream, leaveOpen: true);
+                var lines = new List<string>();
+
+                string? line;
+                while ((line = reader.ReadLine()) != null)
+                    lines.Add(line);
+
+                bool changed = ensureIgnoredInputHandlers(lines);
+
+                if (!changed)
+                    return;
+
+                stream.SetLength(0);
+                stream.Seek(0, SeekOrigin.Begin);
+
+                using var writer = new StreamWriter(stream, leaveOpen: true);
+                foreach (var entry in lines)
+                    writer.WriteLine(entry);
+
+                writer.Flush();
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Failed to persist suppressed input handlers: {ex.Message}", LoggingTarget.Runtime, LogLevel.Debug);
+            }
+        }
+
+        private static void preseedSuppressedInputHandlersConfig()
+        {
+            try
+            {
+                string appDataRoot = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                if (string.IsNullOrWhiteSpace(appDataRoot))
+                    return;
+
+                string storageDirectory = Path.Combine(appDataRoot, "BeatSight");
+                Directory.CreateDirectory(storageDirectory);
+
+                string configPath = Path.Combine(storageDirectory, "framework.ini");
+                List<string> lines = File.Exists(configPath) ? File.ReadAllLines(configPath).ToList() : new List<string>();
+
+                if (!ensureIgnoredInputHandlers(lines))
+                    return;
+
+                File.WriteAllLines(configPath, lines);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Failed to preseed suppressed input handlers: {ex.Message}", LoggingTarget.Runtime, LogLevel.Debug);
+            }
+        }
+
+        private static bool ensureIgnoredInputHandlers(List<string> lines)
+        {
+            const string key = "IgnoredInputHandlers";
+            string prefix = key + " =";
+
+            for (int i = 0; i < lines.Count; i++)
+            {
+                if (!lines[i].StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                string currentValue = extractConfigValue(lines[i]);
+                var merged = mergeInputHandlerNames(currentValue);
+                string updated = $"{key} = {string.Join(",", merged)}";
+
+                if (string.Equals(lines[i].Trim(), updated, StringComparison.OrdinalIgnoreCase))
+                    return false;
+
+                lines[i] = updated;
+                return true;
+            }
+
+            lines.Add($"{key} = {string.Join(",", suppressedInputHandlerNames)}");
+            return true;
+        }
+
+        private static string[] mergeInputHandlerNames(string value)
+        {
+            var merged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var handler in splitInputHandlerNames(value))
+                merged.Add(handler);
+
+            foreach (string handler in suppressedInputHandlerNames)
+                merged.Add(handler);
+
+            return merged.ToArray();
+        }
+
+        private static IEnumerable<string> splitInputHandlerNames(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return Array.Empty<string>();
+
+            return value.Split(inputHandlerSeparators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        }
+
+        private static string extractConfigValue(string line)
+        {
+            int index = line.IndexOf('=');
+            return index >= 0 ? line[(index + 1)..].Trim() : string.Empty;
+        }
+
+        private static void disableSuppressedInputHandlers(GameHost host)
+        {
+            bool disabledAny = false;
+
+            foreach (var handler in host.AvailableInputHandlers)
+            {
+                if (!suppressedInputHandlerNames.Contains(handler.GetType().Name, StringComparer.OrdinalIgnoreCase))
+                    continue;
+
+                if (handler.Enabled.Value)
+                    handler.Enabled.Value = false;
+
+                disabledAny = true;
+                Logger.Log($"Input handler '{handler.GetType().Name}' disabled (tablet input suppression).", LoggingTarget.Runtime, LogLevel.Important);
+            }
+
+            if (!disabledAny)
+            {
+                Logger.Log(
+                    "Tablet input suppression requested, but no matching handlers were present on this host.",
+                    LoggingTarget.Runtime,
+                    LogLevel.Debug);
             }
         }
 

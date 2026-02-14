@@ -151,6 +151,7 @@ namespace BeatSight.Game
             "Fonts/Nunito/Nunito-Medium",
             "Fonts/Nunito/Nunito-SemiBold"
         };
+        private const string suppressedInputHandlersCsv = "OpenTabletDriverHandler,PenHandler";
 
         private DynamicBackground globalBackground = null!;
 
@@ -541,7 +542,10 @@ namespace BeatSight.Game
 
             bootstrapDefaultUserAssets();
 
-            Logger.Log("If you use a graphics tablet, lift the pen off the surface while BeatSight is running to prevent the cursor from being held in place.", LoggingTarget.Runtime, LogLevel.Important);
+            Logger.Log(
+                "Tablet/pen handlers are suppressed by default to avoid Windows device churn. Set BEATSIGHT_ENABLE_TABLET_INPUT=1 or pass --enable-tablet-input to opt in.",
+                LoggingTarget.Runtime,
+                LogLevel.Debug);
 
             // Load the intro screen
             screenStack.Push(new Screens.IntroScreen());
@@ -1212,9 +1216,7 @@ namespace BeatSight.Game
                 changed |= upsertConfigValue(lines, "Fullscreen", "False", overwriteExisting: forceCursorNormalisation);
                 changed |= upsertConfigValue(lines, "ConfineMouseMode", "Fullscreen", overwriteExisting: forceCursorNormalisation);
                 changed |= upsertConfigValue(lines, "MapAbsoluteInputToWindow", "False", overwriteExisting: forceCursorNormalisation);
-
-                if (forceCursorNormalisation)
-                    changed |= upsertConfigValue(lines, "IgnoredInputHandlers", string.Empty, overwriteExisting: true);
+                changed |= upsertConfigValue(lines, "IgnoredInputHandlers", suppressedInputHandlersCsv, overwriteExisting: true);
 
                 if (changed)
                 {

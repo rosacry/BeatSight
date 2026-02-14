@@ -151,7 +151,7 @@ namespace BeatSight.Game
             "Fonts/Nunito/Nunito-Medium",
             "Fonts/Nunito/Nunito-SemiBold"
         };
-        private const string suppressedInputHandlersCsv = "OpenTabletDriverHandler,PenHandler,JoystickHandler,TouchHandler";
+        private const string suppressedInputHandlersCsv = "OpenTabletDriverHandler PenHandler JoystickHandler TouchHandler";
 
         private DynamicBackground globalBackground = null!;
 

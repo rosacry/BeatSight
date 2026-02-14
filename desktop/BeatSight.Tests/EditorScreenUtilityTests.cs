@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Screens.Editor;
@@ -182,6 +184,87 @@ namespace BeatSight.Tests
 
             invokePrivateInstance<object?>(screen, "shiftSelectionToAdjacentNotationLane", false);
             Assert.Equal("snare", selected.Component);
+        }
+
+        [Fact]
+        public void MergeHitObjects_ReplacesSelectionRangeAndShiftsRelativeTimes()
+        {
+            var screen = new EditorScreen();
+            var beatmap = createMinimalBeatmap(
+                new HitObject { Time = 500, Component = "kick", Velocity = 0.8 },
+                new HitObject { Time = 1200, Component = "snare", Velocity = 0.8 },
+                new HitObject { Time = 1400, Component = "hihat_closed", Velocity = 0.8 },
+                new HitObject { Time = 2500, Component = "tom", Velocity = 0.8 });
+
+            setPrivateField(screen, "beatmap", beatmap);
+
+            var generated = new List<HitObject>
+            {
+                new() { Time = 100, Component = "kick", Velocity = 0.9 },
+                new() { Time = 350, Component = "snare", Velocity = 0.9 },
+                new() { Time = 900, Component = "hihat_open", Velocity = 0.9 },
+                new() { Time = 2200, Component = "ride_bow", Velocity = 0.9 } // outside range after shift, should drop
+            };
+
+            invokePrivateInstance<object?>(screen, "mergeHitObjects", generated, 1000d, 2000d);
+
+            var times = beatmap.HitObjects.Select(h => h.Time).OrderBy(t => t).ToArray();
+            Assert.Equal(new[] { 500, 1100, 1350, 1900, 2500 }, times);
+
+            Assert.DoesNotContain(beatmap.HitObjects, h => h.Time == 1200 && h.Component == "snare");
+            Assert.DoesNotContain(beatmap.HitObjects, h => h.Time == 1400 && h.Component == "hihat_closed");
+            Assert.DoesNotContain(beatmap.HitObjects, h => h.Time == 3200);
+        }
+
+        [Fact]
+        public void MergeHitObjects_ClearsSelectedHitWhenRemovedAndArmsUndo()
+        {
+            var screen = new EditorScreen();
+            var beatmap = createMinimalBeatmap(
+                new HitObject { Time = 1200, Component = "snare", Velocity = 0.8 },
+                new HitObject { Time = 2600, Component = "tom", Velocity = 0.8 });
+
+            var selected = beatmap.HitObjects[0];
+
+            setPrivateField(screen, "beatmap", beatmap);
+            setPrivateField(screen, "selectedHitObject", selected);
+
+            var generated = new List<HitObject>
+            {
+                new() { Time = 150, Component = "kick", Velocity = 0.9 }
+            };
+
+            invokePrivateInstance<object?>(screen, "mergeHitObjects", generated, 1000d, 2000d);
+
+            Assert.Null(getPrivateField<HitObject?>(screen, "selectedHitObject"));
+            Assert.True(getPrivateField<bool>(screen, "hasUnsavedChanges"));
+            Assert.False(getPrivateField<bool>(screen, "editSnapshotArmed"));
+
+            var undoStack = getPrivateField<List<EditorSnapshot>>(screen, "undoStack");
+            Assert.Single(undoStack);
+        }
+
+        [Fact]
+        public void ReassignSelectedComponent_ChangesComponentAndTracksUndoState()
+        {
+            var screen = new EditorScreen();
+            var beatmap = createMinimalBeatmap(new HitObject { Time = 1000, Component = "kick", Velocity = 0.8 });
+            var selected = beatmap.HitObjects[0];
+
+            setPrivateField(screen, "beatmap", beatmap);
+            setPrivateField(screen, "selectedHitObject", selected);
+
+            var reassignBindable = getPrivateField<Bindable<string>>(screen, "componentReassignSelection");
+            reassignBindable.Value = "snare";
+
+            invokePrivateInstance<object?>(screen, "reassignSelectedComponent");
+
+            Assert.Equal("snare", selected.Component);
+            Assert.True(getPrivateField<bool>(screen, "hasUnsavedChanges"));
+            Assert.False(getPrivateField<bool>(screen, "editSnapshotArmed"));
+
+            var undoStack = getPrivateField<List<EditorSnapshot>>(screen, "undoStack");
+            Assert.Single(undoStack);
         }
 
         private static T invokePrivateStatic<T>(string methodName, params object?[]? args)

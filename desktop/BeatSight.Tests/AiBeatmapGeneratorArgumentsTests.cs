@@ -59,6 +59,68 @@ public class AiBeatmapGeneratorArgumentsTests
         Assert.Contains(" --quantization thirtysecond", args, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void BuildArguments_AutoSensitivityOnly_KeepsManualQuantization()
+    {
+        var options = new AiGenerationOptions
+        {
+            DetectionSensitivity = 72,
+            QuantizationGrid = QuantizationGrid.Triplet,
+            AutoSensitivity = true,
+            AutoQuantization = false
+        };
+
+        string args = buildArguments(options);
+
+        Assert.Contains(" --auto-sensitivity", args, StringComparison.Ordinal);
+        Assert.DoesNotContain(" --sensitivity 72", args, StringComparison.Ordinal);
+        Assert.Contains(" --quantization triplet", args, StringComparison.Ordinal);
+        Assert.DoesNotContain(" --auto-quantization", args, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildArguments_AutoQuantizationOnly_KeepsManualSensitivity()
+    {
+        var options = new AiGenerationOptions
+        {
+            DetectionSensitivity = 55,
+            QuantizationGrid = QuantizationGrid.Quarter,
+            AutoSensitivity = false,
+            AutoQuantization = true
+        };
+
+        string args = buildArguments(options);
+
+        Assert.Contains(" --sensitivity 55", args, StringComparison.Ordinal);
+        Assert.DoesNotContain(" --auto-sensitivity", args, StringComparison.Ordinal);
+        Assert.Contains(" --auto-quantization", args, StringComparison.Ordinal);
+        Assert.DoesNotContain(" --quantization quarter", args, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildArguments_DefaultThresholdScaleSemantics_DoNotEmitExplicitFlag()
+    {
+        var options = new AiGenerationOptions();
+
+        string args = buildArguments(options);
+
+        Assert.DoesNotContain(" --threshold-scale ", args, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildArguments_UnsupportedGrid_FallsBackToSixteenth()
+    {
+        var options = new AiGenerationOptions
+        {
+            QuantizationGrid = QuantizationGrid.None,
+            AutoQuantization = false
+        };
+
+        string args = buildArguments(options);
+
+        Assert.Contains(" --quantization sixteenth", args, StringComparison.Ordinal);
+    }
+
     private static string buildArguments(AiGenerationOptions options)
     {
         var method = typeof(AiBeatmapGenerator).GetMethod(

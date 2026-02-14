@@ -93,4 +93,18 @@ This helper:
 - validates each batch from generated TRX results,
 - and clears visual test environment variables on exit.
 
+## Chunked scoped runner (recommended for editor/settings work)
+Use this when you want progress heartbeats without running the full matrix:
+
+```powershell
+& ./scripts/run_visual_regression_chunked.ps1 `
+  -SceneBatches 'SongSelectEditor,Settings','Editor,Playback','EditorManuscript,PlaybackManuscript' `
+  -Resolutions '720p,1080p,1440p,ultrawide' `
+  -HeartbeatSeconds 15
+```
+
+Notes:
+- Prefer direct invocation (`& ./scripts/...`) from the repo root in PowerShell.
+- Avoid nested `powershell -Command ...` wrappers for complex array args, since quoting can mis-bind parameters.
+
 CI runs visual regression in `Release`, so prefer `-c Release` when updating baselines.

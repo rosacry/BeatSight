@@ -68,6 +68,7 @@ function Invoke-VisualBatch {
     Write-Host "[visual-gate] resolutions: $Resolutions"
     Write-Host "[visual-gate] timeout: ${TimeoutSeconds}s"
     Write-Host "[visual-gate] trx: $trxPath"
+    Write-Host "[visual-gate] note: each batch can take 60-120s+ depending on scene/resolution complexity."
 
     if ($DryRun) {
         Write-Host "[visual-gate][dry-run] dotnet $($args -join ' ')"
@@ -98,7 +99,7 @@ function Invoke-VisualBatch {
     $process.Refresh()
     $exitCode = $process.ExitCode
     if ($null -eq $exitCode) {
-        Write-Warning "Visual batch did not report an exit code for scenes: $Scenes (will verify TRX outcome)."
+        Write-Host "[visual-gate][info] batch did not report an exit code for scenes: $Scenes; verifying via TRX outcome."
         $exitCode = 0
     }
 

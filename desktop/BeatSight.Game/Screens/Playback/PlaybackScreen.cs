@@ -170,7 +170,7 @@ namespace BeatSight.Game.Screens.Playback
         private readonly BindableDouble zoomLevel = new BindableDouble(1.0)
         {
             MinValue = 0.5,
-            MaxValue = 1.5,
+            MaxValue = 2.0,
             Precision = 0.01,
             Default = 1.0
         };
@@ -286,7 +286,7 @@ namespace BeatSight.Game.Screens.Playback
             autoZoom.BindValueChanged(e =>
             {
                 if (e.NewValue)
-                    zoomLevel.Value = 1.0;
+                    zoomLevel.Value = 1.12;
 
                 if (beatmap != null)
                 {
@@ -1049,7 +1049,7 @@ namespace BeatSight.Game.Screens.Playback
                 DragStepMultiplier = 5 // 0.01 * 5 = 0.05
             }; var autoZoomCheckbox = new BeatSightCheckbox
             {
-                LabelText = "Auto Zoom (BPM Scaled)",
+                LabelText = "Auto Zoom (Density + BPM)",
                 LabelFontSize = metrics.CheckboxLabelFont,
                 Current = autoZoom
             };

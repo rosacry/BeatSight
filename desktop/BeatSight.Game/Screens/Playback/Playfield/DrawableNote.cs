@@ -100,6 +100,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
         public bool IsDisposedPublic => IsDisposed;
 
+        private readonly Container noteheadContainer;
         private readonly Box mainBox;
         private readonly Box highlightStrip;
         private readonly Box manuscriptCrossLineA;
@@ -134,14 +135,21 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             Size = new Vector2(60, 26);
             Origin = Anchor.Centre;
-            CornerRadius = 8;
-            Masking = true;
+            Masking = false;
 
             AccentColour = resolveComponentColour(hitObject.Component);
 
             Colour = AccentColour;
 
             var children = new List<Drawable>();
+
+            noteheadContainer = new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                Masking = true,
+                CornerRadius = 8
+            };
+            children.Add(noteheadContainer);
 
             // Add glow box first if enabled
             if (showGlow.Value)
@@ -153,7 +161,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     Alpha = 0.3f * velocityAlpha,
                     Blending = BlendingParameters.Additive,
                 };
-                children.Add(glowBox);
+                noteheadContainer.Add(glowBox);
             }
 
             // Always add main box
@@ -163,7 +171,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 Colour = AccentColour,
                 Alpha = velocityAlpha
             };
-            children.Add(mainBox);
+            noteheadContainer.Add(mainBox);
 
             stem = new Box
             {
@@ -237,15 +245,17 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             if (viewMode == LaneViewMode.Manuscript)
             {
+                Colour = Color4.White;
                 bool cymbalHead = ManuscriptBackgroundEnhanced.UsesCrossNoteheadForComponent(ComponentName);
                 bool ghostNote = Velocity < 0.35;
                 bool accentNote = Velocity > 0.85;
                 float noteWidth = Math.Max(10f, Width);
                 float noteHeight = Math.Max(7f, Height);
-                Color4 manuscriptInk = AccentColour.Darken(0.18f);
+                Color4 manuscriptInk = new Color4(228, 236, 248, 255);
                 mainBox.Shear = Vector2.Zero;
-                CornerRadius = Math.Clamp(noteHeight * 0.38f, 3f, 10f);
-                mainBox.Colour = ghostNote ? DesignSystem.WithOpacity(manuscriptInk, 0.76f) : manuscriptInk;
+                noteheadContainer.Masking = true;
+                noteheadContainer.CornerRadius = Math.Clamp(noteHeight * 0.44f, 3f, 12f);
+                mainBox.Colour = ghostNote ? DesignSystem.WithOpacity(manuscriptInk, 0.40f) : manuscriptInk;
                 mainBox.Alpha = cymbalHead ? 0f : 0.96f * velocityAlpha;
 
                 float crossLength = Math.Clamp(noteWidth * 0.95f, 9f, 24f);
@@ -306,6 +316,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             stem.Alpha = 0;
             manuscriptCrossLineA.Alpha = 0;
             manuscriptCrossLineB.Alpha = 0;
+            noteheadContainer.Masking = true;
+            Colour = AccentColour;
             mainBox.Colour = AccentColour;
             stem.Colour = AccentColour;
 
@@ -315,7 +327,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 if (isKickNote && kickGlobalMode)
                 {
                     float assumedHeight = Height > 0 ? Height : 18f;
-                    CornerRadius = Math.Min(assumedHeight / 2f, 9f);
+                    noteheadContainer.CornerRadius = Math.Min(assumedHeight / 2f, 9f);
                     highlightStrip.Anchor = Anchor.Centre;
                     highlightStrip.Origin = Anchor.Centre;
                     highlightStrip.Width = 1f;
@@ -327,7 +339,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     return;
                 }
 
-                CornerRadius = 6;
+                noteheadContainer.CornerRadius = 6;
                 Size = new Vector2(60, 20);
                 highlightStrip.Alpha = 0.3f * velocityAlpha;
                 highlightStrip.Width = 0.75f;
@@ -348,7 +360,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 if (isKickNote && kickGlobalMode)
                 {
                     float assumedHeight = Height > 0 ? Height : 18f;
-                    CornerRadius = Math.Min(assumedHeight / 2.0f, 10f);
+                    noteheadContainer.CornerRadius = Math.Min(assumedHeight / 2.0f, 10f);
                     highlightStrip.Anchor = Anchor.Centre;
                     highlightStrip.Origin = Anchor.Centre;
                     highlightStrip.Width = 1f;
@@ -361,7 +373,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     return;
                 }
 
-                CornerRadius = Math.Min(Height / 2.2f, 10f);
+                noteheadContainer.CornerRadius = Math.Min(Height / 2.2f, 10f);
                 highlightStrip.Anchor = Anchor.Centre;
                 highlightStrip.Origin = Anchor.Centre;
                 highlightStrip.Width = 1f;
@@ -396,7 +408,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             if (mode == LaneViewMode.TwoDimensional)
             {
-                CornerRadius = Math.Min(height / 2f, 9f);
+                noteheadContainer.CornerRadius = Math.Min(height / 2f, 9f);
                 highlightStrip.Anchor = Anchor.Centre;
                 highlightStrip.Origin = Anchor.Centre;
                 highlightStrip.Width = 1f;
@@ -409,7 +421,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             }
             else
             {
-                CornerRadius = Math.Min(height / 2.2f, 10f);
+                noteheadContainer.CornerRadius = Math.Min(height / 2.2f, 10f);
                 highlightStrip.Anchor = Anchor.Centre;
                 highlightStrip.Origin = Anchor.Centre;
                 highlightStrip.Width = 1f;

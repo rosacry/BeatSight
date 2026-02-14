@@ -18,10 +18,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private const int sweepLineCount = 3;
 
         // Keep these aligned with PlaybackPlayfield.ThreeDimensionalTuning.
-        private const float vanishingPointYRatio = 0.050f;
+        private const float vanishingPointYRatio = 0.11f;
         private const float hitLineYRatio = 0.935f;
-        private const float highwayTopWidthRatio = 0.22f;
-        private const float highwayBottomWidthRatio = 0.88f;
+        private const float highwayTopWidthRatio = 0.12f;
+        private const float highwayBottomWidthRatio = 0.74f;
 
         private static readonly Color4[] laneAccentPalette =
         {

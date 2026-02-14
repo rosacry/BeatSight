@@ -77,33 +77,33 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         /// <summary>Shared 3D playfield geometry tuning for playback and editor preview.</summary>
         private static class ThreeDimensionalTuning
         {
-            public const float VanishingPointYRatio = 0.050f;
-            public const float HighwayBottomWidthRatio = 0.88f;
-            public const float HighwayTopWidthRatio = 0.22f;
+            public const float VanishingPointYRatio = 0.11f;
+            public const float HighwayBottomWidthRatio = 0.74f;
+            public const float HighwayTopWidthRatio = 0.12f;
             public const float ProgressMin = 0.0f;
-            public const float ProgressMax = 1.08f;
-            public const float LaneNoteWidthAtTop = 0.17f;
-            public const float LaneNoteWidthAtBottom = 0.50f;
-            public const float MinNoteWidth = 10f;
-            public const float MaxNoteWidth = 90f;
-            public const float MinNoteHeight = 6f;
-            public const float MaxNoteHeight = 23f;
-            public const float KickWidthAtTop = 0.050f;
-            public const float KickWidthAtBottom = 0.20f;
+            public const float ProgressMax = 1.12f;
+            public const float LaneNoteWidthAtTop = 0.24f;
+            public const float LaneNoteWidthAtBottom = 0.63f;
+            public const float MinNoteWidth = 14f;
+            public const float MaxNoteWidth = 108f;
+            public const float MinNoteHeight = 8f;
+            public const float MaxNoteHeight = 28f;
+            public const float KickWidthAtTop = 0.075f;
+            public const float KickWidthAtBottom = 0.30f;
         }
 
         private static class SheetMusicTuning
         {
-            public const float TimelineWidthRatio = 0.90f;
+            public const float TimelineWidthRatio = 0.84f;
             public const float TimelineCenterYRatio = 0.56f;
-            public const double VisibleMeasures = 2.5;
-            public const float PlayheadRatio = 0.20f;
-            public const float NoteWidthRatio = 0.030f;
-            public const float NoteHeightRatio = 0.44f;
-            public const float MinNoteWidth = 11f;
-            public const float MaxNoteWidth = 42f;
-            public const float MinNoteHeight = 8f;
-            public const float MaxNoteHeight = 24f;
+            public const double VisibleMeasures = 2.0;
+            public const float PlayheadRatio = 0.24f;
+            public const float NoteWidthRatio = 0.018f;
+            public const float NoteHeightRatio = 0.56f;
+            public const float MinNoteWidth = 9f;
+            public const float MaxNoteWidth = 28f;
+            public const float MinNoteHeight = 9f;
+            public const float MaxNoteHeight = 26f;
         }
 
         /// <summary>Width ratio of the playfield relative to container. 1.0 = full width.</summary>
@@ -112,6 +112,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
         /// <summary>Additional visibility buffer after miss window (ms).</summary>
         private const double PastVisibilityBuffer = 600;
+        private const double BaseVisibleMeasures = 2.15;
+        private const double AutoZoomBaseMultiplier = 1.08;
+        private const double AutoZoomMaxMultiplier = 1.42;
 
         private readonly Func<double> currentTimeProvider;
         private readonly List<DrawableNote> notes = new();
@@ -494,15 +497,64 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             double beatDuration = 60000.0 / cachedBpm;
 
-            // Default to showing 10 beats (2.5 measures in 4/4) at 1.0 zoom to match original ~5000ms feel
-            double targetVisibleBeats = 10 * cachedBeatsPerMeasure / 4.0;
+            double beatsPerMeasure = Math.Max(1, cachedBeatsPerMeasure);
+            double targetVisibleBeats = BaseVisibleMeasures * beatsPerMeasure;
+            double effectiveZoom = getEffectiveZoomFactor(currentTime, beatDuration, beatsPerMeasure);
+            ApproachDuration = (targetVisibleBeats * beatDuration) / effectiveZoom;
+        }
 
-            // Apply ZoomLevel: Zooming In (Value > 1) means seeing LESS time (shorter duration)
-            // Zooming Out (Value < 1) means seeing MORE time (longer duration)
-            // So we divide by ZoomLevel
-            double zoomFactor = Math.Max(0.1, ZoomLevel.Value);
+        private double getEffectiveZoomFactor(double currentTime, double beatDuration, double beatsPerMeasure)
+        {
+            double manualZoom = Math.Max(0.1, ZoomLevel.Value);
+            if (!AutoZoom.Value)
+                return manualZoom;
 
-            ApproachDuration = (targetVisibleBeats * beatDuration) / zoomFactor;
+            double autoZoomMultiplier = calculateAutoZoomMultiplier(currentTime, beatDuration, beatsPerMeasure);
+            return manualZoom * autoZoomMultiplier;
+        }
+
+        private double calculateAutoZoomMultiplier(double currentTime, double beatDuration, double beatsPerMeasure)
+        {
+            if (beatDuration <= 0 || beatsPerMeasure <= 0 || notes.Count == 0)
+                return AutoZoomBaseMultiplier;
+
+            double lookaheadMs = beatDuration * beatsPerMeasure * 2.0;
+            double windowStart = currentTime - beatDuration * 0.5;
+            double windowEnd = currentTime + lookaheadMs;
+            int sampleCount = 0;
+
+            for (int i = Math.Max(0, firstActiveNoteIndex); i < notes.Count; i++)
+            {
+                double hitTime = notes[i].HitTime;
+                if (hitTime > windowEnd)
+                    break;
+                if (hitTime >= windowStart)
+                    sampleCount++;
+            }
+
+            double sampledBeats = lookaheadMs / beatDuration;
+            double notesPerBeat = sampledBeats <= 0 ? 0 : sampleCount / sampledBeats;
+            return CalculateAutoZoomMultiplier(cachedBpm, beatsPerMeasure, notesPerBeat);
+        }
+
+        internal static double CalculateAutoZoomMultiplier(double bpm, double beatsPerMeasure, double notesPerBeat)
+        {
+            double clampedBpm = Math.Max(1, bpm);
+            double clampedMeasure = Math.Max(1, beatsPerMeasure);
+            double clampedDensity = Math.Max(0, notesPerBeat);
+
+            // Density drives the majority of zoom-in pressure, with smaller boosts for higher tempos
+            // and compound signatures so dense charts remain legible.
+            double densityNormalized = Math.Clamp((clampedDensity - 0.70) / 1.90, 0.0, 1.0);
+            double bpmNormalized = Math.Clamp((clampedBpm - 110.0) / 150.0, 0.0, 1.0);
+            double signatureNormalized = Math.Clamp((clampedMeasure - 4.0) / 6.0, 0.0, 1.0);
+
+            double multiplier = AutoZoomBaseMultiplier
+                                + 0.22 * densityNormalized
+                                + 0.12 * bpmNormalized
+                                + 0.04 * signatureNormalized;
+
+            return Math.Clamp(multiplier, AutoZoomBaseMultiplier, AutoZoomMaxMultiplier);
         }
 
         private void updateCachedTiming(TimingPoint timingPoint)
@@ -631,7 +683,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             double beatsPerMeasure = Math.Max(1, cachedBeatsPerMeasure);
             double beatDuration = cachedBpm > 0 ? 60000.0 / cachedBpm : 500.0;
             double measureDuration = Math.Max(beatDuration, beatDuration * beatsPerMeasure);
-            double windowDuration = measureDuration * SheetMusicTuning.VisibleMeasures;
+            double effectiveZoom = getEffectiveZoomFactor(currentTime, beatDuration, beatsPerMeasure);
+            double windowDuration = (measureDuration * SheetMusicTuning.VisibleMeasures) / effectiveZoom;
             double playheadRatio = Math.Clamp(SheetMusicTuning.PlayheadRatio, 0.12f, 0.88f);
             double origin = loadedBeatmap?.Timing?.Offset ?? 0.0;
             double mapEnd = origin + windowDuration;
@@ -1008,17 +1061,17 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                                        / (ThreeDimensionalTuning.ProgressMax - ThreeDimensionalTuning.ProgressMin);
             normalizedProgress = Math.Clamp(normalizedProgress, 0f, 1f);
             // Stronger easing exaggerates stage depth so 3D does not collapse into a flat 2D look.
-            float perspectiveProgress = 1f - MathF.Pow(1f - normalizedProgress, 1.72f);
+            float perspectiveProgress = 1f - MathF.Pow(1f - normalizedProgress, 1.90f);
 
             float vanishingPointY = drawHeight * ThreeDimensionalTuning.VanishingPointYRatio;
             float highwayWidthAtBottom = drawWidth * ThreeDimensionalTuning.HighwayBottomWidthRatio;
             float highwayWidthAtTop = drawWidth * ThreeDimensionalTuning.HighwayTopWidthRatio;
 
             int activeLaneCount = cachedActiveLaneCount;
-            float widthProgress = MathF.Pow(perspectiveProgress, 1.56f);
+            float widthProgress = MathF.Pow(perspectiveProgress, 1.28f);
             float currentHighwayWidth = lerp(highwayWidthAtTop, highwayWidthAtBottom, widthProgress);
             float currentLaneWidth = currentHighwayWidth / activeLaneCount;
-            float y = lerp(vanishingPointY, hitLineY, MathF.Pow(perspectiveProgress, 1.30f));
+            float y = lerp(vanishingPointY, hitLineY, MathF.Pow(perspectiveProgress, 1.18f));
             float noteScaleSetting = (float)Math.Clamp(NoteWidthScale.Value, 0.65, 1.75);
             float laneNoteWidthFactor = lerp(
                 ThreeDimensionalTuning.LaneNoteWidthAtTop,
@@ -1029,7 +1082,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 ThreeDimensionalTuning.MinNoteWidth,
                 ThreeDimensionalTuning.MaxNoteWidth);
             float noteHeight = Math.Clamp(
-                noteWidth * lerp(0.30f, 0.20f, perspectiveProgress),
+                noteWidth * lerp(0.34f, 0.23f, perspectiveProgress),
                 ThreeDimensionalTuning.MinNoteHeight,
                 ThreeDimensionalTuning.MaxNoteHeight);
 
@@ -1038,7 +1091,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 ? Math.Clamp(
                     currentHighwayWidth * lerp(ThreeDimensionalTuning.KickWidthAtTop, ThreeDimensionalTuning.KickWidthAtBottom, perspectiveProgress) * noteScaleSetting,
                     28f,
-                    132f)
+                    152f)
                 : noteWidth;
             float finalNoteHeight = isGlobalKickVisual
                 ? Math.Clamp(noteHeight * 0.88f, ThreeDimensionalTuning.MinNoteHeight, 24f)
@@ -1069,7 +1122,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             note.Position = new Vector2(x, y);
             note.Scale = Vector2.One;
             float lateral = (x - drawWidth * 0.5f) / Math.Max(1f, drawWidth * 0.5f);
-            note.Rotation = -lateral * (1f - perspectiveProgress) * 9.0f;
+            note.Rotation = -lateral * (1f - perspectiveProgress) * 12.0f;
 
             setNoteDepth(note, perspectiveProgress);
 

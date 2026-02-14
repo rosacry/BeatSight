@@ -157,13 +157,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             Upper = 1
         }
 
-        private const float ManuscriptStaffWidthRatio = 0.88f;
+        private const float ManuscriptStaffWidthRatio = 0.84f;
         private const float ManuscriptStaffHeightRatio = 0.86f;
         private const float ManuscriptStaffCenterYRatio = 0.56f;
         private const float StaffUnitMin = -3.5f;
         private const float StaffUnitMax = 3.5f;
         private const float StaffUnitRange = StaffUnitMax - StaffUnitMin;
-        private const float BaseGuideAlpha = 0.012f;
+        private const float BaseGuideAlpha = 0.024f;
 
         // Staff dimensions
         private const int StaffLineCount = 5;
@@ -175,9 +175,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         // Dark sheet music colors inspired by modern tab readers.
         private static readonly Color4 PaperBackground = new Color4(16, 22, 33, 255);
         private static readonly Color4 PaperVignette = new Color4(10, 14, 22, 255);
-        private static readonly Color4 StaffLineColor = new Color4(196, 206, 226, 164);
-        private static readonly Color4 LedgerLineColor = new Color4(152, 168, 198, 106);
-        private static readonly Color4 LabelColor = new Color4(212, 224, 244, 200);
+        private static readonly Color4 StaffLineColor = new Color4(206, 218, 238, 218);
+        private static readonly Color4 LedgerLineColor = new Color4(170, 186, 214, 168);
+        private static readonly Color4 LabelColor = new Color4(220, 232, 248, 228);
 
         private Container? staffContainer;
         private Container? timelineMarkerLayer;

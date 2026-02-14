@@ -104,11 +104,11 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             highlightOverlay = new Box
             {
                 RelativeSizeAxes = Axes.Y,
-                Width = 7,
-                Anchor = Anchor.CentreLeft,
-                Origin = Anchor.Centre,
+                Width = 0,
+                Anchor = Anchor.TopLeft,
+                Origin = Anchor.TopLeft,
                 Colour = ColourInfo.GradientHorizontal(
-                    DesignSystem.WithOpacity(HighlightColor, 0.1f),
+                    DesignSystem.WithOpacity(HighlightColor, 0.02f),
                     HighlightColor)
             };
 
@@ -117,8 +117,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             {
                 RelativeSizeAxes = Axes.Y,
                 Width = GlowWidth,
-                Anchor = Anchor.CentreLeft,
-                Origin = Anchor.Centre,
+                Anchor = Anchor.TopLeft,
+                Origin = Anchor.TopLeft,
                 Colour = ColourInfo.GradientHorizontal(
                     Color4.Transparent,
                     GlowColor),
@@ -130,8 +130,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             {
                 RelativeSizeAxes = Axes.Y,
                 Width = EdgeLineWidth + 1f,
-                Anchor = Anchor.CentreLeft,
-                Origin = Anchor.Centre,
+                Anchor = Anchor.TopLeft,
+                Origin = Anchor.TopLeft,
                 Colour = EdgeColor
             };
 
@@ -212,19 +212,22 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         public void UpdatePlaybackPosition(double timeMs, double bpm)
         {
             currentTimeMs = timeMs;
-            float edgeX = resolveCursorX(timeMs, bpm);
+            float leftBound = hasTimelineWindow ? timelineLeftX : staffStartX;
+            float rightBound = hasTimelineWindow ? timelineRightX : staffEndX;
+            float edgeX = Math.Clamp(resolveCursorX(timeMs, bpm), leftBound, rightBound);
             float staffWidth = Math.Max(1f, staffEndX - staffStartX);
             float cursorWidth = Math.Clamp(staffWidth * 0.0034f, 2.8f, 5.2f);
             float glowWidth = Math.Clamp(cursorWidth * 2.4f, 9f, 13f);
 
-            highlightOverlay.Width = cursorWidth;
-            highlightOverlay.X = edgeX;
+            float overlayWidth = Math.Max(cursorWidth, edgeX - leftBound);
+            highlightOverlay.Width = overlayWidth;
+            highlightOverlay.X = leftBound;
 
-            leadingEdge.Width = Math.Clamp(cursorWidth * 0.66f, 1.6f, 2.8f);
-            leadingEdge.X = edgeX;
+            leadingEdge.Width = Math.Clamp(cursorWidth * 0.78f, 1.8f, 3.2f);
+            leadingEdge.X = edgeX - leadingEdge.Width * 0.5f;
 
             leadingGlow.Width = glowWidth;
-            leadingGlow.X = edgeX;
+            leadingGlow.X = edgeX - glowWidth;
 
             // Per-note glow rings are intentionally disabled by default for sheet readability.
             if (ShowNoteHighlights.Value && currentHitObjects != null)
@@ -315,6 +318,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         {
             currentTimeMs = 0;
             float resetX = hasTimelineWindow ? timelineLeftX : staffStartX;
+            highlightOverlay.Width = 0;
             highlightOverlay.X = resetX;
             leadingEdge.X = resetX;
             leadingGlow.X = resetX;

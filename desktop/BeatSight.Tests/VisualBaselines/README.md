@@ -78,4 +78,17 @@ Recommended workflow:
 - During development: run targeted subsets.
 - Before merge/baseline commit: clear subset env vars and run full matrix once.
 
+## Chunked full-matrix runner (avoids silent long waits)
+For long runs where per-batch progress is helpful, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/run_visual_regression_chunked.ps1 -RunFullDesktopSuite
+```
+
+This helper:
+- runs the full scene catalog in 3 scene batches,
+- prints heartbeat logs while each batch is running,
+- applies a per-batch timeout,
+- and clears visual test environment variables on exit.
+
 CI runs visual regression in `Release`, so prefer `-c Release` when updating baselines.

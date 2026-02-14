@@ -90,6 +90,7 @@ This helper:
 - splits the heaviest editor/playback cluster into per-scene batches,
 - prints heartbeat logs while each batch is running,
 - applies a per-batch timeout,
+- validates each batch from generated TRX results,
 - and clears visual test environment variables on exit.
 
 CI runs visual regression in `Release`, so prefer `-c Release` when updating baselines.

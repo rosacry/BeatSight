@@ -12,7 +12,7 @@ namespace BeatSight.Tests
         [Theory]
         [InlineData("Editor")]
         [InlineData("EditorManuscript")]
-        public void CompactInspectorActionRowsStayBoundedAndCenteredAt720p(string sceneName)
+        public void CompactEditorLayoutContractsStayValidAt720p(string sceneName)
         {
             if (!OperatingSystem.IsWindows())
                 return;

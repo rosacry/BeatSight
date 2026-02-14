@@ -17,9 +17,15 @@ namespace BeatSight.Game.Screens.Editor
         Anchor Anchor,
         Anchor Origin);
 
+    internal readonly record struct EditorHeaderLayoutContract(
+        float StatusMaxWidth,
+        float ActionHintMaxWidth,
+        float PlaybackStatusMaxWidth);
+
     internal readonly record struct InspectorLayoutContract(
         bool IsStackedLayout,
-        InspectorActionRowContract[] ActionRows);
+        InspectorActionRowContract[] ActionRows,
+        EditorHeaderLayoutContract Header);
 
     public partial class EditorScreen
     {
@@ -82,7 +88,12 @@ namespace BeatSight.Game.Screens.Editor
                     entry.RowContainer.Origin))
                 .ToArray();
 
-            return new InspectorLayoutContract(inspectorStackedLayout, rows);
+            var header = new EditorHeaderLayoutContract(
+                statusText?.MaxWidth ?? 0f,
+                actionHintText?.MaxWidth ?? 0f,
+                playbackStatusText?.MaxWidth ?? 0f);
+
+            return new InspectorLayoutContract(inspectorStackedLayout, rows, header);
         }
     }
 }

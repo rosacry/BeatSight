@@ -115,4 +115,27 @@ Notes:
 - Prefer direct invocation (`& ./scripts/...`) from the repo root in PowerShell.
 - Avoid nested `powershell -Command ...` wrappers for complex array args, since quoting can mis-bind parameters.
 
+## Rollup trend compare helper
+To compare two persisted rollup artifacts:
+
+```powershell
+& ./scripts/compare_visual_rollups.ps1 `
+  -BaselinePath 'desktop/BeatSight.Tests/TestResults/visual-chunked/visual_rollup_20260214_160000_000.json' `
+  -CurrentPath 'desktop/BeatSight.Tests/TestResults/visual-chunked/visual_rollup_20260214_170000_000.json'
+```
+
+Or auto-compare the latest two rollups in the default results directory:
+
+```powershell
+& ./scripts/compare_visual_rollups.ps1
+```
+
+For machine-readable output:
+
+```powershell
+& ./scripts/compare_visual_rollups.ps1 -OutputJson
+```
+
+CI now uploads chunked rollup artifacts from Windows runs as `visual-rollup-windows-latest`.
+
 CI runs visual regression in `Release`, so prefer `-c Release` when updating baselines.

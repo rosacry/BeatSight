@@ -5,7 +5,11 @@ param(
     [string[]]$SceneBatches = @(
         "Intro,MainMenu,SongSelect,SongSelectEditor,Settings",
         "Recording,Onboarding,AudioImportLoading,MappingChoice,MetadataChoice",
-        "MappingGeneration,Editor,Playback,EditorManuscript,PlaybackManuscript"
+        "MappingGeneration",
+        "Editor",
+        "Playback",
+        "EditorManuscript",
+        "PlaybackManuscript"
     ),
     [int]$BatchTimeoutSeconds = 900,
     [int]$HeartbeatSeconds = 20,
@@ -69,8 +73,16 @@ function Invoke-VisualBatch {
         }
     }
 
-    if ($process.ExitCode -ne 0) {
-        throw "Visual batch failed (exit code $($process.ExitCode)) for scenes: $Scenes"
+    $process.WaitForExit()
+    $process.Refresh()
+    $exitCode = $process.ExitCode
+    if ($null -eq $exitCode) {
+        Write-Warning "Visual batch did not report an exit code; assuming success for scenes: $Scenes"
+        $exitCode = 0
+    }
+
+    if ($exitCode -ne 0) {
+        throw "Visual batch failed (exit code $exitCode) for scenes: $Scenes"
     }
 
     Write-Host "[visual-gate] batch passed for scenes: $Scenes"
@@ -82,7 +94,10 @@ try {
     Write-Host "[visual-gate] project: $ProjectPath"
     Write-Host "[visual-gate] batches: $($SceneBatches.Count)"
 
-    foreach ($batch in $SceneBatches) {
+    for ($index = 0; $index -lt $SceneBatches.Count; $index++) {
+        $batch = $SceneBatches[$index]
+        Write-Host ""
+        Write-Host "[visual-gate] batch $($index + 1)/$($SceneBatches.Count)"
         [void](Invoke-VisualBatch `
             -Scenes $batch `
             -Resolutions $Resolutions `

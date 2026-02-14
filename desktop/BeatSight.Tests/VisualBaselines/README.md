@@ -86,7 +86,8 @@ powershell -ExecutionPolicy Bypass -File scripts/run_visual_regression_chunked.p
 ```
 
 This helper:
-- runs the full scene catalog in 3 scene batches,
+- runs the full scene catalog in chunked scene batches,
+- splits the heaviest editor/playback cluster into per-scene batches,
 - prints heartbeat logs while each batch is running,
 - applies a per-batch timeout,
 - and clears visual test environment variables on exit.

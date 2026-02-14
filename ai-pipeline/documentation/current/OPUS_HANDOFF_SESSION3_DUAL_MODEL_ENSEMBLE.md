@@ -8,8 +8,9 @@ This handoff reflects the current training plan and command matrix in active use
 
 - Dual-model ensemble architecture is implemented in pipeline code.
 - Step 1 is complete.
-- Step 2 is still running and now has logs through epoch 20 (partial), with best micro-F1 0.9147 (epoch 18).
-- Steps 3/4/5 remain pending and should proceed exactly in sequence after Step 2 checkpoint selection.
+- Step 2 is complete.
+- Step 3 (Version A cymbal-boost Demucs run) is now in progress.
+- Steps 4/5 remain pending and should proceed in sequence after Step 3 completion.
 
 ## Ensemble Architecture (Current)
 
@@ -24,13 +25,12 @@ Production path:
 
 ## Current Decision Rules
 
-### Step 2
+### Step 3
 
-- Keep current run until completion (epoch 30), unless significant divergence appears.
-- At completion, select checkpoint by:
-  - micro-F1
-  - macro-F1
-  - weak-class F1 trend (`hihat_open`, `hihat_pedal`)
+- Keep Version A run until completion (or early stop only on clear divergence).
+- At completion, preserve:
+  - `best_multilabel_model_ema.pt`
+  - late-epoch checkpoints for ensemble bakeoff (currently planned: epoch 26/25/24)
 
 ### Step 5
 
@@ -41,8 +41,8 @@ Production path:
 
 ## Canonical Execution Order
 
-1. Finish Step 2 and select final clean checkpoint.
-2. Run Step 3 Version A (`runs/v5_demucs_cymbal_boost`).
+1. Step 2 is complete; keep selected clean-model checkpoints fixed for bakeoff.
+2. Run (current) Step 3 Version A (`runs/v5_demucs_cymbal_boost`) to completion.
 3. Generate Step 4 thresholds:
    - `thresholds_demucs_calibrated.json`
    - `thresholds_demucs_only.json`

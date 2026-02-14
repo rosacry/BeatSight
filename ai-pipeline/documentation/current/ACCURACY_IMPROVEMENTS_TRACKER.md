@@ -17,12 +17,12 @@ Improve real-song drum transcription quality while preserving strong body-drum p
 | Step | Description | Status | Notes |
 | --- | --- | --- | --- |
 | 1 | Demucs LR 2e-5 run completion | COMPLETE | Finished |
-| 2 | Clean-model continuation (exclude Demucs datasets) | IN PROGRESS | Running through epoch 20 (54% of epoch 20 shown) |
-| 3 | Version A cymbal-boost Demucs run | PENDING | Start after Step 2 checkpoint decision |
+| 2 | Clean-model continuation (exclude Demucs datasets) | COMPLETE | Finished (checkpoint selection/summary captured in local run logs) |
+| 3 | Version A cymbal-boost Demucs run | IN PROGRESS | Current active background training run |
 | 4 | Threshold generation for both models | PENDING | Generate after Step 2 + Step 3 finalize |
 | 5 | Real-song bakeoff + production-mode decision | PENDING | Run after Step 4 threshold files exist |
 
-## Step 2 Running Snapshot (Latest)
+## Step 2 Completion Snapshot (Latest Shared Metrics)
 
 Output directory:
 
@@ -51,12 +51,12 @@ Recent trend:
 Interpretation:
 
 - Improvement continued beyond epoch 15 (not a hard plateau).
-- Training remains active at epoch 20.
-- Keep current run to completion (epoch 30) unless obvious divergence appears.
+- Step 2 has now completed.
+- Use the saved Step 2 best checkpoint and/or selected late-epoch checkpoints as Step 5 candidates.
 
 ## Canonical Commands
 
-### Step 2 command (running in background)
+### Step 2 command (completed)
 
 ```bash
 cd /c/github/BeatSight/ai-pipeline && PYTHONPATH=. python -m training.multilabel.train_multilabel \
@@ -171,9 +171,9 @@ Test input:
   - add:
     - `--checkpoint-ensemble`
     - `runs/v5_multilabel_final_v3_continued/best_multilabel_model_ema.pt`
-    - `runs/v5_multilabel_final_v3_continued/checkpoint_epoch_0010.pt`
-    - `runs/v5_multilabel_final_v3_continued/checkpoint_epoch_0009.pt`
-    - `runs/v5_multilabel_final_v3_continued/checkpoint_epoch_0008.pt`
+    - `runs/v5_multilabel_final_v3_continued/checkpoint_epoch_0026.pt`
+    - `runs/v5_multilabel_final_v3_continued/checkpoint_epoch_0025.pt`
+    - `runs/v5_multilabel_final_v3_continued/checkpoint_epoch_0024.pt`
 
 ### B) Production-candidate matrix (auto-tuned transcription mode)
 
@@ -199,9 +199,9 @@ Candidate runs:
 - Run 5 (+ checkpoint ensemble): `../test_songs/v5/prod/test_v5_checkpoint_ensemble_prod.bsm`
   - planned checkpoints:
     - `best_multilabel_model_ema.pt`
-    - `checkpoint_epoch_0029.pt`
-    - `checkpoint_epoch_0028.pt`
-    - `checkpoint_epoch_0027.pt`
+    - `checkpoint_epoch_0026.pt`
+    - `checkpoint_epoch_0025.pt`
+    - `checkpoint_epoch_0024.pt`
 
 ## Decision Point After Step 5
 

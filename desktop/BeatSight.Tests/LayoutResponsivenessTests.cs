@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Xunit;
 
@@ -81,10 +82,12 @@ namespace BeatSight.Tests
         public void EditorHeaderDefinesCoreActionButtons()
         {
             string root = resolveRepositoryRoot();
-            string editorPath = Path.Combine(root, "desktop", "BeatSight.Game", "Screens", "Editor", "EditorScreen.cs");
-            Assert.True(File.Exists(editorPath), $"Expected file missing: {editorPath}");
+            string editorDir = Path.Combine(root, "desktop", "BeatSight.Game", "Screens", "Editor");
+            Assert.True(Directory.Exists(editorDir), $"Expected directory missing: {editorDir}");
 
-            string source = File.ReadAllText(editorPath);
+            string[] editorPartials = Directory.GetFiles(editorDir, "EditorScreen*.cs", SearchOption.TopDirectoryOnly);
+            Assert.NotEmpty(editorPartials);
+            string source = string.Join("\n", editorPartials.Select(File.ReadAllText));
 
             Assert.Contains("new EditorButton(\"Play\"", source);
             Assert.Contains("new EditorButton(\"Save\"", source);

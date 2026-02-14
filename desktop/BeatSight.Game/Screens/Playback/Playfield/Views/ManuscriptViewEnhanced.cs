@@ -163,7 +163,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         private const float StaffUnitMin = -3.5f;
         private const float StaffUnitMax = 3.5f;
         private const float StaffUnitRange = StaffUnitMax - StaffUnitMin;
-        private const float BaseGuideAlpha = 0.024f;
+        private const float BaseGuideAlpha = 0.010f;
 
         // Staff dimensions
         private const int StaffLineCount = 5;
@@ -461,7 +461,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
                     Height = 1.5f,
-                    Colour = DesignSystem.WithOpacity(guide.Color, 0.14f)
+                    Colour = DesignSystem.WithOpacity(guide.Color, 0.08f)
                 };
 
                 var topLabel = new SpriteText
@@ -537,14 +537,15 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             foreach (ComponentGuideVisual visual in componentGuideVisuals)
             {
                 bool isFocused = hasFocus && string.Equals(visual.Guide.Key, focusedGuideKey, StringComparison.Ordinal);
-                float fillAlpha = hasFocus ? (isFocused ? 0.22f : 0.012f) : BaseGuideAlpha;
-                float railAlpha = hasFocus ? (isFocused ? 0.34f : 0.05f) : 0.07f;
-                float labelAlpha = hasFocus ? (isFocused ? 0.90f : 0.22f) : 0.26f;
+                float fillAlpha = hasFocus ? (isFocused ? 0.12f : 0.004f) : BaseGuideAlpha;
+                float railAlpha = hasFocus ? (isFocused ? 0.22f : 0.028f) : 0.042f;
+                float labelAlpha = hasFocus ? (isFocused ? 0.82f : 0.16f) : 0.18f;
+                Color4 guideColor = hasFocus && isFocused ? visual.Guide.Color : StaffLineColor;
 
-                visual.Fill.Colour = DesignSystem.WithOpacity(visual.Guide.Color, fillAlpha);
-                visual.Rail.Colour = DesignSystem.WithOpacity(visual.Guide.Color, railAlpha);
+                visual.Fill.Colour = DesignSystem.WithOpacity(guideColor, fillAlpha);
+                visual.Rail.Colour = DesignSystem.WithOpacity(guideColor, railAlpha);
                 visual.TopLabel.Alpha = labelAlpha;
-                visual.BottomLabel.Alpha = hasFocus && isFocused ? labelAlpha * 0.42f : 0f;
+                visual.BottomLabel.Alpha = hasFocus && isFocused ? labelAlpha * 0.32f : 0f;
             }
         }
 
@@ -620,26 +621,26 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 if (isMeasure)
                 {
                     marker.Width = 1.8f;
-                    marker.Colour = new Color4(214, 226, 248, 108);
-                    marker.Alpha = 0.42f;
+                    marker.Colour = new Color4(214, 226, 248, 90);
+                    marker.Alpha = 0.30f;
                 }
                 else if (isBeat)
                 {
                     marker.Width = 1.2f;
-                    marker.Colour = new Color4(184, 198, 224, 88);
-                    marker.Alpha = 0.28f;
+                    marker.Colour = new Color4(184, 198, 224, 74);
+                    marker.Alpha = 0.18f;
                 }
                 else if (isSubBeat)
                 {
                     marker.Width = 0.9f;
-                    marker.Colour = new Color4(164, 178, 204, 72);
-                    marker.Alpha = 0.20f;
+                    marker.Colour = new Color4(164, 178, 204, 58);
+                    marker.Alpha = 0.11f;
                 }
                 else
                 {
                     marker.Width = 0.8f;
-                    marker.Colour = new Color4(156, 170, 198, 54);
-                    marker.Alpha = 0.13f;
+                    marker.Colour = new Color4(156, 170, 198, 46);
+                    marker.Alpha = 0.07f;
                 }
             }
 
@@ -750,18 +751,18 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             {
                 AutoSizeAxes = Axes.Both,
                 Direction = FillDirection.Vertical,
-                Spacing = new Vector2(0, 2),
+                Spacing = new Vector2(0, 1),
                 Anchor = Anchor.TopRight,
                 Origin = Anchor.TopRight,
                 Margin = new MarginPadding { Top = 12, Right = 12 },
-                Alpha = 0.82f
+                Alpha = 0.62f
             };
 
             legend.Add(new SpriteText
             {
-                Text = "Notation focus follows selection",
-                Font = new FontUsage("Roboto", 11f),
-                Colour = new Color4(206, 220, 242, 255)
+                Text = "Percussion notation map",
+                Font = new FontUsage("Roboto", 10.5f),
+                Colour = new Color4(206, 220, 242, 230)
             });
 
             foreach (ComponentGuide guide in componentGuides)
@@ -775,14 +776,14 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                     {
                         new Circle
                         {
-                            Size = new Vector2(7, 7),
-                            Colour = guide.Color
+                            Size = new Vector2(6, 6),
+                            Colour = DesignSystem.WithOpacity(guide.Color, 0.72f)
                         },
                         new SpriteText
                         {
-                            Text = $"{guide.Label}  {getGuideDisplayName(guide.Key)}",
-                            Font = new FontUsage("Roboto", 10f),
-                            Colour = new Color4(182, 196, 222, 255)
+                            Text = $"{guide.Label} {getGuideDisplayName(guide.Key)}",
+                            Font = new FontUsage("Roboto", 9.6f),
+                            Colour = new Color4(182, 196, 222, 238)
                         }
                     }
                 });

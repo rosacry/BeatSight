@@ -478,14 +478,19 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
         private readonly struct ManuscriptRestMarker
         {
-            public ManuscriptRestMarker(double timeMs, int level)
+            public ManuscriptRestMarker(
+                double timeMs,
+                int level,
+                ManuscriptBackgroundEnhanced.ManuscriptNotationVoice voice)
             {
                 TimeMs = timeMs;
                 Level = level;
+                Voice = voice;
             }
 
             public double TimeMs { get; }
             public int Level { get; }
+            public ManuscriptBackgroundEnhanced.ManuscriptNotationVoice Voice { get; }
         }
 
         private void updateApproachDuration(double currentTime)
@@ -817,23 +822,36 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 return;
             }
 
-            var noteTimes = collectNoteTimesInWindow(windowStart - tickDuration * 0.6, windowEnd + tickDuration * 0.6);
-            var markers = buildManuscriptRestMarkers(
+            var voiceNoteTimes = collectVoiceNoteTimesInWindow(windowStart - tickDuration * 0.6, windowEnd + tickDuration * 0.6);
+            var markers = new List<ManuscriptRestMarker>();
+            markers.AddRange(buildManuscriptRestMarkers(
                 firstTick,
                 lastTick,
                 beatOrigin,
                 tickDuration,
                 subdivision,
-                noteTimes);
+                voiceNoteTimes.Upper,
+                ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Upper));
+            markers.AddRange(buildManuscriptRestMarkers(
+                firstTick,
+                lastTick,
+                beatOrigin,
+                tickDuration,
+                subdivision,
+                voiceNoteTimes.Lower,
+                ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower));
+
+            markers.Sort((a, b) => a.TimeMs.CompareTo(b.TimeMs));
 
             renderManuscriptRests(markers, sheetWindow, drawWidth, drawHeight);
         }
 
-        private List<double> collectNoteTimesInWindow(double startMs, double endMs)
+        private (List<double> Upper, List<double> Lower) collectVoiceNoteTimesInWindow(double startMs, double endMs)
         {
-            List<double> times = new();
+            List<double> upper = new();
+            List<double> lower = new();
             if (notes.Count == 0)
-                return times;
+                return (upper, lower);
 
             int startIndex = Math.Max(0, firstActiveNoteIndex - 16);
             for (int i = startIndex; i < notes.Count; i++)
@@ -844,10 +862,14 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 if (hitTime > endMs)
                     break;
 
-                times.Add(hitTime);
+                var voice = ManuscriptBackgroundEnhanced.GetNotationVoiceForComponent(notes[i].ComponentName);
+                if (voice == ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower)
+                    lower.Add(hitTime);
+                else
+                    upper.Add(hitTime);
             }
 
-            return times;
+            return (upper, lower);
         }
 
         private List<ManuscriptRestMarker> buildManuscriptRestMarkers(
@@ -856,7 +878,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             double beatOrigin,
             double tickDuration,
             int subdivision,
-            List<double> noteTimes)
+            List<double> noteTimes,
+            ManuscriptBackgroundEnhanced.ManuscriptNotationVoice voice)
         {
             var markers = new List<ManuscriptRestMarker>();
             if (lastTick <= firstTick)
@@ -881,7 +904,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 {
                     if (inRun)
                     {
-                        appendRestMarkersForRun(markers, runStartTick, runLengthTicks, beatOrigin, tickDuration, subdivision);
+                        appendRestMarkersForRun(markers, runStartTick, runLengthTicks, beatOrigin, tickDuration, subdivision, voice);
                         inRun = false;
                     }
 
@@ -899,7 +922,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             }
 
             if (inRun)
-                appendRestMarkersForRun(markers, runStartTick, runLengthTicks, beatOrigin, tickDuration, subdivision);
+                appendRestMarkersForRun(markers, runStartTick, runLengthTicks, beatOrigin, tickDuration, subdivision, voice);
 
             return markers;
         }
@@ -910,7 +933,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             int runLengthTicks,
             double beatOrigin,
             double tickDuration,
-            int subdivision)
+            int subdivision,
+            ManuscriptBackgroundEnhanced.ManuscriptNotationVoice voice)
         {
             if (runLengthTicks <= 0)
                 return;
@@ -920,7 +944,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             while (remaining >= subdivision)
             {
                 double markerTick = cursor + subdivision * 0.5;
-                markers.Add(new ManuscriptRestMarker(beatOrigin + markerTick * tickDuration, 0));
+                markers.Add(new ManuscriptRestMarker(beatOrigin + markerTick * tickDuration, 0, voice));
                 cursor += subdivision;
                 remaining -= subdivision;
             }
@@ -931,7 +955,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             double remainingBeats = remaining / (double)subdivision;
             int level = ResolveManuscriptRestGlyphLevel(remainingBeats);
             double partialMarkerTick = cursor + remaining * 0.5;
-            markers.Add(new ManuscriptRestMarker(beatOrigin + partialMarkerTick * tickDuration, level));
+            markers.Add(new ManuscriptRestMarker(beatOrigin + partialMarkerTick * tickDuration, level, voice));
         }
 
         private void renderManuscriptRests(
@@ -949,7 +973,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float timelineWidth = Math.Max(1f, sheetWindow.RightX - sheetWindow.LeftX);
             float staffCenterY = ManuscriptBackgroundEnhanced.GetStaffCenterYForDrawHeight(drawHeight);
             float staffSpacing = ManuscriptBackgroundEnhanced.GetStaffSpacingForDrawArea(drawWidth, drawHeight);
-            float restY = staffCenterY - staffSpacing * 0.08f;
+            float upperVoiceY = staffCenterY - staffSpacing * 0.66f;
+            float lowerVoiceY = staffCenterY + staffSpacing * 0.74f;
 
             int renderedCount = 0;
             for (int i = 0; i < markers.Count; i++)
@@ -961,10 +986,17 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
                 float x = sheetWindow.LeftX + (float)normalized * timelineWidth;
                 var rest = getOrCreateManuscriptRest(renderedCount++);
-                rest.Position = new Vector2(x, restY);
+                rest.Position = new Vector2(
+                    x,
+                    marker.Voice == ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower
+                        ? lowerVoiceY
+                        : upperVoiceY);
                 rest.SetGlyphLevel(marker.Level);
+                rest.SetVoice(marker.Voice == ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower
+                    ? DrawableManuscriptRest.RestVoice.Lower
+                    : DrawableManuscriptRest.RestVoice.Upper);
                 rest.Colour = manuscriptRestColor;
-                rest.Alpha = 0.86f;
+                rest.Alpha = marker.Voice == ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower ? 0.82f : 0.86f;
             }
 
             for (int i = renderedCount; i < manuscriptRestPool.Count; i++)

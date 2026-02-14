@@ -17,22 +17,36 @@ namespace BeatSight.Game.Screens.Playback.Playfield
     /// </summary>
     public partial class DrawableManuscriptRest : CompositeDrawable
     {
+        public enum RestVoice
+        {
+            Upper,
+            Lower
+        }
+
         private readonly Box body;
         private readonly Box stem;
+        private readonly Box quarterStrokeA;
+        private readonly Box quarterStrokeB;
+        private readonly Box quarterStrokeC;
+        private readonly Box quarterStrokeD;
         private readonly Box flagPrimary;
         private readonly Box flagSecondary;
         private readonly Box flagTertiary;
+        private readonly Circle hookDotPrimary;
+        private readonly Circle hookDotSecondary;
+        private readonly Circle hookDotTertiary;
         private int glyphLevel;
+        private RestVoice voice;
 
         public DrawableManuscriptRest()
         {
-            Size = new Vector2(20, 26);
+            Size = new Vector2(22, 30);
             RelativePositionAxes = Axes.None;
 
             body = new Box
             {
                 Width = 7f,
-                Height = 3f,
+                Height = 3.2f,
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
                 Colour = Color4.White
@@ -41,26 +55,42 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             stem = new Box
             {
                 Width = 1.6f,
-                Height = 13f,
+                Height = 14f,
                 Anchor = Anchor.Centre,
                 Origin = Anchor.BottomCentre,
-                Y = 1f,
+                Y = 2f,
                 Colour = Color4.White
             };
+
+            quarterStrokeA = createQuarterStroke();
+            quarterStrokeB = createQuarterStroke();
+            quarterStrokeC = createQuarterStroke();
+            quarterStrokeD = createQuarterStroke();
 
             flagPrimary = createFlag();
             flagSecondary = createFlag();
             flagTertiary = createFlag();
+            hookDotPrimary = createHookDot();
+            hookDotSecondary = createHookDot();
+            hookDotTertiary = createHookDot();
 
             InternalChildren = new Drawable[]
             {
                 body,
                 stem,
+                quarterStrokeA,
+                quarterStrokeB,
+                quarterStrokeC,
+                quarterStrokeD,
                 flagPrimary,
                 flagSecondary,
-                flagTertiary
+                flagTertiary,
+                hookDotPrimary,
+                hookDotSecondary,
+                hookDotTertiary
             };
 
+            SetVoice(RestVoice.Upper);
             SetGlyphLevel(0);
         }
 
@@ -68,6 +98,25 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         {
             glyphLevel = Math.Clamp(level, 0, 3);
             updateGeometry();
+        }
+
+        public void SetVoice(RestVoice restVoice)
+        {
+            voice = restVoice;
+            updateGeometry();
+        }
+
+        private static Box createQuarterStroke()
+        {
+            return new Box
+            {
+                Width = 8f,
+                Height = 2f,
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                Colour = Color4.White,
+                Alpha = 0f
+            };
         }
 
         private static Box createFlag()
@@ -84,32 +133,103 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             };
         }
 
-        private void updateGeometry()
+        private static Circle createHookDot()
         {
-            bool hasFlags = glyphLevel > 0;
-            stem.Alpha = hasFlags ? 0.92f : 0f;
-            body.Width = hasFlags ? 6f : 8f;
-            body.Height = hasFlags ? 2.4f : 3.2f;
-            body.Y = hasFlags ? 2f : 0f;
-            body.Alpha = 0.92f;
-
-            updateFlag(flagPrimary, glyphLevel >= 1, x: 0.6f, y: -11.4f, width: 8.6f);
-            updateFlag(flagSecondary, glyphLevel >= 2, x: 0.6f, y: -7.6f, width: 8.1f);
-            updateFlag(flagTertiary, glyphLevel >= 3, x: 0.6f, y: -4.1f, width: 7.6f);
+            return new Circle
+            {
+                Size = new Vector2(2.8f),
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                Colour = Color4.White,
+                Alpha = 0f
+            };
         }
 
-        private static void updateFlag(Box flag, bool visible, float x, float y, float width)
+        private void updateGeometry()
+        {
+            updateQuarterGlyph(glyphLevel == 0);
+            updateHookedGlyph(glyphLevel);
+        }
+
+        private void updateQuarterGlyph(bool visible)
+        {
+            if (!visible)
+            {
+                quarterStrokeA.Alpha = 0f;
+                quarterStrokeB.Alpha = 0f;
+                quarterStrokeC.Alpha = 0f;
+                quarterStrokeD.Alpha = 0f;
+                return;
+            }
+
+            float voiceBias = voice == RestVoice.Lower ? 0.5f : -0.3f;
+            configureQuarterStroke(quarterStrokeA, x: -1.8f, y: -8.6f + voiceBias, width: 8.4f, rotation: 62f);
+            configureQuarterStroke(quarterStrokeB, x: 0.4f, y: -4.2f + voiceBias, width: 10.0f, rotation: -48f);
+            configureQuarterStroke(quarterStrokeC, x: -0.2f, y: 0.3f + voiceBias, width: 8.8f, rotation: 66f);
+            configureQuarterStroke(quarterStrokeD, x: 2.1f, y: 4.8f + voiceBias, width: 6.4f, rotation: -18f);
+        }
+
+        private void updateHookedGlyph(int level)
+        {
+            bool visible = level > 0;
+            stem.Alpha = visible ? 0.92f : 0f;
+            body.Alpha = visible ? 0.88f : 0f;
+
+            if (!visible)
+            {
+                flagPrimary.Alpha = 0f;
+                flagSecondary.Alpha = 0f;
+                flagTertiary.Alpha = 0f;
+                hookDotPrimary.Alpha = 0f;
+                hookDotSecondary.Alpha = 0f;
+                hookDotTertiary.Alpha = 0f;
+                return;
+            }
+
+            float direction = voice == RestVoice.Lower ? -1f : 1f;
+            float stemX = voice == RestVoice.Lower ? -1.6f : 0.8f;
+            stem.X = stemX;
+            stem.Y = 2f + (voice == RestVoice.Lower ? 1.0f : 0f);
+            stem.Origin = voice == RestVoice.Lower ? Anchor.TopCentre : Anchor.BottomCentre;
+
+            body.Width = 5.4f;
+            body.Height = 2.2f;
+            body.X = stemX + (voice == RestVoice.Lower ? -0.8f : 0.7f);
+            body.Y = voice == RestVoice.Lower ? 10.2f : -10.2f;
+
+            updateFlag(flagPrimary, hookDotPrimary, level >= 1, direction, stemX, -8.9f, 8.8f);
+            updateFlag(flagSecondary, hookDotSecondary, level >= 2, direction, stemX, -4.8f, 8.3f);
+            updateFlag(flagTertiary, hookDotTertiary, level >= 3, direction, stemX, -1.0f, 7.8f);
+        }
+
+        private static void configureQuarterStroke(Box stroke, float x, float y, float width, float rotation)
+        {
+            stroke.X = x;
+            stroke.Y = y;
+            stroke.Width = width;
+            stroke.Rotation = rotation;
+            stroke.Alpha = 0.92f;
+        }
+
+        private static void updateFlag(Box flag, Circle dot, bool visible, float direction, float stemX, float y, float width)
         {
             if (!visible)
             {
                 flag.Alpha = 0f;
+                dot.Alpha = 0f;
                 return;
             }
 
+            float x = stemX + direction * 0.9f;
             flag.X = x;
             flag.Y = y;
             flag.Width = width;
+            flag.Rotation = direction * 28f;
             flag.Alpha = 0.9f;
+
+            dot.X = x + direction * (width * 0.42f);
+            dot.Y = y - direction * 1.1f;
+            dot.Alpha = 0.84f;
         }
     }
 }

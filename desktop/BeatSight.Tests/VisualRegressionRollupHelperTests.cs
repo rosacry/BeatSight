@@ -55,6 +55,52 @@ public class VisualRegressionRollupHelperTests
     }
 
     [Fact]
+    public void RollupHelperReturnsNullForMalformedTrxTimes()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        string repoRoot = TestPathResolver.ResolveRepositoryRoot();
+        string helperPath = Path.Combine(repoRoot, "scripts", "visual_regression_rollup_helpers.ps1");
+        Assert.True(File.Exists(helperPath), $"Expected helper script missing: {helperPath}");
+
+        string tempRoot = Path.Combine(Path.GetTempPath(), "BeatSight.RollupHelperTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempRoot);
+        string trxPath = Path.Combine(tempRoot, "malformed.trx");
+
+        try
+        {
+            File.WriteAllText(trxPath, """
+<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="test" name="malformed">
+  <ResultSummary outcome="Completed">
+    <Counters total="1" executed="1" passed="1" failed="0" />
+  </ResultSummary>
+</TestRun>
+""");
+
+            string payload = runHelperAndGetJson(
+                helperPath,
+                $"[pscustomobject]@{{ duration = Get-VisualTrxDurationSeconds -TrxPath '{toSingleQuotedLiteral(trxPath)}' }}");
+
+            using JsonDocument document = JsonDocument.Parse(payload);
+            JsonElement duration = document.RootElement.GetProperty("duration");
+            Assert.Equal(JsonValueKind.Null, duration.ValueKind);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+            catch
+            {
+                // Best effort cleanup.
+            }
+        }
+    }
+
+    [Fact]
     public void RollupHelperComputesExpectedMeanAndP95()
     {
         if (!OperatingSystem.IsWindows())
@@ -89,6 +135,38 @@ public class VisualRegressionRollupHelperTests
         Assert.InRange(root.GetProperty("TotalP95Seconds").GetDouble(), 39.99, 40.01);
         Assert.InRange(root.GetProperty("TrxMeanSeconds").GetDouble(), 23.99, 24.01);
         Assert.InRange(root.GetProperty("TrxP95Seconds").GetDouble(), 38.99, 39.01);
+        Assert.Equal(4, root.GetProperty("TrxDurationSampleCount").GetInt32());
+        Assert.Equal(0, root.GetProperty("TrxDurationMissingCount").GetInt32());
+    }
+
+    [Fact]
+    public void RollupHelperTracksMissingTrxDurationSamples()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        string repoRoot = TestPathResolver.ResolveRepositoryRoot();
+        string helperPath = Path.Combine(repoRoot, "scripts", "visual_regression_rollup_helpers.ps1");
+        Assert.True(File.Exists(helperPath), $"Expected helper script missing: {helperPath}");
+
+        string payload = runHelperAndGetJson(
+            helperPath,
+            """
+            $results = @(
+              [pscustomobject]@{ Scenes='A'; StartupSeconds=2; TotalSeconds=10; TrxDurationSeconds=$null },
+              [pscustomobject]@{ Scenes='B'; StartupSeconds=4; TotalSeconds=20; TrxDurationSeconds=19 },
+              [pscustomobject]@{ Scenes='C'; StartupSeconds=6; TotalSeconds=30; TrxDurationSeconds=$null }
+            )
+            Get-VisualTimingRollup -BatchResults $results
+            """);
+
+        using JsonDocument document = JsonDocument.Parse(payload);
+        JsonElement root = document.RootElement;
+
+        Assert.Equal(1, root.GetProperty("TrxDurationSampleCount").GetInt32());
+        Assert.Equal(2, root.GetProperty("TrxDurationMissingCount").GetInt32());
+        Assert.InRange(root.GetProperty("TrxMeanSeconds").GetDouble(), 18.99, 19.01);
+        Assert.InRange(root.GetProperty("TrxP95Seconds").GetDouble(), 18.99, 19.01);
     }
 
     private static string runHelperAndGetJson(string helperPath, string scriptBody)

@@ -8,6 +8,7 @@ on:
       - 'scripts/run_visual_regression_chunked.ps1'
       - 'scripts/visual_regression_rollup_helpers.ps1'
       - 'scripts/compare_visual_rollups.ps1'
+      - 'scripts/evaluate_visual_rollup.ps1'
       - '.github/workflows/desktop.yml'
   pull_request:
     branches: [main, develop]
@@ -16,6 +17,7 @@ on:
       - 'scripts/run_visual_regression_chunked.ps1'
       - 'scripts/visual_regression_rollup_helpers.ps1'
       - 'scripts/compare_visual_rollups.ps1'
+      - 'scripts/evaluate_visual_rollup.ps1'
       - '.github/workflows/desktop.yml'
 
 jobs:
@@ -54,6 +56,17 @@ jobs:
             -SkipInitialBuild `
             -HeartbeatSeconds 20 `
             -BatchTimeoutSeconds 1200
+
+      - name: Evaluate visual rollup gate
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          & ./scripts/evaluate_visual_rollup.ps1 `
+            -ResultsDirectory 'desktop/BeatSight.Tests/TestResults/visual-chunked' `
+            -MaxTotalP95Seconds 300 `
+            -MaxStartupP95Seconds 180 `
+            -MaxTrxMissingRatio 0.30 `
+            -FailOnThresholdBreach
 
       - name: Upload visual diff artifacts
         if: always()

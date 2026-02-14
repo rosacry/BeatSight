@@ -410,6 +410,65 @@ public class VisualRegressionRollupHelperTests
         }
     }
 
+    [Fact]
+    public void RollupThresholdEvaluationPassesWhenWithinLimits()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        string repoRoot = TestPathResolver.ResolveRepositoryRoot();
+        string helperPath = Path.Combine(repoRoot, "scripts", "visual_regression_rollup_helpers.ps1");
+        Assert.True(File.Exists(helperPath), $"Expected helper script missing: {helperPath}");
+
+        string payload = runHelperAndGetJson(
+            helperPath,
+            """
+            $rollup = [pscustomobject]@{
+              BatchCount=4
+              StartupP95Seconds=72
+              TotalP95Seconds=122
+              TrxDurationMissingCount=1
+            }
+            Test-VisualTimingRollupThresholds -Rollup $rollup -MaxStartupP95Seconds 120 -MaxTotalP95Seconds 180 -MaxTrxMissingRatio 0.4
+            """);
+
+        using JsonDocument document = JsonDocument.Parse(payload);
+        JsonElement root = document.RootElement;
+        Assert.True(root.GetProperty("Passed").GetBoolean());
+        Assert.Equal(0, root.GetProperty("FailureCount").GetInt32());
+        Assert.Equal(0, root.GetProperty("Failures").GetArrayLength());
+    }
+
+    [Fact]
+    public void RollupThresholdEvaluationReportsExpectedFailures()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        string repoRoot = TestPathResolver.ResolveRepositoryRoot();
+        string helperPath = Path.Combine(repoRoot, "scripts", "visual_regression_rollup_helpers.ps1");
+        Assert.True(File.Exists(helperPath), $"Expected helper script missing: {helperPath}");
+
+        string payload = runHelperAndGetJson(
+            helperPath,
+            """
+            $rollup = [pscustomobject]@{
+              BatchCount=3
+              StartupP95Seconds=190
+              TotalP95Seconds=340
+              TrxDurationMissingCount=2
+            }
+            Test-VisualTimingRollupThresholds -Rollup $rollup -MaxStartupP95Seconds 180 -MaxTotalP95Seconds 300 -MaxTrxMissingRatio 0.3
+            """);
+
+        using JsonDocument document = JsonDocument.Parse(payload);
+        JsonElement root = document.RootElement;
+        Assert.False(root.GetProperty("Passed").GetBoolean());
+        Assert.Equal(3, root.GetProperty("FailureCount").GetInt32());
+        JsonElement failures = root.GetProperty("Failures");
+        Assert.Equal(3, failures.GetArrayLength());
+    }
+
     private static string runHelperAndGetJson(string helperPath, string scriptBody)
     {
         string command = "$ErrorActionPreference='Stop'; . '" +

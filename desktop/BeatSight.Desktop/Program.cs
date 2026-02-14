@@ -48,7 +48,7 @@ namespace BeatSight.Desktop
         private const uint FILE_SHARE_WRITE = 0x00000002;
         private const uint OPEN_EXISTING = 3;
         private static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
-        private static readonly string[] suppressedInputHandlerNames = { "OpenTabletDriverHandler", "PenHandler" };
+        private static readonly string[] suppressedInputHandlerNames = { "OpenTabletDriverHandler", "PenHandler", "JoystickHandler", "TouchHandler" };
         private static readonly char[] inputHandlerSeparators = { ',', ';' };
 
         private static TextWriter? attachedStdOutWriter;
@@ -68,7 +68,10 @@ namespace BeatSight.Desktop
 
             bool suppressTabletInputHandlers = shouldSuppressTabletInputHandlers(args);
             if (suppressTabletInputHandlers)
+            {
                 preseedSuppressedInputHandlersConfig();
+                applyInputSubsystemHints();
+            }
 
             using GameHost host = Host.GetSuitableDesktopHost("BeatSight");
             ensureCookieFile(host);
@@ -430,6 +433,29 @@ namespace BeatSight.Desktop
             }
 
             return true;
+        }
+
+        private static void applyInputSubsystemHints()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return;
+
+            setEnvIfMissing("SDL_JOYSTICK_HIDAPI", "0");
+            setEnvIfMissing("SDL_JOYSTICK_RAWINPUT", "0");
+            setEnvIfMissing("SDL_XINPUT_ENABLED", "0");
+
+            // Keep hint-name variants for SDL builds that resolve hints from env directly.
+            setEnvIfMissing("SDL_HINT_JOYSTICK_HIDAPI", "0");
+            setEnvIfMissing("SDL_HINT_JOYSTICK_RAWINPUT", "0");
+            setEnvIfMissing("SDL_HINT_XINPUT_ENABLED", "0");
+        }
+
+        private static void setEnvIfMissing(string key, string value)
+        {
+            if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(key)))
+                return;
+
+            Environment.SetEnvironmentVariable(key, value);
         }
 
         private static void preseedSuppressedInputHandlersConfig()

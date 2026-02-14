@@ -151,7 +151,7 @@ namespace BeatSight.Game
             "Fonts/Nunito/Nunito-Medium",
             "Fonts/Nunito/Nunito-SemiBold"
         };
-        private const string suppressedInputHandlersCsv = "OpenTabletDriverHandler,PenHandler";
+        private const string suppressedInputHandlersCsv = "OpenTabletDriverHandler,PenHandler,JoystickHandler,TouchHandler";
 
         private DynamicBackground globalBackground = null!;
 
@@ -543,7 +543,7 @@ namespace BeatSight.Game
             bootstrapDefaultUserAssets();
 
             Logger.Log(
-                "Tablet/pen handlers are suppressed by default to avoid Windows device churn. Set BEATSIGHT_ENABLE_TABLET_INPUT=1 or pass --enable-tablet-input to opt in.",
+                "Tablet/pen/optional HID handlers are suppressed by default to avoid Windows device churn. Set BEATSIGHT_ENABLE_TABLET_INPUT=1 or pass --enable-tablet-input to opt in.",
                 LoggingTarget.Runtime,
                 LogLevel.Debug);
 

@@ -1191,6 +1191,17 @@ namespace BeatSight.Game
         private void ensureCursorSettings()
         {
             const string frameworkConfigFile = "framework.ini";
+            bool skipCursorNormalisation = string.Equals(
+                Environment.GetEnvironmentVariable("BEATSIGHT_SKIP_CURSOR_NORMALISATION"),
+                "1",
+                StringComparison.OrdinalIgnoreCase);
+            bool forceCursorNormalisation = string.Equals(
+                Environment.GetEnvironmentVariable("BEATSIGHT_FORCE_CURSOR_NORMALISATION"),
+                "1",
+                StringComparison.OrdinalIgnoreCase);
+
+            if (skipCursorNormalisation)
+                return;
 
             try
             {
@@ -1203,11 +1214,13 @@ namespace BeatSight.Game
                     lines.Add(line);
 
                 bool changed = false;
-                changed |= upsertConfigValue(lines, "WindowMode", "Windowed");
-                changed |= upsertConfigValue(lines, "Fullscreen", "False");
-                changed |= upsertConfigValue(lines, "ConfineMouseMode", "Fullscreen");
-                changed |= upsertConfigValue(lines, "MapAbsoluteInputToWindow", "False");
-                changed |= upsertConfigValue(lines, "IgnoredInputHandlers", string.Empty);
+                changed |= upsertConfigValue(lines, "WindowMode", "Windowed", overwriteExisting: forceCursorNormalisation);
+                changed |= upsertConfigValue(lines, "Fullscreen", "False", overwriteExisting: forceCursorNormalisation);
+                changed |= upsertConfigValue(lines, "ConfineMouseMode", "Fullscreen", overwriteExisting: forceCursorNormalisation);
+                changed |= upsertConfigValue(lines, "MapAbsoluteInputToWindow", "False", overwriteExisting: forceCursorNormalisation);
+
+                if (forceCursorNormalisation)
+                    changed |= upsertConfigValue(lines, "IgnoredInputHandlers", string.Empty, overwriteExisting: true);
 
                 if (changed)
                 {
@@ -1227,7 +1240,7 @@ namespace BeatSight.Game
             }
         }
 
-        private static bool upsertConfigValue(List<string> lines, string key, string value)
+        private static bool upsertConfigValue(List<string> lines, string key, string value, bool overwriteExisting = true)
         {
             string newLine = $"{key} = {value}";
             string prefix = key + " =";
@@ -1236,6 +1249,9 @@ namespace BeatSight.Game
             {
                 if (!lines[i].StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                     continue;
+
+                if (!overwriteExisting)
+                    return false;
 
                 if (string.Equals(lines[i].Trim(), newLine, StringComparison.OrdinalIgnoreCase))
                     return false;

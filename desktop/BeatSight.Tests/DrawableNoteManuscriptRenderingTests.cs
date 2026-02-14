@@ -80,6 +80,42 @@ public class DrawableNoteManuscriptRenderingTests
         Assert.Equal(0f, noteheadContainer.Rotation);
     }
 
+    [Fact]
+    public void ManuscriptOpenHiHatShowsOpenArticulationRing()
+    {
+        var note = createNote("hihat_open", velocity: 0.9);
+        note.Width = 20;
+        note.Height = 10;
+
+        note.SetViewMode(LaneViewMode.Manuscript);
+
+        var openRing = getPrivateField<Circle>(note, "manuscriptHiHatOpenIndicator");
+        var closedHorizontal = getPrivateField<Box>(note, "manuscriptHiHatClosedHorizontal");
+        var closedVertical = getPrivateField<Box>(note, "manuscriptHiHatClosedVertical");
+
+        Assert.True(openRing.Alpha > 0.5f);
+        Assert.True(closedHorizontal.Alpha < 0.01f);
+        Assert.True(closedVertical.Alpha < 0.01f);
+    }
+
+    [Fact]
+    public void ManuscriptClosedHiHatShowsClosedArticulationMarker()
+    {
+        var note = createNote("hihat_closed", velocity: 0.9);
+        note.Width = 20;
+        note.Height = 10;
+
+        note.SetViewMode(LaneViewMode.Manuscript);
+
+        var openRing = getPrivateField<Circle>(note, "manuscriptHiHatOpenIndicator");
+        var closedHorizontal = getPrivateField<Box>(note, "manuscriptHiHatClosedHorizontal");
+        var closedVertical = getPrivateField<Box>(note, "manuscriptHiHatClosedVertical");
+
+        Assert.True(openRing.Alpha < 0.01f);
+        Assert.True(closedHorizontal.Alpha > 0.5f);
+        Assert.True(closedVertical.Alpha > 0.5f);
+    }
+
     private static DrawableNote createNote(string component, double velocity)
     {
         return new DrawableNote(

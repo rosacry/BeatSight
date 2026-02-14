@@ -206,6 +206,17 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             return (tuning.VanishingPointYRatio, tuning.HighwayBottomWidthRatio, tuning.HighwayTopWidthRatio, tuning.PerspectiveExponent);
         }
 
+        internal static string FormatThreeDProfileHintLabel(ThreeDStageProfile profile)
+        {
+            return profile switch
+            {
+                ThreeDStageProfile.Arcade => "Arcade",
+                ThreeDStageProfile.GhClassic => "GH Classic",
+                ThreeDStageProfile.Tight => "Tight",
+                _ => "GH Classic"
+            };
+        }
+
         private static class SheetMusicTuning
         {
             public const float TimelineWidthRatio = 0.84f;
@@ -251,6 +262,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private Container laneBackgroundContainer = null!;
         private Container manuscriptBeamLayer = null!;
         private Container manuscriptRestLayer = null!;
+        private Container threeDProfileHintContainer = null!;
+        private SpriteText threeDProfileHintText = null!;
 
         private Container laneGuideOverlay = null!;
         private TimingGridOverlay? timingGridOverlay;
@@ -352,6 +365,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             {
                 currentThreeDProfileTuning = resolveThreeDProfileTuning(e.NewValue);
                 threeDHighwayBackground?.SetProfile(e.NewValue);
+                updateThreeDProfileHint();
                 if (currentLaneViewMode == LaneViewMode.ThreeDimensional)
                     layoutDirty = true;
             }, true);
@@ -439,7 +453,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     Origin = Anchor.Centre,
                     Width = PlayfieldWidthRatio
                 },
-                laneGuideOverlay
+                laneGuideOverlay,
+                threeDProfileHintContainer = createThreeDProfileHintOverlay()
             };
 
             laneViewMode.BindValueChanged(onLaneViewModeChanged, true);
@@ -474,9 +489,67 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             };
         }
 
+        private Container createThreeDProfileHintOverlay()
+        {
+            threeDProfileHintText = new SpriteText
+            {
+                Font = new FontUsage("Roboto", 11f),
+                Colour = new Color4(220, 232, 252, 255),
+                Text = string.Empty
+            };
+
+            return new Container
+            {
+                AutoSizeAxes = Axes.Both,
+                Anchor = Anchor.TopLeft,
+                Origin = Anchor.TopLeft,
+                Margin = new MarginPadding { Left = 14, Top = 14 },
+                Alpha = 0,
+                Child = new Container
+                {
+                    AutoSizeAxes = Axes.Both,
+                    Masking = true,
+                    CornerRadius = 8,
+                    BorderThickness = 1f,
+                    BorderColour = new Color4(112, 146, 196, 170),
+                    Children = new Drawable[]
+                    {
+                        new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Colour = new Color4(18, 29, 52, 230)
+                        },
+                        new Container
+                        {
+                            AutoSizeAxes = Axes.Both,
+                            Padding = new MarginPadding { Horizontal = 10, Vertical = 5 },
+                            Child = threeDProfileHintText
+                        }
+                    }
+                }
+            };
+        }
+
+        private void updateThreeDProfileHint()
+        {
+            if (threeDProfileHintContainer == null || threeDProfileHintText == null)
+                return;
+
+            if (currentLaneViewMode != LaneViewMode.ThreeDimensional)
+            {
+                threeDProfileHintContainer.Alpha = 0;
+                return;
+            }
+
+            threeDProfileHintText.Text = $"3D Stage: {FormatThreeDProfileHintLabel(StageProfile.Value)}";
+            threeDProfileHintText.Font = new FontUsage("Roboto", DrawWidth < 1320 ? 10.4f : 11f);
+            threeDProfileHintContainer.Alpha = 0.9f;
+        }
+
         private void onLaneViewModeChanged(ValueChangedEvent<LaneViewMode> e)
         {
             currentLaneViewMode = e.NewValue;
+            updateThreeDProfileHint();
             layoutDirty = true;
             updateLayout();
         }

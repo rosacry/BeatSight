@@ -33,4 +33,13 @@ public class PlaybackPlayfieldThreeDProfileTests
         Assert.True(tight.PerspectiveExponent > classic.PerspectiveExponent);
         Assert.True(classic.PerspectiveExponent > arcade.PerspectiveExponent);
     }
+
+    [Theory]
+    [InlineData(ThreeDStageProfile.Arcade, "Arcade")]
+    [InlineData(ThreeDStageProfile.GhClassic, "GH Classic")]
+    [InlineData(ThreeDStageProfile.Tight, "Tight")]
+    public void ThreeDProfileHintLabelsAreStable(ThreeDStageProfile profile, string expected)
+    {
+        Assert.Equal(expected, PlaybackPlayfield.FormatThreeDProfileHintLabel(profile));
+    }
 }

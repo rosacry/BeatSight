@@ -895,6 +895,33 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             return key is "hihat" or "ride" or "crash";
         }
 
+        public static bool IsHiHatFamilyComponent(string component)
+        {
+            if (string.IsNullOrWhiteSpace(component))
+                return false;
+
+            string key = normalizeComponentKey(component);
+            return key is "hihat" or "hihat_closed" or "hihat_open" or "hihat_half_open" or "hihat_pedal";
+        }
+
+        public static bool IsOpenHiHatComponent(string component)
+        {
+            if (string.IsNullOrWhiteSpace(component))
+                return false;
+
+            string key = normalizeComponentKey(component);
+            return key is "hihat_open" or "hihat_half_open";
+        }
+
+        public static bool IsClosedHiHatComponent(string component)
+        {
+            if (string.IsNullOrWhiteSpace(component))
+                return false;
+
+            string key = normalizeComponentKey(component);
+            return key is "hihat" or "hihat_closed" or "hihat_pedal";
+        }
+
         public static float GetStaffSpacingForDrawWidth(float drawWidth)
         {
             float staffWidth = Math.Max(320f, drawWidth * ManuscriptStaffWidthRatio);
@@ -927,6 +954,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         {
             return key switch
             {
+                "hihat_closed" => "hihat",
+                "hihat_open" => "hihat",
+                "hihat_half_open" => "hihat",
                 "hihat_pedal" => "hihat",
                 "china" => "crash",
                 "splash" => "crash",
@@ -960,7 +990,19 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             if (key.Contains("kick") || key.Contains("bass")) return "kick";
             if (key.Contains("snare") || key.Contains("rim") || key.Contains("cross") || key.Contains("side"))
                 return "snare";
-            if (key.Contains("hat") || key.Contains("hh")) return key.Contains("pedal") ? "hihat_pedal" : "hihat";
+            if (key.Contains("hat") || key.Contains("hh"))
+            {
+                if (key.Contains("pedal") || key.Contains("foot"))
+                    return "hihat_pedal";
+                if (key.Contains("half") || key.Contains("semi"))
+                    return "hihat_half_open";
+                if (key.Contains("open"))
+                    return "hihat_open";
+                if (key.Contains("closed") || key.Contains("tight"))
+                    return "hihat_closed";
+
+                return "hihat_closed";
+            }
             if (key.Contains("tom_high")) return "tom_high";
             if (key.Contains("tom_low") || key.Contains("floor")) return "tom_low";
             if (key.Contains("tom")) return "tom_mid";

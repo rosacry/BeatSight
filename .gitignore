@@ -114,8 +114,14 @@ ai-pipeline/training/boundary_pack/**
 ai-pipeline/training/negatives/**
 ai-pipeline/training/dev_dataset/**
 ai-pipeline/training/dev_models/**
-ai-pipeline/tests/test_ingest_*.py
-data/README.md
+
+# Keep training/source config + docs versionable (private repo) while artifacts remain ignored.
+!ai-pipeline/training/configs/**/*.json
+!ai-pipeline/training/configs/**/*.txt
+!ai-pipeline/training/examples/**/*.json
+!ai-pipeline/training/data/**/README.md
+!ai-pipeline/training/data/licenses/**/*.md
+!ai-pipeline/training/reports/**/*.md
 
 # Node.js
 node_modules/

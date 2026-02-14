@@ -93,6 +93,61 @@ public class GenerationCoordinatorTests
         coordinator.Dispose();
     }
 
+    [Fact]
+    public async Task RunAsync_PropagatesPipelineModeAndAutoFlagsToOptions()
+    {
+        var track = new ImportedAudioTrack(
+            originalPath: "/tmp/source.wav",
+            storedPath: "/tmp/stored.wav",
+            relativeStoragePath: "stored.wav",
+            displayName: "Test Track",
+            fileSizeBytes: 1024,
+            durationMilliseconds: 120_000);
+
+        var pipelineResult = GenerationPipelineResult.CreateSuccess(
+            beatmap: new AiGenerationResult { Success = true, BeatmapPath = "beatmap.bsm" },
+            analysis: null,
+            waveform: null,
+            usedFallback: false,
+            playbackAvailable: true,
+            usedOfflineDecode: false,
+            offlineFallbackEncountered: false,
+            warning: null,
+            logs: Array.Empty<string>());
+
+        var pipeline = new FakePipeline(() => sequence(pipelineResult));
+        var coordinator = new GenerationCoordinator(pipeline, action => action());
+
+        var parameters = new GenerationParams(
+            track,
+            DetectionSensitivity: 68,
+            Quantization: QuantizationGrid.Triplet,
+            DebugOverlayEnabled: true,
+            TempoOverride: null,
+            UseMlClassifier: true,
+            UseMultilabelClassifier: true,
+            MultilabelThresholdsPath: "thresholds.json",
+            UseAdaptiveThresholds: true,
+            AdaptiveThresholdMethod: "percentile",
+            PipelineMode: AiPipelineMode.Transcription,
+            AutoSensitivity: true,
+            AutoQuantization: true);
+
+        await coordinator.RunAsync(parameters, CancellationToken.None);
+
+        var options = pipeline.CapturedRequests.Single().Options;
+        Assert.Equal(AiPipelineMode.Transcription, options.PipelineMode);
+        Assert.True(options.AutoSensitivity);
+        Assert.True(options.AutoQuantization);
+        Assert.True(options.UseAdaptiveThresholds);
+        Assert.Equal("percentile", options.AdaptiveThresholdMethod);
+        Assert.Equal("thresholds.json", options.MultilabelThresholdsPath);
+        Assert.Equal(68, options.DetectionSensitivity);
+        Assert.Equal(QuantizationGrid.Triplet, options.QuantizationGrid);
+
+        coordinator.Dispose();
+    }
+
     private static async IAsyncEnumerable<PipelineProgress> sequence(GenerationPipelineResult finalResult)
     {
         yield return new PipelineProgress(

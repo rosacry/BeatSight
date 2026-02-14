@@ -177,7 +177,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             // Calculate dimensions based on view mode
             float baseHeight = mode switch
             {
-                LaneViewMode.ThreeDimensional => Math.Clamp(drawHeight * 0.055f, 18f, 45f),
+                LaneViewMode.ThreeDimensional => Math.Clamp(drawHeight * 0.064f, 20f, 50f),
                 LaneViewMode.Manuscript => 6f,
                 _ => DesignSystem.StrikeZoneHeight,
             };
@@ -300,9 +300,11 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             topEdge.Colour = borderColor;
             topEdge.Alpha = 0.8f;
+            topEdge.Height = 2f;
 
             centerLine.Colour = borderColor.Lighten(0.3f);
             centerLine.Alpha = 0.6f;
+            centerLine.Height = 2f;
 
             // Set alpha directly instead of using transforms to prevent accumulation
             Alpha = 0.95f;
@@ -311,26 +313,27 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private void Update3DAppearance()
         {
             var borderColor = useGlobalKick
-                ? DesignSystem.ColorKick.Lighten(0.3f)
-                : new Color4(255, 200, 160, 240);
+                ? DesignSystem.ColorKick.Lighten(0.34f)
+                : new Color4(255, 218, 172, 248);
 
             var fillColor = useGlobalKick
-                ? Color4Extensions.Opacity(DesignSystem.ColorKick, 0.12f)
-                : new Color4(55, 45, 75, 100);
+                ? Color4Extensions.Opacity(DesignSystem.ColorKick, 0.16f)
+                : new Color4(72, 56, 94, 126);
 
             strikeBody.BorderColour = borderColor;
             fillBox.Colour = fillColor;
             glowBox.Colour = borderColor;
-            glowBox.Alpha = 0.35f;
+            glowBox.Alpha = 0.5f;
 
             topEdge.Colour = borderColor.Lighten(0.2f);
-            topEdge.Alpha = 0.9f;
+            topEdge.Alpha = 1f;
 
             centerLine.Colour = borderColor;
-            centerLine.Alpha = 0.4f;
+            centerLine.Alpha = 0.68f;
+            centerLine.Height = 3;
 
             // Set alpha directly instead of using transforms to prevent accumulation
-            Alpha = 0.9f;
+            Alpha = 0.96f;
         }
 
         private void UpdateManuscriptAppearance()
@@ -347,6 +350,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             topEdge.Height = 2;
 
             centerLine.Alpha = 0;
+            centerLine.Height = 2f;
 
             // Set alpha directly instead of using transforms to prevent accumulation
             Alpha = 0.85f;

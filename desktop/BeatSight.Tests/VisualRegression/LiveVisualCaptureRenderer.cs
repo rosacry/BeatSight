@@ -700,13 +700,19 @@ namespace BeatSight.Tests.VisualRegression
             if (!contract.IsStackedLayout)
                 return;
 
-            if (contract.ActionRows.Length == 0)
+            validateCompactInspectorActionRows(contract.ActionRows);
+            validateCompactHeaderWidths(contract.Header);
+        }
+
+        private static void validateCompactInspectorActionRows(InspectorActionRowContract[] actionRows)
+        {
+            if (actionRows.Length == 0)
             {
                 throw new VisualCaptureUnavailableException(
                     "Editor compact layout contract failed: inspector action rows were not initialized in stacked mode.");
             }
 
-            foreach (var row in contract.ActionRows)
+            foreach (var row in actionRows)
             {
                 if (row.ColumnCount < 1)
                     continue;
@@ -723,6 +729,45 @@ namespace BeatSight.Tests.VisualRegression
                     throw new VisualCaptureUnavailableException(
                         $"Editor compact layout contract failed: bounded rows must be centered (anchor={row.Anchor}, origin={row.Origin}).");
                 }
+            }
+        }
+
+        private static void validateCompactHeaderWidths(EditorHeaderLayoutContract header)
+        {
+            if (header.StatusMaxWidth <= 0 || header.ActionHintMaxWidth <= 0 || header.PlaybackStatusMaxWidth <= 0)
+            {
+                throw new VisualCaptureUnavailableException(
+                    "Editor compact header contract failed: header max-width values were not initialized.");
+            }
+
+            if (header.StatusMaxWidth < 460f || header.StatusMaxWidth > 545f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact header contract failed: status max width out of range ({header.StatusMaxWidth:0.###}, expected 460-545).");
+            }
+
+            if (header.ActionHintMaxWidth < 840f || header.ActionHintMaxWidth > 990f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact header contract failed: action hint max width out of range ({header.ActionHintMaxWidth:0.###}, expected 840-990).");
+            }
+
+            if (header.PlaybackStatusMaxWidth < 840f || header.PlaybackStatusMaxWidth > 990f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact header contract failed: playback status max width out of range ({header.PlaybackStatusMaxWidth:0.###}, expected 840-990).");
+            }
+
+            if (Math.Abs(header.ActionHintMaxWidth - header.PlaybackStatusMaxWidth) > 1.5f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact header contract failed: action/playback hint max widths diverged ({header.ActionHintMaxWidth:0.###} vs {header.PlaybackStatusMaxWidth:0.###}).");
+            }
+
+            if (header.ActionHintMaxWidth < header.StatusMaxWidth + 260f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact header contract failed: hint width no longer dominates status width ({header.ActionHintMaxWidth:0.###} vs {header.StatusMaxWidth:0.###}).");
             }
         }
 

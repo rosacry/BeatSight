@@ -15,10 +15,78 @@ param(
     [int]$BatchTimeoutSeconds = 900,
     [int]$HeartbeatSeconds = 20,
     [switch]$RunFullDesktopSuite,
+    [switch]$SkipInitialBuild,
+    [switch]$SkipStaleProcessCleanup,
     [switch]$DryRun
 )
 
 $ErrorActionPreference = "Stop"
+
+function Resolve-ProjectPath {
+    param(
+        [string]$ProjectPath
+    )
+
+    if ([System.IO.Path]::IsPathRooted($ProjectPath)) {
+        return $ProjectPath
+    }
+
+    return Join-Path (Get-Location).Path $ProjectPath
+}
+
+function Stop-StaleBeatSightTestProcesses {
+    param(
+        [string]$ProjectPath
+    )
+
+    $isWindows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+    if (-not $isWindows) {
+        return
+    }
+
+    $projectToken = [System.IO.Path]::GetFileName($ProjectPath)
+    $candidates = Get-CimInstance Win32_Process | Where-Object {
+        ($_.Name -ieq "testhost.exe" -or $_.Name -ieq "dotnet.exe") -and
+        $_.CommandLine -like "*$projectToken*"
+    }
+
+    if (-not $candidates) {
+        Write-Host "[visual-gate] no stale BeatSight testhost processes detected."
+        return
+    }
+
+    $stopped = 0
+    foreach ($candidate in $candidates) {
+        try {
+            Stop-Process -Id $candidate.ProcessId -Force -ErrorAction Stop
+            $stopped++
+        }
+        catch {
+            Write-Host "[visual-gate][warn] failed to stop stale process id=$($candidate.ProcessId): $($_.Exception.Message)"
+        }
+    }
+
+    Write-Host "[visual-gate] stopped $stopped stale BeatSight test process(es) before run."
+}
+
+function Invoke-InitialBuild {
+    param(
+        [string]$ProjectPath,
+        [string]$Configuration,
+        [switch]$DryRun
+    )
+
+    Write-Host "[visual-gate] running initial build (once) for $ProjectPath..."
+    if ($DryRun) {
+        Write-Host "[visual-gate][dry-run] dotnet build $ProjectPath -c $Configuration"
+        return
+    }
+
+    dotnet build $ProjectPath -c $Configuration
+    if ($LASTEXITCODE -ne 0) {
+        throw "Initial build failed (exit code $LASTEXITCODE)."
+    }
+}
 
 function Invoke-VisualBatch {
     param(
@@ -55,6 +123,7 @@ function Invoke-VisualBatch {
         $ProjectPath,
         "-c",
         $Configuration,
+        "--no-build",
         "--filter",
         "FullyQualifiedName~VisualRegressionSnapshotTests",
         "--logger",
@@ -129,9 +198,18 @@ function Invoke-VisualBatch {
 }
 
 try {
+    $resolvedProjectPath = Resolve-ProjectPath -ProjectPath $ProjectPath
     Write-Host "[visual-gate] starting chunked visual regression run..."
-    Write-Host "[visual-gate] project: $ProjectPath"
+    Write-Host "[visual-gate] project: $resolvedProjectPath"
     Write-Host "[visual-gate] batches: $($SceneBatches.Count)"
+
+    if (-not $SkipStaleProcessCleanup) {
+        Stop-StaleBeatSightTestProcesses -ProjectPath $resolvedProjectPath
+    }
+
+    if (-not $SkipInitialBuild) {
+        Invoke-InitialBuild -ProjectPath $resolvedProjectPath -Configuration $Configuration -DryRun:$DryRun
+    }
 
     for ($index = 0; $index -lt $SceneBatches.Count; $index++) {
         $batch = $SceneBatches[$index]
@@ -140,7 +218,7 @@ try {
         [void](Invoke-VisualBatch `
             -Scenes $batch `
             -Resolutions $Resolutions `
-            -ProjectPath $ProjectPath `
+            -ProjectPath $resolvedProjectPath `
             -Configuration $Configuration `
             -ResultsDirectory $ResultsDirectory `
             -TimeoutSeconds $BatchTimeoutSeconds `
@@ -151,11 +229,14 @@ try {
     if ($RunFullDesktopSuite) {
         Write-Host ""
         Write-Host "[visual-gate] visual batches passed. Running full desktop suite..."
+        Remove-Item Env:BEATSIGHT_RUN_VISUAL_TESTS -ErrorAction SilentlyContinue
+        Remove-Item Env:BEATSIGHT_VISUAL_SCENES -ErrorAction SilentlyContinue
+        Remove-Item Env:BEATSIGHT_VISUAL_RESOLUTIONS -ErrorAction SilentlyContinue
         if ($DryRun) {
-            Write-Host "[visual-gate][dry-run] dotnet test $ProjectPath -c $Configuration"
+            Write-Host "[visual-gate][dry-run] dotnet test $resolvedProjectPath -c $Configuration --no-build"
         }
         else {
-            dotnet test $ProjectPath -c $Configuration
+            dotnet test $resolvedProjectPath -c $Configuration --no-build
             if ($LASTEXITCODE -ne 0) {
                 throw "Full desktop suite failed (exit code $LASTEXITCODE)."
             }

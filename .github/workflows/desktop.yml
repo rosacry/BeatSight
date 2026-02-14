@@ -5,11 +5,17 @@ on:
     branches: [main, develop]
     paths:
       - 'desktop/**'
+      - 'scripts/run_visual_regression_chunked.ps1'
+      - 'scripts/visual_regression_rollup_helpers.ps1'
+      - 'scripts/compare_visual_rollups.ps1'
       - '.github/workflows/desktop.yml'
   pull_request:
     branches: [main, develop]
     paths:
       - 'desktop/**'
+      - 'scripts/run_visual_regression_chunked.ps1'
+      - 'scripts/visual_regression_rollup_helpers.ps1'
+      - 'scripts/compare_visual_rollups.ps1'
       - '.github/workflows/desktop.yml'
 
 jobs:
@@ -38,13 +44,16 @@ jobs:
       - name: Run tests with coverage
         run: dotnet test desktop/BeatSight.Tests/BeatSight.Tests.csproj --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
 
-      - name: Run live visual regression
+      - name: Run live visual regression (chunked)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          $env:BEATSIGHT_RUN_VISUAL_TESTS='1'
-          dotnet test desktop/BeatSight.Tests/BeatSight.Tests.csproj --no-build --configuration Release --verbosity normal --filter "FullyQualifiedName~VisualRegressionSnapshotTests"
-          Remove-Item Env:BEATSIGHT_RUN_VISUAL_TESTS -ErrorAction SilentlyContinue
+          & ./scripts/run_visual_regression_chunked.ps1 `
+            -ProjectPath 'desktop/BeatSight.Tests/BeatSight.Tests.csproj' `
+            -Configuration 'Release' `
+            -SkipInitialBuild `
+            -HeartbeatSeconds 20 `
+            -BatchTimeoutSeconds 1200
 
       - name: Upload visual diff artifacts
         if: always()
@@ -53,6 +62,18 @@ jobs:
           name: visual-diff-${{ matrix.os }}
           path: desktop/BeatSight.Tests/TestResults/visual-diff/**
           if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload visual rollup artifacts
+        if: always() && matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-rollup-${{ matrix.os }}
+          path: |
+            desktop/BeatSight.Tests/TestResults/visual-chunked/visual_rollup_*.json
+            desktop/BeatSight.Tests/TestResults/visual-chunked/*.trx
+          if-no-files-found: ignore
+          retention-days: 30
 
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest'

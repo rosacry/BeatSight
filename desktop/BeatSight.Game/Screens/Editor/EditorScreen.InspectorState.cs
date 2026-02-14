@@ -22,10 +22,20 @@ namespace BeatSight.Game.Screens.Editor
         float ActionHintMaxWidth,
         float PlaybackStatusMaxWidth);
 
+    internal readonly record struct EditorTimelineToolboxLayoutContract(
+        float ContentSpacingX,
+        float ZoomSliderWidth,
+        float ZoomSliderHeight,
+        float WaveformSliderWidth,
+        float WaveformSliderHeight,
+        float SectionRowSpacingX,
+        float MiniButtonHeight);
+
     internal readonly record struct InspectorLayoutContract(
         bool IsStackedLayout,
         InspectorActionRowContract[] ActionRows,
-        EditorHeaderLayoutContract Header);
+        EditorHeaderLayoutContract Header,
+        EditorTimelineToolboxLayoutContract TimelineToolbox);
 
     public partial class EditorScreen
     {
@@ -93,7 +103,16 @@ namespace BeatSight.Game.Screens.Editor
                 actionHintText?.MaxWidth ?? 0f,
                 playbackStatusText?.MaxWidth ?? 0f);
 
-            return new InspectorLayoutContract(inspectorStackedLayout, rows, header);
+            var timelineToolbox = new EditorTimelineToolboxLayoutContract(
+                timelineToolboxContentFlow?.Spacing.X ?? 0f,
+                timelineZoomSliderContainer?.Width ?? 0f,
+                timelineZoomSliderContainer?.Height ?? 0f,
+                timelineWaveformSliderContainer?.Width ?? 0f,
+                timelineWaveformSliderContainer?.Height ?? 0f,
+                timelineSectionControlRows.Count > 0 ? timelineSectionControlRows[0].Spacing.X : 0f,
+                timelineMiniButtons.Count > 0 ? timelineMiniButtons[0].Height : 0f);
+
+            return new InspectorLayoutContract(inspectorStackedLayout, rows, header, timelineToolbox);
         }
     }
 }

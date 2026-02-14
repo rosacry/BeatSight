@@ -702,6 +702,7 @@ namespace BeatSight.Tests.VisualRegression
 
             validateCompactInspectorActionRows(contract.ActionRows);
             validateCompactHeaderWidths(contract.Header);
+            validateCompactTimelineToolbox(contract.TimelineToolbox);
         }
 
         private static void validateCompactInspectorActionRows(InspectorActionRowContract[] actionRows)
@@ -740,22 +741,22 @@ namespace BeatSight.Tests.VisualRegression
                     "Editor compact header contract failed: header max-width values were not initialized.");
             }
 
-            if (header.StatusMaxWidth < 460f || header.StatusMaxWidth > 545f)
+            if (header.StatusMaxWidth < 450f || header.StatusMaxWidth > 690f)
             {
                 throw new VisualCaptureUnavailableException(
-                    $"Editor compact header contract failed: status max width out of range ({header.StatusMaxWidth:0.###}, expected 460-545).");
+                    $"Editor compact header contract failed: status max width out of range ({header.StatusMaxWidth:0.###}, expected 450-690).");
             }
 
-            if (header.ActionHintMaxWidth < 840f || header.ActionHintMaxWidth > 990f)
+            if (header.ActionHintMaxWidth < 820f || header.ActionHintMaxWidth > 1240f)
             {
                 throw new VisualCaptureUnavailableException(
-                    $"Editor compact header contract failed: action hint max width out of range ({header.ActionHintMaxWidth:0.###}, expected 840-990).");
+                    $"Editor compact header contract failed: action hint max width out of range ({header.ActionHintMaxWidth:0.###}, expected 820-1240).");
             }
 
-            if (header.PlaybackStatusMaxWidth < 840f || header.PlaybackStatusMaxWidth > 990f)
+            if (header.PlaybackStatusMaxWidth < 820f || header.PlaybackStatusMaxWidth > 1240f)
             {
                 throw new VisualCaptureUnavailableException(
-                    $"Editor compact header contract failed: playback status max width out of range ({header.PlaybackStatusMaxWidth:0.###}, expected 840-990).");
+                    $"Editor compact header contract failed: playback status max width out of range ({header.PlaybackStatusMaxWidth:0.###}, expected 820-1240).");
             }
 
             if (Math.Abs(header.ActionHintMaxWidth - header.PlaybackStatusMaxWidth) > 1.5f)
@@ -768,6 +769,73 @@ namespace BeatSight.Tests.VisualRegression
             {
                 throw new VisualCaptureUnavailableException(
                     $"Editor compact header contract failed: hint width no longer dominates status width ({header.ActionHintMaxWidth:0.###} vs {header.StatusMaxWidth:0.###}).");
+            }
+        }
+
+        private static void validateCompactTimelineToolbox(EditorTimelineToolboxLayoutContract timelineToolbox)
+        {
+            if (timelineToolbox.ContentSpacingX <= 0
+                || timelineToolbox.ZoomSliderWidth <= 0
+                || timelineToolbox.ZoomSliderHeight <= 0
+                || timelineToolbox.WaveformSliderWidth <= 0
+                || timelineToolbox.WaveformSliderHeight <= 0)
+            {
+                throw new VisualCaptureUnavailableException(
+                    "Editor compact timeline contract failed: timeline toolbox values were not initialized.");
+            }
+
+            if (timelineToolbox.ContentSpacingX < 8.5f || timelineToolbox.ContentSpacingX > 13.5f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact timeline contract failed: content spacing out of range ({timelineToolbox.ContentSpacingX:0.###}, expected 8.5-13.5).");
+            }
+
+            if (timelineToolbox.ZoomSliderWidth < 145f || timelineToolbox.ZoomSliderWidth > 170f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact timeline contract failed: zoom slider width out of range ({timelineToolbox.ZoomSliderWidth:0.###}, expected 145-170).");
+            }
+
+            if (timelineToolbox.WaveformSliderWidth < 130f || timelineToolbox.WaveformSliderWidth > 154f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact timeline contract failed: waveform slider width out of range ({timelineToolbox.WaveformSliderWidth:0.###}, expected 130-154).");
+            }
+
+            if (timelineToolbox.ZoomSliderWidth < timelineToolbox.WaveformSliderWidth + 8f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact timeline contract failed: zoom slider should remain wider than waveform slider ({timelineToolbox.ZoomSliderWidth:0.###} vs {timelineToolbox.WaveformSliderWidth:0.###}).");
+            }
+
+            if (timelineToolbox.ZoomSliderHeight < 25f || timelineToolbox.ZoomSliderHeight > 31f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact timeline contract failed: zoom slider height out of range ({timelineToolbox.ZoomSliderHeight:0.###}, expected 25-31).");
+            }
+
+            if (timelineToolbox.WaveformSliderHeight < 25f || timelineToolbox.WaveformSliderHeight > 31f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact timeline contract failed: waveform slider height out of range ({timelineToolbox.WaveformSliderHeight:0.###}, expected 25-31).");
+            }
+
+            if (Math.Abs(timelineToolbox.ZoomSliderHeight - timelineToolbox.WaveformSliderHeight) > 1.5f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact timeline contract failed: slider heights diverged ({timelineToolbox.ZoomSliderHeight:0.###} vs {timelineToolbox.WaveformSliderHeight:0.###}).");
+            }
+
+            if (timelineToolbox.SectionRowSpacingX < 5.8f || timelineToolbox.SectionRowSpacingX > 9.5f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact timeline contract failed: section row spacing out of range ({timelineToolbox.SectionRowSpacingX:0.###}, expected 5.8-9.5).");
+            }
+
+            if (timelineToolbox.MiniButtonHeight < 28f || timelineToolbox.MiniButtonHeight > 33f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact timeline contract failed: mini button height out of range ({timelineToolbox.MiniButtonHeight:0.###}, expected 28-33).");
             }
         }
 

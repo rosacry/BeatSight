@@ -119,6 +119,7 @@ namespace BeatSight.Tests.VisualRegression
             resetFrameworkRandomState();
 
             string? previousUserAssetRoot = Environment.GetEnvironmentVariable("BEATSIGHT_USER_ASSET_ROOT");
+            string? previousCursorNormalisationSkip = Environment.GetEnvironmentVariable("BEATSIGHT_SKIP_CURSOR_NORMALISATION");
             string? visualUserAssetRoot = null;
             string beatmapPath = resolveReferenceBeatmapPath();
             string hostName = $"BeatSight.VisualRegression.{scene}-{width}x{height}.{Guid.NewGuid():N}";
@@ -130,6 +131,7 @@ namespace BeatSight.Tests.VisualRegression
             {
                 visualUserAssetRoot = prepareDeterministicUserAssetRoot(scene);
                 Environment.SetEnvironmentVariable("BEATSIGHT_USER_ASSET_ROOT", visualUserAssetRoot);
+                Environment.SetEnvironmentVariable("BEATSIGHT_SKIP_CURSOR_NORMALISATION", "1");
 
                 runTask = Task.Factory.StartNew(
                     () => host.Run(game),
@@ -207,6 +209,7 @@ namespace BeatSight.Tests.VisualRegression
                 safeDispose(host);
 
                 Environment.SetEnvironmentVariable("BEATSIGHT_USER_ASSET_ROOT", previousUserAssetRoot);
+                Environment.SetEnvironmentVariable("BEATSIGHT_SKIP_CURSOR_NORMALISATION", previousCursorNormalisationSkip);
                 if (!string.IsNullOrWhiteSpace(visualUserAssetRoot))
                 {
                     try

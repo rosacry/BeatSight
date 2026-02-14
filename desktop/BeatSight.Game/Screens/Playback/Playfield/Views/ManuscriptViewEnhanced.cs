@@ -180,10 +180,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         private static readonly Color4 LabelColor = new Color4(220, 232, 248, 228);
 
         private Container? staffContainer;
+        private Container? timelineMeasureBandLayer;
         private Container? timelineMarkerLayer;
         private ClefIndicatorEnhanced? clefIndicator;
         private readonly List<(Box Line, float Unit)> staffGuideLines = new();
         private readonly List<ComponentGuideVisual> componentGuideVisuals = new();
+        private readonly List<Box> timelineMeasureBands = new();
         private readonly List<Box> timelineMarkers = new();
         private string? focusedGuideKey;
         private double timelineStartMs;
@@ -292,6 +294,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre
             };
+
+            timelineMeasureBandLayer = new Container
+            {
+                RelativeSizeAxes = Axes.Both
+            };
+            staffContainer.Add(timelineMeasureBandLayer);
 
             timelineMarkerLayer = new Container
             {
@@ -552,6 +560,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
 
             if (!hasTimelineWindow || timelineDurationMs <= 1)
             {
+                for (int i = 0; i < timelineMeasureBands.Count; i++)
+                    timelineMeasureBands[i].Alpha = 0f;
                 for (int i = 0; i < timelineMarkers.Count; i++)
                     timelineMarkers[i].Alpha = 0f;
                 return;
@@ -559,6 +569,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
 
             if (timelineRightX - timelineLeftX <= 1f)
             {
+                for (int i = 0; i < timelineMeasureBands.Count; i++)
+                    timelineMeasureBands[i].Alpha = 0f;
                 for (int i = 0; i < timelineMarkers.Count; i++)
                     timelineMarkers[i].Alpha = 0f;
                 return;
@@ -571,6 +583,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             double windowStart = timelineStartMs;
             double windowEnd = windowStart + timelineDurationMs;
             int beatsPerMeasure = Math.Max(1, timelineBeatsPerMeasure);
+            updateTimelineMeasureBands(windowStart, windowEnd, beatDuration, beatsPerMeasure);
             int subdivision = Math.Clamp(timelineSubdivisionDivisor, 1, 8);
             double subDuration = beatDuration / subdivision;
             int ticksPerMeasure = beatsPerMeasure * subdivision;
@@ -652,6 +665,73 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             }
 
             return timelineMarkers[index];
+        }
+
+        private void updateTimelineMeasureBands(double windowStart, double windowEnd, double beatDuration, int beatsPerMeasure)
+        {
+            if (timelineMeasureBandLayer == null || beatsPerMeasure <= 0 || beatDuration <= 1 || timelineDurationMs <= 1)
+            {
+                for (int i = 0; i < timelineMeasureBands.Count; i++)
+                    timelineMeasureBands[i].Alpha = 0f;
+                return;
+            }
+
+            double measureDuration = beatDuration * beatsPerMeasure;
+            if (measureDuration <= 1)
+            {
+                for (int i = 0; i < timelineMeasureBands.Count; i++)
+                    timelineMeasureBands[i].Alpha = 0f;
+                return;
+            }
+
+            int firstMeasure = (int)Math.Floor((windowStart - timelineBeatOriginMs) / measureDuration) - 1;
+            int lastMeasure = (int)Math.Ceiling((windowEnd - timelineBeatOriginMs) / measureDuration) + 1;
+
+            int bandCount = 0;
+            for (int measureIndex = firstMeasure; measureIndex <= lastMeasure; measureIndex++)
+            {
+                double startMs = timelineBeatOriginMs + measureIndex * measureDuration;
+                double endMs = startMs + measureDuration;
+                double clippedStart = Math.Max(startMs, windowStart);
+                double clippedEnd = Math.Min(endMs, windowEnd);
+                if (clippedEnd - clippedStart <= 1)
+                    continue;
+
+                float startProgress = (float)((clippedStart - windowStart) / timelineDurationMs);
+                float endProgress = (float)((clippedEnd - windowStart) / timelineDurationMs);
+                float width = Math.Clamp(endProgress - startProgress, 0f, 1f);
+                if (width <= 0.0005f)
+                    continue;
+
+                Box band = getTimelineMeasureBand(bandCount++);
+                band.X = Math.Clamp(startProgress, 0f, 1f);
+                band.Width = width;
+                band.Colour = new Color4(124, 144, 182, 255);
+                band.Alpha = positiveModulo(measureIndex, 2) == 0 ? 0.042f : 0.020f;
+            }
+
+            for (int i = bandCount; i < timelineMeasureBands.Count; i++)
+                timelineMeasureBands[i].Alpha = 0f;
+        }
+
+        private Box getTimelineMeasureBand(int index)
+        {
+            while (timelineMeasureBands.Count <= index)
+            {
+                var band = new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    RelativePositionAxes = Axes.X,
+                    Anchor = Anchor.TopLeft,
+                    Origin = Anchor.TopLeft,
+                    Width = 0f,
+                    Alpha = 0f
+                };
+                timelineMeasureBands.Add(band);
+                timelineMeasureBandLayer?.Add(band);
+            }
+
+            return timelineMeasureBands[index];
         }
 
         private static int positiveModulo(int value, int divisor)

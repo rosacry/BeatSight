@@ -180,7 +180,7 @@ namespace BeatSight.Game.Screens.Editor
                 content[row] = rowChildren;
             }
 
-            return new GridContainer
+            var grid = new GridContainer
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
@@ -188,6 +188,19 @@ namespace BeatSight.Game.Screens.Editor
                 ColumnDimensions = columnDimensions,
                 Content = content
             };
+
+            var rowContainer = new Container
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Width = 1f,
+                Anchor = Anchor.TopLeft,
+                Origin = Anchor.TopLeft,
+                Child = grid
+            };
+
+            inspectorActionRowContainers.Add((rowContainer, columnCount));
+            return rowContainer;
         }
 
         private Drawable createInspectorButton(string text, Action action, float width = 88, bool fillWidth = false)

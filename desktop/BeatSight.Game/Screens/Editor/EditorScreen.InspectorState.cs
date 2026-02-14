@@ -17,6 +17,7 @@ namespace BeatSight.Game.Screens.Editor
         private readonly List<BasicButton> inspectorActionButtons = new();
         private readonly List<SpriteText> inspectorActionButtonTexts = new();
         private readonly List<(BasicButton Button, SpriteText Label, bool FillWidth, float WidthHint)> inspectorActionLayouts = new();
+        private readonly List<(Container RowContainer, int ColumnCount)> inspectorActionRowContainers = new();
         private readonly List<BeatSightSliderBar> inspectorSliders = new();
         private readonly List<FillFlowContainer> inspectorSectionBodies = new();
         private readonly List<FillFlowContainer> inspectorFieldFlows = new();

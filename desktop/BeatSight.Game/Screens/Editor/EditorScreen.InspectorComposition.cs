@@ -21,6 +21,7 @@ namespace BeatSight.Game.Screens.Editor
             inspectorActionButtons.Clear();
             inspectorActionButtonTexts.Clear();
             inspectorActionLayouts.Clear();
+            inspectorActionRowContainers.Clear();
             inspectorSliders.Clear();
             inspectorSectionBodies.Clear();
             inspectorFieldFlows.Clear();

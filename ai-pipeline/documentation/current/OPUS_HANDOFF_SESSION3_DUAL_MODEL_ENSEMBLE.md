@@ -1,6 +1,6 @@
 # BeatSight AI Pipeline Handoff - Session 3 Dual-Model Ensemble
 
-Last updated: 2026-02-13
+Last updated: 2026-02-14
 
 This handoff reflects the current training plan and command matrix in active use.
 
@@ -71,3 +71,6 @@ Use this file for workflow context and use the tracker for exact command text:
   - `--mode`
   - `--auto-sensitivity`
   - `--auto-quantization`
+  - Coverage files:
+    - `desktop/BeatSight.Tests/AiBeatmapGeneratorArgumentsTests.cs`
+    - `desktop/BeatSight.Tests/GenerationCoordinatorTests.cs`

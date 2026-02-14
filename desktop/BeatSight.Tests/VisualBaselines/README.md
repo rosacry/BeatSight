@@ -93,6 +93,7 @@ This helper:
 - prints heartbeat logs while each batch is running,
 - prints per-batch timing telemetry (`startup` from first TRX appearance + `total` duration),
 - prints end-of-run timing rollups (`startup_mean`, `startup_p95`, `total_mean`, `total_p95`, `trx_mean`, `trx_p95`, and slowest batch),
+- emits a single warning when TRX duration timestamps are missing for one or more batches (rollup still uses available samples),
 - applies a per-batch timeout,
 - validates each batch from generated TRX results,
 - runs each test invocation with `--no-build` after the upfront build,

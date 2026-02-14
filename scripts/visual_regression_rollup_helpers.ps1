@@ -65,6 +65,8 @@ function Get-VisualTimingRollup {
     $totalDurations = @($BatchResults | ForEach-Object { [double]$_.TotalSeconds })
     $startupDurations = @($BatchResults | Where-Object { $null -ne $_.StartupSeconds } | ForEach-Object { [double]$_.StartupSeconds })
     $trxDurations = @($BatchResults | Where-Object { $null -ne $_.TrxDurationSeconds } | ForEach-Object { [double]$_.TrxDurationSeconds })
+    $trxSampleCount = $trxDurations.Count
+    $trxMissingCount = [Math]::Max(0, $BatchResults.Count - $trxSampleCount)
 
     $totalMean = [double]($totalDurations | Measure-Object -Average).Average
     $totalP95 = Get-VisualPercentileValue -Values $totalDurations -Percentile 95
@@ -83,6 +85,8 @@ function Get-VisualTimingRollup {
         TotalP95Seconds = $totalP95
         TrxMeanSeconds = $trxMean
         TrxP95Seconds = $trxP95
+        TrxDurationSampleCount = $trxSampleCount
+        TrxDurationMissingCount = $trxMissingCount
         SlowestBatchScenes = if ($null -eq $slowest) { $null } else { [string]$slowest.Scenes }
         SlowestBatchTotalSeconds = if ($null -eq $slowest) { $null } else { [double]$slowest.TotalSeconds }
     }

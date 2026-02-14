@@ -41,6 +41,29 @@ public class DrawableNoteManuscriptRenderingTests
         Assert.True(lineB.Alpha > 0.5f);
     }
 
+    [Fact]
+    public void ManuscriptStandaloneFlagsFollowAssignedFlagCount()
+    {
+        var note = createNote("snare", velocity: 0.9);
+        note.Width = 20;
+        note.Height = 10;
+        note.SetViewMode(LaneViewMode.Manuscript);
+
+        note.SetManuscriptFlagCount(2);
+
+        var primary = getPrivateField<Box>(note, "manuscriptFlagPrimary");
+        var secondary = getPrivateField<Box>(note, "manuscriptFlagSecondary");
+        var tertiary = getPrivateField<Box>(note, "manuscriptFlagTertiary");
+        Assert.True(primary.Alpha > 0.5f);
+        Assert.True(secondary.Alpha > 0.5f);
+        Assert.True(tertiary.Alpha < 0.01f);
+
+        note.SetManuscriptFlagCount(0);
+        Assert.True(primary.Alpha < 0.01f);
+        Assert.True(secondary.Alpha < 0.01f);
+        Assert.True(tertiary.Alpha < 0.01f);
+    }
+
     private static DrawableNote createNote(string component, double velocity)
     {
         return new DrawableNote(

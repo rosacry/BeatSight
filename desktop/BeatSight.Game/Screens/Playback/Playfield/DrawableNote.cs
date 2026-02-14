@@ -105,6 +105,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private readonly Box highlightStrip;
         private readonly Box manuscriptCrossLineA;
         private readonly Box manuscriptCrossLineB;
+        private readonly Box manuscriptFlagPrimary;
+        private readonly Box manuscriptFlagSecondary;
+        private readonly Box manuscriptFlagTertiary;
         private readonly Box? glowBox;
         private readonly Box stem;
         private readonly Bindable<bool> showGlowEffects;
@@ -113,6 +116,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private readonly bool isKickNote;
         private readonly int originalLane;
         private bool kickGlobalMode;
+        private int manuscriptFlagCount;
         private float lastAppliedDepth = float.NaN;
         private readonly float velocityAlpha;
 
@@ -205,6 +209,39 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 Alpha = 0
             };
             children.Add(manuscriptCrossLineB);
+
+            manuscriptFlagPrimary = new Box
+            {
+                Width = 14,
+                Height = 2,
+                Anchor = Anchor.Centre,
+                Origin = Anchor.CentreLeft,
+                Colour = AccentColour,
+                Alpha = 0
+            };
+            children.Add(manuscriptFlagPrimary);
+
+            manuscriptFlagSecondary = new Box
+            {
+                Width = 14,
+                Height = 2,
+                Anchor = Anchor.Centre,
+                Origin = Anchor.CentreLeft,
+                Colour = AccentColour,
+                Alpha = 0
+            };
+            children.Add(manuscriptFlagSecondary);
+
+            manuscriptFlagTertiary = new Box
+            {
+                Width = 14,
+                Height = 2,
+                Anchor = Anchor.Centre,
+                Origin = Anchor.CentreLeft,
+                Colour = AccentColour,
+                Alpha = 0
+            };
+            children.Add(manuscriptFlagTertiary);
 
             highlightStrip = new Box
             {
@@ -310,12 +347,17 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     glowBox.Alpha = 0.04f * velocityAlpha;
                 }
 
+                updateManuscriptFlagGeometry(noteWidth, noteHeight, stemDown, manuscriptInk);
+
                 return;
             }
 
             stem.Alpha = 0;
             manuscriptCrossLineA.Alpha = 0;
             manuscriptCrossLineB.Alpha = 0;
+            manuscriptFlagPrimary.Alpha = 0;
+            manuscriptFlagSecondary.Alpha = 0;
+            manuscriptFlagTertiary.Alpha = 0;
             noteheadContainer.Masking = true;
             Colour = AccentColour;
             mainBox.Colour = AccentColour;
@@ -398,6 +440,17 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             SetViewMode(viewMode);
         }
 
+        public void SetManuscriptFlagCount(int flagCount)
+        {
+            int clamped = Math.Clamp(flagCount, 0, 3);
+            if (manuscriptFlagCount == clamped)
+                return;
+
+            manuscriptFlagCount = clamped;
+            if (viewMode == LaneViewMode.Manuscript)
+                SetViewMode(viewMode);
+        }
+
         public void ApplyKickLineDimensions(float width, float height, LaneViewMode mode)
         {
             if (!isKickNote || !kickGlobalMode)
@@ -432,6 +485,77 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 if (glowBox != null)
                     glowBox.Alpha = 0.30f * velocityAlpha;
             }
+        }
+
+        private void updateManuscriptFlagGeometry(float noteWidth, float noteHeight, bool stemDown, Color4 manuscriptInk)
+        {
+            float stemHeight = Math.Clamp(noteHeight * 2.65f, 16f, 44f);
+            float stemTipX = stemDown ? noteWidth * 0.34f : -noteWidth * 0.34f;
+            float stemTipY = stemDown
+                ? -noteHeight * 0.04f + stemHeight
+                : noteHeight * 0.04f - stemHeight;
+
+            float flagWidth = Math.Clamp(noteWidth * 0.72f, 8f, 18f);
+            float flagThickness = Math.Clamp(noteHeight * 0.18f, 1.4f, 2.8f);
+            float flagSpacing = Math.Clamp(noteHeight * 0.42f, 3f, 7f);
+            float flagRotation = stemDown ? -26f : 26f;
+            float flagXOffset = stemDown ? -flagWidth * 0.06f : flagWidth * 0.06f;
+            float direction = stemDown ? 1f : -1f;
+
+            configureFlag(
+                manuscriptFlagPrimary,
+                manuscriptFlagCount >= 1,
+                stemTipX + flagXOffset,
+                stemTipY + direction * flagSpacing * 0.15f,
+                flagWidth,
+                flagThickness,
+                flagRotation,
+                manuscriptInk);
+
+            configureFlag(
+                manuscriptFlagSecondary,
+                manuscriptFlagCount >= 2,
+                stemTipX + flagXOffset,
+                stemTipY + direction * (flagSpacing * 1.15f),
+                flagWidth * 0.94f,
+                flagThickness,
+                flagRotation,
+                manuscriptInk);
+
+            configureFlag(
+                manuscriptFlagTertiary,
+                manuscriptFlagCount >= 3,
+                stemTipX + flagXOffset,
+                stemTipY + direction * (flagSpacing * 2.05f),
+                flagWidth * 0.88f,
+                flagThickness,
+                flagRotation,
+                manuscriptInk);
+        }
+
+        private void configureFlag(
+            Box flag,
+            bool visible,
+            float x,
+            float y,
+            float width,
+            float height,
+            float rotation,
+            Color4 colour)
+        {
+            if (!visible)
+            {
+                flag.Alpha = 0f;
+                return;
+            }
+
+            flag.X = x;
+            flag.Y = y;
+            flag.Width = width;
+            flag.Height = height;
+            flag.Rotation = rotation;
+            flag.Colour = colour;
+            flag.Alpha = 0.9f * velocityAlpha;
         }
 
         internal bool ShouldUpdateDepth(float targetDepth, float tolerance)

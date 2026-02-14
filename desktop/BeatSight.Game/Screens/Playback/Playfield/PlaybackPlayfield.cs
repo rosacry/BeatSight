@@ -449,12 +449,17 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             if (currentLaneViewMode == LaneViewMode.Manuscript && manuscriptBackground != null)
             {
                 SheetTimelineWindow sheetWindow = resolveSheetTimelineWindow(currentTime, effectiveWidth, DrawHeight);
+                resolveTimingForHitTime(currentTime, out double beatDuration, out double beatOrigin);
+                int markerSubdivision = resolveManuscriptTimelineSubdivision(sheetWindow, beatDuration);
                 manuscriptBackground.SetTimelineWindow(
                     sheetWindow.StartTime,
                     sheetWindow.Duration,
                     sheetWindow.PlayheadX,
                     sheetWindow.LeftX,
-                    sheetWindow.RightX);
+                    sheetWindow.RightX,
+                    (int)Math.Max(1, Math.Round(cachedBeatsPerMeasure)),
+                    beatOrigin,
+                    markerSubdivision);
                 manuscriptBackground.UpdatePlaybackPosition(currentTime, cachedBpm);
             }
         }
@@ -709,6 +714,88 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             return new SheetTimelineWindow(windowStart, windowDuration, leftX, rightX, playheadX);
         }
 
+        private int resolveManuscriptTimelineSubdivision(in SheetTimelineWindow sheetWindow, double beatDuration)
+        {
+            if (loadedBeatmap?.HitObjects == null || loadedBeatmap.HitObjects.Count < 2 || beatDuration <= 1 || sheetWindow.Duration <= 1)
+                return 1;
+
+            double windowPadding = beatDuration * 0.15;
+            double windowStart = sheetWindow.StartTime - windowPadding;
+            double windowEnd = sheetWindow.StartTime + sheetWindow.Duration + windowPadding;
+
+            var windowHitTimes = loadedBeatmap.HitObjects
+                .Where(hit => hit.Time >= windowStart && hit.Time <= windowEnd)
+                .Select(hit => (double)hit.Time)
+                .OrderBy(time => time)
+                .ToList();
+
+            if (windowHitTimes.Count < 2)
+                return 1;
+
+            List<double> beatGaps = new();
+            double previous = windowHitTimes[0];
+            for (int i = 1; i < windowHitTimes.Count; i++)
+            {
+                double deltaMs = windowHitTimes[i] - previous;
+                previous = windowHitTimes[i];
+
+                // Skip stacked chord hits or effectively identical timestamps.
+                if (deltaMs < 1.0)
+                    continue;
+
+                double gapBeats = deltaMs / beatDuration;
+                if (gapBeats <= 0 || gapBeats > 1.05)
+                    continue;
+
+                beatGaps.Add(gapBeats);
+            }
+
+            return ResolveManuscriptSubdivisionDivisor(beatGaps);
+        }
+
+        internal static int ResolveManuscriptSubdivisionDivisor(IEnumerable<double> beatGaps)
+        {
+            int count8 = 0;
+            int count6 = 0;
+            int count4 = 0;
+            int count3 = 0;
+            int count2 = 0;
+
+            foreach (double gap in beatGaps)
+            {
+                if (gap <= 0)
+                    continue;
+
+                if (Math.Abs(gap - 0.125) <= 0.030)
+                    count8++;
+                else if (Math.Abs(gap - (1.0 / 6.0)) <= 0.032)
+                    count6++;
+                else if (Math.Abs(gap - 0.25) <= 0.040)
+                    count4++;
+                else if (Math.Abs(gap - (1.0 / 3.0)) <= 0.045)
+                    count3++;
+                else if (Math.Abs(gap - 0.5) <= 0.060)
+                    count2++;
+            }
+
+            if (count8 >= 2)
+                return 8;
+
+            if (count6 >= 2)
+                return 6;
+
+            if (count4 >= 2)
+                return 4;
+
+            if (count3 >= 2)
+                return 3;
+
+            if (count2 >= 1)
+                return 2;
+
+            return 1;
+        }
+
         private ManuscriptBeamAnchor createManuscriptBeamAnchor(DrawableNote note)
         {
             bool stemDown = ManuscriptBackgroundEnhanced.ShouldUseDownStemForComponent(note.ComponentName);
@@ -746,8 +833,11 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         {
             clearManuscriptBeams();
 
-            if (anchors.Count < 2)
+            if (anchors.Count == 0)
                 return;
+
+            foreach (var anchor in anchors)
+                anchor.Note.SetManuscriptFlagCount(0);
 
             addManuscriptBeamsForVoice(anchors, ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Upper);
             addManuscriptBeamsForVoice(anchors, ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower);
@@ -762,9 +852,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 .OrderBy(anchor => anchor.HitTime)
                 .ToList();
 
-            if (voiceAnchors.Count < 2)
+            if (voiceAnchors.Count == 0)
                 return;
 
+            var beamedNotes = new HashSet<DrawableNote>();
             for (int i = 0; i < voiceAnchors.Count - 1; i++)
             {
                 var current = voiceAnchors[i];
@@ -775,7 +866,66 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
                 for (int level = 0; level < levelCount; level++)
                     addManuscriptBeamSegment(current, next, level);
+
+                beamedNotes.Add(current.Note);
+                beamedNotes.Add(next.Note);
             }
+
+            for (int i = 0; i < voiceAnchors.Count; i++)
+            {
+                var anchor = voiceAnchors[i];
+                if (beamedNotes.Contains(anchor.Note))
+                {
+                    anchor.Note.SetManuscriptFlagCount(0);
+                    continue;
+                }
+
+                int standaloneFlags = resolveStandaloneManuscriptFlagCount(voiceAnchors, i);
+                anchor.Note.SetManuscriptFlagCount(standaloneFlags);
+            }
+        }
+
+        private int resolveStandaloneManuscriptFlagCount(List<ManuscriptBeamAnchor> voiceAnchors, int index)
+        {
+            if (index < 0 || index >= voiceAnchors.Count)
+                return 0;
+
+            var current = voiceAnchors[index];
+            double nearestGap = double.MaxValue;
+
+            for (int i = index - 1; i >= 0; i--)
+            {
+                if (voiceAnchors[i].NotationIndex != current.NotationIndex)
+                    continue;
+
+                nearestGap = (current.HitTime - voiceAnchors[i].HitTime) / Math.Max(1.0, current.BeatDuration);
+                break;
+            }
+
+            for (int i = index + 1; i < voiceAnchors.Count; i++)
+            {
+                if (voiceAnchors[i].NotationIndex != current.NotationIndex)
+                    continue;
+
+                double gap = (voiceAnchors[i].HitTime - current.HitTime) / Math.Max(1.0, current.BeatDuration);
+                nearestGap = Math.Min(nearestGap, gap);
+                break;
+            }
+
+            // Fall back to nearest note in the same voice when this lane is sparse.
+            if (double.IsPositiveInfinity(nearestGap) || nearestGap == double.MaxValue)
+            {
+                if (index > 0)
+                    nearestGap = Math.Min(nearestGap, (current.HitTime - voiceAnchors[index - 1].HitTime) / Math.Max(1.0, current.BeatDuration));
+                if (index < voiceAnchors.Count - 1)
+                    nearestGap = Math.Min(nearestGap, (voiceAnchors[index + 1].HitTime - current.HitTime) / Math.Max(1.0, current.BeatDuration));
+            }
+
+            if (double.IsPositiveInfinity(nearestGap) || nearestGap == double.MaxValue || nearestGap <= 0 || nearestGap > SingleBeamThresholdBeats)
+                return 0;
+
+            int beamLevel = GetManuscriptBeamLevelCount(nearestGap);
+            return Math.Clamp(beamLevel, 0, 3);
         }
 
         private bool tryGetBeamLevelCount(in ManuscriptBeamAnchor current, in ManuscriptBeamAnchor next, out int levelCount)

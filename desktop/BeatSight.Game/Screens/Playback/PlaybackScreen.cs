@@ -286,7 +286,7 @@ namespace BeatSight.Game.Screens.Playback
             autoZoom.BindValueChanged(e =>
             {
                 if (e.NewValue)
-                    zoomLevel.Value = 1.12;
+                    zoomLevel.Value = 1.20;
 
                 if (beatmap != null)
                 {

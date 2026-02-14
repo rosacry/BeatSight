@@ -291,9 +291,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 Color4 manuscriptInk = new Color4(228, 236, 248, 255);
                 mainBox.Shear = Vector2.Zero;
                 noteheadContainer.Masking = true;
-                noteheadContainer.CornerRadius = Math.Clamp(noteHeight * 0.44f, 3f, 12f);
+                noteheadContainer.Rotation = cymbalHead ? 0f : -18f;
+                noteheadContainer.CornerRadius = Math.Clamp(noteHeight * 0.5f, 4f, 13f);
                 mainBox.Colour = ghostNote ? DesignSystem.WithOpacity(manuscriptInk, 0.40f) : manuscriptInk;
-                mainBox.Alpha = cymbalHead ? 0f : 0.96f * velocityAlpha;
+                mainBox.Alpha = cymbalHead ? 0f : 0.94f * velocityAlpha;
 
                 float crossLength = Math.Clamp(noteWidth * 0.95f, 9f, 24f);
                 float crossThickness = Math.Clamp(crossLength * 0.15f, 1.5f, 3f);
@@ -359,6 +360,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             manuscriptFlagSecondary.Alpha = 0;
             manuscriptFlagTertiary.Alpha = 0;
             noteheadContainer.Masking = true;
+            noteheadContainer.Rotation = 0f;
             Colour = AccentColour;
             mainBox.Colour = AccentColour;
             stem.Colour = AccentColour;

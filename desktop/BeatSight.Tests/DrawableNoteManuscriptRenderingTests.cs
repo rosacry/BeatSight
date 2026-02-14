@@ -3,6 +3,7 @@ using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Screens.Playback.Playfield;
 using osu.Framework.Bindables;
+using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using Xunit;
 
@@ -62,6 +63,21 @@ public class DrawableNoteManuscriptRenderingTests
         Assert.True(primary.Alpha < 0.01f);
         Assert.True(secondary.Alpha < 0.01f);
         Assert.True(tertiary.Alpha < 0.01f);
+    }
+
+    [Fact]
+    public void ManuscriptModeTiltsStandardNoteheadsAndResetsOutsideManuscript()
+    {
+        var note = createNote("snare", velocity: 0.9);
+        note.Width = 20;
+        note.Height = 10;
+
+        note.SetViewMode(LaneViewMode.Manuscript);
+        var noteheadContainer = getPrivateField<Container>(note, "noteheadContainer");
+        Assert.True(noteheadContainer.Rotation < -10f);
+
+        note.SetViewMode(LaneViewMode.TwoDimensional);
+        Assert.Equal(0f, noteheadContainer.Rotation);
     }
 
     private static DrawableNote createNote(string component, double velocity)

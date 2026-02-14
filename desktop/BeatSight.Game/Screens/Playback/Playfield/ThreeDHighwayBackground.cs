@@ -18,10 +18,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private const int sweepLineCount = 3;
 
         // Keep these aligned with PlaybackPlayfield.ThreeDimensionalTuning.
-        private const float vanishingPointYRatio = 0.11f;
+        private const float vanishingPointYRatio = 0.095f;
         private const float hitLineYRatio = 0.935f;
-        private const float highwayTopWidthRatio = 0.12f;
-        private const float highwayBottomWidthRatio = 0.74f;
+        private const float highwayTopWidthRatio = 0.09f;
+        private const float highwayBottomWidthRatio = 0.82f;
 
         private static readonly Color4[] laneAccentPalette =
         {
@@ -406,8 +406,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             float vanishingY = DrawHeight * vanishingPointYRatio;
             float hitY = DrawHeight * hitLineYRatio;
-            float topY = vanishingY + 6f;
-            float bottomY = hitY - 6f;
+            float topY = vanishingY + 5f;
+            float bottomY = hitY - 5f;
             float depthHeight = Math.Max(20f, bottomY - topY);
 
             float topWidth = DrawWidth * highwayTopWidthRatio;
@@ -423,7 +423,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 float yEnd = topY + depthHeight * depthEnd;
                 float segmentHeight = Math.Max(1f, yEnd - yStart + 1.4f);
 
-                float curvedDepth = MathF.Pow(depthMid, 1.2f);
+                float curvedDepth = MathF.Pow(depthMid, 1.26f);
                 float widthAtDepth = lerp(topWidth, bottomWidth, curvedDepth);
                 float laneWidth = widthAtDepth / visibleLaneCount;
                 float left = (DrawWidth - widthAtDepth) * 0.5f;
@@ -469,7 +469,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float headerHeight = Math.Clamp(24f * compactBoost, 22f, 32f);
             float footerHeight = Math.Clamp(15f * compactBoost, 13f, 20f);
 
-            float headerDepth = 0.075f;
+            float headerDepth = 0.06f;
             float headerWidth = lerp(topWidth, bottomWidth, headerDepth) / visibleLaneCount;
             float headerLeft = (DrawWidth - lerp(topWidth, bottomWidth, headerDepth)) * 0.5f;
             float headerY = Math.Max(6f, topY + 4f);
@@ -477,7 +477,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float footerDepth = 1f;
             float footerWidth = lerp(topWidth, bottomWidth, footerDepth) / visibleLaneCount;
             float footerLeft = (DrawWidth - lerp(topWidth, bottomWidth, footerDepth)) * 0.5f;
-            float footerY = hitY - footerHeight - 5f;
+            float footerY = hitY - footerHeight - 3f;
 
             for (int lane = 0; lane < visibleLaneCount; lane++)
             {

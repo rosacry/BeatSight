@@ -44,11 +44,23 @@ The in-progress pipeline patch set is currently test-validated:
   - `ai-pipeline/pipeline/genre_aware_decoder.py`
   - `ai-pipeline/pipeline/pattern_library.py`
 
+Additional discovery-pass hardening (2026-02-14):
+
+- Modified:
+  - `ai-pipeline/pipeline/adaptive_parameters.py`
+  - `ai-pipeline/transcription/count_estimation.py`
+  - `ai-pipeline/tests/test_process_pipeline.py`
+  - `ai-pipeline/tests/test_count_estimation.py`
+- Purpose:
+  - remove short-signal `librosa` `n_fft > signal length` warning noise from adaptive onset/pulse analysis and count-estimation transient analysis.
+  - add explicit warning-regression assertions in tests.
+
 Validation run (latest local):
 
 - `python -m pytest ai-pipeline/tests/test_auto_parameters.py -q` -> pass
 - `python -m pytest ai-pipeline/tests/test_process_pipeline.py ai-pipeline/tests/test_full_pipeline.py ai-pipeline/tests/test_multilabel_inference.py ai-pipeline/tests/test_count_estimation.py -q` -> pass
 - `python -m pytest ai-pipeline/tests/test_dataset_health.py ai-pipeline/tests/test_structured_decoder.py ai-pipeline/tests/test_lane_assignment.py -q` -> pass
+- `python -m pytest ai-pipeline/tests/test_process_pipeline.py::test_process_audio_creates_parent_directories ai-pipeline/tests/test_count_estimation.py::TestCountEstimator::test_estimate_count_empty_audio -q` -> pass
 
 Desktop contract parity update:
 

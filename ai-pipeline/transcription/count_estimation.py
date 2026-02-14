@@ -55,6 +55,18 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+def _safe_n_fft(signal_length: int, preferred: int, minimum: int = 4) -> int:
+    """Choose an FFT window that does not exceed the available signal length."""
+    if signal_length <= 2:
+        return max(2, signal_length)
+
+    clipped = min(preferred, signal_length)
+    if clipped < minimum:
+        return clipped
+
+    return 1 << int(np.floor(np.log2(clipped)))
+
+
 @dataclass
 class CountEstimationConfig:
     """Configuration for count estimation per instrument class."""
@@ -310,13 +322,20 @@ class CountEstimator:
         """
         if not HAS_LIBROSA:
             return 1, 0.0
-        
+
         try:
+            audio_len = int(len(audio))
+            if audio_len < 4:
+                return 1, 0.0
+
+            onset_n_fft = _safe_n_fft(audio_len, preferred=2048, minimum=8)
+            hop_length = max(1, min(64, onset_n_fft // 4))
+
             # Compute onset strength envelope
-            hop_length = 64  # High resolution
             onset_env = librosa.onset.onset_strength(
                 y=audio.astype(np.float32),
                 sr=sr,
+                n_fft=onset_n_fft,
                 hop_length=hop_length,
             )
             

@@ -1,4 +1,5 @@
 import json
+import warnings
 
 import librosa
 import numpy as np
@@ -26,20 +27,28 @@ def test_process_audio_creates_parent_directories(tmp_path):
     output_path = tmp_path / "nested" / "result.bsm"
     debug_path = tmp_path / "nested" / "result.debug.json"
 
-    result = process_audio_file(
-        str(input_path),
-        str(output_path),
-        isolate_drums=False,
-        confidence_threshold=0.2,
-        detection_sensitivity=45.0,
-        quantization_grid="sixteenth",
-        max_snap_error_ms=20.0,
-        debug_output_path=str(debug_path),
-        use_ml_classifier=False,
-    )
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        result = process_audio_file(
+            str(input_path),
+            str(output_path),
+            isolate_drums=False,
+            confidence_threshold=0.2,
+            detection_sensitivity=45.0,
+            quantization_grid="sixteenth",
+            max_snap_error_ms=20.0,
+            debug_output_path=str(debug_path),
+            use_ml_classifier=False,
+        )
 
     assert output_path.exists()
     assert debug_path.exists()
+    n_fft_warnings = [
+        warning
+        for warning in caught_warnings
+        if "n_fft=" in str(warning.message)
+    ]
+    assert not n_fft_warnings
 
     with output_path.open() as f:
         beatmap = json.load(f)

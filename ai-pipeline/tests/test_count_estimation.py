@@ -7,6 +7,7 @@ of the same drum class hit simultaneously (e.g., 2 crashes).
 
 import numpy as np
 import pytest
+import warnings
 
 from transcription.count_estimation import (
     CountEstimator,
@@ -117,8 +118,17 @@ class TestCountEstimator:
         """Should handle empty/short audio gracefully."""
         audio = np.zeros(10, dtype=np.float32)
         sr = 44100
-        count = estimator.estimate_count(audio, sr, "crash")
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            warnings.simplefilter("always")
+            count = estimator.estimate_count(audio, sr, "crash")
+
         assert count == 1  # Falls back to 1
+        n_fft_warnings = [
+            warning
+            for warning in caught_warnings
+            if "n_fft=" in str(warning.message)
+        ]
+        assert not n_fft_warnings
     
     def test_expand_detections(self, estimator, mono_audio):
         """Should expand detections based on count estimation."""

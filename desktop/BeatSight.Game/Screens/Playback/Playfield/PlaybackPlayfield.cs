@@ -136,6 +136,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private Container hitExplosionLayer = null!;
         private Container laneBackgroundContainer = null!;
         private Container manuscriptBeamLayer = null!;
+        private Container manuscriptRestLayer = null!;
 
         private Container laneGuideOverlay = null!;
         private TimingGridOverlay? timingGridOverlay;
@@ -170,6 +171,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private const double DoubleBeamThresholdBeats = 0.38;
         private const double TripleBeamThresholdBeats = 0.19;
         private static readonly Color4 manuscriptBeamColor = new Color4(42, 50, 66, 255);
+        private static readonly Color4 manuscriptRestColor = new Color4(210, 220, 236, 255);
+
+        private readonly List<DrawableManuscriptRest> manuscriptRestPool = new();
 
         private readonly struct ManuscriptBeamAnchor
         {
@@ -290,6 +294,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     Origin = Anchor.Centre,
                     Width = PlayfieldWidthRatio
                 },
+                manuscriptRestLayer = new Container
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    Width = PlayfieldWidthRatio
+                },
                 noteLayer = new Container
                 {
                     RelativeSizeAxes = Axes.Both,
@@ -366,6 +377,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             notes.Clear();
             noteLayer.Clear(false);
             manuscriptBeamLayer.Clear(false);
+            clearManuscriptRests();
             firstActiveNoteIndex = 0;
             sortedTimingPoints.Clear();
 
@@ -462,6 +474,18 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     markerSubdivision);
                 manuscriptBackground.UpdatePlaybackPosition(currentTime, cachedBpm);
             }
+        }
+
+        private readonly struct ManuscriptRestMarker
+        {
+            public ManuscriptRestMarker(double timeMs, int level)
+            {
+                TimeMs = timeMs;
+                Level = level;
+            }
+
+            public double TimeMs { get; }
+            public int Level { get; }
         }
 
         private void updateApproachDuration(double currentTime)
@@ -579,6 +603,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             if (notes.Count == 0)
             {
                 clearManuscriptBeams();
+                clearManuscriptRests();
                 return;
             }
 
@@ -678,9 +703,15 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             }
 
             if (manuscriptBeamAnchors != null)
+            {
                 updateManuscriptBeams(manuscriptBeamAnchors);
+                updateManuscriptRests(currentTime, sheetWindow, effectiveWidth, drawHeight);
+            }
             else
+            {
                 clearManuscriptBeams();
+                clearManuscriptRests();
+            }
         }
 
         private SheetTimelineWindow resolveSheetTimelineWindow(double currentTime, float drawWidth, float drawHeight)
@@ -753,6 +784,193 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             return ResolveManuscriptSubdivisionDivisor(beatGaps);
         }
 
+        private void updateManuscriptRests(double currentTime, in SheetTimelineWindow sheetWindow, float drawWidth, float drawHeight)
+        {
+            if (sheetWindow.Duration <= 1)
+            {
+                clearManuscriptRests();
+                return;
+            }
+
+            resolveTimingForHitTime(currentTime, out double beatDuration, out double beatOrigin);
+            if (beatDuration <= 1)
+            {
+                clearManuscriptRests();
+                return;
+            }
+
+            int subdivision = Math.Clamp(resolveManuscriptTimelineSubdivision(sheetWindow, beatDuration), 1, 8);
+            double tickDuration = beatDuration / subdivision;
+            if (tickDuration <= 1)
+            {
+                clearManuscriptRests();
+                return;
+            }
+
+            double windowStart = sheetWindow.StartTime;
+            double windowEnd = windowStart + sheetWindow.Duration;
+            int firstTick = (int)Math.Floor((windowStart - beatOrigin) / tickDuration);
+            int lastTick = (int)Math.Ceiling((windowEnd - beatOrigin) / tickDuration);
+            if (lastTick <= firstTick)
+            {
+                clearManuscriptRests();
+                return;
+            }
+
+            var noteTimes = collectNoteTimesInWindow(windowStart - tickDuration * 0.6, windowEnd + tickDuration * 0.6);
+            var markers = buildManuscriptRestMarkers(
+                firstTick,
+                lastTick,
+                beatOrigin,
+                tickDuration,
+                subdivision,
+                noteTimes);
+
+            renderManuscriptRests(markers, sheetWindow, drawWidth, drawHeight);
+        }
+
+        private List<double> collectNoteTimesInWindow(double startMs, double endMs)
+        {
+            List<double> times = new();
+            if (notes.Count == 0)
+                return times;
+
+            int startIndex = Math.Max(0, firstActiveNoteIndex - 16);
+            for (int i = startIndex; i < notes.Count; i++)
+            {
+                double hitTime = notes[i].HitTime;
+                if (hitTime < startMs)
+                    continue;
+                if (hitTime > endMs)
+                    break;
+
+                times.Add(hitTime);
+            }
+
+            return times;
+        }
+
+        private List<ManuscriptRestMarker> buildManuscriptRestMarkers(
+            int firstTick,
+            int lastTick,
+            double beatOrigin,
+            double tickDuration,
+            int subdivision,
+            List<double> noteTimes)
+        {
+            var markers = new List<ManuscriptRestMarker>();
+            if (lastTick <= firstTick)
+                return markers;
+
+            double occupancyTolerance = tickDuration * 0.34;
+            int noteIndex = 0;
+            bool inRun = false;
+            int runStartTick = 0;
+            int runLengthTicks = 0;
+
+            for (int tick = firstTick; tick < lastTick; tick++)
+            {
+                double tickCenter = beatOrigin + (tick + 0.5) * tickDuration;
+                while (noteIndex < noteTimes.Count && noteTimes[noteIndex] < tickCenter - occupancyTolerance)
+                    noteIndex++;
+
+                bool occupied = noteIndex < noteTimes.Count
+                                && Math.Abs(noteTimes[noteIndex] - tickCenter) <= occupancyTolerance;
+
+                if (occupied)
+                {
+                    if (inRun)
+                    {
+                        appendRestMarkersForRun(markers, runStartTick, runLengthTicks, beatOrigin, tickDuration, subdivision);
+                        inRun = false;
+                    }
+
+                    continue;
+                }
+
+                if (!inRun)
+                {
+                    inRun = true;
+                    runStartTick = tick;
+                    runLengthTicks = 0;
+                }
+
+                runLengthTicks++;
+            }
+
+            if (inRun)
+                appendRestMarkersForRun(markers, runStartTick, runLengthTicks, beatOrigin, tickDuration, subdivision);
+
+            return markers;
+        }
+
+        private void appendRestMarkersForRun(
+            List<ManuscriptRestMarker> markers,
+            int runStartTick,
+            int runLengthTicks,
+            double beatOrigin,
+            double tickDuration,
+            int subdivision)
+        {
+            if (runLengthTicks <= 0)
+                return;
+
+            int cursor = runStartTick;
+            int remaining = runLengthTicks;
+            while (remaining >= subdivision)
+            {
+                double markerTick = cursor + subdivision * 0.5;
+                markers.Add(new ManuscriptRestMarker(beatOrigin + markerTick * tickDuration, 0));
+                cursor += subdivision;
+                remaining -= subdivision;
+            }
+
+            if (remaining <= 0)
+                return;
+
+            double remainingBeats = remaining / (double)subdivision;
+            int level = ResolveManuscriptRestGlyphLevel(remainingBeats);
+            double partialMarkerTick = cursor + remaining * 0.5;
+            markers.Add(new ManuscriptRestMarker(beatOrigin + partialMarkerTick * tickDuration, level));
+        }
+
+        private void renderManuscriptRests(
+            List<ManuscriptRestMarker> markers,
+            in SheetTimelineWindow sheetWindow,
+            float drawWidth,
+            float drawHeight)
+        {
+            if (markers.Count == 0 || sheetWindow.Duration <= 1)
+            {
+                clearManuscriptRests();
+                return;
+            }
+
+            float timelineWidth = Math.Max(1f, sheetWindow.RightX - sheetWindow.LeftX);
+            float staffCenterY = ManuscriptBackgroundEnhanced.GetStaffCenterYForDrawHeight(drawHeight);
+            float staffSpacing = ManuscriptBackgroundEnhanced.GetStaffSpacingForDrawArea(drawWidth, drawHeight);
+            float restY = staffCenterY - staffSpacing * 0.08f;
+
+            int renderedCount = 0;
+            for (int i = 0; i < markers.Count; i++)
+            {
+                var marker = markers[i];
+                double normalized = (marker.TimeMs - sheetWindow.StartTime) / sheetWindow.Duration;
+                if (normalized < -0.04 || normalized > 1.04)
+                    continue;
+
+                float x = sheetWindow.LeftX + (float)normalized * timelineWidth;
+                var rest = getOrCreateManuscriptRest(renderedCount++);
+                rest.Position = new Vector2(x, restY);
+                rest.SetGlyphLevel(marker.Level);
+                rest.Colour = manuscriptRestColor;
+                rest.Alpha = 0.86f;
+            }
+
+            for (int i = renderedCount; i < manuscriptRestPool.Count; i++)
+                manuscriptRestPool[i].Alpha = 0f;
+        }
+
         internal static int ResolveManuscriptSubdivisionDivisor(IEnumerable<double> beatGaps)
         {
             int count8 = 0;
@@ -794,6 +1012,18 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 return 2;
 
             return 1;
+        }
+
+        internal static int ResolveManuscriptRestGlyphLevel(double gapBeats)
+        {
+            if (gapBeats >= 0.75)
+                return 0;
+            if (gapBeats >= 0.375)
+                return 1;
+            if (gapBeats >= 0.1875)
+                return 2;
+
+            return 3;
         }
 
         private ManuscriptBeamAnchor createManuscriptBeamAnchor(DrawableNote note)
@@ -1033,6 +1263,29 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private void clearManuscriptBeams()
         {
             manuscriptBeamLayer.Clear(false);
+        }
+
+        private DrawableManuscriptRest getOrCreateManuscriptRest(int index)
+        {
+            while (manuscriptRestPool.Count <= index)
+            {
+                var rest = new DrawableManuscriptRest
+                {
+                    Anchor = Anchor.TopLeft,
+                    Origin = Anchor.Centre,
+                    Alpha = 0f
+                };
+                manuscriptRestPool.Add(rest);
+                manuscriptRestLayer.Add(rest);
+            }
+
+            return manuscriptRestPool[index];
+        }
+
+        private void clearManuscriptRests()
+        {
+            for (int i = 0; i < manuscriptRestPool.Count; i++)
+                manuscriptRestPool[i].Alpha = 0f;
         }
 
         private int getBeatIndex(double time, double beatOrigin, double beatDuration)
@@ -1572,6 +1825,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             }
 
             clearManuscriptBeams();
+            clearManuscriptRests();
             applyKickModeToNotes();
         }
         /// Get a human-readable label for a visual lane index.

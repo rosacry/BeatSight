@@ -46,4 +46,19 @@ public class PlaybackPlayfieldManuscriptSubdivisionTests
         int divisor = PlaybackPlayfield.ResolveManuscriptSubdivisionDivisor(new[] { 0.125, 0.124, 0.126 });
         Assert.Equal(8, divisor);
     }
+
+    [Theory]
+    [InlineData(1.0, 0)]
+    [InlineData(0.75, 0)]
+    [InlineData(0.5, 1)]
+    [InlineData(0.375, 1)]
+    [InlineData(0.25, 2)]
+    [InlineData(0.1875, 2)]
+    [InlineData(0.125, 3)]
+    [InlineData(0.08, 3)]
+    public void RestGlyphLevelMatchesRhythmicGap(double gapBeats, int expectedLevel)
+    {
+        int level = PlaybackPlayfield.ResolveManuscriptRestGlyphLevel(gapBeats);
+        Assert.Equal(expectedLevel, level);
+    }
 }

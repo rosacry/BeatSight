@@ -1,10 +1,14 @@
 # Step 5 Evaluation Commands
 
-Last updated: 2026-02-13
+Last updated: 2026-02-14
 
 These are the exact command blocks for Step 5 evaluation on:
 
 - `../test_songs/0101 - Heir of Grief.flac`
+
+Current training phase:
+
+- Step 3 (Version A cymbal-boost Demucs run) is active.
 
 ## Manual Baseline Matrix (fixed settings)
 
@@ -130,9 +134,9 @@ cd /c/github/BeatSight/ai-pipeline && PYTHONPATH=. python -m pipeline.process \
   --no-pattern-repair \
   --checkpoint-ensemble \
     runs/v5_multilabel_final_v3_continued/best_multilabel_model_ema.pt \
-    runs/v5_multilabel_final_v3_continued/checkpoint_epoch_0010.pt \
-    runs/v5_multilabel_final_v3_continued/checkpoint_epoch_0009.pt \
-    runs/v5_multilabel_final_v3_continued/checkpoint_epoch_0008.pt
+    runs/v5_multilabel_final_v3_continued/checkpoint_epoch_0026.pt \
+    runs/v5_multilabel_final_v3_continued/checkpoint_epoch_0025.pt \
+    runs/v5_multilabel_final_v3_continued/checkpoint_epoch_0024.pt
 ```
 
 ## Production-Candidate Matrix (auto-tuned transcription mode)
@@ -253,7 +257,7 @@ cd /c/github/BeatSight/ai-pipeline && PYTHONPATH=. python -m pipeline.process \
   --adaptive-thresholds \
   --checkpoint-ensemble \
     runs/v5_multilabel_final_v3_continued/best_multilabel_model_ema.pt \
-    runs/v5_multilabel_final_v3_continued/checkpoint_epoch_0029.pt \
-    runs/v5_multilabel_final_v3_continued/checkpoint_epoch_0028.pt \
-    runs/v5_multilabel_final_v3_continued/checkpoint_epoch_0027.pt
+    runs/v5_multilabel_final_v3_continued/checkpoint_epoch_0026.pt \
+    runs/v5_multilabel_final_v3_continued/checkpoint_epoch_0025.pt \
+    runs/v5_multilabel_final_v3_continued/checkpoint_epoch_0024.pt
 ```

@@ -18,8 +18,8 @@ For handoff context:
 ### Training state
 
 - Step 1: COMPLETE
-- Step 2: IN PROGRESS (running through epoch 20 partial in latest shared logs; no completion signal yet)
-- Step 3: PENDING (start after Step 2 checkpoint selection)
+- Step 2: COMPLETE
+- Step 3: IN PROGRESS (Version A cymbal-boost Demucs run is now active)
 - Step 4: PENDING (threshold generation after Steps 2 and 3)
 - Step 5: PENDING (real-song bakeoff + production mode decision)
 
@@ -58,6 +58,6 @@ Desktop contract parity update:
 
 ## Next Action
 
-1. Let Step 2 finish and select final checkpoint using documented criteria.
-2. Kick Step 3 Version A immediately after Step 2 completion.
-3. Keep tracker/handoff synchronized at each phase transition.
+1. Let Step 3 finish and preserve best + late-epoch checkpoints for bakeoff.
+2. Run Step 4 threshold generation for both models.
+3. Run Step 5 bakeoff matrix and select default production inference mode.

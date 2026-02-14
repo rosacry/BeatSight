@@ -73,12 +73,6 @@ namespace BeatSight.Desktop
             using GameHost host = Host.GetSuitableDesktopHost("BeatSight");
             ensureCookieFile(host);
 
-            if (suppressTabletInputHandlers)
-            {
-                persistSuppressedInputHandlers(host);
-                disableSuppressedInputHandlers(host);
-            }
-
             using osu.Framework.Game game = new BeatSightGame();
 
             try
@@ -438,40 +432,6 @@ namespace BeatSight.Desktop
             return true;
         }
 
-        private static void persistSuppressedInputHandlers(GameHost host)
-        {
-            try
-            {
-                const string frameworkConfigFile = "framework.ini";
-
-                using var stream = host.Storage.GetStream(frameworkConfigFile, FileAccess.ReadWrite, FileMode.OpenOrCreate);
-                using var reader = new StreamReader(stream, leaveOpen: true);
-                var lines = new List<string>();
-
-                string? line;
-                while ((line = reader.ReadLine()) != null)
-                    lines.Add(line);
-
-                bool changed = ensureIgnoredInputHandlers(lines);
-
-                if (!changed)
-                    return;
-
-                stream.SetLength(0);
-                stream.Seek(0, SeekOrigin.Begin);
-
-                using var writer = new StreamWriter(stream, leaveOpen: true);
-                foreach (var entry in lines)
-                    writer.WriteLine(entry);
-
-                writer.Flush();
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"Failed to persist suppressed input handlers: {ex.Message}", LoggingTarget.Runtime, LogLevel.Debug);
-            }
-        }
-
         private static void preseedSuppressedInputHandlersConfig()
         {
             try
@@ -547,31 +507,6 @@ namespace BeatSight.Desktop
         {
             int index = line.IndexOf('=');
             return index >= 0 ? line[(index + 1)..].Trim() : string.Empty;
-        }
-
-        private static void disableSuppressedInputHandlers(GameHost host)
-        {
-            bool disabledAny = false;
-
-            foreach (var handler in host.AvailableInputHandlers)
-            {
-                if (!suppressedInputHandlerNames.Contains(handler.GetType().Name, StringComparer.OrdinalIgnoreCase))
-                    continue;
-
-                if (handler.Enabled.Value)
-                    handler.Enabled.Value = false;
-
-                disabledAny = true;
-                Logger.Log($"Input handler '{handler.GetType().Name}' disabled (tablet input suppression).", LoggingTarget.Runtime, LogLevel.Important);
-            }
-
-            if (!disabledAny)
-            {
-                Logger.Log(
-                    "Tablet input suppression requested, but no matching handlers were present on this host.",
-                    LoggingTarget.Runtime,
-                    LogLevel.Debug);
-            }
         }
 
         private static void createCookieIfMissing(Storage storage, string cookieFileName)

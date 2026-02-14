@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
 using BeatSight.Game.UI.Theming;
 using osu.Framework.Graphics;
@@ -17,11 +18,25 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private const int geometrySegmentCount = 64;
         private const int sweepLineCount = 3;
 
-        // Keep these aligned with PlaybackPlayfield.ThreeDimensionalTuning.
-        private const float vanishingPointYRatio = 0.095f;
         private const float hitLineYRatio = 0.935f;
-        private const float highwayTopWidthRatio = 0.09f;
-        private const float highwayBottomWidthRatio = 0.82f;
+
+        private readonly struct ProfileGeometry
+        {
+            public ProfileGeometry(float vanishingPointYRatio, float highwayTopWidthRatio, float highwayBottomWidthRatio, float curveExponent, float headerDepth)
+            {
+                VanishingPointYRatio = vanishingPointYRatio;
+                HighwayTopWidthRatio = highwayTopWidthRatio;
+                HighwayBottomWidthRatio = highwayBottomWidthRatio;
+                CurveExponent = curveExponent;
+                HeaderDepth = headerDepth;
+            }
+
+            public float VanishingPointYRatio { get; }
+            public float HighwayTopWidthRatio { get; }
+            public float HighwayBottomWidthRatio { get; }
+            public float CurveExponent { get; }
+            public float HeaderDepth { get; }
+        }
 
         private static readonly Color4[] laneAccentPalette =
         {
@@ -37,6 +52,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
         private readonly LaneLayout laneLayout;
         private readonly bool kickUsesGlobalLine;
+        private ThreeDStageProfile stageProfile;
         private readonly int visibleLaneCount;
         private readonly IReadOnlyList<string> visibleLaneLabels;
 
@@ -66,10 +82,36 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private double beatInterval = 500;
         private bool beatSyncEnabled = true;
 
-        public ThreeDHighwayBackground(LaneLayout laneLayout, bool kickUsesGlobalLine)
+        private static ProfileGeometry resolveProfileGeometry(ThreeDStageProfile profile)
+        {
+            return profile switch
+            {
+                ThreeDStageProfile.Arcade => new ProfileGeometry(
+                    vanishingPointYRatio: 0.120f,
+                    highwayTopWidthRatio: 0.14f,
+                    highwayBottomWidthRatio: 0.76f,
+                    curveExponent: 1.16f,
+                    headerDepth: 0.085f),
+                ThreeDStageProfile.Tight => new ProfileGeometry(
+                    vanishingPointYRatio: 0.080f,
+                    highwayTopWidthRatio: 0.07f,
+                    highwayBottomWidthRatio: 0.86f,
+                    curveExponent: 1.34f,
+                    headerDepth: 0.050f),
+                _ => new ProfileGeometry(
+                    vanishingPointYRatio: 0.095f,
+                    highwayTopWidthRatio: 0.09f,
+                    highwayBottomWidthRatio: 0.82f,
+                    curveExponent: 1.26f,
+                    headerDepth: 0.060f)
+            };
+        }
+
+        public ThreeDHighwayBackground(LaneLayout laneLayout, bool kickUsesGlobalLine, ThreeDStageProfile stageProfile)
         {
             this.laneLayout = laneLayout;
             this.kickUsesGlobalLine = kickUsesGlobalLine;
+            this.stageProfile = stageProfile;
             visibleLaneCount = kickUsesGlobalLine
                 ? Math.Max(1, laneLayout.LaneCount - 1)
                 : Math.Max(1, laneLayout.LaneCount);
@@ -368,6 +410,17 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             pulse.FadeOut(220, Easing.OutQuad);
         }
 
+        public void SetProfile(ThreeDStageProfile profile)
+        {
+            if (stageProfile == profile)
+                return;
+
+            stageProfile = profile;
+            lastLayoutWidth = -1f;
+            lastLayoutHeight = -1f;
+            updatePerspectiveLayout();
+        }
+
         public void UpdateScroll(double currentTime)
         {
             if (DrawWidth <= 0 || DrawHeight <= 0)
@@ -404,14 +457,15 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             if (DrawWidth <= 0 || DrawHeight <= 0)
                 return;
 
-            float vanishingY = DrawHeight * vanishingPointYRatio;
+            ProfileGeometry profile = resolveProfileGeometry(stageProfile);
+            float vanishingY = DrawHeight * profile.VanishingPointYRatio;
             float hitY = DrawHeight * hitLineYRatio;
             float topY = vanishingY + 5f;
             float bottomY = hitY - 5f;
             float depthHeight = Math.Max(20f, bottomY - topY);
 
-            float topWidth = DrawWidth * highwayTopWidthRatio;
-            float bottomWidth = DrawWidth * highwayBottomWidthRatio;
+            float topWidth = DrawWidth * profile.HighwayTopWidthRatio;
+            float bottomWidth = DrawWidth * profile.HighwayBottomWidthRatio;
 
             for (int segmentIndex = 0; segmentIndex < geometrySegmentCount; segmentIndex++)
             {
@@ -423,7 +477,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 float yEnd = topY + depthHeight * depthEnd;
                 float segmentHeight = Math.Max(1f, yEnd - yStart + 1.4f);
 
-                float curvedDepth = MathF.Pow(depthMid, 1.26f);
+                float curvedDepth = MathF.Pow(depthMid, profile.CurveExponent);
                 float widthAtDepth = lerp(topWidth, bottomWidth, curvedDepth);
                 float laneWidth = widthAtDepth / visibleLaneCount;
                 float left = (DrawWidth - widthAtDepth) * 0.5f;
@@ -458,10 +512,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 }
             }
 
-            layoutLaneGuides(topY, hitY, topWidth, bottomWidth);
+            layoutLaneGuides(topY, hitY, topWidth, bottomWidth, profile.HeaderDepth);
         }
 
-        private void layoutLaneGuides(float topY, float hitY, float topWidth, float bottomWidth)
+        private void layoutLaneGuides(float topY, float hitY, float topWidth, float bottomWidth, float headerDepth)
         {
             float compactBoost = DrawHeight <= 760f ? 1.12f : 1f;
             float headerFontSize = Math.Clamp(12f * compactBoost, 11f, 15f);
@@ -469,7 +523,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float headerHeight = Math.Clamp(24f * compactBoost, 22f, 32f);
             float footerHeight = Math.Clamp(15f * compactBoost, 13f, 20f);
 
-            float headerDepth = 0.06f;
             float headerWidth = lerp(topWidth, bottomWidth, headerDepth) / visibleLaneCount;
             float headerLeft = (DrawWidth - lerp(topWidth, bottomWidth, headerDepth)) * 0.5f;
             float headerY = Math.Max(6f, topY + 4f);
@@ -511,11 +564,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
         private void updateSweepLines(double currentTime)
         {
-            float vanishingY = DrawHeight * vanishingPointYRatio + 3f;
+            ProfileGeometry profile = resolveProfileGeometry(stageProfile);
+            float vanishingY = DrawHeight * profile.VanishingPointYRatio + 3f;
             float hitY = DrawHeight * hitLineYRatio - 8f;
             float depthHeight = Math.Max(20f, hitY - vanishingY);
-            float topWidth = DrawWidth * highwayTopWidthRatio;
-            float bottomWidth = DrawWidth * highwayBottomWidthRatio;
+            float topWidth = DrawWidth * profile.HighwayTopWidthRatio;
+            float bottomWidth = DrawWidth * profile.HighwayBottomWidthRatio;
 
             for (int i = 0; i < sweepLines.Count; i++)
             {

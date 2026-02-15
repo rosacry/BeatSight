@@ -29,7 +29,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         #region Configuration
 
         /// <summary>The color of the cursor body.</summary>
-        private static readonly Color4 HighlightColor = new Color4(120, 255, 172, 28);
+        private static readonly Color4 HighlightColor = new Color4(120, 255, 172, 20);
 
         /// <summary>The color of the leading edge indicator.</summary>
         private static readonly Color4 EdgeColor = new Color4(144, 255, 190, 228);
@@ -38,7 +38,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         private static readonly Color4 GlowColor = new Color4(116, 255, 176, 94);
 
         /// <summary>Secondary forward lookahead tint on the right side of the cursor.</summary>
-        private static readonly Color4 PreviewColor = new Color4(126, 214, 255, 40);
+        private static readonly Color4 PreviewColor = new Color4(126, 214, 255, 24);
 
         /// <summary>Width of the leading edge line.</summary>
         private const float EdgeLineWidth = 2.4f;
@@ -50,7 +50,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         private const double DefaultLookaheadMs = 500;
 
         /// <summary>Fallback cursor trail width ratio when timeline duration is unavailable.</summary>
-        private const float FallbackTrailWidthRatio = 0.09f;
+        private const float FallbackTrailWidthRatio = 0.07f;
 
         #endregion
 
@@ -90,7 +90,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         public readonly BindableBool Enabled = new BindableBool(true);
 
         /// <summary>The opacity of the highlight overlay (0-1).</summary>
-        public readonly BindableFloat HighlightOpacity = new BindableFloat(0.4f)
+        public readonly BindableFloat HighlightOpacity = new BindableFloat(0.30f)
         {
             MinValue = 0f,
             MaxValue = 1f
@@ -322,8 +322,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             double adaptiveLookahead = Math.Clamp(beatDurationMs, 320.0, 700.0);
             double effectiveLookahead = Math.Max(220.0, Math.Min(900.0, Math.Max(configuredLookaheadMs, adaptiveLookahead)));
             float ratioWidth = (float)(safeWidth * (effectiveLookahead / timelineDurationMs));
-            float minWidth = Math.Clamp(safeWidth * 0.06f, 56f, 110f);
-            float maxWidth = Math.Clamp(safeWidth * 0.09f, 96f, 160f);
+            float minWidth = Math.Clamp(safeWidth * 0.045f, 40f, 84f);
+            float maxWidth = Math.Clamp(safeWidth * 0.072f, 72f, 132f);
             return Math.Clamp(ratioWidth, minWidth, maxWidth);
         }
 

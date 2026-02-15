@@ -237,9 +237,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
         /// <summary>Additional visibility buffer after miss window (ms).</summary>
         private const double PastVisibilityBuffer = 600;
-        private const double BaseVisibleMeasures = 2.15;
-        private const double AutoZoomBaseMultiplier = 1.14;
-        private const double AutoZoomMaxMultiplier = 1.62;
+        private const double BaseVisibleMeasures = 2.0;
+        private const double AutoZoomBaseMultiplier = 1.20;
+        private const double AutoZoomMaxMultiplier = 1.78;
 
         private readonly Func<double> currentTimeProvider;
         private readonly List<DrawableNote> notes = new();
@@ -279,7 +279,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private bool kickUsesGlobalLine = true;
         private string? manuscriptFocusComponent;
 
-        public readonly Bindable<double> ZoomLevel = new Bindable<double>(1.0);
+        public readonly Bindable<double> ZoomLevel = new Bindable<double>(1.08);
         public readonly Bindable<bool> AutoZoom = new Bindable<bool>(true);
         public readonly Bindable<double> NoteWidthScale = new Bindable<double>(1.0);
         public readonly Bindable<ThreeDStageProfile> StageProfile = new Bindable<ThreeDStageProfile>(ThreeDStageProfile.GhClassic);
@@ -790,16 +790,16 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             double clampedMeasure = Math.Max(1, beatsPerMeasure);
             double clampedDensity = Math.Max(0, notesPerBeat);
 
-            // Density drives the majority of zoom-in pressure, with smaller boosts for higher tempos
-            // and compound signatures so dense charts remain legible.
+            // Density drives the majority of zoom-in pressure, with additional boosts for higher
+            // tempos and compound signatures so default framing is denser and easier to read.
             double densityNormalized = Math.Clamp((clampedDensity - 0.55) / 1.75, 0.0, 1.0);
             double bpmNormalized = Math.Clamp((clampedBpm - 95.0) / 145.0, 0.0, 1.0);
             double signatureNormalized = Math.Clamp((clampedMeasure - 4.0) / 5.0, 0.0, 1.0);
 
             double multiplier = AutoZoomBaseMultiplier
-                                + 0.30 * densityNormalized
-                                + 0.13 * bpmNormalized
-                                + 0.05 * signatureNormalized;
+                                + 0.37 * densityNormalized
+                                + 0.16 * bpmNormalized
+                                + 0.07 * signatureNormalized;
 
             return Math.Clamp(multiplier, AutoZoomBaseMultiplier, AutoZoomMaxMultiplier);
         }

@@ -304,9 +304,11 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private const double SingleBeamThresholdBeats = 0.76;
         private const double DoubleBeamThresholdBeats = 0.38;
         private const double TripleBeamThresholdBeats = 0.19;
-        private const double MinTieGapBeats = 0.78;
+        private const double MinTieGapBeats = 1.15;
         private const double MaxTieGapBeats = 3.6;
         private const double DottedGapToleranceBeats = 0.075;
+        private const int MaxTieInterveningVoiceNotes = 1;
+        private const float MaxTieSpanRatio = 0.34f;
         private static readonly Color4 manuscriptBeamColor = new Color4(42, 50, 66, 255);
         private static readonly Color4 manuscriptTieColor = new Color4(188, 202, 222, 255);
         private static readonly Color4 manuscriptRestColor = new Color4(210, 220, 236, 255);
@@ -1458,12 +1460,17 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             }
 
             var previousByNotation = new Dictionary<int, ManuscriptBeamAnchor>();
+            var previousIndexByNotation = new Dictionary<int, int>();
             for (int i = 0; i < voiceAnchors.Count; i++)
             {
                 var anchor = voiceAnchors[i];
 
                 if (previousByNotation.TryGetValue(anchor.NotationIndex, out var previousAnchor))
                 {
+                    int previousIndex = previousIndexByNotation.TryGetValue(anchor.NotationIndex, out int storedIndex)
+                        ? storedIndex
+                        : i - 1;
+                    int interveningVoiceNotes = Math.Max(0, i - previousIndex - 1);
                     double beatDuration = Math.Max(1.0, (previousAnchor.BeatDuration + anchor.BeatDuration) * 0.5);
                     double gapBeats = (anchor.HitTime - previousAnchor.HitTime) / beatDuration;
                     if (gapBeats > 0)
@@ -1471,12 +1478,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                         if (ShouldRenderManuscriptDottedCue(gapBeats))
                             previousAnchor.Note.SetManuscriptDurationDot(true);
 
-                        if (ShouldRenderManuscriptTieCue(gapBeats))
+                        if (ShouldRenderManuscriptTieCue(gapBeats, interveningVoiceNotes))
                             addManuscriptTieSegment(previousAnchor, anchor);
                     }
                 }
 
                 previousByNotation[anchor.NotationIndex] = anchor;
+                previousIndexByNotation[anchor.NotationIndex] = i;
 
                 if (beamedNotes.Contains(anchor.Note))
                 {
@@ -1660,8 +1668,17 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         }
 
         internal static bool ShouldRenderManuscriptTieCue(double gapBeats)
+            => ShouldRenderManuscriptTieCue(gapBeats, 0);
+
+        internal static bool ShouldRenderManuscriptTieCue(double gapBeats, int interveningVoiceNotes)
         {
             if (double.IsNaN(gapBeats) || double.IsInfinity(gapBeats))
+                return false;
+
+            if (interveningVoiceNotes > MaxTieInterveningVoiceNotes)
+                return false;
+
+            if (ShouldRenderManuscriptDottedCue(gapBeats))
                 return false;
 
             return gapBeats >= MinTieGapBeats && gapBeats <= MaxTieGapBeats;
@@ -1724,6 +1741,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float endX = end.Note.Position.X - Math.Max(2f, end.Note.Width * 0.54f);
             float span = endX - startX;
             if (span < 12f)
+                return;
+
+            float maxSpan = Math.Max(72f, DrawWidth * MaxTieSpanRatio);
+            if (span > maxSpan)
                 return;
 
             float direction = start.StemDown ? -1f : 1f;

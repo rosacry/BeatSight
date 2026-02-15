@@ -37,7 +37,7 @@ public class TimingStrikeZoneEnhancedTests
             mode: LaneViewMode.ThreeDimensional);
 
         Assert.True(strikeZone.Height > twoDHeight);
-        Assert.True(strikeZone.VisualHitZoneHeight >= 20f);
+        Assert.True(strikeZone.VisualHitZoneHeight >= 24f);
     }
 
     [Fact]

@@ -122,6 +122,53 @@ public class PlaybackPlayfieldManuscriptBeamingTests
         Assert.InRange(huge, 2.4f, 40f);
     }
 
+    [Fact]
+    public void ParserFollowAlphaFallsOffWithDistance()
+    {
+        float near = PlaybackPlayfield.ResolveManuscriptParserFollowAlpha(
+            distanceBeats: 0.0,
+            nearAlpha: 1.0f,
+            farAlpha: 0.30f,
+            focusBeats: 0.5,
+            fadeBeats: 4.0);
+        float middle = PlaybackPlayfield.ResolveManuscriptParserFollowAlpha(
+            distanceBeats: 2.0,
+            nearAlpha: 1.0f,
+            farAlpha: 0.30f,
+            focusBeats: 0.5,
+            fadeBeats: 4.0);
+        float far = PlaybackPlayfield.ResolveManuscriptParserFollowAlpha(
+            distanceBeats: 9.0,
+            nearAlpha: 1.0f,
+            farAlpha: 0.30f,
+            focusBeats: 0.5,
+            fadeBeats: 4.0);
+
+        Assert.True(near > middle, $"Expected parser-follow alpha to decrease with distance, near={near:0.###}, middle={middle:0.###}");
+        Assert.True(middle > far, $"Expected parser-follow alpha to decrease with distance, middle={middle:0.###}, far={far:0.###}");
+        Assert.InRange(far, 0.29f, 0.31f);
+    }
+
+    [Fact]
+    public void ParserFollowAlphaClampsInvalidInputs()
+    {
+        float invalidDistance = PlaybackPlayfield.ResolveManuscriptParserFollowAlpha(
+            distanceBeats: double.NaN,
+            nearAlpha: 1.25f,
+            farAlpha: -0.4f,
+            focusBeats: -8.0,
+            fadeBeats: 0.0);
+        float invertedRange = PlaybackPlayfield.ResolveManuscriptParserFollowAlpha(
+            distanceBeats: 8.0,
+            nearAlpha: 0.25f,
+            farAlpha: 0.85f,
+            focusBeats: 5.0,
+            fadeBeats: 2.0);
+
+        Assert.InRange(invalidDistance, 0.99f, 1.0f);
+        Assert.InRange(invertedRange, 0.24f, 0.25f);
+    }
+
     [Theory]
     [InlineData(0.375, true)]   // dotted 16th
     [InlineData(0.75, true)]    // dotted 8th

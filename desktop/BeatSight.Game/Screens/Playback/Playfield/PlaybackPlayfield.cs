@@ -309,6 +309,11 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private const double DottedGapToleranceBeats = 0.075;
         private const int MaxTieInterveningVoiceNotes = 1;
         private const float MaxTieSpanRatio = 0.34f;
+        private const double ManuscriptParserFocusWindowBeats = 0.55;
+        private const double ManuscriptParserFadeWindowBeats = 4.2;
+        private const float ManuscriptParserFarNoteAlpha = 0.34f;
+        private const float ManuscriptParserFarBeamAlphaScale = 0.32f;
+        private const float ManuscriptParserFarTieAlphaScale = 0.24f;
         private static readonly Color4 manuscriptBeamColor = new Color4(42, 50, 66, 255);
         private static readonly Color4 manuscriptTieColor = new Color4(188, 202, 222, 255);
         private static readonly Color4 manuscriptRestColor = new Color4(210, 220, 236, 255);
@@ -376,14 +381,16 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
         private readonly struct ManuscriptTieCue
         {
-            public ManuscriptTieCue(ManuscriptBeamAnchor start, ManuscriptBeamAnchor end)
+            public ManuscriptTieCue(ManuscriptBeamAnchor start, ManuscriptBeamAnchor end, float alphaScale)
             {
                 Start = start;
                 End = end;
+                AlphaScale = alphaScale;
             }
 
             public ManuscriptBeamAnchor Start { get; }
             public ManuscriptBeamAnchor End { get; }
+            public float AlphaScale { get; }
             public bool StemDown => Start.StemDown;
             public int NotationIndex => Start.NotationIndex;
             public float MidX => (Start.Note.Position.X + End.Note.Position.X) * 0.5f;
@@ -994,7 +1001,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     hitLineY,
                     travelDistance,
                     sheetWindow,
-                    manuscriptHorizontalClusters);
+                    manuscriptHorizontalClusters,
+                    beatDuration);
 
                 if (manuscriptBeamAnchors != null && !note.IsJudged && note.Alpha > 0.01f)
                     manuscriptBeamAnchors.Add(createManuscriptBeamAnchor(note));
@@ -1002,7 +1010,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             if (manuscriptBeamAnchors != null)
             {
-                updateManuscriptBeams(manuscriptBeamAnchors);
+                updateManuscriptBeams(manuscriptBeamAnchors, currentTime);
                 updateManuscriptRests(currentTime, sheetWindow, effectiveWidth, drawHeight);
             }
             else
@@ -1552,7 +1560,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 beatOrigin);
         }
 
-        private void updateManuscriptBeams(List<ManuscriptBeamAnchor> anchors)
+        private void updateManuscriptBeams(List<ManuscriptBeamAnchor> anchors, double currentTime)
         {
             clearManuscriptBeams();
             clearManuscriptDurationCues();
@@ -1566,13 +1574,14 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 anchor.Note.SetManuscriptDurationDot(false);
             }
 
-            addManuscriptBeamsForVoice(anchors, ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Upper);
-            addManuscriptBeamsForVoice(anchors, ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower);
+            addManuscriptBeamsForVoice(anchors, ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Upper, currentTime);
+            addManuscriptBeamsForVoice(anchors, ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower, currentTime);
         }
 
         private void addManuscriptBeamsForVoice(
             List<ManuscriptBeamAnchor> anchors,
-            ManuscriptBackgroundEnhanced.ManuscriptNotationVoice voice)
+            ManuscriptBackgroundEnhanced.ManuscriptNotationVoice voice,
+            double currentTime)
         {
             var voiceAnchors = anchors
                 .Where(anchor => anchor.Voice == voice)
@@ -1593,8 +1602,18 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 if (!tryGetBeamLevelCount(current, next, out int levelCount))
                     continue;
 
+                double beamMidTime = (current.HitTime + next.HitTime) * 0.5;
+                double beamBeatDuration = Math.Max(1.0, (current.BeatDuration + next.BeatDuration) * 0.5);
+                double beamDistanceBeats = Math.Abs((beamMidTime - currentTime) / beamBeatDuration);
+                float beamAlphaScale = ResolveManuscriptParserFollowAlpha(
+                    beamDistanceBeats,
+                    nearAlpha: 1f,
+                    farAlpha: ManuscriptParserFarBeamAlphaScale,
+                    focusBeats: ManuscriptParserFocusWindowBeats,
+                    fadeBeats: ManuscriptParserFadeWindowBeats);
+
                 for (int level = 0; level < levelCount; level++)
-                    addManuscriptBeamSegment(current, next, level);
+                    addManuscriptBeamSegment(current, next, level, beamAlphaScale);
 
                 beamedNotes.Add(current.Note);
                 beamedNotes.Add(next.Note);
@@ -1620,7 +1639,17 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                             previousAnchor.Note.SetManuscriptDurationDot(true);
 
                         if (ShouldRenderManuscriptTieCue(gapBeats, interveningVoiceNotes))
-                            tieCues.Add(new ManuscriptTieCue(previousAnchor, anchor));
+                        {
+                            double tieMidTime = (previousAnchor.HitTime + anchor.HitTime) * 0.5;
+                            double tieDistanceBeats = Math.Abs((tieMidTime - currentTime) / beatDuration);
+                            float tieAlphaScale = ResolveManuscriptParserFollowAlpha(
+                                tieDistanceBeats,
+                                nearAlpha: 1f,
+                                farAlpha: ManuscriptParserFarTieAlphaScale,
+                                focusBeats: ManuscriptParserFocusWindowBeats,
+                                fadeBeats: ManuscriptParserFadeWindowBeats);
+                            tieCues.Add(new ManuscriptTieCue(previousAnchor, anchor, tieAlphaScale));
+                        }
                     }
                 }
 
@@ -1847,7 +1876,11 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             return nearestDelta <= DottedGapToleranceBeats;
         }
 
-        private void addManuscriptBeamSegment(in ManuscriptBeamAnchor start, in ManuscriptBeamAnchor end, int beamLevel)
+        private void addManuscriptBeamSegment(
+            in ManuscriptBeamAnchor start,
+            in ManuscriptBeamAnchor end,
+            int beamLevel,
+            float alphaScale)
         {
             float direction = start.StemDown ? 1f : -1f;
             float densityScale = Math.Clamp(DrawHeight / 1080f, 0.78f, 1.18f);
@@ -1874,7 +1907,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 Height = thickness,
                 Rotation = MathF.Atan2(delta.Y, delta.X) * 180f / MathF.PI,
                 Colour = manuscriptBeamColor,
-                Alpha = ManuscriptBeamAlpha
+                Alpha = ManuscriptBeamAlpha * Math.Clamp(alphaScale, 0f, 1f)
             });
         }
 
@@ -1904,7 +1937,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 if (clusterCount <= 1)
                 {
                     ManuscriptTieCue cue = sorted[clusterStart];
-                    addManuscriptTieSegment(cue.Start, cue.End, tieStackIndex: 0, tieStackCount: 1);
+                    addManuscriptTieSegment(cue.Start, cue.End, tieStackIndex: 0, tieStackCount: 1, cue.AlphaScale);
                 }
                 else
                 {
@@ -1914,7 +1947,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                         .ToList();
 
                     for (int i = 0; i < cluster.Count; i++)
-                        addManuscriptTieSegment(cluster[i].Start, cluster[i].End, tieStackIndex: i, tieStackCount: cluster.Count);
+                        addManuscriptTieSegment(cluster[i].Start, cluster[i].End, tieStackIndex: i, tieStackCount: cluster.Count, cluster[i].AlphaScale);
                 }
 
                 clusterStart = clusterEnd + 1;
@@ -1925,7 +1958,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             in ManuscriptBeamAnchor start,
             in ManuscriptBeamAnchor end,
             int tieStackIndex,
-            int tieStackCount)
+            int tieStackCount,
+            float alphaScale)
         {
             float startX = start.Note.Position.X + Math.Max(2f, start.Note.Width * 0.54f);
             float endX = end.Note.Position.X - Math.Max(2f, end.Note.Width * 0.54f);
@@ -1949,12 +1983,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             var tieMid = new Vector2((startX + endX) * 0.5f, (startY + endY) * 0.5f + archLift);
 
             float thickness = ManuscriptTieThickness * densityScale;
-            addManuscriptDurationCurveSegment(tieStart, tieMid, thickness, ManuscriptTieAlpha);
-            addManuscriptDurationCurveSegment(tieMid, tieEnd, thickness, ManuscriptTieAlpha);
+            float clampedAlphaScale = Math.Clamp(alphaScale, 0f, 1f);
+            addManuscriptDurationCurveSegment(tieStart, tieMid, thickness, ManuscriptTieAlpha * clampedAlphaScale);
+            addManuscriptDurationCurveSegment(tieMid, tieEnd, thickness, ManuscriptTieAlpha * clampedAlphaScale);
 
             Vector2 innerOffset = new Vector2(0f, -direction * thickness * 0.9f);
-            addManuscriptDurationCurveSegment(tieStart + innerOffset, tieMid + innerOffset, thickness * 0.56f, ManuscriptTieInnerAlpha);
-            addManuscriptDurationCurveSegment(tieMid + innerOffset, tieEnd + innerOffset, thickness * 0.56f, ManuscriptTieInnerAlpha);
+            addManuscriptDurationCurveSegment(tieStart + innerOffset, tieMid + innerOffset, thickness * 0.56f, ManuscriptTieInnerAlpha * clampedAlphaScale);
+            addManuscriptDurationCurveSegment(tieMid + innerOffset, tieEnd + innerOffset, thickness * 0.56f, ManuscriptTieInnerAlpha * clampedAlphaScale);
         }
 
         internal static float ResolveManuscriptTieArchLiftMagnitude(float span, int tieStackIndex, int tieStackCount)
@@ -1972,6 +2007,33 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float stackStep = Math.Clamp(safeSpan * 0.02f, 1.1f, 3.8f);
             float clusterBoost = Math.Clamp((safeStackCount - 1) * 0.16f, 0f, 1.0f);
             return baseLift + safeStackIndex * (stackStep + clusterBoost);
+        }
+
+        internal static float ResolveManuscriptParserFollowAlpha(
+            double distanceBeats,
+            float nearAlpha = 1f,
+            float farAlpha = 0.34f,
+            double focusBeats = 0.55,
+            double fadeBeats = 4.2)
+        {
+            float clampedNear = Math.Clamp(nearAlpha, 0f, 1f);
+            float clampedFar = Math.Clamp(farAlpha, 0f, clampedNear);
+
+            if (double.IsNaN(distanceBeats) || double.IsInfinity(distanceBeats))
+                return clampedNear;
+
+            double safeFocus = Math.Clamp(focusBeats, 0, 16);
+            double safeFade = Math.Max(safeFocus + 0.001, Math.Clamp(fadeBeats, 0.05, 32));
+            double absoluteDistance = Math.Abs(distanceBeats);
+
+            if (absoluteDistance <= safeFocus)
+                return clampedNear;
+
+            if (absoluteDistance >= safeFade)
+                return clampedFar;
+
+            double t = (absoluteDistance - safeFocus) / (safeFade - safeFocus);
+            return (float)(clampedNear + (clampedFar - clampedNear) * t);
         }
 
         private void addManuscriptDurationCurveSegment(Vector2 start, Vector2 end, float thickness, float alpha)
@@ -2087,7 +2149,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float hitLineY,
             float travelDistance,
             in SheetTimelineWindow sheetWindow,
-            Dictionary<DrawableNote, ManuscriptHorizontalClusterEntry>? manuscriptHorizontalClusters)
+            Dictionary<DrawableNote, ManuscriptHorizontalClusterEntry>? manuscriptHorizontalClusters,
+            double currentBeatDuration)
         {
             // Use the dynamic ApproachDuration here
             float progress = 1 - (timeUntilHit / (float)ApproachDuration);
@@ -2098,7 +2161,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             }
             else if (currentLaneViewMode == LaneViewMode.Manuscript)
             {
-                updateNotePositionManuscript(note, timeUntilHit, drawWidth, drawHeight, sheetWindow, manuscriptHorizontalClusters);
+                updateNotePositionManuscript(note, timeUntilHit, drawWidth, drawHeight, sheetWindow, manuscriptHorizontalClusters, currentBeatDuration);
             }
             else
             {
@@ -2112,7 +2175,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float drawWidth,
             float drawHeight,
             in SheetTimelineWindow sheetWindow,
-            Dictionary<DrawableNote, ManuscriptHorizontalClusterEntry>? manuscriptHorizontalClusters)
+            Dictionary<DrawableNote, ManuscriptHorizontalClusterEntry>? manuscriptHorizontalClusters,
+            double currentBeatDuration)
         {
             float timelineWidth = Math.Max(120f, sheetWindow.RightX - sheetWindow.LeftX);
             double normalized = sheetWindow.Duration <= 0
@@ -2166,7 +2230,16 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 if (!inTimeline || !inRecentPast)
                     note.Alpha = 0;
                 else
-                    note.Alpha = 1;
+                {
+                    double safeBeatDuration = Math.Max(1.0, currentBeatDuration);
+                    double distanceBeats = Math.Abs(timeUntilHit) / safeBeatDuration;
+                    note.Alpha = ResolveManuscriptParserFollowAlpha(
+                        distanceBeats,
+                        nearAlpha: 1f,
+                        farAlpha: ManuscriptParserFarNoteAlpha,
+                        focusBeats: ManuscriptParserFocusWindowBeats,
+                        fadeBeats: ManuscriptParserFadeWindowBeats);
+                }
             }
 
         }

@@ -1505,8 +1505,21 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             if (string.IsNullOrWhiteSpace(component))
                 return false;
 
-            string key = mapGuideKey(normalizeComponentKey(component));
+            string normalized = normalizeComponentKey(component);
+            if (normalized is "ride_bell" or "cowbell")
+                return false;
+
+            string key = mapGuideKey(normalized);
             return key is "hihat" or "ride" or "crash";
+        }
+
+        public static bool UsesDiamondNoteheadForComponent(string component)
+        {
+            if (string.IsNullOrWhiteSpace(component))
+                return false;
+
+            string key = normalizeComponentKey(component);
+            return key is "ride_bell" or "cowbell";
         }
 
         public static bool IsHiHatFamilyComponent(string component)
@@ -1581,6 +1594,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 "hihat_open" => "hihat",
                 "hihat_half_open" => "hihat",
                 "hihat_pedal" => "hihat",
+                "ride_bell" => "ride",
                 "china" => "crash",
                 "splash" => "crash",
                 "cowbell" => "tom_mid",
@@ -1632,9 +1646,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             if (key.Contains("crash")) return "crash";
             if (key.Contains("china")) return "china";
             if (key.Contains("splash")) return "splash";
-            if (key.Contains("ride_bell") || key.Contains("bell")) return "ride";
-            if (key.Contains("ride")) return "ride";
             if (key.Contains("cowbell")) return "cowbell";
+            if (key.Contains("ride_bell") || key.Contains("bell")) return "ride_bell";
+            if (key.Contains("ride")) return "ride";
 
             return key;
         }

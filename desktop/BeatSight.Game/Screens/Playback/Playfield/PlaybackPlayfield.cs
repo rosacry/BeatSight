@@ -256,6 +256,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private Bindable<bool> showParticleEffects = null!;
         private Bindable<bool> showGlowEffects = null!;
         private Bindable<bool> showHitBurstAnimations = null!;
+        private Bindable<ManuscriptCountInGuideMode> manuscriptCountInGuideModeSetting = null!;
 
         private Container noteLayer = null!;
         private Container hitExplosionLayer = null!;
@@ -394,6 +395,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             showParticleEffects = config.GetBindable<bool>(BeatSightSetting.ShowParticleEffects);
             showGlowEffects = config.GetBindable<bool>(BeatSightSetting.ShowGlowEffects);
             showHitBurstAnimations = config.GetBindable<bool>(BeatSightSetting.ShowHitBurstAnimations);
+            manuscriptCountInGuideModeSetting = config.GetBindable<ManuscriptCountInGuideMode>(BeatSightSetting.ManuscriptCountInGuideMode);
             laneViewMode = config.GetBindable<LaneViewMode>(BeatSightSetting.LaneViewMode);
 
             laneGuideOverlay = createGuideOverlay();
@@ -484,6 +486,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             };
 
             laneViewMode.BindValueChanged(onLaneViewModeChanged, true);
+            manuscriptCountInGuideModeSetting.BindValueChanged(e =>
+            {
+                manuscriptBackground?.SetCountInGuideMode(e.NewValue);
+            }, true);
 
             if (loadedBeatmap != null)
                 LoadBeatmap(loadedBeatmap);
@@ -2280,6 +2286,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             {
                 threeDHighwayBackground = null;
                 manuscriptBackground = new ManuscriptBackgroundEnhanced();
+                manuscriptBackground.SetCountInGuideMode(manuscriptCountInGuideModeSetting.Value);
                 manuscriptBackground.SetFocusedComponent(manuscriptFocusComponent);
                 laneBackgroundContainer.Add(manuscriptBackground);
 

@@ -1,3 +1,4 @@
+using BeatSight.Game.Configuration;
 using BeatSight.Game.Screens.Playback.Playfield.Views;
 using Xunit;
 
@@ -141,5 +142,22 @@ public class ManuscriptNotationMappingTests
         Assert.Equal("-1b 2/4", ManuscriptBackgroundEnhanced.FormatManuscriptCountInLabel(-6, 4));
         Assert.Equal("+2b", ManuscriptBackgroundEnhanced.FormatManuscriptCountInLabel(8, 4));
         Assert.Equal("+1/3", ManuscriptBackgroundEnhanced.FormatManuscriptCountInLabel(1, 3));
+    }
+
+    [Fact]
+    public void CountInLookAroundTicksScaleByGuideMode()
+    {
+        Assert.Equal(0, ManuscriptBackgroundEnhanced.ResolveManuscriptCountInLookAroundTicks(4, ManuscriptCountInGuideMode.Off));
+        Assert.Equal(5, ManuscriptBackgroundEnhanced.ResolveManuscriptCountInLookAroundTicks(4, ManuscriptCountInGuideMode.Compact));
+        Assert.Equal(8, ManuscriptBackgroundEnhanced.ResolveManuscriptCountInLookAroundTicks(4, ManuscriptCountInGuideMode.Full));
+    }
+
+    [Fact]
+    public void CountInLabelPolicyRespectsGuideModeDensity()
+    {
+        Assert.False(ManuscriptBackgroundEnhanced.ShouldRenderManuscriptCountInLabel(ManuscriptCountInGuideMode.Off, isNow: false, isBeat: true, relativeTick: 4, subdivision: 4));
+        Assert.True(ManuscriptBackgroundEnhanced.ShouldRenderManuscriptCountInLabel(ManuscriptCountInGuideMode.Compact, isNow: false, isBeat: true, relativeTick: 4, subdivision: 4));
+        Assert.False(ManuscriptBackgroundEnhanced.ShouldRenderManuscriptCountInLabel(ManuscriptCountInGuideMode.Compact, isNow: false, isBeat: false, relativeTick: 1, subdivision: 4));
+        Assert.True(ManuscriptBackgroundEnhanced.ShouldRenderManuscriptCountInLabel(ManuscriptCountInGuideMode.Full, isNow: false, isBeat: false, relativeTick: 1, subdivision: 4));
     }
 }

@@ -77,6 +77,7 @@ namespace BeatSight.Game.Configuration
             setDefault(BeatSightSetting.ShowGlobalBackground, true);
             setDefault(BeatSightSetting.GlobalBackgroundOpacity, 0.5);
             setDefault(BeatSightSetting.ShowManuscriptPlaybackHighlighter, true);
+            setDefault(BeatSightSetting.ManuscriptCountInGuideMode, ManuscriptCountInGuideMode.Full);
 
             // Audio Settings
             setDefault(BeatSightSetting.MasterVolume, 1.0);
@@ -244,6 +245,7 @@ namespace BeatSight.Game.Configuration
         GlobalBackgroundOpacity,
         UseEnhancedViews,
         ShowManuscriptPlaybackHighlighter,
+        ManuscriptCountInGuideMode,
 
         // Audio
         MasterVolume,
@@ -326,6 +328,13 @@ namespace BeatSight.Game.Configuration
         TwoDimensional,
         ThreeDimensional,
         Manuscript
+    }
+
+    public enum ManuscriptCountInGuideMode
+    {
+        Off,
+        Compact,
+        Full
     }
 
     public enum KickLaneMode

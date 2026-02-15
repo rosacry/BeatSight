@@ -84,6 +84,12 @@ namespace BeatSight.Game.Screens.Settings
                         "Switch between a shared timing line or a dedicated lane for kick hits.",
                         formatKickLaneMode
                     ),
+                    CreateEnumDropdown(
+                        "Sheet Count-in Guides",
+                        config.GetBindable<ManuscriptCountInGuideMode>(BeatSightSetting.ManuscriptCountInGuideMode),
+                        "Control manuscript playhead count-in guide density: hide them, show a compact beat guide, or keep full subdivision guides.",
+                        formatManuscriptCountInGuideMode
+                    ),
                     createOpenSongsFolderButton(),
                     createResetSettingsButton()
                 }
@@ -213,6 +219,14 @@ namespace BeatSight.Game.Screens.Settings
         {
             KickLaneMode.GlobalLine => "Global Line",
             KickLaneMode.DedicatedLane => "Dedicated Line",
+            _ => mode.ToString()
+        };
+
+        private static string formatManuscriptCountInGuideMode(ManuscriptCountInGuideMode mode) => mode switch
+        {
+            ManuscriptCountInGuideMode.Off => "Off",
+            ManuscriptCountInGuideMode.Compact => "Compact",
+            ManuscriptCountInGuideMode.Full => "Full",
             _ => mode.ToString()
         };
     }

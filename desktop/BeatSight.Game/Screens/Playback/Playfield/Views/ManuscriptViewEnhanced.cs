@@ -911,6 +911,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             float width = timelineRightX - timelineLeftX;
             float minSpacing = Math.Clamp(width * 0.085f, 58f, 108f);
             float minBracketSpan = Math.Clamp(width * 0.055f, 28f, 66f);
+            float clampedPlayheadX = Math.Clamp(timelinePlayheadX, timelineLeftX, timelineRightX);
+            double playheadProgress = Math.Clamp((clampedPlayheadX - timelineLeftX) / Math.Max(1f, width), 0f, 1f);
+            double playheadTimeMs = timelineStartMs + timelineDurationMs * playheadProgress;
             float lastPlacedX = float.NegativeInfinity;
             int labelCount = 0;
             int bracketCount = 0;
@@ -943,16 +946,20 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 float railEndX = endX - hookInset;
                 float railWidth = Math.Max(8f, railEndX - railStartX);
                 float railY = 25f;
-                float hookHeight = 5.2f;
-                Color4 bracketColor = new Color4(196, 212, 236, 228);
+                double distanceBeats = Math.Abs((centerTime - playheadTimeMs) / beatDuration);
+                float emphasis = ResolveManuscriptTupletBracketEmphasis(distanceBeats);
+                float hookHeight = Math.Clamp(4.4f + emphasis * 1.6f, 4.4f, 6.0f);
+                float bracketAlpha = Math.Clamp(0.24f + emphasis * 0.34f, 0.24f, 0.58f);
+                byte bracketBlue = (byte)Math.Clamp(226 + (int)Math.Round(emphasis * 20f), 0, 255);
+                Color4 bracketColor = new Color4(196, 212, bracketBlue, 228);
 
                 Box rail = getTimelineTupletBracketRail(bracketCount);
                 rail.X = railStartX;
                 rail.Y = railY;
                 rail.Width = railWidth;
-                rail.Height = 1.4f;
+                rail.Height = Math.Clamp(1.15f + emphasis * 0.35f, 1.15f, 1.5f);
                 rail.Colour = bracketColor;
-                rail.Alpha = 0.46f;
+                rail.Alpha = bracketAlpha;
 
                 Box leftHook = getTimelineTupletBracketLeftHook(bracketCount);
                 leftHook.X = railStartX;
@@ -960,7 +967,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 leftHook.Width = 1.3f;
                 leftHook.Height = hookHeight;
                 leftHook.Colour = bracketColor;
-                leftHook.Alpha = 0.46f;
+                leftHook.Alpha = bracketAlpha;
 
                 Box rightHook = getTimelineTupletBracketRightHook(bracketCount);
                 rightHook.X = railStartX + railWidth;
@@ -968,13 +975,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 rightHook.Width = 1.3f;
                 rightHook.Height = hookHeight;
                 rightHook.Colour = bracketColor;
-                rightHook.Alpha = 0.46f;
+                rightHook.Alpha = bracketAlpha;
 
                 SpriteText label = getTimelineTupletLabel(labelCount++);
                 label.Text = FormatManuscriptTupletHintLabel(subdivision);
                 label.X = Math.Clamp(x, timelineLeftX + 8f, timelineRightX - 16f);
                 label.Y = railY + 6.2f;
-                label.Alpha = 0.52f;
+                label.Alpha = Math.Clamp(0.34f + emphasis * 0.28f, 0.34f, 0.62f);
                 lastPlacedX = x;
                 bracketCount++;
             }
@@ -1332,6 +1339,15 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
 
         internal static string FormatManuscriptTupletHintLabel(int subdivision)
             => ShouldRenderManuscriptTupletHint(subdivision) ? "3" : string.Empty;
+
+        internal static float ResolveManuscriptTupletBracketEmphasis(double distanceBeats)
+        {
+            if (double.IsNaN(distanceBeats) || double.IsInfinity(distanceBeats))
+                return 0.32f;
+
+            double normalized = Math.Clamp(Math.Abs(distanceBeats) / 2.5, 0.0, 1.0);
+            return (float)(1.0 - 0.68 * normalized);
+        }
 
         private static int positiveModulo(int value, int divisor)
         {

@@ -183,4 +183,20 @@ public class ManuscriptNotationMappingTests
         Assert.Equal("3", ManuscriptBackgroundEnhanced.FormatManuscriptTupletHintLabel(6));
         Assert.Equal(string.Empty, ManuscriptBackgroundEnhanced.FormatManuscriptTupletHintLabel(4));
     }
+
+    [Fact]
+    public void TupletBracketEmphasisFallsOffWithDistanceFromPlayhead()
+    {
+        float now = ManuscriptBackgroundEnhanced.ResolveManuscriptTupletBracketEmphasis(0.0);
+        float near = ManuscriptBackgroundEnhanced.ResolveManuscriptTupletBracketEmphasis(1.0);
+        float far = ManuscriptBackgroundEnhanced.ResolveManuscriptTupletBracketEmphasis(2.5);
+        float clamped = ManuscriptBackgroundEnhanced.ResolveManuscriptTupletBracketEmphasis(4.0);
+
+        Assert.InRange(now, 0.99f, 1.01f);
+        Assert.InRange(near, 0.72f, 0.74f);
+        Assert.InRange(far, 0.31f, 0.33f);
+        Assert.InRange(clamped, 0.31f, 0.33f);
+        Assert.True(now > near);
+        Assert.True(near > far);
+    }
 }

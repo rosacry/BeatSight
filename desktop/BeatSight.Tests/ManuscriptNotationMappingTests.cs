@@ -160,4 +160,27 @@ public class ManuscriptNotationMappingTests
         Assert.False(ManuscriptBackgroundEnhanced.ShouldRenderManuscriptCountInLabel(ManuscriptCountInGuideMode.Compact, isNow: false, isBeat: false, relativeTick: 1, subdivision: 4));
         Assert.True(ManuscriptBackgroundEnhanced.ShouldRenderManuscriptCountInLabel(ManuscriptCountInGuideMode.Full, isNow: false, isBeat: false, relativeTick: 1, subdivision: 4));
     }
+
+    [Fact]
+    public void TupletHintPolicyOnlyEnablesTripletSubdivisions()
+    {
+        Assert.False(ManuscriptBackgroundEnhanced.ShouldRenderManuscriptTupletHint(1));
+        Assert.False(ManuscriptBackgroundEnhanced.ShouldRenderManuscriptTupletHint(2));
+        Assert.True(ManuscriptBackgroundEnhanced.ShouldRenderManuscriptTupletHint(3));
+        Assert.False(ManuscriptBackgroundEnhanced.ShouldRenderManuscriptTupletHint(4));
+        Assert.True(ManuscriptBackgroundEnhanced.ShouldRenderManuscriptTupletHint(6));
+        Assert.False(ManuscriptBackgroundEnhanced.ShouldRenderManuscriptTupletHint(8));
+    }
+
+    [Fact]
+    public void TupletHintGroupingAndLabelFormattingStayStable()
+    {
+        Assert.Equal(3, ManuscriptBackgroundEnhanced.ResolveManuscriptTupletGroupingTicks(3));
+        Assert.Equal(3, ManuscriptBackgroundEnhanced.ResolveManuscriptTupletGroupingTicks(6));
+        Assert.Equal(0, ManuscriptBackgroundEnhanced.ResolveManuscriptTupletGroupingTicks(4));
+
+        Assert.Equal("3", ManuscriptBackgroundEnhanced.FormatManuscriptTupletHintLabel(3));
+        Assert.Equal("3", ManuscriptBackgroundEnhanced.FormatManuscriptTupletHintLabel(6));
+        Assert.Equal(string.Empty, ManuscriptBackgroundEnhanced.FormatManuscriptTupletHintLabel(4));
+    }
 }

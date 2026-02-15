@@ -241,6 +241,11 @@ namespace BeatSight.Tests
             Assert.Contains("FormatManuscriptCountInLabel", source);
             Assert.Contains("ResolveManuscriptCountInLookAroundTicks", source);
             Assert.Contains("ShouldRenderManuscriptCountInLabel", source);
+            Assert.Contains("timelineTupletLabelLayer", source);
+            Assert.Contains("updateTimelineTupletLabels", source);
+            Assert.Contains("FormatManuscriptTupletHintLabel", source);
+            Assert.Contains("ResolveManuscriptTupletGroupingTicks", source);
+            Assert.Contains("ShouldRenderManuscriptTupletHint", source);
             Assert.Contains("label.Text = $\"M{measureIndex + 1}\"", source);
         }
 

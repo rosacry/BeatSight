@@ -183,6 +183,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         private Container? timelineMeasureBandLayer;
         private Container? timelineMarkerLayer;
         private Container? timelinePlayheadCountInLayer;
+        private Container? timelineTupletLabelLayer;
         private Container? timelineMeasureLabelLayer;
         private ClefIndicatorEnhanced? clefIndicator;
         private readonly List<(Box Line, float Unit)> staffGuideLines = new();
@@ -191,6 +192,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         private readonly List<Box> timelineMarkers = new();
         private readonly List<Box> timelinePlayheadCountInTicks = new();
         private readonly List<SpriteText> timelinePlayheadCountInLabels = new();
+        private readonly List<SpriteText> timelineTupletLabels = new();
         private readonly List<SpriteText> timelineMeasureLabels = new();
         private SpriteText? timelinePlayheadLabel;
         private string? focusedGuideKey;
@@ -320,6 +322,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 RelativeSizeAxes = Axes.Both
             };
             staffContainer.Add(timelinePlayheadCountInLayer);
+
+            timelineTupletLabelLayer = new Container
+            {
+                RelativeSizeAxes = Axes.Both
+            };
+            staffContainer.Add(timelineTupletLabelLayer);
 
             timelineMeasureLabelLayer = new Container
             {
@@ -602,6 +610,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             if (timelineMarkerLayer == null)
             {
                 clearTimelinePlayheadCountInGuides();
+                clearTimelineTupletLabels();
                 if (timelinePlayheadLabel != null)
                     timelinePlayheadLabel.Alpha = 0f;
                 return;
@@ -616,6 +625,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 for (int i = 0; i < timelineMeasureLabels.Count; i++)
                     timelineMeasureLabels[i].Alpha = 0f;
                 clearTimelinePlayheadCountInGuides();
+                clearTimelineTupletLabels();
                 if (timelinePlayheadLabel != null)
                     timelinePlayheadLabel.Alpha = 0f;
                 return;
@@ -630,6 +640,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 for (int i = 0; i < timelineMeasureLabels.Count; i++)
                     timelineMeasureLabels[i].Alpha = 0f;
                 clearTimelinePlayheadCountInGuides();
+                clearTimelineTupletLabels();
                 if (timelinePlayheadLabel != null)
                     timelinePlayheadLabel.Alpha = 0f;
                 return;
@@ -643,8 +654,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             double windowEnd = windowStart + timelineDurationMs;
             int beatsPerMeasure = Math.Max(1, timelineBeatsPerMeasure);
             updateTimelineMeasureBands(windowStart, windowEnd, beatDuration, beatsPerMeasure);
-            updateTimelineMeasureLabels(windowStart, windowEnd, beatDuration, beatsPerMeasure);
             int subdivision = Math.Clamp(timelineSubdivisionDivisor, 1, 8);
+            updateTimelineMeasureLabels(windowStart, windowEnd, beatDuration, beatsPerMeasure);
+            updateTimelineTupletLabels(windowStart, windowEnd, beatDuration, subdivision);
             double subDuration = beatDuration / subdivision;
             int ticksPerMeasure = beatsPerMeasure * subdivision;
             int firstTickIndex = (int)Math.Floor((windowStart - timelineBeatOriginMs) / subDuration) - 1;
@@ -862,6 +874,92 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             }
 
             return timelineMeasureLabels[index];
+        }
+
+        private void updateTimelineTupletLabels(double windowStart, double windowEnd, double beatDuration, int subdivision)
+        {
+            if (timelineTupletLabelLayer == null
+                || timelineDurationMs <= 1
+                || beatDuration <= 1
+                || !ShouldRenderManuscriptTupletHint(subdivision))
+            {
+                clearTimelineTupletLabels();
+                return;
+            }
+
+            int groupingTicks = ResolveManuscriptTupletGroupingTicks(subdivision);
+            if (groupingTicks <= 0)
+            {
+                clearTimelineTupletLabels();
+                return;
+            }
+
+            double subDuration = beatDuration / Math.Max(1, subdivision);
+            if (subDuration <= 0)
+            {
+                clearTimelineTupletLabels();
+                return;
+            }
+
+            int firstTick = (int)Math.Floor((windowStart - timelineBeatOriginMs) / subDuration) - groupingTicks;
+            int lastTick = (int)Math.Ceiling((windowEnd - timelineBeatOriginMs) / subDuration) + groupingTicks;
+            int firstGroup = (int)Math.Floor(firstTick / (double)groupingTicks) - 1;
+            int lastGroup = (int)Math.Ceiling(lastTick / (double)groupingTicks) + 1;
+            float width = timelineRightX - timelineLeftX;
+            float minSpacing = Math.Clamp(width * 0.085f, 58f, 108f);
+            float lastPlacedX = float.NegativeInfinity;
+            int labelCount = 0;
+
+            for (int groupIndex = firstGroup; groupIndex <= lastGroup; groupIndex++)
+            {
+                int groupStartTick = groupIndex * groupingTicks;
+                int groupEndTick = groupStartTick + groupingTicks;
+                double groupStartTime = timelineBeatOriginMs + groupStartTick * subDuration;
+                double groupEndTime = timelineBeatOriginMs + groupEndTick * subDuration;
+                if (groupEndTime < windowStart || groupStartTime > windowEnd)
+                    continue;
+
+                double centerTime = (groupStartTime + groupEndTime) * 0.5;
+                float progress = (float)((centerTime - windowStart) / timelineDurationMs);
+                float x = timelineLeftX + Math.Clamp(progress, 0f, 1f) * width;
+                if (x - lastPlacedX < minSpacing)
+                    continue;
+
+                SpriteText label = getTimelineTupletLabel(labelCount++);
+                label.Text = FormatManuscriptTupletHintLabel(subdivision);
+                label.X = Math.Clamp(x, timelineLeftX + 8f, timelineRightX - 16f);
+                label.Y = 34f;
+                label.Alpha = 0.46f;
+                lastPlacedX = x;
+            }
+
+            for (int i = labelCount; i < timelineTupletLabels.Count; i++)
+                timelineTupletLabels[i].Alpha = 0f;
+        }
+
+        private SpriteText getTimelineTupletLabel(int index)
+        {
+            while (timelineTupletLabels.Count <= index)
+            {
+                var label = new SpriteText
+                {
+                    Anchor = Anchor.TopLeft,
+                    Origin = Anchor.TopCentre,
+                    Font = new FontUsage("Roboto", 11.4f, weight: "Bold"),
+                    Colour = new Color4(206, 220, 242, 234),
+                    Alpha = 0f
+                };
+                timelineTupletLabels.Add(label);
+                timelineTupletLabelLayer?.Add(label);
+            }
+
+            return timelineTupletLabels[index];
+        }
+
+        private void clearTimelineTupletLabels()
+        {
+            for (int i = 0; i < timelineTupletLabels.Count; i++)
+                timelineTupletLabels[i].Alpha = 0f;
         }
 
         private void updateTimelinePlayheadLabel(double beatDuration, int beatsPerMeasure, int subdivision)
@@ -1109,6 +1207,22 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
 
             return $"{sign}{beatPart}b {subPart}/{safeSubdivision}";
         }
+
+        internal static bool ShouldRenderManuscriptTupletHint(int subdivision)
+            => subdivision is 3 or 6;
+
+        internal static int ResolveManuscriptTupletGroupingTicks(int subdivision)
+        {
+            if (subdivision == 3)
+                return 3;
+            if (subdivision == 6)
+                return 3;
+
+            return 0;
+        }
+
+        internal static string FormatManuscriptTupletHintLabel(int subdivision)
+            => ShouldRenderManuscriptTupletHint(subdivision) ? "3" : string.Empty;
 
         private static int positiveModulo(int value, int divisor)
         {

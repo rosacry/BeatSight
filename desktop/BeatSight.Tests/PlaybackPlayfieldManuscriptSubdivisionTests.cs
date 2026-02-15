@@ -61,4 +61,17 @@ public class PlaybackPlayfieldManuscriptSubdivisionTests
         int level = PlaybackPlayfield.ResolveManuscriptRestGlyphLevel(gapBeats);
         Assert.Equal(expectedLevel, level);
     }
+
+    [Theory]
+    [InlineData(2.0, 2)]
+    [InlineData(1.5, 2)]
+    [InlineData(1.0, 1)]
+    [InlineData(0.76, 1)]
+    [InlineData(0.5, 0)]
+    [InlineData(0.12, 0)]
+    public void RestSpanEmphasisMatchesRhythmicGap(double gapBeats, int expectedLevel)
+    {
+        int level = PlaybackPlayfield.ResolveManuscriptRestSpanEmphasisLevel(gapBeats);
+        Assert.Equal(expectedLevel, level);
+    }
 }

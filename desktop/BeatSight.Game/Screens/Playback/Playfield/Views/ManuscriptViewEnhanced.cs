@@ -189,11 +189,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         private readonly List<Box> timelineMeasureBands = new();
         private readonly List<Box> timelineMarkers = new();
         private readonly List<SpriteText> timelineMeasureLabels = new();
+        private SpriteText? timelinePlayheadLabel;
         private string? focusedGuideKey;
         private double timelineStartMs;
         private double timelineDurationMs;
         private float timelineLeftX;
         private float timelineRightX;
+        private float timelinePlayheadX;
         private bool hasTimelineWindow;
         private double timelineBpm = 120;
         private double timelineBeatOriginMs;
@@ -315,6 +317,16 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             };
             staffContainer.Add(timelineMeasureLabelLayer);
 
+            timelinePlayheadLabel = new SpriteText
+            {
+                Anchor = Anchor.TopLeft,
+                Origin = Anchor.TopLeft,
+                Font = new FontUsage("Roboto", 10.4f),
+                Colour = new Color4(216, 232, 252, 238),
+                Alpha = 0f
+            };
+            timelineMeasureLabelLayer.Add(timelinePlayheadLabel);
+
             buildComponentGuides();
             buildStaffLines();
 
@@ -382,6 +394,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             timelineDurationMs = durationMs;
             timelineLeftX = leftX;
             timelineRightX = rightX;
+            timelinePlayheadX = playheadX;
             hasTimelineWindow = durationMs > 1 && rightX > leftX;
             timelineBeatsPerMeasure = Math.Max(1, beatsPerMeasure);
             timelineBeatOriginMs = beatOriginMs;
@@ -565,7 +578,11 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             timelineWindowDirty = false;
 
             if (timelineMarkerLayer == null)
+            {
+                if (timelinePlayheadLabel != null)
+                    timelinePlayheadLabel.Alpha = 0f;
                 return;
+            }
 
             if (!hasTimelineWindow || timelineDurationMs <= 1)
             {
@@ -575,6 +592,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                     timelineMarkers[i].Alpha = 0f;
                 for (int i = 0; i < timelineMeasureLabels.Count; i++)
                     timelineMeasureLabels[i].Alpha = 0f;
+                if (timelinePlayheadLabel != null)
+                    timelinePlayheadLabel.Alpha = 0f;
                 return;
             }
 
@@ -586,6 +605,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                     timelineMarkers[i].Alpha = 0f;
                 for (int i = 0; i < timelineMeasureLabels.Count; i++)
                     timelineMeasureLabels[i].Alpha = 0f;
+                if (timelinePlayheadLabel != null)
+                    timelinePlayheadLabel.Alpha = 0f;
                 return;
             }
 
@@ -659,6 +680,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
 
             for (int i = markerCount; i < timelineMarkers.Count; i++)
                 timelineMarkers[i].Alpha = 0f;
+
+            updateTimelinePlayheadLabel(beatDuration, beatsPerMeasure, subdivision);
         }
 
         private Box getTimelineMarker(int index)
@@ -813,6 +836,48 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             }
 
             return timelineMeasureLabels[index];
+        }
+
+        private void updateTimelinePlayheadLabel(double beatDuration, int beatsPerMeasure, int subdivision)
+        {
+            if (timelinePlayheadLabel == null
+                || !hasTimelineWindow
+                || timelineDurationMs <= 1
+                || beatDuration <= 1
+                || beatsPerMeasure <= 0)
+            {
+                if (timelinePlayheadLabel != null)
+                    timelinePlayheadLabel.Alpha = 0f;
+                return;
+            }
+
+            float width = timelineRightX - timelineLeftX;
+            if (width <= 1f)
+            {
+                timelinePlayheadLabel.Alpha = 0f;
+                return;
+            }
+
+            float clampedPlayheadX = Math.Clamp(timelinePlayheadX, timelineLeftX, timelineRightX);
+            double progress = Math.Clamp((clampedPlayheadX - timelineLeftX) / width, 0f, 1f);
+            double playheadTimeMs = timelineStartMs + timelineDurationMs * progress;
+            double beatPosition = (playheadTimeMs - timelineBeatOriginMs) / beatDuration;
+            int beatIndex = (int)Math.Floor(beatPosition + 0.000001);
+            int measureIndex = (int)Math.Floor(beatIndex / (double)beatsPerMeasure);
+            int measureNumber = Math.Max(1, measureIndex + 1);
+            int beatInMeasure = positiveModulo(beatIndex, beatsPerMeasure) + 1;
+
+            double beatPhase = beatPosition - Math.Floor(beatPosition);
+            if (beatPhase < 0)
+                beatPhase += 1.0;
+            int subdivisionIndex = Math.Clamp((int)Math.Floor(beatPhase * subdivision + 0.0001), 0, Math.Max(0, subdivision - 1));
+
+            timelinePlayheadLabel.Text = subdivision > 1
+                ? $"Now M{measureNumber} B{beatInMeasure}.{subdivisionIndex + 1}/{subdivision}"
+                : $"Now M{measureNumber} B{beatInMeasure}";
+            timelinePlayheadLabel.X = Math.Clamp(clampedPlayheadX + 10f, timelineLeftX + 6f, Math.Max(timelineLeftX + 90f, timelineRightX - 186f));
+            timelinePlayheadLabel.Y = 8f;
+            timelinePlayheadLabel.Alpha = 0.66f;
         }
 
         private static int positiveModulo(int value, int divisor)

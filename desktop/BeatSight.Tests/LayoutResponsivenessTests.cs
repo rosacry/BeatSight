@@ -214,6 +214,8 @@ namespace BeatSight.Tests
             Assert.Contains("timelineMeasureLabelLayer", source);
             Assert.Contains("updateTimelineMeasureLabels", source);
             Assert.Contains("getTimelineMeasureLabel", source);
+            Assert.Contains("timelinePlayheadLabel", source);
+            Assert.Contains("updateTimelinePlayheadLabel", source);
             Assert.Contains("label.Text = $\"M{measureIndex + 1}\"", source);
         }
 
@@ -232,6 +234,8 @@ namespace BeatSight.Tests
             Assert.Contains("manuscriptDurationLayer", playfieldSource);
             Assert.Contains("addManuscriptTieSegment", playfieldSource);
             Assert.Contains("ShouldRenderManuscriptDottedCue", playfieldSource);
+            Assert.Contains("manuscriptRestSpanLayer", playfieldSource);
+            Assert.Contains("ResolveManuscriptRestSpanEmphasisLevel", playfieldSource);
             Assert.Contains("SetManuscriptDurationDot", noteSource);
         }
 

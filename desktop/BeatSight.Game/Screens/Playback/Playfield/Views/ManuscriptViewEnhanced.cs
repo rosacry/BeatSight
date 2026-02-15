@@ -205,6 +205,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         private int timelineBeatsPerMeasure = 4;
         private int timelineSubdivisionDivisor = 1;
         private bool timelineWindowDirty;
+        private ManuscriptCountInGuideMode countInGuideMode = ManuscriptCountInGuideMode.Full;
 
         private sealed record ComponentGuide(string Key, string Label, float Unit, Color4 Color);
 
@@ -423,6 +424,18 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
 
             focusedGuideKey = next;
             updateGuideFocusVisuals();
+        }
+
+        public void SetCountInGuideMode(ManuscriptCountInGuideMode mode)
+        {
+            if (countInGuideMode == mode)
+                return;
+
+            countInGuideMode = mode;
+            timelineWindowDirty = true;
+
+            if (countInGuideMode == ManuscriptCountInGuideMode.Off)
+                clearTimelinePlayheadCountInGuides();
         }
 
         private void buildStaffLines()
@@ -900,7 +913,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 || timelineDurationMs <= 1
                 || beatDuration <= 1
                 || beatsPerMeasure <= 0
-                || subdivision <= 0)
+                || subdivision <= 0
+                || countInGuideMode == ManuscriptCountInGuideMode.Off)
             {
                 clearTimelinePlayheadCountInGuides();
                 return;
@@ -924,8 +938,16 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             }
 
             int playheadTick = (int)Math.Round((playheadTimeMs - timelineBeatOriginMs) / subDuration, MidpointRounding.AwayFromZero);
-            int lookAroundTicks = Math.Clamp(subdivision * 2, 4, 12);
-            float minLabelSpacing = Math.Clamp(width * 0.032f, 24f, 46f);
+            int lookAroundTicks = ResolveManuscriptCountInLookAroundTicks(subdivision, countInGuideMode);
+            if (lookAroundTicks <= 0)
+            {
+                clearTimelinePlayheadCountInGuides();
+                return;
+            }
+
+            float minLabelSpacing = countInGuideMode == ManuscriptCountInGuideMode.Compact
+                ? Math.Clamp(width * 0.052f, 34f, 62f)
+                : Math.Clamp(width * 0.032f, 24f, 46f);
             float lastLabelX = float.NegativeInfinity;
             int tickCount = 0;
             int labelCount = 0;
@@ -944,6 +966,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 bool isHalfBeat = !isBeat
                                   && subdivision % 2 == 0
                                   && positiveModulo(tickIndex, subdivision / 2) == 0;
+                bool isSubBeat = !isNow && !isBeat && !isHalfBeat;
+
+                if (!ShouldRenderManuscriptCountInTick(countInGuideMode, isNow, isBeat, isHalfBeat, isSubBeat))
+                    continue;
 
                 Box tick = getTimelinePlayheadCountInTick(tickCount++);
                 tick.X = x;
@@ -958,9 +984,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 tick.Height = isNow ? 18f : isBeat ? 14f : isHalfBeat ? 10f : 7f;
                 tick.Alpha = isNow ? 0.78f : isBeat ? 0.52f : isHalfBeat ? 0.40f : 0.30f;
 
-                bool showLabel = isNow
-                                 || isBeat
-                                 || (Math.Abs(relativeTick) <= 2 && subdivision >= 3);
+                bool showLabel = ShouldRenderManuscriptCountInLabel(countInGuideMode, isNow, isBeat, relativeTick, subdivision);
                 if (!showLabel)
                     continue;
 
@@ -1026,6 +1050,44 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 timelinePlayheadCountInTicks[i].Alpha = 0f;
             for (int i = 0; i < timelinePlayheadCountInLabels.Count; i++)
                 timelinePlayheadCountInLabels[i].Alpha = 0f;
+        }
+
+        internal static int ResolveManuscriptCountInLookAroundTicks(int subdivision, ManuscriptCountInGuideMode mode)
+        {
+            if (mode == ManuscriptCountInGuideMode.Off)
+                return 0;
+
+            int safeSubdivision = Math.Max(1, subdivision);
+            return mode == ManuscriptCountInGuideMode.Compact
+                ? Math.Clamp(safeSubdivision + 1, 3, 8)
+                : Math.Clamp(safeSubdivision * 2, 4, 12);
+        }
+
+        internal static bool ShouldRenderManuscriptCountInTick(ManuscriptCountInGuideMode mode, bool isNow, bool isBeat, bool isHalfBeat, bool isSubBeat)
+        {
+            if (mode == ManuscriptCountInGuideMode.Off)
+                return false;
+
+            if (isNow || isBeat)
+                return true;
+
+            return mode == ManuscriptCountInGuideMode.Compact
+                ? isHalfBeat
+                : isHalfBeat || isSubBeat;
+        }
+
+        internal static bool ShouldRenderManuscriptCountInLabel(ManuscriptCountInGuideMode mode, bool isNow, bool isBeat, int relativeTick, int subdivision)
+        {
+            if (mode == ManuscriptCountInGuideMode.Off)
+                return false;
+
+            if (isNow)
+                return true;
+
+            if (mode == ManuscriptCountInGuideMode.Compact)
+                return isBeat && Math.Abs(relativeTick) <= Math.Max(2, subdivision);
+
+            return isBeat || (Math.Abs(relativeTick) <= 2 && subdivision >= 3);
         }
 
         internal static string FormatManuscriptCountInLabel(int relativeTick, int subdivision)

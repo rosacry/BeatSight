@@ -178,6 +178,25 @@ namespace BeatSight.Tests
         }
 
         [Fact]
+        public void PlaybackSettingsExposeManuscriptCountInGuideModeControl()
+        {
+            string root = resolveRepositoryRoot();
+            string playbackSettingsPath = Path.Combine(root, "desktop", "BeatSight.Game", "Screens", "Settings", "PlaybackSettingsSection.cs");
+            string configPath = Path.Combine(root, "desktop", "BeatSight.Game", "Configuration", "BeatSightConfigManager.cs");
+
+            Assert.True(File.Exists(playbackSettingsPath), $"Expected file missing: {playbackSettingsPath}");
+            Assert.True(File.Exists(configPath), $"Expected file missing: {configPath}");
+
+            string settingsSource = File.ReadAllText(playbackSettingsPath);
+            string configSource = File.ReadAllText(configPath);
+
+            Assert.Contains("Sheet Count-in Guides", settingsSource);
+            Assert.Contains("BeatSightSetting.ManuscriptCountInGuideMode", settingsSource);
+            Assert.Contains("formatManuscriptCountInGuideMode", settingsSource);
+            Assert.Contains("setDefault(BeatSightSetting.ManuscriptCountInGuideMode, ManuscriptCountInGuideMode.Full)", configSource);
+        }
+
+        [Fact]
         public void EditorPreviewBindsThreeDProfileSettingToPlaybackPlayfield()
         {
             string root = resolveRepositoryRoot();
@@ -219,6 +238,8 @@ namespace BeatSight.Tests
             Assert.Contains("timelinePlayheadCountInLayer", source);
             Assert.Contains("updateTimelinePlayheadCountInGuides", source);
             Assert.Contains("FormatManuscriptCountInLabel", source);
+            Assert.Contains("ResolveManuscriptCountInLookAroundTicks", source);
+            Assert.Contains("ShouldRenderManuscriptCountInLabel", source);
             Assert.Contains("label.Text = $\"M{measureIndex + 1}\"", source);
         }
 
@@ -239,6 +260,7 @@ namespace BeatSight.Tests
             Assert.Contains("ShouldRenderManuscriptDottedCue", playfieldSource);
             Assert.Contains("manuscriptRestSpanLayer", playfieldSource);
             Assert.Contains("ResolveManuscriptRestSpanEmphasisLevel", playfieldSource);
+            Assert.Contains("SetCountInGuideMode", playfieldSource);
             Assert.Contains("SetManuscriptDurationDot", noteSource);
         }
 

@@ -223,12 +223,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             public const float TimelineCenterYRatio = 0.56f;
             public const double VisibleMeasures = 2.0;
             public const float PlayheadRatio = 0.24f;
-            public const float NoteWidthRatio = 0.018f;
-            public const float NoteHeightRatio = 0.56f;
-            public const float MinNoteWidth = 9f;
-            public const float MaxNoteWidth = 28f;
-            public const float MinNoteHeight = 9f;
-            public const float MaxNoteHeight = 26f;
+            public const float NoteWidthRatio = 0.020f;
+            public const float NoteHeightRatio = 0.60f;
+            public const float MinNoteWidth = 10f;
+            public const float MaxNoteWidth = 32f;
+            public const float MinNoteHeight = 10f;
+            public const float MaxNoteHeight = 30f;
         }
 
         /// <summary>Width ratio of the playfield relative to container. 1.0 = full width.</summary>
@@ -311,9 +311,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private const float MaxTieSpanRatio = 0.34f;
         private const double ManuscriptParserFocusWindowBeats = 0.55;
         private const double ManuscriptParserFadeWindowBeats = 4.2;
-        private const float ManuscriptParserFarNoteAlpha = 0.34f;
-        private const float ManuscriptParserFarBeamAlphaScale = 0.32f;
-        private const float ManuscriptParserFarTieAlphaScale = 0.24f;
+        private const float ManuscriptParserFarNoteAlpha = 0.42f;
+        private const float ManuscriptParserFarBeamAlphaScale = 0.38f;
+        private const float ManuscriptParserFarTieAlphaScale = 0.30f;
         private static readonly Color4 manuscriptBeamColor = new Color4(42, 50, 66, 255);
         private static readonly Color4 manuscriptTieColor = new Color4(188, 202, 222, 255);
         private static readonly Color4 manuscriptRestColor = new Color4(210, 220, 236, 255);

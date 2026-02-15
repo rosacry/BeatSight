@@ -92,10 +92,14 @@ public class DrawableNoteManuscriptRenderingTests
         var openRing = getPrivateField<Circle>(note, "manuscriptHiHatOpenIndicator");
         var closedHorizontal = getPrivateField<Box>(note, "manuscriptHiHatClosedHorizontal");
         var closedVertical = getPrivateField<Box>(note, "manuscriptHiHatClosedVertical");
+        var closedCap = getPrivateField<Box>(note, "manuscriptHiHatClosedCap");
+        var slashSecondary = getPrivateField<Box>(note, "manuscriptHiHatHalfOpenSlashSecondary");
 
         Assert.True(openRing.Alpha > 0.5f);
         Assert.True(closedHorizontal.Alpha < 0.01f);
         Assert.True(closedVertical.Alpha < 0.01f);
+        Assert.True(closedCap.Alpha < 0.01f);
+        Assert.True(slashSecondary.Alpha < 0.01f);
     }
 
     [Fact]
@@ -110,10 +114,14 @@ public class DrawableNoteManuscriptRenderingTests
         var openRing = getPrivateField<Circle>(note, "manuscriptHiHatOpenIndicator");
         var closedHorizontal = getPrivateField<Box>(note, "manuscriptHiHatClosedHorizontal");
         var closedVertical = getPrivateField<Box>(note, "manuscriptHiHatClosedVertical");
+        var closedCap = getPrivateField<Box>(note, "manuscriptHiHatClosedCap");
+        var slashSecondary = getPrivateField<Box>(note, "manuscriptHiHatHalfOpenSlashSecondary");
 
         Assert.True(openRing.Alpha < 0.01f);
         Assert.True(closedHorizontal.Alpha > 0.5f);
         Assert.True(closedVertical.Alpha > 0.5f);
+        Assert.True(closedCap.Alpha > 0.4f);
+        Assert.True(slashSecondary.Alpha < 0.01f);
     }
 
     [Fact]
@@ -127,11 +135,15 @@ public class DrawableNoteManuscriptRenderingTests
 
         var openRing = getPrivateField<Circle>(note, "manuscriptHiHatOpenIndicator");
         var slash = getPrivateField<Box>(note, "manuscriptHiHatHalfOpenSlash");
+        var slashSecondary = getPrivateField<Box>(note, "manuscriptHiHatHalfOpenSlashSecondary");
         var closedHorizontal = getPrivateField<Box>(note, "manuscriptHiHatClosedHorizontal");
+        var closedCap = getPrivateField<Box>(note, "manuscriptHiHatClosedCap");
 
         Assert.True(openRing.Alpha > 0.5f);
         Assert.True(slash.Alpha > 0.5f);
+        Assert.True(slashSecondary.Alpha > 0.3f);
         Assert.True(closedHorizontal.Alpha < 0.01f);
+        Assert.True(closedCap.Alpha < 0.01f);
     }
 
     [Fact]
@@ -160,6 +172,20 @@ public class DrawableNoteManuscriptRenderingTests
         Assert.True(stemUpNoFlags < 0f);
         Assert.True(stemUpDense < stemUpNoFlags - 8f, $"Expected dense flags to increase upward clearance. noFlags={stemUpNoFlags:0.##}, dense={stemUpDense:0.##}");
         Assert.True(stemDownDense > 0f);
+    }
+
+    [Fact]
+    public void ManuscriptHiHatAuxiliaryArticulationOffsetHelpersScaleWithGlyphSize()
+    {
+        float smallSlashOffset = DrawableNote.ResolveManuscriptHalfOpenSlashOffset(4.6f);
+        float largeSlashOffset = DrawableNote.ResolveManuscriptHalfOpenSlashOffset(8.2f);
+        float smallCapOffset = DrawableNote.ResolveManuscriptClosedCapOffset(4.8f);
+        float largeCapOffset = DrawableNote.ResolveManuscriptClosedCapOffset(8.0f);
+
+        Assert.True(smallSlashOffset > 0.5f);
+        Assert.True(largeSlashOffset > smallSlashOffset, $"Expected larger articulation ring to increase half-open slash offset. small={smallSlashOffset:0.##}, large={largeSlashOffset:0.##}");
+        Assert.True(smallCapOffset > 0f);
+        Assert.True(largeCapOffset > smallCapOffset, $"Expected larger closed marker to increase cap offset. small={smallCapOffset:0.##}, large={largeCapOffset:0.##}");
     }
 
     [Fact]

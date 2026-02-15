@@ -153,4 +153,56 @@ public class PlaybackPlayfieldThreeDProfileTests
         Assert.InRange(tall.LaneFillEmphasis, 1.1f, 1.4f);
         Assert.InRange(tall.LaneFillRestingAlpha, (byte)80, (byte)120);
     }
+
+    [Fact]
+    public void ThreeDLaneHitAnimationPresentationKeepsTightProfileMostPronounced()
+    {
+        var arcade = ThreeDHighwayBackground.ResolveThreeDLaneHitAnimationPresentation(ThreeDStageProfile.Arcade, drawHeight: 1080f);
+        var classic = ThreeDHighwayBackground.ResolveThreeDLaneHitAnimationPresentation(ThreeDStageProfile.GhClassic, drawHeight: 1080f);
+        var tight = ThreeDHighwayBackground.ResolveThreeDLaneHitAnimationPresentation(ThreeDStageProfile.Tight, drawHeight: 1080f);
+
+        Assert.True(tight.PulsePeakAlpha > classic.PulsePeakAlpha);
+        Assert.True(classic.PulsePeakAlpha > arcade.PulsePeakAlpha);
+
+        Assert.True(tight.PulseScaleX > classic.PulseScaleX);
+        Assert.True(classic.PulseScaleX > arcade.PulseScaleX);
+
+        Assert.True(tight.ReceptorLiftPixels > classic.ReceptorLiftPixels);
+        Assert.True(classic.ReceptorLiftPixels > arcade.ReceptorLiftPixels);
+    }
+
+    [Theory]
+    [InlineData(ThreeDStageProfile.Arcade)]
+    [InlineData(ThreeDStageProfile.GhClassic)]
+    [InlineData(ThreeDStageProfile.Tight)]
+    public void ThreeDLaneHitAnimationPresentationValuesStayWithinSafeBounds(ThreeDStageProfile profile)
+    {
+        var compact = ThreeDHighwayBackground.ResolveThreeDLaneHitAnimationPresentation(profile, drawHeight: 720f);
+        var desktop = ThreeDHighwayBackground.ResolveThreeDLaneHitAnimationPresentation(profile, drawHeight: 1080f);
+        var tall = ThreeDHighwayBackground.ResolveThreeDLaneHitAnimationPresentation(profile, drawHeight: 1440f);
+
+        Assert.InRange(compact.PulsePeakAlpha, 0.45f, 0.80f);
+        Assert.InRange(compact.PulseScaleX, 1.08f, 1.22f);
+        Assert.InRange(compact.PulseScaleY, 1.0f, 1.05f);
+        Assert.InRange(compact.ReceptorLiftPixels, 1.0f, 2.4f);
+        Assert.InRange(compact.ReceptorPulseMs, 40f, 70f);
+        Assert.InRange(compact.ReceptorSettleMs, 160f, 240f);
+        Assert.InRange(compact.ReceptorGlowDecayMs, 220f, 320f);
+
+        Assert.InRange(desktop.PulsePeakAlpha, 0.45f, 0.80f);
+        Assert.InRange(desktop.PulseScaleX, 1.08f, 1.22f);
+        Assert.InRange(desktop.PulseScaleY, 1.0f, 1.05f);
+        Assert.InRange(desktop.ReceptorLiftPixels, 1.0f, 2.4f);
+        Assert.InRange(desktop.ReceptorPulseMs, 40f, 70f);
+        Assert.InRange(desktop.ReceptorSettleMs, 160f, 240f);
+        Assert.InRange(desktop.ReceptorGlowDecayMs, 220f, 320f);
+
+        Assert.InRange(tall.PulsePeakAlpha, 0.45f, 0.80f);
+        Assert.InRange(tall.PulseScaleX, 1.08f, 1.22f);
+        Assert.InRange(tall.PulseScaleY, 1.0f, 1.05f);
+        Assert.InRange(tall.ReceptorLiftPixels, 1.0f, 2.4f);
+        Assert.InRange(tall.ReceptorPulseMs, 40f, 70f);
+        Assert.InRange(tall.ReceptorSettleMs, 160f, 240f);
+        Assert.InRange(tall.ReceptorGlowDecayMs, 220f, 320f);
+    }
 }

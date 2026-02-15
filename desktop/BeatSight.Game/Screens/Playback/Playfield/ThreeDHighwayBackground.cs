@@ -76,6 +76,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private readonly List<Container> laneReceptorBoxes = new();
         private readonly List<Box> laneReceptorFills = new();
         private readonly List<Box> laneReceptorGlows = new();
+        private readonly List<float> laneReceptorRestingY = new();
         private readonly List<Box> sweepLines = new();
 
         private Box? beatPulseOverlay;
@@ -177,6 +178,40 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     LaneGlowDecayAlpha: 0.28f,
                     LaneFillEmphasis: 1.27f,
                     LaneFillRestingAlpha: (byte)98)
+            };
+        }
+
+        internal static (float PulsePeakAlpha, float PulseScaleX, float PulseScaleY, float ReceptorLiftPixels, float ReceptorPulseMs, float ReceptorSettleMs, float ReceptorGlowDecayMs) ResolveThreeDLaneHitAnimationPresentation(ThreeDStageProfile profile, float drawHeight)
+        {
+            float safeHeight = float.IsFinite(drawHeight) ? Math.Clamp(drawHeight, 540f, 4320f) : 1080f;
+            float compactBoost = safeHeight <= 760f ? 1.10f : safeHeight >= 1440f ? 0.95f : 1f;
+
+            return profile switch
+            {
+                ThreeDStageProfile.Arcade => (
+                    PulsePeakAlpha: 0.50f * compactBoost,
+                    PulseScaleX: 1.10f,
+                    PulseScaleY: 1.00f,
+                    ReceptorLiftPixels: 1.2f * compactBoost,
+                    ReceptorPulseMs: 58f,
+                    ReceptorSettleMs: 190f,
+                    ReceptorGlowDecayMs: 240f),
+                ThreeDStageProfile.Tight => (
+                    PulsePeakAlpha: 0.64f * compactBoost,
+                    PulseScaleX: 1.18f,
+                    PulseScaleY: 1.03f,
+                    ReceptorLiftPixels: 2.1f * compactBoost,
+                    ReceptorPulseMs: 52f,
+                    ReceptorSettleMs: 210f,
+                    ReceptorGlowDecayMs: 286f),
+                _ => (
+                    PulsePeakAlpha: 0.58f * compactBoost,
+                    PulseScaleX: 1.15f,
+                    PulseScaleY: 1.02f,
+                    ReceptorLiftPixels: 1.7f * compactBoost,
+                    ReceptorPulseMs: 54f,
+                    ReceptorSettleMs: 204f,
+                    ReceptorGlowDecayMs: 266f)
             };
         }
 
@@ -499,6 +534,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             laneReceptorBoxes.Clear();
             laneReceptorFills.Clear();
             laneReceptorGlows.Clear();
+            laneReceptorRestingY.Clear();
             receptorLayer.Clear();
 
             receptorRail = new Box
@@ -561,6 +597,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 laneReceptorBoxes.Add(receptor);
                 laneReceptorFills.Add(fill);
                 laneReceptorGlows.Add(glow);
+                laneReceptorRestingY.Add(0f);
             }
         }
 
@@ -618,28 +655,44 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             if (laneIndex < 0 || laneIndex >= lanePulseLights.Count)
                 return;
 
+            float clamped = Math.Clamp(intensity, 0.2f, 1.0f);
+            var laneHitAnimation = ResolveThreeDLaneHitAnimationPresentation(stageProfile, DrawHeight);
             var pulse = lanePulseLights[laneIndex];
             pulse.ClearTransforms();
-            pulse.Alpha = 0.52f * Math.Clamp(intensity, 0.2f, 1.0f);
-            pulse.ScaleTo(new Vector2(1.12f, 1f), 70, Easing.OutQuint)
+            pulse.Alpha = laneHitAnimation.PulsePeakAlpha * clamped;
+            pulse.ScaleTo(new Vector2(laneHitAnimation.PulseScaleX, laneHitAnimation.PulseScaleY), laneHitAnimation.ReceptorPulseMs, Easing.OutQuint)
                  .Then()
-                 .ScaleTo(Vector2.One, 190, Easing.OutQuad);
-            pulse.FadeOut(240, Easing.OutQuad);
+                 .ScaleTo(Vector2.One, laneHitAnimation.ReceptorSettleMs, Easing.OutQuad);
+            pulse.FadeOut(laneHitAnimation.ReceptorSettleMs + 40f, Easing.OutQuad);
 
             if (laneIndex < laneReceptorGlows.Count)
             {
-                float clamped = Math.Clamp(intensity, 0.2f, 1.0f);
                 var hitFeedback = ResolveThreeDHitFeedbackPresentation(stageProfile, DrawHeight);
+                var receptor = laneReceptorBoxes[laneIndex];
+                float restingY = laneIndex < laneReceptorRestingY.Count
+                    ? laneReceptorRestingY[laneIndex]
+                    : receptor.Y;
+
+                // Guard lift animation until lane layout has populated a stable receptor baseline.
+                if (DrawHeight > 0 && restingY > DrawHeight * 0.45f)
+                {
+                    receptor.ClearTransforms();
+                    receptor.Y = restingY;
+                    receptor.MoveToY(restingY - laneHitAnimation.ReceptorLiftPixels * clamped, laneHitAnimation.ReceptorPulseMs, Easing.OutQuint)
+                            .Then()
+                            .MoveToY(restingY, laneHitAnimation.ReceptorSettleMs, Easing.OutQuad);
+                }
+
                 var receptorGlow = laneReceptorGlows[laneIndex];
                 receptorGlow.ClearTransforms();
                 receptorGlow.Alpha = Math.Min(0.94f, hitFeedback.LaneGlowPeakAlpha * clamped);
-                receptorGlow.FadeTo(hitFeedback.LaneGlowDecayAlpha, 250, Easing.OutQuad);
+                receptorGlow.FadeTo(hitFeedback.LaneGlowDecayAlpha, laneHitAnimation.ReceptorGlowDecayMs, Easing.OutQuad);
 
                 var receptorFill = laneReceptorFills[laneIndex];
                 Color4 accent = laneAccentPalette[laneIndex % laneAccentPalette.Length];
                 receptorFill.ClearTransforms();
                 receptorFill.Colour = UITheme.Emphasise(accent, hitFeedback.LaneFillEmphasis);
-                receptorFill.FadeColour(new Color4(accent.R, accent.G, accent.B, hitFeedback.LaneFillRestingAlpha), 260, Easing.OutQuad);
+                receptorFill.FadeColour(new Color4(accent.R, accent.G, accent.B, hitFeedback.LaneFillRestingAlpha), laneHitAnimation.ReceptorGlowDecayMs + 18f, Easing.OutQuad);
             }
         }
 
@@ -817,6 +870,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 receptor.Width = Math.Max(1.5f, receptorLaneWidth - receptorInset * 2f);
                 receptor.Height = receptorHeight;
                 receptor.BorderThickness = strikeZonePresentation.BorderThickness;
+                if (lane < laneReceptorRestingY.Count)
+                    laneReceptorRestingY[lane] = receptorY;
             }
 
             if (receptorRail != null)

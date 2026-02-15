@@ -354,6 +354,26 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             public double BeatOrigin { get; }
         }
 
+        private readonly struct ManuscriptHorizontalClusterEntry
+        {
+            public ManuscriptHorizontalClusterEntry(
+                ManuscriptBackgroundEnhanced.ManuscriptNotationVoice voice,
+                int voiceIndex,
+                int voiceCount,
+                bool hasCrossVoice)
+            {
+                Voice = voice;
+                VoiceIndex = voiceIndex;
+                VoiceCount = voiceCount;
+                HasCrossVoice = hasCrossVoice;
+            }
+
+            public ManuscriptBackgroundEnhanced.ManuscriptNotationVoice Voice { get; }
+            public int VoiceIndex { get; }
+            public int VoiceCount { get; }
+            public bool HasCrossVoice { get; }
+        }
+
         private readonly struct SheetTimelineWindow
         {
             public SheetTimelineWindow(double startTime, double duration, float leftX, float rightX, float playheadX)
@@ -925,6 +945,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             }
 
             // Update visible notes
+            Dictionary<DrawableNote, ManuscriptHorizontalClusterEntry>? manuscriptHorizontalClusters = null;
+            if (currentLaneViewMode == LaneViewMode.Manuscript)
+                manuscriptHorizontalClusters = buildManuscriptHorizontalClusters(currentTime, activeFutureVisibilityWindow);
+
             for (int i = firstActiveNoteIndex; i < notes.Count; i++)
             {
                 var note = notes[i];
@@ -954,7 +978,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     drawHeight,
                     hitLineY,
                     travelDistance,
-                    sheetWindow);
+                    sheetWindow,
+                    manuscriptHorizontalClusters);
 
                 if (manuscriptBeamAnchors != null && !note.IsJudged && note.Alpha > 0.01f)
                     manuscriptBeamAnchors.Add(createManuscriptBeamAnchor(note));
@@ -1377,6 +1402,106 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 return 1;
 
             return 0;
+        }
+
+        private Dictionary<DrawableNote, ManuscriptHorizontalClusterEntry> buildManuscriptHorizontalClusters(
+            double currentTime,
+            double activeFutureVisibilityWindow)
+        {
+            var groupedByTime = new Dictionary<long, List<DrawableNote>>();
+            for (int i = firstActiveNoteIndex; i < notes.Count; i++)
+            {
+                DrawableNote note = notes[i];
+                double timeUntilHit = note.HitTime - currentTime;
+                if (timeUntilHit > activeFutureVisibilityWindow)
+                    break;
+                if (note.IsJudged)
+                    continue;
+
+                long key = ResolveManuscriptSimultaneousTimeKey(note.HitTime);
+                if (!groupedByTime.TryGetValue(key, out var bucket))
+                {
+                    bucket = new List<DrawableNote>();
+                    groupedByTime[key] = bucket;
+                }
+
+                bucket.Add(note);
+            }
+
+            var result = new Dictionary<DrawableNote, ManuscriptHorizontalClusterEntry>();
+            foreach (var bucket in groupedByTime.Values)
+            {
+                if (bucket.Count <= 1)
+                    continue;
+
+                List<DrawableNote> lowerVoiceNotes = bucket
+                    .Where(n => ManuscriptBackgroundEnhanced.GetNotationVoiceForComponent(n.ComponentName) == ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower)
+                    .OrderBy(n => ManuscriptBackgroundEnhanced.GetNotationIndexForComponent(n.ComponentName))
+                    .ThenBy(n => n.ComponentName, StringComparer.Ordinal)
+                    .ToList();
+                List<DrawableNote> upperVoiceNotes = bucket
+                    .Where(n => ManuscriptBackgroundEnhanced.GetNotationVoiceForComponent(n.ComponentName) == ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Upper)
+                    .OrderBy(n => ManuscriptBackgroundEnhanced.GetNotationIndexForComponent(n.ComponentName))
+                    .ThenBy(n => n.ComponentName, StringComparer.Ordinal)
+                    .ToList();
+
+                bool hasCrossVoice = lowerVoiceNotes.Count > 0 && upperVoiceNotes.Count > 0;
+                appendManuscriptClusterEntries(result, lowerVoiceNotes, ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower, hasCrossVoice);
+                appendManuscriptClusterEntries(result, upperVoiceNotes, ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Upper, hasCrossVoice);
+            }
+
+            return result;
+        }
+
+        private static void appendManuscriptClusterEntries(
+            Dictionary<DrawableNote, ManuscriptHorizontalClusterEntry> target,
+            List<DrawableNote> clusterNotes,
+            ManuscriptBackgroundEnhanced.ManuscriptNotationVoice voice,
+            bool hasCrossVoice)
+        {
+            if (clusterNotes.Count == 0 || (clusterNotes.Count == 1 && !hasCrossVoice))
+                return;
+
+            for (int i = 0; i < clusterNotes.Count; i++)
+            {
+                target[clusterNotes[i]] = new ManuscriptHorizontalClusterEntry(
+                    voice,
+                    i,
+                    clusterNotes.Count,
+                    hasCrossVoice);
+            }
+        }
+
+        internal static long ResolveManuscriptSimultaneousTimeKey(double hitTimeMs)
+        {
+            if (double.IsNaN(hitTimeMs) || double.IsInfinity(hitTimeMs))
+                return 0;
+
+            return (long)Math.Round(hitTimeMs * 2.0, MidpointRounding.AwayFromZero);
+        }
+
+        internal static float ResolveManuscriptChordHorizontalOffset(
+            int voiceIndex,
+            int voiceCount,
+            bool lowerVoice,
+            bool hasCrossVoice,
+            float noteWidth)
+        {
+            float safeNoteWidth = float.IsFinite(noteWidth)
+                ? Math.Clamp(noteWidth, 6f, 40f)
+                : 10f;
+
+            int safeCount = Math.Clamp(voiceCount, 1, 4);
+            int safeIndex = Math.Clamp(voiceIndex, 0, safeCount - 1);
+            float centeredIndex = safeIndex - (safeCount - 1) * 0.5f;
+
+            float sameVoiceStep = Math.Clamp(safeNoteWidth * 0.40f, 2.8f, 9.8f);
+            float sameVoiceOffset = centeredIndex * sameVoiceStep;
+            if (!hasCrossVoice)
+                return sameVoiceOffset;
+
+            float crossVoiceShift = Math.Clamp(safeNoteWidth * 0.20f, 2.2f, 6.8f);
+            return sameVoiceOffset + (lowerVoice ? -crossVoiceShift : crossVoiceShift);
         }
 
         private ManuscriptBeamAnchor createManuscriptBeamAnchor(DrawableNote note)
@@ -1878,7 +2003,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float drawHeight,
             float hitLineY,
             float travelDistance,
-            in SheetTimelineWindow sheetWindow)
+            in SheetTimelineWindow sheetWindow,
+            Dictionary<DrawableNote, ManuscriptHorizontalClusterEntry>? manuscriptHorizontalClusters)
         {
             // Use the dynamic ApproachDuration here
             float progress = 1 - (timeUntilHit / (float)ApproachDuration);
@@ -1889,7 +2015,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             }
             else if (currentLaneViewMode == LaneViewMode.Manuscript)
             {
-                updateNotePositionManuscript(note, timeUntilHit, drawWidth, drawHeight, sheetWindow);
+                updateNotePositionManuscript(note, timeUntilHit, drawWidth, drawHeight, sheetWindow, manuscriptHorizontalClusters);
             }
             else
             {
@@ -1902,7 +2028,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float timeUntilHit,
             float drawWidth,
             float drawHeight,
-            in SheetTimelineWindow sheetWindow)
+            in SheetTimelineWindow sheetWindow,
+            Dictionary<DrawableNote, ManuscriptHorizontalClusterEntry>? manuscriptHorizontalClusters)
         {
             float timelineWidth = Math.Max(120f, sheetWindow.RightX - sheetWindow.LeftX);
             double normalized = sheetWindow.Duration <= 0
@@ -1918,6 +2045,19 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 timelineWidth * SheetMusicTuning.NoteWidthRatio * noteScaleSetting,
                 SheetMusicTuning.MinNoteWidth,
                 SheetMusicTuning.MaxNoteWidth);
+
+            if (manuscriptHorizontalClusters != null
+                && manuscriptHorizontalClusters.TryGetValue(note, out var cluster))
+            {
+                bool lowerVoice = cluster.Voice == ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower;
+                x += ResolveManuscriptChordHorizontalOffset(
+                    cluster.VoiceIndex,
+                    cluster.VoiceCount,
+                    lowerVoice,
+                    cluster.HasCrossVoice,
+                    noteWidth);
+            }
+
             float noteHeight = Math.Clamp(
                 staffSpacing * SheetMusicTuning.NoteHeightRatio,
                 SheetMusicTuning.MinNoteHeight,

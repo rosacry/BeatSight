@@ -238,8 +238,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         /// <summary>Additional visibility buffer after miss window (ms).</summary>
         private const double PastVisibilityBuffer = 600;
         private const double BaseVisibleMeasures = 2.0;
-        private const double AutoZoomBaseMultiplier = 1.28;
-        private const double AutoZoomMaxMultiplier = 1.94;
+        private const double AutoZoomBaseMultiplier = 1.36;
+        private const double AutoZoomMaxMultiplier = 2.12;
 
         private readonly Func<double> currentTimeProvider;
         private readonly List<DrawableNote> notes = new();
@@ -831,14 +831,14 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             // Density drives the majority of zoom-in pressure, with additional boosts for higher
             // tempos and compound signatures so default framing is denser and easier to read.
-            double densityNormalized = Math.Clamp((clampedDensity - 0.55) / 1.75, 0.0, 1.0);
-            double bpmNormalized = Math.Clamp((clampedBpm - 95.0) / 145.0, 0.0, 1.0);
-            double signatureNormalized = Math.Clamp((clampedMeasure - 4.0) / 5.0, 0.0, 1.0);
+            double densityNormalized = Math.Clamp((clampedDensity - 0.40) / 1.60, 0.0, 1.0);
+            double bpmNormalized = Math.Clamp((clampedBpm - 90.0) / 135.0, 0.0, 1.0);
+            double signatureNormalized = Math.Clamp((clampedMeasure - 4.0) / 4.5, 0.0, 1.0);
 
             double multiplier = AutoZoomBaseMultiplier
-                                + 0.40 * densityNormalized
-                                + 0.18 * bpmNormalized
-                                + 0.08 * signatureNormalized;
+                                + 0.48 * densityNormalized
+                                + 0.20 * bpmNormalized
+                                + 0.10 * signatureNormalized;
 
             return Math.Clamp(multiplier, AutoZoomBaseMultiplier, AutoZoomMaxMultiplier);
         }

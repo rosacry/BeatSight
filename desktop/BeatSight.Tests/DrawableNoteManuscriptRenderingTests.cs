@@ -43,6 +43,26 @@ public class DrawableNoteManuscriptRenderingTests
     }
 
     [Fact]
+    public void ManuscriptRideBellUsesDiamondNoteheadWithoutCrossLines()
+    {
+        var note = createNote("ride_bell", velocity: 0.9);
+        note.Width = 20;
+        note.Height = 10;
+
+        note.SetViewMode(LaneViewMode.Manuscript);
+
+        var noteheadContainer = getPrivateField<Container>(note, "noteheadContainer");
+        var mainBox = getPrivateField<Box>(note, "mainBox");
+        var lineA = getPrivateField<Box>(note, "manuscriptCrossLineA");
+        var lineB = getPrivateField<Box>(note, "manuscriptCrossLineB");
+
+        Assert.True(noteheadContainer.Rotation > 30f);
+        Assert.True(mainBox.Alpha > 0.5f);
+        Assert.True(lineA.Alpha < 0.01f);
+        Assert.True(lineB.Alpha < 0.01f);
+    }
+
+    [Fact]
     public void ManuscriptStandaloneFlagsFollowAssignedFlagCount()
     {
         var note = createNote("snare", velocity: 0.9);

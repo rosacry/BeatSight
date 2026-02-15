@@ -106,9 +106,19 @@ public class ManuscriptNotationMappingTests
     {
         Assert.True(ManuscriptBackgroundEnhanced.UsesCrossNoteheadForComponent("hihat_pedal"));
         Assert.True(ManuscriptBackgroundEnhanced.UsesCrossNoteheadForComponent("china_2"));
-        Assert.True(ManuscriptBackgroundEnhanced.UsesCrossNoteheadForComponent("ride_bell"));
+        Assert.False(ManuscriptBackgroundEnhanced.UsesCrossNoteheadForComponent("ride_bell"));
+        Assert.False(ManuscriptBackgroundEnhanced.UsesCrossNoteheadForComponent("cowbell"));
         Assert.False(ManuscriptBackgroundEnhanced.UsesCrossNoteheadForComponent("snare"));
         Assert.False(ManuscriptBackgroundEnhanced.UsesCrossNoteheadForComponent("kick"));
+    }
+
+    [Fact]
+    public void DiamondNoteheadsApplyToRideBellAndCowbell()
+    {
+        Assert.True(ManuscriptBackgroundEnhanced.UsesDiamondNoteheadForComponent("ride_bell_1"));
+        Assert.True(ManuscriptBackgroundEnhanced.UsesDiamondNoteheadForComponent("cowbell"));
+        Assert.False(ManuscriptBackgroundEnhanced.UsesDiamondNoteheadForComponent("ride_bow"));
+        Assert.False(ManuscriptBackgroundEnhanced.UsesDiamondNoteheadForComponent("snare"));
     }
 
     [Fact]

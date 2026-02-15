@@ -265,6 +265,7 @@ namespace BeatSight.Tests
             Assert.Contains("ResolveManuscriptTupletGroupingTicks", source);
             Assert.Contains("ShouldRenderManuscriptTupletHint", source);
             Assert.Contains("ResolveManuscriptTupletBracketEmphasis", source);
+            Assert.Contains("UsesDiamondNoteheadForComponent", source);
             Assert.Contains("timelineTupletBracketRails", source);
             Assert.Contains("getTimelineTupletBracketRail", source);
             Assert.Contains("getTimelineTupletBracketLeftHook", source);

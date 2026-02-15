@@ -371,6 +371,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             {
                 Colour = Color4.White;
                 bool cymbalHead = ManuscriptBackgroundEnhanced.UsesCrossNoteheadForComponent(ComponentName);
+                bool diamondHead = ManuscriptBackgroundEnhanced.UsesDiamondNoteheadForComponent(ComponentName);
                 bool ghostNote = Velocity < 0.35;
                 bool accentNote = Velocity > 0.85;
                 bool hiHatOpen = ManuscriptBackgroundEnhanced.IsOpenHiHatComponent(ComponentName);
@@ -381,10 +382,24 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 Color4 manuscriptInk = new Color4(228, 236, 248, 255);
                 mainBox.Shear = Vector2.Zero;
                 noteheadContainer.Masking = true;
-                noteheadContainer.Rotation = cymbalHead ? 0f : -18f;
-                noteheadContainer.CornerRadius = Math.Clamp(noteHeight * 0.5f, 4f, 13f);
+                noteheadContainer.Scale = Vector2.One;
+                noteheadContainer.Rotation = cymbalHead
+                    ? 0f
+                    : diamondHead
+                        ? 45f
+                        : -18f;
+                noteheadContainer.CornerRadius = diamondHead
+                    ? Math.Clamp(noteHeight * 0.18f, 1.4f, 3.6f)
+                    : Math.Clamp(noteHeight * 0.5f, 4f, 13f);
                 mainBox.Colour = ghostNote ? DesignSystem.WithOpacity(manuscriptInk, 0.40f) : manuscriptInk;
-                mainBox.Alpha = cymbalHead ? 0f : 0.94f * velocityAlpha;
+                mainBox.Alpha = cymbalHead
+                    ? 0f
+                    : diamondHead
+                        ? 0.90f * velocityAlpha
+                        : 0.94f * velocityAlpha;
+
+                if (diamondHead)
+                    noteheadContainer.Scale = new Vector2(0.84f, 0.84f);
 
                 float crossLength = Math.Clamp(noteWidth * 0.95f, 9f, 24f);
                 float crossThickness = Math.Clamp(crossLength * 0.15f, 1.5f, 3f);
@@ -392,13 +407,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 manuscriptCrossLineA.Height = crossLength;
                 manuscriptCrossLineA.Rotation = 45f;
                 manuscriptCrossLineA.Colour = manuscriptInk;
-                manuscriptCrossLineA.Alpha = cymbalHead ? 0.95f * velocityAlpha : 0f;
+                manuscriptCrossLineA.Alpha = cymbalHead && !diamondHead ? 0.95f * velocityAlpha : 0f;
 
                 manuscriptCrossLineB.Width = crossThickness;
                 manuscriptCrossLineB.Height = crossLength;
                 manuscriptCrossLineB.Rotation = -45f;
                 manuscriptCrossLineB.Colour = manuscriptInk;
-                manuscriptCrossLineB.Alpha = cymbalHead ? 0.95f * velocityAlpha : 0f;
+                manuscriptCrossLineB.Alpha = cymbalHead && !diamondHead ? 0.95f * velocityAlpha : 0f;
 
                 highlightStrip.Anchor = Anchor.Centre;
                 highlightStrip.Origin = Anchor.BottomCentre;
@@ -510,6 +525,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             manuscriptDurationDot.Alpha = 0;
             noteheadContainer.Masking = true;
             noteheadContainer.Rotation = 0f;
+            noteheadContainer.Scale = Vector2.One;
             Colour = AccentColour;
             mainBox.Colour = AccentColour;
             stem.Colour = AccentColour;

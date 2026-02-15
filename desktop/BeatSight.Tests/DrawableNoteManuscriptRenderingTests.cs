@@ -116,6 +116,24 @@ public class DrawableNoteManuscriptRenderingTests
         Assert.True(closedVertical.Alpha > 0.5f);
     }
 
+    [Fact]
+    public void ManuscriptHalfOpenHiHatShowsRingWithSlashMarker()
+    {
+        var note = createNote("hihat_half_open", velocity: 0.9);
+        note.Width = 20;
+        note.Height = 10;
+
+        note.SetViewMode(LaneViewMode.Manuscript);
+
+        var openRing = getPrivateField<Circle>(note, "manuscriptHiHatOpenIndicator");
+        var slash = getPrivateField<Box>(note, "manuscriptHiHatHalfOpenSlash");
+        var closedHorizontal = getPrivateField<Box>(note, "manuscriptHiHatClosedHorizontal");
+
+        Assert.True(openRing.Alpha > 0.5f);
+        Assert.True(slash.Alpha > 0.5f);
+        Assert.True(closedHorizontal.Alpha < 0.01f);
+    }
+
     private static DrawableNote createNote(string component, double velocity)
     {
         return new DrawableNote(

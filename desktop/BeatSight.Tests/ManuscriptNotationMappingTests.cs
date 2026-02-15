@@ -116,6 +116,12 @@ public class ManuscriptNotationMappingTests
         Assert.True(ManuscriptBackgroundEnhanced.IsHiHatFamilyComponent("hihat_open"));
         Assert.True(ManuscriptBackgroundEnhanced.IsOpenHiHatComponent("hihat_open"));
         Assert.False(ManuscriptBackgroundEnhanced.IsClosedHiHatComponent("hihat_open"));
+        Assert.False(ManuscriptBackgroundEnhanced.IsHalfOpenHiHatComponent("hihat_open"));
+
+        Assert.True(ManuscriptBackgroundEnhanced.IsHiHatFamilyComponent("hihat_half_open"));
+        Assert.True(ManuscriptBackgroundEnhanced.IsOpenHiHatComponent("hihat_half_open"));
+        Assert.True(ManuscriptBackgroundEnhanced.IsHalfOpenHiHatComponent("hihat_half_open"));
+        Assert.False(ManuscriptBackgroundEnhanced.IsClosedHiHatComponent("hihat_half_open"));
 
         Assert.True(ManuscriptBackgroundEnhanced.IsClosedHiHatComponent("hihat_closed"));
         Assert.True(ManuscriptBackgroundEnhanced.IsClosedHiHatComponent("hihat_pedal"));

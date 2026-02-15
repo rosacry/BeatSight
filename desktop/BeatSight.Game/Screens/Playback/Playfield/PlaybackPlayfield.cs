@@ -261,6 +261,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private Container hitExplosionLayer = null!;
         private Container laneBackgroundContainer = null!;
         private Container manuscriptBeamLayer = null!;
+        private Container manuscriptDurationLayer = null!;
         private Container manuscriptRestLayer = null!;
         private Container threeDProfileHintContainer = null!;
         private SpriteText threeDProfileHintText = null!;
@@ -294,11 +295,18 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private const float ManuscriptSecondaryBeamThickness = 2.4f;
         private const float ManuscriptBeamSpacing = 5.2f;
         private const float ManuscriptBeamAlpha = 0.84f;
+        private const float ManuscriptTieThickness = 2.1f;
+        private const float ManuscriptTieInnerAlpha = 0.46f;
+        private const float ManuscriptTieAlpha = 0.78f;
         private const double MinBeamGapBeats = 0.08;
         private const double SingleBeamThresholdBeats = 0.76;
         private const double DoubleBeamThresholdBeats = 0.38;
         private const double TripleBeamThresholdBeats = 0.19;
+        private const double MinTieGapBeats = 0.78;
+        private const double MaxTieGapBeats = 3.6;
+        private const double DottedGapToleranceBeats = 0.075;
         private static readonly Color4 manuscriptBeamColor = new Color4(42, 50, 66, 255);
+        private static readonly Color4 manuscriptTieColor = new Color4(188, 202, 222, 255);
         private static readonly Color4 manuscriptRestColor = new Color4(210, 220, 236, 255);
         private ThreeDProfileTuning currentThreeDProfileTuning = resolveThreeDProfileTuning(ThreeDStageProfile.GhClassic);
 
@@ -426,6 +434,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     Child = timingStrikeZone
                 },
                 manuscriptBeamLayer = new Container
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    Width = PlayfieldWidthRatio
+                },
+                manuscriptDurationLayer = new Container
                 {
                     RelativeSizeAxes = Axes.Both,
                     Anchor = Anchor.Centre,
@@ -573,7 +588,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             loadedBeatmap = beatmap;
             notes.Clear();
             noteLayer.Clear(false);
-            manuscriptBeamLayer.Clear(false);
+            clearManuscriptBeams();
+            clearManuscriptDurationCues();
             clearManuscriptRests();
             firstActiveNoteIndex = 0;
             sortedTimingPoints.Clear();
@@ -805,6 +821,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             if (notes.Count == 0)
             {
                 clearManuscriptBeams();
+                clearManuscriptDurationCues();
                 clearManuscriptRests();
                 return;
             }
@@ -912,6 +929,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             else
             {
                 clearManuscriptBeams();
+                clearManuscriptDurationCues();
                 clearManuscriptRests();
             }
         }
@@ -1291,12 +1309,16 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private void updateManuscriptBeams(List<ManuscriptBeamAnchor> anchors)
         {
             clearManuscriptBeams();
+            clearManuscriptDurationCues();
 
             if (anchors.Count == 0)
                 return;
 
             foreach (var anchor in anchors)
+            {
                 anchor.Note.SetManuscriptFlagCount(0);
+                anchor.Note.SetManuscriptDurationDot(false);
+            }
 
             addManuscriptBeamsForVoice(anchors, ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Upper);
             addManuscriptBeamsForVoice(anchors, ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower);
@@ -1315,6 +1337,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 return;
 
             var beamedNotes = new HashSet<DrawableNote>();
+
             for (int i = 0; i < voiceAnchors.Count - 1; i++)
             {
                 var current = voiceAnchors[i];
@@ -1330,9 +1353,27 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 beamedNotes.Add(next.Note);
             }
 
+            var previousByNotation = new Dictionary<int, ManuscriptBeamAnchor>();
             for (int i = 0; i < voiceAnchors.Count; i++)
             {
                 var anchor = voiceAnchors[i];
+
+                if (previousByNotation.TryGetValue(anchor.NotationIndex, out var previousAnchor))
+                {
+                    double beatDuration = Math.Max(1.0, (previousAnchor.BeatDuration + anchor.BeatDuration) * 0.5);
+                    double gapBeats = (anchor.HitTime - previousAnchor.HitTime) / beatDuration;
+                    if (gapBeats > 0)
+                    {
+                        if (ShouldRenderManuscriptDottedCue(gapBeats))
+                            previousAnchor.Note.SetManuscriptDurationDot(true);
+
+                        if (ShouldRenderManuscriptTieCue(gapBeats))
+                            addManuscriptTieSegment(previousAnchor, anchor);
+                    }
+                }
+
+                previousByNotation[anchor.NotationIndex] = anchor;
+
                 if (beamedNotes.Contains(anchor.Note))
                 {
                     anchor.Note.SetManuscriptFlagCount(0);
@@ -1346,11 +1387,23 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
         private int resolveStandaloneManuscriptFlagCount(List<ManuscriptBeamAnchor> voiceAnchors, int index)
         {
-            if (index < 0 || index >= voiceAnchors.Count)
+            if (!tryResolveNearestStandaloneGap(voiceAnchors, index, out double nearestGap))
                 return 0;
 
+            if (nearestGap > SingleBeamThresholdBeats)
+                return 0;
+
+            int beamLevel = GetManuscriptBeamLevelCount(nearestGap);
+            return Math.Clamp(beamLevel, 0, 3);
+        }
+
+        private bool tryResolveNearestStandaloneGap(List<ManuscriptBeamAnchor> voiceAnchors, int index, out double nearestGap)
+        {
+            nearestGap = double.MaxValue;
+            if (index < 0 || index >= voiceAnchors.Count)
+                return false;
+
             var current = voiceAnchors[index];
-            double nearestGap = double.MaxValue;
 
             for (int i = index - 1; i >= 0; i--)
             {
@@ -1380,11 +1433,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     nearestGap = Math.Min(nearestGap, (voiceAnchors[index + 1].HitTime - current.HitTime) / Math.Max(1.0, current.BeatDuration));
             }
 
-            if (double.IsPositiveInfinity(nearestGap) || nearestGap == double.MaxValue || nearestGap <= 0 || nearestGap > SingleBeamThresholdBeats)
-                return 0;
+            if (double.IsPositiveInfinity(nearestGap) || nearestGap == double.MaxValue || nearestGap <= 0)
+                return false;
 
-            int beamLevel = GetManuscriptBeamLevelCount(nearestGap);
-            return Math.Clamp(beamLevel, 0, 3);
+            return true;
         }
 
         private bool tryGetBeamLevelCount(in ManuscriptBeamAnchor current, in ManuscriptBeamAnchor next, out int levelCount)
@@ -1458,6 +1510,34 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             return 1;
         }
 
+        internal static bool ShouldRenderManuscriptTieCue(double gapBeats)
+        {
+            if (double.IsNaN(gapBeats) || double.IsInfinity(gapBeats))
+                return false;
+
+            return gapBeats >= MinTieGapBeats && gapBeats <= MaxTieGapBeats;
+        }
+
+        internal static bool ShouldRenderManuscriptDottedCue(double gapBeats)
+        {
+            if (double.IsNaN(gapBeats) || double.IsInfinity(gapBeats) || gapBeats <= 0)
+                return false;
+
+            ReadOnlySpan<double> dottedDurations = stackalloc double[]
+            {
+                0.375, // dotted 16th
+                0.75,  // dotted 8th
+                1.5,   // dotted quarter
+                3.0    // dotted half
+            };
+
+            double nearestDelta = double.MaxValue;
+            for (int i = 0; i < dottedDurations.Length; i++)
+                nearestDelta = Math.Min(nearestDelta, Math.Abs(gapBeats - dottedDurations[i]));
+
+            return nearestDelta <= DottedGapToleranceBeats;
+        }
+
         private void addManuscriptBeamSegment(in ManuscriptBeamAnchor start, in ManuscriptBeamAnchor end, int beamLevel)
         {
             float direction = start.StemDown ? 1f : -1f;
@@ -1489,9 +1569,61 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             });
         }
 
+        private void addManuscriptTieSegment(in ManuscriptBeamAnchor start, in ManuscriptBeamAnchor end)
+        {
+            float startX = start.Note.Position.X + Math.Max(2f, start.Note.Width * 0.54f);
+            float endX = end.Note.Position.X - Math.Max(2f, end.Note.Width * 0.54f);
+            float span = endX - startX;
+            if (span < 12f)
+                return;
+
+            float direction = start.StemDown ? -1f : 1f;
+            float startY = start.Note.Position.Y + direction * start.Note.Height * 0.56f;
+            float endY = end.Note.Position.Y + direction * end.Note.Height * 0.56f;
+            float densityScale = Math.Clamp(DrawHeight / 1080f, 0.82f, 1.2f);
+            float archLift = direction * Math.Clamp(span * 0.082f, 2.4f, 9.6f);
+
+            var tieStart = new Vector2(startX, startY);
+            var tieEnd = new Vector2(endX, endY);
+            var tieMid = new Vector2((startX + endX) * 0.5f, (startY + endY) * 0.5f + archLift);
+
+            float thickness = ManuscriptTieThickness * densityScale;
+            addManuscriptDurationCurveSegment(tieStart, tieMid, thickness, ManuscriptTieAlpha);
+            addManuscriptDurationCurveSegment(tieMid, tieEnd, thickness, ManuscriptTieAlpha);
+
+            Vector2 innerOffset = new Vector2(0f, -direction * thickness * 0.9f);
+            addManuscriptDurationCurveSegment(tieStart + innerOffset, tieMid + innerOffset, thickness * 0.56f, ManuscriptTieInnerAlpha);
+            addManuscriptDurationCurveSegment(tieMid + innerOffset, tieEnd + innerOffset, thickness * 0.56f, ManuscriptTieInnerAlpha);
+        }
+
+        private void addManuscriptDurationCurveSegment(Vector2 start, Vector2 end, float thickness, float alpha)
+        {
+            Vector2 delta = end - start;
+            float length = delta.Length;
+            if (length < 5f)
+                return;
+
+            manuscriptDurationLayer.Add(new Box
+            {
+                Anchor = Anchor.TopLeft,
+                Origin = Anchor.CentreLeft,
+                Position = start,
+                Width = length,
+                Height = Math.Max(1f, thickness),
+                Rotation = MathF.Atan2(delta.Y, delta.X) * 180f / MathF.PI,
+                Colour = manuscriptTieColor,
+                Alpha = alpha
+            });
+        }
+
         private void clearManuscriptBeams()
         {
             manuscriptBeamLayer.Clear(false);
+        }
+
+        private void clearManuscriptDurationCues()
+        {
+            manuscriptDurationLayer.Clear(false);
         }
 
         private DrawableManuscriptRest getOrCreateManuscriptRest(int index)
@@ -2054,6 +2186,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             }
 
             clearManuscriptBeams();
+            clearManuscriptDurationCues();
             clearManuscriptRests();
             applyKickModeToNotes();
         }

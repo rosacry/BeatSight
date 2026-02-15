@@ -134,6 +134,23 @@ public class DrawableNoteManuscriptRenderingTests
         Assert.True(closedHorizontal.Alpha < 0.01f);
     }
 
+    [Fact]
+    public void ManuscriptDurationDotFollowsAssignedCueState()
+    {
+        var note = createNote("snare", velocity: 0.9);
+        note.Width = 20;
+        note.Height = 10;
+        note.SetViewMode(LaneViewMode.Manuscript);
+
+        note.SetManuscriptDurationDot(true);
+
+        var dot = getPrivateField<Circle>(note, "manuscriptDurationDot");
+        Assert.True(dot.Alpha > 0.5f);
+
+        note.SetManuscriptDurationDot(false);
+        Assert.True(dot.Alpha < 0.01f);
+    }
+
     private static DrawableNote createNote(string component, double velocity)
     {
         return new DrawableNote(

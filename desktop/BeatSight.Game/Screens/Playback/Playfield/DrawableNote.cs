@@ -112,6 +112,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private readonly Box manuscriptHiHatClosedHorizontal;
         private readonly Box manuscriptHiHatClosedVertical;
         private readonly Box manuscriptHiHatHalfOpenSlash;
+        private readonly Circle manuscriptDurationDot;
         private readonly Box? glowBox;
         private readonly Box stem;
         private readonly Bindable<bool> showGlowEffects;
@@ -121,6 +122,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private readonly int originalLane;
         private bool kickGlobalMode;
         private int manuscriptFlagCount;
+        private bool manuscriptDurationDotVisible;
         private float lastAppliedDepth = float.NaN;
         private readonly float velocityAlpha;
 
@@ -293,6 +295,16 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             };
             children.Add(manuscriptHiHatHalfOpenSlash);
 
+            manuscriptDurationDot = new Circle
+            {
+                Size = new Vector2(2.6f),
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                Colour = AccentColour,
+                Alpha = 0
+            };
+            children.Add(manuscriptDurationDot);
+
             highlightStrip = new Box
             {
                 RelativeSizeAxes = Axes.X,
@@ -431,6 +443,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 manuscriptHiHatClosedVertical.Y = hiHatArticulationY;
                 manuscriptHiHatClosedVertical.Alpha = hiHatClosed ? 0.92f * velocityAlpha : 0f;
 
+                float durationDotDiameter = Math.Clamp(noteHeight * 0.28f, 2.1f, 4.2f);
+                manuscriptDurationDot.Size = new Vector2(durationDotDiameter);
+                manuscriptDurationDot.Colour = manuscriptInk;
+                manuscriptDurationDot.X = noteWidth * 0.72f;
+                manuscriptDurationDot.Y = 0f;
+                manuscriptDurationDot.Alpha = manuscriptDurationDotVisible ? 0.95f * velocityAlpha : 0f;
+
                 updateManuscriptFlagGeometry(noteWidth, noteHeight, stemDown, manuscriptInk);
 
                 return;
@@ -446,6 +465,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             manuscriptHiHatClosedHorizontal.Alpha = 0;
             manuscriptHiHatClosedVertical.Alpha = 0;
             manuscriptHiHatHalfOpenSlash.Alpha = 0;
+            manuscriptDurationDot.Alpha = 0;
             noteheadContainer.Masking = true;
             noteheadContainer.Rotation = 0f;
             Colour = AccentColour;
@@ -536,6 +556,16 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 return;
 
             manuscriptFlagCount = clamped;
+            if (viewMode == LaneViewMode.Manuscript)
+                SetViewMode(viewMode);
+        }
+
+        public void SetManuscriptDurationDot(bool visible)
+        {
+            if (manuscriptDurationDotVisible == visible)
+                return;
+
+            manuscriptDurationDotVisible = visible;
             if (viewMode == LaneViewMode.Manuscript)
                 SetViewMode(viewMode);
         }

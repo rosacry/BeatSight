@@ -52,4 +52,47 @@ public class PlaybackPlayfieldThreeDProfileTests
     {
         Assert.Equal(expected, PlaybackPlayfield.FormatThreeDProfileHintLabel(profile));
     }
+
+    [Fact]
+    public void ThreeDStrikeZonePresentationKeepsTightProfileMostEmphasized()
+    {
+        var arcade = ThreeDHighwayBackground.ResolveThreeDStrikeZonePresentation(ThreeDStageProfile.Arcade, drawHeight: 1080f);
+        var classic = ThreeDHighwayBackground.ResolveThreeDStrikeZonePresentation(ThreeDStageProfile.GhClassic, drawHeight: 1080f);
+        var tight = ThreeDHighwayBackground.ResolveThreeDStrikeZonePresentation(ThreeDStageProfile.Tight, drawHeight: 1080f);
+
+        Assert.True(tight.RailAlpha > classic.RailAlpha);
+        Assert.True(classic.RailAlpha > arcade.RailAlpha);
+
+        Assert.True(tight.GlowAlpha > classic.GlowAlpha);
+        Assert.True(classic.GlowAlpha > arcade.GlowAlpha);
+
+        Assert.True(tight.ReceptorHeightScale > classic.ReceptorHeightScale);
+        Assert.True(classic.ReceptorHeightScale > arcade.ReceptorHeightScale);
+    }
+
+    [Theory]
+    [InlineData(ThreeDStageProfile.Arcade)]
+    [InlineData(ThreeDStageProfile.GhClassic)]
+    [InlineData(ThreeDStageProfile.Tight)]
+    public void ThreeDStrikeZonePresentationValuesStayWithinSafeBounds(ThreeDStageProfile profile)
+    {
+        var compact = ThreeDHighwayBackground.ResolveThreeDStrikeZonePresentation(profile, drawHeight: 720f);
+        var desktop = ThreeDHighwayBackground.ResolveThreeDStrikeZonePresentation(profile, drawHeight: 1080f);
+        var tall = ThreeDHighwayBackground.ResolveThreeDStrikeZonePresentation(profile, drawHeight: 1440f);
+
+        Assert.InRange(compact.RailAlpha, 0.35f, 0.9f);
+        Assert.InRange(compact.GlowAlpha, 0.35f, 0.9f);
+        Assert.InRange(compact.ReceptorHeightScale, 0.8f, 1.3f);
+        Assert.InRange(compact.BorderThickness, 1.4f, 2.6f);
+
+        Assert.InRange(desktop.RailAlpha, 0.35f, 0.9f);
+        Assert.InRange(desktop.GlowAlpha, 0.35f, 0.9f);
+        Assert.InRange(desktop.ReceptorHeightScale, 0.8f, 1.3f);
+        Assert.InRange(desktop.BorderThickness, 1.4f, 2.6f);
+
+        Assert.InRange(tall.RailAlpha, 0.35f, 0.9f);
+        Assert.InRange(tall.GlowAlpha, 0.35f, 0.9f);
+        Assert.InRange(tall.ReceptorHeightScale, 0.8f, 1.3f);
+        Assert.InRange(tall.BorderThickness, 1.4f, 2.6f);
+    }
 }

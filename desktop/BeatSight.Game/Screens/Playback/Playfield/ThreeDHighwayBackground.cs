@@ -115,6 +115,31 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             };
         }
 
+        internal static (float RailAlpha, float GlowAlpha, float ReceptorHeightScale, float BorderThickness) ResolveThreeDStrikeZonePresentation(ThreeDStageProfile profile, float drawHeight)
+        {
+            float safeHeight = float.IsFinite(drawHeight) ? Math.Clamp(drawHeight, 540f, 4320f) : 1080f;
+            float compactBoost = safeHeight <= 760f ? 1.08f : safeHeight >= 1440f ? 0.96f : 1f;
+
+            return profile switch
+            {
+                ThreeDStageProfile.Arcade => (
+                    RailAlpha: 0.44f,
+                    GlowAlpha: 0.48f,
+                    ReceptorHeightScale: 0.96f * compactBoost,
+                    BorderThickness: 1.7f),
+                ThreeDStageProfile.Tight => (
+                    RailAlpha: 0.64f,
+                    GlowAlpha: 0.68f,
+                    ReceptorHeightScale: 1.10f * compactBoost,
+                    BorderThickness: 2.25f),
+                _ => (
+                    RailAlpha: 0.56f,
+                    GlowAlpha: 0.60f,
+                    ReceptorHeightScale: 1.04f * compactBoost,
+                    BorderThickness: 2.0f)
+            };
+        }
+
         public ThreeDHighwayBackground(LaneLayout laneLayout, bool kickUsesGlobalLine, ThreeDStageProfile stageProfile)
         {
             this.laneLayout = laneLayout;
@@ -518,6 +543,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 return;
 
             float pulse = (float)Math.Clamp(intensity, 0.1, 1.0);
+            var strikeZonePresentation = ResolveThreeDStrikeZonePresentation(stageProfile, DrawHeight);
 
             beatPulseOverlay.ClearTransforms();
             beatPulseOverlay.Alpha = 0.05f * pulse;
@@ -534,8 +560,15 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             if (receptorRail != null)
             {
                 receptorRail.ClearTransforms();
-                receptorRail.Alpha = 0.72f * pulse;
-                receptorRail.FadeTo(0.46f, beatInterval * 0.55, Easing.OutQuad);
+                receptorRail.Alpha = Math.Min(0.96f, strikeZonePresentation.RailAlpha + 0.26f * pulse);
+                receptorRail.FadeTo(strikeZonePresentation.RailAlpha, beatInterval * 0.55, Easing.OutQuad);
+            }
+
+            if (strikeZoneGlow != null)
+            {
+                strikeZoneGlow.ClearTransforms();
+                strikeZoneGlow.Alpha = Math.Min(0.94f, strikeZonePresentation.GlowAlpha + 0.24f * pulse);
+                strikeZoneGlow.FadeTo(strikeZonePresentation.GlowAlpha, beatInterval * 0.6, Easing.OutQuad);
             }
         }
 
@@ -727,10 +760,11 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             if (laneReceptorBoxes.Count == 0)
                 return;
 
+            var strikeZonePresentation = ResolveThreeDStrikeZonePresentation(stageProfile, DrawHeight);
             float receptorWidthAtDepth = lerp(topWidth, bottomWidth, receptorDepth);
             float receptorLaneWidth = receptorWidthAtDepth / visibleLaneCount;
             float receptorLeft = (DrawWidth - receptorWidthAtDepth) * 0.5f;
-            float receptorHeight = Math.Clamp(DrawHeight * 0.042f, 20f, 40f);
+            float receptorHeight = Math.Clamp(DrawHeight * 0.042f * strikeZonePresentation.ReceptorHeightScale, 20f, 44f);
             float receptorY = hitY - receptorHeight * 0.56f;
 
             for (int lane = 0; lane < laneReceptorBoxes.Count; lane++)
@@ -740,6 +774,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 receptor.Y = receptorY;
                 receptor.Width = Math.Max(1.5f, receptorLaneWidth - receptorInset * 2f);
                 receptor.Height = receptorHeight;
+                receptor.BorderThickness = strikeZonePresentation.BorderThickness;
             }
 
             if (receptorRail != null)
@@ -748,15 +783,15 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 receptorRail.Y = hitY + 0.5f;
                 receptorRail.Width = receptorWidthAtDepth + 4f;
                 receptorRail.Height = 5f;
-                receptorRail.Alpha = 0.46f;
+                receptorRail.Alpha = strikeZonePresentation.RailAlpha;
             }
 
             if (strikeZoneGlow != null)
             {
                 strikeZoneGlow.Y = hitY - receptorHeight * 0.85f;
-                strikeZoneGlow.Height = receptorHeight * 1.45f;
+                strikeZoneGlow.Height = receptorHeight * 1.56f;
                 strikeZoneGlow.Width = Math.Clamp((receptorWidthAtDepth + 18f) / Math.Max(1f, DrawWidth), 0.45f, 0.96f);
-                strikeZoneGlow.Alpha = 0.52f;
+                strikeZoneGlow.Alpha = strikeZonePresentation.GlowAlpha;
             }
         }
 

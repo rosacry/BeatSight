@@ -1559,8 +1559,14 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 return false;
 
             double gapBeats = (next.HitTime - current.HitTime) / beatDuration;
-            int resolvedLevelCount = GetManuscriptBeamLevelCount(gapBeats);
-            if (resolvedLevelCount <= 0)
+            if (!TryResolveManuscriptBeamSubdivision(gapBeats, out int resolvedLevelCount, out int subdivisionDivisor))
+                return false;
+
+            // Keep beams inside their rhythmic grouping bucket (e.g. split 16th streams per half-beat).
+            double beatStart = current.BeatOrigin + currentBeat * beatDuration;
+            double currentBeatProgress = (current.HitTime - beatStart) / beatDuration;
+            double nextBeatProgress = (next.HitTime - beatStart) / beatDuration;
+            if (!IsManuscriptBeamPairWithinSubdivisionGroup(currentBeatProgress, nextBeatProgress, subdivisionDivisor))
                 return false;
 
             levelCount = resolvedLevelCount;
@@ -1569,8 +1575,18 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
         internal static int GetManuscriptBeamLevelCount(double gapBeats)
         {
+            return TryResolveManuscriptBeamSubdivision(gapBeats, out int levelCount, out _)
+                ? levelCount
+                : 0;
+        }
+
+        internal static bool TryResolveManuscriptBeamSubdivision(double gapBeats, out int levelCount, out int subdivisionDivisor)
+        {
+            levelCount = 0;
+            subdivisionDivisor = 0;
+
             if (gapBeats < MinBeamGapBeats || gapBeats > SingleBeamThresholdBeats)
-                return 0;
+                return false;
 
             // Snap to common drummer subdivisions so beam groupings stay stable:
             // 8th (1/2 beat), 8th-triplet (1/3), 16th (1/4), 16th-triplet (1/6), 32nd (1/8).
@@ -1578,8 +1594,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             {
                 0.5, 1.0 / 3.0, 0.25, 1.0 / 6.0, 0.125
             };
+            ReadOnlySpan<int> subdivisions = stackalloc int[] { 2, 3, 4, 6, 8 };
+            ReadOnlySpan<int> beamLevels = stackalloc int[] { 1, 1, 2, 2, 3 };
 
-            double snapped = gapBeats;
+            int closestIndex = 0;
             double smallestDelta = double.MaxValue;
             for (int i = 0; i < allowedSteps.Length; i++)
             {
@@ -1587,25 +1605,52 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 if (delta < smallestDelta)
                 {
                     smallestDelta = delta;
-                    snapped = allowedSteps[i];
+                    closestIndex = i;
                 }
             }
 
             // Reject intervals that are too far from useful rhythmic buckets.
             if (smallestDelta > 0.065)
-                return 0;
+                return false;
 
-            // Subdivision-aware mapping:
-            // 1/2, 1/3 => single beam (8th family)
-            // 1/4, 1/6 => double beam (16th family)
-            // 1/8      => triple beam (32nd family)
-            if (Math.Abs(snapped - 0.125) < 0.0001)
-                return 3;
+            subdivisionDivisor = subdivisions[closestIndex];
+            levelCount = beamLevels[closestIndex];
+            return true;
+        }
 
-            if (Math.Abs(snapped - 0.25) < 0.0001 || Math.Abs(snapped - (1.0 / 6.0)) < 0.0001)
-                return 2;
+        internal static int ResolveManuscriptBeamGroupingSpanTicks(int subdivisionDivisor)
+        {
+            int safeSubdivision = Math.Max(1, subdivisionDivisor);
+            if (safeSubdivision <= 3)
+                return safeSubdivision;
 
-            return 1;
+            return Math.Max(2, safeSubdivision / 2);
+        }
+
+        internal static bool IsManuscriptBeamPairWithinSubdivisionGroup(double currentBeatProgress, double nextBeatProgress, int subdivisionDivisor)
+        {
+            int safeSubdivision = Math.Max(1, subdivisionDivisor);
+            int groupingSpanTicks = ResolveManuscriptBeamGroupingSpanTicks(safeSubdivision);
+            if (groupingSpanTicks <= 0)
+                return true;
+
+            int currentTick = quantizeManuscriptBeatProgressToTick(currentBeatProgress, safeSubdivision);
+            int nextTick = quantizeManuscriptBeatProgressToTick(nextBeatProgress, safeSubdivision);
+            if (nextTick < currentTick)
+                return false;
+
+            return (currentTick / groupingSpanTicks) == (nextTick / groupingSpanTicks);
+        }
+
+        private static int quantizeManuscriptBeatProgressToTick(double beatProgress, int subdivisionDivisor)
+        {
+            int safeSubdivision = Math.Max(1, subdivisionDivisor);
+            double wrapped = beatProgress - Math.Floor(beatProgress);
+            if (wrapped < 0)
+                wrapped += 1.0;
+
+            int tick = (int)Math.Round(wrapped * safeSubdivision, MidpointRounding.AwayFromZero);
+            return Math.Clamp(tick, 0, safeSubdivision - 1);
         }
 
         internal static bool ShouldRenderManuscriptTieCue(double gapBeats)

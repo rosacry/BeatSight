@@ -220,6 +220,7 @@ namespace BeatSight.Tests
             Assert.Contains("layoutLaneReceptors", source);
             Assert.Contains("receptorRail", source);
             Assert.Contains("laneReceptorGlows", source);
+            Assert.Contains("strikeZoneGlow", source);
         }
 
         [Fact]

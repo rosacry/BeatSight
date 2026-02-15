@@ -34,6 +34,16 @@ public class PlaybackPlayfieldThreeDProfileTests
         Assert.True(classic.PerspectiveExponent > arcade.PerspectiveExponent);
     }
 
+    [Fact]
+    public void GhClassicProfileKeepsHighwayFootprintInGhStyleRange()
+    {
+        var classic = PlaybackPlayfield.GetThreeDProfileTuningSnapshot(ThreeDStageProfile.GhClassic);
+
+        Assert.InRange(classic.HighwayTopWidthRatio, 0.06f, 0.08f);
+        Assert.InRange(classic.HighwayBottomWidthRatio, 0.86f, 0.90f);
+        Assert.InRange(classic.VanishingPointYRatio, 0.08f, 0.09f);
+    }
+
     [Theory]
     [InlineData(ThreeDStageProfile.Arcade, "Arcade")]
     [InlineData(ThreeDStageProfile.GhClassic, "GH Classic")]

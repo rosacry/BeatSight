@@ -177,7 +177,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             // Calculate dimensions based on view mode
             float baseHeight = mode switch
             {
-                LaneViewMode.ThreeDimensional => Math.Clamp(drawHeight * 0.064f, 20f, 50f),
+                LaneViewMode.ThreeDimensional => Math.Clamp(drawHeight * 0.068f, 24f, 54f),
                 LaneViewMode.Manuscript => 6f,
                 _ => DesignSystem.StrikeZoneHeight,
             };
@@ -323,17 +323,18 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             strikeBody.BorderColour = borderColor;
             fillBox.Colour = fillColor;
             glowBox.Colour = borderColor;
-            glowBox.Alpha = 0.5f;
+            glowBox.Alpha = 0.56f;
 
             topEdge.Colour = borderColor.Lighten(0.2f);
             topEdge.Alpha = 1f;
+            topEdge.Height = 3f;
 
             centerLine.Colour = borderColor;
-            centerLine.Alpha = 0.68f;
-            centerLine.Height = 3;
+            centerLine.Alpha = 0.76f;
+            centerLine.Height = 4;
 
             // Set alpha directly instead of using transforms to prevent accumulation
-            Alpha = 0.96f;
+            Alpha = 0.98f;
         }
 
         private void UpdateManuscriptAppearance()

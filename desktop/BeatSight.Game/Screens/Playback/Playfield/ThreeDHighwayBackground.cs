@@ -17,8 +17,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
     {
         private const int geometrySegmentCount = 64;
         private const int sweepLineCount = 4;
-        private const float receptorDepth = 0.985f;
-        private const float receptorInset = 1.4f;
+        private const float receptorDepth = 0.992f;
+        private const float receptorInset = 1.0f;
 
         private const float hitLineYRatio = 0.935f;
 
@@ -94,23 +94,23 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             return profile switch
             {
                 ThreeDStageProfile.Arcade => new ProfileGeometry(
-                    vanishingPointYRatio: 0.120f,
-                    highwayTopWidthRatio: 0.14f,
-                    highwayBottomWidthRatio: 0.76f,
-                    curveExponent: 1.16f,
-                    headerDepth: 0.085f),
+                    vanishingPointYRatio: 0.112f,
+                    highwayTopWidthRatio: 0.12f,
+                    highwayBottomWidthRatio: 0.80f,
+                    curveExponent: 1.22f,
+                    headerDepth: 0.080f),
                 ThreeDStageProfile.Tight => new ProfileGeometry(
-                    vanishingPointYRatio: 0.080f,
-                    highwayTopWidthRatio: 0.07f,
-                    highwayBottomWidthRatio: 0.86f,
-                    curveExponent: 1.34f,
-                    headerDepth: 0.050f),
+                    vanishingPointYRatio: 0.070f,
+                    highwayTopWidthRatio: 0.055f,
+                    highwayBottomWidthRatio: 0.92f,
+                    curveExponent: 1.50f,
+                    headerDepth: 0.042f),
                 _ => new ProfileGeometry(
-                    vanishingPointYRatio: 0.095f,
-                    highwayTopWidthRatio: 0.09f,
-                    highwayBottomWidthRatio: 0.82f,
-                    curveExponent: 1.26f,
-                    headerDepth: 0.060f)
+                    vanishingPointYRatio: 0.086f,
+                    highwayTopWidthRatio: 0.07f,
+                    highwayBottomWidthRatio: 0.88f,
+                    curveExponent: 1.40f,
+                    headerDepth: 0.048f)
             };
         }
 
@@ -202,6 +202,26 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                         Colour = ColourInfo.GradientVertical(
                             new Color4(52, 76, 128, 28),
                             Color4.Transparent)
+                    },
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Width = 0.34f,
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        Colour = ColourInfo.GradientHorizontal(
+                            new Color4(18, 44, 88, 52),
+                            Color4.Transparent)
+                    },
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Width = 0.34f,
+                        Anchor = Anchor.CentreRight,
+                        Origin = Anchor.CentreRight,
+                        Colour = ColourInfo.GradientHorizontal(
+                            Color4.Transparent,
+                            new Color4(18, 44, 88, 52))
                     },
                     new Box
                     {
@@ -365,9 +385,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             {
                 var sweep = new Box
                 {
-                    Height = 1.5f,
-                    Colour = new Color4(182, 206, 238, 84),
-                    Alpha = 0.08f
+                    Height = 1.8f,
+                    Colour = new Color4(194, 220, 255, 96),
+                    Alpha = 0.10f
                 };
 
                 sweepLineLayer.Add(sweep);
@@ -387,7 +407,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 Anchor = Anchor.TopLeft,
                 Origin = Anchor.TopLeft,
                 Colour = new Color4(228, 238, 255, 196),
-                Height = 3f,
+                Height = 4f,
                 Blending = BlendingParameters.Additive
             };
             receptorLayer.Add(receptorRail);
@@ -402,9 +422,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     Anchor = Anchor.TopLeft,
                     Origin = Anchor.TopLeft,
                     Masking = true,
-                    CornerRadius = 6f,
-                    BorderThickness = 1.2f,
-                    BorderColour = new Color4(194, 210, 238, 182)
+                    CornerRadius = 7f,
+                    BorderThickness = 1.5f,
+                    BorderColour = new Color4(212, 226, 248, 214)
                 };
 
                 receptor.Add(new Box
@@ -416,7 +436,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 var fill = new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = new Color4(accent.R, accent.G, accent.B, 84)
+                    Colour = new Color4(accent.R, accent.G, accent.B, 98)
                 };
                 receptor.Add(fill);
 
@@ -424,7 +444,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 {
                     RelativeSizeAxes = Axes.Both,
                     Colour = new Color4(emphasised.R, emphasised.G, emphasised.B, 180),
-                    Alpha = 0.18f,
+                    Alpha = 0.24f,
                     Blending = BlendingParameters.Additive
                 };
                 receptor.Add(glow);
@@ -480,8 +500,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             if (receptorRail != null)
             {
                 receptorRail.ClearTransforms();
-                receptorRail.Alpha = 0.48f * pulse;
-                receptorRail.FadeTo(0.28f, beatInterval * 0.55, Easing.OutQuad);
+                receptorRail.Alpha = 0.58f * pulse;
+                receptorRail.FadeTo(0.34f, beatInterval * 0.55, Easing.OutQuad);
             }
         }
 
@@ -492,25 +512,25 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             var pulse = lanePulseLights[laneIndex];
             pulse.ClearTransforms();
-            pulse.Alpha = 0.44f * Math.Clamp(intensity, 0.2f, 1.0f);
-            pulse.ScaleTo(new Vector2(1.08f, 1f), 70, Easing.OutQuint)
+            pulse.Alpha = 0.52f * Math.Clamp(intensity, 0.2f, 1.0f);
+            pulse.ScaleTo(new Vector2(1.12f, 1f), 70, Easing.OutQuint)
                  .Then()
-                 .ScaleTo(Vector2.One, 180, Easing.OutQuad);
-            pulse.FadeOut(220, Easing.OutQuad);
+                 .ScaleTo(Vector2.One, 190, Easing.OutQuad);
+            pulse.FadeOut(240, Easing.OutQuad);
 
             if (laneIndex < laneReceptorGlows.Count)
             {
                 float clamped = Math.Clamp(intensity, 0.2f, 1.0f);
                 var receptorGlow = laneReceptorGlows[laneIndex];
                 receptorGlow.ClearTransforms();
-                receptorGlow.Alpha = 0.62f * clamped;
-                receptorGlow.FadeTo(0.18f, 230, Easing.OutQuad);
+                receptorGlow.Alpha = 0.72f * clamped;
+                receptorGlow.FadeTo(0.24f, 250, Easing.OutQuad);
 
                 var receptorFill = laneReceptorFills[laneIndex];
                 Color4 accent = laneAccentPalette[laneIndex % laneAccentPalette.Length];
                 receptorFill.ClearTransforms();
-                receptorFill.Colour = UITheme.Emphasise(accent, 1.18f);
-                receptorFill.FadeColour(new Color4(accent.R, accent.G, accent.B, 84), 240, Easing.OutQuad);
+                receptorFill.Colour = UITheme.Emphasise(accent, 1.24f);
+                receptorFill.FadeColour(new Color4(accent.R, accent.G, accent.B, 98), 260, Easing.OutQuad);
             }
         }
 
@@ -591,8 +611,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 {
                     var segment = laneSegments[lane][segmentIndex];
                     Color4 accent = laneAccentPalette[lane % laneAccentPalette.Length];
-                    Color4 laneBase = UITheme.Mix(new Color4(16, 22, 34, 255), accent, lane % 2 == 0 ? 0.08f : 0.055f);
-                    byte laneAlpha = (byte)(70 + curvedDepth * 62);
+                    Color4 laneBase = UITheme.Mix(new Color4(14, 20, 32, 255), accent, lane % 2 == 0 ? 0.12f : 0.09f);
+                    byte laneAlpha = (byte)(82 + curvedDepth * 72);
 
                     segment.X = left + lane * laneWidth + laneInset;
                     segment.Y = yStart - 0.7f;
@@ -606,11 +626,11 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     bool edge = boundary == 0 || boundary == visibleLaneCount;
                     var segment = boundarySegments[boundary][segmentIndex];
                     float boundaryX = left + laneWidth * boundary;
-                    byte alpha = edge ? (byte)(112 + curvedDepth * 68) : (byte)(82 + curvedDepth * 54);
+                    byte alpha = edge ? (byte)(128 + curvedDepth * 74) : (byte)(92 + curvedDepth * 60);
 
-                    segment.X = boundaryX - (edge ? 1.1f : 0.7f);
+                    segment.X = boundaryX - (edge ? 1.25f : 0.8f);
                     segment.Y = yStart - 0.7f;
-                    segment.Width = edge ? 2.2f : 1.4f;
+                    segment.Width = edge ? 2.5f : 1.6f;
                     segment.Height = segmentHeight;
                     segment.Colour = new Color4(198, 216, 246, alpha);
                 }
@@ -676,8 +696,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float receptorWidthAtDepth = lerp(topWidth, bottomWidth, receptorDepth);
             float receptorLaneWidth = receptorWidthAtDepth / visibleLaneCount;
             float receptorLeft = (DrawWidth - receptorWidthAtDepth) * 0.5f;
-            float receptorHeight = Math.Clamp(DrawHeight * 0.028f, 14f, 30f);
-            float receptorY = hitY - receptorHeight * 0.56f;
+            float receptorHeight = Math.Clamp(DrawHeight * 0.034f, 16f, 34f);
+            float receptorY = hitY - receptorHeight * 0.62f;
 
             for (int lane = 0; lane < laneReceptorBoxes.Count; lane++)
             {
@@ -691,9 +711,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             if (receptorRail != null)
             {
                 receptorRail.X = receptorLeft - 2f;
-                receptorRail.Y = hitY + 1f;
+                receptorRail.Y = hitY + 0.5f;
                 receptorRail.Width = receptorWidthAtDepth + 4f;
-                receptorRail.Alpha = 0.28f;
+                receptorRail.Alpha = 0.34f;
             }
         }
 
@@ -717,8 +737,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 line.X = (DrawWidth - width) * 0.5f;
                 line.Y = y;
                 line.Width = width;
-                line.Height = depth > 0.78f ? 1.6f : 1.0f;
-                line.Alpha = 0.015f + (1f - depth) * 0.062f;
+                line.Height = depth > 0.78f ? 2.0f : 1.2f;
+                line.Alpha = 0.022f + (1f - depth) * 0.082f;
             }
         }
 

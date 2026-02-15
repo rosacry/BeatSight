@@ -130,4 +130,16 @@ public class ManuscriptNotationMappingTests
 
         Assert.False(ManuscriptBackgroundEnhanced.IsHiHatFamilyComponent("snare"));
     }
+
+    [Fact]
+    public void CountInLabelFormattingTracksRelativeTickAndSubdivision()
+    {
+        Assert.Equal("Now", ManuscriptBackgroundEnhanced.FormatManuscriptCountInLabel(0, 4));
+        Assert.Equal("+1/4", ManuscriptBackgroundEnhanced.FormatManuscriptCountInLabel(1, 4));
+        Assert.Equal("-2/4", ManuscriptBackgroundEnhanced.FormatManuscriptCountInLabel(-2, 4));
+        Assert.Equal("+1b", ManuscriptBackgroundEnhanced.FormatManuscriptCountInLabel(4, 4));
+        Assert.Equal("-1b 2/4", ManuscriptBackgroundEnhanced.FormatManuscriptCountInLabel(-6, 4));
+        Assert.Equal("+2b", ManuscriptBackgroundEnhanced.FormatManuscriptCountInLabel(8, 4));
+        Assert.Equal("+1/3", ManuscriptBackgroundEnhanced.FormatManuscriptCountInLabel(1, 3));
+    }
 }

@@ -135,6 +135,34 @@ public class DrawableNoteManuscriptRenderingTests
     }
 
     [Fact]
+    public void ManuscriptHiHatArticulationLiftsAboveDenseStandaloneFlags()
+    {
+        var note = createNote("hihat_open", velocity: 0.9);
+        note.Width = 20;
+        note.Height = 10;
+        note.SetViewMode(LaneViewMode.Manuscript);
+
+        var openRing = getPrivateField<Circle>(note, "manuscriptHiHatOpenIndicator");
+        float baselineY = openRing.Y;
+
+        note.SetManuscriptFlagCount(3);
+
+        Assert.True(openRing.Y < baselineY - 8f, $"Expected articulation to move higher for dense flags. baseline={baselineY:0.##}, current={openRing.Y:0.##}");
+    }
+
+    [Fact]
+    public void ManuscriptHiHatArticulationOffsetHelperTracksFlagDensityAndStemDirection()
+    {
+        float stemUpNoFlags = DrawableNote.ResolveManuscriptHiHatArticulationOffsetY(10f, 0, stemDown: false);
+        float stemUpDense = DrawableNote.ResolveManuscriptHiHatArticulationOffsetY(10f, 3, stemDown: false);
+        float stemDownDense = DrawableNote.ResolveManuscriptHiHatArticulationOffsetY(10f, 3, stemDown: true);
+
+        Assert.True(stemUpNoFlags < 0f);
+        Assert.True(stemUpDense < stemUpNoFlags - 8f, $"Expected dense flags to increase upward clearance. noFlags={stemUpNoFlags:0.##}, dense={stemUpDense:0.##}");
+        Assert.True(stemDownDense > 0f);
+    }
+
+    [Fact]
     public void ManuscriptDurationDotFollowsAssignedCueState()
     {
         var note = createNote("snare", velocity: 0.9);

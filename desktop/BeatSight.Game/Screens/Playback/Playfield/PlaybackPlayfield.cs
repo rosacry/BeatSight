@@ -179,24 +179,24 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     noteHeightRatioAtBottom: 0.26f,
                     rotationStrength: 16f),
                 _ => new ThreeDProfileTuning(
-                    vanishingPointYRatio: 0.086f,
+                    vanishingPointYRatio: 0.082f,
                     highwayBottomWidthRatio: 0.88f,
-                    highwayTopWidthRatio: 0.07f,
-                    progressMax: 1.26f,
-                    laneNoteWidthAtTop: 0.29f,
-                    laneNoteWidthAtBottom: 0.79f,
+                    highwayTopWidthRatio: 0.064f,
+                    progressMax: 1.30f,
+                    laneNoteWidthAtTop: 0.30f,
+                    laneNoteWidthAtBottom: 0.82f,
                     minNoteWidth: 16f,
-                    maxNoteWidth: 136f,
+                    maxNoteWidth: 142f,
                     minNoteHeight: 9f,
                     maxNoteHeight: 32f,
-                    kickWidthAtTop: 0.100f,
-                    kickWidthAtBottom: 0.36f,
-                    perspectiveExponent: 2.30f,
-                    widthExponent: 1.50f,
-                    yExponent: 1.33f,
-                    noteHeightRatioAtTop: 0.36f,
-                    noteHeightRatioAtBottom: 0.25f,
-                    rotationStrength: 14.5f)
+                    kickWidthAtTop: 0.104f,
+                    kickWidthAtBottom: 0.38f,
+                    perspectiveExponent: 2.36f,
+                    widthExponent: 1.54f,
+                    yExponent: 1.36f,
+                    noteHeightRatioAtTop: 0.37f,
+                    noteHeightRatioAtBottom: 0.26f,
+                    rotationStrength: 15.0f)
             };
         }
 
@@ -238,8 +238,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         /// <summary>Additional visibility buffer after miss window (ms).</summary>
         private const double PastVisibilityBuffer = 600;
         private const double BaseVisibleMeasures = 2.0;
-        private const double AutoZoomBaseMultiplier = 1.20;
-        private const double AutoZoomMaxMultiplier = 1.78;
+        private const double AutoZoomBaseMultiplier = 1.28;
+        private const double AutoZoomMaxMultiplier = 1.94;
 
         private readonly Func<double> currentTimeProvider;
         private readonly List<DrawableNote> notes = new();
@@ -834,9 +834,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             double signatureNormalized = Math.Clamp((clampedMeasure - 4.0) / 5.0, 0.0, 1.0);
 
             double multiplier = AutoZoomBaseMultiplier
-                                + 0.37 * densityNormalized
-                                + 0.16 * bpmNormalized
-                                + 0.07 * signatureNormalized;
+                                + 0.40 * densityNormalized
+                                + 0.18 * bpmNormalized
+                                + 0.08 * signatureNormalized;
 
             return Math.Clamp(multiplier, AutoZoomBaseMultiplier, AutoZoomMaxMultiplier);
         }

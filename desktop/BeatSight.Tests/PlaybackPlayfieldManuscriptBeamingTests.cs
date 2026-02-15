@@ -26,5 +26,26 @@ public class PlaybackPlayfieldManuscriptBeamingTests
     {
         Assert.Equal(0, PlaybackPlayfield.GetManuscriptBeamLevelCount(gapBeats));
     }
+
+    [Theory]
+    [InlineData(0.375, true)]   // dotted 16th
+    [InlineData(0.75, true)]    // dotted 8th
+    [InlineData(1.5, true)]     // dotted quarter
+    [InlineData(0.5, false)]    // straight 8th
+    [InlineData(1.0, false)]    // straight quarter
+    public void DottedCueDetectionMatchesExpectedBuckets(double gapBeats, bool expected)
+    {
+        Assert.Equal(expected, PlaybackPlayfield.ShouldRenderManuscriptDottedCue(gapBeats));
+    }
+
+    [Theory]
+    [InlineData(0.74, false)]   // still in beam/flag space
+    [InlineData(0.8, true)]     // tie-style continuity onset
+    [InlineData(2.5, true)]     // long spacing still tied
+    [InlineData(4.2, false)]    // too long to tie in dense timeline window
+    public void TieCueDetectionMatchesDurationWindow(double gapBeats, bool expected)
+    {
+        Assert.Equal(expected, PlaybackPlayfield.ShouldRenderManuscriptTieCue(gapBeats));
+    }
 }
 

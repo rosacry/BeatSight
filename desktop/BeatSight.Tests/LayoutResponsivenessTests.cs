@@ -218,6 +218,24 @@ namespace BeatSight.Tests
         }
 
         [Fact]
+        public void ManuscriptPlayfieldIncludesDurationCueContracts()
+        {
+            string root = resolveRepositoryRoot();
+            string playfieldPath = Path.Combine(root, "desktop", "BeatSight.Game", "Screens", "Playback", "Playfield", "PlaybackPlayfield.cs");
+            string drawableNotePath = Path.Combine(root, "desktop", "BeatSight.Game", "Screens", "Playback", "Playfield", "DrawableNote.cs");
+            Assert.True(File.Exists(playfieldPath), $"Expected file missing: {playfieldPath}");
+            Assert.True(File.Exists(drawableNotePath), $"Expected file missing: {drawableNotePath}");
+
+            string playfieldSource = File.ReadAllText(playfieldPath);
+            string noteSource = File.ReadAllText(drawableNotePath);
+
+            Assert.Contains("manuscriptDurationLayer", playfieldSource);
+            Assert.Contains("addManuscriptTieSegment", playfieldSource);
+            Assert.Contains("ShouldRenderManuscriptDottedCue", playfieldSource);
+            Assert.Contains("SetManuscriptDurationDot", noteSource);
+        }
+
+        [Fact]
         public void SettingsScreenClearsDropdownOverlayBeforeSectionSwap()
         {
             string root = resolveRepositoryRoot();

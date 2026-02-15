@@ -133,10 +133,50 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     ReceptorHeightScale: 1.10f * compactBoost,
                     BorderThickness: 2.25f),
                 _ => (
-                    RailAlpha: 0.56f,
-                    GlowAlpha: 0.60f,
-                    ReceptorHeightScale: 1.04f * compactBoost,
-                    BorderThickness: 2.0f)
+                    RailAlpha: 0.60f,
+                    GlowAlpha: 0.64f,
+                    ReceptorHeightScale: 1.08f * compactBoost,
+                    BorderThickness: 2.15f)
+            };
+        }
+
+        internal static (float BeatPulsePeakAlpha, float HorizonPeakAlpha, float HorizonRestingAlpha, float RailPulseBoost, float GlowPulseBoost, float LaneGlowPeakAlpha, float LaneGlowDecayAlpha, float LaneFillEmphasis, byte LaneFillRestingAlpha) ResolveThreeDHitFeedbackPresentation(ThreeDStageProfile profile, float drawHeight)
+        {
+            float safeHeight = float.IsFinite(drawHeight) ? Math.Clamp(drawHeight, 540f, 4320f) : 1080f;
+            float compactBoost = safeHeight <= 760f ? 1.08f : safeHeight >= 1440f ? 0.96f : 1f;
+
+            return profile switch
+            {
+                ThreeDStageProfile.Arcade => (
+                    BeatPulsePeakAlpha: 0.046f * compactBoost,
+                    HorizonPeakAlpha: 0.22f * compactBoost,
+                    HorizonRestingAlpha: 0.11f,
+                    RailPulseBoost: 0.22f * compactBoost,
+                    GlowPulseBoost: 0.20f * compactBoost,
+                    LaneGlowPeakAlpha: 0.66f * compactBoost,
+                    LaneGlowDecayAlpha: 0.24f,
+                    LaneFillEmphasis: 1.20f,
+                    LaneFillRestingAlpha: (byte)90),
+                ThreeDStageProfile.Tight => (
+                    BeatPulsePeakAlpha: 0.066f * compactBoost,
+                    HorizonPeakAlpha: 0.31f * compactBoost,
+                    HorizonRestingAlpha: 0.13f,
+                    RailPulseBoost: 0.30f * compactBoost,
+                    GlowPulseBoost: 0.28f * compactBoost,
+                    LaneGlowPeakAlpha: 0.80f * compactBoost,
+                    LaneGlowDecayAlpha: 0.32f,
+                    LaneFillEmphasis: 1.30f,
+                    LaneFillRestingAlpha: (byte)104),
+                _ => (
+                    BeatPulsePeakAlpha: 0.058f * compactBoost,
+                    HorizonPeakAlpha: 0.28f * compactBoost,
+                    HorizonRestingAlpha: 0.12f,
+                    RailPulseBoost: 0.28f * compactBoost,
+                    GlowPulseBoost: 0.26f * compactBoost,
+                    LaneGlowPeakAlpha: 0.74f * compactBoost,
+                    LaneGlowDecayAlpha: 0.28f,
+                    LaneFillEmphasis: 1.27f,
+                    LaneFillRestingAlpha: (byte)98)
             };
         }
 
@@ -544,30 +584,31 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             float pulse = (float)Math.Clamp(intensity, 0.1, 1.0);
             var strikeZonePresentation = ResolveThreeDStrikeZonePresentation(stageProfile, DrawHeight);
+            var hitFeedback = ResolveThreeDHitFeedbackPresentation(stageProfile, DrawHeight);
 
             beatPulseOverlay.ClearTransforms();
-            beatPulseOverlay.Alpha = 0.05f * pulse;
+            beatPulseOverlay.Alpha = hitFeedback.BeatPulsePeakAlpha * pulse;
             beatPulseOverlay.FadeOut(beatInterval * 0.7, Easing.OutQuad);
 
             if (horizonGlow != null)
             {
                 horizonGlow.ClearTransforms();
-                horizonGlow.TransformTo(nameof(horizonGlow.Alpha), 0.28f * pulse, 60)
+                horizonGlow.TransformTo(nameof(horizonGlow.Alpha), hitFeedback.HorizonPeakAlpha * pulse, 60)
                            .Then()
-                           .TransformTo(nameof(horizonGlow.Alpha), 0.12f, beatInterval * 0.6, Easing.OutQuad);
+                           .TransformTo(nameof(horizonGlow.Alpha), hitFeedback.HorizonRestingAlpha, beatInterval * 0.6, Easing.OutQuad);
             }
 
             if (receptorRail != null)
             {
                 receptorRail.ClearTransforms();
-                receptorRail.Alpha = Math.Min(0.96f, strikeZonePresentation.RailAlpha + 0.26f * pulse);
+                receptorRail.Alpha = Math.Min(0.96f, strikeZonePresentation.RailAlpha + hitFeedback.RailPulseBoost * pulse);
                 receptorRail.FadeTo(strikeZonePresentation.RailAlpha, beatInterval * 0.55, Easing.OutQuad);
             }
 
             if (strikeZoneGlow != null)
             {
                 strikeZoneGlow.ClearTransforms();
-                strikeZoneGlow.Alpha = Math.Min(0.94f, strikeZonePresentation.GlowAlpha + 0.24f * pulse);
+                strikeZoneGlow.Alpha = Math.Min(0.94f, strikeZonePresentation.GlowAlpha + hitFeedback.GlowPulseBoost * pulse);
                 strikeZoneGlow.FadeTo(strikeZonePresentation.GlowAlpha, beatInterval * 0.6, Easing.OutQuad);
             }
         }
@@ -588,16 +629,17 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             if (laneIndex < laneReceptorGlows.Count)
             {
                 float clamped = Math.Clamp(intensity, 0.2f, 1.0f);
+                var hitFeedback = ResolveThreeDHitFeedbackPresentation(stageProfile, DrawHeight);
                 var receptorGlow = laneReceptorGlows[laneIndex];
                 receptorGlow.ClearTransforms();
-                receptorGlow.Alpha = 0.78f * clamped;
-                receptorGlow.FadeTo(0.30f, 250, Easing.OutQuad);
+                receptorGlow.Alpha = Math.Min(0.94f, hitFeedback.LaneGlowPeakAlpha * clamped);
+                receptorGlow.FadeTo(hitFeedback.LaneGlowDecayAlpha, 250, Easing.OutQuad);
 
                 var receptorFill = laneReceptorFills[laneIndex];
                 Color4 accent = laneAccentPalette[laneIndex % laneAccentPalette.Length];
                 receptorFill.ClearTransforms();
-                receptorFill.Colour = UITheme.Emphasise(accent, 1.24f);
-                receptorFill.FadeColour(new Color4(accent.R, accent.G, accent.B, 98), 260, Easing.OutQuad);
+                receptorFill.Colour = UITheme.Emphasise(accent, hitFeedback.LaneFillEmphasis);
+                receptorFill.FadeColour(new Color4(accent.R, accent.G, accent.B, hitFeedback.LaneFillRestingAlpha), 260, Easing.OutQuad);
             }
         }
 

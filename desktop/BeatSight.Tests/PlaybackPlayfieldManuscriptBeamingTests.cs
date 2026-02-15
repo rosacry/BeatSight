@@ -28,6 +28,45 @@ public class PlaybackPlayfieldManuscriptBeamingTests
     }
 
     [Theory]
+    [InlineData(0.5, 1, 2)]
+    [InlineData(1.0 / 3.0, 1, 3)]
+    [InlineData(0.25, 2, 4)]
+    [InlineData(1.0 / 6.0, 2, 6)]
+    [InlineData(0.125, 3, 8)]
+    public void BeamSubdivisionResolutionMatchesExpectedBuckets(double gapBeats, int expectedLevel, int expectedSubdivision)
+    {
+        bool resolved = PlaybackPlayfield.TryResolveManuscriptBeamSubdivision(gapBeats, out int levelCount, out int subdivision);
+        Assert.True(resolved);
+        Assert.Equal(expectedLevel, levelCount);
+        Assert.Equal(expectedSubdivision, subdivision);
+    }
+
+    [Theory]
+    [InlineData(2, 2)]
+    [InlineData(3, 3)]
+    [InlineData(4, 2)]
+    [InlineData(6, 3)]
+    [InlineData(8, 4)]
+    public void BeamGroupingSpanTicksMatchesSubdivisionFamily(int subdivisionDivisor, int expectedGroupingSpan)
+    {
+        Assert.Equal(expectedGroupingSpan, PlaybackPlayfield.ResolveManuscriptBeamGroupingSpanTicks(subdivisionDivisor));
+    }
+
+    [Theory]
+    [InlineData(0.00, 0.25, 4, true)]               // 16ths within first half-beat group
+    [InlineData(0.25, 0.50, 4, false)]              // crosses 16th half-beat boundary
+    [InlineData(0.50, 0.75, 4, true)]               // 16ths within second half-beat group
+    [InlineData(0.0, 1.0 / 6.0, 6, true)]           // 16th-triplet inside group of 3 ticks
+    [InlineData(2.0 / 6.0, 3.0 / 6.0, 6, false)]    // crosses 16th-triplet half-beat boundary
+    [InlineData(0.0, 1.0 / 3.0, 3, true)]           // 8th-triplet stays beamed across full beat group
+    [InlineData(1.0 / 3.0, 2.0 / 3.0, 3, true)]
+    [InlineData(0.0, 0.5, 2, true)]                 // 8ths share beat group
+    public void BeamPairGroupingRespectsSubdivisionBoundaries(double currentBeatProgress, double nextBeatProgress, int subdivisionDivisor, bool expected)
+    {
+        Assert.Equal(expected, PlaybackPlayfield.IsManuscriptBeamPairWithinSubdivisionGroup(currentBeatProgress, nextBeatProgress, subdivisionDivisor));
+    }
+
+    [Theory]
     [InlineData(0.375, true)]   // dotted 16th
     [InlineData(0.75, true)]    // dotted 8th
     [InlineData(1.5, true)]     // dotted quarter

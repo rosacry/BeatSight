@@ -108,6 +108,7 @@ public class ManuscriptNotationMappingTests
         Assert.True(ManuscriptBackgroundEnhanced.UsesCrossNoteheadForComponent("china_2"));
         Assert.False(ManuscriptBackgroundEnhanced.UsesCrossNoteheadForComponent("ride_bell"));
         Assert.False(ManuscriptBackgroundEnhanced.UsesCrossNoteheadForComponent("cowbell"));
+        Assert.False(ManuscriptBackgroundEnhanced.UsesCrossNoteheadForComponent("cross_stick"));
         Assert.False(ManuscriptBackgroundEnhanced.UsesCrossNoteheadForComponent("snare"));
         Assert.False(ManuscriptBackgroundEnhanced.UsesCrossNoteheadForComponent("kick"));
     }
@@ -119,6 +120,16 @@ public class ManuscriptNotationMappingTests
         Assert.True(ManuscriptBackgroundEnhanced.UsesDiamondNoteheadForComponent("cowbell"));
         Assert.False(ManuscriptBackgroundEnhanced.UsesDiamondNoteheadForComponent("ride_bow"));
         Assert.False(ManuscriptBackgroundEnhanced.UsesDiamondNoteheadForComponent("snare"));
+    }
+
+    [Fact]
+    public void CrossStickComponentHelperDetectsRimAndSideStickAliases()
+    {
+        Assert.True(ManuscriptBackgroundEnhanced.IsCrossStickComponent("cross_stick"));
+        Assert.True(ManuscriptBackgroundEnhanced.IsCrossStickComponent("sidestick"));
+        Assert.True(ManuscriptBackgroundEnhanced.IsCrossStickComponent("snare_rim"));
+        Assert.False(ManuscriptBackgroundEnhanced.IsCrossStickComponent("snare"));
+        Assert.False(ManuscriptBackgroundEnhanced.IsCrossStickComponent("hihat_closed"));
     }
 
     [Fact]

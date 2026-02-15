@@ -43,6 +43,24 @@ public class DrawableNoteManuscriptRenderingTests
     }
 
     [Fact]
+    public void ManuscriptCrossStickUsesXHeadWithoutFilledOval()
+    {
+        var note = createNote("cross_stick", velocity: 0.9);
+        note.Width = 20;
+        note.Height = 10;
+
+        note.SetViewMode(LaneViewMode.Manuscript);
+
+        var mainBox = getPrivateField<Box>(note, "mainBox");
+        var lineA = getPrivateField<Box>(note, "manuscriptCrossLineA");
+        var lineB = getPrivateField<Box>(note, "manuscriptCrossLineB");
+
+        Assert.True(mainBox.Alpha < 0.01f);
+        Assert.True(lineA.Alpha > 0.5f);
+        Assert.True(lineB.Alpha > 0.5f);
+    }
+
+    [Fact]
     public void ManuscriptRideBellUsesDiamondNoteheadWithoutCrossLines()
     {
         var note = createNote("ride_bell", velocity: 0.9);
@@ -206,6 +224,44 @@ public class DrawableNoteManuscriptRenderingTests
         Assert.True(largeSlashOffset > smallSlashOffset, $"Expected larger articulation ring to increase half-open slash offset. small={smallSlashOffset:0.##}, large={largeSlashOffset:0.##}");
         Assert.True(smallCapOffset > 0f);
         Assert.True(largeCapOffset > smallCapOffset, $"Expected larger closed marker to increase cap offset. small={smallCapOffset:0.##}, large={largeCapOffset:0.##}");
+    }
+
+    [Fact]
+    public void ManuscriptGhostNotesRenderParentheses()
+    {
+        var ghost = createNote("snare", velocity: 0.2);
+        ghost.Width = 20;
+        ghost.Height = 10;
+
+        ghost.SetViewMode(LaneViewMode.Manuscript);
+
+        var left = getPrivateField<Box>(ghost, "manuscriptGhostParenLeft");
+        var right = getPrivateField<Box>(ghost, "manuscriptGhostParenRight");
+        Assert.True(left.Alpha > 0.3f);
+        Assert.True(right.Alpha > 0.3f);
+
+        var normal = createNote("snare", velocity: 0.9);
+        normal.Width = 20;
+        normal.Height = 10;
+        normal.SetViewMode(LaneViewMode.Manuscript);
+        var normalLeft = getPrivateField<Box>(normal, "manuscriptGhostParenLeft");
+        var normalRight = getPrivateField<Box>(normal, "manuscriptGhostParenRight");
+        Assert.True(normalLeft.Alpha < 0.01f);
+        Assert.True(normalRight.Alpha < 0.01f);
+    }
+
+    [Fact]
+    public void ManuscriptGhostParenthesisHelpersScaleWithNoteSize()
+    {
+        float narrowOffset = DrawableNote.ResolveManuscriptGhostParenthesisOffsetX(10f);
+        float wideOffset = DrawableNote.ResolveManuscriptGhostParenthesisOffsetX(22f);
+        float shortHeight = DrawableNote.ResolveManuscriptGhostParenthesisHeight(7f);
+        float tallHeight = DrawableNote.ResolveManuscriptGhostParenthesisHeight(16f);
+
+        Assert.True(wideOffset > narrowOffset);
+        Assert.True(tallHeight > shortHeight);
+        Assert.InRange(narrowOffset, 5.4f, 12.5f);
+        Assert.InRange(shortHeight, 8.2f, 18f);
     }
 
     [Fact]

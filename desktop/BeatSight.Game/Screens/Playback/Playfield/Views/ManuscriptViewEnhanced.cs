@@ -1493,6 +1493,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             {
                 "kick" => ManuscriptNotationVoice.Lower,
                 "snare" => ManuscriptNotationVoice.Lower,
+                "cross_stick" => ManuscriptNotationVoice.Lower,
                 _ => ManuscriptNotationVoice.Upper
             };
         }
@@ -1520,6 +1521,14 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
 
             string key = normalizeComponentKey(component);
             return key is "ride_bell" or "cowbell";
+        }
+
+        public static bool IsCrossStickComponent(string component)
+        {
+            if (string.IsNullOrWhiteSpace(component))
+                return false;
+
+            return normalizeComponentKey(component) is "cross_stick";
         }
 
         public static bool IsHiHatFamilyComponent(string component)
@@ -1594,6 +1603,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 "hihat_open" => "hihat",
                 "hihat_half_open" => "hihat",
                 "hihat_pedal" => "hihat",
+                "cross_stick" => "snare",
                 "ride_bell" => "ride",
                 "china" => "crash",
                 "splash" => "crash",
@@ -1625,7 +1635,15 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             }
 
             if (key.Contains("kick") || key.Contains("bass")) return "kick";
-            if (key.Contains("snare") || key.Contains("rim") || key.Contains("cross") || key.Contains("side"))
+            if (key.Contains("cross_stick")
+                || key.Contains("xstick")
+                || key.Contains("side_stick")
+                || key.Contains("sidestick")
+                || key.Contains("rim"))
+            {
+                return "cross_stick";
+            }
+            if (key.Contains("snare"))
                 return "snare";
             if (key.Contains("hat") || key.Contains("hh"))
             {

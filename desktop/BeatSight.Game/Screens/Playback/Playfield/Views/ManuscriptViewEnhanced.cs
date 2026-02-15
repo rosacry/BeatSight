@@ -193,6 +193,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         private readonly List<Box> timelinePlayheadCountInTicks = new();
         private readonly List<SpriteText> timelinePlayheadCountInLabels = new();
         private readonly List<SpriteText> timelineTupletLabels = new();
+        private readonly List<Box> timelineTupletBracketRails = new();
+        private readonly List<Box> timelineTupletBracketLeftHooks = new();
+        private readonly List<Box> timelineTupletBracketRightHooks = new();
         private readonly List<SpriteText> timelineMeasureLabels = new();
         private SpriteText? timelinePlayheadLabel;
         private string? focusedGuideKey;
@@ -907,8 +910,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             int lastGroup = (int)Math.Ceiling(lastTick / (double)groupingTicks) + 1;
             float width = timelineRightX - timelineLeftX;
             float minSpacing = Math.Clamp(width * 0.085f, 58f, 108f);
+            float minBracketSpan = Math.Clamp(width * 0.055f, 28f, 66f);
             float lastPlacedX = float.NegativeInfinity;
             int labelCount = 0;
+            int bracketCount = 0;
 
             for (int groupIndex = firstGroup; groupIndex <= lastGroup; groupIndex++)
             {
@@ -919,22 +924,69 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 if (groupEndTime < windowStart || groupStartTime > windowEnd)
                     continue;
 
+                float startProgress = (float)((groupStartTime - windowStart) / timelineDurationMs);
+                float endProgress = (float)((groupEndTime - windowStart) / timelineDurationMs);
+                float startX = timelineLeftX + Math.Clamp(startProgress, 0f, 1f) * width;
+                float endX = timelineLeftX + Math.Clamp(endProgress, 0f, 1f) * width;
+                float span = endX - startX;
+                if (span < minBracketSpan)
+                    continue;
+
                 double centerTime = (groupStartTime + groupEndTime) * 0.5;
                 float progress = (float)((centerTime - windowStart) / timelineDurationMs);
                 float x = timelineLeftX + Math.Clamp(progress, 0f, 1f) * width;
                 if (x - lastPlacedX < minSpacing)
                     continue;
 
+                float hookInset = Math.Clamp(span * 0.08f, 2f, 8f);
+                float railStartX = startX + hookInset;
+                float railEndX = endX - hookInset;
+                float railWidth = Math.Max(8f, railEndX - railStartX);
+                float railY = 25f;
+                float hookHeight = 5.2f;
+                Color4 bracketColor = new Color4(196, 212, 236, 228);
+
+                Box rail = getTimelineTupletBracketRail(bracketCount);
+                rail.X = railStartX;
+                rail.Y = railY;
+                rail.Width = railWidth;
+                rail.Height = 1.4f;
+                rail.Colour = bracketColor;
+                rail.Alpha = 0.46f;
+
+                Box leftHook = getTimelineTupletBracketLeftHook(bracketCount);
+                leftHook.X = railStartX;
+                leftHook.Y = railY;
+                leftHook.Width = 1.3f;
+                leftHook.Height = hookHeight;
+                leftHook.Colour = bracketColor;
+                leftHook.Alpha = 0.46f;
+
+                Box rightHook = getTimelineTupletBracketRightHook(bracketCount);
+                rightHook.X = railStartX + railWidth;
+                rightHook.Y = railY;
+                rightHook.Width = 1.3f;
+                rightHook.Height = hookHeight;
+                rightHook.Colour = bracketColor;
+                rightHook.Alpha = 0.46f;
+
                 SpriteText label = getTimelineTupletLabel(labelCount++);
                 label.Text = FormatManuscriptTupletHintLabel(subdivision);
                 label.X = Math.Clamp(x, timelineLeftX + 8f, timelineRightX - 16f);
-                label.Y = 34f;
-                label.Alpha = 0.46f;
+                label.Y = railY + 6.2f;
+                label.Alpha = 0.52f;
                 lastPlacedX = x;
+                bracketCount++;
             }
 
             for (int i = labelCount; i < timelineTupletLabels.Count; i++)
                 timelineTupletLabels[i].Alpha = 0f;
+            for (int i = bracketCount; i < timelineTupletBracketRails.Count; i++)
+                timelineTupletBracketRails[i].Alpha = 0f;
+            for (int i = bracketCount; i < timelineTupletBracketLeftHooks.Count; i++)
+                timelineTupletBracketLeftHooks[i].Alpha = 0f;
+            for (int i = bracketCount; i < timelineTupletBracketRightHooks.Count; i++)
+                timelineTupletBracketRightHooks[i].Alpha = 0f;
         }
 
         private SpriteText getTimelineTupletLabel(int index)
@@ -956,10 +1008,67 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             return timelineTupletLabels[index];
         }
 
+        private Box getTimelineTupletBracketRail(int index)
+        {
+            while (timelineTupletBracketRails.Count <= index)
+            {
+                var rail = new Box
+                {
+                    Anchor = Anchor.TopLeft,
+                    Origin = Anchor.TopLeft,
+                    Alpha = 0f
+                };
+                timelineTupletBracketRails.Add(rail);
+                timelineTupletLabelLayer?.Add(rail);
+            }
+
+            return timelineTupletBracketRails[index];
+        }
+
+        private Box getTimelineTupletBracketLeftHook(int index)
+        {
+            while (timelineTupletBracketLeftHooks.Count <= index)
+            {
+                var hook = new Box
+                {
+                    Anchor = Anchor.TopLeft,
+                    Origin = Anchor.TopCentre,
+                    Alpha = 0f
+                };
+                timelineTupletBracketLeftHooks.Add(hook);
+                timelineTupletLabelLayer?.Add(hook);
+            }
+
+            return timelineTupletBracketLeftHooks[index];
+        }
+
+        private Box getTimelineTupletBracketRightHook(int index)
+        {
+            while (timelineTupletBracketRightHooks.Count <= index)
+            {
+                var hook = new Box
+                {
+                    Anchor = Anchor.TopLeft,
+                    Origin = Anchor.TopCentre,
+                    Alpha = 0f
+                };
+                timelineTupletBracketRightHooks.Add(hook);
+                timelineTupletLabelLayer?.Add(hook);
+            }
+
+            return timelineTupletBracketRightHooks[index];
+        }
+
         private void clearTimelineTupletLabels()
         {
             for (int i = 0; i < timelineTupletLabels.Count; i++)
                 timelineTupletLabels[i].Alpha = 0f;
+            for (int i = 0; i < timelineTupletBracketRails.Count; i++)
+                timelineTupletBracketRails[i].Alpha = 0f;
+            for (int i = 0; i < timelineTupletBracketLeftHooks.Count; i++)
+                timelineTupletBracketLeftHooks[i].Alpha = 0f;
+            for (int i = 0; i < timelineTupletBracketRightHooks.Count; i++)
+                timelineTupletBracketRightHooks[i].Alpha = 0f;
         }
 
         private void updateTimelinePlayheadLabel(double beatDuration, int beatsPerMeasure, int subdivision)

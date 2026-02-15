@@ -182,11 +182,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         private Container? staffContainer;
         private Container? timelineMeasureBandLayer;
         private Container? timelineMarkerLayer;
+        private Container? timelineMeasureLabelLayer;
         private ClefIndicatorEnhanced? clefIndicator;
         private readonly List<(Box Line, float Unit)> staffGuideLines = new();
         private readonly List<ComponentGuideVisual> componentGuideVisuals = new();
         private readonly List<Box> timelineMeasureBands = new();
         private readonly List<Box> timelineMarkers = new();
+        private readonly List<SpriteText> timelineMeasureLabels = new();
         private string? focusedGuideKey;
         private double timelineStartMs;
         private double timelineDurationMs;
@@ -306,6 +308,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 RelativeSizeAxes = Axes.Both
             };
             staffContainer.Add(timelineMarkerLayer);
+
+            timelineMeasureLabelLayer = new Container
+            {
+                RelativeSizeAxes = Axes.Both
+            };
+            staffContainer.Add(timelineMeasureLabelLayer);
 
             buildComponentGuides();
             buildStaffLines();
@@ -565,6 +573,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                     timelineMeasureBands[i].Alpha = 0f;
                 for (int i = 0; i < timelineMarkers.Count; i++)
                     timelineMarkers[i].Alpha = 0f;
+                for (int i = 0; i < timelineMeasureLabels.Count; i++)
+                    timelineMeasureLabels[i].Alpha = 0f;
                 return;
             }
 
@@ -574,6 +584,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                     timelineMeasureBands[i].Alpha = 0f;
                 for (int i = 0; i < timelineMarkers.Count; i++)
                     timelineMarkers[i].Alpha = 0f;
+                for (int i = 0; i < timelineMeasureLabels.Count; i++)
+                    timelineMeasureLabels[i].Alpha = 0f;
                 return;
             }
 
@@ -585,6 +597,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             double windowEnd = windowStart + timelineDurationMs;
             int beatsPerMeasure = Math.Max(1, timelineBeatsPerMeasure);
             updateTimelineMeasureBands(windowStart, windowEnd, beatDuration, beatsPerMeasure);
+            updateTimelineMeasureLabels(windowStart, windowEnd, beatDuration, beatsPerMeasure);
             int subdivision = Math.Clamp(timelineSubdivisionDivisor, 1, 8);
             double subDuration = beatDuration / subdivision;
             int ticksPerMeasure = beatsPerMeasure * subdivision;
@@ -733,6 +746,73 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             }
 
             return timelineMeasureBands[index];
+        }
+
+        private void updateTimelineMeasureLabels(double windowStart, double windowEnd, double beatDuration, int beatsPerMeasure)
+        {
+            if (timelineMeasureLabelLayer == null || beatsPerMeasure <= 0 || beatDuration <= 1 || timelineDurationMs <= 1)
+            {
+                for (int i = 0; i < timelineMeasureLabels.Count; i++)
+                    timelineMeasureLabels[i].Alpha = 0f;
+                return;
+            }
+
+            double measureDuration = beatDuration * beatsPerMeasure;
+            if (measureDuration <= 1)
+            {
+                for (int i = 0; i < timelineMeasureLabels.Count; i++)
+                    timelineMeasureLabels[i].Alpha = 0f;
+                return;
+            }
+
+            int firstMeasure = (int)Math.Floor((windowStart - timelineBeatOriginMs) / measureDuration) - 1;
+            int lastMeasure = (int)Math.Ceiling((windowEnd - timelineBeatOriginMs) / measureDuration) + 1;
+
+            int labelCount = 0;
+            float minSpacing = Math.Clamp((timelineRightX - timelineLeftX) * 0.07f, 40f, 76f);
+            float lastPlacedX = float.NegativeInfinity;
+
+            for (int measureIndex = firstMeasure; measureIndex <= lastMeasure; measureIndex++)
+            {
+                double startMs = timelineBeatOriginMs + measureIndex * measureDuration;
+                if (startMs < windowStart || startMs > windowEnd)
+                    continue;
+
+                float progress = (float)((startMs - windowStart) / timelineDurationMs);
+                float x = timelineLeftX + Math.Clamp(progress, 0f, 1f) * (timelineRightX - timelineLeftX);
+                if (x - lastPlacedX < minSpacing)
+                    continue;
+
+                SpriteText label = getTimelineMeasureLabel(labelCount++);
+                label.Text = $"M{measureIndex + 1}";
+                label.X = x + 4f;
+                label.Y = 8f;
+                label.Alpha = 0.44f;
+                lastPlacedX = x;
+            }
+
+            for (int i = labelCount; i < timelineMeasureLabels.Count; i++)
+                timelineMeasureLabels[i].Alpha = 0f;
+        }
+
+        private SpriteText getTimelineMeasureLabel(int index)
+        {
+            while (timelineMeasureLabels.Count <= index)
+            {
+                var label = new SpriteText
+                {
+                    RelativePositionAxes = Axes.None,
+                    Anchor = Anchor.TopLeft,
+                    Origin = Anchor.TopLeft,
+                    Font = new FontUsage("Roboto", 10f),
+                    Colour = new Color4(194, 208, 234, 226),
+                    Alpha = 0f
+                };
+                timelineMeasureLabels.Add(label);
+                timelineMeasureLabelLayer?.Add(label);
+            }
+
+            return timelineMeasureLabels[index];
         }
 
         private static int positiveModulo(int value, int divisor)
@@ -911,6 +991,15 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
 
             string key = normalizeComponentKey(component);
             return key is "hihat_open" or "hihat_half_open";
+        }
+
+        public static bool IsHalfOpenHiHatComponent(string component)
+        {
+            if (string.IsNullOrWhiteSpace(component))
+                return false;
+
+            string key = normalizeComponentKey(component);
+            return key is "hihat_half_open";
         }
 
         public static bool IsClosedHiHatComponent(string component)

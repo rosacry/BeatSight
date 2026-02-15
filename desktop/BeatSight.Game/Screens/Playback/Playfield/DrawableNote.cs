@@ -111,6 +111,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private readonly Circle manuscriptHiHatOpenIndicator;
         private readonly Box manuscriptHiHatClosedHorizontal;
         private readonly Box manuscriptHiHatClosedVertical;
+        private readonly Box manuscriptHiHatHalfOpenSlash;
         private readonly Box? glowBox;
         private readonly Box stem;
         private readonly Bindable<bool> showGlowEffects;
@@ -280,6 +281,18 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             };
             children.Add(manuscriptHiHatClosedVertical);
 
+            manuscriptHiHatHalfOpenSlash = new Box
+            {
+                Width = 2,
+                Height = 7,
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                Colour = AccentColour,
+                Rotation = 35f,
+                Alpha = 0
+            };
+            children.Add(manuscriptHiHatHalfOpenSlash);
+
             highlightStrip = new Box
             {
                 RelativeSizeAxes = Axes.X,
@@ -324,6 +337,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 bool ghostNote = Velocity < 0.35;
                 bool accentNote = Velocity > 0.85;
                 bool hiHatOpen = ManuscriptBackgroundEnhanced.IsOpenHiHatComponent(ComponentName);
+                bool hiHatHalfOpen = ManuscriptBackgroundEnhanced.IsHalfOpenHiHatComponent(ComponentName);
                 bool hiHatClosed = ManuscriptBackgroundEnhanced.IsClosedHiHatComponent(ComponentName);
                 float noteWidth = Math.Max(10f, Width);
                 float noteHeight = Math.Max(7f, Height);
@@ -396,6 +410,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 manuscriptHiHatOpenIndicator.Y = hiHatArticulationY;
                 manuscriptHiHatOpenIndicator.Alpha = hiHatOpen ? 0.95f * velocityAlpha : 0f;
 
+                manuscriptHiHatHalfOpenSlash.Width = Math.Clamp(noteHeight * 0.18f, 1.1f, 2.2f);
+                manuscriptHiHatHalfOpenSlash.Height = openDiameter + 1.2f;
+                manuscriptHiHatHalfOpenSlash.Colour = manuscriptInk;
+                manuscriptHiHatHalfOpenSlash.Y = hiHatArticulationY;
+                manuscriptHiHatHalfOpenSlash.Rotation = 35f;
+                manuscriptHiHatHalfOpenSlash.Alpha = hiHatHalfOpen ? 0.92f * velocityAlpha : 0f;
+
                 float closedLength = Math.Clamp(noteWidth * 0.34f, 4.5f, 8.2f);
                 float closedThickness = Math.Clamp(closedLength * 0.22f, 1.1f, 2f);
                 manuscriptHiHatClosedHorizontal.Width = closedLength;
@@ -424,6 +445,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             manuscriptHiHatOpenIndicator.Alpha = 0;
             manuscriptHiHatClosedHorizontal.Alpha = 0;
             manuscriptHiHatClosedVertical.Alpha = 0;
+            manuscriptHiHatHalfOpenSlash.Alpha = 0;
             noteheadContainer.Masking = true;
             noteheadContainer.Rotation = 0f;
             Colour = AccentColour;

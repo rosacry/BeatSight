@@ -204,6 +204,20 @@ namespace BeatSight.Tests
         }
 
         [Fact]
+        public void ManuscriptBackgroundIncludesTimelineMeasureLabels()
+        {
+            string root = resolveRepositoryRoot();
+            string manuscriptPath = Path.Combine(root, "desktop", "BeatSight.Game", "Screens", "Playback", "Playfield", "Views", "ManuscriptViewEnhanced.cs");
+            Assert.True(File.Exists(manuscriptPath), $"Expected file missing: {manuscriptPath}");
+
+            string source = File.ReadAllText(manuscriptPath);
+            Assert.Contains("timelineMeasureLabelLayer", source);
+            Assert.Contains("updateTimelineMeasureLabels", source);
+            Assert.Contains("getTimelineMeasureLabel", source);
+            Assert.Contains("label.Text = $\"M{measureIndex + 1}\"", source);
+        }
+
+        [Fact]
         public void SettingsScreenClearsDropdownOverlayBeforeSectionSwap()
         {
             string root = resolveRepositoryRoot();

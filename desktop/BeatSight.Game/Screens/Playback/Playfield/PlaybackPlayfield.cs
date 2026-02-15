@@ -374,6 +374,21 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             public bool HasCrossVoice { get; }
         }
 
+        private readonly struct ManuscriptTieCue
+        {
+            public ManuscriptTieCue(ManuscriptBeamAnchor start, ManuscriptBeamAnchor end)
+            {
+                Start = start;
+                End = end;
+            }
+
+            public ManuscriptBeamAnchor Start { get; }
+            public ManuscriptBeamAnchor End { get; }
+            public bool StemDown => Start.StemDown;
+            public int NotationIndex => Start.NotationIndex;
+            public float MidX => (Start.Note.Position.X + End.Note.Position.X) * 0.5f;
+        }
+
         private readonly struct SheetTimelineWindow
         {
             public SheetTimelineWindow(double startTime, double duration, float leftX, float rightX, float playheadX)
@@ -1568,6 +1583,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 return;
 
             var beamedNotes = new HashSet<DrawableNote>();
+            var tieCues = new List<ManuscriptTieCue>();
 
             for (int i = 0; i < voiceAnchors.Count - 1; i++)
             {
@@ -1604,7 +1620,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                             previousAnchor.Note.SetManuscriptDurationDot(true);
 
                         if (ShouldRenderManuscriptTieCue(gapBeats, interveningVoiceNotes))
-                            addManuscriptTieSegment(previousAnchor, anchor);
+                            tieCues.Add(new ManuscriptTieCue(previousAnchor, anchor));
                     }
                 }
 
@@ -1620,6 +1636,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 int standaloneFlags = resolveStandaloneManuscriptFlagCount(voiceAnchors, i);
                 anchor.Note.SetManuscriptFlagCount(standaloneFlags);
             }
+
+            renderManuscriptTieCues(tieCues);
         }
 
         private int resolveStandaloneManuscriptFlagCount(List<ManuscriptBeamAnchor> voiceAnchors, int index)
@@ -1860,7 +1878,54 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             });
         }
 
-        private void addManuscriptTieSegment(in ManuscriptBeamAnchor start, in ManuscriptBeamAnchor end)
+        private void renderManuscriptTieCues(List<ManuscriptTieCue> tieCues)
+        {
+            if (tieCues.Count == 0)
+                return;
+
+            float clusterThreshold = Math.Clamp(DrawWidth * 0.016f, 18f, 48f);
+            List<ManuscriptTieCue> sorted = tieCues
+                .OrderBy(cue => cue.MidX)
+                .ThenBy(cue => cue.NotationIndex)
+                .ToList();
+
+            int clusterStart = 0;
+            while (clusterStart < sorted.Count)
+            {
+                int clusterEnd = clusterStart;
+                while (clusterEnd + 1 < sorted.Count
+                       && sorted[clusterEnd + 1].StemDown == sorted[clusterStart].StemDown
+                       && Math.Abs(sorted[clusterEnd + 1].MidX - sorted[clusterEnd].MidX) <= clusterThreshold)
+                {
+                    clusterEnd++;
+                }
+
+                int clusterCount = clusterEnd - clusterStart + 1;
+                if (clusterCount <= 1)
+                {
+                    ManuscriptTieCue cue = sorted[clusterStart];
+                    addManuscriptTieSegment(cue.Start, cue.End, tieStackIndex: 0, tieStackCount: 1);
+                }
+                else
+                {
+                    List<ManuscriptTieCue> cluster = sorted
+                        .GetRange(clusterStart, clusterCount)
+                        .OrderBy(cue => cue.NotationIndex)
+                        .ToList();
+
+                    for (int i = 0; i < cluster.Count; i++)
+                        addManuscriptTieSegment(cluster[i].Start, cluster[i].End, tieStackIndex: i, tieStackCount: cluster.Count);
+                }
+
+                clusterStart = clusterEnd + 1;
+            }
+        }
+
+        private void addManuscriptTieSegment(
+            in ManuscriptBeamAnchor start,
+            in ManuscriptBeamAnchor end,
+            int tieStackIndex,
+            int tieStackCount)
         {
             float startX = start.Note.Position.X + Math.Max(2f, start.Note.Width * 0.54f);
             float endX = end.Note.Position.X - Math.Max(2f, end.Note.Width * 0.54f);
@@ -1876,7 +1941,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float startY = start.Note.Position.Y + direction * start.Note.Height * 0.56f;
             float endY = end.Note.Position.Y + direction * end.Note.Height * 0.56f;
             float densityScale = Math.Clamp(DrawHeight / 1080f, 0.82f, 1.2f);
-            float archLift = direction * Math.Clamp(span * 0.082f, 2.4f, 9.6f);
+            float archLiftMagnitude = ResolveManuscriptTieArchLiftMagnitude(span, tieStackIndex, tieStackCount);
+            float archLift = direction * archLiftMagnitude;
 
             var tieStart = new Vector2(startX, startY);
             var tieEnd = new Vector2(endX, endY);
@@ -1889,6 +1955,23 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             Vector2 innerOffset = new Vector2(0f, -direction * thickness * 0.9f);
             addManuscriptDurationCurveSegment(tieStart + innerOffset, tieMid + innerOffset, thickness * 0.56f, ManuscriptTieInnerAlpha);
             addManuscriptDurationCurveSegment(tieMid + innerOffset, tieEnd + innerOffset, thickness * 0.56f, ManuscriptTieInnerAlpha);
+        }
+
+        internal static float ResolveManuscriptTieArchLiftMagnitude(float span, int tieStackIndex, int tieStackCount)
+        {
+            float safeSpan = float.IsFinite(span)
+                ? Math.Clamp(span, 12f, 1200f)
+                : 12f;
+            int safeStackCount = Math.Clamp(tieStackCount, 1, 6);
+            int safeStackIndex = Math.Clamp(tieStackIndex, 0, safeStackCount - 1);
+
+            float baseLift = Math.Clamp(safeSpan * 0.082f, 2.4f, 9.6f);
+            if (safeStackCount == 1)
+                return baseLift;
+
+            float stackStep = Math.Clamp(safeSpan * 0.02f, 1.1f, 3.8f);
+            float clusterBoost = Math.Clamp((safeStackCount - 1) * 0.16f, 0f, 1.0f);
+            return baseLift + safeStackIndex * (stackStep + clusterBoost);
         }
 
         private void addManuscriptDurationCurveSegment(Vector2 start, Vector2 end, float thickness, float alpha)

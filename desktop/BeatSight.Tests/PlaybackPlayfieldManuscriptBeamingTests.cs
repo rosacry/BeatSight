@@ -100,6 +100,28 @@ public class PlaybackPlayfieldManuscriptBeamingTests
         Assert.NotEqual(baseKey, farKey);
     }
 
+    [Fact]
+    public void TieArchLiftMagnitudeStacksOutwardWithClusterIndex()
+    {
+        float baseLift = PlaybackPlayfield.ResolveManuscriptTieArchLiftMagnitude(88f, tieStackIndex: 0, tieStackCount: 3);
+        float middleLift = PlaybackPlayfield.ResolveManuscriptTieArchLiftMagnitude(88f, tieStackIndex: 1, tieStackCount: 3);
+        float outerLift = PlaybackPlayfield.ResolveManuscriptTieArchLiftMagnitude(88f, tieStackIndex: 2, tieStackCount: 3);
+
+        Assert.True(baseLift > 0f, $"Expected positive base lift, got {baseLift:0.###}");
+        Assert.True(baseLift < middleLift, $"Expected stacked tie lift to increase, base={baseLift:0.###}, middle={middleLift:0.###}");
+        Assert.True(middleLift < outerLift, $"Expected stacked tie lift to increase, middle={middleLift:0.###}, outer={outerLift:0.###}");
+    }
+
+    [Fact]
+    public void TieArchLiftMagnitudeClampsInvalidInputs()
+    {
+        float invalid = PlaybackPlayfield.ResolveManuscriptTieArchLiftMagnitude(float.NaN, tieStackIndex: -9, tieStackCount: 0);
+        float huge = PlaybackPlayfield.ResolveManuscriptTieArchLiftMagnitude(8000f, tieStackIndex: 12, tieStackCount: 9);
+
+        Assert.InRange(invalid, 2.4f, 12f);
+        Assert.InRange(huge, 2.4f, 40f);
+    }
+
     [Theory]
     [InlineData(0.375, true)]   // dotted 16th
     [InlineData(0.75, true)]    // dotted 8th

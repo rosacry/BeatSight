@@ -216,6 +216,9 @@ namespace BeatSight.Tests
             Assert.Contains("getTimelineMeasureLabel", source);
             Assert.Contains("timelinePlayheadLabel", source);
             Assert.Contains("updateTimelinePlayheadLabel", source);
+            Assert.Contains("timelinePlayheadCountInLayer", source);
+            Assert.Contains("updateTimelinePlayheadCountInGuides", source);
+            Assert.Contains("FormatManuscriptCountInLabel", source);
             Assert.Contains("label.Text = $\"M{measureIndex + 1}\"", source);
         }
 

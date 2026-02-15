@@ -182,12 +182,15 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         private Container? staffContainer;
         private Container? timelineMeasureBandLayer;
         private Container? timelineMarkerLayer;
+        private Container? timelinePlayheadCountInLayer;
         private Container? timelineMeasureLabelLayer;
         private ClefIndicatorEnhanced? clefIndicator;
         private readonly List<(Box Line, float Unit)> staffGuideLines = new();
         private readonly List<ComponentGuideVisual> componentGuideVisuals = new();
         private readonly List<Box> timelineMeasureBands = new();
         private readonly List<Box> timelineMarkers = new();
+        private readonly List<Box> timelinePlayheadCountInTicks = new();
+        private readonly List<SpriteText> timelinePlayheadCountInLabels = new();
         private readonly List<SpriteText> timelineMeasureLabels = new();
         private SpriteText? timelinePlayheadLabel;
         private string? focusedGuideKey;
@@ -310,6 +313,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 RelativeSizeAxes = Axes.Both
             };
             staffContainer.Add(timelineMarkerLayer);
+
+            timelinePlayheadCountInLayer = new Container
+            {
+                RelativeSizeAxes = Axes.Both
+            };
+            staffContainer.Add(timelinePlayheadCountInLayer);
 
             timelineMeasureLabelLayer = new Container
             {
@@ -579,6 +588,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
 
             if (timelineMarkerLayer == null)
             {
+                clearTimelinePlayheadCountInGuides();
                 if (timelinePlayheadLabel != null)
                     timelinePlayheadLabel.Alpha = 0f;
                 return;
@@ -592,6 +602,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                     timelineMarkers[i].Alpha = 0f;
                 for (int i = 0; i < timelineMeasureLabels.Count; i++)
                     timelineMeasureLabels[i].Alpha = 0f;
+                clearTimelinePlayheadCountInGuides();
                 if (timelinePlayheadLabel != null)
                     timelinePlayheadLabel.Alpha = 0f;
                 return;
@@ -605,6 +616,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                     timelineMarkers[i].Alpha = 0f;
                 for (int i = 0; i < timelineMeasureLabels.Count; i++)
                     timelineMeasureLabels[i].Alpha = 0f;
+                clearTimelinePlayheadCountInGuides();
                 if (timelinePlayheadLabel != null)
                     timelinePlayheadLabel.Alpha = 0f;
                 return;
@@ -682,6 +694,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 timelineMarkers[i].Alpha = 0f;
 
             updateTimelinePlayheadLabel(beatDuration, beatsPerMeasure, subdivision);
+            updateTimelinePlayheadCountInGuides(beatDuration, beatsPerMeasure, subdivision);
         }
 
         private Box getTimelineMarker(int index)
@@ -878,6 +891,161 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             timelinePlayheadLabel.X = Math.Clamp(clampedPlayheadX + 10f, timelineLeftX + 6f, Math.Max(timelineLeftX + 90f, timelineRightX - 186f));
             timelinePlayheadLabel.Y = 8f;
             timelinePlayheadLabel.Alpha = 0.66f;
+        }
+
+        private void updateTimelinePlayheadCountInGuides(double beatDuration, int beatsPerMeasure, int subdivision)
+        {
+            if (timelinePlayheadCountInLayer == null
+                || !hasTimelineWindow
+                || timelineDurationMs <= 1
+                || beatDuration <= 1
+                || beatsPerMeasure <= 0
+                || subdivision <= 0)
+            {
+                clearTimelinePlayheadCountInGuides();
+                return;
+            }
+
+            float width = timelineRightX - timelineLeftX;
+            if (width <= 1f)
+            {
+                clearTimelinePlayheadCountInGuides();
+                return;
+            }
+
+            float clampedPlayheadX = Math.Clamp(timelinePlayheadX, timelineLeftX, timelineRightX);
+            double playheadProgress = Math.Clamp((clampedPlayheadX - timelineLeftX) / width, 0f, 1f);
+            double playheadTimeMs = timelineStartMs + timelineDurationMs * playheadProgress;
+            double subDuration = beatDuration / subdivision;
+            if (subDuration <= 0)
+            {
+                clearTimelinePlayheadCountInGuides();
+                return;
+            }
+
+            int playheadTick = (int)Math.Round((playheadTimeMs - timelineBeatOriginMs) / subDuration, MidpointRounding.AwayFromZero);
+            int lookAroundTicks = Math.Clamp(subdivision * 2, 4, 12);
+            float minLabelSpacing = Math.Clamp(width * 0.032f, 24f, 46f);
+            float lastLabelX = float.NegativeInfinity;
+            int tickCount = 0;
+            int labelCount = 0;
+
+            for (int relativeTick = -lookAroundTicks; relativeTick <= lookAroundTicks; relativeTick++)
+            {
+                int tickIndex = playheadTick + relativeTick;
+                double tickTime = timelineBeatOriginMs + tickIndex * subDuration;
+                float progress = (float)((tickTime - timelineStartMs) / timelineDurationMs);
+                if (progress < -0.04f || progress > 1.04f)
+                    continue;
+
+                float x = timelineLeftX + Math.Clamp(progress, 0f, 1f) * width;
+                bool isNow = relativeTick == 0;
+                bool isBeat = positiveModulo(tickIndex, subdivision) == 0;
+                bool isHalfBeat = !isBeat
+                                  && subdivision % 2 == 0
+                                  && positiveModulo(tickIndex, subdivision / 2) == 0;
+
+                Box tick = getTimelinePlayheadCountInTick(tickCount++);
+                tick.X = x;
+                tick.Colour = isNow
+                    ? new Color4(192, 228, 255, 210)
+                    : isBeat
+                        ? new Color4(176, 204, 236, 164)
+                        : isHalfBeat
+                            ? new Color4(162, 186, 220, 136)
+                            : new Color4(148, 170, 204, 106);
+                tick.Width = isNow ? 2.0f : isBeat ? 1.4f : 1.0f;
+                tick.Height = isNow ? 18f : isBeat ? 14f : isHalfBeat ? 10f : 7f;
+                tick.Alpha = isNow ? 0.78f : isBeat ? 0.52f : isHalfBeat ? 0.40f : 0.30f;
+
+                bool showLabel = isNow
+                                 || isBeat
+                                 || (Math.Abs(relativeTick) <= 2 && subdivision >= 3);
+                if (!showLabel)
+                    continue;
+
+                if (!isNow && x - lastLabelX < minLabelSpacing)
+                    continue;
+
+                SpriteText label = getTimelinePlayheadCountInLabel(labelCount++);
+                label.Text = FormatManuscriptCountInLabel(relativeTick, subdivision);
+                label.X = Math.Clamp(x + 2f, timelineLeftX + 4f, timelineRightX - 80f);
+                label.Y = 22f;
+                label.Alpha = isNow ? 0.72f : 0.54f;
+                lastLabelX = x;
+            }
+
+            for (int i = tickCount; i < timelinePlayheadCountInTicks.Count; i++)
+                timelinePlayheadCountInTicks[i].Alpha = 0f;
+            for (int i = labelCount; i < timelinePlayheadCountInLabels.Count; i++)
+                timelinePlayheadCountInLabels[i].Alpha = 0f;
+        }
+
+        private Box getTimelinePlayheadCountInTick(int index)
+        {
+            while (timelinePlayheadCountInTicks.Count <= index)
+            {
+                var tick = new Box
+                {
+                    Anchor = Anchor.TopLeft,
+                    Origin = Anchor.TopCentre,
+                    Y = 4f,
+                    Width = 1f,
+                    Height = 0f,
+                    Alpha = 0f
+                };
+                timelinePlayheadCountInTicks.Add(tick);
+                timelinePlayheadCountInLayer?.Add(tick);
+            }
+
+            return timelinePlayheadCountInTicks[index];
+        }
+
+        private SpriteText getTimelinePlayheadCountInLabel(int index)
+        {
+            while (timelinePlayheadCountInLabels.Count <= index)
+            {
+                var label = new SpriteText
+                {
+                    Anchor = Anchor.TopLeft,
+                    Origin = Anchor.TopLeft,
+                    Font = new FontUsage("Roboto", 9.2f),
+                    Colour = new Color4(192, 210, 236, 224),
+                    Alpha = 0f
+                };
+                timelinePlayheadCountInLabels.Add(label);
+                timelinePlayheadCountInLayer?.Add(label);
+            }
+
+            return timelinePlayheadCountInLabels[index];
+        }
+
+        private void clearTimelinePlayheadCountInGuides()
+        {
+            for (int i = 0; i < timelinePlayheadCountInTicks.Count; i++)
+                timelinePlayheadCountInTicks[i].Alpha = 0f;
+            for (int i = 0; i < timelinePlayheadCountInLabels.Count; i++)
+                timelinePlayheadCountInLabels[i].Alpha = 0f;
+        }
+
+        internal static string FormatManuscriptCountInLabel(int relativeTick, int subdivision)
+        {
+            int safeSubdivision = Math.Max(1, subdivision);
+            if (relativeTick == 0)
+                return "Now";
+
+            int absoluteTick = Math.Abs(relativeTick);
+            char sign = relativeTick > 0 ? '+' : '-';
+            int beatPart = absoluteTick / safeSubdivision;
+            int subPart = absoluteTick % safeSubdivision;
+
+            if (subPart == 0)
+                return $"{sign}{Math.Max(1, beatPart)}b";
+
+            if (beatPart == 0)
+                return $"{sign}{subPart}/{safeSubdivision}";
+
+            return $"{sign}{beatPart}b {subPart}/{safeSubdivision}";
         }
 
         private static int positiveModulo(int value, int divisor)

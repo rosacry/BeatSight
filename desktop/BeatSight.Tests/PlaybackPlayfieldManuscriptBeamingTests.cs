@@ -78,13 +78,24 @@ public class PlaybackPlayfieldManuscriptBeamingTests
     }
 
     [Theory]
-    [InlineData(0.74, false)]   // still in beam/flag space
-    [InlineData(0.8, true)]     // tie-style continuity onset
+    [InlineData(0.8, false)]    // short spacing should use beam/flag language, not ties
+    [InlineData(1.0, false)]    // quarter-step continuity is still too dense for tie cues
+    [InlineData(1.5, false)]    // dotted values use duration-dot cue instead
+    [InlineData(2.0, true)]     // longer spacing can use tie-style continuity
     [InlineData(2.5, true)]     // long spacing still tied
     [InlineData(4.2, false)]    // too long to tie in dense timeline window
     public void TieCueDetectionMatchesDurationWindow(double gapBeats, bool expected)
     {
         Assert.Equal(expected, PlaybackPlayfield.ShouldRenderManuscriptTieCue(gapBeats));
+    }
+
+    [Theory]
+    [InlineData(2.0, 0, true)]
+    [InlineData(2.0, 1, true)]
+    [InlineData(2.0, 2, false)] // avoid long arcs through dense intervening note clusters
+    public void TieCueDetectionRejectsDenseInterveningVoiceContext(double gapBeats, int interveningVoiceNotes, bool expected)
+    {
+        Assert.Equal(expected, PlaybackPlayfield.ShouldRenderManuscriptTieCue(gapBeats, interveningVoiceNotes));
     }
 }
 

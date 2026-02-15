@@ -66,6 +66,40 @@ public class PlaybackPlayfieldManuscriptBeamingTests
         Assert.Equal(expected, PlaybackPlayfield.IsManuscriptBeamPairWithinSubdivisionGroup(currentBeatProgress, nextBeatProgress, subdivisionDivisor));
     }
 
+    [Fact]
+    public void ManuscriptChordHorizontalOffsetSeparatesCrossVoices()
+    {
+        float lower = PlaybackPlayfield.ResolveManuscriptChordHorizontalOffset(0, 1, lowerVoice: true, hasCrossVoice: true, noteWidth: 14f);
+        float upper = PlaybackPlayfield.ResolveManuscriptChordHorizontalOffset(0, 1, lowerVoice: false, hasCrossVoice: true, noteWidth: 14f);
+
+        Assert.True(lower < -1.5f, $"Expected lower voice offset leftward, got {lower:0.###}");
+        Assert.True(upper > 1.5f, $"Expected upper voice offset rightward, got {upper:0.###}");
+    }
+
+    [Fact]
+    public void ManuscriptChordHorizontalOffsetCentersSameVoiceClusters()
+    {
+        float left = PlaybackPlayfield.ResolveManuscriptChordHorizontalOffset(0, 3, lowerVoice: false, hasCrossVoice: false, noteWidth: 12f);
+        float middle = PlaybackPlayfield.ResolveManuscriptChordHorizontalOffset(1, 3, lowerVoice: false, hasCrossVoice: false, noteWidth: 12f);
+        float right = PlaybackPlayfield.ResolveManuscriptChordHorizontalOffset(2, 3, lowerVoice: false, hasCrossVoice: false, noteWidth: 12f);
+
+        Assert.True(left < middle, $"Expected left cluster note offset ordering, left={left:0.###}, middle={middle:0.###}");
+        Assert.True(middle < right, $"Expected right cluster note offset ordering, middle={middle:0.###}, right={right:0.###}");
+        Assert.InRange(middle, -0.001f, 0.001f);
+        Assert.InRange(left + right, -0.02f, 0.02f);
+    }
+
+    [Fact]
+    public void ManuscriptSimultaneousTimeKeyUsesSubMillisecondBucketing()
+    {
+        long baseKey = PlaybackPlayfield.ResolveManuscriptSimultaneousTimeKey(1000.0);
+        long nearKey = PlaybackPlayfield.ResolveManuscriptSimultaneousTimeKey(1000.24);
+        long farKey = PlaybackPlayfield.ResolveManuscriptSimultaneousTimeKey(1000.76);
+
+        Assert.Equal(baseKey, nearKey);
+        Assert.NotEqual(baseKey, farKey);
+    }
+
     [Theory]
     [InlineData(0.375, true)]   // dotted 16th
     [InlineData(0.75, true)]    // dotted 8th

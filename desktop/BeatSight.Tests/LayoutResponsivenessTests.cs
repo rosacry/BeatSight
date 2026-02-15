@@ -303,6 +303,9 @@ namespace BeatSight.Tests
             Assert.Contains("ShouldRenderManuscriptDottedCue", playfieldSource);
             Assert.Contains("manuscriptRestSpanLayer", playfieldSource);
             Assert.Contains("ResolveManuscriptRestSpanEmphasisLevel", playfieldSource);
+            Assert.Contains("buildManuscriptHorizontalClusters", playfieldSource);
+            Assert.Contains("ResolveManuscriptChordHorizontalOffset", playfieldSource);
+            Assert.Contains("ResolveManuscriptSimultaneousTimeKey", playfieldSource);
             Assert.Contains("SetCountInGuideMode", playfieldSource);
             Assert.Contains("SetManuscriptDurationDot", noteSource);
         }

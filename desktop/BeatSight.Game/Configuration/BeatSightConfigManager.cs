@@ -54,7 +54,7 @@ namespace BeatSight.Game.Configuration
             setDefault(BeatSightSetting.GameplayMode, GameplayMode.Manual);
             setDefault(BeatSightSetting.SpeedAdjustmentMin, 0.0);
             setDefault(BeatSightSetting.SpeedAdjustmentMax, 2.0);
-            setDefault(BeatSightSetting.PlaybackZoomLevel, 1.30);
+            setDefault(BeatSightSetting.PlaybackZoomLevel, 1.36);
             setDefault(BeatSightSetting.PlaybackNoteWidth, 1.0);
             setDefault(BeatSightSetting.BackgroundDim, 0.8);
             setDefault(BeatSightSetting.BackgroundBlur, 0.0);
@@ -99,7 +99,7 @@ namespace BeatSight.Game.Configuration
             setDefault(BeatSightSetting.ShowDetectionDebugOverlay, false);
 
             // Editor Defaults
-            setDefault(BeatSightSetting.EditorTimelineZoomDefault, 1.0);
+            setDefault(BeatSightSetting.EditorTimelineZoomDefault, 1.15);
             setDefault(BeatSightSetting.EditorWaveformScaleDefault, 1.0);
             setDefault(BeatSightSetting.EditorBeatGridVisibleDefault, true);
 

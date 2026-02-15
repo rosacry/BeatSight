@@ -197,6 +197,24 @@ namespace BeatSight.Tests
         }
 
         [Fact]
+        public void PlaybackAndEditorZoomDefaultsStayReadabilityBiased()
+        {
+            string root = resolveRepositoryRoot();
+            string configPath = Path.Combine(root, "desktop", "BeatSight.Game", "Configuration", "BeatSightConfigManager.cs");
+            string editorBeatmapLoadPath = Path.Combine(root, "desktop", "BeatSight.Game", "Screens", "Editor", "EditorScreen.BeatmapAudioLoad.cs");
+
+            Assert.True(File.Exists(configPath), $"Expected file missing: {configPath}");
+            Assert.True(File.Exists(editorBeatmapLoadPath), $"Expected file missing: {editorBeatmapLoadPath}");
+
+            string configSource = File.ReadAllText(configPath);
+            string editorSource = File.ReadAllText(editorBeatmapLoadPath);
+
+            Assert.Contains("setDefault(BeatSightSetting.PlaybackZoomLevel, 1.36)", configSource);
+            Assert.Contains("setDefault(BeatSightSetting.EditorTimelineZoomDefault, 1.15)", configSource);
+            Assert.Contains("TimelineZoom = editorTimelineZoomDefault?.Value ?? 1.15", editorSource);
+        }
+
+        [Fact]
         public void EditorPreviewBindsThreeDProfileSettingToPlaybackPlayfield()
         {
             string root = resolveRepositoryRoot();

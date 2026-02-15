@@ -6,10 +6,10 @@ namespace BeatSight.Tests;
 public class PlaybackPlayfieldAutoZoomTests
 {
     [Theory]
-    [InlineData(90, 4, 0.2, 1.28)]
-    [InlineData(120, 4, 1.1, 1.43)]
-    [InlineData(180, 4, 2.8, 1.78)]
-    [InlineData(220, 7, 3.5, 1.88)]
+    [InlineData(90, 4, 0.2, 1.36)]
+    [InlineData(120, 4, 1.1, 1.61)]
+    [InlineData(180, 4, 2.8, 1.97)]
+    [InlineData(220, 7, 3.5, 2.09)]
     public void AutoZoomMultiplierScalesWithDensityAndTempo(
         double bpm,
         double beatsPerMeasure,
@@ -24,6 +24,6 @@ public class PlaybackPlayfieldAutoZoomTests
     public void AutoZoomMultiplierIsCapped()
     {
         double multiplier = PlaybackPlayfield.CalculateAutoZoomMultiplier(300, 9, 20);
-        Assert.InRange(multiplier, 1.939, 1.941);
+        Assert.InRange(multiplier, 2.119, 2.121);
     }
 }

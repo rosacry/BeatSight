@@ -13,6 +13,7 @@ param(
         "PlaybackManuscript"
     ),
     [int]$BatchTimeoutSeconds = 900,
+    [int]$BatchStartupTimeoutSeconds = 180,
     [int]$HeartbeatSeconds = 20,
     [switch]$RunFullDesktopSuite,
     [switch]$SkipInitialBuild,
@@ -51,9 +52,14 @@ function Stop-StaleBeatSightTestProcesses {
     }
 
     $projectToken = [System.IO.Path]::GetFileName($ProjectPath)
+    $assemblyToken = "$([System.IO.Path]::GetFileNameWithoutExtension($ProjectPath)).dll"
     $candidates = Get-CimInstance Win32_Process | Where-Object {
+        $commandLine = [string]$_.CommandLine
         ($_.Name -ieq "testhost.exe" -or $_.Name -ieq "dotnet.exe") -and
-        $_.CommandLine -like "*$projectToken*"
+        (
+            $commandLine -like "*$projectToken*" -or
+            $commandLine -like "*$assemblyToken*"
+        )
     }
 
     if (-not $candidates) {
@@ -73,6 +79,34 @@ function Stop-StaleBeatSightTestProcesses {
     }
 
     Write-Host "[visual-gate] stopped $stopped stale BeatSight test process(es) before run."
+}
+
+function Stop-VisualTestProcessTree {
+    param(
+        [int]$ProcessId,
+        [string]$Reason = "unknown"
+    )
+
+    if ($ProcessId -le 0) {
+        return
+    }
+
+    $isWindows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+    if ($isWindows) {
+        & taskkill /PID $ProcessId /T /F 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq 128) {
+            return
+        }
+
+        Write-Host "[visual-gate][warn] taskkill returned exit code $LASTEXITCODE while stopping process tree (reason=$Reason, pid=$ProcessId)."
+    }
+
+    try {
+        Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+    }
+    catch {
+        Write-Host "[visual-gate][warn] failed to stop process id=$ProcessId (reason=$Reason): $($_.Exception.Message)"
+    }
 }
 
 function Invoke-InitialBuild {
@@ -102,6 +136,7 @@ function Invoke-VisualBatch {
         [string]$Configuration,
         [string]$ResultsDirectory,
         [int]$TimeoutSeconds,
+        [int]$StartupTimeoutSeconds,
         [int]$HeartbeatSeconds,
         [switch]$DryRun
     )
@@ -142,6 +177,12 @@ function Invoke-VisualBatch {
     Write-Host "[visual-gate] scenes: $Scenes"
     Write-Host "[visual-gate] resolutions: $Resolutions"
     Write-Host "[visual-gate] timeout: ${TimeoutSeconds}s"
+    if ($StartupTimeoutSeconds -gt 0) {
+        Write-Host "[visual-gate] startup-timeout: ${StartupTimeoutSeconds}s (until first TRX artifact appears)"
+    }
+    else {
+        Write-Host "[visual-gate] startup-timeout: disabled"
+    }
     Write-Host "[visual-gate] trx: $trxPath"
     Write-Host "[visual-gate] note: each batch can take 60-120s+ depending on scene/resolution complexity."
 
@@ -161,26 +202,35 @@ function Invoke-VisualBatch {
     $process = Start-Process -FilePath "dotnet" -ArgumentList $args -NoNewWindow -PassThru
     $batchTimer = [System.Diagnostics.Stopwatch]::StartNew()
     [double]$trxSeenAtSeconds = -1
-    $elapsed = 0
+    $heartbeatIntervalSeconds = [Math]::Max($HeartbeatSeconds, 1)
+    $effectiveStartupTimeoutSeconds = if ($StartupTimeoutSeconds -gt 0) {
+        [Math]::Max([Math]::Min($StartupTimeoutSeconds, $TimeoutSeconds), 1)
+    }
+    else {
+        0
+    }
 
     while (-not $process.HasExited) {
-        Start-Sleep -Seconds $HeartbeatSeconds
-        $elapsed += $HeartbeatSeconds
+        $waitMilliseconds = [int]($heartbeatIntervalSeconds * 1000)
+        $didExit = $process.WaitForExit($waitMilliseconds)
+        $elapsed = [Math]::Round($batchTimer.Elapsed.TotalSeconds, 1)
+
         if ($trxSeenAtSeconds -lt 0 -and (Test-Path $trxPath)) {
             $trxSeenAtSeconds = [Math]::Round($batchTimer.Elapsed.TotalSeconds, 1)
             Write-Host "[visual-gate] startup telemetry: trx first seen at ${trxSeenAtSeconds}s."
         }
-        if (-not $process.HasExited) {
+        if (-not $didExit) {
             Write-Host "[visual-gate] batch still running (${elapsed}s elapsed)..."
         }
 
-        if ($elapsed -ge $TimeoutSeconds -and -not $process.HasExited) {
-            try {
-                Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
-            }
-            finally {
-                throw "Visual batch timed out after ${TimeoutSeconds}s for scenes: $Scenes"
-            }
+        if ($trxSeenAtSeconds -lt 0 -and $effectiveStartupTimeoutSeconds -gt 0 -and $elapsed -ge $effectiveStartupTimeoutSeconds -and -not $didExit) {
+            Stop-VisualTestProcessTree -ProcessId $process.Id -Reason "startup-timeout"
+            throw "Visual batch startup timed out after ${effectiveStartupTimeoutSeconds}s (no TRX emitted) for scenes: $Scenes"
+        }
+
+        if ($elapsed -ge $TimeoutSeconds -and -not $didExit) {
+            Stop-VisualTestProcessTree -ProcessId $process.Id -Reason "batch-timeout"
+            throw "Visual batch timed out after ${TimeoutSeconds}s for scenes: $Scenes"
         }
     }
 
@@ -314,6 +364,7 @@ try {
             -Configuration $Configuration `
             -ResultsDirectory $ResultsDirectory `
             -TimeoutSeconds $BatchTimeoutSeconds `
+            -StartupTimeoutSeconds $BatchStartupTimeoutSeconds `
             -HeartbeatSeconds $HeartbeatSeconds `
             -DryRun:$DryRun
         if ($null -ne $batchResult) {
@@ -327,6 +378,7 @@ try {
         Resolutions = $Resolutions
         SceneBatches = @($SceneBatches)
         BatchTimeoutSeconds = $BatchTimeoutSeconds
+        BatchStartupTimeoutSeconds = $BatchStartupTimeoutSeconds
         HeartbeatSeconds = $HeartbeatSeconds
         DryRun = [bool]$DryRun
         RunFullDesktopSuite = [bool]$RunFullDesktopSuite

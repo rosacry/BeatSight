@@ -267,6 +267,7 @@ namespace BeatSight.Tests
             Assert.Contains("ShouldRenderManuscriptTupletHint", source);
             Assert.Contains("ResolveManuscriptTupletBracketEmphasis", source);
             Assert.Contains("UsesDiamondNoteheadForComponent", source);
+            Assert.Contains("IsCrossStickComponent", source);
             Assert.Contains("timelineTupletBracketRails", source);
             Assert.Contains("getTimelineTupletBracketRail", source);
             Assert.Contains("getTimelineTupletBracketLeftHook", source);
@@ -313,6 +314,8 @@ namespace BeatSight.Tests
             Assert.Contains("ResolveManuscriptParserFollowAlpha", playfieldSource);
             Assert.Contains("SetCountInGuideMode", playfieldSource);
             Assert.Contains("SetManuscriptDurationDot", noteSource);
+            Assert.Contains("ResolveManuscriptGhostParenthesisOffsetX", noteSource);
+            Assert.Contains("manuscriptGhostParenLeft", noteSource);
         }
 
         [Fact]

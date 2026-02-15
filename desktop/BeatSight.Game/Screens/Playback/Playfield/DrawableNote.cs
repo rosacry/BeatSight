@@ -111,7 +111,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private readonly Circle manuscriptHiHatOpenIndicator;
         private readonly Box manuscriptHiHatClosedHorizontal;
         private readonly Box manuscriptHiHatClosedVertical;
+        private readonly Box manuscriptHiHatClosedCap;
         private readonly Box manuscriptHiHatHalfOpenSlash;
+        private readonly Box manuscriptHiHatHalfOpenSlashSecondary;
         private readonly Circle manuscriptDurationDot;
         private readonly Box? glowBox;
         private readonly Box stem;
@@ -283,6 +285,17 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             };
             children.Add(manuscriptHiHatClosedVertical);
 
+            manuscriptHiHatClosedCap = new Box
+            {
+                Width = 5,
+                Height = 2,
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                Colour = AccentColour,
+                Alpha = 0
+            };
+            children.Add(manuscriptHiHatClosedCap);
+
             manuscriptHiHatHalfOpenSlash = new Box
             {
                 Width = 2,
@@ -294,6 +307,18 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 Alpha = 0
             };
             children.Add(manuscriptHiHatHalfOpenSlash);
+
+            manuscriptHiHatHalfOpenSlashSecondary = new Box
+            {
+                Width = 2,
+                Height = 7,
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                Colour = AccentColour,
+                Rotation = 35f,
+                Alpha = 0
+            };
+            children.Add(manuscriptHiHatHalfOpenSlashSecondary);
 
             manuscriptDurationDot = new Circle
             {
@@ -425,9 +450,18 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 manuscriptHiHatHalfOpenSlash.Width = Math.Clamp(noteHeight * 0.18f, 1.1f, 2.2f);
                 manuscriptHiHatHalfOpenSlash.Height = openDiameter + 1.2f;
                 manuscriptHiHatHalfOpenSlash.Colour = manuscriptInk;
-                manuscriptHiHatHalfOpenSlash.Y = hiHatArticulationY;
+                float halfOpenOffset = ResolveManuscriptHalfOpenSlashOffset(openDiameter);
+                manuscriptHiHatHalfOpenSlash.Y = hiHatArticulationY - halfOpenOffset;
                 manuscriptHiHatHalfOpenSlash.Rotation = 35f;
                 manuscriptHiHatHalfOpenSlash.Alpha = hiHatHalfOpen ? 0.92f * velocityAlpha : 0f;
+
+                manuscriptHiHatHalfOpenSlashSecondary.Width = Math.Clamp(noteHeight * 0.16f, 1.0f, 2.0f);
+                manuscriptHiHatHalfOpenSlashSecondary.Height = openDiameter + 0.8f;
+                manuscriptHiHatHalfOpenSlashSecondary.Colour = manuscriptInk;
+                manuscriptHiHatHalfOpenSlashSecondary.Y = hiHatArticulationY + halfOpenOffset * 0.48f;
+                manuscriptHiHatHalfOpenSlashSecondary.X = Math.Clamp(openDiameter * 0.18f, 0.4f, 1.6f);
+                manuscriptHiHatHalfOpenSlashSecondary.Rotation = 35f;
+                manuscriptHiHatHalfOpenSlashSecondary.Alpha = hiHatHalfOpen ? 0.72f * velocityAlpha : 0f;
 
                 float closedLength = Math.Clamp(noteWidth * 0.34f, 4.5f, 8.2f);
                 float closedThickness = Math.Clamp(closedLength * 0.22f, 1.1f, 2f);
@@ -442,6 +476,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 manuscriptHiHatClosedVertical.Colour = manuscriptInk;
                 manuscriptHiHatClosedVertical.Y = hiHatArticulationY;
                 manuscriptHiHatClosedVertical.Alpha = hiHatClosed ? 0.92f * velocityAlpha : 0f;
+
+                manuscriptHiHatClosedCap.Width = closedLength * 0.62f;
+                manuscriptHiHatClosedCap.Height = closedThickness;
+                manuscriptHiHatClosedCap.Colour = manuscriptInk;
+                manuscriptHiHatClosedCap.Y = hiHatArticulationY - ResolveManuscriptClosedCapOffset(closedLength);
+                manuscriptHiHatClosedCap.Alpha = hiHatClosed ? 0.76f * velocityAlpha : 0f;
 
                 float durationDotDiameter = Math.Clamp(noteHeight * 0.28f, 2.1f, 4.2f);
                 manuscriptDurationDot.Size = new Vector2(durationDotDiameter);
@@ -464,7 +504,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             manuscriptHiHatOpenIndicator.Alpha = 0;
             manuscriptHiHatClosedHorizontal.Alpha = 0;
             manuscriptHiHatClosedVertical.Alpha = 0;
+            manuscriptHiHatClosedCap.Alpha = 0;
             manuscriptHiHatHalfOpenSlash.Alpha = 0;
+            manuscriptHiHatHalfOpenSlashSecondary.Alpha = 0;
             manuscriptDurationDot.Alpha = 0;
             noteheadContainer.Masking = true;
             noteheadContainer.Rotation = 0f;
@@ -580,6 +622,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float offset = Math.Clamp(baseDistance + flagLift, 10f, 52f);
             return stemDown ? offset : -offset;
         }
+
+        internal static float ResolveManuscriptHalfOpenSlashOffset(float openDiameter)
+            => Math.Clamp(openDiameter * 0.24f, 0.7f, 2.2f);
+
+        internal static float ResolveManuscriptClosedCapOffset(float closedLength)
+            => Math.Clamp(closedLength * 0.9f, 3.8f, 8.6f);
 
         public void ApplyKickLineDimensions(float width, float height, LaneViewMode mode)
         {

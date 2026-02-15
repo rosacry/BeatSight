@@ -29,13 +29,16 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         #region Configuration
 
         /// <summary>The color of the cursor body.</summary>
-        private static readonly Color4 HighlightColor = new Color4(120, 255, 172, 24);
+        private static readonly Color4 HighlightColor = new Color4(120, 255, 172, 28);
 
         /// <summary>The color of the leading edge indicator.</summary>
         private static readonly Color4 EdgeColor = new Color4(144, 255, 190, 228);
 
         /// <summary>The color of the "now playing" glow.</summary>
         private static readonly Color4 GlowColor = new Color4(116, 255, 176, 94);
+
+        /// <summary>Secondary forward lookahead tint on the right side of the cursor.</summary>
+        private static readonly Color4 PreviewColor = new Color4(126, 214, 255, 40);
 
         /// <summary>Width of the leading edge line.</summary>
         private const float EdgeLineWidth = 2.4f;
@@ -46,13 +49,19 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         /// <summary>How many milliseconds of audio the highlight covers (lookahead window).</summary>
         private const double DefaultLookaheadMs = 500;
 
+        /// <summary>Fallback cursor trail width ratio when timeline duration is unavailable.</summary>
+        private const float FallbackTrailWidthRatio = 0.09f;
+
         #endregion
 
         #region Visual Components
 
         private Box highlightOverlay = null!;
+        private Box previewOverlay = null!;
         private Box leadingEdge = null!;
         private Box leadingGlow = null!;
+        private Box topTick = null!;
+        private Box bottomTick = null!;
         private Container noteHighlightContainer = null!;
 
         #endregion
@@ -108,8 +117,20 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 Anchor = Anchor.TopLeft,
                 Origin = Anchor.TopLeft,
                 Colour = ColourInfo.GradientHorizontal(
-                    DesignSystem.WithOpacity(HighlightColor, 0.02f),
+                    Color4.Transparent,
                     HighlightColor)
+            };
+
+            // Forward lookahead tint (subtle) on the right side of the playhead.
+            previewOverlay = new Box
+            {
+                RelativeSizeAxes = Axes.Y,
+                Width = 0,
+                Anchor = Anchor.TopLeft,
+                Origin = Anchor.TopLeft,
+                Colour = ColourInfo.GradientHorizontal(
+                    PreviewColor,
+                    Color4.Transparent)
             };
 
             // Glow effect at the leading edge (blurred appearance)
@@ -135,6 +156,24 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 Colour = EdgeColor
             };
 
+            topTick = new Box
+            {
+                Anchor = Anchor.TopLeft,
+                Origin = Anchor.TopCentre,
+                Width = 1.8f,
+                Height = 11f,
+                Colour = EdgeColor
+            };
+
+            bottomTick = new Box
+            {
+                Anchor = Anchor.TopLeft,
+                Origin = Anchor.BottomCentre,
+                Width = 1.8f,
+                Height = 11f,
+                Colour = EdgeColor
+            };
+
             // Container for per-note highlight rings
             noteHighlightContainer = new Container
             {
@@ -144,8 +183,11 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             InternalChildren = new Drawable[]
             {
                 highlightOverlay,
+                previewOverlay,
                 leadingGlow,
                 leadingEdge,
+                topTick,
+                bottomTick,
                 noteHighlightContainer
             };
 
@@ -154,7 +196,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             HighlightOpacity.BindValueChanged(e =>
             {
                 highlightOverlay.Colour = ColourInfo.GradientHorizontal(
-                    DesignSystem.WithOpacity(HighlightColor, 0.1f * e.NewValue),
+                    Color4.Transparent,
                     DesignSystem.WithOpacity(HighlightColor, e.NewValue));
             }, true);
         }
@@ -215,19 +257,35 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             float leftBound = hasTimelineWindow ? timelineLeftX : staffStartX;
             float rightBound = hasTimelineWindow ? timelineRightX : staffEndX;
             float edgeX = Math.Clamp(resolveCursorX(timeMs, bpm), leftBound, rightBound);
+            float timelineWidth = Math.Max(1f, rightBound - leftBound);
             float staffWidth = Math.Max(1f, staffEndX - staffStartX);
             float cursorWidth = Math.Clamp(staffWidth * 0.0034f, 2.8f, 5.2f);
             float glowWidth = Math.Clamp(cursorWidth * 2.4f, 9f, 13f);
+            float overlayWidth = ResolvePlaybackCursorTrailWidth(timelineWidth, timelineDurationMs, bpm, lookaheadMs, hasTimelineWindow);
+            float overlayStartX = Math.Max(leftBound, edgeX - overlayWidth);
+            float overlayClampedWidth = Math.Max(cursorWidth, edgeX - overlayStartX);
+            highlightOverlay.Width = overlayClampedWidth;
+            highlightOverlay.X = overlayStartX;
 
-            float overlayWidth = Math.Max(cursorWidth, edgeX - leftBound);
-            highlightOverlay.Width = overlayWidth;
-            highlightOverlay.X = leftBound;
+            float previewWidth = Math.Clamp(overlayWidth * 0.16f, 7f, 36f);
+            float previewClampedWidth = Math.Max(0f, Math.Min(previewWidth, rightBound - edgeX));
+            previewOverlay.Width = previewClampedWidth;
+            previewOverlay.X = edgeX;
+            previewOverlay.Alpha = previewClampedWidth > 0.1f ? 0.48f : 0f;
 
             leadingEdge.Width = Math.Clamp(cursorWidth * 0.78f, 1.8f, 3.2f);
             leadingEdge.X = edgeX - leadingEdge.Width * 0.5f;
 
             leadingGlow.Width = glowWidth;
             leadingGlow.X = edgeX - glowWidth;
+
+            topTick.X = edgeX;
+            topTick.Y = 3f;
+            topTick.Alpha = 0.92f;
+
+            bottomTick.X = edgeX;
+            bottomTick.Y = DrawHeight - 3f;
+            bottomTick.Alpha = 0.92f;
 
             // Per-note glow rings are intentionally disabled by default for sheet readability.
             if (ShowNoteHighlights.Value && currentHitObjects != null)
@@ -247,6 +305,26 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             float measureDurationMs = beatDurationMs * 4;
             float measureProgress = (float)((timeMs % measureDurationMs) / measureDurationMs);
             return staffStartX + (staffEndX - staffStartX) * measureProgress;
+        }
+
+        internal static float ResolvePlaybackCursorTrailWidth(
+            float timelineWidth,
+            double timelineDurationMs,
+            double bpm,
+            double configuredLookaheadMs,
+            bool hasTimelineWindow)
+        {
+            float safeWidth = Math.Max(1f, timelineWidth);
+            if (!hasTimelineWindow || timelineDurationMs <= 1)
+                return Math.Clamp(safeWidth * FallbackTrailWidthRatio, 56f, 190f);
+
+            double beatDurationMs = 60000.0 / Math.Max(1.0, bpm);
+            double adaptiveLookahead = Math.Clamp(beatDurationMs, 320.0, 700.0);
+            double effectiveLookahead = Math.Max(220.0, Math.Min(900.0, Math.Max(configuredLookaheadMs, adaptiveLookahead)));
+            float ratioWidth = (float)(safeWidth * (effectiveLookahead / timelineDurationMs));
+            float minWidth = Math.Clamp(safeWidth * 0.06f, 56f, 110f);
+            float maxWidth = Math.Clamp(safeWidth * 0.09f, 96f, 160f);
+            return Math.Clamp(ratioWidth, minWidth, maxWidth);
         }
 
         private void UpdateNoteHighlights(double timeMs)
@@ -320,8 +398,14 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             float resetX = hasTimelineWindow ? timelineLeftX : staffStartX;
             highlightOverlay.Width = 0;
             highlightOverlay.X = resetX;
+            previewOverlay.Width = 0;
+            previewOverlay.X = resetX;
             leadingEdge.X = resetX;
             leadingGlow.X = resetX;
+            topTick.X = resetX;
+            topTick.Alpha = 0f;
+            bottomTick.X = resetX;
+            bottomTick.Alpha = 0f;
             ClearNoteHighlights();
         }
     }

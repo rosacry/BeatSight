@@ -245,6 +245,20 @@ namespace BeatSight.Tests
         }
 
         [Fact]
+        public void ManuscriptPlaybackHighlighterUsesBoundedCursorTrailContracts()
+        {
+            string root = resolveRepositoryRoot();
+            string highlighterPath = Path.Combine(root, "desktop", "BeatSight.Game", "Screens", "Playback", "Playfield", "Views", "ManuscriptPlaybackHighlighter.cs");
+            Assert.True(File.Exists(highlighterPath), $"Expected file missing: {highlighterPath}");
+
+            string source = File.ReadAllText(highlighterPath);
+            Assert.Contains("ResolvePlaybackCursorTrailWidth", source);
+            Assert.Contains("previewOverlay", source);
+            Assert.Contains("topTick", source);
+            Assert.Contains("bottomTick", source);
+        }
+
+        [Fact]
         public void ManuscriptPlayfieldIncludesDurationCueContracts()
         {
             string root = resolveRepositoryRoot();

@@ -413,7 +413,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     glowBox.Alpha = 0.04f * velocityAlpha;
                 }
 
-                float hiHatArticulationY = -noteHeight * 1.52f;
+                float hiHatArticulationY = ResolveManuscriptHiHatArticulationOffsetY(noteHeight, manuscriptFlagCount, stemDown);
                 float openDiameter = Math.Clamp(noteHeight * 0.65f, 4.5f, 8.4f);
                 manuscriptHiHatOpenIndicator.Size = new Vector2(openDiameter);
                 manuscriptHiHatOpenIndicator.BorderThickness = Math.Clamp(openDiameter * 0.22f, 1.1f, 2f);
@@ -568,6 +568,17 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             manuscriptDurationDotVisible = visible;
             if (viewMode == LaneViewMode.Manuscript)
                 SetViewMode(viewMode);
+        }
+
+        internal static float ResolveManuscriptHiHatArticulationOffsetY(float noteHeight, int flagCount, bool stemDown)
+        {
+            float clampedHeight = Math.Max(7f, noteHeight);
+            int clampedFlags = Math.Clamp(flagCount, 0, 3);
+
+            float baseDistance = Math.Clamp(clampedHeight * 1.52f, 10f, 28f);
+            float flagLift = Math.Clamp(clampedHeight * 0.62f, 4.2f, 8.6f) * clampedFlags;
+            float offset = Math.Clamp(baseDistance + flagLift, 10f, 52f);
+            return stemDown ? offset : -offset;
         }
 
         public void ApplyKickLineDimensions(float width, float height, LaneViewMode mode)

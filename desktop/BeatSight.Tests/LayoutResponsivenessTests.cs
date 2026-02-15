@@ -261,6 +261,8 @@ namespace BeatSight.Tests
             Assert.Contains("FormatManuscriptCountInLabel", source);
             Assert.Contains("ResolveManuscriptCountInLookAroundTicks", source);
             Assert.Contains("ShouldRenderManuscriptCountInLabel", source);
+            Assert.Contains("ResolveManuscriptAnnotationScale", source);
+            Assert.Contains("ResolveManuscriptAnnotationAlphaScale", source);
             Assert.Contains("timelineTupletLabelLayer", source);
             Assert.Contains("updateTimelineTupletLabels", source);
             Assert.Contains("FormatManuscriptTupletHintLabel", source);

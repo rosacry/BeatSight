@@ -163,7 +163,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         private const float StaffUnitMin = -3.5f;
         private const float StaffUnitMax = 3.5f;
         private const float StaffUnitRange = StaffUnitMax - StaffUnitMin;
-        private const float BaseGuideAlpha = 0.010f;
+        private const float BaseGuideAlpha = 0.014f;
 
         // Staff dimensions
         private const int StaffLineCount = 5;
@@ -211,6 +211,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         private int timelineSubdivisionDivisor = 1;
         private bool timelineWindowDirty;
         private ManuscriptCountInGuideMode countInGuideMode = ManuscriptCountInGuideMode.Full;
+        private float annotationScale = 1f;
+        private float annotationAlphaScale = 1f;
 
         private sealed record ComponentGuide(string Key, string Label, float Unit, Color4 Color);
 
@@ -342,7 +344,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             {
                 Anchor = Anchor.TopLeft,
                 Origin = Anchor.TopLeft,
-                Font = new FontUsage("Roboto", 10.4f),
+                Font = new FontUsage("Roboto", 10.8f, weight: "SemiBold"),
                 Colour = new Color4(216, 232, 252, 238),
                 Alpha = 0f
             };
@@ -552,7 +554,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         {
             float spacing = GetStaffSpacingForDrawArea(drawWidth, drawHeight);
             float laneHeight = Math.Clamp(spacing * 0.80f, 14f, 36f);
-            float labelSize = Math.Clamp(drawWidth / 168f, 9.2f, 13.6f);
+            annotationScale = ResolveManuscriptAnnotationScale(drawWidth);
+            annotationAlphaScale = ResolveManuscriptAnnotationAlphaScale(drawWidth);
+            float labelSize = Math.Clamp(drawWidth / 166f, 10.2f, 14.8f);
             float leftLabelInset = Math.Clamp(drawWidth * 0.024f, 18f, 38f);
             float rightLabelInset = Math.Clamp(drawWidth * 0.018f, 14f, 30f);
             float centerY = GetStaffCenterYForDrawHeight(drawHeight);
@@ -593,7 +597,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 bool isFocused = hasFocus && string.Equals(visual.Guide.Key, focusedGuideKey, StringComparison.Ordinal);
                 float fillAlpha = hasFocus ? (isFocused ? 0.12f : 0.004f) : BaseGuideAlpha;
                 float railAlpha = hasFocus ? (isFocused ? 0.22f : 0.028f) : 0.042f;
-                float labelAlpha = hasFocus ? (isFocused ? 0.82f : 0.16f) : 0.18f;
+                float labelAlpha = hasFocus ? (isFocused ? 0.82f : 0.18f) : 0.24f;
                 Color4 guideColor = hasFocus && isFocused ? visual.Guide.Color : StaffLineColor;
 
                 visual.Fill.Colour = DesignSystem.WithOpacity(guideColor, fillAlpha);
@@ -833,7 +837,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             int lastMeasure = (int)Math.Ceiling((windowEnd - timelineBeatOriginMs) / measureDuration) + 1;
 
             int labelCount = 0;
-            float minSpacing = Math.Clamp((timelineRightX - timelineLeftX) * 0.07f, 40f, 76f);
+            float minSpacing = Math.Clamp((timelineRightX - timelineLeftX) * (0.072f / annotationScale), 36f, 74f);
             float lastPlacedX = float.NegativeInfinity;
 
             for (int measureIndex = firstMeasure; measureIndex <= lastMeasure; measureIndex++)
@@ -849,9 +853,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
 
                 SpriteText label = getTimelineMeasureLabel(labelCount++);
                 label.Text = $"M{measureIndex + 1}";
+                label.Font = new FontUsage("Roboto", 10.2f * annotationScale, weight: "SemiBold");
                 label.X = x + 4f;
-                label.Y = 8f;
-                label.Alpha = 0.44f;
+                label.Y = 7f;
+                label.Alpha = Math.Clamp(0.46f * annotationAlphaScale, 0.44f, 0.64f);
                 lastPlacedX = x;
             }
 
@@ -868,7 +873,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                     RelativePositionAxes = Axes.None,
                     Anchor = Anchor.TopLeft,
                     Origin = Anchor.TopLeft,
-                    Font = new FontUsage("Roboto", 10f),
+                    Font = new FontUsage("Roboto", 10.2f, weight: "SemiBold"),
                     Colour = new Color4(194, 208, 234, 226),
                     Alpha = 0f
                 };
@@ -909,7 +914,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             int firstGroup = (int)Math.Floor(firstTick / (double)groupingTicks) - 1;
             int lastGroup = (int)Math.Ceiling(lastTick / (double)groupingTicks) + 1;
             float width = timelineRightX - timelineLeftX;
-            float minSpacing = Math.Clamp(width * 0.085f, 58f, 108f);
+            float minSpacing = Math.Clamp(width * (0.086f / annotationScale), 54f, 104f);
             float minBracketSpan = Math.Clamp(width * 0.055f, 28f, 66f);
             float clampedPlayheadX = Math.Clamp(timelinePlayheadX, timelineLeftX, timelineRightX);
             double playheadProgress = Math.Clamp((clampedPlayheadX - timelineLeftX) / Math.Max(1f, width), 0f, 1f);
@@ -949,7 +954,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                 double distanceBeats = Math.Abs((centerTime - playheadTimeMs) / beatDuration);
                 float emphasis = ResolveManuscriptTupletBracketEmphasis(distanceBeats);
                 float hookHeight = Math.Clamp(4.4f + emphasis * 1.6f, 4.4f, 6.0f);
-                float bracketAlpha = Math.Clamp(0.24f + emphasis * 0.34f, 0.24f, 0.58f);
+                float bracketAlpha = Math.Clamp((0.26f + emphasis * 0.34f) * annotationAlphaScale, 0.26f, 0.64f);
                 byte bracketBlue = (byte)Math.Clamp(226 + (int)Math.Round(emphasis * 20f), 0, 255);
                 Color4 bracketColor = new Color4(196, 212, bracketBlue, 228);
 
@@ -979,9 +984,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
 
                 SpriteText label = getTimelineTupletLabel(labelCount++);
                 label.Text = FormatManuscriptTupletHintLabel(subdivision);
+                label.Font = new FontUsage("Roboto", 11.2f * annotationScale, weight: "Bold");
                 label.X = Math.Clamp(x, timelineLeftX + 8f, timelineRightX - 16f);
                 label.Y = railY + 6.2f;
-                label.Alpha = Math.Clamp(0.34f + emphasis * 0.28f, 0.34f, 0.62f);
+                label.Alpha = Math.Clamp((0.36f + emphasis * 0.30f) * annotationAlphaScale, 0.36f, 0.70f);
                 lastPlacedX = x;
                 bracketCount++;
             }
@@ -1115,9 +1121,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             timelinePlayheadLabel.Text = subdivision > 1
                 ? $"Now M{measureNumber} B{beatInMeasure}.{subdivisionIndex + 1}/{subdivision}"
                 : $"Now M{measureNumber} B{beatInMeasure}";
+            timelinePlayheadLabel.Font = new FontUsage("Roboto", 10.8f * annotationScale, weight: "SemiBold");
             timelinePlayheadLabel.X = Math.Clamp(clampedPlayheadX + 10f, timelineLeftX + 6f, Math.Max(timelineLeftX + 90f, timelineRightX - 186f));
             timelinePlayheadLabel.Y = 8f;
-            timelinePlayheadLabel.Alpha = 0.66f;
+            timelinePlayheadLabel.Alpha = Math.Clamp(0.64f * annotationAlphaScale, 0.60f, 0.78f);
         }
 
         private void updateTimelinePlayheadCountInGuides(double beatDuration, int beatsPerMeasure, int subdivision)
@@ -1160,8 +1167,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             }
 
             float minLabelSpacing = countInGuideMode == ManuscriptCountInGuideMode.Compact
-                ? Math.Clamp(width * 0.052f, 34f, 62f)
-                : Math.Clamp(width * 0.032f, 24f, 46f);
+                ? Math.Clamp(width * (0.052f / annotationScale), 30f, 58f)
+                : Math.Clamp(width * (0.032f / annotationScale), 22f, 42f);
             float lastLabelX = float.NegativeInfinity;
             int tickCount = 0;
             int labelCount = 0;
@@ -1207,9 +1214,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
 
                 SpriteText label = getTimelinePlayheadCountInLabel(labelCount++);
                 label.Text = FormatManuscriptCountInLabel(relativeTick, subdivision);
+                label.Font = new FontUsage("Roboto", 9.6f * annotationScale, weight: isNow ? "Bold" : "Regular");
                 label.X = Math.Clamp(x + 2f, timelineLeftX + 4f, timelineRightX - 80f);
                 label.Y = 22f;
-                label.Alpha = isNow ? 0.72f : 0.54f;
+                label.Alpha = isNow
+                    ? Math.Clamp(0.74f * annotationAlphaScale, 0.68f, 0.84f)
+                    : Math.Clamp(0.56f * annotationAlphaScale, 0.50f, 0.66f);
                 lastLabelX = x;
             }
 
@@ -1349,6 +1359,24 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             return (float)(1.0 - 0.68 * normalized);
         }
 
+        internal static float ResolveManuscriptAnnotationScale(float drawWidth)
+        {
+            if (float.IsNaN(drawWidth) || float.IsInfinity(drawWidth))
+                return 1f;
+
+            float normalized = Math.Clamp((drawWidth - 1280f) / 2160f, 0f, 1f);
+            return 1.14f - normalized * 0.16f;
+        }
+
+        internal static float ResolveManuscriptAnnotationAlphaScale(float drawWidth)
+        {
+            if (float.IsNaN(drawWidth) || float.IsInfinity(drawWidth))
+                return 1f;
+
+            float normalized = Math.Clamp((drawWidth - 1280f) / 2160f, 0f, 1f);
+            return 1.08f - normalized * 0.14f;
+        }
+
         private static int positiveModulo(int value, int divisor)
         {
             if (divisor <= 0)
@@ -1365,17 +1393,17 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             {
                 AutoSizeAxes = Axes.Both,
                 Direction = FillDirection.Vertical,
-                Spacing = new Vector2(0, 1),
+                Spacing = new Vector2(0, 2),
                 Anchor = Anchor.TopRight,
                 Origin = Anchor.TopRight,
                 Margin = new MarginPadding { Top = 12, Right = 12 },
-                Alpha = 0.62f
+                Alpha = 0.74f
             };
 
             legend.Add(new SpriteText
             {
                 Text = "Percussion notation map",
-                Font = new FontUsage("Roboto", 10.5f),
+                Font = new FontUsage("Roboto", 11.8f, weight: "SemiBold"),
                 Colour = new Color4(206, 220, 242, 230)
             });
 
@@ -1390,13 +1418,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
                     {
                         new Circle
                         {
-                            Size = new Vector2(6, 6),
+                            Size = new Vector2(7, 7),
                             Colour = DesignSystem.WithOpacity(guide.Color, 0.72f)
                         },
                         new SpriteText
                         {
                             Text = $"{guide.Label} {getGuideDisplayName(guide.Key)}",
-                            Font = new FontUsage("Roboto", 9.6f),
+                            Font = new FontUsage("Roboto", 10.7f),
                             Colour = new Color4(182, 196, 222, 238)
                         }
                     }

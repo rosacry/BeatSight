@@ -220,4 +220,32 @@ public class ManuscriptNotationMappingTests
         Assert.True(now > near);
         Assert.True(near > far);
     }
+
+    [Fact]
+    public void AnnotationScaleStaysReadableAndTapersAcrossResolutions()
+    {
+        float at720 = ManuscriptBackgroundEnhanced.ResolveManuscriptAnnotationScale(1280f);
+        float at1080 = ManuscriptBackgroundEnhanced.ResolveManuscriptAnnotationScale(1920f);
+        float atUltrawide = ManuscriptBackgroundEnhanced.ResolveManuscriptAnnotationScale(3440f);
+
+        Assert.InRange(at720, 1.13f, 1.15f);
+        Assert.InRange(at1080, 1.08f, 1.10f);
+        Assert.InRange(atUltrawide, 0.97f, 0.99f);
+        Assert.True(at720 > at1080);
+        Assert.True(at1080 > atUltrawide);
+    }
+
+    [Fact]
+    public void AnnotationAlphaScalePrioritizesCompactLegibility()
+    {
+        float at720 = ManuscriptBackgroundEnhanced.ResolveManuscriptAnnotationAlphaScale(1280f);
+        float at1080 = ManuscriptBackgroundEnhanced.ResolveManuscriptAnnotationAlphaScale(1920f);
+        float atUltrawide = ManuscriptBackgroundEnhanced.ResolveManuscriptAnnotationAlphaScale(3440f);
+
+        Assert.InRange(at720, 1.07f, 1.09f);
+        Assert.InRange(at1080, 1.03f, 1.05f);
+        Assert.InRange(atUltrawide, 0.93f, 0.95f);
+        Assert.True(at720 > at1080);
+        Assert.True(at1080 > atUltrawide);
+    }
 }

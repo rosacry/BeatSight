@@ -209,9 +209,9 @@ namespace BeatSight.Tests
             string configSource = File.ReadAllText(configPath);
             string editorSource = File.ReadAllText(editorBeatmapLoadPath);
 
-            Assert.Contains("setDefault(BeatSightSetting.PlaybackZoomLevel, 1.36)", configSource);
-            Assert.Contains("setDefault(BeatSightSetting.EditorTimelineZoomDefault, 1.15)", configSource);
-            Assert.Contains("TimelineZoom = editorTimelineZoomDefault?.Value ?? 1.15", editorSource);
+            Assert.Contains("setDefault(BeatSightSetting.PlaybackZoomLevel, 1.46)", configSource);
+            Assert.Contains("setDefault(BeatSightSetting.EditorTimelineZoomDefault, 1.32)", configSource);
+            Assert.Contains("TimelineZoom = editorTimelineZoomDefault?.Value ?? 1.32", editorSource);
         }
 
         [Fact]

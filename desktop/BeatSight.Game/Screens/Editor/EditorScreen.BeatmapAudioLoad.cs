@@ -120,7 +120,7 @@ namespace BeatSight.Game.Screens.Editor
                 {
                     SnapDivisor = 4,
                     VisualLanes = 7,
-                    TimelineZoom = editorTimelineZoomDefault?.Value ?? 1.15,
+                    TimelineZoom = editorTimelineZoomDefault?.Value ?? 1.32,
                     WaveformScale = editorWaveformScaleDefault?.Value ?? 1.0,
                     BeatGridVisible = editorBeatGridVisibleDefault?.Value ?? true
                 }

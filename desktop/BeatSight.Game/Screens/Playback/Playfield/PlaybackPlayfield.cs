@@ -238,8 +238,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         /// <summary>Additional visibility buffer after miss window (ms).</summary>
         private const double PastVisibilityBuffer = 600;
         private const double BaseVisibleMeasures = 2.0;
-        private const double AutoZoomBaseMultiplier = 1.36;
-        private const double AutoZoomMaxMultiplier = 2.12;
+        private const double AutoZoomBaseMultiplier = 1.44;
+        private const double AutoZoomMaxMultiplier = 2.20;
 
         private readonly Func<double> currentTimeProvider;
         private readonly List<DrawableNote> notes = new();

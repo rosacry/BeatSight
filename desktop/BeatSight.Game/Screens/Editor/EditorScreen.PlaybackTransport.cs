@@ -51,6 +51,7 @@ namespace BeatSight.Game.Screens.Editor
                         track.Seek(target);
                 }
 
+                applyTrackPlaybackRate();
                 track.Start();
                 lastTrackTime = track.CurrentTime;
                 audioStarted = true;

@@ -33,6 +33,7 @@ namespace BeatSight.Game.Screens.Editor
         private readonly Color4 colour2D = UITheme.AccentPrimary;
         private readonly Color4 colour3D = UITheme.AccentSecondary;
         private Color4 currentBaseColour;
+        private string fullModeLabel = "2D View";
         private string? availabilityMessage;
 
         private Box hoverGlow = null!;
@@ -137,6 +138,7 @@ namespace BeatSight.Game.Screens.Editor
         {
             base.Update();
             modeLabel.MaxWidth = Math.Max(20f, DrawWidth - 32f - horizontalLabelPadding * 2f);
+            applyResponsiveModeLabel();
         }
 
         private void toggleMode()
@@ -155,22 +157,35 @@ namespace BeatSight.Game.Screens.Editor
             {
                 case EditorPreviewMode.Playfield3D:
                     icon.Icon = FontAwesome.Solid.Cube;
-                    modeLabel.Text = "3D View";
+                    fullModeLabel = "3D View";
                     currentBaseColour = colour3D;
                     break;
                 case EditorPreviewMode.Manuscript:
                     icon.Icon = FontAwesome.Solid.Music;
-                    modeLabel.Text = "Sheet Music";
+                    fullModeLabel = "Sheet Music";
                     currentBaseColour = Color4.Goldenrod;
                     break;
                 case EditorPreviewMode.Playfield2D:
                 default:
                     icon.Icon = FontAwesome.Solid.LayerGroup;
-                    modeLabel.Text = "2D View";
+                    fullModeLabel = "2D View";
                     currentBaseColour = colour2D;
                     break;
             }
+
+            applyResponsiveModeLabel();
             updateBackgroundForAvailability();
+        }
+
+        private void applyResponsiveModeLabel()
+        {
+            if (previewMode.Value == EditorPreviewMode.Manuscript && DrawWidth < 124f)
+            {
+                modeLabel.Text = "Sheet";
+                return;
+            }
+
+            modeLabel.Text = fullModeLabel;
         }
 
         protected override bool OnClick(ClickEvent e)

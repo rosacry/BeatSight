@@ -195,8 +195,9 @@ namespace BeatSight.Game.Screens.Editor
             historyPanel = new Container
             {
                 AutoSizeAxes = Axes.Both,
-                Anchor = Anchor.TopCentre,
-                Origin = Anchor.TopCentre,
+                Anchor = Anchor.TopRight,
+                Origin = Anchor.TopRight,
+                Margin = new MarginPadding { Top = 2, Right = 4 },
                 Child = new Container
                 {
                     AutoSizeAxes = Axes.Both,
@@ -219,8 +220,8 @@ namespace BeatSight.Game.Screens.Editor
                         {
                             AutoSizeAxes = Axes.Both,
                             Direction = FillDirection.Horizontal,
-                            Spacing = new Vector2(24, 0),
-                            Padding = new MarginPadding { Horizontal = 16, Vertical = 9 },
+                            Spacing = new Vector2(14, 0),
+                            Padding = new MarginPadding { Horizontal = 12, Vertical = 8 },
                             Children = new Drawable[]
                             {
                                 createHistoryColumn("Undo", out undoHeaderText, out undoHistoryFlow),
@@ -287,7 +288,8 @@ namespace BeatSight.Game.Screens.Editor
                 Children = new Drawable[]
                 {
                     mainRow,
-                    informationFlow
+                    informationFlow,
+                    historyPanel
                 }
             };
 

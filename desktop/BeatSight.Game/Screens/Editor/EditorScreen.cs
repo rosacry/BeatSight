@@ -72,6 +72,7 @@ namespace BeatSight.Game.Screens.Editor
         private Container historyPanel = null!;
         private FillFlowContainer undoHistoryFlow = null!;
         private FillFlowContainer redoHistoryFlow = null!;
+        private bool historyPanelVisible;
         private ToastContainer quickActionToast = null!;
         private EditorButton playPauseButton = null!;
         private EditorButton saveButton = null!;
@@ -101,10 +102,23 @@ namespace BeatSight.Game.Screens.Editor
         private readonly List<SpriteText> timelineSectionTitleTexts = new();
         private readonly List<FillFlowContainer> timelineSectionControlRows = new();
         private readonly List<FillFlowContainer> timelineSectionBodies = new();
+        private BasicButton timelineFirstNoteButton = null!;
+        private BasicButton timelineLastNoteButton = null!;
+        private BasicButton timelineTimingButton = null!;
+        private BasicButton timelineSnapAudioButton = null!;
+        private BasicButton timelineRegenerateButton = null!;
+        private SpriteText timelineFirstNoteButtonText = null!;
+        private SpriteText timelineLastNoteButtonText = null!;
+        private SpriteText timelineSnapAudioButtonText = null!;
+        private SpriteText timelineRegenerateButtonText = null!;
         private FillFlowContainer inspectorSectionsFlow = null!;
         private Container footerRootContainer = null!;
         private Container footerInnerContainer = null!;
         private FillFlowContainer footerTipFlow = null!;
+        private Container footerTipsContainer = null!;
+        private Container footerCollapsedContainer = null!;
+        private SpriteText footerCollapsedText = null!;
+        private bool footerTipsCollapsed = true;
         private EditorButton inspectorToggleButton = null!;
         private float lastInspectorWidth = -1;
         private float lastTimelineSurfaceHeight = -1;
@@ -145,11 +159,23 @@ namespace BeatSight.Game.Screens.Editor
         private SpriteText timelineZoomValueText = null!;
         private BeatSightSliderBar waveformScaleSlider = null!;
         private SpriteText waveformScaleValueText = null!;
+        private BeatSightSliderBar playbackRateSlider = null!;
+        private SpriteText playbackRateValueText = null!;
         private SpriteText snapDivisorText = null!;
         private BeatSightCheckbox beatGridCheckbox = null!;
+        private Container timelinePlaybackRateSliderContainer = null!;
+        private Container timingSetupOverlay = null!;
+        private BeatSightTextBox timingSetupBpmInput = null!;
+        private BeatSightTextBox timingSetupOffsetInput = null!;
+        private BeatSightCheckbox timingMoveNotesCheckbox = null!;
+        private BeatSightCheckbox timingResnapNotesCheckbox = null!;
+        private SpriteText timingSetupHintText = null!;
+        private readonly BindableBool timingMoveNotes = new BindableBool(true);
+        private readonly BindableBool timingResnapNotes = new BindableBool(true);
 
         private bool suppressTimelineZoomSync;
         private bool suppressWaveformScaleSync;
+        private bool suppressPlaybackRateSync;
         private bool suppressBeatGridSync;
         private bool suppressEditorDefaultPersistence;
         private bool timelineZoomPointerAdjusting;
@@ -174,9 +200,11 @@ namespace BeatSight.Game.Screens.Editor
         private DateTime lastInspectorSnapshotAtUtc = DateTime.MinValue;
 
         private const int maxUndoSteps = 50;
-        private const int historyPreviewCount = 5;
+        private const int historyPreviewCount = 3;
         private const double timelineZoomPreviewMinIntervalMs = 24;
         private const double waveformScalePreviewMinIntervalMs = 24;
+        private const double minPlaybackRate = 0.25;
+        private const double maxPlaybackRate = 1.5;
         private const float inspectorButtonColumnSpacing = 7;
         private const float inspectorButtonRowSpacing = 6;
         private const float timelineToolboxRowHeight = 118f;
@@ -239,6 +267,7 @@ namespace BeatSight.Game.Screens.Editor
             "Playback finished",
             "Rewound to start"
         };
+        private double playbackRate = 1.0;
 
         private enum NotationArticulationPreset
         {

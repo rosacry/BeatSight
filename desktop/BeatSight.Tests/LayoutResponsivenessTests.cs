@@ -119,11 +119,11 @@ namespace BeatSight.Tests
             (_, float redoCompact) = readBlendPair(source, "redoButtonWidth");
             (_, float previewCompact) = readBlendPair(source, "previewButtonWidth");
 
-            Assert.True(playCompact >= 100f, $"Play button compact width too small for 720p density: {playCompact:0.##}");
-            Assert.True(saveCompact >= 100f, $"Save button compact width too small for 720p density: {saveCompact:0.##}");
-            Assert.True(undoCompact >= 88f, $"Undo button compact width too small for 720p density: {undoCompact:0.##}");
-            Assert.True(redoCompact >= 88f, $"Redo button compact width too small for 720p density: {redoCompact:0.##}");
-            Assert.True(previewCompact >= 120f, $"Preview button compact width too small for 720p density: {previewCompact:0.##}");
+            Assert.True(playCompact >= 96f, $"Play button compact width too small for 720p density: {playCompact:0.##}");
+            Assert.True(saveCompact >= 96f, $"Save button compact width too small for 720p density: {saveCompact:0.##}");
+            Assert.True(undoCompact >= 84f, $"Undo button compact width too small for 720p density: {undoCompact:0.##}");
+            Assert.True(redoCompact >= 84f, $"Redo button compact width too small for 720p density: {redoCompact:0.##}");
+            Assert.True(previewCompact >= 110f, $"Preview button compact width too small for 720p density: {previewCompact:0.##}");
 
             // Primary actions should remain more prominent than secondary undo/redo actions.
             Assert.True(playCompact >= undoCompact + 10f, $"Play action hierarchy regressed: play={playCompact:0.##}, undo={undoCompact:0.##}");

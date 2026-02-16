@@ -24,20 +24,16 @@ namespace BeatSight.Game.Screens.Editor
             if (string.IsNullOrWhiteSpace(detail))
                 return;
 
-            if (isTransientPlaybackStatus(detail))
-                pruneStatusDetailSegments(isTransientPlaybackStatus);
-            else if (isInspectorLayoutStatus(detail))
-                pruneStatusDetailSegments(isInspectorLayoutStatus);
-
-            if (string.IsNullOrWhiteSpace(statusDetailText))
+            string normalized = detail.Trim();
+            if (string.Equals(statusDetailText, normalized, StringComparison.OrdinalIgnoreCase))
             {
-                statusDetailText = detail;
-            }
-            else if (!statusDetailText.Contains(detail, StringComparison.OrdinalIgnoreCase))
-            {
-                statusDetailText = $"{statusDetailText}, {detail}";
+                updateStatusText();
+                return;
             }
 
+            // Keep the detail line focused on the latest action instead of accumulating
+            // multiple edits/undo events that crowd the header.
+            statusDetailText = normalized;
             updateStatusText();
         }
 

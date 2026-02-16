@@ -12,6 +12,53 @@ namespace BeatSight.Game.Screens.Editor
     {
         protected override bool OnKeyDown(KeyDownEvent e)
         {
+            if (!e.ControlPressed && !e.SuperPressed && !e.AltPressed && e.Key == osuTK.Input.Key.F1)
+            {
+                toggleFooterShortcutsCollapsed();
+                return true;
+            }
+
+            if (isTimingSetupOverlayVisible())
+            {
+                if (e.Key == osuTK.Input.Key.Escape)
+                {
+                    closeTimingSetupOverlay();
+                    return true;
+                }
+
+                if (e.Key == osuTK.Input.Key.Enter || e.Key == osuTK.Input.Key.KeypadEnter)
+                {
+                    applyTimingSetupChanges();
+                    return true;
+                }
+
+                if (e.Key == osuTK.Input.Key.Space)
+                {
+                    togglePlayback();
+                    return true;
+                }
+
+                if (isControlOrSuper(e) && e.Key == osuTK.Input.Key.BracketLeft)
+                {
+                    setTimingPlaybackRate(playbackRate - 0.05);
+                    return true;
+                }
+
+                if (isControlOrSuper(e) && e.Key == osuTK.Input.Key.BracketRight)
+                {
+                    setTimingPlaybackRate(playbackRate + 0.05);
+                    return true;
+                }
+
+                if (isControlOrSuper(e) && e.Key == osuTK.Input.Key.Number0)
+                {
+                    setTimingPlaybackRate(1.0);
+                    return true;
+                }
+
+                return base.OnKeyDown(e);
+            }
+
             bool textInputFocused = isTextInputFocused();
             if (textInputFocused)
             {
@@ -48,7 +95,7 @@ namespace BeatSight.Game.Screens.Editor
                 return true;
             }
 
-            if (!e.ControlPressed && !e.SuperPressed && !e.AltPressed && e.Key == osuTK.Input.Key.I && inspectorStackedLayout)
+            if (!e.ControlPressed && !e.SuperPressed && !e.AltPressed && e.Key == osuTK.Input.Key.I)
             {
                 toggleInspectorCollapsed();
                 return true;
@@ -131,6 +178,18 @@ namespace BeatSight.Game.Screens.Editor
             {
                 bool alt = e.AltPressed;
 
+                if (!alt && e.ShiftPressed && e.Key == osuTK.Input.Key.H)
+                {
+                    toggleHistoryPanelVisibility();
+                    return true;
+                }
+
+                if (!alt && e.Key == osuTK.Input.Key.T)
+                {
+                    openTimingSetupOverlay();
+                    return true;
+                }
+
                 if (isZoomIncreaseKey(e.Key))
                 {
                     if (alt)
@@ -146,6 +205,24 @@ namespace BeatSight.Game.Screens.Editor
                         adjustWaveformScale(false);
                     else
                         adjustTimelineZoom(false);
+                    return true;
+                }
+
+                if (!alt && e.Key == osuTK.Input.Key.BracketLeft)
+                {
+                    adjustPlaybackRate(false);
+                    return true;
+                }
+
+                if (!alt && e.Key == osuTK.Input.Key.BracketRight)
+                {
+                    adjustPlaybackRate(true);
+                    return true;
+                }
+
+                if (!alt && e.Key == osuTK.Input.Key.Number0)
+                {
+                    resetPlaybackRate();
                     return true;
                 }
             }

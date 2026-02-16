@@ -25,7 +25,7 @@ namespace BeatSight.Tests
                 Assert.InRange(metrics.InspectorWidth, 360f, 540f);
                 Assert.InRange(metrics.TimelineTopHeight, 180f, 320f);
                 Assert.InRange(metrics.TimelineToolboxHeight, 78f, 136f);
-                Assert.InRange(metrics.FooterHeight, 60f, 112f);
+                Assert.InRange(metrics.FooterHeight, 52f, 112f);
                 Assert.InRange(metrics.PanelGap, 8f, 14f);
                 Assert.InRange(metrics.StackedInspectorHeight, 168f, 320f);
 

@@ -18,7 +18,7 @@ namespace BeatSight.Game.UI.Components
 
         private partial class BeatSightScrollbar : ScrollbarContainer
         {
-            private const float dim_size = 8;
+            private const float dim_size = 7;
 
             public BeatSightScrollbar(Direction direction)
                 : base(direction)
@@ -29,7 +29,7 @@ namespace BeatSight.Game.UI.Components
                 Child = new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = UITheme.AccentPrimary
+                    Colour = UITheme.Mix(new Color4(173, 198, 232, 255), UITheme.SurfaceAlt, 0.32f).Opacity(0.78f)
                 };
             }
 

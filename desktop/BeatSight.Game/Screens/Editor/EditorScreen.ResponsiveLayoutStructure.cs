@@ -10,11 +10,11 @@ namespace BeatSight.Game.Screens.Editor
         private void applyPreviewInspectorLayout(EditorResponsiveLayoutMetrics metrics)
         {
             inspectorStackedLayout = metrics.UseStackedInspector;
-            bool hideStackedInspector = inspectorStackedLayout && inspectorCollapsed;
+            bool hideInspector = inspectorCollapsed;
 
             if (!inspectorStackedLayout)
             {
-                previewCellContainer.Padding = new MarginPadding { Right = metrics.PanelGap };
+                previewCellContainer.Padding = new MarginPadding { Right = hideInspector ? 0 : metrics.PanelGap };
                 inspectorContainer.RelativeSizeAxes = Axes.Y;
                 inspectorContainer.AutoSizeAxes = Axes.None;
                 inspectorContainer.Anchor = Anchor.TopRight;
@@ -22,32 +22,53 @@ namespace BeatSight.Game.Screens.Editor
                 inspectorContainer.Margin = new MarginPadding { Left = metrics.PanelGap };
                 inspectorContainer.Width = metrics.InspectorWidth;
                 inspectorContainer.Height = 1f;
-                inspectorContainer.Alpha = 1f;
-                inspectorContainer.AlwaysPresent = true;
+                inspectorContainer.Alpha = hideInspector ? 0 : 1f;
+                inspectorContainer.AlwaysPresent = !hideInspector;
 
-                previewInspectorGrid.RowDimensions = new[]
+                if (hideInspector)
                 {
-                    new Dimension()
-                };
-                previewInspectorGrid.ColumnDimensions = new[]
-                {
-                    new Dimension(),
-                    new Dimension(GridSizeMode.Absolute, metrics.InspectorWidth)
-                };
-                previewInspectorGrid.Content = new[]
-                {
-                    new Drawable[]
+                    previewInspectorGrid.RowDimensions = new[]
                     {
-                        previewCellContainer,
-                        inspectorContainer
-                    }
-                };
+                        new Dimension()
+                    };
+                    previewInspectorGrid.ColumnDimensions = new[]
+                    {
+                        new Dimension()
+                    };
+                    previewInspectorGrid.Content = new[]
+                    {
+                        new Drawable[]
+                        {
+                            previewCellContainer
+                        }
+                    };
+                }
+                else
+                {
+                    previewInspectorGrid.RowDimensions = new[]
+                    {
+                        new Dimension()
+                    };
+                    previewInspectorGrid.ColumnDimensions = new[]
+                    {
+                        new Dimension(),
+                        new Dimension(GridSizeMode.Absolute, metrics.InspectorWidth)
+                    };
+                    previewInspectorGrid.Content = new[]
+                    {
+                        new Drawable[]
+                        {
+                            previewCellContainer,
+                            inspectorContainer
+                        }
+                    };
+                }
             }
             else
             {
                 previewCellContainer.Padding = new MarginPadding
                 {
-                    Bottom = hideStackedInspector ? 0 : metrics.PanelGap
+                    Bottom = hideInspector ? 0 : metrics.PanelGap
                 };
 
                 inspectorContainer.RelativeSizeAxes = Axes.X;
@@ -57,10 +78,10 @@ namespace BeatSight.Game.Screens.Editor
                 inspectorContainer.Margin = new MarginPadding();
                 inspectorContainer.Width = 1f;
                 inspectorContainer.Height = metrics.StackedInspectorHeight;
-                inspectorContainer.Alpha = hideStackedInspector ? 0 : 1;
-                inspectorContainer.AlwaysPresent = !hideStackedInspector;
+                inspectorContainer.Alpha = hideInspector ? 0 : 1;
+                inspectorContainer.AlwaysPresent = !hideInspector;
 
-                if (hideStackedInspector)
+                if (hideInspector)
                 {
                     previewInspectorGrid.RowDimensions = new[]
                     {
@@ -125,13 +146,6 @@ namespace BeatSight.Game.Screens.Editor
                 Right = toggleInsetX
             };
 
-            if (!metrics.UseStackedInspector)
-            {
-                inspectorToggleButton.UpdateState(false, "Inspector collapse is available in compact layouts.");
-                inspectorToggleButton.FadeOut(120);
-                return;
-            }
-
             inspectorToggleButton.SetLabel(inspectorCollapsed ? "Show Panel" : "Hide Panel");
             inspectorToggleButton.UpdateState(true, inspectorCollapsed ? "Show inspector panel (I)." : "Hide inspector panel (I).");
             inspectorToggleButton.FadeTo(0.95f, 120);
@@ -139,18 +153,15 @@ namespace BeatSight.Game.Screens.Editor
 
         private void toggleInspectorCollapsed()
         {
-            if (!inspectorStackedLayout)
-                return;
-
             inspectorCollapsed = !inspectorCollapsed;
             applyResponsiveEditorLayout(force: true);
-            appendStatusDetail(inspectorCollapsed ? "Inspector hidden (compact layout)" : "Inspector shown (compact layout)");
+            appendStatusDetail(inspectorCollapsed ? "Inspector hidden" : "Inspector shown");
         }
 
         private float getInitialFooterHeight()
         {
             var viewport = resolveResponsiveViewport();
-            return EditorResponsiveLayout.Compute(viewport.X, viewport.Y, inspectorStackedLayout).FooterHeight;
+            return EditorResponsiveLayout.Compute(viewport.X, viewport.Y, inspectorStackedLayout, footerTipsCollapsed).FooterHeight;
         }
 
         private Vector2 resolveResponsiveViewport()

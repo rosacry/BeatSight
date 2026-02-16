@@ -6,6 +6,7 @@ using BeatSight.Game.Audio;
 using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
+using BeatSight.Game.UI.Components;
 using BeatSight.Game.UI.Theming;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -108,6 +109,12 @@ namespace BeatSight.Game.Screens.Editor
         public bool TryDeleteHitObject(HitObject hit)
             => content.TryDeleteHitObject(hit);
 
+        public bool TryAddHitObjectAtTimeAndLane(double timeMs, int lane)
+            => content.TryAddHitObjectAtTimeAndLane(timeMs, lane);
+
+        public bool TryDeleteNearestHitObject(double timeMs, int lane, double maxDistanceMs = 90)
+            => content.TryDeleteNearestHitObject(timeMs, lane, maxDistanceMs);
+
         public void RefreshHitObject(HitObject hit)
             => content.RefreshHitObject(hit);
 
@@ -152,7 +159,7 @@ namespace BeatSight.Game.Screens.Editor
 
             private const float rulerHeight = 38f;
 
-            private readonly BasicScrollContainer scroll;
+            private readonly BeatSightScrollContainer scroll;
             private readonly Container timelineSurface;
             private readonly Container contentArea;
             private readonly Container laneBackgrounds;
@@ -211,7 +218,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 RelativeSizeAxes = Axes.Both;
 
-                InternalChild = scroll = new BasicScrollContainer(Direction.Horizontal)
+                InternalChild = scroll = new BeatSightScrollContainer(Direction.Horizontal)
                 {
                     RelativeSizeAxes = Axes.Both,
                     ScrollbarVisible = true,
@@ -481,6 +488,51 @@ namespace BeatSight.Game.Screens.Editor
                 return true;
             }
 
+            public bool TryAddHitObjectAtTimeAndLane(double timeMs, int lane)
+            {
+                if (beatmap == null || laneCount <= 0)
+                    return false;
+
+                int clampedLane = Math.Clamp(lane, 0, laneCount - 1);
+                addNoteAtLane(timeMs, clampedLane);
+                return true;
+            }
+
+            public bool TryDeleteNearestHitObject(double timeMs, int lane, double maxDistanceMs)
+            {
+                if (beatmap == null || notes.Count == 0 || laneCount <= 0)
+                    return false;
+
+                int targetLane = Math.Clamp(lane, 0, laneCount - 1);
+                double threshold = Math.Max(1, maxDistanceMs);
+                TimelineNoteDrawable? nearest = null;
+                double nearestDistance = threshold;
+
+                foreach (var note in notes)
+                {
+                    int noteLane = note.HitObject.Lane.HasValue
+                        ? Math.Clamp(note.HitObject.Lane.Value, 0, laneCount - 1)
+                        : resolveLaneFromComponent(note.HitObject.Component);
+
+                    if (noteLane != targetLane)
+                        continue;
+
+                    double delta = Math.Abs(note.HitObject.Time - timeMs);
+                    if (delta > nearestDistance)
+                        continue;
+
+                    nearest = note;
+                    nearestDistance = delta;
+                }
+
+                if (nearest == null)
+                    return false;
+
+                EditBegan?.Invoke();
+                onNoteDeleted(nearest);
+                return true;
+            }
+
             public void RefreshHitObject(HitObject hit)
             {
                 var note = findNoteDrawable(hit);
@@ -717,7 +769,6 @@ namespace BeatSight.Game.Screens.Editor
                 var local = timelineSurface.ToLocalSpace(e.ScreenSpaceMousePosition);
                 double timeMs = Math.Max(0, local.X / PixelsPerSecond * 1000);
                 var laneLocal = laneBackgrounds.ToLocalSpace(e.ScreenSpaceMousePosition);
-                EditBegan?.Invoke();
                 addNoteAt(timeMs, laneLocal.Y);
                 return true;
             }
@@ -1398,25 +1449,41 @@ namespace BeatSight.Game.Screens.Editor
 
             private void addNoteAt(double timeMs, float yPosition)
             {
-                if (beatmap == null)
-                    return;
+                int lane = resolveLaneFromYPosition(yPosition);
+                addNoteAtLane(timeMs, lane);
+            }
 
-                double snapped = snapIntervalMs.HasValue
-                    ? snapToInterval(timeMs, snapIntervalMs.Value)
-                    : timeMs;
+            private int resolveLaneFromYPosition(float yPosition)
+            {
+                if (laneCount <= 0)
+                    return 0;
 
                 float laneAreaHeight = laneHeightForNotes() * laneCount;
                 if (laneAreaHeight <= 0)
                     laneAreaHeight = laneCount;
 
                 float clampedY = Math.Clamp(yPosition, 0, laneAreaHeight);
-                int lane = Math.Clamp((int)(clampedY / Math.Max(1, laneAreaHeight) * laneCount), 0, laneCount - 1);
-                string component = laneMapping[lane];
+                return Math.Clamp((int)(clampedY / Math.Max(1, laneAreaHeight) * laneCount), 0, laneCount - 1);
+            }
+
+            private void addNoteAtLane(double timeMs, int lane)
+            {
+                if (beatmap == null || laneCount <= 0)
+                    return;
+
+                double snapped = snapIntervalMs.HasValue
+                    ? snapToInterval(timeMs, snapIntervalMs.Value)
+                    : timeMs;
+
+                int resolvedLane = Math.Clamp(lane, 0, laneCount - 1);
+                string component = laneMapping.Count > 0
+                    ? laneMapping[Math.Clamp(resolvedLane, 0, laneMapping.Count - 1)]
+                    : "kick";
 
                 var hit = new HitObject
                 {
                     Time = (int)Math.Round(snapped),
-                    Lane = lane,
+                    Lane = resolvedLane,
                     Component = component,
                     Velocity = 0.8
                 };

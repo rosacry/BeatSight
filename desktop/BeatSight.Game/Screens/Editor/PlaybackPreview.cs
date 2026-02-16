@@ -14,9 +14,11 @@ using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Logging;
+using osu.Framework.Input.Events;
 using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osuTK;
 using osuTK.Graphics;
+using osuTK.Input;
 
 namespace BeatSight.Game.Screens.Editor
 {
@@ -26,6 +28,7 @@ namespace BeatSight.Game.Screens.Editor
         private PreviewStageContainer stageContainer = null!;
         private PlaybackPlayfield playfield = null!;
         private SpriteText placeholderText = null!;
+        private SpriteText editHintText = null!;
         private Beatmap? beatmap;
         private Bindable<LanePreset> lanePresetSetting = null!;
         private Bindable<KickLaneMode> kickLaneModeSetting = null!;
@@ -33,6 +36,9 @@ namespace BeatSight.Game.Screens.Editor
         private LaneLayout currentLaneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
         private bool useGlobalKickLine;
         private string? manuscriptFocusComponent;
+
+        public event Action<int, double>? NotePlacementRequested;
+        public event Action<int, double>? NoteRemovalRequested;
 
         [Resolved]
         private BeatSightConfigManager config { get; set; } = null!;
@@ -71,9 +77,21 @@ namespace BeatSight.Game.Screens.Editor
                 Alpha = 0
             };
 
+            editHintText = new SpriteText
+            {
+                Anchor = Anchor.BottomLeft,
+                Origin = Anchor.BottomLeft,
+                Margin = new MarginPadding { Left = 16, Bottom = 10 },
+                Font = BeatSightFont.Caption(10.8f),
+                Colour = new Color4(206, 220, 244, 220),
+                Text = "LMB add at playhead  |  RMB remove nearest lane note",
+                Alpha = 0
+            };
+
             InternalChildren = new Drawable[]
             {
                 stageContainer,
+                editHintText,
                 placeholderText
             };
 
@@ -131,6 +149,30 @@ namespace BeatSight.Game.Screens.Editor
             playfield.SetManuscriptFocusComponent(componentName);
         }
 
+        protected override bool OnMouseDown(MouseDownEvent e)
+        {
+            if (beatmap == null || playfield == null)
+                return base.OnMouseDown(e);
+
+            if (e.Button == MouseButton.Left)
+            {
+                if (!playfield.TryResolveLaneFromScreenSpace(e.ScreenSpaceMousePosition, out int lane))
+                    return base.OnMouseDown(e);
+
+                NotePlacementRequested?.Invoke(lane, Math.Max(0, currentTimeProvider()));
+                return true;
+            }
+
+            if (e.Button != MouseButton.Right)
+                return base.OnMouseDown(e);
+
+            if (!playfield.TryResolveLaneFromScreenSpace(e.ScreenSpaceMousePosition, out int laneToRemove))
+                return base.OnMouseDown(e);
+
+            NoteRemovalRequested?.Invoke(laneToRemove, Math.Max(0, currentTimeProvider()));
+            return true;
+        }
+
         private void applyBeatmap()
         {
             if (playfield == null)
@@ -180,6 +222,8 @@ namespace BeatSight.Game.Screens.Editor
             if (hasContent)
             {
                 placeholderText.FadeOut(200, Easing.OutQuint);
+                editHintText.Text = "LMB add at playhead  |  RMB remove nearest lane note";
+                editHintText.FadeIn(180, Easing.OutQuint);
             }
             else
             {
@@ -187,6 +231,8 @@ namespace BeatSight.Game.Screens.Editor
                     ? "Load or create a beatmap to preview playback"
                     : "Add notes to preview playback";
                 placeholderText.FadeIn(200, Easing.OutQuint);
+                editHintText.Text = "LMB add at playhead to start mapping";
+                editHintText.FadeIn(160, Easing.OutQuint);
             }
         }
 

@@ -103,10 +103,8 @@ namespace BeatSight.Game.Screens.Editor
             if (viewport.X <= 0 || viewport.Y <= 0)
                 return;
 
-            var metrics = EditorResponsiveLayout.Compute(viewport.X, viewport.Y, inspectorStackedLayout);
+            var metrics = EditorResponsiveLayout.Compute(viewport.X, viewport.Y, inspectorStackedLayout, footerTipsCollapsed);
             bool inspectorCollapsedBeforeAdjustment = inspectorCollapsed;
-            if (!metrics.UseStackedInspector && inspectorCollapsed)
-                inspectorCollapsed = false;
 
             bool inspectorWidthChanged = lastInspectorWidth < 0 || Math.Abs(metrics.InspectorWidth - lastInspectorWidth) > 0.2f;
             bool stackedInspectorHeightChanged = lastStackedInspectorHeight < 0 || Math.Abs(metrics.StackedInspectorHeight - lastStackedInspectorHeight) > 0.2f;

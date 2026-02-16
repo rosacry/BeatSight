@@ -118,6 +118,37 @@ namespace BeatSight.Tests
             Assert.Equal(5800, timeline.SelectionEnd);
         }
 
+        [Fact]
+        public void TryAddHitObjectAtTimeAndLaneAddsSnappedNote()
+        {
+            var timeline = createTimelineWithBeatmap(out var beatmap);
+            timeline.SetSnap(4, 120); // 125ms grid
+
+            bool added = timeline.TryAddHitObjectAtTimeAndLane(1112, lane: 2);
+
+            Assert.True(added);
+            Assert.Equal(3, beatmap.HitObjects.Count);
+            Assert.Contains(beatmap.HitObjects, h => h.Lane == 2 && h.Time == 1125);
+        }
+
+        [Fact]
+        public void TryDeleteNearestHitObjectRemovesClosestNoteWithinLaneAndThreshold()
+        {
+            var timeline = createTimelineWithBeatmap(out var beatmap);
+            timeline.SetSnap(4, 120);
+            timeline.TryAddHitObjectAtTimeAndLane(1112, lane: 2); // snapped to 1125
+            timeline.TryAddHitObjectAtTimeAndLane(2205, lane: 2); // snapped to 2250
+
+            bool deletedNearFirst = timeline.TryDeleteNearestHitObject(1130, lane: 2, maxDistanceMs: 40);
+            bool rejectedWrongLane = timeline.TryDeleteNearestHitObject(2250, lane: 5, maxDistanceMs: 80);
+
+            Assert.True(deletedNearFirst);
+            Assert.False(rejectedWrongLane);
+            Assert.Equal(3, beatmap.HitObjects.Count);
+            Assert.DoesNotContain(beatmap.HitObjects, h => h.Lane == 2 && h.Time == 1125);
+            Assert.Contains(beatmap.HitObjects, h => h.Lane == 2 && h.Time == 2250);
+        }
+
         private static EditorTimeline createTimelineWithBeatmap(out Beatmap beatmap)
         {
             beatmap = new Beatmap

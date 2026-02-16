@@ -2717,6 +2717,32 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             };
         }
 
+        public bool TryResolveLaneFromScreenSpace(Vector2 screenSpacePosition, out int lane)
+        {
+            lane = 0;
+
+            if (noteLayer == null || DrawWidth <= 0 || DrawHeight <= 0)
+                return false;
+
+            Vector2 local = noteLayer.ToLocalSpace(screenSpacePosition);
+            if (local.X < 0 || local.X > noteLayer.DrawWidth || local.Y < 0 || local.Y > noteLayer.DrawHeight)
+                return false;
+
+            int activeLaneCount = Math.Max(1, cachedActiveLaneCount);
+            float laneWidth = noteLayer.DrawWidth / activeLaneCount;
+            if (!float.IsFinite(laneWidth) || laneWidth <= 0)
+                return false;
+
+            int visualLane = Math.Clamp((int)(local.X / laneWidth), 0, activeLaneCount - 1);
+            int logicalLane = visualLane;
+
+            if (kickUsesGlobalLine && logicalLane >= laneLayout.KickLane)
+                logicalLane++;
+
+            lane = laneLayout.ClampLane(logicalLane);
+            return true;
+        }
+
         public void JumpToTime(double time)
         {
             // Reset ALL notes to ensure clean state after seeking.

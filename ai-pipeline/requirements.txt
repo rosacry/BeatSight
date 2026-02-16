@@ -91,7 +91,7 @@ torchaudio==2.4.1
 transformers>=4.35.0
 tqdm==4.67.1
 treetable==0.2.6
-triton==3.0.0
+triton==3.5.1
 typing_extensions==4.15.0
 typing-inspection==0.4.2
 urllib3==2.5.0

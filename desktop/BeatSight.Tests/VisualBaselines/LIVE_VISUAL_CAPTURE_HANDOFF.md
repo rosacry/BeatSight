@@ -45,6 +45,22 @@ Run deterministic visual QA using **real rendered game screens** (not synthetic 
   - `SongSelectEditor` seeds two deterministic user beatmaps (`Heir of Grief`, `The Sin and the Sentence`)
 - Purpose: keep song-card count/content stable across machines and prevent `%AppData%` drift from breaking visual baselines.
 
+## 2026-02-15 Editor/Manuscript Density Update
+
+- Editor/Playback density tuning was tightened for short-height viewports, with manuscript mode now using explicit compact-bias in playback responsive metrics.
+- Visual baseline updates in this pass:
+  - `Editor-720p.png`
+  - `Editor-1080p.png`
+  - `EditorManuscript-720p.png`
+  - `EditorManuscript-1080p.png`
+  - `PlaybackManuscript-720p.png`
+  - `PlaybackManuscript-1080p.png`
+  - `PlaybackManuscript-1440p.png`
+  - `PlaybackManuscript-ultrawide.png`
+- Reliability note from this host:
+  - a single multi-scene visual batch can hang despite heartbeat output;
+  - per-scene chunked runs (`Editor`, `EditorManuscript`, `PlaybackManuscript`) were stable and green.
+
 ## Core Files and Responsibilities
 
 - `desktop/BeatSight.Tests/VisualRegressionSnapshotTests.cs`

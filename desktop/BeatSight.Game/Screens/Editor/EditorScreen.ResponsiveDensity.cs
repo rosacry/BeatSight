@@ -19,6 +19,9 @@ namespace BeatSight.Game.Screens.Editor
             else
                 compactBlend = Math.Max(0f, compactBlend - 0.28f);
 
+            if (viewport.Y <= 760f)
+                compactBlend = Math.Max(compactBlend, 0.82f);
+
             if (!force && lastCompactBlend >= 0 && Math.Abs(compactBlend - lastCompactBlend) < 0.015f)
                 return;
 
@@ -269,36 +272,36 @@ namespace BeatSight.Game.Screens.Editor
             {
                 footerRootContainer.Padding = new MarginPadding
                 {
-                    Horizontal = blend(12f, 10f, compactBlend) + ultraWideRelax * 1.2f,
-                    Vertical = blend(11f, 8f, compactBlend) + ultraWideRelax * 0.6f
+                    Horizontal = blend(12f, 9f, compactBlend) + ultraWideRelax * 1.2f,
+                    Vertical = blend(11f, 6.5f, compactBlend) + ultraWideRelax * 0.5f
                 };
-                footerRootContainer.CornerRadius = blend(12f, 10f, compactBlend);
+                footerRootContainer.CornerRadius = blend(12f, 9.5f, compactBlend);
             }
 
             if (footerInnerContainer != null)
             {
                 footerInnerContainer.Padding = new MarginPadding
                 {
-                    Horizontal = blend(15f, 10f, compactBlend),
-                    Vertical = blend(9f, 6f, compactBlend)
+                    Horizontal = blend(15f, 9f, compactBlend),
+                    Vertical = blend(9f, 4.5f, compactBlend)
                 };
             }
 
             if (footerTipFlow != null)
-                footerTipFlow.Spacing = new Vector2(blend(18f, 13f, compactBlend) + ultraWideRelax * 1.5f, 0);
+                footerTipFlow.Spacing = new Vector2(blend(18f, 10.5f, compactBlend) + ultraWideRelax * 1.2f, 0);
 
             foreach (var keyText in footerKeyTexts)
             {
-                keyText.Font = BeatSightFont.Title(blend(11.2f, 10f, compactBlend));
+                keyText.Font = BeatSightFont.Title(blend(11.2f, 9.6f, compactBlend));
                 keyText.Margin = new MarginPadding
                 {
-                    Horizontal = blend(7f, 6f, compactBlend),
-                    Vertical = blend(4f, 3f, compactBlend)
+                    Horizontal = blend(7f, 5.5f, compactBlend),
+                    Vertical = blend(4f, 2.5f, compactBlend)
                 };
             }
 
             foreach (var actionText in footerActionTexts)
-                actionText.Font = BeatSightFont.Caption(blend(11f, 10f, compactBlend));
+                actionText.Font = BeatSightFont.Caption(blend(11f, 9.4f, compactBlend));
         }
 
         private static float blend(float normal, float compact, float t)

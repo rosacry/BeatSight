@@ -525,9 +525,15 @@ namespace BeatSight.Game.Screens.Playback
             }, true);
         }
 
+        private PlaybackResponsiveLayoutMetrics resolveResponsiveMetrics()
+            => PlaybackResponsiveLayout.Compute(
+                DrawWidth,
+                DrawHeight,
+                manuscriptMode: laneViewModeSetting?.Value == LaneViewMode.Manuscript);
+
         private Drawable createHeader()
         {
-            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
+            var metrics = resolveResponsiveMetrics();
             statusText = new SpriteText
             {
                 Font = BeatSightFont.Section(metrics.HeaderStatusFont),
@@ -578,7 +584,7 @@ namespace BeatSight.Game.Screens.Playback
 
         private Drawable createBottomToolbar()
         {
-            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
+            var metrics = resolveResponsiveMetrics();
             toolbarButtons.Clear();
             sidebarControlButtons.Clear();
             toolbarSectionTitles.Clear();
@@ -768,7 +774,7 @@ namespace BeatSight.Game.Screens.Playback
 
         private BasicButton createToolbarButton(string label, Action action)
         {
-            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
+            var metrics = resolveResponsiveMetrics();
             var button = new BeatSightButton
             {
                 Width = metrics.ToolbarButtonWidth,
@@ -787,7 +793,7 @@ namespace BeatSight.Game.Screens.Playback
 
         private Drawable createControlGroup(string title, Drawable content)
         {
-            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
+            var metrics = resolveResponsiveMetrics();
             var titleText = new SpriteText
             {
                 Text = title,
@@ -992,7 +998,7 @@ namespace BeatSight.Game.Screens.Playback
 
         private Drawable createStageContent()
         {
-            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
+            var metrics = resolveResponsiveMetrics();
             viewModeToggleButton = createSidebarButton("Stage View: 2D", toggleLaneViewMode);
             updateViewModeToggle(laneViewModeSetting?.Value ?? LaneViewMode.TwoDimensional);
 
@@ -1019,7 +1025,7 @@ namespace BeatSight.Game.Screens.Playback
 
         private Drawable createVisualControls()
         {
-            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
+            var metrics = resolveResponsiveMetrics();
             var zoomText = new SpriteText
             {
                 Font = BeatSightFont.Section(metrics.SliderValueFont),
@@ -1081,7 +1087,7 @@ namespace BeatSight.Game.Screens.Playback
 
         private Drawable createSpeedControl()
         {
-            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
+            var metrics = resolveResponsiveMetrics();
             speedValueText = new SpriteText
             {
                 Font = BeatSightFont.Section(metrics.SliderValueFont),
@@ -1116,7 +1122,7 @@ namespace BeatSight.Game.Screens.Playback
 
         private Drawable createOffsetControl()
         {
-            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
+            var metrics = resolveResponsiveMetrics();
             offsetValueText = new SpriteText
             {
                 Font = BeatSightFont.Section(metrics.SliderValueFont),
@@ -1217,7 +1223,7 @@ namespace BeatSight.Game.Screens.Playback
 
         private Drawable createTimingAudioContent()
         {
-            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
+            var metrics = resolveResponsiveMetrics();
             mixToggleButton = createSidebarButton("Audio: Full Mix", toggleDrumMix);
             metronomeToggleButton = createSidebarButton("Metronome: Off", toggleMetronome);
             loopLowConfidenceButton = createSidebarButton("Loop Low Confidence: Off", toggleLoopLowConfidence); // New
@@ -1244,7 +1250,7 @@ namespace BeatSight.Game.Screens.Playback
 
         private BasicButton createSidebarButton(string label, Action action)
         {
-            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
+            var metrics = resolveResponsiveMetrics();
             var button = new BeatSightButton
             {
                 RelativeSizeAxes = Axes.X,
@@ -1309,6 +1315,7 @@ namespace BeatSight.Game.Screens.Playback
             viewModeToggleButton.Text = text;
             setButtonState(viewModeToggleButton, mode != LaneViewMode.TwoDimensional);
             updateThreeDStageProfileToggle(threeDStageProfileSetting?.Value ?? ThreeDStageProfile.GhClassic);
+            applyResponsivePlaybackDensity(force: true);
         }
 
         private void updateKickLayoutToggle(KickLaneMode mode)
@@ -1928,7 +1935,7 @@ namespace BeatSight.Game.Screens.Playback
                 return;
             }
 
-            var metrics = PlaybackResponsiveLayout.Compute(DrawWidth, DrawHeight);
+            var metrics = resolveResponsiveMetrics();
 
             if (statusText != null)
                 statusText.Font = BeatSightFont.Section(metrics.HeaderStatusFont);

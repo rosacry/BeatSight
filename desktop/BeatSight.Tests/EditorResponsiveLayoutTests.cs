@@ -24,10 +24,10 @@ namespace BeatSight.Tests
 
                 Assert.InRange(metrics.InspectorWidth, 360f, 540f);
                 Assert.InRange(metrics.TimelineTopHeight, 180f, 320f);
-                Assert.InRange(metrics.TimelineToolboxHeight, 84f, 136f);
-                Assert.InRange(metrics.FooterHeight, 68f, 112f);
+                Assert.InRange(metrics.TimelineToolboxHeight, 78f, 136f);
+                Assert.InRange(metrics.FooterHeight, 60f, 112f);
                 Assert.InRange(metrics.PanelGap, 8f, 14f);
-                Assert.InRange(metrics.StackedInspectorHeight, 180f, 340f);
+                Assert.InRange(metrics.StackedInspectorHeight, 168f, 320f);
 
                 if (!metrics.UseStackedInspector)
                 {
@@ -50,6 +50,19 @@ namespace BeatSight.Tests
 
             stacked = EditorResponsiveLayout.Compute(1460, 860, stacked).UseStackedInspector;
             Assert.False(stacked);
+        }
+
+        [Fact]
+        public void CompactViewportUsesTighterBottomChromeBudgetAt720p()
+        {
+            var compact = EditorResponsiveLayout.Compute(1280, 720, currentlyStacked: false);
+            var full = EditorResponsiveLayout.Compute(1920, 1080, currentlyStacked: false);
+
+            Assert.True(compact.UseStackedInspector);
+            Assert.True(compact.FooterHeight < full.FooterHeight);
+            Assert.True(compact.TimelineToolboxHeight < full.TimelineToolboxHeight);
+            Assert.True(compact.StackedInspectorHeight <= 185f, $"Expected compact stacked inspector cap around 720p, got {compact.StackedInspectorHeight:0.##}.");
+            Assert.True(compact.FooterHeight <= 62f, $"Expected compact footer cap around 720p, got {compact.FooterHeight:0.##}.");
         }
 
         [Fact]

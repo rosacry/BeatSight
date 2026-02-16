@@ -44,6 +44,19 @@ namespace BeatSight.Tests
         }
 
         [Fact]
+        public void ManuscriptModeUsesDenserToolbarThanStandardViewAt720p()
+        {
+            var standard = PlaybackResponsiveLayout.Compute(1280, 720);
+            var manuscript = PlaybackResponsiveLayout.Compute(1280, 720, manuscriptMode: true);
+
+            Assert.True(manuscript.ToolbarButtonHeight < standard.ToolbarButtonHeight);
+            Assert.True(manuscript.ToolbarButtonWidth < standard.ToolbarButtonWidth);
+            Assert.True(manuscript.ToolbarInnerPaddingV < standard.ToolbarInnerPaddingV);
+            Assert.True(manuscript.PlaybackRowSpacingY < standard.PlaybackRowSpacingY);
+            Assert.True(manuscript.ToolbarSectionSpacing < standard.ToolbarSectionSpacing);
+        }
+
+        [Fact]
         public void ToolbarButtonTypographyFitsButtonHeight()
         {
             var resolutions = new (float Width, float Height)[]

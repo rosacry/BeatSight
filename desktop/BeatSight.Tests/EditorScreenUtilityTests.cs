@@ -267,6 +267,40 @@ namespace BeatSight.Tests
             Assert.Single(undoStack);
         }
 
+        [Fact]
+        public void RemapHitObjectsForTiming_PreservesBeatPositionWhenMoveNotesEnabled()
+        {
+            var screen = new EditorScreen();
+            var beatmap = createMinimalBeatmap(
+                new HitObject { Time = 500, Component = "kick", Velocity = 0.8 },
+                new HitObject { Time = 1000, Component = "snare", Velocity = 0.8 });
+
+            setPrivateField(screen, "beatmap", beatmap);
+            setPrivateField(screen, "snapDivisor", 4);
+
+            invokePrivateInstance<object?>(screen, "remapHitObjectsForTiming", 120d, 0d, 60d, 1000d, false);
+
+            Assert.Contains(beatmap.HitObjects, h => h.Time == 2000 && h.Component == "kick");
+            Assert.Contains(beatmap.HitObjects, h => h.Time == 3000 && h.Component == "snare");
+        }
+
+        [Fact]
+        public void ResnapHitObjectsToGrid_UsesCurrentSnapDivisorAndOffset()
+        {
+            var screen = new EditorScreen();
+            var beatmap = createMinimalBeatmap(
+                new HitObject { Time = 163, Component = "kick", Velocity = 0.8 },
+                new HitObject { Time = 364, Component = "snare", Velocity = 0.8 });
+
+            setPrivateField(screen, "beatmap", beatmap);
+            setPrivateField(screen, "snapDivisor", 4); // 125ms interval at 120 BPM
+
+            invokePrivateInstance<object?>(screen, "resnapHitObjectsToGrid", 120d, 100d);
+
+            Assert.Contains(beatmap.HitObjects, h => h.Time == 225 && h.Component == "kick");
+            Assert.Contains(beatmap.HitObjects, h => h.Time == 350 && h.Component == "snare");
+        }
+
         private static T invokePrivateStatic<T>(string methodName, params object?[]? args)
         {
             var method = typeof(EditorScreen).GetMethod(methodName, BindingFlags.Static | BindingFlags.NonPublic)

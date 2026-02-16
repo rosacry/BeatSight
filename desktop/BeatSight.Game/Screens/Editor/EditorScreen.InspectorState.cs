@@ -40,7 +40,7 @@ namespace BeatSight.Game.Screens.Editor
     public partial class EditorScreen
     {
         private bool inspectorStackedLayout;
-        private bool inspectorCollapsed;
+        private bool inspectorCollapsed = true;
         private readonly List<BeatSightTextBox> inspectorTextBoxes = new();
         private readonly List<BasicButton> inspectorActionButtons = new();
         private readonly List<SpriteText> inspectorActionButtonTexts = new();

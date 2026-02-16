@@ -91,6 +91,45 @@ namespace BeatSight.Game.Screens.Editor
             applySnapDivisor(divisor);
         }
 
+        private void onPreviewNotePlacementRequested(int lane, double timeMs)
+        {
+            if (beatmap == null || timeline == null)
+                return;
+
+            if (!timeline.TryAddHitObjectAtTimeAndLane(timeMs, lane))
+                return;
+
+            string laneLabel = getLaneLabelForStatus(lane);
+            setStatusDetail($"Added {laneLabel} @ {formatTime(timeMs)}");
+            if (!isPlaying)
+                seekToTime(timeMs);
+        }
+
+        private void onPreviewNoteRemovalRequested(int lane, double timeMs)
+        {
+            if (beatmap == null || timeline == null)
+                return;
+
+            if (!timeline.TryDeleteNearestHitObject(timeMs, lane))
+            {
+                appendStatusDetail($"No note near {getLaneLabelForStatus(lane)} @ {formatTime(timeMs)}");
+                return;
+            }
+
+            setStatusDetail($"Removed nearest {getLaneLabelForStatus(lane)} note @ {formatTime(timeMs)}");
+            if (!isPlaying)
+                seekToTime(timeMs);
+        }
+
+        private string getLaneLabelForStatus(int lane)
+        {
+            string? component = timeline?.GetLaneComponentForVisibleLane(lane);
+            if (string.IsNullOrWhiteSpace(component))
+                return $"lane {lane + 1}";
+
+            return formatComponentDisplayName(component);
+        }
+
         private void onPreviewModeChanged(ValueChangedEvent<EditorPreviewMode> mode)
         {
             switch (mode.NewValue)

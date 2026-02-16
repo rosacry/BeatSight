@@ -216,6 +216,7 @@ namespace BeatSight.Game.Screens.Editor
 
                 track = loadedTrack;
                 track.Completed += onTrackCompleted;
+                applyTrackPlaybackRate();
                 trackLength = track.Length;
                 if (currentTime > 0)
                     track.Seek(Math.Clamp(currentTime, 0, trackLength));

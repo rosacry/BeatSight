@@ -19,7 +19,7 @@ namespace BeatSight.Game.Screens.Editor
         private const float stackHeightThreshold = 730f;
         private const float unstackHeightThreshold = 790f;
 
-        public static EditorResponsiveLayoutMetrics Compute(float viewportWidth, float viewportHeight, bool currentlyStacked)
+        public static EditorResponsiveLayoutMetrics Compute(float viewportWidth, float viewportHeight, bool currentlyStacked, bool footerHintsCollapsed = false)
         {
             float width = viewportWidth > 0 ? viewportWidth : 1920f;
             float height = viewportHeight > 0 ? viewportHeight : 1080f;
@@ -31,7 +31,9 @@ namespace BeatSight.Game.Screens.Editor
             float inspectorWidth = ResponsiveLayout.ClampFraction(width, 0.245f, 360f, 540f);
             float timelineTopHeight = ResponsiveLayout.ClampFraction(height, 0.245f, 180f, 320f);
             float timelineToolboxHeight = ResponsiveLayout.ClampFraction(height, 0.102f, 78f, 136f);
-            float footerHeight = ResponsiveLayout.ClampFraction(height, 0.082f, 60f, 112f);
+            float footerHeight = footerHintsCollapsed
+                ? ResponsiveLayout.ClampFraction(height, 0.032f, 24f, 40f)
+                : ResponsiveLayout.ClampFraction(height, 0.076f, 56f, 104f);
             float panelGap = ResponsiveLayout.ClampFraction(width, 0.0065f, 8f, 14f);
             float stackedInspectorHeight = ResponsiveLayout.ClampFraction(height, 0.245f, 168f, 320f);
 

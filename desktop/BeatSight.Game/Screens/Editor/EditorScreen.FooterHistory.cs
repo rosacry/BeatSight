@@ -20,15 +20,19 @@ namespace BeatSight.Game.Screens.Editor
 
             var tips = new (string key, string action)[]
             {
+                ("F1", "Show/hide shortcuts"),
                 ("Esc", "Clear selection / Back"),
                 ("Space", "Play/Pause"),
                 ("Shift+Space", "Rewind to start"),
+                ("Ctrl+[ / Ctrl+]", "Playback rate"),
+                ("Ctrl+0", "Reset playback rate"),
+                ("Ctrl+T", "Open timing setup"),
                 ("Left/Right", "Seek"),
                 ("Ctrl +/-", "Zoom timeline"),
                 ("Ctrl+Alt +/-", "Scale waveform"),
                 ("[ / ]", "Change snap"),
                 ("G", "Toggle beat grid"),
-                ("I", "Toggle inspector panel (compact)"),
+                ("I", "Toggle inspector panel"),
                 (", / .", "Previous/next note"),
                 ("Home / End", "Jump first/last note"),
                 ("PgUp/PgDn", "Shift selection notation lane"),
@@ -40,6 +44,7 @@ namespace BeatSight.Game.Screens.Editor
                 ("Ctrl+A", "Select all notes"),
                 ("Ctrl+D", "Duplicate selected note/range"),
                 ("Ctrl+S", "Save"),
+                ("Ctrl+Shift+H", "Toggle history panel"),
                 ("Ctrl+Z", "Undo"),
                 ("Ctrl+Y / Ctrl+Shift+Z", "Redo")
             };
@@ -65,7 +70,17 @@ namespace BeatSight.Game.Screens.Editor
                 }
             };
 
-            return footerRootContainer = new Container
+            footerCollapsedText = new SpriteText
+            {
+                Text = "Shortcuts hidden. Press F1 to show.",
+                Font = BeatSightFont.Caption(11.2f),
+                Colour = EditorColours.TextSecondary,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                Margin = new MarginPadding { Left = 2 }
+            };
+
+            var root = footerRootContainer = new Container
             {
                 RelativeSizeAxes = Axes.Both,
                 Padding = new MarginPadding { Horizontal = 12, Vertical = 11 },
@@ -88,10 +103,37 @@ namespace BeatSight.Game.Screens.Editor
                     {
                         RelativeSizeAxes = Axes.Both,
                         Padding = new MarginPadding { Horizontal = 15, Vertical = 9 },
-                        Child = horizontalScroll
+                        Children = new Drawable[]
+                        {
+                            footerTipsContainer = new Container
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Child = horizontalScroll
+                            },
+                            footerCollapsedContainer = new Container
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Child = new FillFlowContainer
+                                {
+                                    AutoSizeAxes = Axes.Both,
+                                    Direction = FillDirection.Horizontal,
+                                    Spacing = new Vector2(10, 0),
+                                    Anchor = Anchor.CentreLeft,
+                                    Origin = Anchor.CentreLeft,
+                                    Children = new Drawable[]
+                                    {
+                                        createCollapsedFooterKeycap("F1"),
+                                        footerCollapsedText
+                                    }
+                                }
+                            }
+                        }
                     },
                 }
             };
+
+            refreshFooterShortcutVisibility();
+            return root;
         }
 
         private Drawable createTip(string key, string action)
@@ -143,6 +185,60 @@ namespace BeatSight.Game.Screens.Editor
             };
         }
 
+        private Drawable createCollapsedFooterKeycap(string key)
+        {
+            return new Container
+            {
+                AutoSizeAxes = Axes.Both,
+                Masking = true,
+                CornerRadius = 6,
+                Children = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = EditorColours.Lighten(EditorColours.ControlsBackground, 1.18f)
+                    },
+                    new SpriteText
+                    {
+                        Text = key,
+                        Font = BeatSightFont.Title(11.2f),
+                        Colour = EditorColours.TextPrimary,
+                        Margin = new MarginPadding { Horizontal = 7, Vertical = 4 },
+                        UseFullGlyphHeight = false
+                    }
+                }
+            };
+        }
+
+        private void toggleFooterShortcutsCollapsed()
+        {
+            footerTipsCollapsed = !footerTipsCollapsed;
+            refreshFooterShortcutVisibility();
+            applyResponsiveEditorLayout(force: true);
+            appendStatusDetail(footerTipsCollapsed ? "Shortcuts hidden" : "Shortcuts shown");
+        }
+
+        private void refreshFooterShortcutVisibility()
+        {
+            if (footerTipsContainer == null || footerCollapsedContainer == null)
+                return;
+
+            bool collapsed = footerTipsCollapsed;
+            footerTipsContainer.Alpha = collapsed ? 0 : 1;
+            footerTipsContainer.AlwaysPresent = !collapsed;
+
+            footerCollapsedContainer.Alpha = collapsed ? 1 : 0;
+            footerCollapsedContainer.AlwaysPresent = collapsed;
+        }
+
+        private void toggleHistoryPanelVisibility()
+        {
+            historyPanelVisible = !historyPanelVisible;
+            updateHistoryPanel();
+            appendStatusDetail(historyPanelVisible ? "History panel shown" : "History panel hidden");
+        }
+
         private Drawable createHistoryColumn(string title, out SpriteText headerText, out FillFlowContainer listFlow)
         {
             headerText = new SpriteText
@@ -181,13 +277,14 @@ namespace BeatSight.Game.Screens.Editor
             updateHistoryColumn(redoStack, redoHeaderText, redoHistoryFlow, "Redo");
 
             bool anyEntries = undoStack.Count > 0 || redoStack.Count > 0;
-            if (anyEntries)
+            if (anyEntries && historyPanelVisible)
             {
                 historyPanel.Show();
                 historyPanel.FadeTo(1f, 120, Easing.OutQuint);
             }
             else
             {
+                historyPanel.FadeOut(120, Easing.OutQuint);
                 historyPanel.Hide();
             }
         }

@@ -90,8 +90,6 @@ namespace BeatSight.Game.Screens.Editor
                 Child = backButton
             };
 
-            historyPanel!.Y = editorEdgePadding.Top + 64;
-
             InternalChildren = new Drawable[]
             {
                 new Box
@@ -116,12 +114,12 @@ namespace BeatSight.Game.Screens.Editor
                     Colour = EditorColours.ScreenBackdropBottom.Opacity(0.9f)
                 },
                 paddedLayout,
-                historyPanel!,
                 backButtonOverlay,
                 quickActionToast = new ToastContainer
                 {
                     RelativeSizeAxes = Axes.Both
                 },
+                createTimingSetupOverlay(),
                 createLogOverlay()
             };
 

@@ -42,13 +42,13 @@ namespace BeatSight.Game.Screens.Editor
                     if (track.IsRunning && newTime > lastTrackTime)
                         currentTime = newTime;
                     else
-                        currentTime = Math.Max(0, currentTime + Time.Elapsed);
+                        currentTime = Math.Max(0, currentTime + Time.Elapsed * playbackRate);
 
                     lastTrackTime = newTime;
                 }
                 else
                 {
-                    currentTime = Math.Max(0, currentTime + Time.Elapsed);
+                    currentTime = Math.Max(0, currentTime + Time.Elapsed * playbackRate);
                 }
             }
 

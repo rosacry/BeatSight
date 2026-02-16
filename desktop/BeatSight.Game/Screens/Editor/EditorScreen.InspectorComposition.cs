@@ -81,6 +81,7 @@ namespace BeatSight.Game.Screens.Editor
             inspectorTimingSection = createInspectorSection(inspectorCopy.SectionEdit,
                 createInspectorField("Selection", createSelectionPanel(inspectorCopy)),
                 timingPairRow,
+                createInspectorButtonRow(("Timing Setup", openTimingSetupOverlay)),
                 createInspectorButtonRow(("Half", () => adjustBpmByFactor(0.5)), ("x2", () => adjustBpmByFactor(2)), ("Reset", resetBpmToDefault)));
 
             var notesBadge = createInspectorStatBadge("Notes", out noteCountValue);

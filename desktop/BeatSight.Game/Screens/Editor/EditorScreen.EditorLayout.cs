@@ -13,7 +13,7 @@ namespace BeatSight.Game.Screens.Editor
         private Drawable createEditor()
         {
             var viewport = resolveResponsiveViewport();
-            var initialMetrics = EditorResponsiveLayout.Compute(viewport.X, viewport.Y, inspectorStackedLayout);
+            var initialMetrics = EditorResponsiveLayout.Compute(viewport.X, viewport.Y, inspectorStackedLayout, footerTipsCollapsed);
 
             timeline = new EditorTimeline
             {
@@ -34,6 +34,8 @@ namespace BeatSight.Game.Screens.Editor
             {
                 RelativeSizeAxes = Axes.Both
             };
+            playbackPreview.NotePlacementRequested += onPreviewNotePlacementRequested;
+            playbackPreview.NoteRemovalRequested += onPreviewNoteRemovalRequested;
 
             previewSurfaceContainer = new Container
             {

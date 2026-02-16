@@ -136,6 +136,45 @@ namespace BeatSight.Game.Screens.Editor
             };
             timelineWaveformSliderContainer = waveformSliderContainer;
 
+            playbackRateValueText = new SpriteText
+            {
+                Text = $"{playbackRate:0.00}x",
+                Font = BeatSightFont.Caption(11.8f),
+                Colour = EditorColours.TextPrimary,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft
+            };
+
+            playbackRateSlider = new BeatSightSliderBar
+            {
+                RelativeSizeAxes = Axes.Both,
+                DragStepMultiplier = 1
+            };
+            var playbackRateBindable = new BindableDouble(playbackRate)
+            {
+                MinValue = minPlaybackRate,
+                MaxValue = maxPlaybackRate,
+                Precision = 0.01
+            };
+            playbackRateSlider.Current = playbackRateBindable;
+            playbackRateSlider.Current.ValueChanged += e =>
+            {
+                if (suppressPlaybackRateSync)
+                    return;
+
+                setPlaybackRate(e.NewValue, announce: false);
+            };
+
+            var playbackRateSliderContainer = new Container
+            {
+                Width = 144,
+                Height = 30,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                Child = playbackRateSlider
+            };
+            timelinePlaybackRateSliderContainer = playbackRateSliderContainer;
+
             snapDivisorText = new SpriteText
             {
                 Text = $"1/{snapDivisor}",
@@ -186,6 +225,13 @@ namespace BeatSight.Game.Screens.Editor
                     }
                 });
 
+            var playbackSection = createTimelineSection("Playback",
+                createTimelineMiniButton("-", () => adjustPlaybackRate(false), 32),
+                playbackRateSliderContainer,
+                createTimelineMiniButton("+", () => adjustPlaybackRate(true), 32),
+                createTimelineMiniButton("Reset", resetPlaybackRate, 58),
+                playbackRateValueText);
+
             var snapSection = createTimelineSection(timelineCopy.SectionSnap,
                 createTimelineMiniButton("-", () => adjustSnapDivisor(false), 32),
                 snapDivisorText,
@@ -193,11 +239,31 @@ namespace BeatSight.Game.Screens.Editor
 
             var gridSection = createTimelineSection(timelineCopy.SectionOverlay, beatGridCheckbox);
 
+            var firstNoteButton = createTimelineMiniButton(timelineCopy.FirstNoteButton, jumpToFirstNote, 98);
+            timelineFirstNoteButton = firstNoteButton;
+            timelineFirstNoteButtonText = timelineMiniButtonTexts[^1];
+
+            var lastNoteButton = createTimelineMiniButton(timelineCopy.LastNoteButton, jumpToLastNote, 96);
+            timelineLastNoteButton = lastNoteButton;
+            timelineLastNoteButtonText = timelineMiniButtonTexts[^1];
+
+            var timingButton = createTimelineMiniButton("Timing", openTimingSetupOverlay, 92);
+            timelineTimingButton = timingButton;
+
+            var snapSelectionButton = createTimelineMiniButton(timelineCopy.SnapSelectionButton, snapSelectionToTransient, 110);
+            timelineSnapAudioButton = snapSelectionButton;
+            timelineSnapAudioButtonText = timelineMiniButtonTexts[^1];
+
+            var regenerateButton = createTimelineMiniButton(timelineCopy.RegenerateButton, regenerateRegion, 108);
+            timelineRegenerateButton = regenerateButton;
+            timelineRegenerateButtonText = timelineMiniButtonTexts[^1];
+
             var toolsSection = createTimelineSection(timelineCopy.SectionTools,
-                createTimelineMiniButton(timelineCopy.FirstNoteButton, jumpToFirstNote, 98),
-                createTimelineMiniButton(timelineCopy.LastNoteButton, jumpToLastNote, 96),
-                createTimelineMiniButton(timelineCopy.SnapSelectionButton, snapSelectionToTransient, 116),
-                createTimelineMiniButton(timelineCopy.RegenerateButton, regenerateRegion, 116));
+                firstNoteButton,
+                lastNoteButton,
+                timingButton,
+                snapSelectionButton,
+                regenerateButton);
 
             var contentFlow = new FillFlowContainer
             {
@@ -210,6 +276,7 @@ namespace BeatSight.Game.Screens.Editor
                 {
                     zoomSection,
                     waveformSection,
+                    playbackSection,
                     snapSection,
                     gridSection,
                     toolsSection
@@ -220,7 +287,7 @@ namespace BeatSight.Game.Screens.Editor
             var horizontalScroll = new PassiveScrollContainer(Direction.Horizontal)
             {
                 RelativeSizeAxes = Axes.Both,
-                ScrollbarVisible = false,
+                ScrollbarVisible = true,
                 Child = new Container
                 {
                     RelativeSizeAxes = Axes.Y,
@@ -350,6 +417,7 @@ namespace BeatSight.Game.Screens.Editor
         {
             syncTimelineZoomDisplay();
             updateWaveformScaleDisplay();
+            syncPlaybackRateDisplay();
             syncSnapControl();
             syncBeatGridControl();
         }
@@ -581,6 +649,62 @@ namespace BeatSight.Game.Screens.Editor
             setWaveformScale(waveformScale + (increase ? 0.1 : -0.1));
         }
 
+        private void setPlaybackRate(double rate, bool announce = true)
+        {
+            double clamped = Math.Clamp(rate, minPlaybackRate, maxPlaybackRate);
+            bool changed = Math.Abs(clamped - playbackRate) >= 0.0001;
+            playbackRate = clamped;
+
+            applyTrackPlaybackRate();
+            syncPlaybackRateDisplay();
+
+            if (announce && changed)
+                appendStatusDetail($"Playback rate {playbackRate:0.00}x");
+        }
+
+        private void syncPlaybackRateDisplay()
+        {
+            if (playbackRateValueText != null)
+                playbackRateValueText.Text = $"{playbackRate:0.00}x";
+
+            if (playbackRateSlider != null)
+            {
+                suppressPlaybackRateSync = true;
+                playbackRateSlider.Current.Value = playbackRate;
+                suppressPlaybackRateSync = false;
+            }
+        }
+
+        private void adjustPlaybackRate(bool increase)
+            => setPlaybackRate(playbackRate + (increase ? 0.05 : -0.05));
+
+        private void resetPlaybackRate()
+            => setPlaybackRate(1.0);
+
+        private void applyTrackPlaybackRate()
+        {
+            if (track == null)
+                return;
+
+            try
+            {
+                if (playbackRate < 0.05)
+                {
+                    track.Tempo.Value = 0.05;
+                    track.Frequency.Value = playbackRate / 0.05;
+                }
+                else
+                {
+                    track.Frequency.Value = 1.0;
+                    track.Tempo.Value = playbackRate;
+                }
+            }
+            catch
+            {
+                track.Tempo.Value = Math.Max(0.05, playbackRate);
+            }
+        }
+
         private void adjustSnapDivisor(bool increase)
         {
             int index = Array.IndexOf(allowedSnapDivisors, snapDivisor);
@@ -671,10 +795,11 @@ namespace BeatSight.Game.Screens.Editor
             float sectionPaddingH = blend(11f, 9f, compactBlend) + ultraWideRelax * 1.2f;
             float sectionPaddingV = blend(8f, 7f, compactBlend) + ultraWideRelax * 0.45f;
             float sectionVerticalSpacing = blend(6f, 5f, compactBlend) + ultraWideRelax * 0.55f;
-            float sectionLabelSpacing = blend(8f, 6f, compactBlend) + ultraWideRelax * 1.05f;
+            float sectionLabelSpacing = blend(8f, 5.8f, compactBlend) + ultraWideRelax * 1.05f;
             float sliderHeight = blend(30f, 26f, compactBlend);
             float miniButtonHeight = blend(32f, 28f, compactBlend);
             float miniButtonFont = blend(11.9f, 10.8f, compactBlend) + ultraWideRelax * 0.2f;
+            bool ultraCompactControls = compactBlend >= 0.72f && viewport.X <= 1460f;
 
             if (timelineToolboxContainer != null)
             {
@@ -686,18 +811,24 @@ namespace BeatSight.Game.Screens.Editor
             }
 
             if (timelineToolboxContentFlow != null)
-                timelineToolboxContentFlow.Spacing = new Vector2(blend(12f, 9f, compactBlend) + ultraWideRelax * 1.3f, 0);
+                timelineToolboxContentFlow.Spacing = new Vector2(blend(12f, 8.5f, compactBlend) + ultraWideRelax * 1.3f, 0);
 
             if (timelineZoomSliderContainer != null)
             {
-                timelineZoomSliderContainer.Width = blend(170f, 146f, compactBlend);
+                timelineZoomSliderContainer.Width = blend(170f, 145f, compactBlend);
                 timelineZoomSliderContainer.Height = sliderHeight;
             }
 
             if (timelineWaveformSliderContainer != null)
             {
-                timelineWaveformSliderContainer.Width = blend(154f, 132f, compactBlend);
+                timelineWaveformSliderContainer.Width = blend(154f, 130f, compactBlend);
                 timelineWaveformSliderContainer.Height = sliderHeight;
+            }
+
+            if (timelinePlaybackRateSliderContainer != null)
+            {
+                timelinePlaybackRateSliderContainer.Width = blend(144f, 116f, compactBlend);
+                timelinePlaybackRateSliderContainer.Height = sliderHeight;
             }
 
             foreach (var body in timelineSectionBodies)
@@ -720,11 +851,34 @@ namespace BeatSight.Game.Screens.Editor
             foreach (var label in timelineMiniButtonTexts)
                 label.Font = BeatSightFont.Button(miniButtonFont);
 
+            if (timelineFirstNoteButton != null)
+                timelineFirstNoteButton.Width = blend(98f, 74f, compactBlend);
+            if (timelineLastNoteButton != null)
+                timelineLastNoteButton.Width = blend(96f, 72f, compactBlend);
+            if (timelineTimingButton != null)
+                timelineTimingButton.Width = blend(92f, 78f, compactBlend);
+            if (timelineSnapAudioButton != null)
+                timelineSnapAudioButton.Width = blend(110f, 86f, compactBlend);
+            if (timelineRegenerateButton != null)
+                timelineRegenerateButton.Width = blend(108f, 90f, compactBlend);
+
+            if (timelineFirstNoteButtonText != null)
+                timelineFirstNoteButtonText.Text = ultraCompactControls ? "First" : "First Note";
+            if (timelineLastNoteButtonText != null)
+                timelineLastNoteButtonText.Text = ultraCompactControls ? "Last" : "Last Note";
+            if (timelineSnapAudioButtonText != null)
+                timelineSnapAudioButtonText.Text = ultraCompactControls ? "Snap" : "Snap Audio";
+            if (timelineRegenerateButtonText != null)
+                timelineRegenerateButtonText.Text = ultraCompactControls ? "Regen" : "Regenerate";
+
             if (timelineZoomValueText != null)
                 timelineZoomValueText.Font = BeatSightFont.Caption(blend(11.8f, 10.8f, compactBlend));
 
             if (waveformScaleValueText != null)
                 waveformScaleValueText.Font = BeatSightFont.Caption(blend(11.8f, 10.8f, compactBlend));
+
+            if (playbackRateValueText != null)
+                playbackRateValueText.Font = BeatSightFont.Caption(blend(11.8f, 10.8f, compactBlend));
 
             if (snapDivisorText != null)
                 snapDivisorText.Font = BeatSightFont.Title(blend(12.8f, 11.6f, compactBlend));

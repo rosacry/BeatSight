@@ -83,21 +83,39 @@ namespace BeatSight.Game.Screens.Editor
             float hintFontSize = blend(11.4f, 10.2f, compactBlend) + ultraWideRelax * 0.25f;
             float buttonHeight = blend(42f, 36f, compactBlend) + ultraWideRelax * 1.1f;
             float buttonFontSize = blend(13.4f, 11.8f, compactBlend) + widthRelax * 0.35f;
-            float buttonSpacing = blend(10f, 8f, compactBlend) + ultraWideRelax * 1.25f;
+            float buttonSpacing = blend(8f, 6f, compactBlend) + ultraWideRelax * 1.1f;
             float horizontalPadding = blend(24f, 18f, compactBlend) + ultraWideRelax * 2.3f;
             float verticalPadding = blend(12f, 9f, compactBlend) + ultraWideRelax * 0.8f;
             float infoSpacing = blend(6f, 4f, compactBlend);
             float contentSpacing = blend(10f, 8f, compactBlend);
-            float playButtonWidth = blend(120f, 106f, compactBlend);
-            float saveButtonWidth = blend(120f, 106f, compactBlend);
-            float undoButtonWidth = blend(104f, 92f, compactBlend);
-            float redoButtonWidth = blend(104f, 92f, compactBlend);
-            float previewButtonWidth = blend(146f, 126f, compactBlend);
+            float playButtonWidth = blend(114f, 96f, compactBlend);
+            float saveButtonWidth = blend(112f, 96f, compactBlend);
+            float undoButtonWidth = blend(98f, 84f, compactBlend);
+            float redoButtonWidth = blend(98f, 84f, compactBlend);
+            float previewButtonWidth = blend(132f, 110f, compactBlend);
             float timeBadgeWidth = blend(196f, 170f, compactBlend);
             float timeBadgeHeight = blend(62f, 54f, compactBlend);
+            float controlsBaseWidth = playButtonWidth + saveButtonWidth + undoButtonWidth + redoButtonWidth + previewButtonWidth + buttonSpacing * 4f;
+            float availableContentWidth = Math.Max(1f, viewport.X - (horizontalPadding * 2f + timeBadgeWidth));
+            float targetButtonBudget = ResponsiveLayout.ClampFraction(viewport.X, 0.38f, 360f, 760f);
+            float buttonBudget = Math.Clamp(targetButtonBudget, 320f, Math.Max(320f, availableContentWidth - 220f));
+            float widthScale = Math.Clamp(buttonBudget / Math.Max(1f, controlsBaseWidth), 0.56f, 1.06f);
+            float hierarchyScale = Math.Clamp(1f - compactBlend * 0.04f + ultraWideRelax * 0.03f, 0.94f, 1.05f);
+            float controlScale = Math.Clamp(widthScale * hierarchyScale, 0.60f, 1.10f);
+
+            buttonSpacing *= Math.Clamp(controlScale, 0.9f, 1.06f);
+            buttonHeight *= Math.Clamp(controlScale, 0.92f, 1.04f);
+            playButtonWidth *= controlScale;
+            saveButtonWidth *= controlScale;
+            undoButtonWidth *= controlScale;
+            redoButtonWidth *= controlScale;
+            previewButtonWidth *= controlScale;
 
             statusText.Font = BeatSightFont.Section(statusFontSize);
-            statusText.MaxWidth = blend(560f, 480f, compactBlend) + ultraWideRelax * 110f;
+            float desiredStatusWidth = blend(560f, 480f, compactBlend) + ultraWideRelax * 110f;
+            float minStatusWidth = viewport.X <= 1400f ? 220f : 280f;
+            float statusRemaining = Math.Max(minStatusWidth, availableContentWidth - controlsBaseWidth * controlScale - 24f);
+            statusText.MaxWidth = Math.Clamp(Math.Min(desiredStatusWidth, statusRemaining), minStatusWidth, desiredStatusWidth + 32f);
             statusDetailLine.Font = BeatSightFont.Caption(detailFontSize);
             statusDetailLine.MaxWidth = statusText.MaxWidth;
 
@@ -268,12 +286,13 @@ namespace BeatSight.Game.Screens.Editor
         {
             float aspect = viewport.X / Math.Max(1f, viewport.Y);
             float ultraWideRelax = Math.Clamp((aspect - 2.0f) / 0.85f, 0f, 1f);
+            float collapseScale = footerTipsCollapsed ? 0.42f : 1f;
             if (footerRootContainer != null)
             {
                 footerRootContainer.Padding = new MarginPadding
                 {
                     Horizontal = blend(12f, 9f, compactBlend) + ultraWideRelax * 1.2f,
-                    Vertical = blend(11f, 6.5f, compactBlend) + ultraWideRelax * 0.5f
+                    Vertical = (blend(11f, 6.5f, compactBlend) + ultraWideRelax * 0.5f) * collapseScale
                 };
                 footerRootContainer.CornerRadius = blend(12f, 9.5f, compactBlend);
             }
@@ -283,7 +302,7 @@ namespace BeatSight.Game.Screens.Editor
                 footerInnerContainer.Padding = new MarginPadding
                 {
                     Horizontal = blend(15f, 9f, compactBlend),
-                    Vertical = blend(9f, 4.5f, compactBlend)
+                    Vertical = blend(9f, 4.5f, compactBlend) * collapseScale
                 };
             }
 
@@ -302,6 +321,9 @@ namespace BeatSight.Game.Screens.Editor
 
             foreach (var actionText in footerActionTexts)
                 actionText.Font = BeatSightFont.Caption(blend(11f, 9.4f, compactBlend));
+
+            if (footerCollapsedText != null)
+                footerCollapsedText.Font = BeatSightFont.Caption(blend(11.2f, 9.8f, compactBlend));
         }
 
         private static float blend(float normal, float compact, float t)

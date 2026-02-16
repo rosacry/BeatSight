@@ -82,7 +82,7 @@ jobs:
 
       - name: Upload health artifacts
         if: steps.check_manifest.outputs.exists == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: dataset-health
           path: |

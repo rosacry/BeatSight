@@ -21,7 +21,7 @@
         "api:generate:file": "openapi-typescript ../backend/openapi.json -o src/types/api.generated.ts"
     },
     "dependencies": {
-        "@sentry/react": "^10.28.0",
+        "@sentry/react": "^10.29.0",
         "@tanstack/react-query": "^5.51.0",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",

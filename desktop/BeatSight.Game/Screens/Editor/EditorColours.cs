@@ -10,7 +10,7 @@ namespace BeatSight.Game.Screens.Editor
     internal static class EditorColours
     {
         // Screen + panel backgrounds
-        public static readonly Color4 ScreenBackground = new Color4(7, 10, 19, 255);
+        public static readonly Color4 ScreenBackground = new Color4(9, 13, 24, 255);
         public static readonly Color4 ScreenBackdropTop = new Color4(28, 44, 80, 156);
         public static readonly Color4 ScreenBackdropBottom = new Color4(10, 16, 30, 182);
         public static readonly Color4 ScreenHeaderGlow = new Color4(84, 136, 230, 50);
@@ -18,7 +18,7 @@ namespace BeatSight.Game.Screens.Editor
         public static readonly Color4 ControlsBackground = new Color4(24, 32, 55, 245);
         public static readonly Color4 TimelineBackground = new Color4(12, 18, 33, 245);
         public static readonly Color4 TimelineToolbarBackground = new Color4(20, 28, 49, 240);
-        public static readonly Color4 PreviewBackground = new Color4(10, 14, 27, 245);
+        public static readonly Color4 PreviewBackground = new Color4(12, 18, 33, 245);
         public static readonly Color4 InspectorBackground = new Color4(17, 24, 43, 245);
         public static readonly Color4 SectionBackground = new Color4(26, 35, 58, 230);
         public static readonly Color4 CardBackground = new Color4(28, 38, 63, 205);

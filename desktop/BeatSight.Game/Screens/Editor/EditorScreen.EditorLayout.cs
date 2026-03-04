@@ -15,6 +15,7 @@ namespace BeatSight.Game.Screens.Editor
         {
             var viewport = resolveResponsiveViewport();
             var initialMetrics = EditorResponsiveLayout.Compute(viewport.X, viewport.Y, inspectorStackedLayout, footerTipsCollapsed);
+            var sharedSurfacePadding = new MarginPadding { Horizontal = 10, Vertical = 6 };
 
             timeline = new EditorTimeline
             {
@@ -67,7 +68,7 @@ namespace BeatSight.Game.Screens.Editor
                     previewContentContainer = new Container
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Padding = new MarginPadding { Horizontal = 2, Vertical = 2 },
+                        Padding = sharedSurfacePadding,
                         Child = playbackPreview
                     },
                     inspectorToggleButton = new EditorButton("Hide Inspector", EditorColours.AccentUndo)
@@ -158,7 +159,7 @@ namespace BeatSight.Game.Screens.Editor
                     new Container
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Padding = new MarginPadding { Horizontal = 12, Vertical = 6 },
+                        Padding = sharedSurfacePadding,
                         Child = timelineLayoutGrid
                     },
                     timelineToolboxToggleButton = new EditorButton("Hide Toolbar", EditorColours.AccentUndo)

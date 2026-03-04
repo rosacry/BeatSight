@@ -117,24 +117,24 @@ namespace BeatSight.Game.Screens.Editor
                         new Container
                         {
                             RelativeSizeAxes = Axes.Y,
-                            Width = 86,
+                            Width = 80,
                             Height = 1,
-                            Padding = new MarginPadding { Right = 8 },
+                            Padding = new MarginPadding { Right = 6 },
                             Child = footerSeekCurrentText
                         },
                         new Container
                         {
                             RelativeSizeAxes = Axes.Both,
                             Height = 1,
-                            Padding = new MarginPadding { Horizontal = 2 },
+                            Padding = new MarginPadding(),
                             Child = footerSeekSlider
                         },
                         new Container
                         {
                             RelativeSizeAxes = Axes.Y,
-                            Width = 86,
+                            Width = 80,
                             Height = 1,
-                            Padding = new MarginPadding { Left = 8 },
+                            Padding = new MarginPadding { Left = 6 },
                             Child = footerSeekTotalText
                         }
                     }
@@ -169,7 +169,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
-                Padding = new MarginPadding { Horizontal = 12, Vertical = 11 },
+                Padding = new MarginPadding { Horizontal = 8, Vertical = 11 },
                 Masking = true,
                 CornerRadius = 12,
                 Children = new Drawable[]
@@ -189,7 +189,7 @@ namespace BeatSight.Game.Screens.Editor
                     {
                         RelativeSizeAxes = Axes.X,
                         AutoSizeAxes = Axes.Y,
-                        Padding = new MarginPadding { Horizontal = 15, Vertical = 9 },
+                        Padding = new MarginPadding { Horizontal = 10, Vertical = 8 },
                         Child = new FillFlowContainer
                         {
                             RelativeSizeAxes = Axes.X,

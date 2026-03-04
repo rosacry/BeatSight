@@ -211,7 +211,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             // Kick notes span the full width as a horizontal bar
             float kickNoteHeight = Math.Clamp(drawHeight * 0.022f, 10f, 22f);
 
-            note.Width = drawWidth * 0.98f; // Slight margin
+            note.Width = drawWidth;
             note.Height = kickNoteHeight;
             note.Position = new Vector2(drawWidth / 2, y);
             note.Scale = Vector2.One;
@@ -262,7 +262,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
         {
             RelativeSizeAxes = Axes.X;
             Height = DesignSystem.StrikeZoneHeight2D;
-            Width = 0.995f;
+            Width = 1f;
             Anchor = Anchor.BottomCentre;
             Origin = Anchor.BottomCentre;
 

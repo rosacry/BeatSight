@@ -25,6 +25,13 @@ namespace BeatSight.Game.Screens.Editor
             laneViewMode = laneViewModeBindable.GetBoundCopy();
             lanePresetSetting = config.GetBindable<LanePreset>(BeatSightSetting.LanePreset);
             kickLaneModeSetting = config.GetBindable<KickLaneMode>(BeatSightSetting.KickLaneMode);
+            uiScaleSetting = config.GetBindable<double>(BeatSightSetting.UIScale);
+            masterVolumeSetting = config.GetBindable<double>(BeatSightSetting.MasterVolume);
+            musicVolumeSetting = config.GetBindable<double>(BeatSightSetting.MusicVolume);
+            masterVolumeEnabledSetting = config.GetBindable<bool>(BeatSightSetting.MasterVolumeEnabled);
+            musicVolumeEnabledSetting = config.GetBindable<bool>(BeatSightSetting.MusicVolumeEnabled);
+            playbackZoomSetting = config.GetBindable<double>(BeatSightSetting.PlaybackZoomLevel);
+            noteWidthSetting = config.GetBindable<double>(BeatSightSetting.PlaybackNoteWidth);
 
             // Initialize preview mode based on current setting
             var initialPreviewMode = EditorPreviewMode.Playfield3D;
@@ -39,6 +46,20 @@ namespace BeatSight.Game.Screens.Editor
             editorTimelineZoomDefault = config.GetBindable<double>(BeatSightSetting.EditorTimelineZoomDefault);
             editorWaveformScaleDefault = config.GetBindable<double>(BeatSightSetting.EditorWaveformScaleDefault);
             editorBeatGridVisibleDefault = config.GetBindable<bool>(BeatSightSetting.EditorBeatGridVisibleDefault);
+            editorSnapDivisorDefault = config.GetBindable<int>(BeatSightSetting.EditorSnapDivisorDefault);
+            editorTimelinePlaybackZoomLinkedDefault = config.GetBindable<bool>(BeatSightSetting.EditorTimelinePlaybackZoomLinkedDefault);
+            editorTimelineSplitRatioExpanded = config.GetBindable<double>(BeatSightSetting.EditorTimelineSplitRatioExpanded);
+            editorTimelineSplitRatioCollapsed = config.GetBindable<double>(BeatSightSetting.EditorTimelineSplitRatioCollapsed);
+            editorSnapDivisorDefault.Value = coerceSnapDivisor(editorSnapDivisorDefault.Value);
+            editorTimelineSplitRatioExpanded.Value = Math.Clamp(
+                double.IsFinite(editorTimelineSplitRatioExpanded.Value) ? editorTimelineSplitRatioExpanded.Value : defaultTimelineSplitRatioExpanded,
+                0.0,
+                1.0);
+            editorTimelineSplitRatioCollapsed.Value = Math.Clamp(
+                double.IsFinite(editorTimelineSplitRatioCollapsed.Value) ? editorTimelineSplitRatioCollapsed.Value : defaultTimelineSplitRatioCollapsed,
+                0.0,
+                1.0);
+            initializeEditorMetronome();
 
             bool previousPersistenceState = suppressEditorDefaultPersistence;
             suppressEditorDefaultPersistence = true;
@@ -50,7 +71,7 @@ namespace BeatSight.Game.Screens.Editor
 
             backButton = new BackButton
             {
-                Margin = BackButton.DefaultMargin,
+                Margin = new MarginPadding(),
                 Action = () => this.Exit()
             };
 
@@ -58,36 +79,43 @@ namespace BeatSight.Game.Screens.Editor
             {
                 Left = UITheme.ScreenPadding.Left + 20,
                 Right = UITheme.ScreenPadding.Right + 20,
-                Top = UITheme.ScreenPadding.Top + 12,
+                Top = UITheme.ScreenPadding.Top + 4,
                 Bottom = UITheme.ScreenPadding.Bottom + 12
+            };
+
+            var header = createHeader();
+            var editor = createEditor();
+            var footer = createFooter();
+
+            var layoutRoot = new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                Children = new Drawable[]
+                {
+                    screenLayoutGrid = new GridContainer
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        RowDimensions = new[]
+                        {
+                            new Dimension(GridSizeMode.AutoSize),
+                            new Dimension(),
+                            new Dimension(GridSizeMode.AutoSize)
+                        },
+                        Content = new[]
+                        {
+                            new Drawable[] { header },
+                            new Drawable[] { editor },
+                            new Drawable[] { footer }
+                        }
+                    },
+                    historyPanel
+                }
             };
 
             var paddedLayout = new ScreenEdgeContainer(scrollable: false)
             {
                 EdgePadding = editorEdgePadding,
-                Content = screenLayoutGrid = new GridContainer
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    RowDimensions = new[]
-                    {
-                        new Dimension(GridSizeMode.AutoSize),
-                        new Dimension(),
-                        new Dimension(GridSizeMode.Absolute, getInitialFooterHeight())
-                    },
-                    Content = new[]
-                    {
-                        new Drawable[] { createHeader() },
-                        new Drawable[] { createEditor() },
-                        new Drawable[] { createFooter() }
-                    }
-                }
-            };
-
-            var backButtonOverlay = new SafeAreaContainer
-            {
-                RelativeSizeAxes = Axes.Both,
-                Padding = BackButton.DefaultMargin,
-                Child = backButton
+                Content = layoutRoot
             };
 
             InternalChildren = new Drawable[]
@@ -100,25 +128,30 @@ namespace BeatSight.Game.Screens.Editor
                 new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Height = 0.48f,
-                    Anchor = Anchor.TopLeft,
-                    Origin = Anchor.TopLeft,
-                    Colour = EditorColours.ScreenBackdropTop
+                    Colour = EditorColours.ScreenBackdropBottom.Opacity(0.42f)
                 },
                 new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Height = 0.52f,
-                    Anchor = Anchor.BottomLeft,
-                    Origin = Anchor.BottomLeft,
-                    Colour = EditorColours.ScreenBackdropBottom.Opacity(0.9f)
+                    Height = 0.42f,
+                    Anchor = Anchor.TopLeft,
+                    Origin = Anchor.TopLeft,
+                    Colour = EditorColours.ScreenBackdropTop.Opacity(0.78f)
+                },
+                new Box
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Height = 228,
+                    Anchor = Anchor.TopLeft,
+                    Origin = Anchor.TopLeft,
+                    Colour = EditorColours.ScreenHeaderGlow
                 },
                 paddedLayout,
-                backButtonOverlay,
                 quickActionToast = new ToastContainer
                 {
                     RelativeSizeAxes = Axes.Both
                 },
+                createScrubPerfOverlay(),
                 createTimingSetupOverlay(),
                 createLogOverlay()
             };
@@ -147,6 +180,10 @@ namespace BeatSight.Game.Screens.Editor
             base.LoadComplete();
 
             showDrumStem.BindValueChanged(_ => updateWaveformSource());
+            masterVolumeSetting.BindValueChanged(_ => updateEditorMasterVolumeOutput(), true);
+            masterVolumeEnabledSetting.BindValueChanged(_ => updateEditorMasterVolumeOutput(), true);
+            musicVolumeSetting.BindValueChanged(_ => updateEditorMusicVolumeOutput(), true);
+            musicVolumeEnabledSetting.BindValueChanged(_ => updateEditorMusicVolumeOutput(), true);
 
             // Ensure preview is synchronized after everything is loaded
             if (beatmap != null && playbackPreview != null)
@@ -159,6 +196,7 @@ namespace BeatSight.Game.Screens.Editor
 
             updatePlaybackAvailabilityUI();
             applyResponsiveEditorLayout(force: true);
+            Schedule(() => applyResponsiveEditorLayout(force: true));
         }
     }
 }

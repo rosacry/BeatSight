@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BeatSight.Game.Screens.Playback;
 using BeatSight.Game.UI.Components;
 using BeatSight.Game.UI.Theming;
 using osu.Framework.Graphics;
@@ -18,71 +19,156 @@ namespace BeatSight.Game.Screens.Editor
             footerKeyTexts.Clear();
             footerActionTexts.Clear();
 
-            var tips = new (string key, string action)[]
+            FillFlowContainer? tipFlow = null;
+            if (showFooterShortcutHints)
             {
-                ("F1", "Show/hide shortcuts"),
-                ("Esc", "Clear selection / Back"),
-                ("Space", "Play/Pause"),
-                ("Shift+Space", "Rewind to start"),
-                ("Ctrl+[ / Ctrl+]", "Playback rate"),
-                ("Ctrl+0", "Reset playback rate"),
-                ("Ctrl+T", "Open timing setup"),
-                ("Left/Right", "Seek"),
-                ("Ctrl +/-", "Zoom timeline"),
-                ("Ctrl+Alt +/-", "Scale waveform"),
-                ("[ / ]", "Change snap"),
-                ("G", "Toggle beat grid"),
-                ("I", "Toggle inspector panel"),
-                (", / .", "Previous/next note"),
-                ("Home / End", "Jump first/last note"),
-                ("PgUp/PgDn", "Shift selection notation lane"),
-                ("Ctrl+PgUp/PgDn", "Cycle selection articulation"),
-                ("1-9", "Quick lane reassign (left->right)"),
-                ("Alt+Left/Right", "Nudge selected note/range"),
-                ("Delete", "Remove selected note/range"),
-                ("Q", "Quantize selected note/range"),
-                ("Ctrl+A", "Select all notes"),
-                ("Ctrl+D", "Duplicate selected note/range"),
-                ("Ctrl+S", "Save"),
-                ("Ctrl+Shift+H", "Toggle history panel"),
-                ("Ctrl+Z", "Undo"),
-                ("Ctrl+Y / Ctrl+Shift+Z", "Redo")
-            };
-
-            var tipFlow = new FillFlowContainer
-            {
-                AutoSizeAxes = Axes.Both,
-                Direction = FillDirection.Horizontal,
-                Spacing = new Vector2(18, 0),
-                Children = tips.Select(t => createTip(t.key, t.action)).ToArray()
-            };
-            footerTipFlow = tipFlow;
-
-            var horizontalScroll = new BeatSightScrollContainer(Direction.Horizontal)
-            {
-                RelativeSizeAxes = Axes.Both,
-                ScrollbarVisible = false,
-                Child = new Container
+                var tips = new (string key, string action)[]
                 {
-                    RelativeSizeAxes = Axes.Y,
-                    AutoSizeAxes = Axes.X,
-                    Child = tipFlow
-                }
-            };
+                    ("Esc", "Clear selection / Back"),
+                    ("Space", "Play/Pause"),
+                    ("Shift+Space", "Rewind to start"),
+                    ("Ctrl+[ / Ctrl+]", "Playback rate"),
+                    ("Ctrl+0", "Reset playback rate"),
+                    ("Ctrl+T", "Open timing setup"),
+                    ("Left/Right", "Seek"),
+                    ("Mouse Wheel", "Scrub timeline (Shift = faster)"),
+                    ("Seek Bar", "Click/drag to scrub"),
+                    ("Ctrl +/-", "Zoom timeline"),
+                    ("Alt +/-", "Scale UI"),
+                    ("Ctrl+Alt +/-", "Scale waveform"),
+                    ("[ / ]", "Change snap"),
+                    ("G", "Toggle beat grid"),
+                    ("I", "Toggle inspector panel"),
+                    (", / .", "Previous/next note"),
+                    ("Home / End", "Jump first/last note"),
+                    ("PgUp/PgDn", "Shift selection notation lane"),
+                    ("Ctrl+PgUp/PgDn", "Cycle selection articulation"),
+                    ("1-9", "Quick lane reassign (left->right)"),
+                    ("Alt+Left/Right", "Nudge selected note/range"),
+                    ("Delete", "Remove selected note/range"),
+                    ("Q", "Quantize selected note/range"),
+                    ("Ctrl+A", "Select all notes"),
+                    ("Ctrl+C / Ctrl+V", "Copy/paste selection"),
+                    ("Ctrl+D", "Duplicate selected note/range"),
+                    ("Ctrl+S", "Save"),
+                    ("Ctrl+Shift+H", "Toggle history panel"),
+                    ("Ctrl+Z", "Undo"),
+                    ("Ctrl+Y / Ctrl+Shift+Z", "Redo")
+                };
 
-            footerCollapsedText = new SpriteText
+                tipFlow = new FillFlowContainer
+                {
+                    AutoSizeAxes = Axes.Both,
+                    Direction = FillDirection.Horizontal,
+                    Spacing = new Vector2(18, 0),
+                    Children = tips.Select(t => createTip(t.key, t.action)).ToArray()
+                };
+            }
+            footerTipFlow = tipFlow!;
+
+            footerSeekCurrentText = new SpriteText
             {
-                Text = "Shortcuts hidden. Press F1 to show.",
-                Font = BeatSightFont.Caption(11.2f),
+                Text = formatTime(0),
+                Font = BeatSightFont.Caption(10.6f),
                 Colour = EditorColours.TextSecondary,
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft,
-                Margin = new MarginPadding { Left = 2 }
+                UseFullGlyphHeight = true
             };
+
+            footerSeekTotalText = new SpriteText
+            {
+                Text = "--:--.---",
+                Font = BeatSightFont.Caption(10.6f),
+                Colour = EditorColours.TextSecondary,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
+                UseFullGlyphHeight = true
+            };
+
+            footerSeekSlider = new ScrubbableSliderBar
+            {
+                RelativeSizeAxes = Axes.Both,
+                Current = footerSeekProgress,
+                KeyboardStepMultiplier = 1,
+                DragStepMultiplier = 1
+            };
+            footerSeekSlider.ScrubbingChanged += onFooterSeekScrubbingChanged;
+            footerSeekProgress.BindValueChanged(onFooterSeekProgressChanged, true);
+
+            footerSeekRow = new GridContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                ColumnDimensions = new[]
+                {
+                    new Dimension(GridSizeMode.AutoSize),
+                    new Dimension(),
+                    new Dimension(GridSizeMode.AutoSize)
+                },
+                RowDimensions = new[]
+                {
+                    new Dimension(GridSizeMode.Absolute, 24)
+                },
+                Content = new[]
+                {
+                    new Drawable[]
+                    {
+                        new Container
+                        {
+                            RelativeSizeAxes = Axes.Y,
+                            AutoSizeAxes = Axes.X,
+                            Height = 1,
+                            Padding = new MarginPadding { Right = 10 },
+                            Child = footerSeekCurrentText
+                        },
+                        new Container
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Height = 1,
+                            Padding = new MarginPadding { Horizontal = 4 },
+                            Child = footerSeekSlider
+                        },
+                        new Container
+                        {
+                            RelativeSizeAxes = Axes.Y,
+                            AutoSizeAxes = Axes.X,
+                            Height = 1,
+                            Padding = new MarginPadding { Left = 10 },
+                            Child = footerSeekTotalText
+                        }
+                    }
+                }
+            };
+
+            Drawable[] footerRows;
+            if (showFooterShortcutHints && tipFlow != null)
+            {
+                footerRows = new Drawable[]
+                {
+                    footerSeekRow,
+                    footerTipsContainer = new Container
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Masking = true,
+                        Child = tipFlow
+                    }
+                };
+            }
+            else
+            {
+                footerTipsContainer = null!;
+                footerRows = new Drawable[]
+                {
+                    footerSeekRow
+                };
+            }
 
             var root = footerRootContainer = new Container
             {
-                RelativeSizeAxes = Axes.Both,
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
                 Padding = new MarginPadding { Horizontal = 12, Vertical = 11 },
                 Masking = true,
                 CornerRadius = 12,
@@ -101,38 +187,24 @@ namespace BeatSight.Game.Screens.Editor
                     },
                     footerInnerContainer = new Container
                     {
-                        RelativeSizeAxes = Axes.Both,
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
                         Padding = new MarginPadding { Horizontal = 15, Vertical = 9 },
-                        Children = new Drawable[]
+                        Child = new FillFlowContainer
                         {
-                            footerTipsContainer = new Container
-                            {
-                                RelativeSizeAxes = Axes.Both,
-                                Child = horizontalScroll
-                            },
-                            footerCollapsedContainer = new Container
-                            {
-                                RelativeSizeAxes = Axes.Both,
-                                Child = new FillFlowContainer
-                                {
-                                    AutoSizeAxes = Axes.Both,
-                                    Direction = FillDirection.Horizontal,
-                                    Spacing = new Vector2(10, 0),
-                                    Anchor = Anchor.CentreLeft,
-                                    Origin = Anchor.CentreLeft,
-                                    Children = new Drawable[]
-                                    {
-                                        createCollapsedFooterKeycap("F1"),
-                                        footerCollapsedText
-                                    }
-                                }
-                            }
+                            RelativeSizeAxes = Axes.X,
+                            AutoSizeAxes = Axes.Y,
+                            Anchor = Anchor.TopLeft,
+                            Origin = Anchor.TopLeft,
+                            Direction = FillDirection.Vertical,
+                            Spacing = new Vector2(0, 8),
+                            Children = footerRows
                         }
                     },
                 }
             };
 
-            refreshFooterShortcutVisibility();
+            syncFooterSeekBar();
             return root;
         }
 
@@ -185,51 +257,104 @@ namespace BeatSight.Game.Screens.Editor
             };
         }
 
-        private Drawable createCollapsedFooterKeycap(string key)
-        {
-            return new Container
-            {
-                AutoSizeAxes = Axes.Both,
-                Masking = true,
-                CornerRadius = 6,
-                Children = new Drawable[]
-                {
-                    new Box
-                    {
-                        RelativeSizeAxes = Axes.Both,
-                        Colour = EditorColours.Lighten(EditorColours.ControlsBackground, 1.18f)
-                    },
-                    new SpriteText
-                    {
-                        Text = key,
-                        Font = BeatSightFont.Title(11.2f),
-                        Colour = EditorColours.TextPrimary,
-                        Margin = new MarginPadding { Horizontal = 7, Vertical = 4 },
-                        UseFullGlyphHeight = false
-                    }
-                }
-            };
-        }
-
         private void toggleFooterShortcutsCollapsed()
         {
-            footerTipsCollapsed = !footerTipsCollapsed;
-            refreshFooterShortcutVisibility();
-            applyResponsiveEditorLayout(force: true);
-            appendStatusDetail(footerTipsCollapsed ? "Shortcuts hidden" : "Shortcuts shown");
+            footerTipsCollapsed = true;
+            appendStatusDetail(showFooterShortcutHints ? "Shortcuts are always visible" : "Shortcut hint row hidden");
         }
 
-        private void refreshFooterShortcutVisibility()
+        private void refreshFooterShortcutVisibility(bool animate)
         {
-            if (footerTipsContainer == null || footerCollapsedContainer == null)
+            if (!showFooterShortcutHints || footerTipsContainer == null)
                 return;
 
-            bool collapsed = footerTipsCollapsed;
-            footerTipsContainer.Alpha = collapsed ? 0 : 1;
-            footerTipsContainer.AlwaysPresent = !collapsed;
+            footerTipsContainer.AlwaysPresent = true;
+            if (animate)
+                footerTipsContainer.FadeTo(1f, 140, Easing.OutQuint);
+            else
+                footerTipsContainer.Alpha = 1f;
+        }
 
-            footerCollapsedContainer.Alpha = collapsed ? 1 : 0;
-            footerCollapsedContainer.AlwaysPresent = collapsed;
+        private void onFooterSeekScrubbingChanged(bool scrubbing)
+        {
+            footerSeekScrubbing = scrubbing;
+            if (scrubbing)
+            {
+                footerSmoothedScrubProgress = footerSeekProgress.Value;
+                footerLastQueuedScrubProgress = footerSmoothedScrubProgress;
+                footerSmoothedScrubInitialized = true;
+                registerScrubSeekRequest(SeekInputSource.SeekBar, 0);
+                return;
+            }
+
+            if (!scrubbing)
+            {
+                double length = getEffectivePlaybackLength();
+                if (length > 0)
+                    seekToTimeWithOptions(length * footerSeekProgress.Value, ensureTimelineVisible: true, syncTrack: true, syncPreview: true);
+
+                footerSmoothedScrubInitialized = false;
+                footerLastQueuedScrubProgress = double.NaN;
+                syncFooterSeekBar();
+            }
+        }
+
+        private void onFooterSeekProgressChanged(osu.Framework.Bindables.ValueChangedEvent<double> value)
+        {
+            if (suppressFooterSeekSync || !footerSeekScrubbing)
+                return;
+
+            double length = getEffectivePlaybackLength();
+            if (length <= 0)
+                return;
+
+            double rawProgress = Math.Clamp(value.NewValue, 0, 1);
+            if (!footerSmoothedScrubInitialized)
+            {
+                footerSmoothedScrubProgress = rawProgress;
+                footerLastQueuedScrubProgress = rawProgress;
+                footerSmoothedScrubInitialized = true;
+            }
+
+            double smoothing = resolveSeekBarScrubSmoothing();
+            footerSmoothedScrubProgress += (rawProgress - footerSmoothedScrubProgress) * smoothing;
+            if (Math.Abs(rawProgress - footerSmoothedScrubProgress) < seekBarQueueProgressThreshold)
+                footerSmoothedScrubProgress = rawProgress;
+
+            if (!double.IsNaN(footerLastQueuedScrubProgress)
+                && Math.Abs(footerSmoothedScrubProgress - footerLastQueuedScrubProgress) < seekBarQueueProgressThreshold)
+            {
+                return;
+            }
+
+            footerLastQueuedScrubProgress = footerSmoothedScrubProgress;
+            queueSeekToTime(
+                length * footerSmoothedScrubProgress,
+                ensureTimelineVisible: true,
+                syncTrack: false,
+                syncPreview: true,
+                source: SeekInputSource.SeekBar,
+                inputDelta: rawProgress - footerSmoothedScrubProgress);
+        }
+
+        private void syncFooterSeekBar()
+        {
+            if (footerSeekCurrentText == null || footerSeekTotalText == null)
+                return;
+
+            double length = getEffectivePlaybackLength();
+            double clampedCurrent = length > 0 ? Math.Clamp(currentTime, 0, length) : Math.Max(0, currentTime);
+            double progress = length > 0 ? clampedCurrent / length : 0;
+
+            if (!footerSeekScrubbing)
+            {
+                suppressFooterSeekSync = true;
+                footerSeekProgress.Value = progress;
+                suppressFooterSeekSync = false;
+            }
+
+            footerSeekCurrentText.Text = formatTime(clampedCurrent);
+            footerSeekTotalText.Text = length > 0 ? formatTime(length) : "--:--.---";
         }
 
         private void toggleHistoryPanelVisibility()
@@ -279,13 +404,18 @@ namespace BeatSight.Game.Screens.Editor
             bool anyEntries = undoStack.Count > 0 || redoStack.Count > 0;
             if (anyEntries && historyPanelVisible)
             {
+                historyPanel.ClearTransforms();
+                historyPanel.X = 18;
                 historyPanel.Show();
-                historyPanel.FadeTo(1f, 120, Easing.OutQuint);
+                historyPanel.FadeInFromZero(130, Easing.OutQuint);
+                historyPanel.MoveToX(0, 210, Easing.OutQuint);
             }
             else
             {
-                historyPanel.FadeOut(120, Easing.OutQuint);
-                historyPanel.Hide();
+                historyPanel.ClearTransforms();
+                historyPanel.FadeOut(110, Easing.OutQuint);
+                historyPanel.MoveToX(16, 130, Easing.OutQuint);
+                Scheduler.AddDelayed(() => historyPanel.Hide(), 132);
             }
         }
 

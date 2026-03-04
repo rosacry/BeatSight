@@ -14,6 +14,7 @@ using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
 using BeatSight.Game.Screens;
+using BeatSight.Game.Screens.Playback;
 using BeatSight.Game.Screens.Playback.Playfield.Views;
 using BeatSight.Game.UI.Components;
 using BeatSight.Game.UI.Theming;
@@ -58,6 +59,13 @@ namespace BeatSight.Game.Screens.Editor
         private Bindable<EditorPreviewMode> previewMode = null!;
         private Bindable<LanePreset> lanePresetSetting = null!;
         private Bindable<KickLaneMode> kickLaneModeSetting = null!;
+        private Bindable<double> uiScaleSetting = null!;
+        private Bindable<double> masterVolumeSetting = null!;
+        private Bindable<double> musicVolumeSetting = null!;
+        private Bindable<bool> masterVolumeEnabledSetting = null!;
+        private Bindable<bool> musicVolumeEnabledSetting = null!;
+        private Bindable<double> playbackZoomSetting = null!;
+        private Bindable<double> noteWidthSetting = null!;
 
         private EditorTimeline timeline = null!;
         private PlaybackPreview playbackPreview = null!;
@@ -87,6 +95,8 @@ namespace BeatSight.Game.Screens.Editor
         private Container headerContentContainer = null!;
         private FillFlowContainer headerInformationFlow = null!;
         private FillFlowContainer headerButtonFlow = null!;
+        private FillFlowContainer headerLeadFlow = null!;
+        private float headerContentSpacingY = 4f;
         private Container headerTimeBadgeContainer = null!;
         private SpriteText headerTimeCaptionText = null!;
         private FillFlowContainer headerStatusColumn = null!;
@@ -94,7 +104,10 @@ namespace BeatSight.Game.Screens.Editor
         private Container previewCellContainer = null!;
         private Container previewSurfaceContainer = null!;
         private Container timelineToolboxContainer = null!;
+        private Container timelineToolboxHostContainer = null!;
         private FillFlowContainer timelineToolboxContentFlow = null!;
+        private EditorButton timelineToolboxToggleButton = null!;
+        private EditorVerticalSplitter timelinePreviewSplitter = null!;
         private Container timelineZoomSliderContainer = null!;
         private Container timelineWaveformSliderContainer = null!;
         private readonly List<BasicButton> timelineMiniButtons = new();
@@ -107,18 +120,84 @@ namespace BeatSight.Game.Screens.Editor
         private BasicButton timelineTimingButton = null!;
         private BasicButton timelineSnapAudioButton = null!;
         private BasicButton timelineRegenerateButton = null!;
+        private BasicButton timelineLanePrevButton = null!;
+        private BasicButton timelineLaneNextButton = null!;
+        private BasicButton timelineLaneAddButton = null!;
+        private BasicButton timelineLaneRemoveButton = null!;
+        private BasicButton timelineLaneMoveLeftButton = null!;
+        private BasicButton timelineLaneMoveRightButton = null!;
+        private BasicButton timelineLaneApplyButton = null!;
         private SpriteText timelineFirstNoteButtonText = null!;
         private SpriteText timelineLastNoteButtonText = null!;
         private SpriteText timelineSnapAudioButtonText = null!;
         private SpriteText timelineRegenerateButtonText = null!;
+        private SpriteText timelineLaneSelectionText = null!;
+        private BeatSightTextBox timelineLaneNameInput = null!;
+        private BeatSightTextBox timelineLaneShortNameInput = null!;
+        private BeatSightTextBox timelineLaneColorInput = null!;
+        private int timelineLaneEditIndex;
+        private bool suppressLaneEditorFieldSync;
         private FillFlowContainer inspectorSectionsFlow = null!;
+        private Container scrubPerfOverlayContainer = null!;
+        private SpriteText scrubPerfOverlayText = null!;
         private Container footerRootContainer = null!;
         private Container footerInnerContainer = null!;
         private FillFlowContainer footerTipFlow = null!;
         private Container footerTipsContainer = null!;
-        private Container footerCollapsedContainer = null!;
-        private SpriteText footerCollapsedText = null!;
         private bool footerTipsCollapsed = true;
+        private GridContainer footerSeekRow = null!;
+        private ScrubbableSliderBar footerSeekSlider = null!;
+        private SpriteText footerSeekCurrentText = null!;
+        private SpriteText footerSeekTotalText = null!;
+        private readonly BindableDouble footerSeekProgress = new BindableDouble
+        {
+            MinValue = 0,
+            MaxValue = 1,
+            Precision = 0.0001,
+            Default = 0
+        };
+        private bool footerSeekScrubbing;
+        private bool suppressFooterSeekSync;
+        private bool previewRefreshQueued;
+        private int previewRefreshEpoch;
+        private bool timelineDragInProgress;
+        private int suppressTimelineSelectionSeekCount;
+        private bool deferredTimelineUiRefreshPending;
+        private double? pendingSeekTimeMs;
+        private bool pendingSeekEnsureVisible;
+        private bool pendingSeekSyncTrack;
+        private bool pendingSeekSyncPreview;
+        private SeekInputSource pendingSeekSource;
+        private bool seekDispatchScheduled;
+        private bool scrubTelemetryActive;
+        private SeekInputSource scrubTelemetrySource;
+        private double scrubTelemetrySessionStartAt = double.NegativeInfinity;
+        private double scrubTelemetryLastInputAt = double.NegativeInfinity;
+        private int scrubTelemetryQueuedSeekCount;
+        private int scrubTelemetryFlushedSeekCount;
+        private double scrubTelemetryInputDeltaTotal;
+        private double scrubTelemetryFlushTotalMs;
+        private double scrubTelemetryFlushMaxMs;
+        private int scrubTelemetryFrameSampleCount;
+        private double scrubTelemetryFrameTotalMs;
+        private double scrubTelemetryFrameMaxMs;
+        private double scrubFrameAverageMs = scrubFrameTargetMs;
+        private double wheelScrubActiveUntil = double.NegativeInfinity;
+        private bool scrubPerfOverlayVisible;
+        private double lastScrubPerfOverlayUpdateAt = double.NegativeInfinity;
+        private SeekInputSource lastScrubSummarySource = SeekInputSource.Programmatic;
+        private double lastScrubSummaryRecordedAt = double.NegativeInfinity;
+        private double lastScrubSummaryDurationMs;
+        private int lastScrubSummaryQueued;
+        private int lastScrubSummaryFlushed;
+        private double lastScrubSummaryAvgFrameMs;
+        private double lastScrubSummaryMaxFrameMs;
+        private double lastScrubSummaryAvgFlushMs;
+        private double lastScrubSummaryMaxFlushMs;
+        private double lastScrubSummaryAvgInputDelta;
+        private double footerSmoothedScrubProgress;
+        private double footerLastQueuedScrubProgress = double.NaN;
+        private bool footerSmoothedScrubInitialized;
         private EditorButton inspectorToggleButton = null!;
         private float lastInspectorWidth = -1;
         private float lastTimelineSurfaceHeight = -1;
@@ -127,10 +206,12 @@ namespace BeatSight.Game.Screens.Editor
         private float lastStackedInspectorHeight = -1;
         private float lastPanelGap = -1;
         private float lastCompactBlend = -1f;
+        private bool lastTimelineToolboxCollapsedState;
         // Inspector declaration cluster extracted to EditorScreen.InspectorState.cs.
 
         private bool isPlaying;
         private double currentTime;
+        private double lastTimelineSyncedTime = double.NaN;
         private double lastManuscriptFocusSyncAt = double.NegativeInfinity;
         private double trackLength;
         private WaveformData? waveformData;
@@ -154,6 +235,11 @@ namespace BeatSight.Game.Screens.Editor
         private string? defaultHintText;
         private double lastTrackTime;
         private readonly bool playbackAvailable;
+        private double lastTimelineSnapBpm = double.NaN;
+        private double lastTimelineSnapOrigin = double.NaN;
+        private int lastTimelineBeatsPerMeasure = 4;
+        private int lastTimelineBeatUnitDenominator = 4;
+        private int lastTimelineSnapDivisor = -1;
 
         private BeatSightSliderBar timelineZoomSlider = null!;
         private SpriteText timelineZoomValueText = null!;
@@ -161,10 +247,18 @@ namespace BeatSight.Game.Screens.Editor
         private SpriteText waveformScaleValueText = null!;
         private BeatSightSliderBar playbackRateSlider = null!;
         private SpriteText playbackRateValueText = null!;
+        private BeatSightSliderBar playbackZoomSlider = null!;
+        private SpriteText playbackZoomValueText = null!;
+        private BeatSightSliderBar noteWidthSlider = null!;
+        private SpriteText noteWidthValueText = null!;
         private SpriteText snapDivisorText = null!;
         private BeatSightCheckbox beatGridCheckbox = null!;
+        private BeatSightCheckbox timelineLinkZoomCheckbox = null!;
         private Container timelinePlaybackRateSliderContainer = null!;
+        private Container timelinePlaybackZoomSliderContainer = null!;
+        private Container timelineNoteWidthSliderContainer = null!;
         private Container timingSetupOverlay = null!;
+        private Container timingSetupDialogContainer = null!;
         private BeatSightTextBox timingSetupBpmInput = null!;
         private BeatSightTextBox timingSetupOffsetInput = null!;
         private BeatSightCheckbox timingMoveNotesCheckbox = null!;
@@ -176,8 +270,12 @@ namespace BeatSight.Game.Screens.Editor
         private bool suppressTimelineZoomSync;
         private bool suppressWaveformScaleSync;
         private bool suppressPlaybackRateSync;
+        private bool suppressPlaybackZoomSync;
+        private bool suppressNoteWidthSync;
         private bool suppressBeatGridSync;
+        private bool suppressTimelineZoomLinkSync;
         private bool suppressEditorDefaultPersistence;
+        private bool suppressLinkedZoomPropagation;
         private bool timelineZoomPointerAdjusting;
         private bool timelineZoomInteractionActive;
         private bool timelineZoomInteractionDirty;
@@ -189,26 +287,67 @@ namespace BeatSight.Game.Screens.Editor
         private double lastWaveformScalePreviewAppliedAt = double.NegativeInfinity;
         private double? pendingWaveformScalePreview;
         private double? liveWaveformScalePreviewValue;
+        private bool playbackZoomPointerAdjusting;
+        private bool playbackZoomInteractionActive;
+        private bool playbackZoomInteractionDirty;
+        private double lastPlaybackZoomPreviewAppliedAt = double.NegativeInfinity;
+        private double? pendingPlaybackZoomPreview;
+        private bool linkTimelineAndPlaybackZoom;
+        private bool timelineToolboxCollapsed;
+        private int timelineToolboxAnimationVersion;
+        private bool timelineToolboxAnimationInProgress;
+        private float? timelineTopHeightOverride;
 
         private Bindable<double> editorTimelineZoomDefault = null!;
         private Bindable<double> editorWaveformScaleDefault = null!;
         private Bindable<bool> editorBeatGridVisibleDefault = null!;
+        private Bindable<int> editorSnapDivisorDefault = null!;
+        private Bindable<bool> editorTimelinePlaybackZoomLinkedDefault = null!;
+        private Bindable<double> editorTimelineSplitRatioExpanded = null!;
+        private Bindable<double> editorTimelineSplitRatioCollapsed = null!;
 
         private bool suppressInspectorFieldSync;
         private HitObject? selectedHitObject;
+        private readonly List<HitObject> clipboardNotes = new();
         private double? initialBeatmapBpm;
         private DateTime lastInspectorSnapshotAtUtc = DateTime.MinValue;
+        private bool inspectorTransitionActive;
 
         private const int maxUndoSteps = 50;
+        private static readonly bool showFooterShortcutHints = false;
         private const int historyPreviewCount = 3;
-        private const double timelineZoomPreviewMinIntervalMs = 24;
+        private const double timelineZoomPreviewMinIntervalMs = 12;
         private const double waveformScalePreviewMinIntervalMs = 24;
+        private const double playbackZoomPreviewMinIntervalMs = 12;
+        private const double previewRefreshDebounceMs = 28;
+        private const double previewRefreshDragDebounceMs = 96;
+        private const double editorPreviewVisibleMeasures = 2.0;
+        private const double editorPlaybackZoomMin = EditorTimeline.MinZoom;
+        private const double editorPlaybackZoomMax = EditorTimeline.MaxZoom;
+        private const double scrubTelemetryIdleTimeoutMs = 220;
+        private const double scrubPerfOverlayRefreshMs = 84;
+        private const double scrubFrameTargetMs = 16.7;
+        private const double scrubFramePressureFloor = 0.58;
+        private const double wheelScrubHoldMs = 160;
+        private const double wheelScrubCurveExponent = 1.08;
+        private const double wheelScrubBaseMultiplier = 1.20;
+        private const double wheelScrubShiftMultiplier = 1.84;
+        private const double wheelScrubMagnitudeCap = 3.5;
+        private const double seekBarSmoothingBase = 0.30;
+        private const double seekBarSmoothingFloor = 0.16;
+        private const double seekBarSmoothingCeiling = 0.62;
+        private const double seekBarQueueProgressThreshold = 0.0005;
         private const double minPlaybackRate = 0.25;
         private const double maxPlaybackRate = 1.5;
         private const float inspectorButtonColumnSpacing = 7;
         private const float inspectorButtonRowSpacing = 6;
-        private const float timelineToolboxRowHeight = 118f;
-        private const float timelineSurfaceHeight = 292f;
+        private const float timelineToolboxRowHeight = 104f;
+        private const float timelineSurfaceHeight = 278f;
+        private const float timelinePreviewSplitterHeight = 10f;
+        private const float minimumPreviewWorkspaceHeight = 188f;
+        private const float minimumTimelineCoreHeight = 146f;
+        private const double defaultTimelineSplitRatioExpanded = 0.18;
+        private const double defaultTimelineSplitRatioCollapsed = 0.02;
         private const double manuscriptFocusSyncIntervalMs = 120;
         private const double firstNoteLeadInMs = 1800;
         private const double previewStartLookBehindMs = 1200;
@@ -283,6 +422,14 @@ namespace BeatSight.Game.Screens.Editor
             ShiftLaneDown,
             ArticulationUp,
             ArticulationDown
+        }
+
+        private enum SeekInputSource
+        {
+            Programmatic = 0,
+            Wheel,
+            SeekBar,
+            Timeline
         }
 
         [Resolved]

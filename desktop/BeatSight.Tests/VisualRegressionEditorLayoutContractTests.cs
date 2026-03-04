@@ -11,6 +11,7 @@ namespace BeatSight.Tests
 
         [Theory]
         [InlineData("Editor")]
+        [InlineData("EditorTwoDimensional")]
         [InlineData("EditorManuscript")]
         public void CompactEditorLayoutContractsStayValidAt720p(string sceneName)
         {

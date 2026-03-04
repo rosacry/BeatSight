@@ -38,6 +38,7 @@ namespace BeatSight.Tests.VisualRegression
     internal static class LiveVisualCaptureRenderer
     {
         private const string suppressedInputHandlersCsv = "OpenTabletDriverHandler PenHandler JoystickHandler TouchHandler";
+        private const string editorScrubProbeEnvVar = "BEATSIGHT_EDITOR_SCRUB_PROBE";
         private static readonly char[] inputHandlerSeparators = { ',', ';', ' ' };
         private static readonly string[] inputSuppressionEnvKeys =
         {
@@ -117,13 +118,37 @@ namespace BeatSight.Tests.VisualRegression
             typeof(EditorScreen).GetMethod("stopPlayback", BindingFlags.Instance | BindingFlags.NonPublic);
         private static readonly MethodInfo? editorSeekMethod =
             typeof(EditorScreen).GetMethod("seekToTime", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly MethodInfo? editorQueueSeekMethod =
+            typeof(EditorScreen).GetMethod("queueSeekToTime", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly MethodInfo? editorFlushQueuedSeekMethod =
+            typeof(EditorScreen).GetMethod("flushQueuedSeek", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly MethodInfo? editorFinalizeScrubTelemetryMethod =
+            typeof(EditorScreen).GetMethod("finalizeScrubTelemetry", BindingFlags.Instance | BindingFlags.NonPublic);
         private static readonly FieldInfo? playbackLaneViewModeField =
             typeof(PlaybackScreen).GetField("laneViewModeSetting", BindingFlags.Instance | BindingFlags.NonPublic);
         private static readonly FieldInfo? editorLaneViewModeField =
             typeof(EditorScreen).GetField("laneViewModeBindable", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly FieldInfo? editorTrackLengthField =
+            typeof(EditorScreen).GetField("trackLength", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly FieldInfo? editorLastScrubSummaryAvgFrameMsField =
+            typeof(EditorScreen).GetField("lastScrubSummaryAvgFrameMs", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly FieldInfo? editorLastScrubSummaryMaxFrameMsField =
+            typeof(EditorScreen).GetField("lastScrubSummaryMaxFrameMs", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly FieldInfo? editorLastScrubSummaryAvgFlushMsField =
+            typeof(EditorScreen).GetField("lastScrubSummaryAvgFlushMs", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly FieldInfo? editorLastScrubSummaryMaxFlushMsField =
+            typeof(EditorScreen).GetField("lastScrubSummaryMaxFlushMs", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly FieldInfo? editorLastScrubSummaryQueuedField =
+            typeof(EditorScreen).GetField("lastScrubSummaryQueued", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly FieldInfo? editorLastScrubSummaryFlushedField =
+            typeof(EditorScreen).GetField("lastScrubSummaryFlushed", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly FieldInfo? editorLastScrubSummaryDurationMsField =
+            typeof(EditorScreen).GetField("lastScrubSummaryDurationMs", BindingFlags.Instance | BindingFlags.NonPublic);
 
         private static readonly TimeSpan startupTimeout = TimeSpan.FromSeconds(20);
         private static readonly TimeSpan sceneReadyTimeout = TimeSpan.FromSeconds(20);
+        private static readonly TimeSpan updateThreadActionTimeout = TimeSpan.FromSeconds(120);
+        private static readonly TimeSpan screenshotCaptureTimeout = TimeSpan.FromSeconds(20);
 
         internal static Image<Rgba32> Render(VisualScene scene, VisualResolution resolution)
             => Render(scene, resolution.Width, resolution.Height);
@@ -167,12 +192,20 @@ namespace BeatSight.Tests.VisualRegression
                     TaskScheduler.Default);
 
                 await waitForCondition(
-                    () => Task.FromResult(host.UpdateThread != null),
+                    () =>
+                    {
+                        ensureHostRunTaskHealthy(runTask, "startup/update-thread");
+                        return Task.FromResult(host.UpdateThread != null);
+                    },
                     startupTimeout,
                     "BeatSight update thread").ConfigureAwait(false);
 
                 await waitForCondition(
-                    async () => await runOnUpdateThread(host, () => getScreenStack(game) != null).ConfigureAwait(false),
+                    async () =>
+                    {
+                        ensureHostRunTaskHealthy(runTask, "startup/screen-stack");
+                        return await runOnUpdateThread(host, () => getScreenStack(game) != null).ConfigureAwait(false);
+                    },
                     startupTimeout,
                     "BeatSight screen stack").ConfigureAwait(false);
 
@@ -183,15 +216,23 @@ namespace BeatSight.Tests.VisualRegression
                 if (scene != VisualScene.Intro)
                 {
                     await waitForCondition(
-                        async () => await runOnUpdateThread(host, () => getScreenStack(game)?.CurrentScreen is MainMenuScreen).ConfigureAwait(false),
+                        async () =>
+                        {
+                            ensureHostRunTaskHealthy(runTask, "main-menu-handoff");
+                            return await runOnUpdateThread(host, () => getScreenStack(game)?.CurrentScreen is MainMenuScreen).ConfigureAwait(false);
+                        },
                         TimeSpan.FromSeconds(10),
                         "MainMenuScreen startup handoff").ConfigureAwait(false);
                 }
 
                 Screen targetScreen = await runOnUpdateThread(host, () => pushTargetScene(scene, beatmapPath, game)).ConfigureAwait(false);
                 await waitForCondition(
-                    async () => await runOnUpdateThread(host, () =>
-                        targetScreen.IsLoaded && ReferenceEquals(getScreenStack(game)?.CurrentScreen, targetScreen)).ConfigureAwait(false),
+                    async () =>
+                    {
+                        ensureHostRunTaskHealthy(runTask, $"{scene} load wait");
+                        return await runOnUpdateThread(host, () =>
+                            targetScreen.IsLoaded && ReferenceEquals(getScreenStack(game)?.CurrentScreen, targetScreen)).ConfigureAwait(false);
+                    },
                     sceneReadyTimeout,
                     $"{scene} screen to load").ConfigureAwait(false);
 
@@ -571,6 +612,8 @@ namespace BeatSight.Tests.VisualRegression
                 VisualScene.MappingGeneration => new MappingGenerationScreen(createReferenceImportedTrack()),
                 VisualScene.Editor => new EditorScreen(beatmapPath),
                 VisualScene.Playback => new PlaybackScreen(beatmapPath),
+                VisualScene.EditorTwoDimensional => new EditorScreen(beatmapPath),
+                VisualScene.PlaybackTwoDimensional => new PlaybackScreen(beatmapPath),
                 VisualScene.EditorManuscript => new EditorScreen(beatmapPath),
                 VisualScene.PlaybackManuscript => new PlaybackScreen(beatmapPath),
                 _ => throw new ArgumentOutOfRangeException(nameof(scene), scene, "Unsupported visual scene.")
@@ -641,11 +684,38 @@ namespace BeatSight.Tests.VisualRegression
                     await Task.Delay(2400).ConfigureAwait(false);
                     await runOnUpdateThread(host, () => freezeEditorIfSupported(targetScreen, LaneViewMode.ThreeDimensional)).ConfigureAwait(false);
                     await Task.Delay(220).ConfigureAwait(false);
+                    if (shouldRunEditorScrubProbe())
+                    {
+                        await runEditorScrubProbe(host, targetScreen).ConfigureAwait(false);
+                        await runOnUpdateThread(host, () => freezeEditorIfSupported(targetScreen, LaneViewMode.ThreeDimensional)).ConfigureAwait(false);
+                        await Task.Delay(180).ConfigureAwait(false);
+                    }
                     break;
 
                 case VisualScene.Playback:
                     await Task.Delay(1400).ConfigureAwait(false);
                     await runOnUpdateThread(host, () => freezePlaybackIfSupported(targetScreen, LaneViewMode.ThreeDimensional)).ConfigureAwait(false);
+                    await waitForConditionOrTimeout(
+                        async () => await runOnUpdateThread(host, () => hasVisiblePlaybackToolbar(targetScreen)).ConfigureAwait(false),
+                        TimeSpan.FromSeconds(3)).ConfigureAwait(false);
+                    await Task.Delay(320).ConfigureAwait(false);
+                    break;
+
+                case VisualScene.EditorTwoDimensional:
+                    await Task.Delay(2400).ConfigureAwait(false);
+                    await runOnUpdateThread(host, () => freezeEditorIfSupported(targetScreen, LaneViewMode.TwoDimensional)).ConfigureAwait(false);
+                    await Task.Delay(220).ConfigureAwait(false);
+                    if (shouldRunEditorScrubProbe())
+                    {
+                        await runEditorScrubProbe(host, targetScreen).ConfigureAwait(false);
+                        await runOnUpdateThread(host, () => freezeEditorIfSupported(targetScreen, LaneViewMode.TwoDimensional)).ConfigureAwait(false);
+                        await Task.Delay(180).ConfigureAwait(false);
+                    }
+                    break;
+
+                case VisualScene.PlaybackTwoDimensional:
+                    await Task.Delay(1400).ConfigureAwait(false);
+                    await runOnUpdateThread(host, () => freezePlaybackIfSupported(targetScreen, LaneViewMode.TwoDimensional)).ConfigureAwait(false);
                     await waitForConditionOrTimeout(
                         async () => await runOnUpdateThread(host, () => hasVisiblePlaybackToolbar(targetScreen)).ConfigureAwait(false),
                         TimeSpan.FromSeconds(3)).ConfigureAwait(false);
@@ -686,6 +756,87 @@ namespace BeatSight.Tests.VisualRegression
             setScreenLaneViewMode(editorLaneViewModeField?.GetValue(editor), laneViewMode);
             editorStopMethod?.Invoke(editor, new object?[] { true });
             editorSeekMethod?.Invoke(editor, new object?[] { 2000d });
+        }
+
+        private static bool shouldRunEditorScrubProbe()
+        {
+            string? value = Environment.GetEnvironmentVariable(editorScrubProbeEnvVar);
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            return value == "1"
+                   || value.Equals("true", StringComparison.OrdinalIgnoreCase)
+                   || value.Equals("yes", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static async Task runEditorScrubProbe(GameHost host, Screen screen)
+        {
+            if (screen is not EditorScreen editor)
+                return;
+
+            if (editorQueueSeekMethod == null || editorFlushQueuedSeekMethod == null)
+                return;
+
+            Type? seekInputSourceType = typeof(EditorScreen).GetNestedType("SeekInputSource", BindingFlags.NonPublic);
+            if (seekInputSourceType == null || !seekInputSourceType.IsEnum)
+                return;
+
+            object wheelSource = Enum.ToObject(seekInputSourceType, 1);
+            object seekBarSource = Enum.ToObject(seekInputSourceType, 2);
+
+            double trackLength = await runOnUpdateThread(host, () =>
+                Convert.ToDouble(editorTrackLengthField?.GetValue(editor) ?? 8000d)).ConfigureAwait(false);
+            double maxTarget = Math.Max(2200, trackLength > 0 ? trackLength - 240 : 7600);
+
+            for (int i = 0; i < 56; i++)
+            {
+                double normalized = i / 55.0;
+                double target = 900 + normalized * (maxTarget - 900);
+                double delta = (i % 2 == 0 ? 1.0 : -1.0) * (1.0 + (i % 4) * 0.22);
+                await runOnUpdateThread(host, () => invokeEditorScrubSeek(editor, target, wheelSource, delta, syncTrack: true)).ConfigureAwait(false);
+                await Task.Delay(8).ConfigureAwait(false);
+            }
+
+            for (int i = 0; i < 64; i++)
+            {
+                double normalized = i / 63.0;
+                double arc = 0.5 - 0.5 * Math.Cos(normalized * Math.PI);
+                double target = 780 + arc * (maxTarget - 780);
+                double delta = normalized - 0.5;
+                await runOnUpdateThread(host, () => invokeEditorScrubSeek(editor, target, seekBarSource, delta, syncTrack: false)).ConfigureAwait(false);
+                await Task.Delay(7).ConfigureAwait(false);
+            }
+
+            await Task.Delay(300).ConfigureAwait(false);
+            await runOnUpdateThread(host, () => editorFinalizeScrubTelemetryMethod?.Invoke(editor, null)).ConfigureAwait(false);
+            await runOnUpdateThread(host, () =>
+            {
+                double avgFrameMs = Convert.ToDouble(editorLastScrubSummaryAvgFrameMsField?.GetValue(editor) ?? 0d);
+                double maxFrameMs = Convert.ToDouble(editorLastScrubSummaryMaxFrameMsField?.GetValue(editor) ?? 0d);
+                double avgFlushMs = Convert.ToDouble(editorLastScrubSummaryAvgFlushMsField?.GetValue(editor) ?? 0d);
+                double maxFlushMs = Convert.ToDouble(editorLastScrubSummaryMaxFlushMsField?.GetValue(editor) ?? 0d);
+                int queued = Convert.ToInt32(editorLastScrubSummaryQueuedField?.GetValue(editor) ?? 0);
+                int flushed = Convert.ToInt32(editorLastScrubSummaryFlushedField?.GetValue(editor) ?? 0);
+                double durationMs = Convert.ToDouble(editorLastScrubSummaryDurationMsField?.GetValue(editor) ?? 0d);
+
+                Console.WriteLine(
+                    $"[VisualScrubProbe] duration={durationMs:0}ms queued={queued} flushed={flushed} frame(avg/max)={avgFrameMs:0.00}/{maxFrameMs:0.00}ms flush(avg/max)={avgFlushMs:0.00}/{maxFlushMs:0.00}ms");
+            }).ConfigureAwait(false);
+        }
+
+        private static void invokeEditorScrubSeek(EditorScreen editor, double target, object sourceEnumValue, double inputDelta, bool syncTrack)
+        {
+            editorQueueSeekMethod?.Invoke(editor, new object?[]
+            {
+                target,
+                true,
+                syncTrack,
+                true,
+                sourceEnumValue,
+                inputDelta
+            });
+
+            editorFlushQueuedSeekMethod?.Invoke(editor, null);
         }
 
         private static void validateEditorCompactInspectorLayout(Screen screen, int captureWidth)
@@ -1158,6 +1309,11 @@ namespace BeatSight.Tests.VisualRegression
                 }
             });
 
+            Task timeoutTask = Task.Delay(updateThreadActionTimeout);
+            Task completed = await Task.WhenAny(tcs.Task, timeoutTask).ConfigureAwait(false);
+            if (completed != tcs.Task)
+                throw new VisualCaptureUnavailableException($"Timed out waiting for update-thread action after {updateThreadActionTimeout.TotalSeconds:0}s.");
+
             return await tcs.Task.ConfigureAwait(false);
         }
 
@@ -1239,7 +1395,7 @@ namespace BeatSight.Tests.VisualRegression
 
             for (int attempt = 0; attempt < maxAttempts; attempt++)
             {
-                using var screenshot = await host.TakeScreenshotAsync().ConfigureAwait(false);
+                using var screenshot = await takeScreenshotWithTimeout(host).ConfigureAwait(false);
                 var output = normaliseScreenshotDimensions(screenshot, width, height);
                 forceOpaqueAlpha(output);
 
@@ -1264,6 +1420,17 @@ namespace BeatSight.Tests.VisualRegression
 
             throw new VisualCaptureUnavailableException(
                 $"Screenshot capture did not stabilise after {maxAttempts} attempts. Last reason: {lastInstabilityReason ?? "unknown"}");
+        }
+
+        private static async Task<Image<Rgba32>> takeScreenshotWithTimeout(GameHost host)
+        {
+            Task<Image<Rgba32>> screenshotTask = host.TakeScreenshotAsync();
+            Task timeoutTask = Task.Delay(screenshotCaptureTimeout);
+            Task completed = await Task.WhenAny(screenshotTask, timeoutTask).ConfigureAwait(false);
+            if (completed != screenshotTask)
+                throw new VisualCaptureUnavailableException($"Timed out waiting for host screenshot after {screenshotCaptureTimeout.TotalSeconds:0}s.");
+
+            return await screenshotTask.ConfigureAwait(false);
         }
 
         private static void forceOpaqueAlpha(Image<Rgba32> image)
@@ -1457,6 +1624,26 @@ namespace BeatSight.Tests.VisualRegression
             {
                 // Ignore disposal ordering races from host shutdown.
             }
+        }
+
+        private static void ensureHostRunTaskHealthy(Task? runTask, string stage)
+        {
+            if (runTask == null)
+                return;
+
+            if (runTask.IsFaulted)
+            {
+                Exception? root = runTask.Exception?.GetBaseException() ?? runTask.Exception;
+                throw new VisualCaptureUnavailableException(
+                    $"Visual host task faulted during {stage}: {root?.Message ?? "unknown fault"}",
+                    root);
+            }
+
+            if (runTask.IsCanceled)
+                throw new VisualCaptureUnavailableException($"Visual host task cancelled during {stage}.");
+
+            if (runTask.IsCompleted)
+                throw new VisualCaptureUnavailableException($"Visual host task completed unexpectedly during {stage}.");
         }
     }
 }

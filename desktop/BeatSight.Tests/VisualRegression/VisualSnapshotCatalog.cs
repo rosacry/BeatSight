@@ -15,6 +15,8 @@ namespace BeatSight.Tests.VisualRegression
         MappingGeneration,
         Editor,
         Playback,
+        EditorTwoDimensional,
+        PlaybackTwoDimensional,
         EditorManuscript,
         PlaybackManuscript
     }
@@ -49,6 +51,8 @@ namespace BeatSight.Tests.VisualRegression
             VisualScene.MappingGeneration,
             VisualScene.Editor,
             VisualScene.Playback,
+            VisualScene.EditorTwoDimensional,
+            VisualScene.PlaybackTwoDimensional,
             VisualScene.EditorManuscript,
             VisualScene.PlaybackManuscript
         };

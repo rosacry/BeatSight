@@ -98,8 +98,9 @@ namespace BeatSight.Game.Screens.Editor
         private FillFlowContainer headerInformationFlow = null!;
         private FillFlowContainer headerButtonFlow = null!;
         private FillFlowContainer headerLeadFlow = null!;
-        private float headerContentSpacingY = 4f;
+        private float headerContentSpacingY = 0f;
         private Container headerTimeBadgeContainer = null!;
+        private Container headerTimeContentContainer = null!;
         private SpriteText headerTimeCaptionText = null!;
         private FillFlowContainer headerStatusColumn = null!;
         private Container previewContentContainer = null!;
@@ -208,6 +209,7 @@ namespace BeatSight.Game.Screens.Editor
         private float lastStackedInspectorHeight = -1;
         private float lastPanelGap = -1;
         private float lastCompactBlend = -1f;
+        private float lastHeaderTimeContentHeight = float.NaN;
         private bool lastTimelineToolboxCollapsedState;
         // Inspector declaration cluster extracted to EditorScreen.InspectorState.cs.
 
@@ -233,7 +235,6 @@ namespace BeatSight.Game.Screens.Editor
         private bool beatGridVisible = true;
         private string? lastSavedSnapshot;
         private bool isSaving;
-        private string? hoverHintOverride;
         private string? defaultHintText;
         private double lastTrackTime;
         private readonly bool playbackAvailable;
@@ -345,7 +346,7 @@ namespace BeatSight.Game.Screens.Editor
         private const float inspectorButtonRowSpacing = 6;
         private const float timelineToolboxRowHeight = 104f;
         private const float timelineSurfaceHeight = 278f;
-        private const float timelinePreviewSplitterHeight = 10f;
+        private const float timelinePreviewSplitterHeight = 8f;
         private const float minimumPreviewWorkspaceHeight = 188f;
         private const float minimumTimelineCoreHeight = 146f;
         private const double defaultTimelineSplitRatioExpanded = 0.18;

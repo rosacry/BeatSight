@@ -78,15 +78,15 @@ namespace BeatSight.Game.Screens.Editor
             float widthRelax = Math.Clamp((viewport.X - 1920f) / 1200f, 0f, 1f);
             float statusFontSize = quantizeFontSize(blend(18.4f, 16f, compactBlend) + ultraWideRelax * 0.55f);
             float detailFontSize = quantizeFontSize(blend(11.6f, 10.3f, compactBlend) + ultraWideRelax * 0.28f);
-            float timeFontSize = quantizeTimelineHeaderFont(blend(22.4f, 19.4f, compactBlend) + ultraWideRelax * 0.7f);
-            float timeCaptionFontSize = quantizeTimelineHeaderFont(blend(9.8f, 8.8f, compactBlend) + ultraWideRelax * 0.2f);
+            float timeFontSize = quantizeTimelineHeaderFont(blend(21.2f, 18.8f, compactBlend) + ultraWideRelax * 0.52f);
+            float timeCaptionFontSize = quantizeTimelineHeaderFont(blend(9.2f, 8.5f, compactBlend) + ultraWideRelax * 0.15f);
             float hintFontSize = blend(11.4f, 10.2f, compactBlend) + ultraWideRelax * 0.25f;
             float buttonHeight = blend(42f, 36f, compactBlend) + ultraWideRelax * 1.1f;
             float buttonFontSize = blend(13.4f, 11.8f, compactBlend) + widthRelax * 0.35f;
             float buttonSpacing = blend(8f, 6f, compactBlend) + ultraWideRelax * 1.1f;
-            float horizontalPadding = blend(24f, 18f, compactBlend) + ultraWideRelax * 2.3f;
-            float verticalPaddingTop = blend(4.6f, 3.3f, compactBlend) + ultraWideRelax * 0.3f;
-            float verticalPaddingBottom = blend(2.1f, 1.4f, compactBlend) + ultraWideRelax * 0.1f;
+            float horizontalPadding = blend(10f, 8f, compactBlend) + ultraWideRelax * 1.6f;
+            float verticalPaddingTop = blend(2.4f, 2.0f, compactBlend) + ultraWideRelax * 0.16f;
+            float verticalPaddingBottom = blend(0.4f, 0.2f, compactBlend) + ultraWideRelax * 0.05f;
             float infoSpacing = blend(4f, 2.5f, compactBlend);
             float contentSpacing = 0f;
             float playButtonWidth = blend(114f, 96f, compactBlend);
@@ -94,8 +94,8 @@ namespace BeatSight.Game.Screens.Editor
             float undoButtonWidth = blend(98f, 84f, compactBlend);
             float redoButtonWidth = blend(98f, 84f, compactBlend);
             float previewButtonWidth = blend(132f, 110f, compactBlend);
-            float timeBadgeWidth = roundToPixel(blend(196f, 170f, compactBlend));
-            float timeBadgeHeight = roundToPixel(blend(62f, 54f, compactBlend));
+            float timeBadgeWidth = roundToPixel(blend(188f, 166f, compactBlend));
+            float timeBadgeHeight = roundToPixel(blend(54f, 48f, compactBlend));
             float leadSpacing = blend(18f, 12f, compactBlend);
             float backButtonWidth = backButton?.Width > 0 ? backButton.Width : 120f;
             float leadReservedWidth = backButtonWidth + leadSpacing;
@@ -133,16 +133,19 @@ namespace BeatSight.Game.Screens.Editor
 
             if (headerPrimaryRowContainer != null)
             {
-                float rowHeight = roundToPixel(Math.Max(58f, Math.Max(timeBadgeHeight, buttonHeight) + blend(2.4f, 1.4f, compactBlend)));
+                float rowHeight = roundToPixel(Math.Max(58f, Math.Max(timeBadgeHeight, buttonHeight)));
                 headerPrimaryRowContainer.Height = rowHeight;
             }
 
             if (headerPrimaryAccentBox != null)
             {
-                float accentHeight = roundToPixel((headerPrimaryRowContainer?.Height ?? Math.Max(timeBadgeHeight, buttonHeight))
+                float baseRowHeight = headerPrimaryRowContainer?.Height ?? Math.Max(timeBadgeHeight, buttonHeight);
+                float accentHeight = roundToPixel(baseRowHeight
                                                   + verticalPaddingTop
                                                   + verticalPaddingBottom
-                                                  + blend(2.8f, 2.0f, compactBlend));
+                                                  + blend(0.8f, 0.4f, compactBlend));
+                float minimumAccentHeight = roundToPixel(baseRowHeight + 6f);
+                accentHeight = Math.Max(accentHeight, minimumAccentHeight);
                 headerPrimaryAccentBox.Height = accentHeight;
             }
 
@@ -153,10 +156,16 @@ namespace BeatSight.Game.Screens.Editor
             }
 
             if (headerTimeCaptionText != null)
+            {
                 headerTimeCaptionText.Font = BeatSightFont.Caption(timeCaptionFontSize);
+            }
 
             if (timeText != null)
+            {
                 timeText.Font = BeatSightFont.Numeral(timeFontSize);
+            }
+
+            layoutHeaderTimeBadgeContent(force: true);
 
             if (actionHintText != null)
             {

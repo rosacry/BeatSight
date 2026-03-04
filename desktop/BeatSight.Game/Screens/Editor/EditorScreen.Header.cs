@@ -1,3 +1,4 @@
+using System;
 using BeatSight.Game.UI.Components;
 using BeatSight.Game.UI.Theming;
 using osu.Framework.Graphics;
@@ -60,11 +61,11 @@ namespace BeatSight.Game.Screens.Editor
                 Colour = EditorColours.TextPrimary,
                 Spacing = Vector2.Zero,
                 AllowMultiline = false,
-                UseFullGlyphHeight = true,
+                UseFullGlyphHeight = false,
                 Shadow = false,
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
-                Margin = new MarginPadding { Horizontal = 18, Vertical = 2 }
+                Margin = new MarginPadding()
             };
 
             var timeCaption = new SpriteText
@@ -74,7 +75,7 @@ namespace BeatSight.Game.Screens.Editor
                 Colour = EditorColours.TextMuted,
                 Spacing = Vector2.Zero,
                 AllowMultiline = false,
-                UseFullGlyphHeight = true,
+                UseFullGlyphHeight = false,
                 Shadow = false,
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre
@@ -83,7 +84,7 @@ namespace BeatSight.Game.Screens.Editor
 
             var timeBadge = new Container
             {
-                Size = new Vector2(196, 62),
+                Size = new Vector2(188, 54),
                 Masking = true,
                 CornerRadius = 12,
                 Anchor = Anchor.Centre,
@@ -101,18 +102,18 @@ namespace BeatSight.Game.Screens.Editor
                         Colour = EditorColours.PanelStroke,
                         Alpha = 0.14f
                     },
-                    new FillFlowContainer
+                    new Container
                     {
-                        AutoSizeAxes = Axes.Both,
-                        Direction = FillDirection.Vertical,
-                        Anchor = Anchor.Centre,
-                        Origin = Anchor.Centre,
-                        Spacing = new Vector2(0, 3),
-                        Padding = new MarginPadding { Horizontal = 14, Vertical = 6 },
-                        Children = new Drawable[]
+                        RelativeSizeAxes = Axes.Both,
+                        Padding = new MarginPadding { Horizontal = 12, Vertical = 3 },
+                        Child = headerTimeContentContainer = new Container
                         {
-                            timeCaption,
-                            timeText
+                            RelativeSizeAxes = Axes.Both,
+                            Children = new Drawable[]
+                            {
+                                timeCaption,
+                                timeText
+                            }
                         }
                     },
                 }
@@ -264,7 +265,7 @@ namespace BeatSight.Game.Screens.Editor
             var mainRow = new Container
             {
                 RelativeSizeAxes = Axes.X,
-                Height = 70f,
+                Height = 58f,
                 Children = new Drawable[]
                 {
                     new Container
@@ -338,7 +339,7 @@ namespace BeatSight.Game.Screens.Editor
                     headerPrimaryAccentBox = new Box
                     {
                         RelativeSizeAxes = Axes.X,
-                        Height = 78f,
+                        Height = 84f,
                         Anchor = Anchor.TopLeft,
                         Origin = Anchor.TopLeft,
                         Colour = ColourInfo.GradientVertical(
@@ -349,7 +350,7 @@ namespace BeatSight.Game.Screens.Editor
                     {
                         RelativeSizeAxes = Axes.X,
                         AutoSizeAxes = Axes.Y,
-                        Padding = new MarginPadding { Left = 22, Right = 22, Top = 4, Bottom = 2 },
+                        Padding = new MarginPadding { Left = 10, Right = 10, Top = 2, Bottom = 0 },
                         Child = content
                     },
                     new Box
@@ -368,8 +369,46 @@ namespace BeatSight.Game.Screens.Editor
             updateActionButtons();
             updatePlaybackAvailabilityUI();
             updateHeaderInformationVisibility();
+            layoutHeaderTimeBadgeContent(force: true);
 
             return header;
+        }
+
+        private void layoutHeaderTimeBadgeContent(bool force = false)
+        {
+            if (headerTimeContentContainer == null || headerTimeCaptionText == null || timeText == null)
+                return;
+
+            float contentHeight = headerTimeContentContainer.DrawHeight;
+            if (!float.IsFinite(contentHeight) || contentHeight <= 0f)
+            {
+                float fallbackBadgeHeight = headerTimeBadgeContainer?.DrawHeight > 0
+                    ? headerTimeBadgeContainer.DrawHeight
+                    : headerTimeBadgeContainer?.Height ?? 54f;
+                contentHeight = Math.Max(1f, fallbackBadgeHeight - 6f);
+            }
+
+            float captionHeight = headerTimeCaptionText.DrawHeight;
+            if (!float.IsFinite(captionHeight) || captionHeight <= 0f)
+                captionHeight = Math.Max(6f, headerTimeCaptionText.Font.Size * 0.94f);
+
+            float valueHeight = timeText.DrawHeight;
+            if (!float.IsFinite(valueHeight) || valueHeight <= 0f)
+                valueHeight = Math.Max(14f, timeText.Font.Size * 0.96f);
+
+            if (!force
+                && Math.Abs(contentHeight - lastHeaderTimeContentHeight) < 0.25f)
+            {
+                return;
+            }
+
+            float captionOffsetY = (-contentHeight * 0.18f) + (captionHeight * 0.1f);
+            float valueOffsetY = (contentHeight * 0.09f) + Math.Min(3f, valueHeight * 0.08f);
+
+            headerTimeCaptionText.Y = captionOffsetY;
+            timeText.Y = valueOffsetY;
+
+            lastHeaderTimeContentHeight = contentHeight;
         }
     }
 }

@@ -62,12 +62,12 @@ namespace BeatSight.Game.Screens.Editor
                     {
                         RelativeSizeAxes = Axes.Both,
                         Colour = EditorColours.PanelStroke,
-                        Alpha = 0.13f
+                        Alpha = 0.08f
                     },
                     previewContentContainer = new Container
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Padding = new MarginPadding { Horizontal = 6, Vertical = 4 },
+                        Padding = new MarginPadding { Horizontal = 2, Vertical = 2 },
                         Child = playbackPreview
                     },
                     inspectorToggleButton = new EditorButton("Hide Inspector", EditorColours.AccentUndo)
@@ -153,7 +153,7 @@ namespace BeatSight.Game.Screens.Editor
                     {
                         RelativeSizeAxes = Axes.Both,
                         Colour = EditorColours.PanelStroke,
-                        Alpha = 0.1f
+                        Alpha = 0.08f
                     },
                     new Container
                     {
@@ -189,7 +189,6 @@ namespace BeatSight.Game.Screens.Editor
                         new Container
                         {
                             RelativeSizeAxes = Axes.Both,
-                            Padding = new MarginPadding { Bottom = 1 },
                             Child = timelineSurface
                         }
                     },

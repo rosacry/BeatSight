@@ -128,23 +128,23 @@ namespace BeatSight.Game.Screens.Editor
                 new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = EditorColours.ScreenBackdropBottom.Opacity(0.42f)
-                },
-                new Box
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Height = 0.42f,
-                    Anchor = Anchor.TopLeft,
-                    Origin = Anchor.TopLeft,
-                    Colour = EditorColours.ScreenBackdropTop.Opacity(0.78f)
+                    Colour = EditorColours.ScreenBackdropBottom.Opacity(0.24f)
                 },
                 new Box
                 {
                     RelativeSizeAxes = Axes.X,
-                    Height = 228,
+                    Height = 196,
                     Anchor = Anchor.TopLeft,
                     Origin = Anchor.TopLeft,
-                    Colour = EditorColours.ScreenHeaderGlow
+                    Colour = EditorColours.ScreenBackdropTop.Opacity(0.58f)
+                },
+                new Box
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Height = 128,
+                    Anchor = Anchor.TopLeft,
+                    Origin = Anchor.TopLeft,
+                    Colour = EditorColours.ScreenHeaderGlow.Opacity(0.92f)
                 },
                 paddedLayout,
                 quickActionToast = new ToastContainer

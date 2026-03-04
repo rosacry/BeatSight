@@ -38,8 +38,7 @@ namespace BeatSight.Game.Screens.Editor
 
             var statusColumn = new FillFlowContainer
             {
-                RelativeSizeAxes = Axes.X,
-                AutoSizeAxes = Axes.Y,
+                AutoSizeAxes = Axes.Both,
                 Direction = FillDirection.Vertical,
                 Spacing = new Vector2(0, 5),
                 Anchor = Anchor.TopLeft,
@@ -52,13 +51,15 @@ namespace BeatSight.Game.Screens.Editor
             };
             headerStatusColumn = statusColumn;
 
-            float safeLeftPadding = (backButton?.Margin.Left ?? 0) + (backButton?.Width ?? 120) + 20;
-
             timeText = new SpriteText
             {
                 Text = formatTime(0),
-                Font = BeatSightFont.Numeral(22.4f),
+                Font = BeatSightFont.Numeral(22f),
                 Colour = EditorColours.TextPrimary,
+                Spacing = Vector2.Zero,
+                AllowMultiline = false,
+                UseFullGlyphHeight = true,
+                Shadow = false,
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
                 Margin = new MarginPadding { Horizontal = 18, Vertical = 2 }
@@ -67,8 +68,12 @@ namespace BeatSight.Game.Screens.Editor
             var timeCaption = new SpriteText
             {
                 Text = "TIMELINE",
-                Font = BeatSightFont.Caption(9.8f),
+                Font = BeatSightFont.Caption(10f),
                 Colour = EditorColours.TextMuted,
+                Spacing = Vector2.Zero,
+                AllowMultiline = false,
+                UseFullGlyphHeight = true,
+                Shadow = false,
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre
             };
@@ -197,7 +202,7 @@ namespace BeatSight.Game.Screens.Editor
                 AutoSizeAxes = Axes.Both,
                 Anchor = Anchor.TopRight,
                 Origin = Anchor.TopRight,
-                Margin = new MarginPadding { Top = 2, Right = 4 },
+                Margin = new MarginPadding { Top = 72, Right = 24 },
                 Child = new Container
                 {
                     AutoSizeAxes = Axes.Both,
@@ -232,6 +237,30 @@ namespace BeatSight.Game.Screens.Editor
                 }
             };
 
+            backButton.Margin = new MarginPadding();
+            backButton.Anchor = Anchor.TopLeft;
+            backButton.Origin = Anchor.TopLeft;
+
+            var leadFlow = new FillFlowContainer
+            {
+                AutoSizeAxes = Axes.Both,
+                Direction = FillDirection.Horizontal,
+                Spacing = new Vector2(18, 0),
+                Anchor = Anchor.TopLeft,
+                Origin = Anchor.TopLeft,
+                Children = new Drawable[]
+                {
+                    backButton,
+                    new Container
+                    {
+                        AutoSizeAxes = Axes.Both,
+                        Padding = new MarginPadding { Top = 2 },
+                        Child = statusColumn
+                    }
+                }
+            };
+            headerLeadFlow = leadFlow;
+
             var mainRow = new Container
             {
                 RelativeSizeAxes = Axes.X,
@@ -240,10 +269,10 @@ namespace BeatSight.Game.Screens.Editor
                 {
                     new Container
                     {
-                        RelativeSizeAxes = Axes.X,
-                        AutoSizeAxes = Axes.Y,
-                        Padding = new MarginPadding { Left = safeLeftPadding, Right = 26 },
-                        Child = statusColumn
+                        AutoSizeAxes = Axes.Both,
+                        Anchor = Anchor.TopLeft,
+                        Origin = Anchor.TopLeft,
+                        Child = leadFlow
                     },
                     new Container
                     {
@@ -284,12 +313,11 @@ namespace BeatSight.Game.Screens.Editor
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
                 Direction = FillDirection.Vertical,
-                Spacing = new Vector2(10),
+                Spacing = new Vector2(0, headerContentSpacingY),
                 Children = new Drawable[]
                 {
                     mainRow,
-                    informationFlow,
-                    historyPanel
+                    informationFlow
                 }
             };
 
@@ -316,7 +344,7 @@ namespace BeatSight.Game.Screens.Editor
                     {
                         RelativeSizeAxes = Axes.X,
                         AutoSizeAxes = Axes.Y,
-                        Padding = new MarginPadding { Horizontal = 24, Vertical = 12 },
+                        Padding = new MarginPadding { Horizontal = 22, Vertical = 6 },
                         Child = content
                     },
                     new Box
@@ -334,6 +362,7 @@ namespace BeatSight.Game.Screens.Editor
             setStatusDetail("Load or import audio to begin mapping.");
             updateActionButtons();
             updatePlaybackAvailabilityUI();
+            updateHeaderInformationVisibility();
 
             return header;
         }

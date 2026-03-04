@@ -1,0 +1,184 @@
+using System;
+using BeatSight.Game.UI.Theming;
+using osu.Framework.Graphics;
+using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Shapes;
+using osu.Framework.Input.Events;
+using osuTK;
+using osuTK.Graphics;
+using osuTK.Input;
+
+namespace BeatSight.Game.Screens.Editor
+{
+    internal partial class EditorVerticalSplitter : CompositeDrawable
+    {
+        private readonly Box background;
+        private readonly Box rail;
+        private bool dragging;
+        private Vector2 dragLastScreenPosition;
+        private const float minimumDragDelta = 0.01f;
+
+        public event Action<float>? DragDeltaY;
+        public event Action<bool>? DraggingStateChanged;
+        public override bool HandlePositionalInput => true;
+
+        public EditorVerticalSplitter()
+        {
+            RelativeSizeAxes = Axes.X;
+            Height = 10f;
+            Alpha = 0.96f;
+            Masking = true;
+            CornerRadius = 5f;
+
+            InternalChildren = new Drawable[]
+            {
+                background = new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = new Color4(13, 22, 41, 170)
+                },
+                rail = new Box
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Height = 2f,
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    Colour = EditorColours.Lighten(EditorColours.Divider, 1.22f).Opacity(0.82f)
+                }
+            };
+        }
+
+        protected override bool OnHover(HoverEvent e)
+        {
+            updateVisualState(active: true);
+            return true;
+        }
+
+        protected override void OnHoverLost(HoverLostEvent e)
+        {
+            if (!dragging)
+                updateVisualState(active: false);
+
+            base.OnHoverLost(e);
+        }
+
+        protected override bool OnMouseDown(MouseDownEvent e)
+        {
+            if (e.Button != MouseButton.Left)
+                return false;
+
+            beginDragging(e.ScreenSpaceMousePosition);
+            return true;
+        }
+
+        protected override bool OnDragStart(DragStartEvent e)
+        {
+            if (e.Button != MouseButton.Left)
+                return false;
+
+            beginDragging(e.ScreenSpaceMousePosition);
+            return true;
+        }
+
+        protected override void OnDrag(DragEvent e)
+        {
+            if (!dragging)
+            {
+                base.OnDrag(e);
+                return;
+            }
+
+            dispatchDragDelta(e.ScreenSpaceMousePosition);
+
+            base.OnDrag(e);
+        }
+
+        protected override bool OnMouseMove(MouseMoveEvent e)
+        {
+            if (!dragging)
+                return base.OnMouseMove(e);
+
+            dispatchDragDelta(e.ScreenSpaceMousePosition);
+
+            return true;
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            if (!dragging)
+                return;
+
+            var input = GetContainingInputManager();
+            if (input == null)
+                return;
+
+            if (!input.CurrentState.Mouse.IsPressed(MouseButton.Left))
+            {
+                endDragging();
+                return;
+            }
+
+            dispatchDragDelta(input.CurrentState.Mouse.Position);
+        }
+
+        protected override void OnDragEnd(DragEndEvent e)
+        {
+            endDragging();
+            base.OnDragEnd(e);
+        }
+
+        protected override void OnMouseUp(MouseUpEvent e)
+        {
+            if (e.Button == MouseButton.Left)
+                endDragging();
+
+            base.OnMouseUp(e);
+        }
+
+        private void beginDragging(Vector2 screenSpacePosition)
+        {
+            if (dragging)
+            {
+                dragLastScreenPosition = screenSpacePosition;
+                return;
+            }
+
+            dragging = true;
+            dragLastScreenPosition = screenSpacePosition;
+            updateVisualState(active: true);
+            DraggingStateChanged?.Invoke(true);
+        }
+
+        private void endDragging()
+        {
+            if (!dragging)
+                return;
+
+            dragging = false;
+            DraggingStateChanged?.Invoke(false);
+            updateVisualState(active: IsHovered);
+        }
+
+        private void dispatchDragDelta(Vector2 screenSpacePosition)
+        {
+            float deltaY = screenSpacePosition.Y - dragLastScreenPosition.Y;
+            dragLastScreenPosition = screenSpacePosition;
+
+            if (Math.Abs(deltaY) > minimumDragDelta)
+                DragDeltaY?.Invoke(deltaY);
+        }
+
+        private void updateVisualState(bool active)
+        {
+            background.FadeColour(active
+                    ? new Color4(21, 37, 67, 190)
+                    : new Color4(13, 22, 41, 170),
+                120,
+                Easing.OutQuint);
+            rail.FadeTo(active ? 1f : 0.82f, 120, Easing.OutQuint);
+            rail.ResizeHeightTo(active || dragging ? 3f : 2f, 120, Easing.OutQuint);
+        }
+    }
+}

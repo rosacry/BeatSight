@@ -6,6 +6,7 @@ Snapshots are captured from the live running `BeatSightGame` screen graph (`host
 
 For Task 1 validation coverage:
 - `Editor` and `Playback` snapshots are captured with lane view mode forced to `3D`.
+- `EditorTwoDimensional` and `PlaybackTwoDimensional` snapshots are captured with lane view mode forced to `2D`.
 - `EditorManuscript` and `PlaybackManuscript` snapshots are captured with lane view mode forced to `Manuscript`.
 
 For full operational details (fresh-session protocol, architecture, troubleshooting, extension flow), see:
@@ -25,6 +26,8 @@ For full operational details (fresh-session protocol, architecture, troubleshoot
 - `MappingGeneration` at `720p`, `1080p`, `1440p`, `ultrawide`
 - `Editor` at `720p`, `1080p`, `1440p`, `ultrawide`
 - `Playback` at `720p`, `1080p`, `1440p`, `ultrawide`
+- `EditorTwoDimensional` at `720p`, `1080p`, `1440p`, `ultrawide`
+- `PlaybackTwoDimensional` at `720p`, `1080p`, `1440p`, `ultrawide`
 - `EditorManuscript` at `720p`, `1080p`, `1440p`, `ultrawide`
 - `PlaybackManuscript` at `720p`, `1080p`, `1440p`, `ultrawide`
 
@@ -56,7 +59,7 @@ Scene subset + resolution subset:
 
 ```powershell
 $env:BEATSIGHT_RUN_VISUAL_TESTS='1'
-$env:BEATSIGHT_VISUAL_SCENES='SongSelectEditor,Editor,Playback'
+$env:BEATSIGHT_VISUAL_SCENES='SongSelectEditor,Editor,Playback,EditorTwoDimensional,PlaybackTwoDimensional'
 $env:BEATSIGHT_VISUAL_RESOLUTIONS='1080p'
 dotnet test desktop/BeatSight.Tests/BeatSight.Tests.csproj -c Release --filter "FullyQualifiedName~VisualRegressionSnapshotTests"
 Remove-Item Env:BEATSIGHT_RUN_VISUAL_TESTS -ErrorAction SilentlyContinue
@@ -68,7 +71,7 @@ Built-in profile subsets:
 
 ```powershell
 $env:BEATSIGHT_RUN_VISUAL_TESTS='1'
-$env:BEATSIGHT_VISUAL_PROFILE='mapping' # full | smoke | mapping | editorplayback | manuscript
+$env:BEATSIGHT_VISUAL_PROFILE='mapping' # full | smoke | mapping | editorplayback | editor2d | manuscript
 dotnet test desktop/BeatSight.Tests/BeatSight.Tests.csproj -c Release --filter "FullyQualifiedName~VisualRegressionSnapshotTests"
 Remove-Item Env:BEATSIGHT_RUN_VISUAL_TESTS -ErrorAction SilentlyContinue
 Remove-Item Env:BEATSIGHT_VISUAL_PROFILE -ErrorAction SilentlyContinue
@@ -89,7 +92,7 @@ This helper:
 - optionally cleans up stale BeatSight testhost/dotnet test processes before run (`-SkipStaleProcessCleanup` to disable),
 - runs one upfront build by default (`-SkipInitialBuild` to disable),
 - runs the full scene catalog in chunked scene batches,
-- splits the heaviest editor/playback cluster into per-scene batches,
+- splits the heaviest editor/playback cluster (3D, 2D, manuscript) into per-scene batches,
 - prints heartbeat logs while each batch is running,
 - prints per-batch timing telemetry (`startup` from first TRX appearance + `total` duration),
 - prints end-of-run timing rollups (`startup_mean`, `startup_p95`, `total_mean`, `total_p95`, `trx_mean`, `trx_p95`, and slowest batch),
@@ -107,7 +110,7 @@ Use this when you want progress heartbeats without running the full matrix:
 
 ```powershell
 & ./scripts/run_visual_regression_chunked.ps1 `
-  -SceneBatches 'SongSelectEditor,Settings','Editor,Playback','EditorManuscript,PlaybackManuscript' `
+  -SceneBatches 'SongSelectEditor,Settings','Editor,Playback,EditorTwoDimensional,PlaybackTwoDimensional','EditorManuscript,PlaybackManuscript' `
   -Resolutions '720p,1080p,1440p,ultrawide' `
   -HeartbeatSeconds 15
 ```

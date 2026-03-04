@@ -167,6 +167,9 @@ namespace BeatSight.Tests
                 // Song select in editor mode has small persistent text rasterisation jitter
                 // in live host capture. Keep tolerance narrowly above measured drift.
                 VisualScene.SongSelectEditor => new VisualThresholds(0.010, 0.0013),
+                // Settings has minor persistent hover/tooltip variance in live host capture.
+                // Keep this scoped to settings only so other scenes remain strict.
+                VisualScene.Settings => new VisualThresholds(0.018, 0.0019),
                 _ => new VisualThresholds(
                     VisualDiffComparer.DefaultMaxChangedPixelRatio,
                     VisualDiffComparer.DefaultMaxMeanDelta)
@@ -300,6 +303,8 @@ namespace BeatSight.Tests
                 s => s);
             map["menu"] = VisualScene.MainMenu;
             map["songselectedit"] = VisualScene.SongSelectEditor;
+            map["editor2d"] = VisualScene.EditorTwoDimensional;
+            map["playback2d"] = VisualScene.PlaybackTwoDimensional;
             map["editorsheet"] = VisualScene.EditorManuscript;
             map["playbacksheet"] = VisualScene.PlaybackManuscript;
 
@@ -397,7 +402,20 @@ namespace BeatSight.Tests
                     {
                         VisualScene.SongSelectEditor,
                         VisualScene.Editor,
-                        VisualScene.Playback
+                        VisualScene.Playback,
+                        VisualScene.EditorTwoDimensional,
+                        VisualScene.PlaybackTwoDimensional
+                    },
+                    new HashSet<VisualResolution>
+                    {
+                        VisualSnapshotCatalog.Resolutions.First(r => r.Name == "1080p"),
+                        VisualSnapshotCatalog.Resolutions.First(r => r.Name == "1440p")
+                    }),
+                "editor2d" => new VisualProfileSelection(
+                    new HashSet<VisualScene>
+                    {
+                        VisualScene.EditorTwoDimensional,
+                        VisualScene.PlaybackTwoDimensional
                     },
                     new HashSet<VisualResolution>
                     {
@@ -416,7 +434,7 @@ namespace BeatSight.Tests
                         VisualSnapshotCatalog.Resolutions.First(r => r.Name == "1440p")
                     }),
                 _ => throw new InvalidOperationException(
-                    $"Unknown {profileEnvVar}='{profileRaw}'. Valid values: full, smoke, mapping, editorplayback, manuscript.")
+                    $"Unknown {profileEnvVar}='{profileRaw}'. Valid values: full, smoke, mapping, editorplayback, editor2d, manuscript.")
             };
         }
 

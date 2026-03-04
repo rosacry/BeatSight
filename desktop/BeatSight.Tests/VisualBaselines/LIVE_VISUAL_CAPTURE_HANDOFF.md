@@ -24,6 +24,8 @@ Run deterministic visual QA using **real rendered game screens** (not synthetic 
   - `MappingGeneration`
   - `Editor`
   - `Playback`
+  - `EditorTwoDimensional`
+  - `PlaybackTwoDimensional`
   - `EditorManuscript`
   - `PlaybackManuscript`
 - Resolutions covered:
@@ -44,6 +46,14 @@ Run deterministic visual QA using **real rendered game screens** (not synthetic 
   - `SongSelect` seeds one deterministic user beatmap (`Heir of Grief`)
   - `SongSelectEditor` seeds two deterministic user beatmaps (`Heir of Grief`, `The Sin and the Sentence`)
 - Purpose: keep song-card count/content stable across machines and prevent `%AppData%` drift from breaking visual baselines.
+
+## 2026-03-04 2D Editor Coverage Update
+
+- Added dedicated live-capture scenes for `EditorTwoDimensional` and `PlaybackTwoDimensional`.
+- Visual full-matrix gate now covers `68` cases (`17` scenes x `4` resolutions).
+- Added a dedicated `editor2d` profile in visual snapshot tests for fast 2D-only iteration.
+- Added `EditorTwoDimensional` to the compact 720p editor layout contract test.
+- Updated chunked runner defaults so 2D scenes execute as independent heavy batches.
 
 ## 2026-02-15 Editor/Manuscript Density Update
 
@@ -106,14 +116,14 @@ Use these to avoid opening the app dozens of times when only one area changed:
 - `BEATSIGHT_VISUAL_RESOLUTIONS`
   - Comma-separated names (`720p`, `1080p`, `1440p`, `ultrawide`) or dimensions (`1920x1080`).
 - `BEATSIGHT_VISUAL_PROFILE`
-  - Built-in subsets: `full`, `smoke`, `mapping`, `editorplayback`, `manuscript`.
+  - Built-in subsets: `full`, `smoke`, `mapping`, `editorplayback`, `editor2d`, `manuscript`.
   - Used only when explicit scene/resolution filters are not set.
 
 Examples:
 
 ```powershell
 $env:BEATSIGHT_RUN_VISUAL_TESTS='1'
-$env:BEATSIGHT_VISUAL_SCENES='SongSelectEditor,Editor,Playback,EditorManuscript,PlaybackManuscript'
+$env:BEATSIGHT_VISUAL_SCENES='SongSelectEditor,Editor,Playback,EditorTwoDimensional,PlaybackTwoDimensional,EditorManuscript,PlaybackManuscript'
 $env:BEATSIGHT_VISUAL_RESOLUTIONS='1080p'
 dotnet test desktop/BeatSight.Tests/BeatSight.Tests.csproj -c Release --filter "FullyQualifiedName~VisualRegressionSnapshotTests"
 ```
@@ -195,6 +205,7 @@ These controls already exist in code and should remain unless replaced with some
   - Editor: stop + seek to fixed time.
   - Playback: stop + seek normalized.
   - Editor/Playback: force lane view mode to `ThreeDimensional` before capture.
+  - EditorTwoDimensional/PlaybackTwoDimensional: force lane view mode to `TwoDimensional` before capture.
   - EditorManuscript/PlaybackManuscript: force lane view mode to `Manuscript` before capture.
 - Window size clamp to physical display bounds.
 - Screenshot resize to requested resolution if host was clamped.

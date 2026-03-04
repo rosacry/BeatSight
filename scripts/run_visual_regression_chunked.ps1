@@ -9,6 +9,8 @@ param(
         "MappingGeneration",
         "Editor",
         "Playback",
+        "EditorTwoDimensional",
+        "PlaybackTwoDimensional",
         "EditorManuscript",
         "PlaybackManuscript"
     ),

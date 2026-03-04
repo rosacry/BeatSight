@@ -51,7 +51,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 RelativeSizeAxes = Axes.Both,
                 Masking = true,
-                CornerRadius = 16,
+                CornerRadius = 12,
                 Children = new Drawable[]
                 {
                     new Box
@@ -142,7 +142,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 RelativeSizeAxes = Axes.Both,
                 Masking = true,
-                CornerRadius = 16,
+                CornerRadius = 12,
                 Children = new Drawable[]
                 {
                     new Box
@@ -219,7 +219,7 @@ namespace BeatSight.Game.Screens.Editor
             return new Container
             {
                 RelativeSizeAxes = Axes.Both,
-                Padding = new MarginPadding { Horizontal = 8, Vertical = 4 },
+                Padding = new MarginPadding { Horizontal = 6, Vertical = 2 },
                 Child = editorLayoutGrid
             };
         }

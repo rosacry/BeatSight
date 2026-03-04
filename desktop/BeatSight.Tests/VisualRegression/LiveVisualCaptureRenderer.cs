@@ -921,6 +921,24 @@ namespace BeatSight.Tests.VisualRegression
                 throw new VisualCaptureUnavailableException(
                     $"Editor compact header contract failed: hint width no longer dominates status width ({header.ActionHintMaxWidth:0.###} vs {header.StatusMaxWidth:0.###}).");
             }
+
+            if (header.PrimaryRowHeight < 58f || header.PrimaryRowHeight > 104f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact header contract failed: primary row height out of range ({header.PrimaryRowHeight:0.###}, expected 58-104).");
+            }
+
+            if (header.PrimaryAccentHeight < header.PrimaryRowHeight + 6f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact header contract failed: primary accent does not extend below controls ({header.PrimaryAccentHeight:0.###} vs row {header.PrimaryRowHeight:0.###}).");
+            }
+
+            if (header.PrimaryAccentHeight > header.PrimaryRowHeight + 42f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact header contract failed: primary accent depth is excessive ({header.PrimaryAccentHeight:0.###} vs row {header.PrimaryRowHeight:0.###}).");
+            }
         }
 
         private static void validateCompactTimelineToolbox(EditorTimelineToolboxLayoutContract timelineToolbox)

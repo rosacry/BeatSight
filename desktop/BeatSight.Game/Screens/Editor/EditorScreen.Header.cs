@@ -1,10 +1,12 @@
 using BeatSight.Game.UI.Components;
 using BeatSight.Game.UI.Theming;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osuTK;
+using osuTK.Graphics;
 
 namespace BeatSight.Game.Screens.Editor
 {
@@ -254,7 +256,6 @@ namespace BeatSight.Game.Screens.Editor
                     new Container
                     {
                         AutoSizeAxes = Axes.Both,
-                        Padding = new MarginPadding { Top = 2 },
                         Child = statusColumn
                     }
                 }
@@ -264,32 +265,33 @@ namespace BeatSight.Game.Screens.Editor
             var mainRow = new Container
             {
                 RelativeSizeAxes = Axes.X,
-                AutoSizeAxes = Axes.Y,
+                Height = 72f,
                 Children = new Drawable[]
                 {
                     new Container
                     {
                         AutoSizeAxes = Axes.Both,
-                        Anchor = Anchor.TopLeft,
-                        Origin = Anchor.TopLeft,
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
                         Child = leadFlow
                     },
                     new Container
                     {
                         AutoSizeAxes = Axes.Both,
-                        Anchor = Anchor.TopCentre,
-                        Origin = Anchor.TopCentre,
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
                         Child = timeBadge
                     },
                     new Container
                     {
                         AutoSizeAxes = Axes.Both,
-                        Anchor = Anchor.TopRight,
-                        Origin = Anchor.TopRight,
+                        Anchor = Anchor.CentreRight,
+                        Origin = Anchor.CentreRight,
                         Child = buttonFlow
                     }
                 }
             };
+            headerPrimaryRowContainer = mainRow;
             historyPanel.Hide();
 
             var informationFlow = new FillFlowContainer
@@ -332,19 +334,21 @@ namespace BeatSight.Game.Screens.Editor
                         RelativeSizeAxes = Axes.Both,
                         Colour = EditorColours.HeaderBackground
                     },
-                    new Box
+                    headerPrimaryAccentBox = new Box
                     {
                         RelativeSizeAxes = Axes.X,
-                        Height = 20,
+                        Height = 78f,
                         Anchor = Anchor.TopLeft,
                         Origin = Anchor.TopLeft,
-                        Colour = EditorColours.PanelStroke.Opacity(0.22f)
+                        Colour = ColourInfo.GradientVertical(
+                            EditorColours.PanelStroke.Opacity(0.38f),
+                            Color4.Transparent)
                     },
                     headerContentContainer = new Container
                     {
                         RelativeSizeAxes = Axes.X,
                         AutoSizeAxes = Axes.Y,
-                        Padding = new MarginPadding { Horizontal = 22, Vertical = 6 },
+                        Padding = new MarginPadding { Horizontal = 22, Vertical = 8 },
                         Child = content
                     },
                     new Box

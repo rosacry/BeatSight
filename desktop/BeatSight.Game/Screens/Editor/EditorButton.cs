@@ -8,6 +8,8 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
+using osuTK;
+using osuTK.Input;
 using osuTK.Graphics;
 
 namespace BeatSight.Game.Screens.Editor
@@ -44,6 +46,12 @@ namespace BeatSight.Game.Screens.Editor
         /// Fired when hover hint text should change.
         /// </summary>
         public event Action<string?>? HoverHintChanged;
+
+        /// <summary>
+        /// Enables or disables scale transforms for this button.
+        /// Disable when the button sits in autosized layout rows that must not reflow.
+        /// </summary>
+        public bool EnableScaleAnimation { get; set; } = true;
 
         public EditorButton(string text, Color4 colour)
         {
@@ -167,7 +175,8 @@ namespace BeatSight.Game.Screens.Editor
 
             uiAudio.PlayHover(e.ScreenSpaceMousePosition.X / GetContainingInputManager().DrawSize.X);
             background.FadeColour(hoverColour, 200, Easing.OutQuint);
-            this.ScaleTo(1.015f, 220, Easing.OutQuint);
+            if (EnableScaleAnimation)
+                this.ScaleTo(1.015f, 220, Easing.OutQuint);
             border.FadeTo(0.2f, 180, Easing.OutQuint);
             hoverGlow.FadeTo(0.2f, 200, Easing.OutQuint);
             return base.OnHover(e);
@@ -177,7 +186,10 @@ namespace BeatSight.Game.Screens.Editor
         {
             base.OnHoverLost(e);
             background.FadeColour(Enabled.Value ? idleColour : disabledColour, 200, Easing.OutQuint);
-            this.ScaleTo(1f, 200, Easing.OutQuint);
+            if (EnableScaleAnimation)
+                this.ScaleTo(1f, 200, Easing.OutQuint);
+            else
+                Scale = Vector2.One;
             border.FadeOut(180, Easing.OutQuint);
             hoverGlow.FadeOut(200);
             HoverHintChanged?.Invoke(null);
@@ -185,13 +197,21 @@ namespace BeatSight.Game.Screens.Editor
 
         protected override bool OnMouseDown(MouseDownEvent e)
         {
-            this.ScaleTo(0.95f, 50, Easing.OutQuint);
-            return base.OnMouseDown(e);
+            if (e.Button != MouseButton.Left)
+                return base.OnMouseDown(e);
+
+            if (EnableScaleAnimation)
+                this.ScaleTo(0.95f, 50, Easing.OutQuint);
+            // Consume left-button down so toolbar clicks never leak to timeline hit targets underneath.
+            return true;
         }
 
         protected override void OnMouseUp(MouseUpEvent e)
         {
-            this.ScaleTo(IsHovered ? 1.02f : 1f, 250, Easing.OutQuint);
+            if (EnableScaleAnimation)
+                this.ScaleTo(IsHovered ? 1.02f : 1f, 250, Easing.OutQuint);
+            else
+                Scale = Vector2.One;
             base.OnMouseUp(e);
         }
 
@@ -200,7 +220,12 @@ namespace BeatSight.Game.Screens.Editor
             background.FadeColour(enabled ? idleColour : disabledColour, 200, Easing.OutQuint);
             this.FadeTo(enabled ? 1f : 0.56f, 200, Easing.OutQuint);
             if (!enabled)
-                this.ScaleTo(1f, 200, Easing.OutQuint);
+            {
+                if (EnableScaleAnimation)
+                    this.ScaleTo(1f, 200, Easing.OutQuint);
+                else
+                    Scale = Vector2.One;
+            }
             label.FadeColour(enabled ? EditorColours.TextPrimary : EditorColours.Lighten(EditorColours.TextPrimary, 0.84f), 200, Easing.OutQuint);
             topSheen.FadeTo(enabled ? 1f : 0.75f, 160, Easing.OutQuint);
         }

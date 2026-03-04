@@ -73,7 +73,8 @@ namespace BeatSight.Game.Screens.Editor
                 Colour = EditorColours.TextSecondary,
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft,
-                UseFullGlyphHeight = true
+                UseFullGlyphHeight = false,
+                Y = -1f
             };
 
             footerSeekTotalText = new SpriteText
@@ -83,7 +84,8 @@ namespace BeatSight.Game.Screens.Editor
                 Colour = EditorColours.TextSecondary,
                 Anchor = Anchor.CentreRight,
                 Origin = Anchor.CentreRight,
-                UseFullGlyphHeight = true
+                UseFullGlyphHeight = false,
+                Y = -1f
             };
 
             footerSeekSlider = new ScrubbableSliderBar
@@ -108,7 +110,7 @@ namespace BeatSight.Game.Screens.Editor
                 },
                 RowDimensions = new[]
                 {
-                    new Dimension(GridSizeMode.Absolute, 26)
+                    new Dimension(GridSizeMode.Absolute, 28)
                 },
                 Content = new[]
                 {
@@ -117,9 +119,9 @@ namespace BeatSight.Game.Screens.Editor
                         new Container
                         {
                             RelativeSizeAxes = Axes.Y,
-                            Width = 80,
+                            Width = 84,
                             Height = 1,
-                            Padding = new MarginPadding { Right = 6 },
+                            Padding = new MarginPadding { Right = 8 },
                             Child = footerSeekCurrentText
                         },
                         new Container
@@ -132,9 +134,9 @@ namespace BeatSight.Game.Screens.Editor
                         new Container
                         {
                             RelativeSizeAxes = Axes.Y,
-                            Width = 80,
+                            Width = 84,
                             Height = 1,
-                            Padding = new MarginPadding { Left = 6 },
+                            Padding = new MarginPadding { Left = 8 },
                             Child = footerSeekTotalText
                         }
                     }

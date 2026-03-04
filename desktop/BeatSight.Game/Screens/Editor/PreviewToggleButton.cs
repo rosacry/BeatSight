@@ -13,6 +13,7 @@ using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osuTK;
 using osuTK.Graphics;
+using osuTK.Input;
 
 namespace BeatSight.Game.Screens.Editor
 {
@@ -46,6 +47,12 @@ namespace BeatSight.Game.Screens.Editor
         /// Fired when the hover hint text should change.
         /// </summary>
         public event Action<string?>? HoverHintChanged;
+
+        /// <summary>
+        /// Enables or disables scale transforms for this button.
+        /// Disable when the button sits in autosized layout rows that must not reflow.
+        /// </summary>
+        public bool EnableScaleAnimation { get; set; } = true;
 
         public PreviewToggleButton(Bindable<EditorPreviewMode> previewMode)
         {
@@ -219,7 +226,8 @@ namespace BeatSight.Game.Screens.Editor
 
             var targetColour = EditorColours.Lighten(currentBaseColour, 1.15f);
             background.FadeColour(targetColour, 140, Easing.OutQuint);
-            this.ScaleTo(1.015f, 220, Easing.OutQuint);
+            if (EnableScaleAnimation)
+                this.ScaleTo(1.015f, 220, Easing.OutQuint);
             border.FadeTo(0.24f, 170, Easing.OutQuint);
             hoverGlow.FadeTo(0.2f, 200, Easing.OutQuint);
             return base.OnHover(e);
@@ -230,20 +238,31 @@ namespace BeatSight.Game.Screens.Editor
             base.OnHoverLost(e);
             HoverHintChanged?.Invoke(null);
             updateBackgroundForAvailability();
-            this.ScaleTo(1f, 200, Easing.OutQuint);
+            if (EnableScaleAnimation)
+                this.ScaleTo(1f, 200, Easing.OutQuint);
+            else
+                Scale = Vector2.One;
             border.FadeOut(160, Easing.OutQuint);
             hoverGlow.FadeOut(200);
         }
 
         protected override bool OnMouseDown(MouseDownEvent e)
         {
-            this.ScaleTo(0.95f, 50, Easing.OutQuint);
-            return base.OnMouseDown(e);
+            if (e.Button != MouseButton.Left)
+                return base.OnMouseDown(e);
+
+            if (EnableScaleAnimation)
+                this.ScaleTo(0.95f, 50, Easing.OutQuint);
+            // Consume left-button down so the preview toggle never forwards to timeline input.
+            return true;
         }
 
         protected override void OnMouseUp(MouseUpEvent e)
         {
-            this.ScaleTo(IsHovered ? 1.02f : 1f, 220, Easing.OutQuint);
+            if (EnableScaleAnimation)
+                this.ScaleTo(IsHovered ? 1.02f : 1f, 220, Easing.OutQuint);
+            else
+                Scale = Vector2.One;
             base.OnMouseUp(e);
         }
 

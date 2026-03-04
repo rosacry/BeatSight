@@ -22,7 +22,9 @@ namespace BeatSight.Game.Screens.Editor
         float ActionHintMaxWidth,
         float PlaybackStatusMaxWidth,
         float PrimaryRowHeight,
-        float PrimaryAccentHeight);
+        float PrimaryAccentHeight,
+        float InformationHeight,
+        float InformationAlpha);
 
     internal readonly record struct EditorTimelineToolboxLayoutContract(
         float ContentSpacingX,
@@ -105,7 +107,9 @@ namespace BeatSight.Game.Screens.Editor
                 actionHintText?.MaxWidth ?? 0f,
                 playbackStatusText?.MaxWidth ?? 0f,
                 headerPrimaryRowContainer?.Height ?? 0f,
-                headerPrimaryAccentBox?.Height ?? 0f);
+                headerPrimaryAccentBox?.Height ?? 0f,
+                headerInformationFlow?.Height ?? 0f,
+                headerInformationFlow?.Alpha ?? 0f);
 
             var timelineToolbox = new EditorTimelineToolboxLayoutContract(
                 timelineToolboxContentFlow?.Spacing.X ?? 0f,

@@ -15,7 +15,7 @@ namespace BeatSight.Game.Screens.Editor
         {
             var viewport = resolveResponsiveViewport();
             var initialMetrics = EditorResponsiveLayout.Compute(viewport.X, viewport.Y, inspectorStackedLayout, footerTipsCollapsed);
-            var sharedSurfacePadding = new MarginPadding { Horizontal = 10, Vertical = 6 };
+            var sharedSurfacePadding = new MarginPadding { Horizontal = 8, Vertical = 4 };
 
             timeline = new EditorTimeline
             {
@@ -51,7 +51,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 RelativeSizeAxes = Axes.Both,
                 Masking = true,
-                CornerRadius = 12,
+                CornerRadius = 10,
                 Children = new Drawable[]
                 {
                     new Box
@@ -74,6 +74,7 @@ namespace BeatSight.Game.Screens.Editor
                     inspectorToggleButton = new EditorButton("Hide Inspector", EditorColours.AccentUndo)
                     {
                         Size = new Vector2(132, 34),
+                        EnableScaleAnimation = false,
                         Anchor = Anchor.TopRight,
                         Origin = Anchor.TopRight,
                         Margin = new MarginPadding { Top = 12, Right = 12 },
@@ -142,7 +143,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 RelativeSizeAxes = Axes.Both,
                 Masking = true,
-                CornerRadius = 12,
+                CornerRadius = 10,
                 Children = new Drawable[]
                 {
                     new Box
@@ -165,6 +166,7 @@ namespace BeatSight.Game.Screens.Editor
                     timelineToolboxToggleButton = new EditorButton("Hide Toolbar", EditorColours.AccentUndo)
                     {
                         Size = new Vector2(138, 34),
+                        EnableScaleAnimation = false,
                         Anchor = Anchor.TopRight,
                         Origin = Anchor.TopRight,
                         Margin = new MarginPadding { Top = 10, Right = 12 },
@@ -219,7 +221,7 @@ namespace BeatSight.Game.Screens.Editor
             return new Container
             {
                 RelativeSizeAxes = Axes.Both,
-                Padding = new MarginPadding { Horizontal = 6, Vertical = 2 },
+                Padding = new MarginPadding { Horizontal = 4, Vertical = 0 },
                 Child = editorLayoutGrid
             };
         }

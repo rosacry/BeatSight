@@ -130,6 +130,18 @@ namespace BeatSight.Game.Screens.Editor
             if (headerLeadFlow != null)
                 headerLeadFlow.Spacing = new Vector2(leadSpacing, 0);
 
+            if (headerPrimaryRowContainer != null)
+            {
+                float rowHeight = roundToPixel(Math.Max(timeBadgeHeight, buttonHeight) + blend(11f, 8f, compactBlend));
+                headerPrimaryRowContainer.Height = rowHeight;
+            }
+
+            if (headerPrimaryAccentBox != null)
+            {
+                float accentHeight = roundToPixel((headerPrimaryRowContainer?.Height ?? Math.Max(timeBadgeHeight, buttonHeight)) + verticalPadding * 2f);
+                headerPrimaryAccentBox.Height = accentHeight;
+            }
+
             if (headerTimeBadgeContainer != null)
             {
                 headerTimeBadgeContainer.Size = new Vector2(timeBadgeWidth, timeBadgeHeight);

@@ -116,7 +116,7 @@ namespace BeatSight.Game.Screens.Editor
                 Anchor = Anchor.TopLeft,
                 Origin = Anchor.TopLeft,
                 AutoSizeAxes = Axes.Both,
-                Margin = new MarginPadding { Left = 10, Top = 10 },
+                Margin = new MarginPadding { Left = 12, Top = 12 },
                 Alpha = 0,
                 Masking = true,
                 CornerRadius = 6,
@@ -125,7 +125,7 @@ namespace BeatSight.Game.Screens.Editor
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = new Color4(12, 16, 28, 170)
+                        Colour = new Color4(12, 16, 28, 152)
                     },
                     new Container
                     {

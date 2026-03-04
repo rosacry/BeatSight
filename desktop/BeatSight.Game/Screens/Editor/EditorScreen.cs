@@ -93,6 +93,8 @@ namespace BeatSight.Game.Screens.Editor
         private GridContainer editorLayoutGrid = null!;
         private GridContainer screenLayoutGrid = null!;
         private Container headerContentContainer = null!;
+        private Container headerPrimaryRowContainer = null!;
+        private Box headerPrimaryAccentBox = null!;
         private FillFlowContainer headerInformationFlow = null!;
         private FillFlowContainer headerButtonFlow = null!;
         private FillFlowContainer headerLeadFlow = null!;

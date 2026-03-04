@@ -334,11 +334,11 @@ namespace BeatSight.Game.Screens.Editor
                     },
                     new Box
                     {
-                        RelativeSizeAxes = Axes.Both,
-                        Height = 0.5f,
+                        RelativeSizeAxes = Axes.X,
+                        Height = 20,
                         Anchor = Anchor.TopLeft,
                         Origin = Anchor.TopLeft,
-                        Colour = EditorColours.PanelStroke.Opacity(0.34f)
+                        Colour = EditorColours.PanelStroke.Opacity(0.22f)
                     },
                     headerContentContainer = new Container
                     {

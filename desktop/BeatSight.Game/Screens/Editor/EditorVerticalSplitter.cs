@@ -25,22 +25,23 @@ namespace BeatSight.Game.Screens.Editor
         public EditorVerticalSplitter()
         {
             RelativeSizeAxes = Axes.X;
-            Height = 10f;
+            Height = 8f;
             Alpha = 0.96f;
             Masking = true;
-            CornerRadius = 5f;
+            CornerRadius = 4f;
 
             InternalChildren = new Drawable[]
             {
                 background = new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = new Color4(13, 22, 41, 170)
+                    Colour = new Color4(11, 19, 34, 158)
                 },
                 rail = new Box
                 {
                     RelativeSizeAxes = Axes.X,
-                    Height = 2f,
+                    Width = 0.985f,
+                    Height = 1.6f,
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
                     Colour = EditorColours.Lighten(EditorColours.Divider, 1.22f).Opacity(0.82f)
@@ -173,12 +174,12 @@ namespace BeatSight.Game.Screens.Editor
         private void updateVisualState(bool active)
         {
             background.FadeColour(active
-                    ? new Color4(21, 37, 67, 190)
-                    : new Color4(13, 22, 41, 170),
+                    ? new Color4(18, 31, 55, 176)
+                    : new Color4(11, 19, 34, 158),
                 120,
                 Easing.OutQuint);
-            rail.FadeTo(active ? 1f : 0.82f, 120, Easing.OutQuint);
-            rail.ResizeHeightTo(active || dragging ? 3f : 2f, 120, Easing.OutQuint);
+            rail.FadeTo(active ? 0.95f : 0.72f, 120, Easing.OutQuint);
+            rail.ResizeHeightTo(active || dragging ? 2.4f : 1.6f, 120, Easing.OutQuint);
         }
     }
 }

@@ -74,7 +74,7 @@ namespace BeatSight.Game.Screens.Editor
 
             RelativeSizeAxes = Axes.Both;
             Masking = true;
-            CornerRadius = 20;
+            CornerRadius = 16;
         }
 
         [BackgroundDependencyLoader]
@@ -676,7 +676,7 @@ namespace BeatSight.Game.Screens.Editor
                 {
                     RelativeSizeAxes = Axes.Both,
                     Masking = true,
-                    CornerRadius = 20,
+                    CornerRadius = 16,
                     EdgeEffect = new EdgeEffectParameters
                     {
                         Type = EdgeEffectType.Shadow,
@@ -698,12 +698,7 @@ namespace BeatSight.Game.Screens.Editor
                 stagePadding = new Container
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Child = new Container
-                    {
-                        RelativeSizeAxes = Axes.Both,
-                        Padding = new MarginPadding { Horizontal = 8, Vertical = 6 },
-                        Child = stageSurface
-                    }
+                    Child = stageSurface
                 };
 
                 InternalChild = stagePadding;
@@ -716,15 +711,15 @@ namespace BeatSight.Game.Screens.Editor
                 if (DrawWidth <= 0 || DrawHeight <= 0)
                     return;
 
-                float horizontal = Math.Clamp(DrawWidth * 0.0038f, 4f, 12f);
-                float vertical = Math.Clamp(DrawHeight * 0.0055f, 4f, 10f);
+                float horizontal = Math.Clamp(DrawWidth * 0.0018f, 2f, 6f);
+                float vertical = Math.Clamp(DrawHeight * 0.0034f, 3f, 7f);
 
                 stagePadding.Padding = new MarginPadding
                 {
                     Left = horizontal,
                     Right = horizontal,
                     Top = vertical,
-                    Bottom = vertical + 2
+                    Bottom = vertical + 1
                 };
             }
         }

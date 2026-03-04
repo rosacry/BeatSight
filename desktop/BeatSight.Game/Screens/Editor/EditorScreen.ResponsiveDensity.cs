@@ -85,9 +85,10 @@ namespace BeatSight.Game.Screens.Editor
             float buttonFontSize = blend(13.4f, 11.8f, compactBlend) + widthRelax * 0.35f;
             float buttonSpacing = blend(8f, 6f, compactBlend) + ultraWideRelax * 1.1f;
             float horizontalPadding = blend(24f, 18f, compactBlend) + ultraWideRelax * 2.3f;
-            float verticalPadding = blend(6f, 4.5f, compactBlend) + ultraWideRelax * 0.4f;
+            float verticalPaddingTop = blend(4.6f, 3.3f, compactBlend) + ultraWideRelax * 0.3f;
+            float verticalPaddingBottom = blend(2.1f, 1.4f, compactBlend) + ultraWideRelax * 0.1f;
             float infoSpacing = blend(4f, 2.5f, compactBlend);
-            float contentSpacing = blend(4f, 3f, compactBlend);
+            float contentSpacing = 0f;
             float playButtonWidth = blend(114f, 96f, compactBlend);
             float saveButtonWidth = blend(112f, 96f, compactBlend);
             float undoButtonWidth = blend(98f, 84f, compactBlend);
@@ -132,13 +133,16 @@ namespace BeatSight.Game.Screens.Editor
 
             if (headerPrimaryRowContainer != null)
             {
-                float rowHeight = roundToPixel(Math.Max(timeBadgeHeight, buttonHeight) + blend(11f, 8f, compactBlend));
+                float rowHeight = roundToPixel(Math.Max(58f, Math.Max(timeBadgeHeight, buttonHeight) + blend(2.4f, 1.4f, compactBlend)));
                 headerPrimaryRowContainer.Height = rowHeight;
             }
 
             if (headerPrimaryAccentBox != null)
             {
-                float accentHeight = roundToPixel((headerPrimaryRowContainer?.Height ?? Math.Max(timeBadgeHeight, buttonHeight)) + verticalPadding * 2f);
+                float accentHeight = roundToPixel((headerPrimaryRowContainer?.Height ?? Math.Max(timeBadgeHeight, buttonHeight))
+                                                  + verticalPaddingTop
+                                                  + verticalPaddingBottom
+                                                  + blend(2.8f, 2.0f, compactBlend));
                 headerPrimaryAccentBox.Height = accentHeight;
             }
 
@@ -203,7 +207,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 historyPanel.Margin = new MarginPadding
                 {
-                    Top = verticalPadding + timeBadgeHeight + blend(8f, 6f, compactBlend),
+                    Top = verticalPaddingTop + timeBadgeHeight + blend(7f, 5.5f, compactBlend),
                     Right = horizontalPadding
                 };
             }
@@ -212,7 +216,15 @@ namespace BeatSight.Game.Screens.Editor
                 headerInformationFlow.Spacing = new Vector2(0, infoSpacing);
 
             if (headerContentContainer != null)
-                headerContentContainer.Padding = new MarginPadding { Horizontal = horizontalPadding, Vertical = verticalPadding };
+            {
+                headerContentContainer.Padding = new MarginPadding
+                {
+                    Left = horizontalPadding,
+                    Right = horizontalPadding,
+                    Top = verticalPaddingTop,
+                    Bottom = verticalPaddingBottom
+                };
+            }
 
             headerContentSpacingY = contentSpacing;
             if (headerContentContainer?.Child is FillFlowContainer contentFlow)

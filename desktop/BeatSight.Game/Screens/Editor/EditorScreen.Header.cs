@@ -122,38 +122,37 @@ namespace BeatSight.Game.Screens.Editor
             playPauseButton = new EditorButton("Play", EditorColours.AccentPlay)
             {
                 Size = new Vector2(120, 42),
+                EnableScaleAnimation = false,
                 Action = togglePlayback
             };
 
             saveButton = new EditorButton("Save", EditorColours.AccentSave)
             {
                 Size = new Vector2(120, 42),
+                EnableScaleAnimation = false,
                 Action = saveBeatmap
             };
 
             undoButton = new EditorButton("Undo", EditorColours.AccentUndo)
             {
                 Size = new Vector2(104, 42),
+                EnableScaleAnimation = false,
                 Action = undoLastEdit
             };
 
             redoButton = new EditorButton("Redo", EditorColours.AccentRedo)
             {
                 Size = new Vector2(104, 42),
+                EnableScaleAnimation = false,
                 Action = redoLastEdit
             };
 
             previewToggle = new PreviewToggleButton(previewMode)
             {
                 Size = new Vector2(146, 42),
+                EnableScaleAnimation = false,
                 Alpha = 0
             };
-
-            playPauseButton.HoverHintChanged += setHoverHint;
-            saveButton.HoverHintChanged += setHoverHint;
-            undoButton.HoverHintChanged += setHoverHint;
-            redoButton.HoverHintChanged += setHoverHint;
-            previewToggle.HoverHintChanged += setHoverHint;
 
             var buttonFlow = new FillFlowContainer
             {
@@ -265,7 +264,7 @@ namespace BeatSight.Game.Screens.Editor
             var mainRow = new Container
             {
                 RelativeSizeAxes = Axes.X,
-                Height = 72f,
+                Height = 70f,
                 Children = new Drawable[]
                 {
                     new Container
@@ -297,11 +296,13 @@ namespace BeatSight.Game.Screens.Editor
             var informationFlow = new FillFlowContainer
             {
                 RelativeSizeAxes = Axes.X,
-                AutoSizeAxes = Axes.Y,
+                AutoSizeAxes = Axes.None,
+                Height = 0f,
                 Direction = FillDirection.Vertical,
                 Spacing = new Vector2(6),
                 Anchor = Anchor.TopCentre,
                 Origin = Anchor.TopCentre,
+                Alpha = 0f,
                 Children = new Drawable[]
                 {
                     actionHintText,
@@ -348,7 +349,7 @@ namespace BeatSight.Game.Screens.Editor
                     {
                         RelativeSizeAxes = Axes.X,
                         AutoSizeAxes = Axes.Y,
-                        Padding = new MarginPadding { Horizontal = 22, Vertical = 8 },
+                        Padding = new MarginPadding { Left = 22, Right = 22, Top = 4, Bottom = 2 },
                         Child = content
                     },
                     new Box

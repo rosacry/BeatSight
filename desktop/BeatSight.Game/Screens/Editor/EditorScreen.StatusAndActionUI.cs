@@ -1,6 +1,8 @@
 using System;
 using System.Linq;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Containers;
+using osuTK;
 
 namespace BeatSight.Game.Screens.Editor
 {
@@ -71,9 +73,6 @@ namespace BeatSight.Game.Screens.Editor
             if (!string.IsNullOrWhiteSpace(detail))
                 detail = detail.Replace(", ", " | ");
 
-            if (hasUnsavedChanges)
-                detail = string.IsNullOrWhiteSpace(detail) ? "Unsaved changes" : $"{detail} | Unsaved changes";
-
             if (statusDetailLine != null)
             {
                 bool showDetail = !string.IsNullOrWhiteSpace(detail);
@@ -84,7 +83,7 @@ namespace BeatSight.Game.Screens.Editor
 
         private void setHoverHint(string? hint)
         {
-            hoverHintOverride = string.IsNullOrWhiteSpace(hint) ? null : hint;
+            _ = hint;
             refreshHintText();
         }
 
@@ -93,9 +92,11 @@ namespace BeatSight.Game.Screens.Editor
             if (actionHintText == null)
                 return;
 
-            string? display = hoverHintOverride ?? defaultHintText;
-            actionHintText.Text = display ?? string.Empty;
-            actionHintText.Alpha = string.IsNullOrEmpty(display) ? 0 : 1;
+            // Header hover-tooltips cause layout shifts and provide low-value noise in the
+            // editor's primary transport area; keep this channel disabled.
+            actionHintText.Text = string.Empty;
+            actionHintText.Alpha = 0;
+            updateHeaderInformationVisibility();
         }
 
         private void updatePlaybackAvailabilityUI()
@@ -113,17 +114,28 @@ namespace BeatSight.Game.Screens.Editor
 
             if (playbackStatusText != null)
             {
-                if (playbackAvailable)
-                    playbackStatusText.FadeOut(150);
-                else
-                {
-                    playbackStatusText.Text = offlinePlaybackMessage;
-                    playbackStatusText.FadeIn(150);
-                }
+                playbackStatusText.Text = string.Empty;
+                playbackStatusText.Alpha = 0;
             }
+
+            updateHeaderInformationVisibility();
 
             if (!playbackAvailable)
                 appendStatusDetail(offlinePlaybackMessage);
+        }
+
+        private void updateHeaderInformationVisibility()
+        {
+            if (headerInformationFlow == null)
+                return;
+
+            headerInformationFlow.AutoSizeAxes = Axes.None;
+            headerInformationFlow.Height = 0f;
+            headerInformationFlow.Alpha = 0f;
+            headerInformationFlow.AlwaysPresent = false;
+
+            if (headerContentContainer?.Child is FillFlowContainer contentFlow)
+                contentFlow.Spacing = new Vector2(0, 0f);
         }
 
         private void updateActionButtons()
@@ -177,7 +189,7 @@ namespace BeatSight.Game.Screens.Editor
             }
             else if (hasUnsavedChanges)
             {
-                defaultHintText = $"Unsaved changes: press Ctrl+S to save ({currentBeatmap!.HitObjects.Count} notes).";
+                defaultHintText = null;
             }
             else if (!canUndo && !canRedo)
             {

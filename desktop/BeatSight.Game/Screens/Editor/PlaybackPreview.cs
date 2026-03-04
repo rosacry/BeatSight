@@ -10,7 +10,6 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Events;
@@ -73,8 +72,8 @@ namespace BeatSight.Game.Screens.Editor
             this.snapOriginAtTimeProvider = snapOriginAtTimeProvider;
 
             RelativeSizeAxes = Axes.Both;
-            Masking = true;
-            CornerRadius = 16;
+            Masking = false;
+            CornerRadius = 0;
         }
 
         [BackgroundDependencyLoader]
@@ -666,61 +665,10 @@ namespace BeatSight.Game.Screens.Editor
 
         private partial class PreviewStageContainer : CompositeDrawable
         {
-            private readonly Container stagePadding;
-
             public PreviewStageContainer(Drawable playfield)
             {
                 RelativeSizeAxes = Axes.Both;
-
-                var stageSurface = new Container
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Masking = true,
-                    CornerRadius = 16,
-                    EdgeEffect = new EdgeEffectParameters
-                    {
-                        Type = EdgeEffectType.Shadow,
-                        Colour = new Color4(0, 0, 0, 48),
-                        Radius = 32,
-                        Roundness = 1f
-                    },
-                    Children = new Drawable[]
-                    {
-                        new Box
-                        {
-                            RelativeSizeAxes = Axes.Both,
-                            Colour = new Color4(10, 12, 20, 255)
-                        },
-                        playfield
-                    }
-                };
-
-                stagePadding = new Container
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Child = stageSurface
-                };
-
-                InternalChild = stagePadding;
-            }
-
-            protected override void Update()
-            {
-                base.Update();
-
-                if (DrawWidth <= 0 || DrawHeight <= 0)
-                    return;
-
-                float horizontal = Math.Clamp(DrawWidth * 0.0018f, 2f, 6f);
-                float vertical = Math.Clamp(DrawHeight * 0.0034f, 3f, 7f);
-
-                stagePadding.Padding = new MarginPadding
-                {
-                    Left = horizontal,
-                    Right = horizontal,
-                    Top = vertical,
-                    Bottom = vertical + 1
-                };
+                InternalChild = playfield;
             }
         }
     }

@@ -209,7 +209,7 @@ namespace BeatSight.Tests
             string configSource = File.ReadAllText(configPath);
             string editorSource = File.ReadAllText(editorBeatmapLoadPath);
 
-            Assert.Contains("setDefault(BeatSightSetting.PlaybackZoomLevel, 1.46)", configSource);
+            Assert.Contains("setDefault(BeatSightSetting.PlaybackZoomLevel, 1.0)", configSource);
             Assert.Contains("setDefault(BeatSightSetting.EditorTimelineZoomDefault, 1.32)", configSource);
             Assert.Contains("TimelineZoom = editorTimelineZoomDefault?.Value ?? 1.32", editorSource);
         }
@@ -224,6 +224,25 @@ namespace BeatSight.Tests
             string source = File.ReadAllText(previewPath);
             Assert.Contains("BeatSightSetting.ThreeDStageProfile", source);
             Assert.Contains("playfield.StageProfile.BindTo(threeDStageProfileSetting)", source);
+        }
+
+        [Fact]
+        public void EditorPreviewPlacementUsesCursorResolvedTimeAndLane()
+        {
+            string root = resolveRepositoryRoot();
+            string previewPath = Path.Combine(root, "desktop", "BeatSight.Game", "Screens", "Editor", "PlaybackPreview.cs");
+            string handlersPath = Path.Combine(root, "desktop", "BeatSight.Game", "Screens", "Editor", "EditorScreen.TimelineEventHandlers.cs");
+
+            Assert.True(File.Exists(previewPath), $"Expected file missing: {previewPath}");
+            Assert.True(File.Exists(handlersPath), $"Expected file missing: {handlersPath}");
+
+            string previewSource = File.ReadAllText(previewPath);
+            string handlersSource = File.ReadAllText(handlersPath);
+
+            Assert.Contains("TryResolvePlacementFromScreenSpace", previewSource);
+            Assert.Contains("onPreviewNotePlacementRequested(int lane, double timeMs, bool bypassSnap)", handlersSource);
+            Assert.Contains("double placementTime = Math.Max(0, timeMs);", handlersSource);
+            Assert.Contains("double removalAnchorTime = Math.Max(0, timeMs);", handlersSource);
         }
 
         [Fact]

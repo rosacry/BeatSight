@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using BeatSight.Game.Beatmaps;
 using osu.Framework.Configuration;
 using osu.Framework.Platform;
 
@@ -54,7 +55,7 @@ namespace BeatSight.Game.Configuration
             setDefault(BeatSightSetting.GameplayMode, GameplayMode.Manual);
             setDefault(BeatSightSetting.SpeedAdjustmentMin, 0.0);
             setDefault(BeatSightSetting.SpeedAdjustmentMax, 2.0);
-            setDefault(BeatSightSetting.PlaybackZoomLevel, 1.46);
+            setDefault(BeatSightSetting.PlaybackZoomLevel, 1.0);
             setDefault(BeatSightSetting.PlaybackNoteWidth, 1.0);
             setDefault(BeatSightSetting.BackgroundDim, 0.8);
             setDefault(BeatSightSetting.BackgroundBlur, 0.0);
@@ -63,6 +64,7 @@ namespace BeatSight.Game.Configuration
             setDefault(BeatSightSetting.LaneViewMode, LaneViewMode.TwoDimensional);
             setDefault(BeatSightSetting.LanePreset, LanePreset.DrumSevenLane);
             setDefault(BeatSightSetting.KickLaneMode, KickLaneMode.GlobalLine);
+            setDefault(BeatSightSetting.LaneProfileJson, LaneManagement.SerializeLaneProfile(LaneManagement.DeserializeLaneProfile(null, 7)));
             setDefault(BeatSightSetting.ThreeDStageProfile, ThreeDStageProfile.GhClassic);
 
             // Visual Settings
@@ -102,6 +104,10 @@ namespace BeatSight.Game.Configuration
             setDefault(BeatSightSetting.EditorTimelineZoomDefault, 1.32);
             setDefault(BeatSightSetting.EditorWaveformScaleDefault, 1.0);
             setDefault(BeatSightSetting.EditorBeatGridVisibleDefault, true);
+            setDefault(BeatSightSetting.EditorSnapDivisorDefault, 4);
+            setDefault(BeatSightSetting.EditorTimelinePlaybackZoomLinkedDefault, false);
+            setDefault(BeatSightSetting.EditorTimelineSplitRatioExpanded, 0.18, 0.0, 1.0, 0.001);
+            setDefault(BeatSightSetting.EditorTimelineSplitRatioCollapsed, 0.02, 0.0, 1.0, 0.001);
 
             // Audio Timing
             setDefault(BeatSightSetting.AudioOffset, 0.0);
@@ -231,6 +237,7 @@ namespace BeatSight.Game.Configuration
         LaneViewMode,
         LanePreset,
         KickLaneMode,
+        LaneProfileJson,
         ThreeDStageProfile,
 
         // Visual
@@ -272,6 +279,10 @@ namespace BeatSight.Game.Configuration
         EditorTimelineZoomDefault,
         EditorWaveformScaleDefault,
         EditorBeatGridVisibleDefault,
+        EditorSnapDivisorDefault,
+        EditorTimelinePlaybackZoomLinkedDefault,
+        EditorTimelineSplitRatioExpanded,
+        EditorTimelineSplitRatioCollapsed,
 
         // Performance
         FrameLimiter,

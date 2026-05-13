@@ -1,5 +1,6 @@
 using BeatSight.Game.Audio;
 using BeatSight.Game.Beatmaps;
+using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
 using Xunit;
 
@@ -54,5 +55,26 @@ public class DrumLaneHeuristicsTests
             h => Assert.Equal(2, h.Lane),
             h => Assert.Equal(5, h.Lane),
             h => Assert.Equal(4, h.Lane));
+    }
+
+    [Fact]
+    public void ApplyToBeatmap_PreserveStoredLaneKeepsValidAuthoredLanes()
+    {
+        var beatmap = new Beatmap
+        {
+            HitObjects =
+            {
+                new HitObject { Component = "kick", Lane = 6 },
+                new HitObject { Component = "snare", Lane = 0 },
+                new HitObject { Component = "ride", Lane = 99 }
+            }
+        };
+
+        var layout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
+        DrumLaneHeuristics.ApplyToBeatmap(beatmap, layout, preserveStoredLane: true);
+
+        Assert.Equal(6, beatmap.HitObjects[0].Lane);
+        Assert.Equal(0, beatmap.HitObjects[1].Lane);
+        Assert.Equal(6, beatmap.HitObjects[2].Lane);
     }
 }

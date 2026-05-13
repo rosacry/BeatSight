@@ -263,3 +263,8 @@ data/dataset_index/
 docs-site/.docusaurus/
 
 nul
+
+# Temp/diagnostic files
+tmp_*
+*.zip
+ai-pipeline/diag_*.py

@@ -154,9 +154,13 @@ namespace BeatSight.Tests.VisualRegression
             => Render(scene, resolution.Width, resolution.Height);
 
         internal static Image<Rgba32> Render(VisualScene scene, int width, int height)
-            => renderAsync(scene, width, height).GetAwaiter().GetResult();
+            => captureOrValidateAsync(scene, width, height, captureScreenshot: true).GetAwaiter().GetResult()
+               ?? throw new VisualCaptureUnavailableException($"Live visual capture for {scene} at {width}x{height} did not return an image.");
 
-        private static async Task<Image<Rgba32>> renderAsync(VisualScene scene, int width, int height)
+        internal static void ValidateScene(VisualScene scene, int width, int height)
+            => captureOrValidateAsync(scene, width, height, captureScreenshot: false).GetAwaiter().GetResult();
+
+        private static async Task<Image<Rgba32>?> captureOrValidateAsync(VisualScene scene, int width, int height, bool captureScreenshot)
         {
             if (!OperatingSystem.IsWindows())
                 throw new VisualCaptureUnavailableException("Live visual capture currently runs only on Windows desktop hosts.");
@@ -244,6 +248,9 @@ namespace BeatSight.Tests.VisualRegression
                 await stabiliseScene(host, scene, targetScreen).ConfigureAwait(false);
                 await applyWindowSize(host, width, height).ConfigureAwait(false);
                 await runOnUpdateThread(host, () => validateEditorCompactInspectorLayout(targetScreen, width)).ConfigureAwait(false);
+
+                if (!captureScreenshot)
+                    return null;
 
                 return await captureStableScreenshot(host, targetScreen, width, height).ConfigureAwait(false);
             }
@@ -854,6 +861,7 @@ namespace BeatSight.Tests.VisualRegression
             validateCompactInspectorActionRows(contract.ActionRows);
             validateCompactHeaderWidths(contract.Header);
             validateCompactTimelineToolbox(contract.TimelineToolbox);
+            validateCompactFooter(contract.Footer);
         }
 
         private static void validateCompactInspectorActionRows(InspectorActionRowContract[] actionRows)
@@ -1017,6 +1025,33 @@ namespace BeatSight.Tests.VisualRegression
             {
                 throw new VisualCaptureUnavailableException(
                     $"Editor compact timeline contract failed: mini button height out of range ({timelineToolbox.MiniButtonHeight:0.###}, expected 28-33).");
+            }
+        }
+
+        private static void validateCompactFooter(EditorFooterLayoutContract footer)
+        {
+            if (footer.SurfaceHeight <= 0 || footer.SeekRowHeight <= 0)
+            {
+                throw new VisualCaptureUnavailableException(
+                    "Editor compact footer contract failed: footer metrics were not initialized.");
+            }
+
+            if (footer.SurfaceHeight < 60f || footer.SurfaceHeight > 92f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact footer contract failed: surface height out of range ({footer.SurfaceHeight:0.###}, expected 60-92).");
+            }
+
+            if (footer.SeekRowHeight < 24f || footer.SeekRowHeight > 32f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact footer contract failed: seek row height out of range ({footer.SeekRowHeight:0.###}, expected 24-32).");
+            }
+
+            if (footer.SurfaceHeight < footer.SeekRowHeight + 34f)
+            {
+                throw new VisualCaptureUnavailableException(
+                    $"Editor compact footer contract failed: footer transport band lost vertical breathing room ({footer.SurfaceHeight:0.###} vs seek row {footer.SeekRowHeight:0.###}).");
             }
         }
 

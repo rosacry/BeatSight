@@ -31,12 +31,13 @@ namespace BeatSight.Game.Screens.Editor
 
         private readonly TimelineContent content;
 
-        public event Action<double>? SeekRequested;
         public event Action<HitObject>? NoteSelected;
         public event Action<HitObject>? NoteAdded;
         public event Action<HitObject>? NoteChanged;
         public event Action<HitObject>? NoteDeleted;
         public event Action? EditBegan;
+        public event Action? DragStarted;
+        public event Action? DragEnded;
         public event Action<double>? ZoomChanged;
         public event Action<int>? SnapDivisorChanged;
         public event Action<double?, double?>? SelectionChanged;
@@ -45,15 +46,16 @@ namespace BeatSight.Game.Screens.Editor
         {
             RelativeSizeAxes = Axes.Both;
             Masking = true;
-            CornerRadius = 12;
+            CornerRadius = 0;
 
             InternalChild = content = new TimelineContent();
-            content.SeekRequested += t => SeekRequested?.Invoke(t);
             content.NoteSelected += h => NoteSelected?.Invoke(h);
             content.NoteAdded += h => NoteAdded?.Invoke(h);
             content.NoteChanged += h => NoteChanged?.Invoke(h);
             content.NoteDeleted += h => NoteDeleted?.Invoke(h);
             content.EditBegan += () => EditBegan?.Invoke();
+            content.DragStarted += () => DragStarted?.Invoke();
+            content.DragEnded += () => DragEnded?.Invoke();
             content.ZoomChanged += z => ZoomChanged?.Invoke(z);
             content.SnapDivisorChanged += d => SnapDivisorChanged?.Invoke(d);
             content.SelectionChanged += (start, end) => SelectionChanged?.Invoke(start, end);
@@ -80,8 +82,8 @@ namespace BeatSight.Game.Screens.Editor
         public void EndZoomInteraction()
             => content.EndZoomInteraction();
 
-        public void SetSnap(int divisor, double bpm)
-            => content.SetSnap(divisor, bpm);
+        public void SetSnap(int divisor, double bpm, double timingOffsetMs = 0, int beatsPerMeasure = 4, int beatUnitDenominator = 4)
+            => content.SetSnap(divisor, bpm, timingOffsetMs, beatsPerMeasure, beatUnitDenominator);
 
         public void ScrollToCurrentTime()
             => content.ScrollToPlayhead();
@@ -90,6 +92,10 @@ namespace BeatSight.Game.Screens.Editor
         public int CurrentSnapDivisor => content.CurrentSnapDivisor;
         public bool BeatGridVisible => content.BeatGridVisible;
         public double CurrentWaveformScale => content.CurrentWaveformScale;
+        public double FutureViewportDurationMs => content.GetFutureViewportDurationMs();
+
+        public double GetFutureViewportDurationMsAtZoom(double zoom)
+            => content.GetFutureViewportDurationMsAtZoom(zoom);
 
         public void SetBeatGridVisible(bool visible)
             => content.SetBeatGridVisible(visible);
@@ -109,8 +115,8 @@ namespace BeatSight.Game.Screens.Editor
         public bool TryDeleteHitObject(HitObject hit)
             => content.TryDeleteHitObject(hit);
 
-        public bool TryAddHitObjectAtTimeAndLane(double timeMs, int lane)
-            => content.TryAddHitObjectAtTimeAndLane(timeMs, lane);
+        public bool TryAddHitObjectAtTimeAndLane(double timeMs, int lane, bool bypassSnap = false, bool selectInsertedNote = true)
+            => content.TryAddHitObjectAtTimeAndLane(timeMs, lane, bypassSnap, selectInsertedNote);
 
         public bool TryDeleteNearestHitObject(double timeMs, int lane, double maxDistanceMs = 90)
             => content.TryDeleteNearestHitObject(timeMs, lane, maxDistanceMs);
@@ -146,13 +152,15 @@ namespace BeatSight.Game.Screens.Editor
             private const int defaultLaneCount = 7;
             private const int maxEditorLaneCount = 9;
             private const double viewportHintRefreshDeltaMs = 35;
+            private const double playheadViewportRatio = 0.18;
 
-            public event Action<double>? SeekRequested;
             public event Action<HitObject>? NoteSelected;
             public event Action<HitObject>? NoteAdded;
             public event Action<HitObject>? NoteChanged;
             public event Action<HitObject>? NoteDeleted;
             public event Action? EditBegan;
+            public event Action? DragStarted;
+            public event Action? DragEnded;
             public event Action<double>? ZoomChanged;
             public event Action<int>? SnapDivisorChanged;
             public event Action<double?, double?>? SelectionChanged;
@@ -172,6 +180,7 @@ namespace BeatSight.Game.Screens.Editor
             private readonly WaveformDrawable waveformDrawable;
             private readonly Container noteLayer;
             private readonly Box playhead;
+            private readonly Box fixedPlayhead;
             private readonly Container rulerLayer;
             private readonly Container rulerTickLayer;
 
@@ -181,13 +190,21 @@ namespace BeatSight.Game.Screens.Editor
             private double zoom = 1.0;
             private double? snapIntervalMs;
             private int snapDivisor = 4;
-            private double bpm = 120.0;
+            private double bpm = double.NaN;
+            private double timingOffsetMs;
+            private int beatsPerMeasure = 4;
+            private int beatUnitDenominator = 4;
             private bool beatGridVisible = true;
             private double waveformScale = 1.0;
             private LaneLayout laneResolutionLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
 
             private readonly List<TimelineNoteDrawable> notes = new();
             private TimelineNoteDrawable? selectedNote;
+            private TimelineNoteDrawable? dragAnchorNote;
+            private TimelineNoteDrawable? activeDragNote;
+            private readonly Dictionary<HitObject, int> dragSelectionBaseline = new();
+            private int dragAnchorBaselineTime;
+            private bool groupedDragDirty;
             private float lastLaneHeight = -1;
             private bool laneLayoutDirty = true;
             private bool zoomInteractionActive;
@@ -201,11 +218,18 @@ namespace BeatSight.Game.Screens.Editor
             public bool BeatGridVisible => beatGridVisible;
             public double CurrentWaveformScale => waveformScale;
 
+            public double GetFutureViewportDurationMs()
+                => getFutureViewportDurationMs(zoom);
+
+            public double GetFutureViewportDurationMsAtZoom(double zoomLevel)
+                => getFutureViewportDurationMs(Math.Clamp(zoomLevel, MinZoom, MaxZoom));
+
             private readonly List<double> detectedOnsets = new();
 
             private Box selectionBox;
             private double? selectionStart;
             private double? selectionEnd;
+            private bool pointerSelectionActive;
             private double lastViewportHintStartMs = double.NaN;
             private double lastViewportHintEndMs = double.NaN;
             private string? lastViewportHintMessage;
@@ -218,91 +242,111 @@ namespace BeatSight.Game.Screens.Editor
             {
                 RelativeSizeAxes = Axes.Both;
 
-                InternalChild = scroll = new BeatSightScrollContainer(Direction.Horizontal)
+                InternalChildren = new Drawable[]
                 {
-                    RelativeSizeAxes = Axes.Both,
-                    ScrollbarVisible = true,
-                    Child = contentArea = new Container
+                    scroll = new TimelineScrollContainer
                     {
-                        RelativeSizeAxes = Axes.Y,
-                        AutoSizeAxes = Axes.X,
-                        Children = new Drawable[]
+                        RelativeSizeAxes = Axes.Both,
+                        ScrollbarVisible = false,
+                        Child = contentArea = new Container
                         {
-                            timelineSurface = new Container
+                            RelativeSizeAxes = Axes.Y,
+                            AutoSizeAxes = Axes.X,
+                            Children = new Drawable[]
                             {
-                                RelativeSizeAxes = Axes.Y,
-                                Height = 1,
-                                Padding = new MarginPadding { Bottom = rulerHeight + 2f },
-                                Children = new Drawable[]
+                                timelineSurface = new Container
                                 {
-                                    new Box
+                                    RelativeSizeAxes = Axes.Y,
+                                    Height = 1,
+                                    Padding = new MarginPadding { Bottom = rulerHeight + 2f },
+                                    Children = new Drawable[]
                                     {
-                                        RelativeSizeAxes = Axes.Both,
-                                        Colour = EditorColours.TimelineBackground
-                                    },
-                                    laneBackgrounds = new Container { RelativeSizeAxes = Axes.Both },
-                                    beatGridLayer = new Container { RelativeSizeAxes = Axes.Both },
-                                    waveformDrawable = new WaveformDrawable { RelativeSizeAxes = Axes.Both, Alpha = 0.42f },
-                                    debugLayer = new Container { RelativeSizeAxes = Axes.Both, Alpha = 0.6f },
-                                    onsetLayer = new Container { RelativeSizeAxes = Axes.Both, Alpha = 0.4f },
-                                    laneLabelLayer = new Container { RelativeSizeAxes = Axes.Both },
-                                    selectionBox = new Box { RelativeSizeAxes = Axes.Y, Colour = EditorColours.TimelineSelection, Alpha = 0 },
-                                    noteLayer = new Container { RelativeSizeAxes = Axes.Both },
-                                    viewportHintContainer = new Container
-                                    {
-                                        AutoSizeAxes = Axes.Both,
-                                        Anchor = Anchor.Centre,
-                                        Origin = Anchor.Centre,
-                                        Alpha = 0,
-                                        Masking = true,
-                                        CornerRadius = 8,
-                                        Children = new Drawable[]
+                                        new Box
                                         {
-                                            new Box
+                                            RelativeSizeAxes = Axes.Both,
+                                            Colour = EditorColours.TimelineBackground
+                                        },
+                                        laneBackgrounds = new Container { RelativeSizeAxes = Axes.Both },
+                                        beatGridLayer = new Container { RelativeSizeAxes = Axes.Both },
+                                        waveformDrawable = new WaveformDrawable { RelativeSizeAxes = Axes.Both, Alpha = 0.42f },
+                                        debugLayer = new Container { RelativeSizeAxes = Axes.Both, Alpha = 0.6f },
+                                        onsetLayer = new Container { RelativeSizeAxes = Axes.Both, Alpha = 0.4f },
+                                        laneLabelLayer = new Container { RelativeSizeAxes = Axes.Both },
+                                        selectionBox = new Box { RelativeSizeAxes = Axes.Y, Colour = EditorColours.TimelineSelection, Alpha = 0 },
+                                        noteLayer = new Container { RelativeSizeAxes = Axes.Both },
+                                        viewportHintContainer = new Container
+                                        {
+                                            AutoSizeAxes = Axes.Both,
+                                            Anchor = Anchor.Centre,
+                                            Origin = Anchor.Centre,
+                                            Alpha = 0,
+                                            Masking = true,
+                                            CornerRadius = 8,
+                                            Children = new Drawable[]
                                             {
-                                                RelativeSizeAxes = Axes.Both,
-                                                Colour = EditorColours.TimelineLabelBackground.Opacity(0.94f)
-                                            },
-                                            viewportHintText = new SpriteText
-                                            {
-                                                Font = BeatSightFont.Caption(11.6f),
-                                                Colour = EditorColours.TextPrimary,
-                                                Margin = new MarginPadding { Horizontal = 12, Vertical = 6 },
-                                                Text = string.Empty,
-                                                Anchor = Anchor.Centre,
-                                                Origin = Anchor.Centre
+                                                new Box
+                                                {
+                                                    RelativeSizeAxes = Axes.Both,
+                                                    Colour = EditorColours.TimelineLabelBackground.Opacity(0.94f)
+                                                },
+                                                viewportHintText = new SpriteText
+                                                {
+                                                    Font = BeatSightFont.Caption(11.6f),
+                                                    Colour = EditorColours.TextPrimary,
+                                                    Margin = new MarginPadding { Horizontal = 12, Vertical = 6 },
+                                                    Text = string.Empty,
+                                                    Anchor = Anchor.Centre,
+                                                    Origin = Anchor.Centre
+                                                }
                                             }
+                                        },
+                                        playhead = new Box
+                                        {
+                                            Width = 2.4f,
+                                            RelativeSizeAxes = Axes.Y,
+                                            Colour = EditorColours.TimelinePlayhead,
+                                            EdgeSmoothness = new Vector2(1, 0),
+                                            Alpha = 0
+                                        },
+                                        new Box
+                                        {
+                                            RelativeSizeAxes = Axes.X,
+                                            Height = 1,
+                                            Anchor = Anchor.BottomLeft,
+                                            Origin = Anchor.BottomLeft,
+                                            Colour = EditorColours.Divider.Opacity(0.35f)
                                         }
-                                    },
-                                    playhead = new Box
+                                    }
+                                },
+                                rulerLayer = new Container
+                                {
+                                    RelativeSizeAxes = Axes.X,
+                                    Height = rulerHeight,
+                                    Anchor = Anchor.BottomLeft,
+                                    Origin = Anchor.BottomLeft,
+                                    Children = new Drawable[]
                                     {
-                                        Width = 2.4f,
-                                        RelativeSizeAxes = Axes.Y,
-                                        Colour = EditorColours.TimelinePlayhead,
-                                        EdgeSmoothness = new Vector2(1, 0)
-                                    },
-                                    new Box
-                                    {
-                                        RelativeSizeAxes = Axes.X,
-                                        Height = 1,
-                                        Anchor = Anchor.BottomLeft,
-                                        Origin = Anchor.BottomLeft,
-                                        Colour = EditorColours.Divider.Opacity(0.35f)
+                                        new Box { RelativeSizeAxes = Axes.Both, Colour = EditorColours.TimelineToolbarBackground },
+                                        rulerTickLayer = new Container { RelativeSizeAxes = Axes.Both }
                                     }
                                 }
-                            },
-                            rulerLayer = new Container
-                            {
-                                RelativeSizeAxes = Axes.X,
-                                Height = rulerHeight,
-                                Anchor = Anchor.BottomLeft,
-                                Origin = Anchor.BottomLeft,
-                                Children = new Drawable[]
-                                {
-                                    new Box { RelativeSizeAxes = Axes.Both, Colour = EditorColours.TimelineToolbarBackground },
-                                    rulerTickLayer = new Container { RelativeSizeAxes = Axes.Both }
-                                }
                             }
+                        }
+                    },
+                    new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Padding = new MarginPadding { Bottom = rulerHeight + 2f },
+                        Child = fixedPlayhead = new Box
+                        {
+                            Anchor = Anchor.TopLeft,
+                            Origin = Anchor.TopCentre,
+                            RelativePositionAxes = Axes.X,
+                            X = (float)playheadViewportRatio,
+                            RelativeSizeAxes = Axes.Y,
+                            Width = 2.4f,
+                            Colour = EditorColours.TimelinePlayhead,
+                            EdgeSmoothness = new Vector2(1, 0)
                         }
                     }
                 };
@@ -424,7 +468,7 @@ namespace BeatSight.Game.Screens.Editor
                     if (playheadViewportX >= 0 && playheadViewportX <= viewportWidth)
                         resolvedAnchorX = playheadViewportX;
                     else
-                        resolvedAnchorX = viewportWidth > 0 ? viewportWidth * 0.5 : 0;
+                        resolvedAnchorX = viewportWidth > 0 ? viewportWidth * playheadViewportRatio : 0;
                 }
 
                 if (!double.IsFinite(resolvedAnchorX))
@@ -455,7 +499,8 @@ namespace BeatSight.Game.Screens.Editor
                 waveformDrawable.SetPixelsPerSecond(PixelsPerSecond);
             }
 
-            public void SetSnap(int divisor, double bpm) => setSnapInternal(divisor, bpm, false);
+            public void SetSnap(int divisor, double bpm, double timingOffsetMs = 0, int beatsPerMeasure = 4, int beatUnitDenominator = 4)
+                => setSnapInternal(divisor, bpm, timingOffsetMs, beatsPerMeasure, beatUnitDenominator, false);
 
             public void SetBeatGridVisible(bool visible) => setBeatGridVisibleInternal(visible);
 
@@ -488,14 +533,13 @@ namespace BeatSight.Game.Screens.Editor
                 return true;
             }
 
-            public bool TryAddHitObjectAtTimeAndLane(double timeMs, int lane)
+            public bool TryAddHitObjectAtTimeAndLane(double timeMs, int lane, bool bypassSnap = false, bool selectInsertedNote = true)
             {
                 if (beatmap == null || laneCount <= 0)
                     return false;
 
                 int clampedLane = Math.Clamp(lane, 0, laneCount - 1);
-                addNoteAtLane(timeMs, clampedLane);
-                return true;
+                return addNoteAtLane(timeMs, clampedLane, bypassSnap, selectInsertedNote);
             }
 
             public bool TryDeleteNearestHitObject(double timeMs, int lane, double maxDistanceMs)
@@ -613,12 +657,15 @@ namespace BeatSight.Game.Screens.Editor
             public void SetCurrentTime(double timeMs, bool ensureVisible = true)
             {
                 float x = (float)(timeMs / 1000.0 * PixelsPerSecond);
-                playhead.X = x;
+                bool moved = Math.Abs(playhead.X - x) >= 0.05f;
+                if (moved)
+                    playhead.X = x;
 
                 if (ensureVisible)
                     ScrollToPlayhead();
 
-                updateViewportHint();
+                if (moved || ensureVisible)
+                    updateViewportHint();
             }
 
             public void SetSelectedNoteTime(double timeMs)
@@ -740,27 +787,21 @@ namespace BeatSight.Game.Screens.Editor
             public void ScrollToPlayhead()
             {
                 double playheadX = playhead.X;
-                double viewStart = scroll.Current;
-                double viewEnd = viewStart + scroll.DrawWidth;
+                double viewportWidth = Math.Max(0, scroll.DrawWidth);
+                if (viewportWidth <= 0)
+                    return;
 
-                if (playheadX < viewStart)
-                {
-                    scroll.ScrollTo((float)Math.Max(0, playheadX - 20));
-                }
-                else if (playheadX > viewEnd)
-                {
-                    scroll.ScrollTo((float)Math.Max(0, playheadX - scroll.DrawWidth / 2));
-                }
+                double maxScroll = Math.Max(0, timelineSurface.Width - viewportWidth);
+                double target = Math.Clamp(playheadX - viewportWidth * playheadViewportRatio, 0, maxScroll);
+                if (Math.Abs(scroll.Current - target) < 0.35)
+                    return;
+
+                scroll.ScrollTo((float)target, false);
             }
 
             protected override bool OnClick(ClickEvent e)
             {
-                if (!IsLoaded)
-                    return base.OnClick(e);
-
-                var local = timelineSurface.ToLocalSpace(e.ScreenSpaceMousePosition);
-                double timeMs = Math.Max(0, local.X / PixelsPerSecond * 1000);
-                SeekRequested?.Invoke(timeMs);
+                // Seeking is intentionally moved to wheel scrub and footer seek bar.
                 return true;
             }
 
@@ -775,29 +816,27 @@ namespace BeatSight.Game.Screens.Editor
 
             protected override bool OnScroll(ScrollEvent e)
             {
+                double delta = e.ScrollDelta.Y != 0 ? e.ScrollDelta.Y : -e.ScrollDelta.X;
+                if (Math.Abs(delta) <= Precision.FLOAT_EPSILON)
+                    return base.OnScroll(e);
+
                 if (e.ControlPressed)
                 {
-                    double delta = e.ScrollDelta.Y != 0 ? e.ScrollDelta.Y : -e.ScrollDelta.X;
-                    if (Math.Abs(delta) > Precision.FLOAT_EPSILON)
-                    {
-                        double factor = delta > 0 ? 1.1 : 1 / 1.1;
-                        float viewportAnchorX = scroll.ToLocalSpace(e.ScreenSpaceMousePosition).X;
-                        setZoomInternal(zoom * factor, true, viewportAnchorX);
-                        return true;
-                    }
+                    double factor = delta > 0 ? 1.1 : 1 / 1.1;
+                    float viewportAnchorX = scroll.ToLocalSpace(e.ScreenSpaceMousePosition).X;
+                    setZoomInternal(zoom * factor, true, viewportAnchorX);
+                    return true;
                 }
 
                 if (e.AltPressed)
                 {
-                    double delta = e.ScrollDelta.Y != 0 ? e.ScrollDelta.Y : -e.ScrollDelta.X;
-                    if (Math.Abs(delta) > Precision.FLOAT_EPSILON)
-                    {
-                        adjustSnapFromScroll(delta > 0);
-                        return true;
-                    }
+                    adjustSnapFromScroll(delta > 0);
+                    return true;
                 }
 
-                return base.OnScroll(e);
+                // Let EditorScreen own plain-wheel scrubbing so behavior stays consistent
+                // across timeline + preview and keeps the fixed playhead locked.
+                return false;
             }
 
             private void rebuildLaneBackgrounds()
@@ -810,10 +849,8 @@ namespace BeatSight.Game.Screens.Editor
                 for (int lane = 0; lane < laneCount; lane++)
                 {
                     float fraction = (float)lane / laneCount;
-                    var laneBase = UITheme.GetLaneColourForLogicalIndex(lane, laneCount);
-                    var laneEdge = UITheme.GetLaneEdgeColourForLogicalIndex(lane, laneCount);
-                    var laneFill = EditorColours.Mix(EditorColours.TimelineRowFill, laneBase, 0.42f).Opacity(0.85f);
-                    var edgeColour = EditorColours.Mix(EditorColours.TimelineRowLine, laneEdge, 0.55f).Opacity(0.9f);
+                    var laneFill = EditorColours.TimelineRowFill;
+                    var edgeColour = EditorColours.TimelineRowLine;
 
                     laneBackgrounds.Add(new Container
                     {
@@ -858,7 +895,7 @@ namespace BeatSight.Game.Screens.Editor
                                 new Box
                                 {
                                     RelativeSizeAxes = Axes.Both,
-                                    Colour = EditorColours.Mix(EditorColours.TimelineLabelBackground, laneBase, 0.26f).Opacity(0.92f)
+                                    Colour = EditorColours.TimelineLabelBackground.Opacity(0.92f)
                                 },
                                 new SpriteText
                                 {
@@ -902,7 +939,9 @@ namespace BeatSight.Game.Screens.Editor
 
                     if (componentSource.Count > 0)
                     {
-                        var groupedLayout = LaneLayoutFactory.CreateFromComponents(componentSource.ToList());
+                        var groupedLayout = LaneLayoutFactory.CreateFromComponents(
+                            componentSource.ToList(),
+                            minimumLaneCount: defaultLaneCount);
                         laneCountFromComponents = groupedLayout.LaneCount;
                     }
                 }
@@ -974,23 +1013,13 @@ namespace BeatSight.Game.Screens.Editor
 
             private string getLaneLabel(int laneIndex)
             {
-                if (beatmap?.DrumKit?.LaneLayout?.Lanes != null)
-                {
-                    var laneInfo = beatmap.DrumKit.LaneLayout.Lanes.FirstOrDefault(l => l.Index == laneIndex);
-                    if (laneInfo != null)
-                    {
-                        if (!string.IsNullOrWhiteSpace(laneInfo.ShortName))
-                            return laneInfo.ShortName!;
-
-                        if (!string.IsNullOrWhiteSpace(laneInfo.Name))
-                            return laneInfo.Name!;
-                    }
-                }
-
+                string fallback;
                 if (laneIndex >= 0 && laneIndex < laneMapping.Count)
-                    return formatLaneName(laneMapping[laneIndex]);
+                    fallback = formatLaneName(laneMapping[laneIndex]);
+                else
+                    fallback = $"Lane {laneIndex + 1}";
 
-                return $"Lane {laneIndex + 1}";
+                return LaneManagement.ResolveLaneLabel(beatmap, laneIndex, fallback);
             }
 
             private static string formatLaneName(string component)
@@ -1056,13 +1085,17 @@ namespace BeatSight.Game.Screens.Editor
                 if (durationMs <= 0 || PixelsPerSecond <= 0)
                     return;
 
-                const int beatsPerMeasure = 4;
-                double effectiveBpm = bpm > 0 && double.IsFinite(bpm) ? bpm : 120.0;
+                int effectiveBeatsPerMeasure = Math.Max(1, beatsPerMeasure);
+                double rhythmAnchorMs = timingOffsetMs;
+                if (!(bpm > 0) || !double.IsFinite(bpm))
+                    return;
+
+                double effectiveBpm = bpm;
                 double beatMs = 60000.0 / effectiveBpm;
                 if (!double.IsFinite(beatMs) || beatMs <= 0)
                     return;
 
-                double measureMs = beatMs * beatsPerMeasure;
+                double measureMs = beatMs * effectiveBeatsPerMeasure;
                 double beatPixels = beatMs / 1000.0 * PixelsPerSecond;
                 double measurePixels = measureMs / 1000.0 * PixelsPerSecond;
                 double subdivisionPixels = snapIntervalMs.HasValue ? snapIntervalMs.Value / 1000.0 * PixelsPerSecond : 0;
@@ -1109,27 +1142,27 @@ namespace BeatSight.Game.Screens.Editor
 
                 if (drawMeasures)
                 {
-                    int startMeasure = Math.Max(0, (int)Math.Floor(minTime / measureMs) - 1);
-                    int endMeasure = Math.Max(startMeasure, (int)Math.Ceiling(maxTime / measureMs) + 1);
+                    int startMeasure = (int)Math.Floor((minTime - rhythmAnchorMs) / measureMs) - 1;
+                    int endMeasure = Math.Max(startMeasure, (int)Math.Ceiling((maxTime - rhythmAnchorMs) / measureMs) + 1);
 
                     for (int i = startMeasure; i <= endMeasure; i++)
                     {
-                        double time = i * measureMs;
+                        double time = rhythmAnchorMs + i * measureMs;
                         addLine(time, measureColour, 0.92f, 2.2f);
                     }
                 }
 
                 if (drawBeats)
                 {
-                    int startBeat = Math.Max(0, (int)Math.Floor(minTime / beatMs) - 1);
-                    int endBeat = Math.Max(startBeat, (int)Math.Ceiling(maxTime / beatMs) + 1);
+                    int startBeat = (int)Math.Floor((minTime - rhythmAnchorMs) / beatMs) - 1;
+                    int endBeat = Math.Max(startBeat, (int)Math.Ceiling((maxTime - rhythmAnchorMs) / beatMs) + 1);
 
                     for (int i = startBeat; i <= endBeat; i++)
                     {
-                        if (drawMeasures && beatsPerMeasure > 0 && i % beatsPerMeasure == 0)
+                        if (drawMeasures && effectiveBeatsPerMeasure > 0 && i % effectiveBeatsPerMeasure == 0)
                             continue;
 
-                        double time = i * beatMs;
+                        double time = rhythmAnchorMs + i * beatMs;
                         addLine(time, beatColour, 0.66f, 1.15f);
                     }
                 }
@@ -1139,17 +1172,18 @@ namespace BeatSight.Game.Screens.Editor
                     double interval = snapIntervalMs.Value;
                     double beatLengthTolerance = Math.Max(beatMs * 0.01, 0.5);
                     double measureLengthTolerance = Math.Max(measureMs * 0.01, 1);
-                    int startSubdivision = Math.Max(0, (int)Math.Floor(minTime / interval) - 1);
-                    int endSubdivision = Math.Max(startSubdivision, (int)Math.Ceiling(maxTime / interval) + 1);
+                    int startSubdivision = (int)Math.Floor((minTime - rhythmAnchorMs) / interval) - 1;
+                    int endSubdivision = Math.Max(startSubdivision, (int)Math.Ceiling((maxTime - rhythmAnchorMs) / interval) + 1);
 
                     for (int i = startSubdivision; i <= endSubdivision; i++)
                     {
-                        double time = i * interval;
+                        double time = rhythmAnchorMs + i * interval;
+                        double rhythmRelativeTime = time - rhythmAnchorMs;
 
-                        if (drawMeasures && isMultiple(time, measureMs, measureLengthTolerance))
+                        if (drawMeasures && isMultiple(rhythmRelativeTime, measureMs, measureLengthTolerance))
                             continue;
 
-                        if (drawBeats && isMultiple(time, beatMs, beatLengthTolerance))
+                        if (drawBeats && isMultiple(rhythmRelativeTime, beatMs, beatLengthTolerance))
                             continue;
 
                         addLine(time, subdivisionColour, 0.48f, 1f);
@@ -1161,7 +1195,7 @@ namespace BeatSight.Game.Screens.Editor
                     if (modulus <= 0)
                         return false;
 
-                    double remainder = value % modulus;
+                    double remainder = Math.Abs(value % modulus);
                     return remainder <= tolerance || modulus - remainder <= tolerance;
                 }
             }
@@ -1289,8 +1323,15 @@ namespace BeatSight.Game.Screens.Editor
                 return $"{(int)span.TotalMinutes:00}:{span.Seconds:00}.{span.Milliseconds:000}";
             }
 
-            private partial class TimelineScrollContainer : BasicScrollContainer
+            private partial class TimelineScrollContainer : BeatSightScrollContainer
             {
+                public TimelineScrollContainer()
+                    : base(Direction.Horizontal)
+                {
+                }
+
+                protected override bool OnScroll(ScrollEvent e) => false;
+
                 protected override bool OnDragStart(DragStartEvent e) => false;
 
                 protected override void OnDrag(DragEvent e)
@@ -1365,17 +1406,19 @@ namespace BeatSight.Game.Screens.Editor
                     laneCount,
                     time => (float)(time / 1000.0 * PixelsPerSecond),
                     x => Math.Max(0, x / PixelsPerSecond * 1000),
-                    component => resolveLaneFromComponent(component))
+                    component => resolveLaneFromComponent(component),
+                    lane => resolveLaneColour(lane))
                 {
                     Anchor = Anchor.TopLeft,
-                    Origin = Anchor.CentreLeft
+                    Origin = Anchor.Centre
                 };
 
                 note.Selected += onNoteSelected;
                 note.DeleteRequested += onNoteDeleted;
                 note.Dragged += onNoteDragged;
                 note.LaneChanged += onNoteLaneChanged;
-                note.DragStarted += () => EditBegan?.Invoke();
+                note.DragStarted += () => onNoteDragStarted(note);
+                note.DragEnded += () => onNoteDragEnded(note);
 
                 return note;
             }
@@ -1391,6 +1434,59 @@ namespace BeatSight.Game.Screens.Editor
 
                 int resolved = DrumLaneHeuristics.ResolveLane(component, laneResolutionLayout);
                 return Math.Clamp(resolved, 0, Math.Max(0, laneCount - 1));
+            }
+
+            private int resolveHitObjectLane(HitObject hitObject)
+            {
+                if (hitObject.Lane.HasValue && hitObject.Lane.Value >= 0 && hitObject.Lane.Value < laneCount)
+                    return hitObject.Lane.Value;
+
+                return resolveLaneFromComponent(hitObject.Component);
+            }
+
+            private Color4? resolveLaneColour(int lane)
+            {
+                int resolvedLane = Math.Clamp(lane, 0, Math.Max(0, laneCount - 1));
+                if (LaneManagement.TryGetLaneColor(beatmap, resolvedLane, out Color4 laneColour))
+                    return laneColour;
+
+                var palette = LaneManagement.DefaultPalette;
+                if (palette.Count > 0)
+                    return palette[resolvedLane % palette.Count];
+
+                return null;
+            }
+
+            private bool hasLaneTimeConflict(int lane, int timeMs, HitObject? excludedHit = null, HashSet<HitObject>? ignoredHits = null)
+            {
+                for (int i = 0; i < notes.Count; i++)
+                {
+                    HitObject hit = notes[i].HitObject;
+                    if (ReferenceEquals(hit, excludedHit))
+                        continue;
+                    if (ignoredHits != null && ignoredHits.Contains(hit))
+                        continue;
+
+                    if (resolveHitObjectLane(hit) == lane && hit.Time == timeMs)
+                        return true;
+                }
+
+                return false;
+            }
+
+            private TimelineNoteDrawable? findNoteDrawableAtLaneAndTime(int lane, int timeMs, HitObject? excludedHit = null)
+            {
+                for (int i = 0; i < notes.Count; i++)
+                {
+                    TimelineNoteDrawable note = notes[i];
+                    if (ReferenceEquals(note.HitObject, excludedHit))
+                        continue;
+
+                    if (resolveHitObjectLane(note.HitObject) == lane && note.HitObject.Time == timeMs)
+                        return note;
+                }
+
+                return null;
             }
 
             private void onNoteSelected(TimelineNoteDrawable note)
@@ -1416,6 +1512,9 @@ namespace BeatSight.Game.Screens.Editor
                 if (selectedNote == note)
                     selectedNote = null;
 
+                if (dragAnchorNote == note)
+                    clearGroupedDragState();
+
                 NoteDeleted?.Invoke(note.HitObject);
                 updateViewportHint(force: true);
             }
@@ -1425,19 +1524,152 @@ namespace BeatSight.Game.Screens.Editor
                 if (beatmap == null)
                     return;
 
-                double snapped = snapIntervalMs.HasValue
-                    ? snapToInterval(timeMs, snapIntervalMs.Value)
-                    : timeMs;
+                if (dragAnchorNote == note && dragSelectionBaseline.Count > 1)
+                {
+                    double snappedAnchorTime = snapIntervalMs.HasValue
+                        ? snapToInterval(timeMs, snapIntervalMs.Value, timingOffsetMs)
+                        : Math.Max(0, timeMs);
+                    int delta = (int)Math.Round(snappedAnchorTime) - dragAnchorBaselineTime;
 
-                note.HitObject.Time = (int)Math.Round(snapped);
+                    var proposedTimes = new Dictionary<HitObject, int>(dragSelectionBaseline.Count);
+                    bool anyChanged = false;
+                    foreach (var entry in dragSelectionBaseline)
+                    {
+                        int newTime = Math.Max(0, entry.Value + delta);
+                        proposedTimes[entry.Key] = newTime;
+                        if (entry.Key.Time == newTime)
+                            continue;
+
+                        anyChanged = true;
+                    }
+
+                    if (!anyChanged)
+                        return;
+
+                    var movingHits = new HashSet<HitObject>(dragSelectionBaseline.Keys);
+                    var proposedPositions = new HashSet<(int Lane, int Time)>();
+                    foreach (var entry in proposedTimes)
+                    {
+                        int lane = resolveHitObjectLane(entry.Key);
+                        if (!proposedPositions.Add((lane, entry.Value)))
+                            return;
+
+                        if (hasLaneTimeConflict(lane, entry.Value, entry.Key, movingHits))
+                            return;
+                    }
+
+                    foreach (var entry in proposedTimes)
+                        entry.Key.Time = entry.Value;
+
+                    groupedDragDirty = true;
+                    float laneHeight = laneHeightForNotes();
+                    foreach (var timelineNote in notes)
+                    {
+                        if (!dragSelectionBaseline.ContainsKey(timelineNote.HitObject))
+                            continue;
+
+                        timelineNote.UpdateLayout(PixelsPerSecond, laneHeight);
+                        updateNoteDepth(timelineNote);
+                        NoteChanged?.Invoke(timelineNote.HitObject);
+                    }
+
+                    var draggedRangeNotes = notes
+                        .Where(n => dragSelectionBaseline.ContainsKey(n.HitObject))
+                        .Select(n => n.HitObject.Time)
+                        .ToList();
+                    if (draggedRangeNotes.Count > 0)
+                    {
+                        selectionStart = draggedRangeNotes.Min();
+                        selectionEnd = draggedRangeNotes.Max();
+                        updateSelectionVisuals();
+                        notifySelectionChanged();
+                    }
+
+                    updateViewportHint(force: true);
+                    return;
+                }
+
+                double snapped = snapIntervalMs.HasValue
+                    ? snapToInterval(timeMs, snapIntervalMs.Value, timingOffsetMs)
+                    : Math.Max(0, timeMs);
+                int targetTime = (int)Math.Round(snapped);
+                int targetLane = resolveHitObjectLane(note.HitObject);
+                if (targetTime != note.HitObject.Time && hasLaneTimeConflict(targetLane, targetTime, note.HitObject))
+                    return;
+
+                note.HitObject.Time = targetTime;
                 note.UpdateLayout(PixelsPerSecond, laneHeightForNotes());
                 updateNoteDepth(note);
                 NoteChanged?.Invoke(note.HitObject);
             }
 
+            private void onNoteDragStarted(TimelineNoteDrawable note)
+            {
+                EditBegan?.Invoke();
+                activeDragNote = note;
+                DragStarted?.Invoke();
+                groupedDragDirty = false;
+                clearGroupedDragState();
+
+                if (!selectionStart.HasValue || !selectionEnd.HasValue || Precision.AlmostEquals(selectionStart.Value, selectionEnd.Value))
+                    return;
+
+                double rangeStart = Math.Min(selectionStart.Value, selectionEnd.Value);
+                double rangeEnd = Math.Max(selectionStart.Value, selectionEnd.Value);
+                if (note.HitObject.Time < rangeStart || note.HitObject.Time > rangeEnd)
+                    return;
+
+                var rangeNotes = notes
+                    .Where(n => n.HitObject.Time >= rangeStart && n.HitObject.Time <= rangeEnd)
+                    .ToList();
+                if (rangeNotes.Count <= 1)
+                    return;
+
+                dragAnchorNote = note;
+                dragAnchorBaselineTime = note.HitObject.Time;
+                foreach (var rangeNote in rangeNotes)
+                    dragSelectionBaseline[rangeNote.HitObject] = rangeNote.HitObject.Time;
+            }
+
+            private void onNoteDragEnded(TimelineNoteDrawable note)
+            {
+                if (activeDragNote != note)
+                    return;
+
+                activeDragNote = null;
+                DragEnded?.Invoke();
+
+                if (groupedDragDirty && beatmap != null)
+                    beatmap.HitObjects.Sort((a, b) => a.Time.CompareTo(b.Time));
+
+                if (dragAnchorNote != note)
+                    return;
+
+                clearGroupedDragState();
+            }
+
+            private void clearGroupedDragState()
+            {
+                dragAnchorNote = null;
+                dragSelectionBaseline.Clear();
+                dragAnchorBaselineTime = 0;
+                groupedDragDirty = false;
+            }
+
             private void onNoteLaneChanged(TimelineNoteDrawable note, int lane)
             {
-                note.HitObject.Lane = lane;
+                if (laneCount <= 0)
+                    return;
+
+                int resolvedLane = Math.Clamp(lane, 0, laneCount - 1);
+                int currentLane = resolveHitObjectLane(note.HitObject);
+                if (resolvedLane == currentLane)
+                    return;
+
+                if (hasLaneTimeConflict(resolvedLane, note.HitObject.Time, note.HitObject))
+                    return;
+
+                note.HitObject.Lane = resolvedLane;
                 note.UpdateLayout(PixelsPerSecond, laneHeightForNotes());
                 NoteChanged?.Invoke(note.HitObject);
             }
@@ -1450,7 +1682,7 @@ namespace BeatSight.Game.Screens.Editor
             private void addNoteAt(double timeMs, float yPosition)
             {
                 int lane = resolveLaneFromYPosition(yPosition);
-                addNoteAtLane(timeMs, lane);
+                addNoteAtLane(timeMs, lane, bypassSnap: false, selectInsertedNote: true);
             }
 
             private int resolveLaneFromYPosition(float yPosition)
@@ -1466,23 +1698,33 @@ namespace BeatSight.Game.Screens.Editor
                 return Math.Clamp((int)(clampedY / Math.Max(1, laneAreaHeight) * laneCount), 0, laneCount - 1);
             }
 
-            private void addNoteAtLane(double timeMs, int lane)
+            private bool addNoteAtLane(double timeMs, int lane, bool bypassSnap, bool selectInsertedNote = true)
             {
                 if (beatmap == null || laneCount <= 0)
-                    return;
+                    return false;
 
-                double snapped = snapIntervalMs.HasValue
-                    ? snapToInterval(timeMs, snapIntervalMs.Value)
-                    : timeMs;
+                double snapped = !bypassSnap && snapIntervalMs.HasValue
+                    ? snapToInterval(timeMs, snapIntervalMs.Value, timingOffsetMs)
+                    : Math.Max(0, timeMs);
 
                 int resolvedLane = Math.Clamp(lane, 0, laneCount - 1);
+                int resolvedTime = (int)Math.Round(snapped);
+                TimelineNoteDrawable? duplicate = findNoteDrawableAtLaneAndTime(resolvedLane, resolvedTime);
+                if (duplicate != null)
+                {
+                    if (selectInsertedNote)
+                        onNoteSelected(duplicate);
+
+                    return false;
+                }
+
                 string component = laneMapping.Count > 0
                     ? laneMapping[Math.Clamp(resolvedLane, 0, laneMapping.Count - 1)]
                     : "kick";
 
                 var hit = new HitObject
                 {
-                    Time = (int)Math.Round(snapped),
+                    Time = resolvedTime,
                     Lane = resolvedLane,
                     Component = component,
                     Velocity = 0.8
@@ -1498,8 +1740,10 @@ namespace BeatSight.Game.Screens.Editor
                 note.UpdateLayout(PixelsPerSecond, laneHeightForNotes());
                 updateNoteDepth(note);
                 NoteAdded?.Invoke(hit);
-                onNoteSelected(note);
+                if (selectInsertedNote)
+                    onNoteSelected(note);
                 updateViewportHint(force: true);
+                return true;
             }
 
             private void updateSurfaceWidth(bool rebuildStaticLayers = true)
@@ -1516,12 +1760,12 @@ namespace BeatSight.Game.Screens.Editor
                 laneLayoutDirty = true;
             }
 
-            private static double snapToInterval(double value, double interval)
+            private static double snapToInterval(double value, double interval, double origin)
             {
                 if (interval <= 0)
                     return value;
 
-                double snapped = Math.Round(value / interval) * interval;
+                double snapped = Math.Round((value - origin) / interval) * interval + origin;
                 return snapped < 0 ? 0 : snapped;
             }
 
@@ -1549,8 +1793,8 @@ namespace BeatSight.Game.Screens.Editor
                     }
                     else
                     {
-                        // Default to viewport-centred zoom for discrete actions.
-                        resolvedViewportAnchorX = viewportWidth > 0 ? viewportWidth * 0.5 : 0;
+                        // Default to fixed-playhead-centric zoom for discrete actions.
+                        resolvedViewportAnchorX = viewportWidth > 0 ? viewportWidth * playheadViewportRatio : 0;
                     }
 
                     if (!double.IsFinite(resolvedViewportAnchorX))
@@ -1559,7 +1803,7 @@ namespace BeatSight.Game.Screens.Editor
                     if (viewportWidth > 0)
                     {
                         if (resolvedViewportAnchorX < 0 || resolvedViewportAnchorX > viewportWidth)
-                            resolvedViewportAnchorX = viewportWidth * 0.5;
+                            resolvedViewportAnchorX = viewportWidth * playheadViewportRatio;
 
                         resolvedViewportAnchorX = Math.Clamp(resolvedViewportAnchorX, 0, viewportWidth);
                     }
@@ -1609,6 +1853,20 @@ namespace BeatSight.Game.Screens.Editor
                     (startMs, endMs) = (endMs, startMs);
 
                 return (startMs, endMs);
+            }
+
+            private double getFutureViewportDurationMs(double zoomLevel)
+            {
+                double viewportWidth = Math.Max(0, scroll.DrawWidth);
+                if (viewportWidth <= 0)
+                    return 0;
+
+                double pixelsPerSecond = basePixelsPerSecond * zoomLevel;
+                if (!double.IsFinite(pixelsPerSecond) || pixelsPerSecond <= 0)
+                    return 0;
+
+                double futurePixels = viewportWidth * (1.0 - playheadViewportRatio);
+                return Math.Max(0, futurePixels / pixelsPerSecond * 1000.0);
             }
 
             private void updateViewportHint(bool force = false)
@@ -1703,18 +1961,22 @@ namespace BeatSight.Game.Screens.Editor
                 scroll.ScrollTo((float)Math.Clamp(targetScroll, 0, maxScroll), false);
             }
 
-            private void setSnapInternal(int divisor, double bpm, bool notify)
+            private void setSnapInternal(int divisor, double bpm, double timingOffsetMs, int beatsPerMeasure, int beatUnitDenominator, bool notify)
             {
                 this.bpm = bpm;
+                this.timingOffsetMs = timingOffsetMs;
+                this.beatsPerMeasure = Math.Max(1, beatsPerMeasure);
+                this.beatUnitDenominator = Math.Max(1, beatUnitDenominator);
                 snapDivisor = divisor <= 0 ? 1 : divisor;
 
-                if (divisor <= 0 || bpm <= 0)
+                if (divisor <= 0 || !(bpm > 0) || !double.IsFinite(bpm))
                 {
                     snapIntervalMs = null;
                 }
                 else
                 {
-                    snapIntervalMs = 60000.0 / bpm / divisor;
+                    double beatUnitDuration = 60000.0 / bpm * (4.0 / this.beatUnitDenominator);
+                    snapIntervalMs = beatUnitDuration / divisor;
                 }
 
                 rebuildBeatGrid();
@@ -1741,7 +2003,7 @@ namespace BeatSight.Game.Screens.Editor
                 if (newDivisor == snapDivisor)
                     return;
 
-                setSnapInternal(newDivisor, bpm, true);
+                setSnapInternal(newDivisor, bpm, timingOffsetMs, beatsPerMeasure, beatUnitDenominator, true);
             }
 
             private void setBeatGridVisibleInternal(bool visible)
@@ -1807,40 +2069,69 @@ namespace BeatSight.Game.Screens.Editor
 
             protected override bool OnMouseDown(MouseDownEvent e)
             {
-                if (e.Button == MouseButton.Left && e.ShiftPressed)
+                if (e.Button == MouseButton.Left)
                 {
-                    if (selectedNote != null)
+                    bool overNote = isPointerOverNote(e.ScreenSpaceMousePosition);
+                    if (e.ShiftPressed || !overNote)
                     {
-                        selectedNote.SetSelected(false);
-                        selectedNote = null;
+                        if (selectedNote != null)
+                        {
+                            selectedNote.SetSelected(false);
+                            selectedNote = null;
+                        }
+
+                        double time = screenSpaceToTimelineTime(e.ScreenSpaceMousePosition);
+                        selectionStart = time;
+                        selectionEnd = time;
+                        pointerSelectionActive = true;
+                        updateSelectionVisuals();
+                        notifySelectionChanged();
+                        return true;
                     }
 
-                    float x = timelineSurface.ToLocalSpace(e.ScreenSpaceMousePosition).X;
-                    double time = x / PixelsPerSecond * 1000;
-                    selectionStart = time;
-                    selectionEnd = time;
-                    updateSelectionVisuals();
-                    notifySelectionChanged();
-                    return true;
-                }
-
-                if (e.Button == MouseButton.Left && !e.ShiftPressed)
                     clearSelectionRange();
+                }
 
                 return base.OnMouseDown(e);
             }
 
             protected override void OnDrag(DragEvent e)
             {
-                if (selectionStart.HasValue && e.Button == MouseButton.Left && e.ShiftPressed)
+                if (pointerSelectionActive && selectionStart.HasValue && e.Button == MouseButton.Left)
                 {
-                    float x = timelineSurface.ToLocalSpace(e.ScreenSpaceMousePosition).X;
-                    double time = x / PixelsPerSecond * 1000;
+                    double time = screenSpaceToTimelineTime(e.ScreenSpaceMousePosition);
                     selectionEnd = time;
                     updateSelectionVisuals();
                     notifySelectionChanged();
+                    return;
                 }
+
                 base.OnDrag(e);
+            }
+
+            protected override void OnMouseUp(MouseUpEvent e)
+            {
+                if (e.Button == MouseButton.Left)
+                    pointerSelectionActive = false;
+
+                base.OnMouseUp(e);
+            }
+
+            private bool isPointerOverNote(Vector2 screenSpacePosition)
+            {
+                foreach (var note in notes)
+                {
+                    if (note.ReceivePositionalInputAt(screenSpacePosition))
+                        return true;
+                }
+
+                return false;
+            }
+
+            private double screenSpaceToTimelineTime(Vector2 screenSpacePosition)
+            {
+                float x = timelineSurface.ToLocalSpace(screenSpacePosition).X;
+                return Math.Max(0, x / PixelsPerSecond * 1000);
             }
         }
 
@@ -2009,6 +2300,7 @@ namespace BeatSight.Game.Screens.Editor
             private readonly Func<double, float> timeToX;
             private readonly Func<float, double> xToTime;
             private readonly Func<string, int> resolveLaneFromComponent;
+            private readonly Func<int, Color4?>? resolveLaneColour;
             private readonly int laneCount;
             private readonly Box background;
             private readonly Box border;
@@ -2022,19 +2314,22 @@ namespace BeatSight.Game.Screens.Editor
             public event Action<TimelineNoteDrawable, double>? Dragged;
             public event Action<TimelineNoteDrawable, int>? LaneChanged;
             public event Action? DragStarted;
+            public event Action? DragEnded;
 
             public TimelineNoteDrawable(
                 HitObject hitObject,
                 int laneCount,
                 Func<double, float> timeToX,
                 Func<float, double> xToTime,
-                Func<string, int> resolveLaneFromComponent)
+                Func<string, int> resolveLaneFromComponent,
+                Func<int, Color4?>? resolveLaneColour = null)
             {
                 HitObject = hitObject;
                 this.laneCount = laneCount;
                 this.timeToX = timeToX;
                 this.xToTime = xToTime;
                 this.resolveLaneFromComponent = resolveLaneFromComponent;
+                this.resolveLaneColour = resolveLaneColour;
 
                 Size = new Vector2(baseWidth, 30);
                 CornerRadius = 5;
@@ -2067,16 +2362,20 @@ namespace BeatSight.Game.Screens.Editor
                         Alpha = 0
                     }
                 };
+
+                refreshColour(resolveEffectiveLane());
             }
 
             public void UpdateLayout(double pixelsPerSecond, float laneHeight)
             {
                 float x = timeToX(HitObject.Time);
                 int lane = resolveEffectiveLane();
-                float y = laneHeight * lane + laneHeight / 2;
+                float y = MathF.Round(laneHeight * lane + laneHeight / 2f);
+                float noteHeight = MathF.Round(Math.Clamp(laneHeight * 0.72f, 16f, 44f));
 
                 Position = new Vector2(x, y);
-                Size = new Vector2(baseWidth, Math.Clamp(laneHeight * 0.72f, 16f, 44f));
+                Size = new Vector2(baseWidth, noteHeight);
+                refreshColour(lane);
             }
 
             public void SetSelected(bool selected)
@@ -2116,9 +2415,15 @@ namespace BeatSight.Game.Screens.Editor
                 Dragged?.Invoke(this, xToTime(parentX));
             }
 
+            protected override void OnDragEnd(DragEndEvent e)
+            {
+                DragEnded?.Invoke();
+                base.OnDragEnd(e);
+            }
+
             protected override bool OnScroll(ScrollEvent e)
             {
-                if (e.ControlPressed || e.AltPressed)
+                if (e.ControlPressed || !e.AltPressed)
                     return false;
 
                 int laneDelta = e.ScrollDelta.Y > 0 ? -1 : 1;
@@ -2169,6 +2474,16 @@ namespace BeatSight.Game.Screens.Editor
                     return new Color4(170, 190, 255, 255);
 
                 return new Color4(200, 200, 220, 255);
+            }
+
+            private void refreshColour(int lane)
+            {
+                Color4 resolved = resolveLaneColour?.Invoke(lane) ?? ResolveColour(HitObject.Component);
+                if (background.Colour == resolved)
+                    return;
+
+                Colour = resolved;
+                background.Colour = resolved;
             }
 
             private int resolveEffectiveLane()

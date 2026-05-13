@@ -6,11 +6,13 @@ using BeatSight.Game.UI.Theming;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.IO.Stores;
 using osu.Framework.Screens;
 using osuTK;
+using osuTK.Graphics;
 
 namespace BeatSight.Game.Screens.Editor
 {
@@ -86,6 +88,7 @@ namespace BeatSight.Game.Screens.Editor
             var header = createHeader();
             var editor = createEditor();
             var footer = createFooter();
+            var workspace = createEditorWorkspace(editor, footer);
 
             var layoutRoot = new Container
             {
@@ -98,14 +101,12 @@ namespace BeatSight.Game.Screens.Editor
                         RowDimensions = new[]
                         {
                             new Dimension(GridSizeMode.AutoSize),
-                            new Dimension(),
-                            new Dimension(GridSizeMode.AutoSize)
+                            new Dimension()
                         },
                         Content = new[]
                         {
                             new Drawable[] { header },
-                            new Drawable[] { editor },
-                            new Drawable[] { footer }
+                            new Drawable[] { workspace }
                         }
                     },
                     historyPanel
@@ -124,6 +125,23 @@ namespace BeatSight.Game.Screens.Editor
                 {
                     RelativeSizeAxes = Axes.Both,
                     Colour = EditorColours.ScreenBackground
+                },
+                new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = ColourInfo.GradientVertical(
+                        EditorColours.ScreenBackdropTop,
+                        EditorColours.ScreenBackdropBottom)
+                },
+                new Box
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Height = 240,
+                    Anchor = Anchor.TopLeft,
+                    Origin = Anchor.TopLeft,
+                    Colour = ColourInfo.GradientVertical(
+                        EditorColours.ScreenHeaderGlow,
+                        Color4.Transparent)
                 },
                 paddedLayout,
                 quickActionToast = new ToastContainer

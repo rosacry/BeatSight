@@ -72,6 +72,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 prepareInspectorUndoSnapshot();
                 beatmap.Timing.Offset = (int)Math.Round(offset);
+                syncTimelineSnapForCurrentTime(force: true);
                 beatmap.Metadata.ModifiedAt = DateTime.UtcNow;
                 markUnsaved();
             }
@@ -89,7 +90,7 @@ namespace BeatSight.Game.Screens.Editor
             prepareInspectorUndoSnapshot();
             beatmap.Timing.Bpm = Math.Clamp(bpm, 20, 400);
             beatmap.Metadata.ModifiedAt = DateTime.UtcNow;
-            timeline?.SetSnap(snapDivisor, beatmap.Timing.Bpm);
+            syncTimelineSnapForCurrentTime(force: true);
             bpmStatValue.Text = $"{beatmap.Timing.Bpm:0.##} BPM";
             markUnsaved();
             updateInspectorStats();

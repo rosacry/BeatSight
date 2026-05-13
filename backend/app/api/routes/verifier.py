@@ -139,6 +139,58 @@ class DecisionResponse(BaseModel):
     decided_at: datetime
 
 
+def _as_optional_str(value: object) -> Optional[str]:
+    return value if isinstance(value, str) else None
+
+
+def _get_display_name(user_like: object, fallback: str = "Unknown User") -> str:
+    display_name = _as_optional_str(getattr(user_like, "display_name", None))
+    if display_name:
+        return display_name
+
+    username = _as_optional_str(getattr(user_like, "username", None))
+    if username:
+        return username
+
+    return fallback
+
+
+def _build_decision_read(decision: object) -> DecisionRead:
+    verifier = getattr(decision, "verifier", None)
+    verifier_display_name = _get_display_name(verifier) if verifier else None
+    return DecisionRead(
+        id=decision.id,
+        decision=decision.decision,
+        notes=decision.notes,
+        verifier_id=decision.verifier_id,
+        verifier_display_name=verifier_display_name,
+        decided_at=decision.decided_at,
+    )
+
+
+def _build_proposal_read(proposal: MapEditProposal) -> ProposalRead:
+    proposer = proposal.proposer
+    return ProposalRead(
+        id=proposal.id,
+        map_version_id=proposal.map_version_id,
+        proposer=ProposerInfo(
+            id=proposer.id,
+            display_name=_get_display_name(proposer),
+            avatar_url=_as_optional_str(getattr(proposer, "avatar_url", None)),
+        ),
+        summary=proposal.summary if isinstance(proposal.summary, str) else "",
+        diff_payload=proposal.diff_payload
+        if isinstance(proposal.diff_payload, dict)
+        else {},
+        status=proposal.status,
+        submitted_at=proposal.submitted_at,
+        updated_at=proposal.updated_at,
+        decision=(
+            _build_decision_read(proposal.decision) if proposal.decision else None
+        ),
+    )
+
+
 # =============================================================================
 # Endpoints
 # =============================================================================
@@ -199,38 +251,7 @@ async def list_proposals(
     proposals = result.scalars().unique().all()
 
     # Convert to response
-    items = []
-    for proposal in proposals:
-        decision_read = None
-        if proposal.decision:
-            decision_read = DecisionRead(
-                id=proposal.decision.id,
-                decision=proposal.decision.decision,
-                notes=proposal.decision.notes,
-                verifier_id=proposal.decision.verifier_id,
-                verifier_display_name=proposal.decision.verifier.display_name
-                if proposal.decision.verifier
-                else None,
-                decided_at=proposal.decision.decided_at,
-            )
-
-        items.append(
-            ProposalRead(
-                id=proposal.id,
-                map_version_id=proposal.map_version_id,
-                proposer=ProposerInfo(
-                    id=proposal.proposer.id,
-                    display_name=proposal.proposer.display_name,
-                    avatar_url=None,  # Add avatar if available
-                ),
-                summary=proposal.summary,
-                diff_payload=proposal.diff_payload,
-                status=proposal.status,
-                submitted_at=proposal.submitted_at,
-                updated_at=proposal.updated_at,
-                decision=decision_read,
-            )
-        )
+    items = [_build_proposal_read(proposal) for proposal in proposals]
 
     return ProposalListResponse(
         items=items,
@@ -276,34 +297,7 @@ async def get_proposal(
             detail="Proposal not found",
         )
 
-    decision_read = None
-    if proposal.decision:
-        decision_read = DecisionRead(
-            id=proposal.decision.id,
-            decision=proposal.decision.decision,
-            notes=proposal.decision.notes,
-            verifier_id=proposal.decision.verifier_id,
-            verifier_display_name=proposal.decision.verifier.display_name
-            if proposal.decision.verifier
-            else None,
-            decided_at=proposal.decision.decided_at,
-        )
-
-    return ProposalRead(
-        id=proposal.id,
-        map_version_id=proposal.map_version_id,
-        proposer=ProposerInfo(
-            id=proposal.proposer.id,
-            display_name=proposal.proposer.display_name,
-            avatar_url=None,
-        ),
-        summary=proposal.summary,
-        diff_payload=proposal.diff_payload,
-        status=proposal.status,
-        submitted_at=proposal.submitted_at,
-        updated_at=proposal.updated_at,
-        decision=decision_read,
-    )
+    return _build_proposal_read(proposal)
 
 
 @router.post(
@@ -630,38 +624,7 @@ async def list_my_decisions(
     proposals = result.scalars().unique().all()
 
     # Convert to response
-    items = []
-    for proposal in proposals:
-        decision_read = None
-        if proposal.decision:
-            decision_read = DecisionRead(
-                id=proposal.decision.id,
-                decision=proposal.decision.decision,
-                notes=proposal.decision.notes,
-                verifier_id=proposal.decision.verifier_id,
-                verifier_display_name=proposal.decision.verifier.display_name
-                if proposal.decision.verifier
-                else None,
-                decided_at=proposal.decision.decided_at,
-            )
-
-        items.append(
-            ProposalRead(
-                id=proposal.id,
-                map_version_id=proposal.map_version_id,
-                proposer=ProposerInfo(
-                    id=proposal.proposer.id,
-                    display_name=proposal.proposer.display_name,
-                    avatar_url=None,
-                ),
-                summary=proposal.summary,
-                diff_payload=proposal.diff_payload,
-                status=proposal.status,
-                submitted_at=proposal.submitted_at,
-                updated_at=proposal.updated_at,
-                decision=decision_read,
-            )
-        )
+    items = [_build_proposal_read(proposal) for proposal in proposals]
 
     return ProposalListResponse(
         items=items,

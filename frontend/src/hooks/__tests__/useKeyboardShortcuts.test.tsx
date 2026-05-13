@@ -26,10 +26,25 @@ describe('useKeyboardShortcuts', () => {
         it('should throw error when used outside provider', () => {
             // Suppress console.error for this test
             const consoleError = vi.spyOn(console, 'error').mockImplementation(() => { })
+            const windowErrorHandler = (event: ErrorEvent) => {
+                if (
+                    event.error instanceof Error &&
+                    event.error.message.includes(
+                        'useKeyboardShortcuts must be used within a KeyboardShortcutsProvider'
+                    )
+                ) {
+                    event.preventDefault()
+                }
+            }
+            window.addEventListener('error', windowErrorHandler)
 
-            expect(() => {
-                renderHook(() => useKeyboardShortcuts())
-            }).toThrow('useKeyboardShortcuts must be used within a KeyboardShortcutsProvider')
+            try {
+                expect(() => {
+                    renderHook(() => useKeyboardShortcuts())
+                }).toThrow('useKeyboardShortcuts must be used within a KeyboardShortcutsProvider')
+            } finally {
+                window.removeEventListener('error', windowErrorHandler)
+            }
 
             consoleError.mockRestore()
         })

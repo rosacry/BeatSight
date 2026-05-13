@@ -59,6 +59,7 @@ namespace BeatSight.Game.Screens.Editor
 
             playbackPreview?.JumpToTime(currentTime);
             isPlaying = true;
+            resetEditorMetronomeTracking(suppressUntilNextBeat: true);
             updatePlayPauseButtonLabel();
             timeText.Text = formatTime(currentTime);
             timeline?.SetCurrentTime(currentTime);
@@ -80,6 +81,8 @@ namespace BeatSight.Game.Screens.Editor
             }
 
             isPlaying = false;
+            stopEditorMetronomeChannels();
+            resetEditorMetronomeTracking();
             updatePlayPauseButtonLabel();
 
             if (!silent)
@@ -122,6 +125,23 @@ namespace BeatSight.Game.Screens.Editor
 
             playPauseButton.UpdateState(true, tooltip);
             playPauseButton.SetLabel(label);
+        }
+
+        private void updateEditorMasterVolumeOutput()
+        {
+            double value = masterVolumeSetting?.Value ?? 0;
+            bool enabled = masterVolumeEnabledSetting?.Value ?? true;
+            audioManager.Volume.Value = enabled ? value : 0;
+        }
+
+        private void updateEditorMusicVolumeOutput()
+        {
+            if (track == null)
+                return;
+
+            double value = musicVolumeSetting?.Value ?? 0;
+            bool enabled = musicVolumeEnabledSetting?.Value ?? true;
+            track.Volume.Value = enabled ? value : 0;
         }
     }
 }

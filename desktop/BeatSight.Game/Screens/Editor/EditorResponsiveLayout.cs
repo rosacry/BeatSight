@@ -29,11 +29,17 @@ namespace BeatSight.Game.Screens.Editor
                 : width < stackWidthThreshold || height < stackHeightThreshold;
 
             float inspectorWidth = ResponsiveLayout.ClampFraction(width, 0.245f, 360f, 540f);
-            float timelineTopHeight = ResponsiveLayout.ClampFraction(height, 0.245f, 180f, 320f);
-            float timelineToolboxHeight = ResponsiveLayout.ClampFraction(height, 0.102f, 78f, 136f);
+            float timelineTopHeight = ResponsiveLayout.ClampFraction(height, 0.215f, 180f, 286f);
+            float timelineToolboxHeight = ResponsiveLayout.ClampFraction(height, 0.096f, 76f, 132f);
+            if (width < 1700f)
+                timelineToolboxHeight += ResponsiveLayout.ClampFraction(height, 0.016f, 8f, 18f);
+            if (width < 1450f)
+                timelineToolboxHeight += ResponsiveLayout.ClampFraction(height, 0.024f, 12f, 30f);
+            timelineToolboxHeight = Math.Clamp(timelineToolboxHeight, 76f, 156f);
+
             float footerHeight = footerHintsCollapsed
-                ? ResponsiveLayout.ClampFraction(height, 0.032f, 24f, 40f)
-                : ResponsiveLayout.ClampFraction(height, 0.076f, 56f, 104f);
+                ? ResponsiveLayout.ClampFraction(height, 0.072f, 60f, 88f)
+                : ResponsiveLayout.ClampFraction(height, 0.098f, 84f, 132f);
             float panelGap = ResponsiveLayout.ClampFraction(width, 0.0065f, 8f, 14f);
             float stackedInspectorHeight = ResponsiveLayout.ClampFraction(height, 0.245f, 168f, 320f);
 

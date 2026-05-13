@@ -3,7 +3,8 @@
  */
 
 import { useParams, Navigate } from 'react-router-dom'
-import { ConversationList, MessageThread, UserSearch } from '@/components/social'
+import { ConversationList, MessageThread } from '@/components/social/Messaging'
+import { UserSearch } from '@/components/social/UserProfile'
 import { useAuthStore } from '@/stores/authStore'
 import type { UserSearchResult } from '@/api/social'
 import { useNavigate } from 'react-router-dom'

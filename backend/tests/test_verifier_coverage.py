@@ -192,8 +192,8 @@ class TestGetProposalDeepCoverage:
     """Deep coverage tests for get_proposal endpoint (lines 242-275)."""
 
     @pytest.mark.asyncio
-    async def test_get_proposal_with_verifier_username(self):
-        """Test getting proposal includes verifier username in decision."""
+    async def test_get_proposal_with_verifier_display_name(self):
+        """Test getting proposal includes verifier display name in decision."""
         from app.api.routes.verifier import get_proposal
 
         mock_user = create_mock_user()
@@ -212,7 +212,7 @@ class TestGetProposalDeepCoverage:
 
         assert result.id == mock_proposal.id
         assert result.decision is not None
-        assert result.decision.verifier_username == "verifier_user"
+        assert result.decision.verifier_display_name == "verifier_user"
 
     @pytest.mark.asyncio
     async def test_get_proposal_without_decision(self):

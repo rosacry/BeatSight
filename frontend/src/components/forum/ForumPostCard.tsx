@@ -9,7 +9,7 @@ import { format, formatDistanceToNow } from 'date-fns'
 import { editPost, deletePost } from '@/api/forum'
 import type { ForumPost } from '@/types/forum'
 import { PostVoteButtons } from './PostVoteButtons'
-import { UsernameLink } from '@/components/social'
+import { UsernameLink } from '@/components/social/UserProfile'
 import { useAuthStore } from '@/stores/authStore'
 
 interface ForumPostCardProps {

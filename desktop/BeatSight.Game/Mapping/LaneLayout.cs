@@ -66,8 +66,15 @@ namespace BeatSight.Game.Mapping
 
         public int ResolveLane(ReadOnlySpan<DrumComponentCategory> categoryPriority, SidePreference sidePreference, int? storedLane)
         {
-            if (storedLane.HasValue && IsLaneValid(storedLane.Value))
-                return storedLane.Value;
+            if (storedLane.HasValue)
+            {
+                // Preserve authored lane intent whenever possible. If the current layout
+                // has fewer lanes than the authored index, clamp instead of remapping by
+                // component to avoid large semantic jumps.
+                return IsLaneValid(storedLane.Value)
+                    ? storedLane.Value
+                    : ClampLane(storedLane.Value);
+            }
 
             foreach (var category in categoryPriority)
             {
@@ -199,8 +206,13 @@ namespace BeatSight.Game.Mapping
             return new LaneLayout(preset, categoryMap, laneCount);
         }
 
-        public static LaneLayout CreateFromComponents(List<string> components)
+        public static LaneLayout CreateFromComponents(List<string> components, int minimumLaneCount = 1)
         {
+            if (components == null)
+                throw new ArgumentNullException(nameof(components));
+
+            int clampedMinimumLaneCount = Math.Clamp(minimumLaneCount, 1, 9);
+
             // 1. Classify each component using the heuristic classifier
             //    (Enum.TryParse fails for underscore-separated names like hihat_closed, crash_1, tom_1)
             var primaryCategories = new HashSet<DrumComponentCategory>();
@@ -237,13 +249,13 @@ namespace BeatSight.Game.Mapping
                 presentGroups.Add(("Unknown", new[] { DrumComponentCategory.Unknown }));
 
             if (presentGroups.Count == 0)
-                return Create(LanePreset.DrumFourLane); // Fallback
+                return Create(resolvePresetForLaneCount(Math.Max(4, clampedMinimumLaneCount))); // Fallback
 
             // 4. Assign lanes and map ALL member categories to their group's lane
-            int laneCount = presentGroups.Count;
+            int laneCount = Math.Max(clampedMinimumLaneCount, presentGroups.Count);
             var map = new Dictionary<DrumComponentCategory, int[]>();
 
-            for (int i = 0; i < laneCount; i++)
+            for (int i = 0; i < presentGroups.Count; i++)
             {
                 var group = presentGroups[i];
                 foreach (var member in group.Members)
@@ -259,6 +271,30 @@ namespace BeatSight.Game.Mapping
             }
 
             return new LaneLayout(LanePreset.Custom, map, laneCount);
+        }
+
+        public static LaneLayout CreateAutoDynamic(IReadOnlyCollection<string>? components, int minimumLaneCount = 7)
+        {
+            int clampedMinimumLaneCount = Math.Clamp(minimumLaneCount, 1, 9);
+            if (components != null && components.Count > 0)
+                return CreateFromComponents(components.ToList(), clampedMinimumLaneCount);
+
+            return Create(resolvePresetForLaneCount(Math.Max(4, clampedMinimumLaneCount)));
+        }
+
+        private static LanePreset resolvePresetForLaneCount(int laneCount)
+        {
+            int clamped = Math.Clamp(laneCount, 4, 9);
+            return clamped switch
+            {
+                4 => LanePreset.DrumFourLane,
+                5 => LanePreset.DrumFiveLane,
+                6 => LanePreset.DrumSixLane,
+                7 => LanePreset.DrumSevenLane,
+                8 => LanePreset.DrumEightLane,
+                9 => LanePreset.DrumNineLane,
+                _ => LanePreset.DrumSevenLane
+            };
         }
 
         private static LanePresetDefinition BuildFourLane()

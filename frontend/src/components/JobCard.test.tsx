@@ -28,7 +28,7 @@ describe('JobCard', () => {
 
     const renderJobCard = (job: AIJob, showProgress = true) => {
         return render(
-            <MemoryRouter>
+            <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <JobCard job={job} showProgress={showProgress} />
             </MemoryRouter>
         )

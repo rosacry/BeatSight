@@ -353,22 +353,25 @@ namespace BeatSight.Game.Screens.Editor
         {
             float aspect = viewport.X / Math.Max(1f, viewport.Y);
             float ultraWideRelax = Math.Clamp((aspect - 2.0f) / 0.85f, 0f, 1f);
-            if (footerRootContainer != null)
-            {
-                footerRootContainer.Padding = new MarginPadding
-                {
-                    Horizontal = blend(12f, 9f, compactBlend) + ultraWideRelax * 1.2f,
-                    Vertical = blend(10.5f, 7f, compactBlend) + ultraWideRelax * 0.45f
-                };
-                footerRootContainer.CornerRadius = blend(12f, 9.5f, compactBlend);
-            }
-
             if (footerInnerContainer != null)
             {
                 footerInnerContainer.Padding = new MarginPadding
                 {
-                    Horizontal = blend(15f, 9f, compactBlend),
-                    Vertical = blend(8f, 5f, compactBlend)
+                    Left = blend(14f, 10f, compactBlend) + ultraWideRelax * 0.9f,
+                    Right = blend(14f, 10f, compactBlend) + ultraWideRelax * 0.9f,
+                    Top = blend(8f, 5f, compactBlend) + ultraWideRelax * 0.15f,
+                    Bottom = blend(5f, 3f, compactBlend)
+                };
+            }
+
+            if (footerTransportBandContainer != null)
+                footerTransportBandContainer.Height = blend(42f, 36f, compactBlend);
+
+            if (footerSeekRow != null)
+            {
+                footerSeekRow.RowDimensions = new[]
+                {
+                    new Dimension(GridSizeMode.Absolute, blend(26f, 24f, compactBlend))
                 };
             }
 

@@ -17,6 +17,12 @@ namespace BeatSight.Game.Screens.Editor
 
             if (editorBeatGridVisibleDefault != null)
                 beatGridVisible = editorBeatGridVisibleDefault.Value;
+
+            if (editorSnapDivisorDefault != null)
+                snapDivisor = coerceSnapDivisor(editorSnapDivisorDefault.Value);
+
+            if (editorTimelinePlaybackZoomLinkedDefault != null)
+                linkTimelineAndPlaybackZoom = editorTimelinePlaybackZoomLinkedDefault.Value;
         }
 
         private void persistEditorDefaults()
@@ -32,14 +38,12 @@ namespace BeatSight.Game.Screens.Editor
 
             if (editorBeatGridVisibleDefault != null)
                 editorBeatGridVisibleDefault.Value = beatGridVisible;
-        }
 
-        private void onTimelineSeekRequested(double timeMs)
-        {
-            double target = Math.Clamp(timeMs, 0, trackLength > 0 ? trackLength : Math.Max(0, timeMs));
-            seekToTime(target);
-            if (isPlaying && track != null && !track.IsRunning)
-                track.Start();
+            if (editorSnapDivisorDefault != null)
+                editorSnapDivisorDefault.Value = coerceSnapDivisor(snapDivisor);
+
+            if (editorTimelinePlaybackZoomLinkedDefault != null)
+                editorTimelinePlaybackZoomLinkedDefault.Value = linkTimelineAndPlaybackZoom;
         }
 
         private void onTimelineNoteSelected(HitObject hit)
@@ -47,6 +51,13 @@ namespace BeatSight.Game.Screens.Editor
             selectedHitObject = hit;
             setStatusDetail($"Selected {hit.Component} @ {formatTime(hit.Time)}");
             updateSelectionSummary();
+
+            if (suppressTimelineSelectionSeekCount > 0)
+            {
+                suppressTimelineSelectionSeekCount--;
+                return;
+            }
+
             seekToTime(hit.Time);
         }
 
@@ -63,18 +74,99 @@ namespace BeatSight.Game.Screens.Editor
             if (beatmap == null)
                 return;
 
-            beatmap.HitObjects.Sort((a, b) => a.Time.CompareTo(b.Time));
+            if (requiresHitObjectResort(beatmap.HitObjects, hit))
+                beatmap.HitObjects.Sort((a, b) => a.Time.CompareTo(b.Time));
+
             beatmap.Metadata.ModifiedAt = DateTime.UtcNow;
-            playbackPreview?.RefreshBeatmap();
+            queuePlaybackPreviewRefresh();
             markUnsaved();
             refreshUnsavedState();
 
             if (selectedHitObject != null && !beatmap.HitObjects.Contains(selectedHitObject))
                 selectedHitObject = null;
 
+            if (timelineDragInProgress)
+            {
+                deferredTimelineUiRefreshPending = true;
+                return;
+            }
+
             refreshComponentReassignmentOptions();
             updateSelectionSummary();
             updateInspectorStats();
+        }
+
+        private void onTimelineDragStarted()
+            => timelineDragInProgress = true;
+
+        private void onTimelineDragEnded()
+        {
+            timelineDragInProgress = false;
+            flushDeferredTimelineUiRefresh();
+            flushPlaybackPreviewRefresh();
+        }
+
+        private void flushDeferredTimelineUiRefresh()
+        {
+            if (!deferredTimelineUiRefreshPending)
+                return;
+
+            deferredTimelineUiRefreshPending = false;
+            refreshComponentReassignmentOptions();
+            updateSelectionSummary();
+            updateInspectorStats();
+        }
+
+        private bool requiresHitObjectResort(System.Collections.Generic.IReadOnlyList<HitObject> hitObjects, HitObject changed)
+        {
+            int index = -1;
+            for (int i = 0; i < hitObjects.Count; i++)
+            {
+                if (!ReferenceEquals(hitObjects[i], changed))
+                    continue;
+
+                index = i;
+                break;
+            }
+
+            if (index < 0)
+                return true;
+
+            if (index > 0 && hitObjects[index - 1].Time > changed.Time)
+                return true;
+
+            return index < hitObjects.Count - 1 && hitObjects[index + 1].Time < changed.Time;
+        }
+
+        private void queuePlaybackPreviewRefresh()
+        {
+            if (playbackPreview == null)
+                return;
+
+            if (previewRefreshQueued)
+                return;
+
+            previewRefreshQueued = true;
+            int refreshEpoch = ++previewRefreshEpoch;
+            double delay = timelineDragInProgress ? previewRefreshDragDebounceMs : previewRefreshDebounceMs;
+            Scheduler.AddDelayed(() =>
+            {
+                if (refreshEpoch != previewRefreshEpoch)
+                    return;
+
+                previewRefreshQueued = false;
+                playbackPreview?.RefreshBeatmap();
+            }, delay);
+        }
+
+        private void flushPlaybackPreviewRefresh()
+        {
+            if (playbackPreview == null)
+                return;
+
+            previewRefreshEpoch++;
+            previewRefreshQueued = false;
+            playbackPreview.RefreshBeatmap();
         }
 
         private void onTimelineEditBegan()
@@ -91,34 +183,54 @@ namespace BeatSight.Game.Screens.Editor
             applySnapDivisor(divisor);
         }
 
-        private void onPreviewNotePlacementRequested(int lane, double timeMs)
+        private void onPreviewNotePlacementRequested(int lane, double timeMs, bool bypassSnap)
         {
-            if (beatmap == null || timeline == null)
+            if (isTimingSetupOverlayVisible() || beatmap == null || timeline == null)
                 return;
 
-            if (!timeline.TryAddHitObjectAtTimeAndLane(timeMs, lane))
-                return;
+            suppressQueuedSeekFromDirectPreviewEdit();
 
+            double placementTime = Math.Max(0, timeMs);
+            bool bypassTimelineSnap = bypassSnap || !beatGridVisible;
+            if (!bypassTimelineSnap)
+            {
+                double snapInterval = Math.Max(0, getSnapIntervalMs(placementTime));
+                if (snapInterval > 0.01)
+                {
+                    double snapOrigin = getSnapOriginMs(placementTime);
+                    placementTime = Math.Round((placementTime - snapOrigin) / snapInterval) * snapInterval + snapOrigin;
+                    placementTime = Math.Max(0, placementTime);
+                }
+            }
+
+            // Insert without timeline-side snapping and without auto-selection.
+            // Preview already resolved lane/time from cursor space.
             string laneLabel = getLaneLabelForStatus(lane);
-            setStatusDetail($"Added {laneLabel} @ {formatTime(timeMs)}");
-            if (!isPlaying)
-                seekToTime(timeMs);
+            string snapLabel = bypassTimelineSnap ? " (unsnapped)" : string.Empty;
+            if (!timeline.TryAddHitObjectAtTimeAndLane(placementTime, lane, bypassSnap: true, selectInsertedNote: false))
+            {
+                appendStatusDetail($"Skipped duplicate {laneLabel} @ {formatTime(placementTime)}");
+                return;
+            }
+
+            setStatusDetail($"Added {laneLabel} @ {formatTime(placementTime)}{snapLabel}");
         }
 
         private void onPreviewNoteRemovalRequested(int lane, double timeMs)
         {
-            if (beatmap == null || timeline == null)
+            if (isTimingSetupOverlayVisible() || beatmap == null || timeline == null)
                 return;
 
-            if (!timeline.TryDeleteNearestHitObject(timeMs, lane))
+            suppressQueuedSeekFromDirectPreviewEdit();
+            double removalAnchorTime = Math.Max(0, timeMs);
+
+            if (!timeline.TryDeleteNearestHitObject(removalAnchorTime, lane))
             {
-                appendStatusDetail($"No note near {getLaneLabelForStatus(lane)} @ {formatTime(timeMs)}");
+                appendStatusDetail($"No note near {getLaneLabelForStatus(lane)} @ {formatTime(removalAnchorTime)}");
                 return;
             }
 
-            setStatusDetail($"Removed nearest {getLaneLabelForStatus(lane)} note @ {formatTime(timeMs)}");
-            if (!isPlaying)
-                seekToTime(timeMs);
+            setStatusDetail($"Removed nearest {getLaneLabelForStatus(lane)} note @ {formatTime(removalAnchorTime)}");
         }
 
         private string getLaneLabelForStatus(int lane)
@@ -128,6 +240,19 @@ namespace BeatSight.Game.Screens.Editor
                 return $"lane {lane + 1}";
 
             return formatComponentDisplayName(component);
+        }
+
+        // Direct preview edits should not dispatch delayed wheel/seek-bar scrubs on the same frame,
+        // otherwise click placement can appear to jump the whole editor time position.
+        private void suppressQueuedSeekFromDirectPreviewEdit()
+        {
+            pendingSeekTimeMs = null;
+            pendingSeekEnsureVisible = false;
+            pendingSeekSyncTrack = false;
+            pendingSeekSyncPreview = false;
+            pendingSeekSource = SeekInputSource.Programmatic;
+            seekDispatchScheduled = false;
+            finalizeScrubTelemetry();
         }
 
         private void onPreviewModeChanged(ValueChangedEvent<EditorPreviewMode> mode)
@@ -152,6 +277,9 @@ namespace BeatSight.Game.Screens.Editor
             }
 
             syncManuscriptFocus();
+
+            if (editorLayoutGrid != null)
+                applyResponsiveEditorLayout(force: true);
         }
 
         private void onLaneViewModeChanged(ValueChangedEvent<LaneViewMode> change)

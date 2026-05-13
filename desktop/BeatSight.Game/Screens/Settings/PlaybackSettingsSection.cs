@@ -3,12 +3,17 @@
 // See ENGINEERING_ACTION_TRACKER.md item 2.2
 
 using System;
+using System.Collections.Generic;
+using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Customization;
 using BeatSight.Game.UI.Components;
 using BeatSight.Game.UI.Theming;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Sprites;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osuTK;
@@ -24,6 +29,22 @@ namespace BeatSight.Game.Screens.Settings
     {
         private readonly BeatSightConfigManager config;
         private readonly GameHost host;
+        private Bindable<string> laneProfileJson = null!;
+        private readonly List<LaneInfo> editableLaneProfile = new();
+        private int laneProfileEditIndex;
+        private bool suppressLaneProfileFieldSync;
+        private bool suppressLaneProfileBindableSync;
+        private SpriteText laneProfileNameText = null!;
+        private SpriteText laneProfileShortNameText = null!;
+        private BeatSightTextBox laneProfileColorInput = null!;
+        private BeatSightButton laneProfilePrevButton = null!;
+        private BeatSightButton laneProfileNextButton = null!;
+        private BeatSightButton laneProfileApplyButton = null!;
+        private BeatSightButton laneProfileMoveLeftButton = null!;
+        private BeatSightButton laneProfileMoveRightButton = null!;
+        private SpriteText laneProfileSelectionText = null!;
+        private Box laneProfileColorPreview = null!;
+        private SettingItem laneProfileSettingItem = null!;
 
         public PlaybackSettingsSection(BeatSightConfigManager config, GameHost host, Container dropdownOverlay, SettingsTooltipOverlay tooltipOverlay)
             : base("Playback Settings", dropdownOverlay, tooltipOverlay)
@@ -84,6 +105,7 @@ namespace BeatSight.Game.Screens.Settings
                         "Switch between a shared timing line or a dedicated lane for kick hits.",
                         formatKickLaneMode
                     ),
+                    createLaneProfileEditor(),
                     CreateEnumDropdown(
                         "Sheet Count-in Guides",
                         config.GetBindable<ManuscriptCountInGuideMode>(BeatSightSetting.ManuscriptCountInGuideMode),
@@ -194,6 +216,307 @@ namespace BeatSight.Game.Screens.Settings
                 "Reset All Settings",
                 "Restore every setting to the factory defaults. This affects audio, graphics, and gameplay preferences.",
                 control);
+        }
+
+        private SettingItem createLaneProfileEditor()
+        {
+            laneProfileJson = config.GetBindable<string>(BeatSightSetting.LaneProfileJson);
+
+            laneProfileSelectionText = new SpriteText
+            {
+                Text = "Lane 1",
+                Font = BeatSightFont.Label(14f),
+                Colour = UITheme.TextPrimary,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft
+            };
+
+            laneProfileNameText = new SpriteText
+            {
+                Text = "-",
+                Font = BeatSightFont.Label(12f),
+                Colour = UITheme.TextPrimary,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft
+            };
+
+            laneProfileShortNameText = new SpriteText
+            {
+                Text = "-",
+                Font = BeatSightFont.Label(12f),
+                Colour = UITheme.TextPrimary,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft
+            };
+
+            laneProfileColorInput = new BeatSightTextBox
+            {
+                Width = 96,
+                Height = 32,
+                PlaceholderText = "#RRGGBB",
+                TextSize = 12f
+            };
+
+            laneProfileColorPreview = new Box
+            {
+                Size = new Vector2(22, 22),
+                Colour = UITheme.SurfaceAlt
+            };
+
+            laneProfilePrevButton = createLaneProfileButton("<", () => stepLaneProfileSelection(-1), 34);
+            laneProfileNextButton = createLaneProfileButton(">", () => stepLaneProfileSelection(1), 34);
+            laneProfileApplyButton = createLaneProfileButton("Apply", applyLaneProfileEdits, 64);
+            laneProfileMoveLeftButton = createLaneProfileButton("Move -", () => moveLaneProfileLane(-1), 64);
+            laneProfileMoveRightButton = createLaneProfileButton("Move +", () => moveLaneProfileLane(1), 64);
+
+            var laneSelectorRow = new FillFlowContainer
+            {
+                AutoSizeAxes = Axes.Both,
+                Direction = FillDirection.Horizontal,
+                Spacing = new Vector2(6, 0),
+                Children = new Drawable[]
+                {
+                    laneProfilePrevButton,
+                    new Container
+                    {
+                        Width = 168,
+                        Height = 32,
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        Child = laneProfileSelectionText
+                    },
+                    laneProfileNextButton,
+                    laneProfileApplyButton
+                }
+            };
+
+            var laneEditorRow = new FillFlowContainer
+            {
+                AutoSizeAxes = Axes.Both,
+                Direction = FillDirection.Horizontal,
+                Spacing = new Vector2(6, 0),
+                Children = new Drawable[]
+                {
+                    createLaneProfileReadOnlyField(148, laneProfileNameText),
+                    createLaneProfileReadOnlyField(88, laneProfileShortNameText),
+                    laneProfileColorInput,
+                    new Container
+                    {
+                        Size = new Vector2(30, 32),
+                        Child = new Container
+                        {
+                            Size = new Vector2(22, 22),
+                            Anchor = Anchor.Centre,
+                            Origin = Anchor.Centre,
+                            Masking = true,
+                            CornerRadius = 6,
+                            Children = new Drawable[]
+                            {
+                                laneProfileColorPreview,
+                                new Box
+                                {
+                                    RelativeSizeAxes = Axes.Both,
+                                    Colour = Color4.White,
+                                    Alpha = 0.08f
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            var laneActionsRow = new FillFlowContainer
+            {
+                AutoSizeAxes = Axes.Both,
+                Direction = FillDirection.Horizontal,
+                Spacing = new Vector2(6, 0),
+                Children = new Drawable[]
+                {
+                    laneProfileMoveLeftButton,
+                    laneProfileMoveRightButton
+                }
+            };
+
+            var laneProfileControl = new FillFlowContainer
+            {
+                Width = 500,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(0, 8),
+                Children = new Drawable[]
+                {
+                    laneSelectorRow,
+                    laneEditorRow,
+                    laneActionsRow
+                }
+            };
+
+            laneProfileColorInput.Current.BindValueChanged(_ =>
+            {
+                if (suppressLaneProfileFieldSync)
+                    return;
+            });
+
+            laneProfileJson.BindValueChanged(_ =>
+            {
+                if (suppressLaneProfileBindableSync)
+                    return;
+
+                loadLaneProfileFromSettings();
+                refreshLaneProfileEditorControls();
+                laneProfileSettingItem?.SetModified(!laneProfileJson.IsDefault);
+            }, true);
+
+            laneProfileSettingItem = CreateSettingItem(
+                "Lane Profile",
+                "Adjust default lane colors and lane order only. Lane names and lane count come from beatmap configuration.",
+                laneProfileControl);
+            laneProfileSettingItem.SetDefaultValue("Factory lane profile");
+            laneProfileSettingItem.SetModified(!laneProfileJson.IsDefault);
+            return laneProfileSettingItem;
+        }
+
+        private BeatSightButton createLaneProfileButton(string text, Action action, float width)
+            => new BeatSightButton
+            {
+                Width = width,
+                Height = 32,
+                Text = text,
+                FontSize = 10.8f,
+                Action = action
+            };
+
+        private Container createLaneProfileReadOnlyField(float width, SpriteText contentText)
+            => new Container
+            {
+                Width = width,
+                Height = 32,
+                Masking = true,
+                CornerRadius = 6,
+                Children = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = UITheme.SurfaceAlt
+                    },
+                    new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Padding = new MarginPadding
+                        {
+                            Horizontal = 8,
+                            Vertical = 6
+                        },
+                        Child = contentText
+                    }
+                }
+            };
+
+        private void loadLaneProfileFromSettings()
+        {
+            editableLaneProfile.Clear();
+            editableLaneProfile.AddRange(LaneManagement.DeserializeLaneProfile(laneProfileJson.Value, fallbackLaneCount: 7));
+            laneProfileEditIndex = Math.Clamp(laneProfileEditIndex, 0, Math.Max(0, editableLaneProfile.Count - 1));
+        }
+
+        private void refreshLaneProfileEditorControls()
+        {
+            if (editableLaneProfile.Count == 0)
+                loadLaneProfileFromSettings();
+
+            if (editableLaneProfile.Count == 0)
+                return;
+
+            laneProfileEditIndex = Math.Clamp(laneProfileEditIndex, 0, editableLaneProfile.Count - 1);
+            var lane = editableLaneProfile[laneProfileEditIndex];
+
+            suppressLaneProfileFieldSync = true;
+            laneProfileSelectionText.Text = $"Lane {laneProfileEditIndex + 1}: {lane.ShortName ?? lane.Name ?? "Lane"}";
+            laneProfileNameText.Text = lane.Name ?? string.Empty;
+            laneProfileShortNameText.Text = lane.ShortName ?? string.Empty;
+            laneProfileColorInput.Current.Value = lane.ColorHex ?? string.Empty;
+            suppressLaneProfileFieldSync = false;
+
+            laneProfileColorPreview.Colour = LaneManagement.TryParseColorHex(lane.ColorHex, out var laneColor)
+                ? laneColor
+                : UITheme.SurfaceAlt;
+
+            bool canMoveLeft = laneProfileEditIndex > 0;
+            laneProfileMoveLeftButton.Enabled.Value = canMoveLeft;
+            laneProfileMoveLeftButton.Alpha = canMoveLeft ? 1f : 0.56f;
+
+            bool canMoveRight = laneProfileEditIndex < editableLaneProfile.Count - 1;
+            laneProfileMoveRightButton.Enabled.Value = canMoveRight;
+            laneProfileMoveRightButton.Alpha = canMoveRight ? 1f : 0.56f;
+        }
+
+        private void stepLaneProfileSelection(int delta)
+        {
+            if (editableLaneProfile.Count == 0)
+                return;
+
+            laneProfileEditIndex = Math.Clamp(laneProfileEditIndex + delta, 0, editableLaneProfile.Count - 1);
+            refreshLaneProfileEditorControls();
+        }
+
+        private void applyLaneProfileEdits()
+        {
+            if (editableLaneProfile.Count == 0)
+                return;
+
+            if (!LaneManagement.IsLaneEditAllowed(LaneEditScope.Settings, LaneEditOperation.Recolor))
+            {
+                return;
+            }
+
+            var lane = editableLaneProfile[laneProfileEditIndex];
+            string colorText = laneProfileColorInput.Current.Value?.Trim() ?? string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(colorText) && !LaneManagement.TryParseColorHex(colorText, out _))
+            {
+                Logger.Log("[Settings] Ignoring invalid lane color input. Expected #RRGGBB.", LoggingTarget.Runtime, LogLevel.Important);
+                refreshLaneProfileEditorControls();
+                return;
+            }
+
+            lane.ColorHex = colorText;
+            commitLaneProfileChanges();
+        }
+
+        private void moveLaneProfileLane(int delta)
+        {
+            if (editableLaneProfile.Count <= 1 || delta == 0)
+                return;
+
+            if (!LaneManagement.IsLaneEditAllowed(LaneEditScope.Settings, LaneEditOperation.Reorder))
+                return;
+
+            int fromIndex = Math.Clamp(laneProfileEditIndex, 0, editableLaneProfile.Count - 1);
+            int toIndex = Math.Clamp(fromIndex + delta, 0, editableLaneProfile.Count - 1);
+            if (fromIndex == toIndex)
+                return;
+
+            var lane = editableLaneProfile[fromIndex];
+            editableLaneProfile.RemoveAt(fromIndex);
+            editableLaneProfile.Insert(toIndex, lane);
+            laneProfileEditIndex = toIndex;
+            commitLaneProfileChanges();
+        }
+
+        private void commitLaneProfileChanges()
+        {
+            string serialized = LaneManagement.SerializeLaneProfile(editableLaneProfile);
+            editableLaneProfile.Clear();
+            editableLaneProfile.AddRange(LaneManagement.DeserializeLaneProfile(serialized, fallbackLaneCount: 7));
+            laneProfileEditIndex = Math.Clamp(laneProfileEditIndex, 0, Math.Max(0, editableLaneProfile.Count - 1));
+
+            suppressLaneProfileBindableSync = true;
+            laneProfileJson.Value = serialized;
+            suppressLaneProfileBindableSync = false;
+
+            laneProfileSettingItem?.SetModified(!laneProfileJson.IsDefault);
+            refreshLaneProfileEditorControls();
         }
 
         private static string formatLaneViewMode(LaneViewMode mode) => mode switch

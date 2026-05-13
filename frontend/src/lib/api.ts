@@ -8,6 +8,7 @@
 
 // Re-export shared types from main client
 export { APIError } from '@/api/client'
+import { APIError } from '@/api/client'
 import { API_CONFIG } from '@/lib/config'
 
 const API_BASE = API_CONFIG.baseUrl
@@ -21,8 +22,6 @@ export const api = {
      * Make an unauthenticated POST request.
      */
     async post<T = unknown>(endpoint: string, data: Record<string, unknown>): Promise<T> {
-        const { APIError } = await import('@/api/client')
-
         const response = await fetch(`${API_BASE}/api${endpoint}`, {
             method: 'POST',
             headers: {
@@ -43,8 +42,6 @@ export const api = {
      * Make an unauthenticated GET request.
      */
     async get<T = unknown>(endpoint: string): Promise<T> {
-        const { APIError } = await import('@/api/client')
-
         const response = await fetch(`${API_BASE}/api${endpoint}`, {
             method: 'GET',
             headers: {

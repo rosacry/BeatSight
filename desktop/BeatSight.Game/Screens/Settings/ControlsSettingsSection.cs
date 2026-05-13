@@ -54,6 +54,8 @@ namespace BeatSight.Game.Screens.Settings
                         ("Shift+Space", "Rewind to start"),
                         ("Left Arrow", "Seek backward 5 seconds"),
                         ("Right Arrow", "Seek forward 5 seconds"),
+                        ("Mouse Wheel", "Scrub timeline (Shift for faster scrub)"),
+                        ("Seek Bar (Footer)", "Click/drag to scrub timeline"),
                         ("Alt+Left", "Nudge selected note earlier"),
                         ("Alt+Right", "Nudge selected note later"),
                         (",", "Jump to previous note"),
@@ -61,7 +63,9 @@ namespace BeatSight.Game.Screens.Settings
                         ("Delete / Backspace", "Delete selected note"),
                         ("[ / ]", "Adjust snap divisor"),
                         ("Ctrl++ / Ctrl+-", "Zoom timeline"),
+                        ("Alt++ / Alt+-", "Scale UI"),
                         ("Ctrl+Alt++ / Ctrl+Alt+-", "Scale waveform"),
+                        ("Ctrl+C / Ctrl+V", "Copy/paste selected notes"),
                     }),
                 }
             };

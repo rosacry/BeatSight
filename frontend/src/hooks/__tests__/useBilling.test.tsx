@@ -10,6 +10,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { server } from '@/test/mocks/server'
+import { useAuthStore } from '@/stores/authStore'
 import {
     useStripeConfig,
     useSubscription,
@@ -44,6 +45,34 @@ const mockProSubscription = {
     cancel_at_period_end: false,
 }
 
+const mockUser = {
+    id: 'user-1',
+    user_number: 1,
+    email: 'test@example.com',
+    display_name: 'Test User',
+    email_verified: true,
+    phone_number: null,
+    phone_verified: false,
+    avatar_url: null,
+    karma_score: 0,
+    created_at: '2024-01-01T00:00:00Z',
+    roles: [],
+    tags: [],
+}
+
+function createMockJwt(expiresInSeconds: number = 3600): string {
+    const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+    const payload = btoa(
+        JSON.stringify({
+            sub: 'user123',
+            exp: Math.floor(Date.now() / 1000) + expiresInSeconds,
+            iat: Math.floor(Date.now() / 1000),
+        })
+    )
+    const signature = btoa('mock-signature')
+    return `${header}.${payload}.${signature}`
+}
+
 // Wrapper component for React Query
 function createWrapper() {
     const queryClient = new QueryClient({
@@ -62,6 +91,16 @@ function createWrapper() {
 }
 
 describe('useStripeConfig', () => {
+    beforeEach(() => {
+        useAuthStore.setState({
+            user: mockUser,
+            accessToken: createMockJwt(),
+            refreshToken: 'mock-refresh-token',
+            isLoading: false,
+            _hasHydrated: true,
+        })
+    })
+
     beforeEach(() => {
         server.use(
             http.get('/api/billing/config', () => {
@@ -101,6 +140,16 @@ describe('useStripeConfig', () => {
 
 describe('useSubscription', () => {
     beforeEach(() => {
+        useAuthStore.setState({
+            user: mockUser,
+            accessToken: createMockJwt(),
+            refreshToken: 'mock-refresh-token',
+            isLoading: false,
+            _hasHydrated: true,
+        })
+    })
+
+    beforeEach(() => {
         server.use(
             http.get('/api/billing/subscription', () => {
                 return HttpResponse.json(mockFreeSubscription)
@@ -136,7 +185,15 @@ describe('useSubscription', () => {
         expect(result.current.data?.ai_quota_remaining).toBe(100)
     })
 
-    it('should handle unauthenticated user', async () => {
+    it('should not fetch when unauthenticated', async () => {
+        useAuthStore.setState({
+            user: null,
+            accessToken: null,
+            refreshToken: null,
+            isLoading: false,
+            _hasHydrated: true,
+        })
+
         server.use(
             http.get('/api/billing/subscription', () => {
                 return HttpResponse.json(
@@ -150,11 +207,22 @@ describe('useSubscription', () => {
             wrapper: createWrapper(),
         })
 
-        await waitFor(() => expect(result.current.isError).toBe(true))
+        await waitFor(() => expect(result.current.fetchStatus).toBe('idle'))
+        expect(result.current.isError).toBe(false)
     })
 })
 
 describe('useIsPro', () => {
+    beforeEach(() => {
+        useAuthStore.setState({
+            user: mockUser,
+            accessToken: createMockJwt(),
+            refreshToken: 'mock-refresh-token',
+            isLoading: false,
+            _hasHydrated: true,
+        })
+    })
+
     it('should return false for free users', async () => {
         server.use(
             http.get('/api/billing/subscription', () => {
@@ -212,6 +280,16 @@ describe('useIsPro', () => {
 })
 
 describe('useAiQuota', () => {
+    beforeEach(() => {
+        useAuthStore.setState({
+            user: mockUser,
+            accessToken: createMockJwt(),
+            refreshToken: 'mock-refresh-token',
+            isLoading: false,
+            _hasHydrated: true,
+        })
+    })
+
     it('should return remaining quota for free user', async () => {
         server.use(
             http.get('/api/billing/subscription', () => {

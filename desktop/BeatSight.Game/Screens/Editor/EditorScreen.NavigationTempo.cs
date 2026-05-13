@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.Linq;
+using BeatSight.Game.Beatmaps;
 
 namespace BeatSight.Game.Screens.Editor
 {
@@ -19,7 +20,7 @@ namespace BeatSight.Game.Screens.Editor
 
         private void resetBpmToDefault()
         {
-            double target = initialBeatmapBpm ?? 120;
+            double target = initialBeatmapBpm ?? TimingInfo.DefaultBpm;
             setBpm(target);
             suppressInspectorFieldSync = true;
             bpmInput.Current.Value = target.ToString("0.##", CultureInfo.InvariantCulture);

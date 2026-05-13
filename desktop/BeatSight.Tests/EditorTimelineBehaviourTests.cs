@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Screens.Editor;
 using Xunit;
@@ -132,6 +133,37 @@ namespace BeatSight.Tests
         }
 
         [Fact]
+        public void TryAddHitObjectAtTimeAndLaneCanSkipAutoSelection()
+        {
+            var timeline = createTimelineWithBeatmap(out var beatmap);
+            timeline.SetSnap(4, 120); // 125ms grid
+            int selectedCount = 0;
+            timeline.NoteSelected += _ => selectedCount++;
+
+            bool added = timeline.TryAddHitObjectAtTimeAndLane(1112, lane: 2, bypassSnap: false, selectInsertedNote: false);
+
+            Assert.True(added);
+            Assert.Equal(3, beatmap.HitObjects.Count);
+            Assert.Equal(0, selectedCount);
+            Assert.Contains(beatmap.HitObjects, h => h.Lane == 2 && h.Time == 1125);
+        }
+
+        [Fact]
+        public void TryAddHitObjectAtTimeAndLaneRejectsDuplicateLaneAndTime()
+        {
+            var timeline = createTimelineWithBeatmap(out var beatmap);
+            timeline.SetSnap(4, 120); // 125ms grid
+
+            bool firstAdded = timeline.TryAddHitObjectAtTimeAndLane(1112, lane: 2);
+            bool duplicateAdded = timeline.TryAddHitObjectAtTimeAndLane(1118, lane: 2); // snaps to same 1125 slot
+
+            Assert.True(firstAdded);
+            Assert.False(duplicateAdded);
+            Assert.Equal(3, beatmap.HitObjects.Count);
+            Assert.Single(beatmap.HitObjects.Where(h => h.Lane == 2 && h.Time == 1125));
+        }
+
+        [Fact]
         public void TryDeleteNearestHitObjectRemovesClosestNoteWithinLaneAndThreshold()
         {
             var timeline = createTimelineWithBeatmap(out var beatmap);
@@ -147,6 +179,38 @@ namespace BeatSight.Tests
             Assert.Equal(3, beatmap.HitObjects.Count);
             Assert.DoesNotContain(beatmap.HitObjects, h => h.Lane == 2 && h.Time == 1125);
             Assert.Contains(beatmap.HitObjects, h => h.Lane == 2 && h.Time == 2250);
+        }
+
+        [Fact]
+        public void ComponentOnlyBeatmapKeepsDefaultLaneFloorForLaneOperations()
+        {
+            var beatmap = new Beatmap
+            {
+                Metadata = new BeatmapMetadata
+                {
+                    Title = "Component Only",
+                    Artist = "BeatSight"
+                },
+                Audio = new AudioInfo
+                {
+                    Filename = "test.wav",
+                    Duration = 60000
+                },
+                HitObjects = new List<HitObject>
+                {
+                    new() { Time = 800, Component = "kick" },
+                    new() { Time = 1200, Component = "snare" },
+                    new() { Time = 1600, Component = "crash" }
+                }
+            };
+
+            var timeline = new EditorTimeline();
+            timeline.LoadBeatmap(beatmap, durationMs: beatmap.Audio.Duration, waveform: null);
+
+            bool added = timeline.TryAddHitObjectAtTimeAndLane(2000, lane: 6, bypassSnap: true);
+
+            Assert.True(added);
+            Assert.Contains(beatmap.HitObjects, h => h.Time == 2000 && h.Lane == 6);
         }
 
         private static EditorTimeline createTimelineWithBeatmap(out Beatmap beatmap)

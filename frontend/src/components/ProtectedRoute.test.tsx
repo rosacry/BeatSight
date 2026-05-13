@@ -41,7 +41,7 @@ beforeEach(() => {
 
 function renderWithRouter(initialRoute = '/protected') {
     return render(
-        <MemoryRouter initialEntries={[initialRoute]}>
+        <MemoryRouter initialEntries={[initialRoute]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Routes>
                 <Route path="/login" element={<><div data-testid="login-page">Login Page</div><LocationTracker /></>} />
                 <Route
@@ -126,7 +126,7 @@ describe('ProtectedRoute', () => {
         mockAuthState.isLoading = false
 
         render(
-            <MemoryRouter initialEntries={['/protected']}>
+            <MemoryRouter initialEntries={['/protected']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <Routes>
                     <Route
                         path="/protected"

@@ -16,6 +16,7 @@ import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { server } from '@/test/mocks/server'
+import { useAuthStore } from '@/stores/authStore'
 import {
     useCreditBalance,
     useCreditPacks,
@@ -99,6 +100,34 @@ const mockCreditHistory = {
     page_size: 20,
 }
 
+const mockUser = {
+    id: 'user-1',
+    user_number: 1,
+    email: 'test@example.com',
+    display_name: 'Test User',
+    email_verified: true,
+    phone_number: null,
+    phone_verified: false,
+    avatar_url: null,
+    karma_score: 0,
+    created_at: '2024-01-01T00:00:00Z',
+    roles: [],
+    tags: [],
+}
+
+function createMockJwt(expiresInSeconds: number = 3600): string {
+    const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+    const payload = btoa(
+        JSON.stringify({
+            sub: 'user123',
+            exp: Math.floor(Date.now() / 1000) + expiresInSeconds,
+            iat: Math.floor(Date.now() / 1000),
+        })
+    )
+    const signature = btoa('mock-signature')
+    return `${header}.${payload}.${signature}`
+}
+
 // Wrapper component for React Query
 function createWrapper() {
     const queryClient = new QueryClient({
@@ -115,6 +144,16 @@ function createWrapper() {
         </QueryClientProvider>
     )
 }
+
+beforeEach(() => {
+    useAuthStore.setState({
+        user: mockUser,
+        accessToken: createMockJwt(),
+        refreshToken: 'mock-refresh-token',
+        isLoading: false,
+        _hasHydrated: true,
+    })
+})
 
 describe('useCreditBalance', () => {
     beforeEach(() => {

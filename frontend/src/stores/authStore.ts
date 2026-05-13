@@ -7,6 +7,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { User, TokenResponse, LoginCredentials, RegisterCredentials } from '@/types/auth'
 import { API_CONFIG } from '@/lib/config'
+import { resetSessionVerification } from './verificationStore'
 
 const API_BASE = API_CONFIG.baseUrl
 
@@ -284,11 +285,9 @@ export const useAuthStore = create<AuthStore>()(
 
             // Logout action
             logout: () => {
-                // Reset verification state on logout
-                // Import dynamically to avoid circular dependency
-                import('./verificationStore').then(({ resetSessionVerification }) => {
-                    resetSessionVerification()
-                })
+                // Reset verification state on logout.
+                // Static import avoids unnecessary async overhead and build-time dynamic import warnings.
+                resetSessionVerification()
 
                 set({
                     user: null,

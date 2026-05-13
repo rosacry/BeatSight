@@ -29,7 +29,7 @@ import {
     StaggerSection,
     PageContentWrapper
 } from '@/components/ui/UnifiedTransitions'
-import { KarmaBreakdownTooltip } from '@/components/social'
+import { KarmaBreakdownTooltip } from '@/components/social/KarmaBreakdownTooltip'
 import { BannerUpload } from '@/components/BannerUpload'
 import { AvatarUpload } from '@/components/AvatarUpload'
 

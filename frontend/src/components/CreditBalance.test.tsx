@@ -23,7 +23,7 @@ import { useCreditCount } from '@/hooks/useCredits'
 // Helper function to render with router context
 const renderWithRouter = (component: React.ReactElement) => {
     return render(
-        <MemoryRouter>
+        <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             {component}
         </MemoryRouter>
     )

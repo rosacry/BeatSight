@@ -3,9 +3,12 @@ using BeatSight.Game.Screens.Playback.Playfield.Views;
 using BeatSight.Game.UI.Components;
 using BeatSight.Game.UI.Theming;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osuTK;
+using osuTK.Graphics;
 
 namespace BeatSight.Game.Screens.Editor
 {
@@ -15,7 +18,8 @@ namespace BeatSight.Game.Screens.Editor
         {
             var viewport = resolveResponsiveViewport();
             var initialMetrics = EditorResponsiveLayout.Compute(viewport.X, viewport.Y, inspectorStackedLayout, footerTipsCollapsed);
-            var sharedSurfacePadding = new MarginPadding { Horizontal = 8, Vertical = 4 };
+            var sharedSurfacePadding = new MarginPadding { Left = 8, Right = 8, Top = 0, Bottom = 4 };
+            const float initialPreviewUtilityStripHeight = 38f;
 
             timeline = new EditorTimeline
             {
@@ -47,11 +51,14 @@ namespace BeatSight.Game.Screens.Editor
             playbackPreview.NotePlacementRequested += onPreviewNotePlacementRequested;
             playbackPreview.NoteRemovalRequested += onPreviewNoteRemovalRequested;
 
+            var previewContentPadding = sharedSurfacePadding;
+            previewContentPadding.Top = initialPreviewUtilityStripHeight + 4f;
+
             previewSurfaceContainer = new Container
             {
                 RelativeSizeAxes = Axes.Both,
                 Masking = true,
-                CornerRadius = 10,
+                CornerRadius = 0,
                 Children = new Drawable[]
                 {
                     new Box
@@ -61,25 +68,106 @@ namespace BeatSight.Game.Screens.Editor
                     },
                     new Box
                     {
+                        RelativeSizeAxes = Axes.X,
+                        Height = 112f,
+                        Anchor = Anchor.TopLeft,
+                        Origin = Anchor.TopLeft,
+                        Colour = ColourInfo.GradientVertical(
+                            EditorColours.PanelStroke.Opacity(0.18f),
+                            Color4.Transparent)
+                    },
+                    new Box
+                    {
                         RelativeSizeAxes = Axes.Both,
                         Colour = EditorColours.PanelStroke,
                         Alpha = 0.08f
                     },
+                    previewUtilityStripContainer = new Container
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        Height = initialPreviewUtilityStripHeight,
+                        Masking = true,
+                        Children = new Drawable[]
+                        {
+                            new Box
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Colour = EditorColours.Mix(EditorColours.PreviewBackground, EditorColours.ControlsBackground, 0.42f)
+                            },
+                            new Box
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Colour = EditorColours.PanelStroke,
+                                Alpha = 0.08f
+                            },
+                            new Box
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                Height = 1,
+                                Anchor = Anchor.BottomLeft,
+                                Origin = Anchor.BottomLeft,
+                                Colour = EditorColours.Divider.Opacity(0.84f)
+                            },
+                            new Container
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Padding = new MarginPadding { Left = 12, Right = 10, Top = 5, Bottom = 5 },
+                                Children = new Drawable[]
+                                {
+                                    new Container
+                                    {
+                                        RelativeSizeAxes = Axes.X,
+                                        Width = 1f,
+                                        AutoSizeAxes = Axes.Y,
+                                        Anchor = Anchor.CentreLeft,
+                                        Origin = Anchor.CentreLeft,
+                                        Padding = new MarginPadding { Right = 154f },
+                                        Child = new FillFlowContainer
+                                        {
+                                            RelativeSizeAxes = Axes.X,
+                                            Width = 1f,
+                                            AutoSizeAxes = Axes.Y,
+                                            Direction = FillDirection.Vertical,
+                                            Spacing = new Vector2(0, 2),
+                                            Anchor = Anchor.CentreLeft,
+                                            Origin = Anchor.CentreLeft,
+                                            Children = new Drawable[]
+                                            {
+                                                previewUtilityTitleText = new SpriteText
+                                                {
+                                                    Text = "Playfield",
+                                                    Font = BeatSightFont.Section(11.8f),
+                                                    Colour = EditorColours.TextPrimary,
+                                                    UseFullGlyphHeight = false
+                                                },
+                                                previewUtilityHintText = new SpriteText
+                                                {
+                                                    Text = "LMB place | Shift no snap | RMB remove",
+                                                    Font = BeatSightFont.Caption(9.9f),
+                                                    Colour = EditorColours.TextMuted,
+                                                    UseFullGlyphHeight = false
+                                                }
+                                            }
+                                        }
+                                    },
+                                    inspectorToggleButton = new EditorButton("Hide Inspector", EditorColours.AccentUndo)
+                                    {
+                                        Size = new Vector2(140, 30),
+                                        EnableScaleAnimation = false,
+                                        Anchor = Anchor.CentreRight,
+                                        Origin = Anchor.CentreRight,
+                                        Alpha = 0,
+                                        Action = toggleInspectorCollapsed
+                                    }
+                                }
+                            }
+                        }
+                    },
                     previewContentContainer = new Container
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Padding = sharedSurfacePadding,
+                        Padding = previewContentPadding,
                         Child = playbackPreview
-                    },
-                    inspectorToggleButton = new EditorButton("Hide Inspector", EditorColours.AccentUndo)
-                    {
-                        Size = new Vector2(132, 34),
-                        EnableScaleAnimation = false,
-                        Anchor = Anchor.TopRight,
-                        Origin = Anchor.TopRight,
-                        Margin = new MarginPadding { Top = 12, Right = 12 },
-                        Alpha = 0,
-                        Action = toggleInspectorCollapsed
                     }
                 }
             };
@@ -143,13 +231,23 @@ namespace BeatSight.Game.Screens.Editor
             {
                 RelativeSizeAxes = Axes.Both,
                 Masking = true,
-                CornerRadius = 10,
+                CornerRadius = 0,
                 Children = new Drawable[]
                 {
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
                         Colour = EditorColours.TimelineBackground
+                    },
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        Height = 84f,
+                        Anchor = Anchor.TopLeft,
+                        Origin = Anchor.TopLeft,
+                        Colour = ColourInfo.GradientVertical(
+                            EditorColours.PanelStroke.Opacity(0.2f),
+                            Color4.Transparent)
                     },
                     new Box
                     {
@@ -162,16 +260,6 @@ namespace BeatSight.Game.Screens.Editor
                         RelativeSizeAxes = Axes.Both,
                         Padding = sharedSurfacePadding,
                         Child = timelineLayoutGrid
-                    },
-                    timelineToolboxToggleButton = new EditorButton("Hide Toolbar", EditorColours.AccentUndo)
-                    {
-                        Size = new Vector2(138, 34),
-                        EnableScaleAnimation = false,
-                        Anchor = Anchor.TopRight,
-                        Origin = Anchor.TopRight,
-                        Margin = new MarginPadding { Top = 10, Right = 12 },
-                        Alpha = 0,
-                        Action = toggleTimelineToolboxCollapsed
                     }
                 }
             };
@@ -218,11 +306,67 @@ namespace BeatSight.Game.Screens.Editor
 
             syncTimelineToolboxCollapseToggle();
 
+            return editorLayoutGrid;
+        }
+
+        private Drawable createEditorWorkspace(Drawable editorBody, Drawable footer)
+        {
+            editorWorkspaceGrid = new GridContainer
+            {
+                RelativeSizeAxes = Axes.Both,
+                RowDimensions = new[]
+                {
+                    new Dimension(),
+                    new Dimension(GridSizeMode.Absolute, getInitialFooterHeight())
+                },
+                Content = new[]
+                {
+                    new Drawable[]
+                    {
+                        editorBody
+                    },
+                    new Drawable[]
+                    {
+                        footer
+                    }
+                }
+            };
+
             return new Container
             {
                 RelativeSizeAxes = Axes.Both,
-                Padding = new MarginPadding { Horizontal = 4, Vertical = 0 },
-                Child = editorLayoutGrid
+                Padding = new MarginPadding { Horizontal = editorWorkspaceHorizontalInset },
+                Child = new Container
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Masking = true,
+                    CornerRadius = editorWorkspaceCornerRadius,
+                    Children = new Drawable[]
+                    {
+                        new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Colour = EditorColours.WorkspaceBackground
+                        },
+                        new Box
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Height = 180f,
+                            Anchor = Anchor.TopLeft,
+                            Origin = Anchor.TopLeft,
+                            Colour = ColourInfo.GradientVertical(
+                                EditorColours.PanelStroke.Opacity(0.16f),
+                                Color4.Transparent)
+                        },
+                        new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Colour = EditorColours.PanelStroke,
+                            Alpha = 0.06f
+                        },
+                        editorWorkspaceGrid
+                    }
+                }
             };
         }
 
@@ -231,10 +375,10 @@ namespace BeatSight.Game.Screens.Editor
             if (isTimingSetupOverlayVisible())
                 return true;
 
-            if (isPointerInsideDrawable(inspectorToggleButton, screenSpacePosition))
+            if (isPointerInsideDrawable(previewUtilityStripContainer, screenSpacePosition))
                 return true;
 
-            if (isPointerInsideDrawable(timelineToolboxToggleButton, screenSpacePosition))
+            if (isPointerInsideDrawable(inspectorToggleButton, screenSpacePosition))
                 return true;
 
             if (isPointerInsideDrawable(timelinePreviewSplitter, screenSpacePosition))
@@ -256,7 +400,8 @@ namespace BeatSight.Game.Screens.Editor
             float currentTopHeight = resolveTimelineTopHeight(metrics, viewport);
             float totalHeight = editorLayoutGrid.DrawHeight > 0 ? editorLayoutGrid.DrawHeight : viewport.Y;
             float minTopHeight = resolveTimelineTopMinimumHeight(metrics, viewport);
-            float maxTopHeight = Math.Max(minTopHeight, totalHeight - timelinePreviewSplitterHeight - minimumPreviewWorkspaceHeight);
+            float minimumPreviewHeight = resolveMinimumPreviewWorkspaceHeight(viewport);
+            float maxTopHeight = Math.Max(minTopHeight, totalHeight - timelinePreviewSplitterHeight - minimumPreviewHeight);
 
             float nextTopHeight = Math.Clamp(currentTopHeight + deltaY, minTopHeight, maxTopHeight);
             timelineTopHeightOverride = nextTopHeight;

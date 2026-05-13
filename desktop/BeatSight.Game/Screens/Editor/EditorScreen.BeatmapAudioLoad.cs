@@ -28,7 +28,9 @@ namespace BeatSight.Game.Screens.Editor
                 redoStack.Clear();
                 editSnapshotArmed = false;
                 lastInspectorSnapshotAtUtc = DateTime.MinValue;
-                snapDivisor = coerceSnapDivisor(beatmap.Editor?.SnapDivisor ?? 4);
+                int fallbackSnapDivisor = coerceSnapDivisor(beatmap.Editor?.SnapDivisor ?? snapDivisor);
+                snapDivisor = coerceSnapDivisor(editorSnapDivisorDefault?.Value ?? fallbackSnapDivisor);
+                linkTimelineAndPlaybackZoom = editorTimelinePlaybackZoomLinkedDefault?.Value ?? linkTimelineAndPlaybackZoom;
                 bool previousPersistenceState = suppressEditorDefaultPersistence;
                 suppressEditorDefaultPersistence = true;
 
@@ -48,6 +50,7 @@ namespace BeatSight.Game.Screens.Editor
                 updateStatusText();
                 trackLength = beatmap.Audio.Duration;
                 currentTime = resolvePreferredStartTime(out string? startContextDetail);
+                snapCurrentTimeToGridOnBeatmapLoad();
                 if (timeText != null)
                     timeText.Text = formatTime(currentTime);
                 reloadTimeline();
@@ -118,7 +121,7 @@ namespace BeatSight.Game.Screens.Editor
                 },
                 Editor = new EditorInfo
                 {
-                    SnapDivisor = 4,
+                    SnapDivisor = coerceSnapDivisor(editorSnapDivisorDefault?.Value ?? 4),
                     VisualLanes = 7,
                     TimelineZoom = editorTimelineZoomDefault?.Value ?? 1.32,
                     WaveformScale = editorWaveformScaleDefault?.Value ?? 1.0,
@@ -136,7 +139,7 @@ namespace BeatSight.Game.Screens.Editor
             editSnapshotArmed = false;
             lastInspectorSnapshotAtUtc = DateTime.MinValue;
             lastSavedSnapshot = null;
-            snapDivisor = 4;
+            snapDivisor = coerceSnapDivisor(editorSnapDivisorDefault?.Value ?? 4);
             suppressEditorDefaultPersistence = true;
             applyEditorDefaultsFromConfig();
             suppressEditorDefaultPersistence = false;
@@ -161,6 +164,18 @@ namespace BeatSight.Game.Screens.Editor
         {
             if (beatmap == null || beatmapPath == null)
                 return;
+
+            if (isVisualCaptureMode())
+            {
+                disposeTrack();
+                track = null;
+                trackLength = beatmap.Audio.Duration > 0
+                    ? beatmap.Audio.Duration
+                    : Math.Max(trackLength, 60000);
+                reloadTimeline();
+                refreshTimelineToolboxState();
+                return;
+            }
 
             disposeTrack();
 
@@ -204,6 +219,16 @@ namespace BeatSight.Game.Screens.Editor
 
         private void loadAudioTrackFromStorage(string relativePath)
         {
+            if (isVisualCaptureMode())
+            {
+                disposeTrack();
+                track = null;
+                trackLength = beatmap?.Audio.Duration ?? trackLength;
+                reloadTimeline();
+                refreshTimelineToolboxState();
+                return;
+            }
+
             disposeTrack();
 
             try
@@ -217,6 +242,8 @@ namespace BeatSight.Game.Screens.Editor
                 track = loadedTrack;
                 track.Completed += onTrackCompleted;
                 applyTrackPlaybackRate();
+                updateEditorMasterVolumeOutput();
+                updateEditorMusicVolumeOutput();
                 trackLength = track.Length;
                 if (currentTime > 0)
                     track.Seek(Math.Clamp(currentTime, 0, trackLength));
@@ -225,6 +252,7 @@ namespace BeatSight.Game.Screens.Editor
                 if (beatmap != null && trackLength > 0)
                     beatmap.Audio.Duration = (int)Math.Round(trackLength);
 
+                snapCurrentTimeToGridOnBeatmapLoad();
                 reloadTimeline();
                 refreshTimelineToolboxState();
 
@@ -240,6 +268,71 @@ namespace BeatSight.Game.Screens.Editor
                 appendStatusDetail($"Audio load failed: {ex.Message}");
                 track = null;
             }
+        }
+
+        private static bool isVisualCaptureMode()
+        {
+            string? value = Environment.GetEnvironmentVariable("BEATSIGHT_RUN_VISUAL_TESTS");
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            return value == "1"
+                   || value.Equals("true", StringComparison.OrdinalIgnoreCase)
+                   || value.Equals("yes", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void snapCurrentTimeToGridOnBeatmapLoad()
+        {
+            if (beatmap == null || !beatGridVisible)
+                return;
+
+            double snapped = quantizeTimeToSnapGrid(currentTime, onlyWhenBeatGridVisible: false);
+            if (!double.IsFinite(snapped))
+                return;
+
+            if (Math.Abs(snapped - currentTime) <= 0.01)
+                return;
+
+            currentTime = snapped;
+            if (track != null && Math.Abs(track.CurrentTime - currentTime) > 1.5)
+                track.Seek(currentTime);
+        }
+
+        private static int cleanupDuplicateLaneTimeNotes(Beatmap map)
+        {
+            if (map.HitObjects == null || map.HitObjects.Count <= 1)
+                return 0;
+
+            int laneCount = Math.Max(1, LaneManagement.ResolveLaneCount(map, fallbackLaneCount: map.Editor?.VisualLanes ?? 7));
+            var uniquePositions = new System.Collections.Generic.HashSet<(int Lane, int Time)>();
+            var deduped = new System.Collections.Generic.List<HitObject>(map.HitObjects.Count);
+            int removed = 0;
+
+            foreach (var hit in map.HitObjects)
+            {
+                int lane = resolveLaneForCleanup(hit, laneCount);
+                if (!uniquePositions.Add((lane, hit.Time)))
+                {
+                    removed++;
+                    continue;
+                }
+
+                deduped.Add(hit);
+            }
+
+            if (removed <= 0)
+                return 0;
+
+            map.HitObjects = deduped;
+            map.HitObjects.Sort((a, b) => a.Time.CompareTo(b.Time));
+            map.Metadata.ModifiedAt = DateTime.UtcNow;
+            return removed;
+        }
+
+        private static int resolveLaneForCleanup(HitObject hit, int laneCount)
+        {
+            int lane = hit.Lane ?? DrumLaneHeuristics.ResolveLane(hit.Component);
+            return Math.Clamp(lane, 0, Math.Max(0, laneCount - 1));
         }
     }
 }

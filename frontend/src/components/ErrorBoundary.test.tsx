@@ -13,10 +13,21 @@ vi.mock('../lib/errorReporting', () => ({
 
 // Suppress React's error boundary console.error during tests
 const originalError = console.error
+let windowErrorHandler: ((event: ErrorEvent) => void) | null = null
+
 beforeEach(() => {
     console.error = vi.fn()
+    windowErrorHandler = (event: ErrorEvent) => {
+        if (event.error instanceof Error && event.error.message === 'Test error') {
+            event.preventDefault()
+        }
+    }
+    window.addEventListener('error', windowErrorHandler)
 })
 afterEach(() => {
+    if (windowErrorHandler) {
+        window.removeEventListener('error', windowErrorHandler)
+    }
     console.error = originalError
 })
 

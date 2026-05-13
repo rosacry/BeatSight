@@ -5,6 +5,7 @@ using System.Reflection;
 using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Screens.Editor;
 using osu.Framework.Bindables;
+using osuTK;
 using osuTK.Input;
 using Xunit;
 
@@ -299,6 +300,199 @@ namespace BeatSight.Tests
 
             Assert.Contains(beatmap.HitObjects, h => h.Time == 225 && h.Component == "kick");
             Assert.Contains(beatmap.HitObjects, h => h.Time == 350 && h.Component == "snare");
+        }
+
+        [Fact]
+        public void QuantizeTimeToSnapGrid_UsesActiveTimingAndBeatGridToggle()
+        {
+            var screen = new EditorScreen();
+            var beatmap = createMinimalBeatmap(new HitObject { Time = 1000, Component = "kick", Velocity = 0.8 });
+            beatmap.Timing.Offset = 100;
+            beatmap.Timing.TimingPoints = new List<TimingPoint>
+            {
+                new() { Time = 1000, Bpm = 60, TimeSignature = "4/4" }
+            };
+
+            setPrivateField(screen, "beatmap", beatmap);
+            setPrivateField(screen, "snapDivisor", 4);
+            setPrivateField(screen, "beatGridVisible", true);
+
+            double snappedBeforeTimingPoint = invokePrivateInstance<double>(screen, "quantizeTimeToSnapGrid", 887d, true);
+            double snappedAfterTimingPoint = invokePrivateInstance<double>(screen, "quantizeTimeToSnapGrid", 1490d, true);
+
+            Assert.Equal(850, snappedBeforeTimingPoint, 3);  // 120 BPM timing (offset 100, interval 125)
+            Assert.Equal(1500, snappedAfterTimingPoint, 3);  // 60 BPM timing point (origin 1000, interval 250)
+
+            setPrivateField(screen, "beatGridVisible", false);
+            double unsnappedWhenGridHidden = invokePrivateInstance<double>(screen, "quantizeTimeToSnapGrid", 1137d, true);
+            Assert.Equal(1137, unsnappedWhenGridHidden, 3);
+        }
+
+        [Fact]
+        public void GetSnapIntervalMs_UsesTimeSignatureBeatUnitDenominator()
+        {
+            var screen = new EditorScreen();
+            var beatmap = createMinimalBeatmap(new HitObject { Time = 1000, Component = "kick", Velocity = 0.8 });
+            beatmap.Timing.Bpm = 120;
+            beatmap.Timing.TimeSignature = "6/8";
+            beatmap.Timing.TimingPoints = new List<TimingPoint>
+            {
+                new() { Time = 1000, Bpm = 60, TimeSignature = "3/4" }
+            };
+
+            setPrivateField(screen, "beatmap", beatmap);
+            setPrivateField(screen, "snapDivisor", 4);
+            setPrivateField(screen, "currentTime", 500d);
+
+            double beforeTimingPoint = invokePrivateInstance<double>(screen, "getSnapIntervalMs", 500d);
+            double afterTimingPoint = invokePrivateInstance<double>(screen, "getSnapIntervalMs", 1500d);
+
+            Assert.InRange(beforeTimingPoint, 62.49, 62.51); // 120 BPM, 8th-note beat unit, /4 snap
+            Assert.InRange(afterTimingPoint, 250.0, 250.1);  // 60 BPM timing point with 4/4 beat unit, /4 snap
+        }
+
+        [Fact]
+        public void TimelineSplitRatioHelpersRoundTripAndClamp()
+        {
+            double ratio = invokePrivateStatic<double>("resolveTimelineSplitRatioFromHeight", 260f, 200f, 400f);
+            Assert.Equal(0.30d, ratio, 3);
+
+            float roundTripHeight = invokePrivateStatic<float>("resolveTimelineTopHeightFromSplitRatio", ratio, 200f, 400f);
+            Assert.InRange(roundTripHeight, 259.98f, 260.02f);
+
+            float clampedLow = invokePrivateStatic<float>("resolveTimelineTopHeightFromSplitRatio", -1.5d, 200f, 400f);
+            float clampedHigh = invokePrivateStatic<float>("resolveTimelineTopHeightFromSplitRatio", 4.0d, 200f, 400f);
+            Assert.InRange(clampedLow, 199.98f, 200.02f);
+            Assert.InRange(clampedHigh, 399.98f, 400.02f);
+
+            double collapsedBoundsRatio = invokePrivateStatic<double>("resolveTimelineSplitRatioFromHeight", 220f, 300f, 300f);
+            Assert.Equal(0d, collapsedBoundsRatio, 3);
+        }
+
+        [Fact]
+        public void TwoDimensionalPreviewWorkspaceMinimumRaisesFloorAboveSharedBaseline()
+        {
+            float sharedBaseline = invokePrivateStatic<float>("resolveMinimumPreviewWorkspaceHeight", new Vector2(1280, 720), false);
+            float compactTwoDimensional = invokePrivateStatic<float>("resolveMinimumPreviewWorkspaceHeight", new Vector2(1280, 720), true);
+            float largeTwoDimensional = invokePrivateStatic<float>("resolveMinimumPreviewWorkspaceHeight", new Vector2(1920, 1080), true);
+
+            Assert.InRange(sharedBaseline, 187.9f, 188.1f);
+            Assert.True(compactTwoDimensional > sharedBaseline);
+            Assert.True(largeTwoDimensional >= compactTwoDimensional);
+            Assert.InRange(compactTwoDimensional, 219.9f, 220.1f);
+            Assert.InRange(largeTwoDimensional, 248.3f, 248.5f);
+        }
+
+        [Fact]
+        public void TryNormalizeTimeSignature_ValidatesAndNormalisesInput()
+        {
+            var method = typeof(EditorScreen).GetMethod("tryNormalizeTimeSignature", BindingFlags.Static | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("tryNormalizeTimeSignature method not found.");
+
+            object?[] validArgs = { " 6/8 ", null };
+            bool valid = (bool)method.Invoke(null, validArgs)!;
+            Assert.True(valid);
+            Assert.Equal("6/8", validArgs[1] as string);
+
+            object?[] invalidArgs = { "7/3", null };
+            bool invalid = (bool)method.Invoke(null, invalidArgs)!;
+            Assert.False(invalid);
+        }
+
+        [Fact]
+        public void TryEstimateBpmFromHitObjects_DetectsSimpleQuarterPulse()
+        {
+            var method = typeof(EditorScreen).GetMethod("tryEstimateBpmFromHitObjects", BindingFlags.Static | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("tryEstimateBpmFromHitObjects method not found.");
+
+            var hitObjects = new List<HitObject>
+            {
+                new() { Time = 0, Component = "kick" },
+                new() { Time = 500, Component = "snare" },
+                new() { Time = 1000, Component = "kick" },
+                new() { Time = 1500, Component = "snare" },
+                new() { Time = 2000, Component = "kick" }
+            };
+
+            object?[] args = { hitObjects, 0d };
+            bool detected = (bool)method.Invoke(null, args)!;
+
+            Assert.True(detected);
+            Assert.InRange((double)args[1]!, 119.0, 121.0);
+        }
+
+        [Fact]
+        public void TryEstimateOffsetFromHitObjects_ResolvesConstantPhaseOffset()
+        {
+            var method = typeof(EditorScreen).GetMethod("tryEstimateOffsetFromHitObjects", BindingFlags.Static | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("tryEstimateOffsetFromHitObjects method not found.");
+
+            var hitObjects = new List<HitObject>
+            {
+                new() { Time = 40, Component = "kick" },
+                new() { Time = 540, Component = "snare" },
+                new() { Time = 1040, Component = "kick" },
+                new() { Time = 1540, Component = "snare" }
+            };
+
+            object?[] args = { hitObjects, 120d, 0d };
+            bool detected = (bool)method.Invoke(null, args)!;
+
+            Assert.True(detected);
+            Assert.InRange((double)args[2]!, 35.0, 45.0);
+        }
+
+        [Fact]
+        public void EstimateTimeSignatureFromHitObjects_PrefersFourFourForStandardBackbeat()
+        {
+            var method = typeof(EditorScreen).GetMethod("estimateTimeSignatureFromHitObjects", BindingFlags.Static | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("estimateTimeSignatureFromHitObjects method not found.");
+
+            var hitObjects = new List<HitObject>();
+            int beatLength = 500;
+            for (int measure = 0; measure < 4; measure++)
+            {
+                int start = measure * 4 * beatLength;
+                hitObjects.Add(new HitObject { Time = start, Component = "kick" });
+                hitObjects.Add(new HitObject { Time = start + beatLength, Component = "snare" });
+                hitObjects.Add(new HitObject { Time = start + beatLength * 2, Component = "kick" });
+                hitObjects.Add(new HitObject { Time = start + beatLength * 3, Component = "snare" });
+            }
+
+            object?[] args = { hitObjects, 120d, 0d, "4/4" };
+            string signature = (string)method.Invoke(null, args)!;
+            Assert.Equal("4/4", signature);
+        }
+
+        [Fact]
+        public void CleanupDuplicateLaneTimeNotes_RemovesLegacyDuplicatesByLaneAndTime()
+        {
+            var screen = new EditorScreen();
+            var first = new HitObject { Time = 1000, Component = "snare", Lane = 2, Velocity = 0.55 };
+            var duplicateSameLaneTime = new HitObject { Time = 1000, Component = "snare", Lane = 2, Velocity = 0.95 };
+            var unique = new HitObject { Time = 1125, Component = "snare", Lane = 2, Velocity = 0.75 };
+
+            var beatmap = createMinimalBeatmap(first, duplicateSameLaneTime, unique);
+
+            int removed = invokePrivateStatic<int>("cleanupDuplicateLaneTimeNotes", beatmap);
+
+            Assert.Equal(1, removed);
+            Assert.Equal(2, beatmap.HitObjects.Count);
+            Assert.Same(first, beatmap.HitObjects[0]);
+            Assert.Same(unique, beatmap.HitObjects[1]);
+        }
+
+        [Fact]
+        public void CleanupDuplicateLaneTimeNotes_ReturnsZeroWhenNoDuplicatesExist()
+        {
+            var beatmap = createMinimalBeatmap(
+                new HitObject { Time = 1000, Component = "kick", Lane = 3, Velocity = 0.8 },
+                new HitObject { Time = 1125, Component = "kick", Lane = 3, Velocity = 0.8 });
+
+            int removed = invokePrivateStatic<int>("cleanupDuplicateLaneTimeNotes", beatmap);
+
+            Assert.Equal(0, removed);
+            Assert.Equal(2, beatmap.HitObjects.Count);
         }
 
         private static T invokePrivateStatic<T>(string methodName, params object?[]? args)

@@ -20,7 +20,7 @@ namespace BeatSight.Game.Screens.Editor
                 Logger.Log("[EditorScreen] reloadTimeline: beatmap is NULL", LoggingTarget.Runtime, LogLevel.Important);
                 timeline.LoadBeatmap(new Beatmap(), Math.Max(trackLength, 60000), waveformData);
                 timeline.SetZoom(timelineZoom);
-                timeline.SetSnap(snapDivisor, 120);
+                timeline.SetSnap(0, double.NaN, 0, 4, 4);
                 timeline.SetWaveformScale(waveformScale);
                 timeline.SetBeatGridVisible(beatGridVisible);
                 timeline.SetCurrentTime(currentTime);
@@ -42,9 +42,9 @@ namespace BeatSight.Game.Screens.Editor
 
             timeline.LoadBeatmap(beatmap, duration, waveformData);
             timeline.SetZoom(timelineZoom);
-            timeline.SetSnap(snapDivisor, beatmap.Timing.Bpm);
             timeline.SetWaveformScale(waveformScale);
             timeline.SetBeatGridVisible(beatGridVisible);
+            syncTimelineSnapForCurrentTime(force: true);
             timeline.SetCurrentTime(currentTime);
             playbackPreview?.SetBeatmap(beatmap);
             if (selectedHitObject != null && !beatmap.HitObjects.Contains(selectedHitObject))

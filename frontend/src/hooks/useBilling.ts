@@ -24,7 +24,7 @@ export function useStripeConfig() {
  * Only fetches when user is authenticated to avoid 401 errors.
  */
 export function useSubscription() {
-    const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated())
 
     return useQuery({
         queryKey: ['subscription'],

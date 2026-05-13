@@ -357,7 +357,6 @@ async def get_me(
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
     from app.models.role import UserRole
-    from app.models.user_tag import UserTag
 
     # Eagerly load roles and tags
     result = await session.execute(

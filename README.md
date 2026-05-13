@@ -106,7 +106,7 @@ The goal isn't gamification for its own sake—it's giving drummers the same vis
 |------|---------|---------|
 | .NET SDK | 8.0+ | Desktop client |
 | Python | 3.10+ | Backend services |
-| Node.js | 20+ | Web frontend |
+| Node.js | 20.19+ (or 22.12+) | Web frontend |
 | FFmpeg | Latest | Audio processing |
 | PostgreSQL | 15+ | Database |
 | Redis | 7+ | Caching |

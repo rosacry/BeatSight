@@ -19,16 +19,13 @@ from __future__ import annotations
 import hashlib
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.session_verification import (
-    MAX_VERIFICATION_ATTEMPTS,
-    SESSION_VERIFICATION_TIMEOUT_MINUTES,
-    VERIFICATION_CODE_EXPIRY_MINUTES,
     SensitiveActionLog,
     SessionVerification,
 )
@@ -252,7 +249,7 @@ class SessionVerificationService:
         verification = result.scalar_one_or_none()
         
         if verification is None:
-            logger.warning(f"Invalid verification link attempted")
+            logger.warning("Invalid verification link attempted")
             return (False, None, "Invalid or expired verification link")
         
         if verification.is_code_expired():

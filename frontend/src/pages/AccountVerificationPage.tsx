@@ -47,6 +47,7 @@ export function AccountVerificationPage() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [successMessage, setSuccessMessage] = useState<string | null>(null)
     const inputRef = useRef<HTMLInputElement>(null)
+    const submittedCodeRef = useRef<string | null>(null)
 
     // Initialize verification on mount
     useEffect(() => {
@@ -69,14 +70,6 @@ export function AccountVerificationPage() {
         }
     }, [isVerified, navigate, returnTo])
 
-    // Auto-submit when code is complete
-    useEffect(() => {
-        const normalized = code.replace(/\s/g, '')
-        if (normalized.length === CODE_LENGTH && !isSubmitting) {
-            handleSubmit()
-        }
-    }, [code])
-
     const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         // Allow only hex characters and spaces
         const value = e.target.value.replace(/[^0-9a-fA-F\s]/g, '')
@@ -84,9 +77,11 @@ export function AccountVerificationPage() {
         clearError()
     }
 
-    const handleSubmit = useCallback(async () => {
-        const normalized = code.replace(/\s/g, '').toLowerCase()
+    const handleSubmit = useCallback(async (normalized: string) => {
         if (normalized.length !== CODE_LENGTH) {
+            return
+        }
+        if (isSubmitting) {
             return
         }
 
@@ -101,7 +96,21 @@ export function AccountVerificationPage() {
         }
 
         setIsSubmitting(false)
-    }, [code, submitCode, clearError])
+    }, [submitCode, clearError, isSubmitting])
+
+    // Auto-submit when code is complete
+    useEffect(() => {
+        const normalized = code.replace(/\s/g, '').toLowerCase()
+        if (normalized.length !== CODE_LENGTH) {
+            submittedCodeRef.current = null
+            return
+        }
+        if (isSubmitting || submittedCodeRef.current === normalized) {
+            return
+        }
+        submittedCodeRef.current = normalized
+        void handleSubmit(normalized)
+    }, [code, isSubmitting, handleSubmit])
 
     const handleRequestNewCode = async () => {
         setCode('')

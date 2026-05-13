@@ -134,28 +134,76 @@ namespace BeatSight.Game.Screens.Editor
             if (inspectorToggleButton == null)
                 return;
 
-            float toggleWidth = ResponsiveLayout.ClampFraction(viewport.X, 0.094f, 116f, 172f);
-            float toggleHeight = ResponsiveLayout.ClampFraction(viewport.Y, 0.036f, 30f, 40f);
-            float toggleInsetX = ResponsiveLayout.ClampFraction(viewport.X, 0.007f, 8f, 14f);
-            float toggleInsetY = ResponsiveLayout.ClampFraction(viewport.Y, 0.009f, 8f, 14f);
+            float toggleWidth = ResponsiveLayout.ClampFraction(viewport.X, 0.108f, 132f, 176f);
+            float toggleHeight = ResponsiveLayout.ClampFraction(viewport.Y, 0.034f, 28f, 38f);
+            float toggleInsetX = ResponsiveLayout.ClampFraction(viewport.X, 0.006f, 6f, 12f);
 
             inspectorToggleButton.Size = new Vector2(toggleWidth, toggleHeight);
             inspectorToggleButton.Margin = new MarginPadding
             {
-                Top = toggleInsetY,
                 Right = toggleInsetX
             };
 
-            inspectorToggleButton.SetLabel(inspectorCollapsed ? "Show Panel" : "Hide Panel");
+            inspectorToggleButton.SetLabel(inspectorCollapsed ? "Show Inspector" : "Hide Inspector");
             inspectorToggleButton.UpdateState(true, inspectorCollapsed ? "Show inspector panel (I)." : "Hide inspector panel (I).");
-            inspectorToggleButton.FadeTo(0.95f, 120);
+            inspectorToggleButton.FadeTo(inspectorCollapsed ? 0.74f : 0.64f, 160);
         }
 
         private void toggleInspectorCollapsed()
         {
-            inspectorCollapsed = !inspectorCollapsed;
-            applyResponsiveEditorLayout(force: true);
-            appendStatusDetail(inspectorCollapsed ? "Inspector hidden" : "Inspector shown");
+            if (inspectorContainer == null || inspectorTransitionActive)
+                return;
+
+            if (inspectorCollapsed)
+            {
+                inspectorCollapsed = false;
+                applyResponsiveEditorLayout(force: true);
+
+                inspectorContainer.Show();
+                inspectorContainer.AlwaysPresent = true;
+                inspectorContainer.ClearTransforms();
+                inspectorContainer.Alpha = 0;
+                if (inspectorStackedLayout)
+                {
+                    inspectorContainer.Y = 14;
+                    inspectorContainer.FadeIn(220, Easing.OutQuint);
+                    inspectorContainer.MoveToY(0, 240, Easing.OutQuint);
+                }
+                else
+                {
+                    inspectorContainer.X = 22;
+                    inspectorContainer.FadeIn(220, Easing.OutQuint);
+                    inspectorContainer.MoveToX(0, 240, Easing.OutQuint);
+                }
+
+                appendStatusDetail("Inspector shown");
+                return;
+            }
+
+            inspectorTransitionActive = true;
+            inspectorContainer.Show();
+            inspectorContainer.AlwaysPresent = true;
+            inspectorContainer.ClearTransforms();
+
+            if (inspectorStackedLayout)
+            {
+                inspectorContainer.FadeOut(190, Easing.OutQuint);
+                inspectorContainer.MoveToY(20, 220, Easing.OutQuint);
+            }
+            else
+            {
+                inspectorContainer.FadeOut(190, Easing.OutQuint);
+                inspectorContainer.MoveToX(28, 220, Easing.OutQuint);
+            }
+
+            Scheduler.AddDelayed(() =>
+            {
+                inspectorCollapsed = true;
+                inspectorTransitionActive = false;
+                applyResponsiveEditorLayout(force: true);
+            }, 236);
+
+            appendStatusDetail("Inspector hidden");
         }
 
         private float getInitialFooterHeight()

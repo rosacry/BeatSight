@@ -84,7 +84,8 @@ namespace BeatSight.Game.Screens.Editor
         private void setHoverHint(string? hint)
         {
             _ = hint;
-            refreshHintText();
+            // Hover hints are intentionally ignored to keep toolbar hover states
+            // from mutating header layout while mapping.
         }
 
         private void refreshHintText()

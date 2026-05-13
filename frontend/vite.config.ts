@@ -6,8 +6,8 @@ import path from 'path'
 export default defineConfig(({ mode }) => ({
     plugins: [
         react(),
-        // Sentry source maps plugin (only in production builds)
-        mode === 'production' && sentryVitePlugin({
+        // Sentry source maps plugin (production builds with auth token available)
+        mode === 'production' && process.env.SENTRY_AUTH_TOKEN && sentryVitePlugin({
             org: process.env.SENTRY_ORG,
             project: 'beatsight-frontend',
             authToken: process.env.SENTRY_AUTH_TOKEN,

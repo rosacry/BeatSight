@@ -47,6 +47,23 @@ function getTabFromUrl(searchParams: URLSearchParams): SettingsTab {
 // Use the shared Preferences type but make it compatible with our local usage
 type Preferences = Omit<UserPreferences, 'version' | 'checksum' | 'last_modified'>
 
+function createDefaultPreferences(): Preferences {
+    return {
+        scroll_speed: 1.0,
+        note_skin: 'default',
+        audio_offset_ms: 0,
+        visual_offset_ms: 0,
+        background_dim: 0.5,
+        master_volume: 1.0,
+        music_volume: 0.8,
+        effects_volume: 0.8,
+        hitsound_volume: 1.0,
+        theme: 'dark',
+        language: 'en',
+        custom_settings: { ...DEFAULT_CUSTOM_SETTINGS },
+    }
+}
+
 // API helper with auth
 async function apiRequest<T>(
     endpoint: string,
@@ -179,7 +196,7 @@ export function SettingsPage() {
                 hide_from_leaderboards: settings.hide_from_leaderboards ?? false,
                 hide_from_public_queues: settings.hide_from_public_queues ?? false,
             })
-        } catch (err) {
+        } catch {
             // Silently handle errors - user settings might not exist yet
             logger.debug('Could not load user settings, using defaults')
         }
@@ -211,29 +228,13 @@ export function SettingsPage() {
 
 
     // Load preferences on mount
-    // Default preferences used when cloud sync is disabled
-    const defaultPreferences: Preferences = {
-        scroll_speed: 1.0,
-        note_skin: 'default',
-        audio_offset_ms: 0,
-        visual_offset_ms: 0,
-        background_dim: 0.5,
-        master_volume: 1.0,
-        music_volume: 0.8,
-        effects_volume: 0.8,
-        hitsound_volume: 1.0,
-        theme: 'dark',
-        language: 'en',
-        custom_settings: DEFAULT_CUSTOM_SETTINGS,
-    }
-
     const loadPreferences = useCallback(async () => {
         if (!accessToken) return
 
         // Skip cloud sync call if feature is disabled
         if (features && !features.cloud_sync) {
             logger.debug('Cloud sync disabled, using local preferences')
-            setPreferences(defaultPreferences)
+            setPreferences(createDefaultPreferences())
             setIsLoading(false)
             return
         }
@@ -253,7 +254,7 @@ export function SettingsPage() {
                 logger.error('Failed to load preferences:', err)
             }
             // Initialize with defaults if cloud sync unavailable
-            setPreferences(defaultPreferences)
+            setPreferences(createDefaultPreferences())
         } finally {
             setIsLoading(false)
         }

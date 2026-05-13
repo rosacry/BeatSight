@@ -14,7 +14,7 @@ This migration fixes multiple schema mismatches:
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy import inspect, text
+from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = "028_fix_schema_mismatches"

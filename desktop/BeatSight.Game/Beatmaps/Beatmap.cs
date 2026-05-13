@@ -47,7 +47,8 @@ namespace BeatSight.Game.Beatmaps
 
     public class TimingInfo
     {
-        public double Bpm { get; set; } = 120.0;
+        public const double DefaultBpm = 120.0;
+        public double Bpm { get; set; } = DefaultBpm;
         public int Offset { get; set; } = 0;
         public string TimeSignature { get; set; } = "4/4";
         public List<TimingPoint>? TimingPoints { get; set; }
@@ -78,6 +79,7 @@ namespace BeatSight.Game.Beatmaps
         public int Index { get; set; }
         public string? Name { get; set; }
         public string? ShortName { get; set; }
+        public string? ColorHex { get; set; }
     }
 
     public class HitObject

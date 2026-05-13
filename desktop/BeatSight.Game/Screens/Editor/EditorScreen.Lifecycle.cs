@@ -10,10 +10,12 @@ namespace BeatSight.Game.Screens.Editor
     {
         public override bool OnExiting(ScreenExitEvent e)
         {
+            endPlaybackZoomInteraction();
             endTimelineZoomInteraction();
             endWaveformScaleInteraction();
             uiAudio.PlayBack();
             stopPlayback(silent: true);
+            stopEditorMetronomeChannels();
             disposeTrack();
             return base.OnExiting(e);
         }
@@ -21,11 +23,18 @@ namespace BeatSight.Game.Screens.Editor
         protected override void Dispose(bool isDisposing)
         {
             base.Dispose(isDisposing);
+            stopEditorMetronomeChannels();
             disposeTrack();
             storageTrackStore?.Dispose();
             storageTrackStore = null;
+            storageSampleStore?.Dispose();
+            storageSampleStore = null;
             storageResourceStore?.Dispose();
             storageResourceStore = null;
+            embeddedSampleStore?.Dispose();
+            embeddedSampleStore = null;
+            embeddedResourceStore?.Dispose();
+            embeddedResourceStore = null;
         }
 
         private partial class PassiveScrollContainer : BeatSightScrollContainer

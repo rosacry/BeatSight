@@ -24,8 +24,8 @@ namespace BeatSight.Tests
 
                 Assert.InRange(metrics.InspectorWidth, 360f, 540f);
                 Assert.InRange(metrics.TimelineTopHeight, 180f, 320f);
-                Assert.InRange(metrics.TimelineToolboxHeight, 78f, 136f);
-                Assert.InRange(metrics.FooterHeight, 52f, 112f);
+                Assert.InRange(metrics.TimelineToolboxHeight, 86f, 196f);
+                Assert.InRange(metrics.FooterHeight, 84f, 132f);
                 Assert.InRange(metrics.PanelGap, 8f, 14f);
                 Assert.InRange(metrics.StackedInspectorHeight, 168f, 320f);
 
@@ -60,9 +60,10 @@ namespace BeatSight.Tests
 
             Assert.True(compact.UseStackedInspector);
             Assert.True(compact.FooterHeight < full.FooterHeight);
-            Assert.True(compact.TimelineToolboxHeight < full.TimelineToolboxHeight);
+            Assert.True(compact.TimelineToolboxHeight >= full.TimelineToolboxHeight);
+            Assert.True(compact.TimelineToolboxHeight <= 132f, $"Expected compact toolbox cap around 720p, got {compact.TimelineToolboxHeight:0.##}.");
             Assert.True(compact.StackedInspectorHeight <= 185f, $"Expected compact stacked inspector cap around 720p, got {compact.StackedInspectorHeight:0.##}.");
-            Assert.True(compact.FooterHeight <= 62f, $"Expected compact footer cap around 720p, got {compact.FooterHeight:0.##}.");
+            Assert.True(compact.FooterHeight <= 90f, $"Expected compact footer cap around 720p, got {compact.FooterHeight:0.##}.");
         }
 
         [Fact]

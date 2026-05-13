@@ -261,14 +261,19 @@ class TestGetKarmaLeaderboard:
 
     @pytest.mark.asyncio
     async def test_returns_leaderboard_list(self):
-        """Test that leaderboard returns list of tuples."""
+        """Test that leaderboard returns list of dictionaries."""
         mock_session = AsyncMock()
 
         user_id = uuid.uuid4()
-        mock_data = [(user_id, "TopPlayer", 5000)]
+        mock_row = MagicMock()
+        mock_row.id = user_id
+        mock_row.user_number = 1
+        mock_row.display_name = "TopPlayer"
+        mock_row.karma_score = 5000
+        mock_row.is_anonymous = False
 
         mock_result = MagicMock()
-        mock_result.all.return_value = mock_data
+        mock_result.all.return_value = [mock_row]
         mock_session.execute.return_value = mock_result
 
         service = KarmaService(mock_session)
@@ -276,9 +281,11 @@ class TestGetKarmaLeaderboard:
         result = await service.get_karma_leaderboard(limit=10)
 
         assert len(result) == 1
-        assert result[0][0] == user_id
-        assert result[0][1] == "TopPlayer"
-        assert result[0][2] == 5000
+        assert result[0]["user_id"] == user_id
+        assert result[0]["user_number"] == 1
+        assert result[0]["display_name"] == "TopPlayer"
+        assert result[0]["karma_score"] == 5000
+        assert result[0]["is_anonymous"] is False
 
 
 class TestGetKarmaHistoryCount:

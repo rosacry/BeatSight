@@ -1,3 +1,4 @@
+using System;
 using BeatSight.Game.UI.Theming;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -19,6 +20,8 @@ namespace BeatSight.Game.UI.Components
         private partial class BeatSightScrollbar : ScrollbarContainer
         {
             private const float dim_size = 7;
+            private const float minimum_horizontal_thumb_length = 34f;
+            private const float minimum_vertical_thumb_length = 24f;
 
             public BeatSightScrollbar(Direction direction)
                 : base(direction)
@@ -35,9 +38,13 @@ namespace BeatSight.Game.UI.Components
 
             public override void ResizeTo(float val, int duration = 0, Easing easing = Easing.None)
             {
+                float minimumLength = ScrollDirection == Direction.Horizontal
+                    ? minimum_horizontal_thumb_length
+                    : minimum_vertical_thumb_length;
+                float clamped = Math.Max(minimumLength, val);
                 Vector2 size = new Vector2(dim_size)
                 {
-                    [(int)ScrollDirection] = val
+                    [(int)ScrollDirection] = clamped
                 };
                 this.ResizeTo(size, duration, easing);
             }

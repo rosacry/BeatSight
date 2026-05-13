@@ -13,7 +13,7 @@ import { useAuthStore } from '@/stores/authStore'
  * Only fetches when user is authenticated to avoid 401 errors.
  */
 export function useCreditBalance() {
-    const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated())
 
     return useQuery({
         queryKey: ['credit-balance'],

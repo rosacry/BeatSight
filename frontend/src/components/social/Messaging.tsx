@@ -138,7 +138,7 @@ export function MessageThread({ partnerId }: MessageThreadProps) {
         isFetchingNextPage,
     } = useMessages(partnerId)
     const sendMessage = useSendMessage()
-    const markRead = useMarkMessagesRead()
+    const { mutate: markMessagesRead } = useMarkMessagesRead()
     const [newMessage, setNewMessage] = useState('')
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
@@ -152,9 +152,9 @@ export function MessageThread({ partnerId }: MessageThreadProps) {
     // Mark messages as read when viewing
     useEffect(() => {
         if (partnerId && messages.some((m) => m.sender_id === partnerId && !m.read_at)) {
-            markRead.mutate(partnerId)
+            markMessagesRead(partnerId)
         }
-    }, [partnerId, messages])
+    }, [partnerId, messages, markMessagesRead])
 
     // Scroll to bottom on new messages
     useEffect(() => {

@@ -1,10 +1,13 @@
 using System;
 using System.Globalization;
 using System.Linq;
+using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
+using osu.Framework.Graphics;
 using osu.Framework.Input.Events;
 using osu.Framework.Screens;
+using osuTK;
 
 namespace BeatSight.Game.Screens.Editor
 {
@@ -12,9 +15,9 @@ namespace BeatSight.Game.Screens.Editor
     {
         protected override bool OnKeyDown(KeyDownEvent e)
         {
-            if (!e.ControlPressed && !e.SuperPressed && !e.AltPressed && e.Key == osuTK.Input.Key.F1)
+            if (isControlOrSuper(e) && e.ShiftPressed && e.Key == osuTK.Input.Key.F12)
             {
-                toggleFooterShortcutsCollapsed();
+                toggleScrubPerfOverlay();
                 return true;
             }
 
@@ -35,6 +38,90 @@ namespace BeatSight.Game.Screens.Editor
                 if (e.Key == osuTK.Input.Key.Space)
                 {
                     togglePlayback();
+                    return true;
+                }
+
+                if (e.Key == osuTK.Input.Key.T && !e.ControlPressed && !e.SuperPressed && !e.AltPressed)
+                {
+                    registerTimingTap();
+                    return true;
+                }
+
+                if (e.Key == osuTK.Input.Key.A && !e.ControlPressed && !e.SuperPressed && !e.AltPressed)
+                {
+                    autoDetectTimingFromContext();
+                    return true;
+                }
+
+                if (e.Key == osuTK.Input.Key.C && !e.ControlPressed && !e.SuperPressed && !e.AltPressed)
+                {
+                    clearTimingDetectors();
+                    return true;
+                }
+
+                if (e.Key == osuTK.Input.Key.Up)
+                {
+                    nudgeTimingBpm(e.ShiftPressed ? 1.0 : 0.1);
+                    return true;
+                }
+
+                if (e.Key == osuTK.Input.Key.Down)
+                {
+                    nudgeTimingBpm(e.ShiftPressed ? -1.0 : -0.1);
+                    return true;
+                }
+
+                if (e.Key == osuTK.Input.Key.Left)
+                {
+                    nudgeTimingOffset(e.ShiftPressed ? -5 : -1);
+                    return true;
+                }
+
+                if (e.Key == osuTK.Input.Key.Right)
+                {
+                    nudgeTimingOffset(e.ShiftPressed ? 5 : 1);
+                    return true;
+                }
+
+                if (e.Key == osuTK.Input.Key.M)
+                {
+                    toggleEditorMetronome();
+                    return true;
+                }
+
+                if (e.Key == osuTK.Input.Key.BracketLeft)
+                {
+                    nudgeTimingTimeSignature(-1);
+                    return true;
+                }
+
+                if (e.Key == osuTK.Input.Key.BracketRight)
+                {
+                    nudgeTimingTimeSignature(1);
+                    return true;
+                }
+
+                if (e.Key == osuTK.Input.Key.PageUp)
+                {
+                    nudgeTimingSection(-1);
+                    return true;
+                }
+
+                if (e.Key == osuTK.Input.Key.PageDown)
+                {
+                    nudgeTimingSection(1);
+                    return true;
+                }
+
+                if (e.Key == osuTK.Input.Key.Insert)
+                {
+                    addTimingSplitAtCurrentTime();
+                    return true;
+                }
+
+                if (e.Key == osuTK.Input.Key.Delete)
+                {
+                    removeSelectedTimingSplit();
                     return true;
                 }
 
@@ -112,6 +199,18 @@ namespace BeatSight.Game.Screens.Editor
                 if (e.Key == osuTK.Input.Key.Right)
                 {
                     nudgeSelectedNote(true);
+                    return true;
+                }
+
+                if (!e.ControlPressed && !e.SuperPressed && isZoomIncreaseKey(e.Key))
+                {
+                    adjustUiScale(true);
+                    return true;
+                }
+
+                if (!e.ControlPressed && !e.SuperPressed && isZoomDecreaseKey(e.Key))
+                {
+                    adjustUiScale(false);
                     return true;
                 }
             }
@@ -231,6 +330,12 @@ namespace BeatSight.Game.Screens.Editor
             {
                 if (!e.AltPressed)
                 {
+                    if (e.Key == osuTK.Input.Key.M)
+                    {
+                        toggleEditorMetronome();
+                        return true;
+                    }
+
                     if (tryHandleLaneQuickReassign(e.Key))
                         return true;
 
@@ -272,6 +377,18 @@ namespace BeatSight.Game.Screens.Editor
                 return true;
             }
 
+            if (isControlOrSuper(e) && e.Key == osuTK.Input.Key.C)
+            {
+                copySelectedNotesToClipboard();
+                return true;
+            }
+
+            if (isControlOrSuper(e) && e.Key == osuTK.Input.Key.V)
+            {
+                pasteNotesFromClipboard();
+                return true;
+            }
+
             if (isControlOrSuper(e) && e.Key == osuTK.Input.Key.A && !isTextInputFocused())
             {
                 selectAllNotes();
@@ -297,6 +414,78 @@ namespace BeatSight.Game.Screens.Editor
             }
 
             return base.OnKeyDown(e);
+        }
+
+        protected override bool OnScroll(ScrollEvent e)
+        {
+            if (isTimingSetupOverlayVisible())
+                return true;
+
+            if (isTextInputFocused())
+                return base.OnScroll(e);
+
+            if (e.ControlPressed || e.AltPressed)
+                return base.OnScroll(e);
+
+            if (!shouldUseWheelForTimelineSeek())
+                return base.OnScroll(e);
+
+            double delta = e.ScrollDelta.Y != 0 ? e.ScrollDelta.Y : -e.ScrollDelta.X;
+            if (Math.Abs(delta) <= 0.0001)
+                return base.OnScroll(e);
+
+            double seekDeltaMs = resolveWheelScrubDeltaMs(delta, e.ShiftPressed);
+            double targetTime = quantizeTimeToSnapGrid(currentTime - seekDeltaMs, onlyWhenBeatGridVisible: true);
+            queueSeekToTime(
+                targetTime,
+                ensureTimelineVisible: true,
+                syncTrack: true,
+                syncPreview: true,
+                source: SeekInputSource.Wheel,
+                inputDelta: delta);
+            return true;
+        }
+
+        private double resolveWheelScrubDeltaMs(double delta, bool shiftPressed)
+        {
+            double stepMs = Math.Max(8, getSnapIntervalMs());
+            double magnitude = Math.Abs(delta);
+            double curvedMagnitude = Math.Pow(magnitude + 0.15, wheelScrubCurveExponent);
+            curvedMagnitude = Math.Clamp(curvedMagnitude, 0.22, wheelScrubMagnitudeCap);
+            double shiftMultiplier = shiftPressed ? wheelScrubShiftMultiplier : 1.0;
+            double adaptiveScale = getScrubFramePressureScale();
+            double totalMultiplier = wheelScrubBaseMultiplier * shiftMultiplier * adaptiveScale;
+            return Math.Sign(delta) * stepMs * curvedMagnitude * totalMultiplier;
+        }
+
+        private bool shouldUseWheelForTimelineSeek()
+        {
+            var inputManager = GetContainingInputManager();
+            if (inputManager == null)
+                return true;
+
+            Vector2 pointerScreenSpace = inputManager.CurrentState.Mouse.Position;
+            if (isPointerInsideDrawable(timelineToolboxContainer, pointerScreenSpace))
+                return false;
+            if (isPointerInsideDrawable(footerRootContainer, pointerScreenSpace))
+                return false;
+
+            return true;
+        }
+
+        private static bool isPointerInsideDrawable(Drawable? drawable, Vector2 pointerScreenSpace)
+        {
+            if (drawable == null || !drawable.IsPresent || drawable.DrawWidth <= 0 || drawable.DrawHeight <= 0)
+                return false;
+
+            var quad = drawable.ScreenSpaceDrawQuad;
+            float minX = Math.Min(Math.Min(quad.TopLeft.X, quad.TopRight.X), Math.Min(quad.BottomLeft.X, quad.BottomRight.X));
+            float maxX = Math.Max(Math.Max(quad.TopLeft.X, quad.TopRight.X), Math.Max(quad.BottomLeft.X, quad.BottomRight.X));
+            float minY = Math.Min(Math.Min(quad.TopLeft.Y, quad.TopRight.Y), Math.Min(quad.BottomLeft.Y, quad.BottomRight.Y));
+            float maxY = Math.Max(Math.Max(quad.TopLeft.Y, quad.TopRight.Y), Math.Max(quad.BottomLeft.Y, quad.BottomRight.Y));
+
+            return pointerScreenSpace.X >= minX && pointerScreenSpace.X <= maxX
+                   && pointerScreenSpace.Y >= minY && pointerScreenSpace.Y <= maxY;
         }
 
         private bool tryHandleLaneQuickReassign(osuTK.Input.Key key)
@@ -403,12 +592,11 @@ namespace BeatSight.Game.Screens.Editor
 
         private LaneLayout resolveCurrentLaneLayout()
         {
-            if (lanePresetSetting.Value == LanePreset.AutoDynamic && beatmap?.DrumKit?.Components?.Count > 0)
-                return LaneLayoutFactory.CreateFromComponents(beatmap.DrumKit.Components);
+            if (lanePresetSetting.Value != LanePreset.AutoDynamic)
+                return LaneLayoutFactory.Create(lanePresetSetting.Value);
 
-            return lanePresetSetting.Value == LanePreset.AutoDynamic
-                ? LaneLayoutFactory.Create(LanePreset.DrumSevenLane)
-                : LaneLayoutFactory.Create(lanePresetSetting.Value);
+            int minimumLaneCount = LaneManagement.ResolveLaneCount(beatmap, fallbackLaneCount: 7);
+            return LaneLayoutFactory.CreateAutoDynamic(beatmap?.DrumKit?.Components, minimumLaneCount);
         }
 
         private static bool isZoomIncreaseKey(osuTK.Input.Key key)
@@ -418,6 +606,22 @@ namespace BeatSight.Game.Screens.Editor
         private static bool isZoomDecreaseKey(osuTK.Input.Key key)
             => key == osuTK.Input.Key.Minus
                 || key == osuTK.Input.Key.KeypadMinus;
+
+        private void adjustUiScale(bool increase)
+        {
+            if (uiScaleSetting == null)
+                return;
+
+            const double min = 0.5;
+            const double max = 1.5;
+            double step = 0.05;
+            double next = Math.Clamp(uiScaleSetting.Value + (increase ? step : -step), min, max);
+            if (Math.Abs(next - uiScaleSetting.Value) < 0.0001)
+                return;
+
+            uiScaleSetting.Value = next;
+            appendStatusDetail($"UI scale {next:0.00}x");
+        }
 
         private static NotationHotkeyAction getNotationHotkeyAction(osuTK.Input.Key key, bool controlPressed, bool altPressed, bool superPressed)
         {

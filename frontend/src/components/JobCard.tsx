@@ -11,6 +11,10 @@ interface JobCardProps {
 
 export function JobCard({ job, showProgress = true }: JobCardProps) {
     const createdAt = new Date(job.created_at)
+    const formattedError =
+        job.error_message && job.error_message.length > 100
+            ? `${job.error_message.slice(0, 100)}...`
+            : job.error_message
 
     return (
         <Link
@@ -63,7 +67,7 @@ export function JobCard({ job, showProgress = true }: JobCardProps) {
 
             {job.state === 'failed' && job.error_message && (
                 <div className="mt-3 p-2 bg-red-500/10 border border-red-500/20 rounded text-sm text-red-400 break-words line-clamp-2">
-                    {job.error_message}
+                    {formattedError}
                 </div>
             )}
         </Link>

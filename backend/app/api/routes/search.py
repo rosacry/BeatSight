@@ -7,10 +7,9 @@ from __future__ import annotations
 
 import logging
 from typing import Optional
-from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
 from sqlalchemy import select, or_, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -18,7 +17,7 @@ from sqlalchemy.orm import selectinload
 from app.api.deps import get_current_user_optional, get_db_session
 from app.models.user import User
 from app.models.song import Song, SongStatus
-from app.models.forum import ForumTopic, ForumPost
+from app.models.forum import ForumTopic
 
 logger = logging.getLogger(__name__)
 

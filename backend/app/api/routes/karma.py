@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -99,6 +99,7 @@ class LeaderboardResponse(BaseModel):
 
     entries: list[LeaderboardEntry]
     limit: int
+    offset: int
 
 
 class KarmaSourceBreakdown(BaseModel):
@@ -303,17 +304,51 @@ async def get_leaderboard(
     service = KarmaService(session)
     entries = await service.get_karma_leaderboard(limit=limit, offset=offset)
 
-    leaderboard = [
-        LeaderboardEntry(
-            rank=offset + i + 1,
-            user_id=entry["user_id"],
-            user_number=entry["user_number"],
-            display_name=entry["display_name"],
-            karma_score=entry["karma_score"],
-            is_anonymous=entry["is_anonymous"],
+    def parse_leaderboard_entry(entry: Any) -> dict[str, Any]:
+        if isinstance(entry, dict):
+            return entry
+
+        if isinstance(entry, (tuple, list)):
+            # Backward-compat shape used in some older call sites/tests:
+            # (user_id, display_name, karma_score)
+            if len(entry) == 3:
+                user_id, display_name, karma_score = entry
+                return {
+                    "user_id": user_id,
+                    "user_number": 0,
+                    "display_name": display_name,
+                    "karma_score": karma_score,
+                    "is_anonymous": False,
+                    "avatar_url": None,
+                }
+
+            if len(entry) >= 5:
+                user_id, user_number, display_name, karma_score, is_anonymous = entry[:5]
+                return {
+                    "user_id": user_id,
+                    "user_number": user_number,
+                    "display_name": display_name,
+                    "karma_score": karma_score,
+                    "is_anonymous": bool(is_anonymous),
+                    "avatar_url": None,
+                }
+
+        raise TypeError(f"Unsupported leaderboard entry shape: {type(entry)!r}")
+
+    leaderboard: list[LeaderboardEntry] = []
+    for i, raw_entry in enumerate(entries):
+        parsed = parse_leaderboard_entry(raw_entry)
+        leaderboard.append(
+            LeaderboardEntry(
+                rank=offset + i + 1,
+                user_id=parsed["user_id"],
+                user_number=parsed["user_number"],
+                display_name=parsed["display_name"],
+                avatar_url=parsed.get("avatar_url"),
+                karma_score=parsed["karma_score"],
+                is_anonymous=parsed.get("is_anonymous", False),
+            )
         )
-        for i, entry in enumerate(entries)
-    ]
 
     return LeaderboardResponse(
         entries=leaderboard,

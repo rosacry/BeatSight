@@ -1144,10 +1144,9 @@ namespace BeatSight.Game
 
         protected override void Dispose(bool isDisposing)
         {
-            base.Dispose(isDisposing);
-
-            if (Host.Window != null)
-                Host.Window.DragDrop -= onWindowDragDrop;
+            var hostWindow = Host?.Window;
+            if (hostWindow != null)
+                hostWindow.DragDrop -= onWindowDragDrop;
 
             if (boundWindow != null)
             {
@@ -1165,6 +1164,8 @@ namespace BeatSight.Game
             generationCoordinator?.Dispose();
             generationPipeline?.Dispose();
             audioEngine?.Dispose();
+
+            base.Dispose(isDisposing);
         }
 
         public void ImportAudio(string path) => handleFileDrop(path);

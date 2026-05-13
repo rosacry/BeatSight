@@ -51,13 +51,17 @@ namespace BeatSight.Game.Screens.Editor
             }
 
             double interval = getSnapIntervalMs();
+            double snapOrigin = beatmap.Timing.Offset;
             int maxTime = trackLength > 0 ? (int)Math.Round(trackLength) : int.MaxValue;
 
             var changes = targets
                 .Select(hit => new
                 {
                     Hit = hit,
-                    Snapped = (int)Math.Round(Math.Clamp(Math.Round(hit.Time / interval) * interval, 0, maxTime))
+                    Snapped = (int)Math.Round(Math.Clamp(
+                        snapOrigin + Math.Round((hit.Time - snapOrigin) / interval) * interval,
+                        0,
+                        maxTime))
                 })
                 .Where(change => change.Snapped != change.Hit.Time)
                 .ToList();
@@ -238,6 +242,95 @@ namespace BeatSight.Game.Screens.Editor
             updateInspectorStats();
             seekToTime(clones.Min(clone => clone.Time));
             appendStatusDetail($"Duplicated {clones.Count} note{(clones.Count == 1 ? string.Empty : "s")}");
+        }
+
+        private void copySelectedNotesToClipboard()
+        {
+            if (beatmap == null)
+            {
+                appendStatusDetail("Select a note or range to copy");
+                return;
+            }
+
+            var targets = getSelectedHitObjectsForEditing(out _, out _, out _);
+            if (targets.Count == 0)
+            {
+                appendStatusDetail("Select a note or range to copy");
+                return;
+            }
+
+            clipboardNotes.Clear();
+            int anchorTime = targets.Min(hit => hit.Time);
+
+            foreach (var source in targets.OrderBy(hit => hit.Time))
+            {
+                var clone = cloneHitObject(source);
+                clone.Time = Math.Max(0, source.Time - anchorTime);
+                clipboardNotes.Add(clone);
+            }
+
+            appendStatusDetail($"Copied {clipboardNotes.Count} note{(clipboardNotes.Count == 1 ? string.Empty : "s")}");
+        }
+
+        private void pasteNotesFromClipboard()
+        {
+            if (beatmap == null)
+            {
+                appendStatusDetail("Load a beatmap before pasting");
+                return;
+            }
+
+            if (clipboardNotes.Count == 0)
+            {
+                appendStatusDetail("Clipboard is empty");
+                return;
+            }
+
+            prepareUndoSnapshot();
+
+            int maxTime = trackLength > 0 ? (int)Math.Round(trackLength) : int.MaxValue;
+            int insertionTime = (int)Math.Round(Math.Max(0, currentTime));
+            var clones = new List<HitObject>(clipboardNotes.Count);
+
+            foreach (var template in clipboardNotes)
+            {
+                var clone = cloneHitObject(template);
+                clone.Time = Math.Clamp(insertionTime + template.Time, 0, maxTime);
+                clones.Add(clone);
+            }
+
+            beatmap.HitObjects.AddRange(clones);
+            beatmap.HitObjects.Sort((a, b) => a.Time.CompareTo(b.Time));
+            beatmap.Metadata.ModifiedAt = DateTime.UtcNow;
+            markUnsaved();
+            reloadTimeline();
+
+            if (clones.Count == 1)
+            {
+                selectedHitObject = clones[0];
+                timeline?.TrySelectHitObject(selectedHitObject);
+            }
+            else
+            {
+                selectedHitObject = null;
+                timeline?.SetSelectionRange(clones.Min(hit => hit.Time), clones.Max(hit => hit.Time));
+            }
+
+            updateSelectionSummary();
+            updateInspectorStats();
+            appendStatusDetail($"Pasted {clones.Count} note{(clones.Count == 1 ? string.Empty : "s")}");
+        }
+
+        private static HitObject cloneHitObject(HitObject source)
+        {
+            return new HitObject
+            {
+                Component = source.Component,
+                Lane = source.Lane,
+                Velocity = source.Velocity,
+                Duration = source.Duration,
+                Time = source.Time
+            };
         }
 
         private void deleteSelectedNote()

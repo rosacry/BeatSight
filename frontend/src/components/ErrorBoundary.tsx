@@ -65,7 +65,7 @@ export class ErrorBoundary extends Component<Props, State> {
                         </div>
                         <h2 className="text-xl font-semibold text-white mb-2">Something went wrong</h2>
                         <p className="text-gray-400 mb-6">
-                            Something went wrong. Try refreshing the page.
+                            Try refreshing the page or retrying your last action.
                         </p>
                         <div className="space-y-3">
                             <button

@@ -171,8 +171,8 @@ namespace BeatSight.Game.Screens.Playback
 
         private readonly BindableDouble zoomLevel = new BindableDouble(1.0)
         {
-            MinValue = 0.5,
-            MaxValue = 2.0,
+            MinValue = Editor.EditorTimeline.MinZoom,
+            MaxValue = Editor.EditorTimeline.MaxZoom,
             Precision = 0.01,
             Default = 1.0
         };
@@ -269,7 +269,7 @@ namespace BeatSight.Game.Screens.Playback
         {
             // Pre-fetch lane configuration so the playfield reflects user settings before UI construction.
             lanePresetSetting = config.GetBindable<LanePreset>(BeatSightSetting.LanePreset);
-            currentLaneLayout = LaneLayoutFactory.Create(lanePresetSetting.Value);
+            currentLaneLayout = resolveLaneLayoutForPreset(lanePresetSetting.Value, null);
 
             laneViewModeSetting = config.GetBindable<LaneViewMode>(BeatSightSetting.LaneViewMode);
             kickLaneModeSetting = config.GetBindable<KickLaneMode>(BeatSightSetting.KickLaneMode);
@@ -288,9 +288,6 @@ namespace BeatSight.Game.Screens.Playback
 
             autoZoom.BindValueChanged(e =>
             {
-                if (e.NewValue)
-                    zoomLevel.Value = Math.Max(zoomLevel.Value, 1.30);
-
                 if (beatmap != null)
                 {
                     var settings = mapSettings.Get(beatmap.Metadata.BeatmapId);
@@ -944,7 +941,7 @@ namespace BeatSight.Game.Screens.Playback
                 return;
 
             // Ensure lane assignments match the current layout before reloading notes.
-            DrumLaneHeuristics.ApplyToBeatmap(beatmap, currentLaneLayout);
+            DrumLaneHeuristics.ApplyToBeatmap(beatmap, currentLaneLayout, preserveStoredLane: true);
             playfield.SetLaneLayout(currentLaneLayout);
             playfield.LoadBeatmap(beatmap);
             playfield.SetKickLineMode(KickLineEnabled);
@@ -1499,21 +1496,12 @@ namespace BeatSight.Game.Screens.Playback
                 beatmap = loadedMap;
                 beatmapPath = path;
 
-                // Determine layout based on settings and beatmap
-                if (lanePresetSetting.Value == LanePreset.AutoDynamic && beatmap.DrumKit.Components.Count > 0)
-                {
-                    currentLaneLayout = LaneLayoutFactory.CreateFromComponents(beatmap.DrumKit.Components);
-                }
-                else if (lanePresetSetting.Value == LanePreset.AutoDynamic)
-                {
-                    currentLaneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
-                }
-                else
-                {
-                    currentLaneLayout = LaneLayoutFactory.Create(lanePresetSetting.Value);
-                }
+                // Determine layout based on settings and beatmap.
+                // AutoDynamic now keeps a lane-count floor from beatmap lane indices/layout data
+                // to avoid accidental lane remaps when component grouping is sparse.
+                currentLaneLayout = resolveLaneLayoutForPreset(lanePresetSetting.Value, beatmap);
 
-                DrumLaneHeuristics.ApplyToBeatmap(beatmap, currentLaneLayout);
+                DrumLaneHeuristics.ApplyToBeatmap(beatmap, currentLaneLayout, preserveStoredLane: true);
                 playfield?.SetLaneLayout(currentLaneLayout);
                 playfield?.LoadBeatmap(beatmap);
                 playfield?.SetKickLineMode(KickLineEnabled);
@@ -1763,7 +1751,7 @@ namespace BeatSight.Game.Screens.Playback
             playfield?.SetLaneLayout(currentLaneLayout);
             if (beatmap != null)
             {
-                DrumLaneHeuristics.ApplyToBeatmap(beatmap, currentLaneLayout);
+                DrumLaneHeuristics.ApplyToBeatmap(beatmap, currentLaneLayout, preserveStoredLane: true);
                 playfield?.LoadBeatmap(beatmap);
             }
             playfield?.SetKickLineMode(KickLineEnabled);
@@ -2096,30 +2084,35 @@ namespace BeatSight.Game.Screens.Playback
 
         private void onLanePresetChanged(ValueChangedEvent<LanePreset> preset)
         {
-            if (preset.NewValue == LanePreset.AutoDynamic && beatmap != null && beatmap.DrumKit.Components.Count > 0)
-            {
-                currentLaneLayout = LaneLayoutFactory.CreateFromComponents(beatmap.DrumKit.Components);
-            }
-            else if (preset.NewValue == LanePreset.AutoDynamic)
-            {
-                currentLaneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
-            }
-            else
-            {
-                currentLaneLayout = LaneLayoutFactory.Create(preset.NewValue);
-            }
+            currentLaneLayout = resolveLaneLayoutForPreset(preset.NewValue, beatmap);
 
             // IMPORTANT: Re-resolve lane assignments BEFORE setting the layout on the
             // playfield so that hit.Lane values are consistent with the new layout
             // when LoadBeatmap→resolveLane reads them.
             if (beatmap != null)
-                DrumLaneHeuristics.ApplyToBeatmap(beatmap, currentLaneLayout);
+                DrumLaneHeuristics.ApplyToBeatmap(beatmap, currentLaneLayout, preserveStoredLane: true);
 
             playfield?.SetLaneLayout(currentLaneLayout);
             rebuildLaneKeyBindings();
 
             if (beatmap != null && IsLoaded)
                 playfield?.LoadBeatmap(beatmap);
+        }
+
+        private LaneLayout resolveLaneLayoutForPreset(LanePreset preset, Beatmap? sourceBeatmap)
+        {
+            int minimumLaneCount = LaneManagement.ResolveLaneCount(sourceBeatmap, fallbackLaneCount: 7);
+
+            if (preset != LanePreset.AutoDynamic)
+            {
+                LaneLayout preferredLayout = LaneLayoutFactory.Create(preset);
+                if (minimumLaneCount <= preferredLayout.LaneCount)
+                    return preferredLayout;
+            }
+
+            // If authored beatmap data uses more lanes than the selected preset, use
+            // auto-dynamic with the authored lane floor to preserve stored lane intent.
+            return LaneLayoutFactory.CreateAutoDynamic(sourceBeatmap?.DrumKit?.Components, minimumLaneCount);
         }
 
         private void rebuildLaneKeyBindings()

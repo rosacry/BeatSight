@@ -35,11 +35,16 @@ namespace BeatSight.Game.Screens.Editor
         float SectionRowSpacingX,
         float MiniButtonHeight);
 
+    internal readonly record struct EditorFooterLayoutContract(
+        float SurfaceHeight,
+        float SeekRowHeight);
+
     internal readonly record struct InspectorLayoutContract(
         bool IsStackedLayout,
         InspectorActionRowContract[] ActionRows,
         EditorHeaderLayoutContract Header,
-        EditorTimelineToolboxLayoutContract TimelineToolbox);
+        EditorTimelineToolboxLayoutContract TimelineToolbox,
+        EditorFooterLayoutContract Footer);
 
     public partial class EditorScreen
     {
@@ -120,7 +125,11 @@ namespace BeatSight.Game.Screens.Editor
                 timelineSectionControlRows.Count > 0 ? timelineSectionControlRows[0].Spacing.X : 0f,
                 timelineMiniButtons.Count > 0 ? timelineMiniButtons[0].Height : 0f);
 
-            return new InspectorLayoutContract(inspectorStackedLayout, rows, header, timelineToolbox);
+            var footer = new EditorFooterLayoutContract(
+                footerRootContainer?.DrawHeight ?? 0f,
+                footerSeekRow?.DrawHeight ?? 0f);
+
+            return new InspectorLayoutContract(inspectorStackedLayout, rows, header, timelineToolbox, footer);
         }
     }
 }

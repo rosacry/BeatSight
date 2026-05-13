@@ -78,7 +78,6 @@ export function removeStaleOverlays(): void {
     // 
     // The proper fix is to ensure modal components correctly unmount through React's
     // lifecycle methods rather than manually removing DOM elements.
-    console.debug('[bodyScrollLock] removeStaleOverlays called but is now a no-op - let React handle cleanup')
 }
 
 /**

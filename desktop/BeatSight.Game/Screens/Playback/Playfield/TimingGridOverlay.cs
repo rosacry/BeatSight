@@ -21,6 +21,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private bool useGlobalKick = true;
         private LaneLayout? laneLayout;
         private PlaybackPlayfield? playfield;
+        private int snapDivisor = 4;
 
         private const double previewMultiplier = 1.7;
         private const double pastAllowance = 320;
@@ -36,6 +37,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         {
             laneLayout = layout;
             useGlobalKick = globalKick;
+            snapDivisor = Math.Max(1, beatmap.Editor?.SnapDivisor ?? 4);
             rebuildMarkers(beatmap);
         }
 
@@ -166,7 +168,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 : 180000;
 
             double offset = beatmap.Timing?.Offset ?? 0;
-            double bpm = beatmap.Timing?.Bpm ?? 120;
+            double bpm = beatmap.Timing?.Bpm ?? TimingInfo.DefaultBpm;
             string signature = beatmap.Timing?.TimeSignature ?? "4/4";
 
             var timingPoints = beatmap.Timing?.TimingPoints
@@ -195,9 +197,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private void emitMarkers(double startTime, double endTime, double bpm, string signature)
         {
             if (bpm <= 0)
-                bpm = 120;
+                bpm = TimingInfo.DefaultBpm;
 
-            var (beatsPerMeasure, beatUnit) = parseSignature(signature);
+            var (beatsPerMeasure, _) = parseSignature(signature);
             double beatLength = 60000.0 / bpm;
             double measureLength = beatLength * beatsPerMeasure;
 
@@ -216,19 +218,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     time += beatLength - remainder;
             }
 
-            while (time <= endTime && markers.Count < 20000)
+            while (time <= endTime && markers.Count < 120000)
             {
                 for (int beat = 0; beat < beatsPerMeasure && time <= endTime; beat++)
                 {
                     markers.Add(new GridMarker(time, beat == 0 ? GridMarkerType.Measure : GridMarkerType.Beat, beat));
 
-                    int subdivisions = beatUnit switch
-                    {
-                        4 => 4,
-                        8 => 3,
-                        16 => 2,
-                        _ => 2
-                    };
+                    int subdivisions = Math.Clamp(snapDivisor, 1, 32);
 
                     double subdivisionLength = beatLength / subdivisions;
                     if (subdivisionLength >= 45)
@@ -398,9 +394,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             public void Deactivate()
             {
-                // Clear any pending transforms to prevent accumulation, then fade out
                 this.ClearTransforms();
-                this.FadeOut(140, Easing.OutQuint);
+                Alpha = 0;
             }
         }
     }

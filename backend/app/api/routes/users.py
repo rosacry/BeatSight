@@ -4,21 +4,20 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from io import BytesIO
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from PIL import Image
 from pydantic import BaseModel, Field
-from sqlalchemy import select, func, or_, and_
+from sqlalchemy import select, func, or_, and_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user, get_current_user_optional, get_db_session
 from app.models.user import User
-from app.models.user_tag import UserTag
-from app.models.song import Song
+from app.models.song import Song, Map, MapState
 from app.models.forum import ForumPost
 from app.models.role import UserRole
 from app.schemas.user_settings import UserSettingsRead, UserSettingsUpdate
@@ -98,35 +97,78 @@ class MessageResponse(BaseModel):
     message: str
 
 
+def _as_optional_str(value: object) -> Optional[str]:
+    return value if isinstance(value, str) else None
+
+
+def _is_recently_active(
+    last_active_at: Optional[datetime],
+    *,
+    now: Optional[datetime] = None,
+    window_minutes: int = 5,
+) -> bool:
+    """Return whether the user should be treated as online."""
+    if not isinstance(last_active_at, datetime):
+        return False
+
+    reference_now = now or datetime.now(timezone.utc)
+    timestamp = (
+        last_active_at
+        if last_active_at.tzinfo is not None
+        else last_active_at.replace(tzinfo=timezone.utc)
+    )
+    age_seconds = (reference_now - timestamp).total_seconds()
+    return 0 <= age_seconds <= (window_minutes * 60)
+
+
+def _build_user_response(current_user: User) -> UserResponse:
+    """Build a stable user response from ORM instances and test doubles."""
+    raw_tags = getattr(current_user, "tags", None)
+    tags: list[UserTagResponse] = []
+    if isinstance(raw_tags, list):
+        for tag in sorted(raw_tags, key=lambda t: getattr(t, "display_order", 0)):
+            try:
+                tags.append(
+                    UserTagResponse(
+                        id=tag.id,
+                        name=tag.name,
+                        background_color=tag.background_color,
+                        text_color=tag.text_color,
+                    )
+                )
+            except Exception:
+                continue
+
+    user_number = getattr(current_user, "user_number", 0)
+    karma_score = getattr(current_user, "karma_score", 0)
+    created_at = getattr(current_user, "created_at", None)
+
+    return UserResponse(
+        id=current_user.id,
+        user_number=user_number if isinstance(user_number, int) else 0,
+        email=current_user.email,
+        display_name=current_user.display_name,
+        email_verified=bool(current_user.email_verified),
+        phone_number=_as_optional_str(getattr(current_user, "phone_number", None)),
+        phone_verified=bool(getattr(current_user, "phone_verified", False)),
+        avatar_url=_as_optional_str(getattr(current_user, "avatar_url", None)),
+        banner_url=_as_optional_str(getattr(current_user, "banner_url", None)),
+        karma_score=karma_score if isinstance(karma_score, int) else 0,
+        created_at=(
+            created_at
+            if isinstance(created_at, datetime)
+            else datetime.now(timezone.utc)
+        ),
+        tags=tags,
+    )
+
+
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_profile(
     current_user: User = Depends(get_current_user),
 ) -> UserResponse:
     """Get the current user's profile including custom tags."""
-    # Build tags list from loaded relationship
-    tags = [
-        UserTagResponse(
-            id=tag.id,
-            name=tag.name,
-            background_color=tag.background_color,
-            text_color=tag.text_color,
-        )
-        for tag in sorted(current_user.tags, key=lambda t: t.display_order)
-    ] if current_user.tags else []
-    
-    return UserResponse(
-        id=current_user.id,
-        user_number=current_user.user_number,
-        email=current_user.email,
-        display_name=current_user.display_name,
-        email_verified=current_user.email_verified,
-        phone_number=current_user.phone_number,
-        phone_verified=current_user.phone_verified,
-        avatar_url=current_user.avatar_url,
-        karma_score=current_user.karma_score,
-        created_at=current_user.created_at,
-        tags=tags,
-    )
+    return _build_user_response(current_user)
 
 
 @router.patch("/me", response_model=UserResponse)
@@ -153,7 +195,7 @@ async def update_current_user(
 
     logger.info(f"User {current_user.id} updated their profile")
 
-    return UserResponse.model_validate(current_user)
+    return _build_user_response(current_user)
 
 
 @router.post("/me/password", response_model=MessageResponse)
@@ -311,7 +353,7 @@ async def upload_avatar(
 
     logger.info(f"User {current_user.id} uploaded new avatar")
 
-    return UserResponse.model_validate(current_user)
+    return _build_user_response(current_user)
 
 
 @router.delete("/me/avatar", response_model=UserResponse)
@@ -347,7 +389,7 @@ async def delete_avatar(
 
     logger.info(f"User {current_user.id} deleted their avatar")
 
-    return UserResponse.model_validate(current_user)
+    return _build_user_response(current_user)
 
 
 @router.post("/me/banner", response_model=UserResponse)
@@ -457,7 +499,7 @@ async def upload_banner(
 
     logger.info(f"User {current_user.id} uploaded new banner")
 
-    return UserResponse.model_validate(current_user)
+    return _build_user_response(current_user)
 
 
 @router.delete("/me/banner", response_model=UserResponse)
@@ -493,7 +535,7 @@ async def delete_banner(
 
     logger.info(f"User {current_user.id} deleted their banner")
 
-    return UserResponse.model_validate(current_user)
+    return _build_user_response(current_user)
 
 
 @router.delete("/me", response_model=MessageResponse)
@@ -734,8 +776,8 @@ async def get_public_user_profile(
     Supports lookup by either UUID or user_number (e.g., /users/1/profile).
     Returns public information about a user including their stats and activity.
     """
-    from app.models.user_settings import UserSettings
     from app.models.training_contribution import TrainingContribution
+    from app.models.achievement import UserAchievement
     
     user = await _get_user_for_profile(user_id, session)
     
@@ -747,11 +789,31 @@ async def get_public_user_profile(
     
     # Get song count
     songs_result = await session.execute(
-        select(func.count()).select_from(Song).where(
-            Song.created_by_id == user.id
-        )
+        select(func.count(Song.id)).where(Song.created_by_id == user.id)
     )
     songs_count = songs_result.scalar() or 0
+
+    # Get map stats (generated + verified) for maps belonging to the user's songs
+    maps_result = await session.execute(
+        select(
+            func.count(Map.id).label("maps_generated_count"),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (Map.state == MapState.VERIFIED, 1),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("maps_verified_count"),
+        )
+        .select_from(Map)
+        .join(Song, Song.id == Map.song_id)
+        .where(Song.created_by_id == user.id)
+    )
+    map_stats = maps_result.one()
+    maps_generated = int(map_stats.maps_generated_count or 0)
+    maps_verified = int(map_stats.maps_verified_count or 0)
     
     # Get forum posts count
     try:
@@ -774,6 +836,17 @@ async def get_public_user_profile(
             )
         )
         contribution_count = contrib_result.scalar() or 0
+    except Exception:
+        pass
+
+    achievements_count = 0
+    try:
+        achievements_result = await session.execute(
+            select(func.count()).select_from(UserAchievement).where(
+                UserAchievement.user_id == user.id
+            )
+        )
+        achievements_count = achievements_result.scalar() or 0
     except Exception:
         pass
     
@@ -919,9 +992,9 @@ async def get_public_user_profile(
         karma_rank=karma_rank,
         contribution_rank=contribution_rank,
         songs_uploaded=songs_count,
-        maps_generated=songs_count,  # Approximate - should count maps
-        maps_verified=0,  # TODO: Count verified maps
-        achievements_count=0,  # TODO: Count achievements
+        maps_generated=maps_generated,
+        maps_verified=maps_verified,
+        achievements_count=achievements_count,
         forum_posts=forum_posts,
         contribution_count=contribution_count,
         last_active=getattr(user, 'last_active_at', None),
@@ -1015,7 +1088,7 @@ class UserHoverCardResponse(BaseModel):
     avatar_url: Optional[str] = None
     banner_url: Optional[str] = None
     karma_score: int
-    is_online: bool = False  # TODO: Implement online status tracking
+    is_online: bool = False
     last_active: Optional[datetime] = None
     role: str
     country_code: Optional[str] = None
@@ -1061,8 +1134,8 @@ async def get_user_hover_card(
         avatar_url=user.avatar_url,
         banner_url=user.banner_url,
         karma_score=user.karma_score or 0,
-        is_online=False,  # TODO: Implement real online status
-        last_active=getattr(user, 'last_active_at', None),
+        is_online=_is_recently_active(getattr(user, "last_active_at", None)),
+        last_active=getattr(user, "last_active_at", None),
         role=role,
         country_code=getattr(user, 'country_code', None),
     )

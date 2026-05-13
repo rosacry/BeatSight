@@ -12,7 +12,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
 import { API_CONFIG } from '@/lib/config'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
-import { UsernameLink, StaticKarmaBreakdownTooltip } from '@/components/social'
+import { UsernameLink } from '@/components/social/UserProfile'
+import { StaticKarmaBreakdownTooltip } from '@/components/social/KarmaBreakdownTooltip'
 import { PageContentWrapper } from '@/components/ui/UnifiedTransitions'
 
 // Types

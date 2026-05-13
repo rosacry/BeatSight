@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom'
 import clsx from 'clsx'
 import { format, formatDistanceToNow } from 'date-fns'
 import type { Topic } from '@/types/forum'
-import { UsernameLink } from '@/components/social'
+import { UsernameLink } from '@/components/social/UserProfile'
 
 // Icons
 function PinIcon({ className }: { className?: string }) {

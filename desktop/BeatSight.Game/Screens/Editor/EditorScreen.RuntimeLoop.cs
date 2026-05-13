@@ -19,10 +19,6 @@ namespace BeatSight.Game.Screens.Editor
             if (playbackPreview != null)
                 playbackPreview.MoveToY(-100).FadeInFromZero(500).MoveToY(0, 800, Easing.OutQuint);
 
-            // Animate history panel from right
-            if (historyPanel != null && historyPanel.Alpha > 0.01f)
-                historyPanel.MoveToX(100).FadeInFromZero(500).MoveToX(0, 800, Easing.OutQuint);
-
             // Animate back button
             if (backButton != null)
                 backButton.ScaleTo(0).Delay(200).ScaleTo(1, 600, Easing.OutElastic);
@@ -33,6 +29,7 @@ namespace BeatSight.Game.Screens.Editor
             base.Update();
             applyResponsiveEditorLayout();
             refreshInspectorActionLabelWidths();
+            layoutHeaderTimeBadgeContent();
 
             if (isPlaying)
             {
@@ -55,6 +52,8 @@ namespace BeatSight.Game.Screens.Editor
             double effectiveLength = getEffectivePlaybackLength();
             if (effectiveLength > 0)
                 currentTime = Math.Clamp(currentTime, 0, effectiveLength);
+
+            handleEditorMetronome();
 
             if (isPlaying
                 && effectiveLength > 0
@@ -80,8 +79,31 @@ namespace BeatSight.Game.Screens.Editor
                 applyWaveformScalePreviewNow(pendingWaveformScalePreview.Value, Time.Current);
             }
 
+            if (playbackZoomInteractionActive
+                && pendingPlaybackZoomPreview.HasValue
+                && Time.Current - lastPlaybackZoomPreviewAppliedAt >= playbackZoomPreviewMinIntervalMs)
+            {
+                applyPlaybackZoomPreviewNow(pendingPlaybackZoomPreview.Value, Time.Current);
+            }
+
             timeText.Text = formatTime(currentTime);
-            timeline?.SetCurrentTime(currentTime, ensureVisible: isPlaying);
+            if (timeline != null)
+            {
+                bool timelineNeedsSync = isPlaying
+                    || double.IsNaN(lastTimelineSyncedTime)
+                    || Math.Abs(currentTime - lastTimelineSyncedTime) >= 0.25;
+
+                if (timelineNeedsSync)
+                {
+                    syncTimelineSnapForCurrentTime();
+                    timeline.SetCurrentTime(currentTime, ensureVisible: true);
+                    lastTimelineSyncedTime = currentTime;
+                }
+            }
+
+            syncFooterSeekBar();
+            updateScrubTelemetryFrame();
+            updateScrubPerfOverlay();
 
             if (previewMode?.Value == EditorPreviewMode.Manuscript
                 && Time.Current - lastManuscriptFocusSyncAt >= manuscriptFocusSyncIntervalMs)

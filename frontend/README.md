@@ -18,7 +18,7 @@ React-based web frontend for BeatSight beatmap generation service.
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20.19+ (or 22.12+)
 - npm or pnpm
 - Backend running at `localhost:8000` (see `../backend/README.md`)
 

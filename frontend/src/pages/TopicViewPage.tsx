@@ -16,7 +16,7 @@ import {
     unpinTopic,
 } from '@/api/forum'
 import { ForumPostCard, ForumPoll, PostEditor } from '@/components/forum'
-import { UsernameLink } from '@/components/social'
+import { UsernameLink } from '@/components/social/UserProfile'
 import { useAuthStore } from '@/stores/authStore'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { PageContentWrapper } from '@/components/ui/UnifiedTransitions'

@@ -27,7 +27,6 @@ from app.schemas.social import (
     MessageResponse,
     MessagesResponse,
     ReportCreateResponse,
-    ReportResponse,
     ReportStatus,
     ReportType,
     ReportUserRequest,

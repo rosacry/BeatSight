@@ -171,7 +171,9 @@ def process_audio_file(
     use_multi_window: bool = False,  # Multi-window inference
     multi_window_sizes: Optional[List[float]] = None,  # Window sizes in ms
     checkpoint_ensemble_paths: Optional[List[str]] = None,  # Checkpoint paths for ensemble
+    demucs_checkpoint_ensemble_paths: Optional[List[str]] = None,  # Demucs model checkpoint paths for ensemble
     use_multi_pass: bool = False,  # Multi-pass onset refinement
+    use_hihat_refinement: bool = True,  # Refine hihat detections with larger window
     # Auto-parameter estimation
     auto_sensitivity: bool = False,  # Auto-detect optimal sensitivity from audio
     auto_quantization: bool = False,  # Auto-detect optimal quantization grid
@@ -294,6 +296,38 @@ def process_audio_file(
     )
 
     refined_onsets = refine_onsets(drum_audio, detection_result.onsets)
+
+    # Silence gating: remove onsets in very quiet sections of the drum stem
+    # Demucs can produce faint bleed artifacts that the onset detector picks up
+    if isolate_drums and refined_onsets:
+        import numpy as np
+        drum_data, drum_sr = drum_audio
+        if drum_data.ndim > 1:
+            drum_mono = drum_data.mean(axis=0) if drum_data.shape[0] <= 2 else drum_data.mean(axis=1)
+        else:
+            drum_mono = drum_data
+        # Compute RMS energy in 50ms windows around each onset
+        window_samples = int(0.05 * drum_sr)
+        global_rms = np.sqrt(np.mean(drum_mono ** 2)) if len(drum_mono) > 0 else 1e-8
+        silence_threshold = global_rms * 0.05  # 5% of global RMS = effectively silent
+        pre_count = len(refined_onsets)
+        filtered_onsets = []
+        for onset in refined_onsets:
+            onset_time = onset.time if hasattr(onset, 'time') else onset[0]
+            center = int(onset_time * drum_sr)
+            start = max(0, center - window_samples // 2)
+            end = min(len(drum_mono), center + window_samples // 2)
+            if end > start:
+                local_rms = np.sqrt(np.mean(drum_mono[start:end] ** 2))
+                if local_rms >= silence_threshold:
+                    filtered_onsets.append(onset)
+            else:
+                filtered_onsets.append(onset)
+        refined_onsets = filtered_onsets
+        silence_removed = pre_count - len(refined_onsets)
+        if silence_removed > 0:
+            print(f"   Silence gating: removed {silence_removed} onsets in quiet sections")
+
     print(f"   Found {len(refined_onsets)} potential hits")
 
     detection_tempo_candidates = list(detection_result.tempo_candidates or [])
@@ -412,6 +446,7 @@ def process_audio_file(
     accuracy_enhancements_applied = []
     if use_multilabel and effective_multilabel_model and (
         use_tta or use_multi_window or checkpoint_ensemble_paths or use_multi_pass
+        or demucs_checkpoint_ensemble_paths
     ):
         try:
             from transcription.multilabel_inference import MultiLabelDrumClassifier
@@ -471,26 +506,183 @@ def process_audio_file(
                     )
                     accuracy_enhancements_applied.append("checkpoint-ensemble")
 
+                # --- Demucs checkpoint ensemble for cymbal classes ---
+                demucs_enhanced_detections = None
+                if demucs_checkpoint_ensemble_paths and ensemble_classification and ensemble_demucs_model_path:
+                    print(f"\n   [ACCURACY] Demucs checkpoint ensemble ({len(demucs_checkpoint_ensemble_paths)} models)")
+                    demucs_acc_classifier = MultiLabelDrumClassifier.get_cached(
+                        model_path=ensemble_demucs_model_path,
+                        threshold=confidence_threshold,
+                        thresholds_file=ensemble_demucs_thresholds_path,
+                        device=ml_device,
+                        threshold_scale=threshold_scale,
+                    )
+                    demucs_enhanced_detections = demucs_acc_classifier.classify_batch_checkpoint_ensemble(
+                        classify_audio_data, classify_sr, unique_onset_times,
+                        checkpoint_paths=demucs_checkpoint_ensemble_paths,
+                    )
+                    accuracy_enhancements_applied.append("demucs-checkpoint-ensemble")
+
                 # Rebuild classified_hits from enhanced detections
                 if enhanced_detections is not None:
-                    new_hits = []
-                    for onset_time, detected_classes in zip(unique_onset_times, enhanced_detections):
-                        if not detected_classes:
-                            continue
-                        for class_name, class_confidence in detected_classes.items():
-                            new_hits.append({
-                                "time": onset_time,
-                                "component": class_name,
-                                "confidence": class_confidence,
-                                "onset_confidence": class_confidence,
-                                "class_confidence": class_confidence,
-                            })
-                    classified_hits = new_hits
-                    print(f"   [ACCURACY] Re-classified: {len(classified_hits)} hits "
-                          f"(enhancements: {', '.join(accuracy_enhancements_applied)})")
+                    # When ensemble classification is active, preserve the correct
+                    # source for each class: clean model for body drums + crash,
+                    # Demucs model for china/splash only. Crash stays with the
+                    # clean model because it detects crash significantly better
+                    # than the Demucs-specialized model.
+                    _DEMUCS_CLASSES = {'china', 'splash'}
+
+                    if ensemble_classification and ensemble_demucs_model_path:
+                        # Build a lookup of base Demucs cymbal detections per onset
+                        base_cymbal_detections = {}  # onset_time -> {class: conf}
+                        for hit in classified_hits:
+                            t = hit.get("time", 0)
+                            comp = hit.get("component", "")
+                            if comp in _DEMUCS_CLASSES:
+                                if t not in base_cymbal_detections:
+                                    base_cymbal_detections[t] = {}
+                                base_cymbal_detections[t][comp] = hit.get("confidence", 0)
+
+                        # Use Demucs checkpoint ensemble if available, else base detections
+                        cymbal_source = "base"
+                        if demucs_enhanced_detections is not None:
+                            cymbal_lookup = {}  # onset_time -> {class: conf}
+                            for onset_time, det in zip(unique_onset_times, demucs_enhanced_detections):
+                                cymbal_lookup[onset_time] = {
+                                    cls: conf for cls, conf in det.items() if cls in _DEMUCS_CLASSES
+                                }
+                            cymbal_source = "demucs-checkpoint-ensemble"
+                        else:
+                            cymbal_lookup = base_cymbal_detections
+
+                        new_hits = []
+                        for onset_time, detected_classes in zip(unique_onset_times, enhanced_detections):
+                            # Body drum classes from clean model checkpoint ensemble
+                            for class_name, class_confidence in detected_classes.items():
+                                if class_name not in _DEMUCS_CLASSES:
+                                    new_hits.append({
+                                        "time": onset_time,
+                                        "component": class_name,
+                                        "confidence": class_confidence,
+                                        "onset_confidence": class_confidence,
+                                        "class_confidence": class_confidence,
+                                    })
+                            # Cymbal classes from Demucs model (checkpoint ensemble or base)
+                            cymbal_dets = cymbal_lookup.get(onset_time, {})
+                            for class_name, class_confidence in cymbal_dets.items():
+                                new_hits.append({
+                                    "time": onset_time,
+                                    "component": class_name,
+                                    "confidence": class_confidence,
+                                    "onset_confidence": class_confidence,
+                                    "class_confidence": class_confidence,
+                                })
+
+                        classified_hits = new_hits
+                        print(f"   [ACCURACY] Re-classified: {len(classified_hits)} hits "
+                              f"(enhancements: {', '.join(accuracy_enhancements_applied)}, "
+                              f"cymbals from {cymbal_source})")
+                    else:
+                        # No ensemble classification — use all classes from enhanced detections
+                        new_hits = []
+                        for onset_time, detected_classes in zip(unique_onset_times, enhanced_detections):
+                            if not detected_classes:
+                                continue
+                            for class_name, class_confidence in detected_classes.items():
+                                new_hits.append({
+                                    "time": onset_time,
+                                    "component": class_name,
+                                    "confidence": class_confidence,
+                                    "onset_confidence": class_confidence,
+                                    "class_confidence": class_confidence,
+                                })
+                        classified_hits = new_hits
+                        print(f"   [ACCURACY] Re-classified: {len(classified_hits)} hits "
+                              f"(enhancements: {', '.join(accuracy_enhancements_applied)})")
 
         except Exception as e:
             print(f"   [ACCURACY] Enhancement failed (falling back to base classification): {e}")
+            import traceback
+            traceback.print_exc()
+
+    # === HIHAT REFINEMENT (larger window for hihat disambiguation) ===
+    # Hi-hat open/closed/pedal are hard to distinguish in 100ms windows because
+    # the key differentiator (decay tail length) extends 200-400ms. Re-classify
+    # hihat onsets with a larger window and average probabilities.
+    if use_hihat_refinement and use_multilabel and effective_multilabel_model and classified_hits:
+        try:
+            from transcription.multilabel_inference import MultiLabelDrumClassifier
+
+            _HIHAT_CLASSES = {'hihat_closed', 'hihat_open', 'hihat_pedal'}
+
+            # Find onsets that have any hihat detection
+            hihat_onset_times = sorted(set(
+                h["time"] for h in classified_hits
+                if h.get("component", "") in _HIHAT_CLASSES
+            ))
+
+            if hihat_onset_times and len(hihat_onset_times) >= 3:
+                # Get the audio to use for hihat refinement
+                if ensemble_classification and isolate_drums:
+                    hh_audio, hh_sr = drum_audio
+                elif hybrid_classification and isolate_drums:
+                    hh_audio, hh_sr = audio_data, sample_rate
+                else:
+                    hh_audio, hh_sr = drum_audio if isinstance(drum_audio, tuple) else (
+                        drum_audio[0] if hasattr(drum_audio, '__getitem__') else drum_audio, sample_rate
+                    )
+
+                hh_classifier = MultiLabelDrumClassifier.get_cached(
+                    model_path=effective_multilabel_model,
+                    threshold=confidence_threshold,
+                    thresholds_file=multilabel_thresholds_path,
+                    device=ml_device,
+                    threshold_scale=threshold_scale,
+                )
+
+                refined_hihat = hh_classifier.refine_hihat_detections(
+                    audio=hh_audio,
+                    sr=hh_sr,
+                    onset_times=hihat_onset_times,
+                    base_window_ms=100.0,
+                    wide_window_ms=200.0,
+                )
+
+                if refined_hihat:
+                    # Build lookup: onset_time -> refined hihat class+confidence
+                    hihat_refinement_map = {}
+                    for onset_time, det in zip(hihat_onset_times, refined_hihat):
+                        hh_dets = {cls: conf for cls, conf in det.items() if cls in _HIHAT_CLASSES}
+                        if hh_dets:
+                            hihat_refinement_map[onset_time] = hh_dets
+
+                    # Apply refinements: replace hihat detections at each onset
+                    changes = 0
+                    new_hits = []
+                    processed_onsets = set()
+                    for hit in classified_hits:
+                        t = hit["time"]
+                        comp = hit.get("component", "")
+                        if comp in _HIHAT_CLASSES and t in hihat_refinement_map:
+                            if t not in processed_onsets:
+                                processed_onsets.add(t)
+                                for cls, conf in hihat_refinement_map[t].items():
+                                    new_hits.append({
+                                        "time": t,
+                                        "component": cls,
+                                        "confidence": conf,
+                                        "onset_confidence": conf,
+                                        "class_confidence": conf,
+                                    })
+                                changes += 1
+                        else:
+                            new_hits.append(hit)
+
+                    classified_hits = new_hits
+                    print(f"   [HIHAT] Refined {changes} hihat onsets with 200ms wide-window analysis")
+
+        except Exception as e:
+            print(f"   [HIHAT] Refinement failed (using base detections): {e}")
             import traceback
             traceback.print_exc()
 
@@ -1324,9 +1516,21 @@ def main():
         help="Paths to additional checkpoint files for checkpoint ensemble (averages predictions across models)",
     )
     parser.add_argument(
+        "--demucs-checkpoint-ensemble",
+        type=str,
+        nargs="+",
+        default=None,
+        help="Paths to Demucs model checkpoint files for checkpoint ensemble on cymbal classes (use with --ensemble-classification)",
+    )
+    parser.add_argument(
         "--multi-pass",
         action="store_true",
         help="Enable multi-pass onset refinement (re-classifies uncertain onsets with wider window + TTA)",
+    )
+    parser.add_argument(
+        "--no-hihat-refinement",
+        action="store_true",
+        help="Disable automatic hihat refinement with larger analysis window (enabled by default)",
     )
 
     # Lane layout options (always dynamic for AI beatmaps)
@@ -1509,7 +1713,9 @@ def main():
             use_multi_window=getattr(args, 'multi_window', False),
             multi_window_sizes=[float(x) for x in getattr(args, 'multi_window_sizes', '80,100,120').split(',')] if getattr(args, 'multi_window', False) else None,
             checkpoint_ensemble_paths=getattr(args, 'checkpoint_ensemble', None),
+            demucs_checkpoint_ensemble_paths=getattr(args, 'demucs_checkpoint_ensemble', None),
             use_multi_pass=getattr(args, 'multi_pass', False),
+            use_hihat_refinement=not getattr(args, 'no_hihat_refinement', False),
             # Auto-parameter estimation
             auto_sensitivity=getattr(args, 'auto_sensitivity', False),
             auto_quantization=getattr(args, 'auto_quantization', False),

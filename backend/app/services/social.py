@@ -1206,9 +1206,9 @@ class SocialService:
         )
         
         if notification_type == 'map_upload':
-            query = query.where(UserSubscription.notify_on_map_upload == True)
+            query = query.where(UserSubscription.notify_on_map_upload.is_(True))
         elif notification_type == 'map_ranked':
-            query = query.where(UserSubscription.notify_on_map_ranked == True)
+            query = query.where(UserSubscription.notify_on_map_ranked.is_(True))
 
         result = await self.db.execute(query)
         return [row[0] for row in result.all()]

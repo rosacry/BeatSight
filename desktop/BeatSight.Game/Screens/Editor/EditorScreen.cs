@@ -91,6 +91,7 @@ namespace BeatSight.Game.Screens.Editor
         private GridContainer previewInspectorGrid = null!;
         private GridContainer timelineLayoutGrid = null!;
         private GridContainer editorLayoutGrid = null!;
+        private GridContainer editorWorkspaceGrid = null!;
         private GridContainer screenLayoutGrid = null!;
         private Container headerContentContainer = null!;
         private Container headerPrimaryRowContainer = null!;
@@ -106,8 +107,12 @@ namespace BeatSight.Game.Screens.Editor
         private Container previewContentContainer = null!;
         private Container previewCellContainer = null!;
         private Container previewSurfaceContainer = null!;
+        private Container previewUtilityStripContainer = null!;
+        private SpriteText previewUtilityTitleText = null!;
+        private SpriteText previewUtilityHintText = null!;
         private Container timelineToolboxContainer = null!;
         private Container timelineToolboxHostContainer = null!;
+        private Container timelineToolboxInnerContainer = null!;
         private FillFlowContainer timelineToolboxContentFlow = null!;
         private EditorButton timelineToolboxToggleButton = null!;
         private EditorVerticalSplitter timelinePreviewSplitter = null!;
@@ -118,6 +123,7 @@ namespace BeatSight.Game.Screens.Editor
         private readonly List<SpriteText> timelineSectionTitleTexts = new();
         private readonly List<FillFlowContainer> timelineSectionControlRows = new();
         private readonly List<FillFlowContainer> timelineSectionBodies = new();
+        private readonly List<(Container Wrapper, bool HasTrailingGap)> timelineToolboxSectionWrappers = new();
         private BasicButton timelineFirstNoteButton = null!;
         private BasicButton timelineLastNoteButton = null!;
         private BasicButton timelineTimingButton = null!;
@@ -145,9 +151,10 @@ namespace BeatSight.Game.Screens.Editor
         private SpriteText scrubPerfOverlayText = null!;
         private Container footerRootContainer = null!;
         private Container footerInnerContainer = null!;
+        private Container footerTransportBandContainer = null!;
         private FillFlowContainer footerTipFlow = null!;
         private Container footerTipsContainer = null!;
-        private bool footerTipsCollapsed = true;
+        private bool footerTipsCollapsed;
         private GridContainer footerSeekRow = null!;
         private ScrubbableSliderBar footerSeekSlider = null!;
         private SpriteText footerSeekCurrentText = null!;
@@ -346,7 +353,10 @@ namespace BeatSight.Game.Screens.Editor
         private const float inspectorButtonRowSpacing = 6;
         private const float timelineToolboxRowHeight = 104f;
         private const float timelineSurfaceHeight = 278f;
-        private const float timelinePreviewSplitterHeight = 8f;
+        private const float timelinePreviewSplitterHeight = 6f;
+        private const float editorWorkspaceHorizontalInset = 4f;
+        private const float editorWorkspaceCornerRadius = 12f;
+        private const float editorSurfaceCornerRadius = 8f;
         private const float minimumPreviewWorkspaceHeight = 188f;
         private const float minimumTimelineCoreHeight = 146f;
         private const double defaultTimelineSplitRatioExpanded = 0.18;
@@ -456,6 +466,7 @@ namespace BeatSight.Game.Screens.Editor
             this.beatmapPath = beatmapPath;
             this.importedAudio = importedAudio;
             this.playbackAvailable = playbackAvailable;
+            footerTipsCollapsed = !showFooterShortcutHints;
         }
 
         // Inspector composition methods extracted to EditorScreen.InspectorComposition.cs.

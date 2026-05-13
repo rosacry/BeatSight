@@ -226,7 +226,7 @@ export function LoginPage() {
                                 <form onSubmit={handleSubmit} className="space-y-4">
                                     <div>
                                         <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1.5">
-                                            Email
+                                            Email address
                                         </label>
                                         <input
                                             id="email"

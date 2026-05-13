@@ -233,19 +233,33 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
         /// <summary>Width ratio of the playfield relative to container. 1.0 = full width.</summary>
         private const float PlayfieldWidthRatio = 1f;
-        private const float HitLineYRatio = 0.935f;
+        private const float PreviewTwoDimensionalHitLineLift = 0.015f;
 
         /// <summary>Additional visibility buffer after miss window (ms).</summary>
         private const double PastVisibilityBuffer = 600;
-        private const double BaseVisibleMeasures = 2.0;
-        private const double AutoZoomBaseMultiplier = 1.44;
-        private const double AutoZoomMaxMultiplier = 2.20;
+        private const double BaseVisibleMeasures = 1.40;
+        private const double FutureVisibilityLeadInRatio = 0.24;
+        private const double FutureVisibilityLeadInMinMs = 120;
+        private const double FutureVisibilityLeadInMaxMs = 360;
+        private const double ManualZoomMin = 0.2;
+        private const double ManualZoomMax = 5.0;
+        private const double ManualZoomResponseExponent = 0.55;
+        private const double ManualZoomHighEndBoost = 1.80;
+        private const double ManualZoomLowEndLift = 1.20;
+        private const double PreviewZoomLowEndBoost = 0.22;
+        private const double PreviewZoomHighEndBoost = 0.95;
+        private const double PreviewZoomLowEndExponent = 1.4;
+        private const double PreviewZoomHighEndExponent = 1.8;
+        private const double AutoZoomBaseMultiplier = 1.18;
+        private const double AutoZoomMaxMultiplier = 1.95;
 
         private readonly Func<double> currentTimeProvider;
+        private readonly Func<bool>? snapEnabledProvider;
+        private readonly Func<double, double>? snapIntervalAtTimeProvider;
         private readonly List<DrawableNote> notes = new();
         private readonly List<DrawableNote> kickNoteBuffer = new();
         private int firstActiveNoteIndex;
-        private double futureVisibilityWindow => ApproachDuration + 900;
+        private double futureVisibilityWindow => computeFutureVisibilityWindowMs(ApproachDuration);
         private double pastVisibilityWindow => missWindow + PastVisibilityBuffer;
         private bool isPreviewMode; // Preview still auto-judges for visuals, but suppresses result callbacks.
 
@@ -281,17 +295,25 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private bool kickUsesGlobalLine = true;
         private string? manuscriptFocusComponent;
 
-        public readonly Bindable<double> ZoomLevel = new Bindable<double>(1.08);
+        public readonly Bindable<double> ZoomLevel = new Bindable<double>(1.00);
         public readonly Bindable<bool> AutoZoom = new Bindable<bool>(true);
         public readonly Bindable<double> NoteWidthScale = new Bindable<double>(1.0);
         public readonly Bindable<ThreeDStageProfile> StageProfile = new Bindable<ThreeDStageProfile>(ThreeDStageProfile.GhClassic);
+        public LaneViewMode CurrentLaneViewMode => currentLaneViewMode;
 
         public event Action<HitResult, double, Color4, string>? ResultApplied;
 
-        private double cachedBpm = 120;
+        private double cachedBpm = TimingInfo.DefaultBpm;
         private double cachedBeatsPerMeasure = 4;
+        private double cachedBeatUnitDenominator = 4;
         private int lastTimingPointIndex = -1;
         private readonly List<TimingPoint> sortedTimingPoints = new();
+        private const double previewSeekResetPaddingMs = 260;
+        private const double previewLightweightSeekDeltaThresholdMs = 480;
+        private const double previewLightweightPrunePaddingMs = 420;
+        private double lastJumpTargetTimeMs = double.NaN;
+        private float lastLayoutAppliedWidth = float.NaN;
+        private float lastLayoutAppliedHeight = float.NaN;
 
         private const float ManuscriptPrimaryBeamThickness = 3.2f;
         private const float ManuscriptSecondaryBeamThickness = 2.4f;
@@ -414,9 +436,14 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             public float PlayheadX { get; }
         }
 
-        public PlaybackPlayfield(Func<double> currentTimeProvider)
+        public PlaybackPlayfield(
+            Func<double> currentTimeProvider,
+            Func<bool>? snapEnabledProvider = null,
+            Func<double, double>? snapIntervalAtTimeProvider = null)
         {
             this.currentTimeProvider = currentTimeProvider;
+            this.snapEnabledProvider = snapEnabledProvider;
+            this.snapIntervalAtTimeProvider = snapIntervalAtTimeProvider;
 
             StageProfile.BindValueChanged(e =>
             {
@@ -648,12 +675,27 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         {
             loadedBeatmap = beatmap;
             notes.Clear();
-            noteLayer.Clear(false);
+            noteLayer?.Clear(false);
             clearManuscriptBeams();
             clearManuscriptDurationCues();
             clearManuscriptRests();
             firstActiveNoteIndex = 0;
             sortedTimingPoints.Clear();
+            lastTimingPointIndex = -1;
+
+            if (beatmap?.Timing != null)
+            {
+                cachedBpm = beatmap.Timing.Bpm > 0 ? beatmap.Timing.Bpm : TimingInfo.DefaultBpm;
+                (int beatsPerMeasure, int beatUnitDenominator) = parseTimingSignature(beatmap.Timing.TimeSignature, 4, 4);
+                cachedBeatsPerMeasure = beatsPerMeasure;
+                cachedBeatUnitDenominator = beatUnitDenominator;
+            }
+            else
+            {
+                cachedBpm = TimingInfo.DefaultBpm;
+                cachedBeatsPerMeasure = 4;
+                cachedBeatUnitDenominator = 4;
+            }
 
             if (beatmap == null)
                 return;
@@ -661,7 +703,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             foreach (var hitObject in beatmap.HitObjects)
             {
                 int lane = resolveLane(hitObject);
-                var note = new DrawableNote(hitObject, lane, showGlowEffects, showParticleEffects);
+                Color4 accentColour = resolveLaneAccentColour(lane, hitObject.Component);
+                var note = new DrawableNote(hitObject, lane, showGlowEffects, showParticleEffects, accentColour);
                 notes.Add(note);
             }
 
@@ -680,6 +723,21 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         public void SetPreviewMode(bool preview)
         {
             isPreviewMode = preview;
+            layoutDirty = true;
+        }
+
+        public void ForceVisualLayoutRefresh()
+        {
+            layoutDirty = true;
+            lastLayoutAppliedWidth = float.NaN;
+            lastLayoutAppliedHeight = float.NaN;
+        }
+
+        public double GetFutureViewportDurationMsAtZoom(double zoomLevel)
+        {
+            double currentTime = Math.Max(0, currentTimeProvider());
+            double approachDurationAtZoom = computeApproachDurationAtZoom(currentTime, zoomLevel);
+            return computeFutureVisibilityWindowMs(approachDurationAtZoom);
         }
 
         public void SetManuscriptFocusComponent(string? componentName)
@@ -695,6 +753,16 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         protected override void Update()
         {
             base.Update();
+
+            bool sizeChanged = DrawWidth > 0
+                && DrawHeight > 0
+                && (!float.IsFinite(lastLayoutAppliedWidth)
+                    || !float.IsFinite(lastLayoutAppliedHeight)
+                    || Math.Abs(DrawWidth - lastLayoutAppliedWidth) >= 0.5f
+                    || Math.Abs(DrawHeight - lastLayoutAppliedHeight) >= 0.5f);
+
+            if (sizeChanged)
+                layoutDirty = true;
 
             // If a previous updateLayout() bailed (e.g. DrawWidth was 0 during init),
             // retry now that the container has been sized.
@@ -720,7 +788,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float effectiveWidth = DrawWidth * PlayfieldWidthRatio;
 
             // Ensure strike zone geometry is updated every frame to handle resizing
-            float hitLineY = DrawHeight * HitLineYRatio;
+            float hitLineY = resolveHitLineY(DrawHeight);
             float spawnTop = 0f; // Extend grid to top
             float travelDistance = hitLineY - spawnTop;
 
@@ -817,13 +885,19 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     else
                     {
                         lastTimingPointIndex = -1;
-                        cachedBpm = loadedBeatmap.Timing.Bpm;
-                        cachedBeatsPerMeasure = 4; // Default
+                        cachedBpm = loadedBeatmap.Timing.Bpm > 0 ? loadedBeatmap.Timing.Bpm : TimingInfo.DefaultBpm;
+                        (int parsedBeatsPerMeasure, int parsedBeatUnitDenominator) = parseTimingSignature(loadedBeatmap.Timing.TimeSignature, 4, 4);
+                        cachedBeatsPerMeasure = parsedBeatsPerMeasure;
+                        cachedBeatUnitDenominator = parsedBeatUnitDenominator;
                     }
                 }
             }
 
-            double beatDuration = 60000.0 / cachedBpm;
+            double safeBpm = cachedBpm > 0 && double.IsFinite(cachedBpm) ? cachedBpm : TimingInfo.DefaultBpm;
+            double safeBeatUnitDenominator = cachedBeatUnitDenominator > 0 && double.IsFinite(cachedBeatUnitDenominator)
+                ? cachedBeatUnitDenominator
+                : 4.0;
+            double beatDuration = 60000.0 / safeBpm * (4.0 / safeBeatUnitDenominator);
 
             double beatsPerMeasure = Math.Max(1, cachedBeatsPerMeasure);
             double targetVisibleBeats = BaseVisibleMeasures * beatsPerMeasure;
@@ -833,7 +907,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
         private double getEffectiveZoomFactor(double currentTime, double beatDuration, double beatsPerMeasure)
         {
-            double manualZoom = Math.Max(0.1, ZoomLevel.Value);
+            double manualZoom = remapManualZoomForApproachDuration(ZoomLevel.Value);
             if (!AutoZoom.Value)
                 return manualZoom;
 
@@ -871,16 +945,16 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             double clampedMeasure = Math.Max(1, beatsPerMeasure);
             double clampedDensity = Math.Max(0, notesPerBeat);
 
-            // Density drives the majority of zoom-in pressure, with additional boosts for higher
-            // tempos and compound signatures so default framing is denser and easier to read.
-            double densityNormalized = Math.Clamp((clampedDensity - 0.40) / 1.60, 0.0, 1.0);
-            double bpmNormalized = Math.Clamp((clampedBpm - 90.0) / 135.0, 0.0, 1.0);
-            double signatureNormalized = Math.Clamp((clampedMeasure - 4.0) / 4.5, 0.0, 1.0);
+            // Keep 1.0x manual as a true baseline and let auto-zoom provide a moderate
+            // readability lift that scales mostly with local note density.
+            double densityNormalized = Math.Clamp((clampedDensity - 0.30) / 1.85, 0.0, 1.0);
+            double bpmNormalized = Math.Clamp((clampedBpm - 95.0) / 150.0, 0.0, 1.0);
+            double signatureNormalized = Math.Clamp((clampedMeasure - 4.0) / 6.0, 0.0, 1.0);
 
             double multiplier = AutoZoomBaseMultiplier
-                                + 0.48 * densityNormalized
-                                + 0.20 * bpmNormalized
-                                + 0.10 * signatureNormalized;
+                                + 0.52 * densityNormalized
+                                + 0.16 * bpmNormalized
+                                + 0.09 * signatureNormalized;
 
             return Math.Clamp(multiplier, AutoZoomBaseMultiplier, AutoZoomMaxMultiplier);
         }
@@ -891,9 +965,14 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             if (!string.IsNullOrEmpty(timingPoint.TimeSignature))
             {
-                var parts = timingPoint.TimeSignature.Split('/');
-                if (parts.Length > 0 && int.TryParse(parts[0], out int num))
-                    cachedBeatsPerMeasure = num;
+                int fallbackBeatsPerMeasure = (int)Math.Clamp(Math.Round(cachedBeatsPerMeasure), 1, 32);
+                int fallbackBeatUnitDenominator = (int)Math.Clamp(Math.Round(cachedBeatUnitDenominator), 1, 32);
+                (int beatsPerMeasure, int beatUnitDenominator) = parseTimingSignature(
+                    timingPoint.TimeSignature,
+                    fallbackBeatsPerMeasure,
+                    fallbackBeatUnitDenominator);
+                cachedBeatsPerMeasure = beatsPerMeasure;
+                cachedBeatUnitDenominator = beatUnitDenominator;
             }
         }
 
@@ -910,30 +989,11 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float drawHeight = DrawHeight;
             float effectiveWidth = DrawWidth * PlayfieldWidthRatio;
 
-            float hitLineY = drawHeight * HitLineYRatio;
+            float hitLineY = resolveHitLineY(drawHeight);
             float spawnTop = 0f;
             float travelDistance = hitLineY - spawnTop;
 
-            // Calculate note height based on 16th note duration
-            double bpm = 120;
-            if (loadedBeatmap?.Timing != null)
-            {
-                var timingPoints = loadedBeatmap.Timing.TimingPoints;
-                var timingPoint = timingPoints?.LastOrDefault(tp => tp.Time <= currentTime);
-
-                if (timingPoint != null && timingPoint.Bpm > 0)
-                    bpm = timingPoint.Bpm;
-                else
-                    bpm = loadedBeatmap.Timing.Bpm;
-            }
-            if (bpm <= 0) bpm = 120;
-
-            double beatDuration = 60000.0 / bpm;
-            double sixteenthDuration = beatDuration / 4.0;
-
-            // Use the dynamic ApproachDuration here
-            float noteHeight = (float)(sixteenthDuration / ApproachDuration * travelDistance);
-            noteHeight = Math.Max(10f, noteHeight * 0.6f); // Scale height down visually
+            double beatDuration = 60000.0 / resolveTimingBpmAt(currentTime);
             SheetTimelineWindow sheetWindow = default;
             if (currentLaneViewMode == LaneViewMode.Manuscript)
                 sheetWindow = resolveSheetTimelineWindow(currentTime, effectiveWidth, drawHeight);
@@ -945,6 +1005,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             double activeFutureVisibilityWindow = futureVisibilityWindow;
             if (currentLaneViewMode == LaneViewMode.Manuscript && sheetWindow.Duration > 0)
                 activeFutureVisibilityWindow = Math.Max(activeFutureVisibilityWindow, sheetWindow.Duration + 500);
+
+            pruneNotesOutsideVisibilityWindow(currentTime, activeFutureVisibilityWindow);
 
             // Clean up notes that have fully expired (well past the hit line)
             while (firstActiveNoteIndex < notes.Count && notes[firstActiveNoteIndex].HitTime < currentTime - pastVisibilityWindow)
@@ -990,8 +1052,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     note.ApplyKickMode(kickUsesGlobalLine, laneLayout.KickLane);
                 }
 
-                // Reset height to calculated height
-                note.Height = noteHeight;
+                if (currentLaneViewMode == LaneViewMode.TwoDimensional)
+                    note.Height = resolveTwoDimensionalNoteHeight(note.HitTime, drawHeight);
 
                 updateNotePosition(
                     note,
@@ -1024,7 +1086,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private SheetTimelineWindow resolveSheetTimelineWindow(double currentTime, float drawWidth, float drawHeight)
         {
             double beatsPerMeasure = Math.Max(1, cachedBeatsPerMeasure);
-            double beatDuration = cachedBpm > 0 ? 60000.0 / cachedBpm : 500.0;
+            double beatDuration = cachedBpm > 0
+                ? 60000.0 / cachedBpm * (4.0 / Math.Max(1.0, cachedBeatUnitDenominator))
+                : 500.0;
             double measureDuration = Math.Max(beatDuration, beatDuration * beatsPerMeasure);
             double effectiveZoom = getEffectiveZoomFactor(currentTime, beatDuration, beatsPerMeasure);
             double windowDuration = (measureDuration * SheetMusicTuning.VisibleMeasures) / effectiveZoom;
@@ -2058,12 +2122,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
         private void clearManuscriptBeams()
         {
-            manuscriptBeamLayer.Clear(false);
+            manuscriptBeamLayer?.Clear(false);
         }
 
         private void clearManuscriptDurationCues()
         {
-            manuscriptDurationLayer.Clear(false);
+            manuscriptDurationLayer?.Clear(false);
         }
 
         private Box getOrCreateManuscriptRestSpan(int index)
@@ -2120,8 +2184,15 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
         private void resolveTimingForHitTime(double hitTime, out double beatDuration, out double beatOrigin)
         {
-            beatDuration = cachedBpm > 0 ? 60000.0 / cachedBpm : 500;
+            double bpm = cachedBpm > 0 ? cachedBpm : TimingInfo.DefaultBpm;
             beatOrigin = loadedBeatmap?.Timing?.Offset ?? 0;
+            int beatsPerMeasure = (int)Math.Clamp(Math.Round(cachedBeatsPerMeasure), 1, 32);
+            int beatUnitDenominator = (int)Math.Clamp(Math.Round(cachedBeatUnitDenominator), 1, 32);
+
+            if (loadedBeatmap?.Timing != null)
+                (beatsPerMeasure, beatUnitDenominator) = parseTimingSignature(loadedBeatmap.Timing.TimeSignature, beatsPerMeasure, beatUnitDenominator);
+
+            beatDuration = 60000.0 / Math.Max(1.0, bpm) * (4.0 / Math.Max(1.0, beatUnitDenominator));
 
             if (sortedTimingPoints.Count == 0)
                 return;
@@ -2136,7 +2207,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             }
 
             if (activePoint.Bpm > 0)
-                beatDuration = 60000.0 / activePoint.Bpm;
+                bpm = activePoint.Bpm;
+
+            if (!string.IsNullOrWhiteSpace(activePoint.TimeSignature))
+                (beatsPerMeasure, beatUnitDenominator) = parseTimingSignature(activePoint.TimeSignature, beatsPerMeasure, beatUnitDenominator);
+
+            beatDuration = 60000.0 / Math.Max(1.0, bpm) * (4.0 / Math.Max(1.0, beatUnitDenominator));
 
             beatOrigin = activePoint.Time;
         }
@@ -2186,7 +2262,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float x = sheetWindow.LeftX + (float)(normalized * timelineWidth);
             float y = ManuscriptBackgroundEnhanced.GetStaffYForComponent(note.ComponentName, drawWidth, drawHeight);
             float staffSpacing = ManuscriptBackgroundEnhanced.GetStaffSpacingForDrawArea(drawWidth, drawHeight);
-            float noteScaleSetting = (float)Math.Clamp(NoteWidthScale.Value, 0.65, 1.75);
+            float noteScaleSetting = (float)Math.Clamp(NoteWidthScale.Value, 0.5, 1.5);
 
             float noteWidth = Math.Clamp(
                 timelineWidth * SheetMusicTuning.NoteWidthRatio * noteScaleSetting,
@@ -2264,11 +2340,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 // Use cachedActiveLaneCount from updateLayout() instead of recomputing,
                 // to guarantee consistency between background lanes and note lanes.
                 int activeLaneCount = cachedActiveLaneCount;
-                float laneWidthPx = drawWidth / activeLaneCount;
-
-                float baseNoteWidth = laneWidthPx * 0.45f;
-                float userScale = (float)NoteWidthScale.Value;
-                note.Width = Math.Clamp(baseNoteWidth * userScale, 40f, 160f);
+                float actualParentWidth = noteLayer.DrawWidth;
+                float actualLaneWidthPx = actualParentWidth / activeLaneCount;
+                note.Width = resolveLaneNoteWidth2D(actualLaneWidthPx);
 
                 int visualLaneIndex = note.Lane;
                 if (kickUsesGlobalLine && note.Lane > laneLayout.KickLane)
@@ -2276,8 +2350,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
                 // CRITICAL: use noteLayer.DrawWidth, NOT the passed-in drawWidth (which is PlaybackPlayfield.DrawWidth * ratio).
                 // If these differ, notes will be mispositioned!
-                float actualParentWidth = noteLayer.DrawWidth;
-                float actualLaneWidthPx = actualParentWidth / activeLaneCount;
                 float laneCenterX = (visualLaneIndex + 0.5f) * actualLaneWidthPx;
 
                 // Origin = Centre (set in DrawableNote constructor), Anchor = TopLeft
@@ -2323,26 +2395,29 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float currentHighwayWidth = lerp(highwayWidthAtTop, highwayWidthAtBottom, widthProgress);
             float currentLaneWidth = currentHighwayWidth / activeLaneCount;
             float y = lerp(vanishingPointY, hitLineY, MathF.Pow(perspectiveProgress, tuning.YExponent));
-            float noteScaleSetting = (float)Math.Clamp(NoteWidthScale.Value, 0.65, 1.75);
+            float noteScaleSetting = (float)Math.Clamp(NoteWidthScale.Value, 0.5, 1.5);
             float laneNoteWidthFactor = lerp(
                 tuning.LaneNoteWidthAtTop,
                 tuning.LaneNoteWidthAtBottom,
                 perspectiveProgress);
-            float noteWidth = Math.Clamp(
-                currentLaneWidth * laneNoteWidthFactor * noteScaleSetting,
+            float laneFillWidth = Math.Max(tuning.MinNoteWidth, currentLaneWidth - 2f);
+            float baseLaneWidth = Math.Clamp(
+                currentLaneWidth * laneNoteWidthFactor,
                 tuning.MinNoteWidth,
                 tuning.MaxNoteWidth);
+            float noteWidth = resolveLaneNoteWidth3D(baseLaneWidth, laneFillWidth, noteScaleSetting, tuning);
             float noteHeight = Math.Clamp(
                 noteWidth * lerp(tuning.NoteHeightRatioAtTop, tuning.NoteHeightRatioAtBottom, perspectiveProgress),
                 tuning.MinNoteHeight,
                 tuning.MaxNoteHeight);
 
             bool isGlobalKickVisual = kickUsesGlobalLine && note.IsKick;
+            float baseKickWidth = Math.Clamp(
+                currentHighwayWidth * lerp(tuning.KickWidthAtTop, tuning.KickWidthAtBottom, perspectiveProgress),
+                28f,
+                152f);
             float finalNoteWidth = isGlobalKickVisual
-                ? Math.Clamp(
-                    currentHighwayWidth * lerp(tuning.KickWidthAtTop, tuning.KickWidthAtBottom, perspectiveProgress) * noteScaleSetting,
-                    28f,
-                    152f)
+                ? resolveKickWidth3D(baseKickWidth, currentHighwayWidth, noteScaleSetting)
                 : noteWidth;
             float finalNoteHeight = isGlobalKickVisual
                 ? Math.Clamp(noteHeight * 0.88f, tuning.MinNoteHeight, 26f)
@@ -2384,10 +2459,281 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 if (y > hitLineY + note.Height / 2 + 2)
                     note.Alpha = 0;
                 else
-                    note.Alpha = lerp(0.5f, 1f, perspectiveProgress);
+                note.Alpha = lerp(0.5f, 1f, perspectiveProgress);
             }
         }
+
+        private float resolveTwoDimensionalNoteHeight(double currentTime, float drawHeight)
+        {
+            if (ApproachDuration <= 0 || drawHeight <= 0)
+                return 10f;
+
+            double bpm = resolveTimingBpmAt(currentTime);
+            double quarterDuration = 60000.0 / bpm;
+            double sixteenthDuration = quarterDuration / 4.0;
+            float travelDistance = Math.Max(1f, resolveHitLineY(drawHeight));
+            float legacyHeight = Math.Clamp((float)(sixteenthDuration / ApproachDuration * travelDistance) * 0.64f, 8f, 44f);
+
+            if (!isSnapCollisionAvoidanceEnabled())
+                return legacyHeight;
+
+            double snapIntervalMs = resolveSnapIntervalMsForCurrentTime(currentTime);
+            if (!double.IsFinite(snapIntervalMs) || snapIntervalMs <= 0.01)
+                return legacyHeight;
+
+            float snapSpacing = (float)(snapIntervalMs / Math.Max(1.0, ApproachDuration) * travelDistance);
+            if (!float.IsFinite(snapSpacing) || snapSpacing <= 0.01f)
+                return legacyHeight;
+
+            // If spacing is comfortably larger than the current body height, keep legacy sizing
+            // to avoid making sparse patterns unnecessarily thin.
+            if (snapSpacing >= legacyHeight + 8f)
+                return legacyHeight;
+
+            // Drive collision-avoidance from snap density in quarter-note space so signatures
+            // like 6/8 and dense divisors (1/6, 1/8, 1/12+) scale consistently.
+            double notesPerQuarter = quarterDuration / snapIntervalMs;
+            float snapDensity = (float)Math.Clamp((notesPerQuarter - 2.0) / 10.0, 0.0, 1.0);
+            float preferredSpacingRatio = lerp(0.70f, 0.42f, snapDensity);
+            float minimumSpacingRatio = lerp(0.28f, 0.14f, snapDensity);
+
+            float collisionCap = Math.Max(1.0f, snapSpacing - 1.25f);
+            float preferredHeight = snapSpacing * preferredSpacingRatio;
+            float lowerBound = Math.Clamp(snapSpacing * minimumSpacingRatio, 1.2f, 7f);
+            float effectiveLowerBound = Math.Min(lowerBound, collisionCap);
+            float snapAwareHeight = Math.Min(legacyHeight, Math.Max(effectiveLowerBound, preferredHeight));
+            float minimumAllowedHeight = Math.Min(1.2f, collisionCap);
+
+            // Tiny 2D preview heights and very dense snap grids can push the collision cap below the
+            // nominal 1.2px floor. Clamp against the reduced cap instead of throwing.
+            return Math.Clamp(snapAwareHeight, minimumAllowedHeight, collisionCap);
+        }
+
+        private bool isSnapCollisionAvoidanceEnabled()
+        {
+            if (snapEnabledProvider == null)
+                return true;
+
+            return snapEnabledProvider();
+        }
+
+        private double resolveSnapIntervalMsForCurrentTime(double currentTime)
+        {
+            double providerInterval = snapIntervalAtTimeProvider?.Invoke(currentTime) ?? double.NaN;
+            if (double.IsFinite(providerInterval) && providerInterval > 0.01)
+                return providerInterval;
+
+            int divisor = Math.Max(1, loadedBeatmap?.Editor?.SnapDivisor ?? 4);
+            double bpm = resolveTimingBpmAt(currentTime);
+            if (!double.IsFinite(bpm) || bpm <= 0)
+                return double.NaN;
+
+            double beatUnitDenominator = resolveTimingBeatUnitDenominatorAt(currentTime);
+            double beatUnitDuration = 60000.0 / bpm * (4.0 / Math.Max(1.0, beatUnitDenominator));
+            return beatUnitDuration / divisor;
+        }
+
+        private Color4 resolveLaneAccentColour(int lane, string component)
+        {
+            int resolvedLane = laneLayout.ClampLane(lane);
+            if (LaneManagement.TryGetLaneColor(loadedBeatmap, resolvedLane, out Color4 laneColour))
+                return laneColour;
+
+            var palette = LaneManagement.DefaultPalette;
+            if (palette.Count > 0)
+                return palette[Math.Abs(resolvedLane) % palette.Count];
+
+            return DesignSystem.GetComponentColor(component);
+        }
+
+        private double resolveTimingBpmAt(double currentTime)
+        {
+            double bpm = loadedBeatmap?.Timing?.Bpm ?? TimingInfo.DefaultBpm;
+            if (loadedBeatmap?.Timing?.TimingPoints != null)
+            {
+                var timingPoint = loadedBeatmap.Timing.TimingPoints.LastOrDefault(tp => tp.Time <= currentTime);
+                if (timingPoint != null && timingPoint.Bpm > 0)
+                    bpm = timingPoint.Bpm;
+            }
+
+            if (!double.IsFinite(bpm) || bpm <= 0)
+                bpm = TimingInfo.DefaultBpm;
+
+            return bpm;
+        }
+
+        private double resolveTimingBeatsPerMeasureAt(double currentTime)
+            => resolveTimingSignatureAt(currentTime).BeatsPerMeasure;
+
+        private double resolveTimingBeatUnitDenominatorAt(double currentTime)
+            => resolveTimingSignatureAt(currentTime).BeatUnitDenominator;
+
+        private (double BeatsPerMeasure, double BeatUnitDenominator) resolveTimingSignatureAt(double currentTime)
+        {
+            int beatsPerMeasure = 4;
+            int beatUnitDenominator = 4;
+
+            (beatsPerMeasure, beatUnitDenominator) = parseTimingSignature(loadedBeatmap?.Timing?.TimeSignature, beatsPerMeasure, beatUnitDenominator);
+
+            if (loadedBeatmap?.Timing?.TimingPoints != null)
+            {
+                var timingPoint = loadedBeatmap.Timing.TimingPoints.LastOrDefault(tp => tp.Time <= currentTime);
+                if (timingPoint != null && !string.IsNullOrWhiteSpace(timingPoint.TimeSignature))
+                {
+                    (beatsPerMeasure, beatUnitDenominator) = parseTimingSignature(timingPoint.TimeSignature, beatsPerMeasure, beatUnitDenominator);
+                }
+            }
+
+            return (Math.Clamp(beatsPerMeasure, 1, 16), Math.Clamp(beatUnitDenominator, 1, 32));
+        }
+
+        private static (int BeatsPerMeasure, int BeatUnitDenominator) parseTimingSignature(
+            string? signature,
+            int fallbackBeatsPerMeasure,
+            int fallbackBeatUnitDenominator)
+        {
+            int beatsPerMeasure = fallbackBeatsPerMeasure;
+            int beatUnitDenominator = fallbackBeatUnitDenominator;
+            if (string.IsNullOrWhiteSpace(signature))
+                return (beatsPerMeasure, beatUnitDenominator);
+
+            string[] parts = signature.Split('/');
+            if (parts.Length > 0 && int.TryParse(parts[0], out int numerator) && numerator > 0)
+                beatsPerMeasure = numerator;
+
+            if (parts.Length > 1 && int.TryParse(parts[1], out int denominator) && denominator > 0)
+                beatUnitDenominator = denominator;
+
+            return (beatsPerMeasure, beatUnitDenominator);
+        }
+
+        private double computeApproachDurationAtZoom(double currentTime, double zoomLevel)
+        {
+            double bpm = resolveTimingBpmAt(currentTime);
+            double beatsPerMeasure = resolveTimingBeatsPerMeasureAt(currentTime);
+            double beatUnitDenominator = resolveTimingBeatUnitDenominatorAt(currentTime);
+            double beatDuration = 60000.0 / Math.Max(1, bpm) * (4.0 / Math.Max(1.0, beatUnitDenominator));
+            double targetVisibleBeats = BaseVisibleMeasures * Math.Max(1, beatsPerMeasure);
+
+            double effectiveZoom = remapManualZoomForApproachDuration(zoomLevel);
+            if (isPreviewMode)
+                effectiveZoom *= computePreviewZoomBoost(zoomLevel);
+
+            if (AutoZoom.Value)
+                effectiveZoom *= calculateAutoZoomMultiplier(currentTime, beatDuration, beatsPerMeasure);
+
+            return (targetVisibleBeats * beatDuration) / Math.Max(0.1, effectiveZoom);
+        }
+
+        private static double computePreviewZoomBoost(double zoomLevel)
+        {
+            double clamped = Math.Clamp(zoomLevel, ManualZoomMin, ManualZoomMax);
+            double normalized = (clamped - ManualZoomMin) / (ManualZoomMax - ManualZoomMin);
+            double lowEndBoost = PreviewZoomLowEndBoost * Math.Pow(1.0 - normalized, PreviewZoomLowEndExponent);
+            double highEndBoost = PreviewZoomHighEndBoost * Math.Pow(normalized, PreviewZoomHighEndExponent);
+            return 1.0 + lowEndBoost + highEndBoost;
+        }
+
+        private static double computeFutureVisibilityPaddingMs(double approachDurationMs)
+        {
+            if (!double.IsFinite(approachDurationMs) || approachDurationMs <= 0)
+                return FutureVisibilityLeadInMinMs;
+
+            return Math.Clamp(
+                approachDurationMs * FutureVisibilityLeadInRatio,
+                FutureVisibilityLeadInMinMs,
+                FutureVisibilityLeadInMaxMs);
+        }
+
+        private static double computeFutureVisibilityWindowMs(double approachDurationMs)
+            => Math.Max(0, approachDurationMs + computeFutureVisibilityPaddingMs(approachDurationMs));
+
+        private static double remapManualZoomForApproachDuration(double zoomLevel)
+        {
+            double clamped = Math.Clamp(zoomLevel, ManualZoomMin, ManualZoomMax);
+            double normalized = (clamped - ManualZoomMin) / (ManualZoomMax - ManualZoomMin);
+            double curved = Math.Pow(normalized, ManualZoomResponseExponent);
+            double remapped = ManualZoomMin + curved * (ManualZoomMax - ManualZoomMin);
+            double lowEndLift = ManualZoomLowEndLift * Math.Pow(1.0 - normalized, 1.7);
+            double boosted = (remapped + lowEndLift) * (1.0 + ManualZoomHighEndBoost * Math.Pow(normalized, 2.2));
+            return Math.Max(0.1, boosted);
+        }
+
+        private void pruneNotesOutsideVisibilityWindow(double currentTime, double futureVisibilityWindowMs)
+        {
+            if (noteLayer == null || noteLayer.Count == 0)
+                return;
+
+            const double visibilityPrunePaddingMs = 120;
+            double minVisible = currentTime - pastVisibilityWindow - visibilityPrunePaddingMs;
+            double maxVisible = currentTime + futureVisibilityWindowMs + visibilityPrunePaddingMs;
+
+            foreach (var note in noteLayer.Children.OfType<DrawableNote>().ToArray())
+            {
+                if (note.IsDisposedPublic || note.HitTime < minVisible || note.HitTime > maxVisible)
+                    noteLayer.Remove(note, false);
+            }
+        }
+
+        private float resolveLaneNoteWidth2D(float laneWidthPx)
+        {
+            float safeLaneWidth = Math.Max(1f, laneWidthPx);
+            float noteScale = (float)Math.Clamp(NoteWidthScale.Value, 0.5, 1.5);
+            float laneFillWidth = Math.Max(14f, safeLaneWidth - 2f);
+            float legacyUpperBound = Math.Min(160f, laneFillWidth);
+            float legacyWidth = Math.Clamp(safeLaneWidth * 0.45f * noteScale, 40f, legacyUpperBound);
+
+            if (noteScale <= 1f || laneFillWidth <= legacyUpperBound + 0.01f)
+                return legacyWidth;
+
+            float baseWidthAtOne = Math.Clamp(safeLaneWidth * 0.45f, 40f, legacyUpperBound);
+            float expansionProgress = Math.Clamp((noteScale - 1f) / 0.5f, 0f, 1f);
+            float easedExpansion = expansionProgress * expansionProgress;
+            return Math.Clamp(lerp(baseWidthAtOne, laneFillWidth, easedExpansion), 40f, laneFillWidth);
+        }
+
+        private static float resolveLaneNoteWidth3D(float baseLaneWidth, float laneFillWidth, float noteScale, ThreeDProfileTuning tuning)
+        {
+            float legacyWidth = Math.Clamp(baseLaneWidth * noteScale, tuning.MinNoteWidth, tuning.MaxNoteWidth);
+            if (noteScale <= 1f || laneFillWidth <= tuning.MaxNoteWidth + 0.01f)
+                return legacyWidth;
+
+            float expansionProgress = Math.Clamp((noteScale - 1f) / 0.5f, 0f, 1f);
+            float easedExpansion = expansionProgress * expansionProgress;
+            return Math.Clamp(lerp(baseLaneWidth, laneFillWidth, easedExpansion), tuning.MinNoteWidth, laneFillWidth);
+        }
+
+        private static float resolveKickWidth3D(float baseKickWidth, float currentHighwayWidth, float noteScale)
+        {
+            float legacyWidth = Math.Clamp(baseKickWidth * noteScale, 28f, 152f);
+            float kickFillWidth = Math.Max(baseKickWidth, currentHighwayWidth * 0.98f);
+            if (noteScale <= 1f || kickFillWidth <= 152f + 0.01f)
+                return legacyWidth;
+
+            float expansionProgress = Math.Clamp((noteScale - 1f) / 0.5f, 0f, 1f);
+            float easedExpansion = expansionProgress * expansionProgress;
+            return Math.Clamp(lerp(baseKickWidth, kickFillWidth, easedExpansion), 28f, Math.Max(152f, currentHighwayWidth));
+        }
+
         private static float lerp(float start, float end, float amount) => start + (end - start) * amount;
+
+        private float resolveHitLineRatio()
+        {
+            float baseRatio = currentLaneViewMode switch
+            {
+                LaneViewMode.ThreeDimensional => DesignSystem.HitLineRatio3D,
+                LaneViewMode.Manuscript => DesignSystem.HitLineRatioManuscript,
+                _ => DesignSystem.DefaultHitLineRatio
+            };
+
+            if (isPreviewMode && currentLaneViewMode == LaneViewMode.TwoDimensional)
+                baseRatio -= PreviewTwoDimensionalHitLineLift;
+
+            return Math.Clamp(baseRatio, 0.78f, 0.95f);
+        }
+
+        private float resolveHitLineY(float drawHeight)
+            => Math.Max(0f, drawHeight * resolveHitLineRatio());
 
         private void setNoteDepth(DrawableNote note, float depth)
         {
@@ -2579,6 +2925,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             if (DrawWidth <= 0 || DrawHeight <= 0) return;
 
             layoutDirty = false;
+            lastLayoutAppliedWidth = DrawWidth;
+            lastLayoutAppliedHeight = DrawHeight;
 
             laneBackgroundContainer.Clear();
 
@@ -2615,12 +2963,60 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             {
                 threeDHighwayBackground = null;
                 manuscriptBackground = null;
+                Color4 twoDimensionalBase = isPreviewMode
+                    ? new Color4(20, 29, 48, 255)
+                    : new Color4(20, 20, 30, 255);
+                Color4 twoDimensionalLaneTint = isPreviewMode
+                    ? new Color4(120, 168, 255, 20)
+                    : new Color4(255, 255, 255, 8);
+                Color4 twoDimensionalSeparator = isPreviewMode
+                    ? new Color4(178, 212, 255, 98)
+                    : new Color4(255, 255, 255, 70);
+                Color4 twoDimensionalLabel = isPreviewMode
+                    ? new Color4(222, 236, 255, 178)
+                    : new Color4(255, 255, 255, 120);
                 // Add 2D background - fully opaque to prevent any bleed-through
                 laneBackgroundContainer.Add(new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = new Color4(20, 20, 30, 255)
+                    Colour = twoDimensionalBase
                 });
+
+                if (isPreviewMode)
+                {
+                    laneBackgroundContainer.Add(new Container
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        Height = 38f,
+                        Anchor = Anchor.BottomLeft,
+                        Origin = Anchor.BottomLeft,
+                        Masking = true,
+                        Children = new Drawable[]
+                        {
+                            new Box
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Colour = new Color4(28, 41, 68, 188)
+                            },
+                            new Box
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                Height = 1,
+                                Anchor = Anchor.TopLeft,
+                                Origin = Anchor.TopLeft,
+                                Colour = new Color4(146, 184, 255, 82)
+                            },
+                            new Box
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                Height = 1,
+                                Anchor = Anchor.BottomLeft,
+                                Origin = Anchor.BottomLeft,
+                                Colour = new Color4(96, 128, 188, 108)
+                            }
+                        }
+                    });
+                }
 
                 // Add lane separators, background tints, and labels
                 float laneWidth = 1.0f / activeLaneCount; // Relative to container width
@@ -2637,7 +3033,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                             Origin = Anchor.TopLeft,
                             X = i * laneWidth,
                             Width = laneWidth,
-                            Colour = new Color4(255, 255, 255, 8)
+                            Colour = twoDimensionalLaneTint
                         });
                     }
 
@@ -2650,7 +3046,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                             Width = 2,
                             RelativePositionAxes = Axes.X,
                             X = i * laneWidth,
-                            Colour = new Color4(255, 255, 255, 70)
+                            Colour = twoDimensionalSeparator
                         });
                     }
 
@@ -2659,18 +3055,18 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     laneBackgroundContainer.Add(new SpriteText
                     {
                         Text = label,
-                        Font = FrameworkFont.Regular.With(size: 11),
-                        Colour = new Color4(255, 255, 255, 120),
+                        Font = FrameworkFont.Regular.With(size: isPreviewMode ? 10.2f : 11f),
+                        Colour = twoDimensionalLabel,
                         RelativePositionAxes = Axes.Both,
                         Anchor = Anchor.TopLeft,
                         Origin = Anchor.BottomCentre,
                         X = (i + 0.5f) * laneWidth,
-                        Y = 0.98f
+                        Y = isPreviewMode ? 0.968f : 0.98f
                     });
                 }
                 float effectiveWidth = DrawWidth * PlayfieldWidthRatio;
                 if (timingStrikeZone != null)
-                    timingStrikeZone.UpdateGeometry(effectiveWidth, DrawHeight, DrawHeight * HitLineYRatio, 0f, effectiveWidth / activeLaneCount, activeLaneCount, activeLaneCount, laneLayout.KickLane, kickUsesGlobalLine, currentLaneViewMode);
+                    timingStrikeZone.UpdateGeometry(effectiveWidth, DrawHeight, resolveHitLineY(DrawHeight), 0f, effectiveWidth / activeLaneCount, activeLaneCount, activeLaneCount, laneLayout.KickLane, kickUsesGlobalLine, currentLaneViewMode);
             }
 
             clearManuscriptBeams();
@@ -2679,30 +3075,22 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             applyKickModeToNotes();
         }
         /// Get a human-readable label for a visual lane index.
-        /// Always uses the desktop's canonical lane ordering since lanes are re-resolved
-        /// by DrumLaneHeuristics.ApplyToBeatmap (ignoring the .bsm pipeline layout).
+        /// Prefers explicit beatmap lane metadata when available.
         /// </summary>
         private string getLaneLabelForIndex(int laneIndex, int totalLanes)
         {
-            if (kickUsesGlobalLine)
-            {
-                // When kick uses global line, visual lanes skip the kick position.
-                // Map visual lane index to the semantic lane labels.
-                return laneIndex switch
-                {
-                    0 => "Crash",
-                    1 => "HiHat",
-                    2 => "Snare",
-                    3 => "Tom",
-                    4 => "Ride",
-                    5 => "China",
-                    6 => "Splash",
-                    7 => "Perc",
-                    _ => $"Lane {laneIndex + 1}"
-                };
-            }
+            int logicalLane = laneIndex;
+            if (kickUsesGlobalLine && logicalLane >= laneLayout.KickLane)
+                logicalLane++;
 
-            return laneIndex switch
+            logicalLane = laneLayout.ClampLane(logicalLane);
+            string fallback = getCanonicalLaneLabel(logicalLane);
+            return LaneManagement.ResolveLaneLabel(loadedBeatmap, logicalLane, fallback);
+        }
+
+        private string getCanonicalLaneLabel(int logicalLane)
+        {
+            return logicalLane switch
             {
                 0 => "Crash",
                 1 => "HiHat",
@@ -2713,8 +3101,15 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 6 => "China",
                 7 => "Splash",
                 8 => "Perc",
-                _ => $"Lane {laneIndex + 1}"
+                _ => $"Lane {logicalLane + 1}"
             };
+        }
+
+        public string GetLaneLabelForLogicalLane(int logicalLane)
+        {
+            int lane = laneLayout.ClampLane(logicalLane);
+            string fallback = getCanonicalLaneLabel(lane);
+            return LaneManagement.ResolveLaneLabel(loadedBeatmap, lane, fallback);
         }
 
         public bool TryResolveLaneFromScreenSpace(Vector2 screenSpacePosition, out int lane)
@@ -2743,28 +3138,378 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             return true;
         }
 
-        public void JumpToTime(double time)
+        public bool TryResolvePlacementFromScreenSpace(Vector2 screenSpacePosition, out int lane, out double hitTimeMs)
         {
-            // Reset ALL notes to ensure clean state after seeking.
-            // Previously only notes after the target time were reset,
-            // causing notes before the target to stay in their judged/expired
-            // state, producing different visuals when seeking back and forth.
-            foreach (var note in notes)
+            lane = 0;
+            hitTimeMs = Math.Max(0, currentTimeProvider());
+
+            if (!TryResolveLaneFromScreenSpace(screenSpacePosition, out lane))
+                return false;
+
+            if (noteLayer == null || DrawWidth <= 0 || DrawHeight <= 0)
+                return false;
+
+            Vector2 local = noteLayer.ToLocalSpace(screenSpacePosition);
+            if (!tryComputePlacementTimeFromLocalPosition(local, out hitTimeMs))
+                hitTimeMs = Math.Max(0, currentTimeProvider());
+
+            return true;
+        }
+
+        public bool TryResolvePlacementScreenSpace(int lane, double hitTimeMs, out Vector2 screenSpacePosition)
+        {
+            screenSpacePosition = Vector2.Zero;
+
+            if (noteLayer == null || DrawWidth <= 0 || DrawHeight <= 0)
+                return false;
+
+            if (!tryComputePlacementLocalPosition(lane, hitTimeMs, out Vector2 local))
+                return false;
+
+            screenSpacePosition = noteLayer.ToScreenSpace(local);
+            return true;
+        }
+
+        public bool TryResolvePlacementNoteSize(int lane, double hitTimeMs, out Vector2 noteSizeScreen)
+        {
+            noteSizeScreen = Vector2.Zero;
+
+            if (noteLayer == null || DrawWidth <= 0 || DrawHeight <= 0)
+                return false;
+
+            int resolvedLane = laneLayout.ClampLane(lane);
+            bool isGlobalKickVisual = kickUsesGlobalLine && resolvedLane == laneLayout.KickLane;
+            if (!tryResolvePlacementNoteSizeLocal(resolvedLane, hitTimeMs, isGlobalKickVisual, out Vector2 localSize))
+                return false;
+
+            if (!tryComputePlacementLocalPosition(resolvedLane, hitTimeMs, out Vector2 localAnchor))
+                return false;
+
+            Vector2 halfSize = localSize * 0.5f;
+            Vector2 leftScreen = noteLayer.ToScreenSpace(localAnchor - new Vector2(halfSize.X, 0));
+            Vector2 rightScreen = noteLayer.ToScreenSpace(localAnchor + new Vector2(halfSize.X, 0));
+            Vector2 topScreen = noteLayer.ToScreenSpace(localAnchor - new Vector2(0, halfSize.Y));
+            Vector2 bottomScreen = noteLayer.ToScreenSpace(localAnchor + new Vector2(0, halfSize.Y));
+
+            noteSizeScreen = new Vector2(
+                Math.Max(1f, Math.Abs(rightScreen.X - leftScreen.X)),
+                Math.Max(1f, Math.Abs(bottomScreen.Y - topScreen.Y)));
+            return true;
+        }
+
+        private bool tryResolvePlacementNoteSizeLocal(int resolvedLane, double hitTimeMs, bool isGlobalKickVisual, out Vector2 localSize)
+        {
+            localSize = new Vector2(28f, 10f);
+
+            if (noteLayer == null || DrawWidth <= 0 || DrawHeight <= 0)
+                return false;
+
+            double currentTime = Math.Max(0, currentTimeProvider());
+            if (currentLaneViewMode == LaneViewMode.Manuscript)
             {
-                note.Reset();
+                float effectiveWidth = DrawWidth * PlayfieldWidthRatio;
+                SheetTimelineWindow sheetWindow = resolveSheetTimelineWindow(currentTime, effectiveWidth, DrawHeight);
+                float timelineWidth = Math.Max(120f, sheetWindow.RightX - sheetWindow.LeftX);
+                float noteScaleSetting = (float)Math.Clamp(NoteWidthScale.Value, 0.5, 1.5);
+                float noteWidth = Math.Clamp(
+                    timelineWidth * SheetMusicTuning.NoteWidthRatio * noteScaleSetting,
+                    SheetMusicTuning.MinNoteWidth,
+                    SheetMusicTuning.MaxNoteWidth);
+                float staffSpacing = ManuscriptBackgroundEnhanced.GetStaffSpacingForDrawArea(effectiveWidth, DrawHeight);
+                float noteHeight = Math.Clamp(
+                    staffSpacing * SheetMusicTuning.NoteHeightRatio,
+                    SheetMusicTuning.MinNoteHeight,
+                    SheetMusicTuning.MaxNoteHeight);
+                localSize = new Vector2(noteWidth, noteHeight);
+                return true;
+            }
+
+            if (currentLaneViewMode == LaneViewMode.ThreeDimensional)
+            {
+                if (ApproachDuration <= 0)
+                    return false;
+
+                var tuning = currentThreeDProfileTuning;
+                float drawWidth = DrawWidth * PlayfieldWidthRatio;
+                float drawHeight = DrawHeight;
+                double timeUntilHit = hitTimeMs - currentTime;
+                float progress = 1f - (float)(timeUntilHit / Math.Max(1.0, ApproachDuration));
+                float clampedProgress = Math.Clamp(progress, 0f, tuning.ProgressMax);
+                float normalizedProgress = Math.Clamp(clampedProgress / Math.Max(0.001f, tuning.ProgressMax), 0f, 1f);
+                float perspectiveProgress = 1f - MathF.Pow(1f - normalizedProgress, tuning.PerspectiveExponent);
+
+                float highwayWidthAtBottom = drawWidth * tuning.HighwayBottomWidthRatio;
+                float highwayWidthAtTop = drawWidth * tuning.HighwayTopWidthRatio;
+                int activeLaneCount = Math.Max(1, cachedActiveLaneCount);
+                float widthProgress = MathF.Pow(perspectiveProgress, tuning.WidthExponent);
+                float currentHighwayWidth = lerp(highwayWidthAtTop, highwayWidthAtBottom, widthProgress);
+                float currentLaneWidth = currentHighwayWidth / activeLaneCount;
+
+                float noteScaleSetting = (float)Math.Clamp(NoteWidthScale.Value, 0.5, 1.5);
+                float laneNoteWidthFactor = lerp(
+                    tuning.LaneNoteWidthAtTop,
+                    tuning.LaneNoteWidthAtBottom,
+                    perspectiveProgress);
+                float laneFillWidth = Math.Max(tuning.MinNoteWidth, currentLaneWidth - 2f);
+                float baseLaneWidth = Math.Clamp(
+                    currentLaneWidth * laneNoteWidthFactor,
+                    tuning.MinNoteWidth,
+                    tuning.MaxNoteWidth);
+                float noteWidth = resolveLaneNoteWidth3D(baseLaneWidth, laneFillWidth, noteScaleSetting, tuning);
+                float noteHeight = Math.Clamp(
+                    noteWidth * lerp(tuning.NoteHeightRatioAtTop, tuning.NoteHeightRatioAtBottom, perspectiveProgress),
+                    tuning.MinNoteHeight,
+                    tuning.MaxNoteHeight);
+
+                float baseKickWidth = Math.Clamp(
+                    currentHighwayWidth * lerp(tuning.KickWidthAtTop, tuning.KickWidthAtBottom, perspectiveProgress),
+                    28f,
+                    152f);
+                float finalNoteWidth = isGlobalKickVisual
+                    ? resolveKickWidth3D(baseKickWidth, currentHighwayWidth, noteScaleSetting)
+                    : noteWidth;
+                float finalNoteHeight = isGlobalKickVisual
+                    ? Math.Clamp(noteHeight * 0.88f, tuning.MinNoteHeight, 26f)
+                    : noteHeight;
+
+                localSize = new Vector2(finalNoteWidth, finalNoteHeight);
+                return true;
+            }
+
+            int laneCount = Math.Max(1, cachedActiveLaneCount);
+            float laneWidthPx = noteLayer.DrawWidth / laneCount;
+            float width = isGlobalKickVisual ? noteLayer.DrawWidth : resolveLaneNoteWidth2D(laneWidthPx);
+            float height = resolveTwoDimensionalNoteHeight(hitTimeMs, DrawHeight);
+            localSize = new Vector2(width, height);
+            return true;
+        }
+
+        private bool tryComputePlacementTimeFromLocalPosition(Vector2 local, out double hitTimeMs)
+        {
+            double currentTime = Math.Max(0, currentTimeProvider());
+            hitTimeMs = currentTime;
+
+            if (ApproachDuration <= 0)
+                return false;
+
+            if (currentLaneViewMode == LaneViewMode.Manuscript)
+            {
+                float effectiveWidth = DrawWidth * PlayfieldWidthRatio;
+                SheetTimelineWindow sheetWindow = resolveSheetTimelineWindow(currentTime, effectiveWidth, DrawHeight);
+                if (sheetWindow.Duration <= 0)
+                    return false;
+
+                float timelineWidth = Math.Max(1f, sheetWindow.RightX - sheetWindow.LeftX);
+                double normalized = (local.X - sheetWindow.LeftX) / timelineWidth;
+                hitTimeMs = Math.Max(0, sheetWindow.StartTime + normalized * sheetWindow.Duration);
+                return true;
+            }
+
+            float hitLineY = resolveHitLineY(DrawHeight);
+            if (hitLineY <= 0)
+                return false;
+
+            double timeUntilHit;
+            if (currentLaneViewMode == LaneViewMode.ThreeDimensional)
+            {
+                var tuning = currentThreeDProfileTuning;
+                float vanishingPointY = DrawHeight * tuning.VanishingPointYRatio;
+                float yRange = Math.Max(1f, hitLineY - vanishingPointY);
+                float verticalProgress = Math.Clamp((local.Y - vanishingPointY) / yRange, 0f, 1f);
+                float perspectiveProgress = MathF.Pow(verticalProgress, 1f / Math.Max(0.001f, tuning.YExponent));
+                float normalizedProgress = 1f - MathF.Pow(1f - Math.Clamp(perspectiveProgress, 0f, 1f), 1f / Math.Max(0.001f, tuning.PerspectiveExponent));
+                float progress = Math.Clamp(normalizedProgress * tuning.ProgressMax, 0f, tuning.ProgressMax);
+                timeUntilHit = (1.0 - progress) * ApproachDuration;
+            }
+            else
+            {
+                float progress = local.Y / hitLineY;
+                timeUntilHit = (1.0 - progress) * ApproachDuration;
+            }
+
+            hitTimeMs = Math.Max(0, currentTime + timeUntilHit);
+            return true;
+        }
+
+        private bool tryComputePlacementLocalPosition(int lane, double hitTimeMs, out Vector2 localPosition)
+        {
+            localPosition = Vector2.Zero;
+
+            if (noteLayer == null || DrawWidth <= 0 || DrawHeight <= 0 || ApproachDuration <= 0)
+                return false;
+
+            int resolvedLane = laneLayout.ClampLane(lane);
+            bool isGlobalKickVisual = kickUsesGlobalLine && resolvedLane == laneLayout.KickLane;
+            double currentTime = Math.Max(0, currentTimeProvider());
+            double timeUntilHit = hitTimeMs - currentTime;
+            float hitLineY = resolveHitLineY(DrawHeight);
+            if (hitLineY <= 0)
+                return false;
+
+            float x;
+            float y;
+
+            if (currentLaneViewMode == LaneViewMode.Manuscript)
+            {
+                float effectiveWidth = DrawWidth * PlayfieldWidthRatio;
+                SheetTimelineWindow sheetWindow = resolveSheetTimelineWindow(currentTime, effectiveWidth, DrawHeight);
+                if (sheetWindow.Duration <= 0)
+                    return false;
+
+                float timelineWidth = Math.Max(1f, sheetWindow.RightX - sheetWindow.LeftX);
+                double normalized = (hitTimeMs - sheetWindow.StartTime) / sheetWindow.Duration;
+                x = sheetWindow.LeftX + (float)normalized * timelineWidth;
+                y = hitLineY;
+            }
+            else if (currentLaneViewMode == LaneViewMode.ThreeDimensional)
+            {
+                var tuning = currentThreeDProfileTuning;
+                float drawWidth = DrawWidth * PlayfieldWidthRatio;
+                float drawHeight = DrawHeight;
+
+                float progress = 1f - (float)(timeUntilHit / Math.Max(1.0, ApproachDuration));
+                float clampedProgress = Math.Clamp(progress, 0f, tuning.ProgressMax);
+                float normalizedProgress = Math.Clamp(clampedProgress / Math.Max(0.001f, tuning.ProgressMax), 0f, 1f);
+                float perspectiveProgress = 1f - MathF.Pow(1f - normalizedProgress, tuning.PerspectiveExponent);
+
+                float vanishingPointY = drawHeight * tuning.VanishingPointYRatio;
+                float highwayWidthAtBottom = drawWidth * tuning.HighwayBottomWidthRatio;
+                float highwayWidthAtTop = drawWidth * tuning.HighwayTopWidthRatio;
+
+                int activeLaneCount = Math.Max(1, cachedActiveLaneCount);
+                float widthProgress = MathF.Pow(perspectiveProgress, tuning.WidthExponent);
+                float currentHighwayWidth = lerp(highwayWidthAtTop, highwayWidthAtBottom, widthProgress);
+                float currentLaneWidth = currentHighwayWidth / activeLaneCount;
+                y = lerp(vanishingPointY, hitLineY, MathF.Pow(perspectiveProgress, tuning.YExponent));
+
+                if (isGlobalKickVisual)
+                {
+                    x = drawWidth / 2f;
+                }
+                else
+                {
+                    int visualLane = resolvedLane;
+                    if (kickUsesGlobalLine && visualLane > laneLayout.KickLane)
+                        visualLane--;
+
+                    float highwayLeft = (drawWidth - currentHighwayWidth) / 2f;
+                    x = highwayLeft + currentLaneWidth * visualLane + currentLaneWidth / 2f;
+                }
+            }
+            else
+            {
+                float progress = 1f - (float)(timeUntilHit / Math.Max(1.0, ApproachDuration));
+                y = hitLineY * progress;
+
+                if (isGlobalKickVisual)
+                {
+                    x = noteLayer.DrawWidth / 2f;
+                }
+                else
+                {
+                    int activeLaneCount = Math.Max(1, cachedActiveLaneCount);
+                    int visualLane = resolvedLane;
+                    if (kickUsesGlobalLine && visualLane > laneLayout.KickLane)
+                        visualLane--;
+
+                    float laneWidth = noteLayer.DrawWidth / activeLaneCount;
+                    x = (visualLane + 0.5f) * laneWidth;
+                }
+            }
+
+            localPosition = new Vector2(
+                Math.Clamp(x, 0f, Math.Max(0f, noteLayer.DrawWidth)),
+                Math.Clamp(y, 0f, Math.Max(0f, noteLayer.DrawHeight)));
+            return true;
+        }
+
+        public void JumpToTime(double time, bool lightweightSeek = false)
+        {
+            double clampedTime = Math.Max(0, time);
+
+            if (lightweightSeek && isPreviewMode && canUseLightweightPreviewSeek(clampedTime))
+            {
+                resetPreviewNotesAroundTime(clampedTime);
+                prunePreviewVisibleNotes(clampedTime);
+                hitExplosionLayer?.Clear(false);
+                clearManuscriptBeams();
+                clearManuscriptDurationCues();
+                clearManuscriptRests();
+                firstActiveNoteIndex = findFirstNoteIndexAtOrAfter(clampedTime - pastVisibilityWindow);
+                lastJumpTargetTimeMs = clampedTime;
+                return;
+            }
+
+            if (isPreviewMode)
+                resetPreviewNotesAroundTime(clampedTime);
+            else
+            {
+                foreach (var note in notes)
+                    note.Reset();
             }
 
             noteLayer.Clear(false);
             hitExplosionLayer?.Clear(false);
+            clearManuscriptBeams();
+            clearManuscriptDurationCues();
+            clearManuscriptRests();
 
-            // Advance firstActiveNoteIndex past notes that are already out of view
-            firstActiveNoteIndex = 0;
-            double visibilityStart = time - pastVisibilityWindow;
+            firstActiveNoteIndex = findFirstNoteIndexAtOrAfter(clampedTime - pastVisibilityWindow);
+            lastJumpTargetTimeMs = clampedTime;
+        }
 
-            while (firstActiveNoteIndex < notes.Count && notes[firstActiveNoteIndex].HitTime < visibilityStart)
+        private bool canUseLightweightPreviewSeek(double targetTimeMs)
+        {
+            if (double.IsNaN(lastJumpTargetTimeMs))
+                return false;
+
+            return Math.Abs(targetTimeMs - lastJumpTargetTimeMs) <= previewLightweightSeekDeltaThresholdMs;
+        }
+
+        private void prunePreviewVisibleNotes(double currentTimeMs)
+        {
+            if (noteLayer == null || noteLayer.Count == 0)
+                return;
+
+            double minVisible = currentTimeMs - pastVisibilityWindow - previewLightweightPrunePaddingMs;
+            double maxVisible = currentTimeMs + futureVisibilityWindow + previewLightweightPrunePaddingMs;
+
+            foreach (var note in noteLayer.Children.OfType<DrawableNote>().ToArray())
             {
-                firstActiveNoteIndex++;
+                if (note.HitTime < minVisible || note.HitTime > maxVisible)
+                    noteLayer.Remove(note, false);
             }
+        }
+
+        private void resetPreviewNotesAroundTime(double time)
+        {
+            if (notes.Count == 0)
+                return;
+
+            double resetStartTime = time - pastVisibilityWindow - previewSeekResetPaddingMs;
+            double resetEndTime = time + futureVisibilityWindow + previewSeekResetPaddingMs;
+
+            int resetStartIndex = Math.Max(0, findFirstNoteIndexAtOrAfter(resetStartTime) - 1);
+            int resetEndIndex = findFirstNoteIndexAtOrAfter(resetEndTime);
+
+            for (int i = resetStartIndex; i < resetEndIndex; i++)
+                notes[i].Reset();
+        }
+
+        private int findFirstNoteIndexAtOrAfter(double hitTimeMs)
+        {
+            int low = 0;
+            int high = notes.Count;
+            while (low < high)
+            {
+                int mid = low + (high - low) / 2;
+                if (notes[mid].HitTime < hitTimeMs)
+                    low = mid + 1;
+                else
+                    high = mid;
+            }
+
+            return low;
         }
 
         public void StartSession(bool restart)

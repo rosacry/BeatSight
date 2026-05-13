@@ -107,8 +107,8 @@ namespace BeatSight.Game.Screens.Editor
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft,
                 Font = BeatSightFont.Caption(10.8f),
-                Colour = new Color4(206, 220, 244, 220),
-                Text = "LMB place note | Shift+LMB ignore snap | RMB remove nearest lane note"
+                Colour = new Color4(214, 228, 252, 220),
+                Text = "Place notes directly on the preview lanes"
             };
 
             editHintContainer = new Container
@@ -116,21 +116,26 @@ namespace BeatSight.Game.Screens.Editor
                 Anchor = Anchor.TopLeft,
                 Origin = Anchor.TopLeft,
                 AutoSizeAxes = Axes.Both,
-                Margin = new MarginPadding { Left = 12, Top = 12 },
+                Margin = new MarginPadding { Left = 14, Top = 10 },
                 Alpha = 0,
                 Masking = true,
-                CornerRadius = 6,
+                CornerRadius = 8,
                 Children = new Drawable[]
                 {
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = new Color4(12, 16, 28, 152)
+                        Colour = new Color4(14, 21, 37, 118)
+                    },
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = new Color4(154, 190, 255, 40)
                     },
                     new Container
                     {
                         AutoSizeAxes = Axes.Both,
-                        Padding = new MarginPadding { Horizontal = 8, Vertical = 5 },
+                        Padding = new MarginPadding { Horizontal = 10, Vertical = 6 },
                         Child = editHintText
                     }
                 }
@@ -232,6 +237,7 @@ namespace BeatSight.Game.Screens.Editor
             if (!IsLoaded || playfield == null)
                 return;
 
+            clearPlacementGhost();
             playfield.ForceVisualLayoutRefresh();
         }
 
@@ -330,6 +336,7 @@ namespace BeatSight.Game.Screens.Editor
             if (playfield == null)
                 return;
 
+            clearPlacementGhost();
             currentLaneLayout = resolvePreviewLaneLayout();
 
             playfield.SetLaneLayout(currentLaneLayout);
@@ -374,8 +381,7 @@ namespace BeatSight.Game.Screens.Editor
             if (hasContent)
             {
                 placeholderText.FadeOut(200, Easing.OutQuint);
-                editHintText.Text = "LMB place note | Shift+LMB ignore snap | RMB remove nearest lane note";
-                editHintContainer.FadeIn(180, Easing.OutQuint);
+                editHintContainer.FadeOut(140, Easing.OutQuint);
             }
             else
             {
@@ -383,7 +389,9 @@ namespace BeatSight.Game.Screens.Editor
                     ? "Load or create a beatmap to preview playback"
                     : "Add notes to preview playback";
                 placeholderText.FadeIn(200, Easing.OutQuint);
-                editHintText.Text = "LMB place notes in the preview area to start mapping";
+                editHintText.Text = beatmap == null
+                    ? "Load or create a beatmap to enable preview placement"
+                    : "Place notes directly on the preview lanes";
                 editHintContainer.FadeIn(160, Easing.OutQuint);
             }
         }
@@ -464,10 +472,24 @@ namespace BeatSight.Game.Screens.Editor
         }
 
         private bool isPlacementInputBlocked(Vector2 screenSpacePosition)
-            => PlacementInputBlockedAtScreenSpace?.Invoke(screenSpacePosition) ?? false;
+        {
+            if (PlacementInputBlockedAtScreenSpace?.Invoke(screenSpacePosition) ?? false)
+                return true;
+
+            return editHintContainer?.Alpha > 0.01f && editHintContainer.ReceivePositionalInputAt(screenSpacePosition);
+        }
 
         private bool isShiftPressed()
             => GetContainingInputManager()?.CurrentState.Keyboard.ShiftPressed ?? false;
+
+        private void clearPlacementGhost()
+        {
+            if (placementGhost == null)
+                return;
+
+            placementGhost.ClearTransforms();
+            placementGhost.Alpha = 0f;
+        }
 
         private static string formatPreviewTime(double milliseconds)
         {

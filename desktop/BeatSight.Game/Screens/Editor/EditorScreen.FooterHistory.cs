@@ -5,10 +5,12 @@ using BeatSight.Game.Screens.Playback;
 using BeatSight.Game.UI.Components;
 using BeatSight.Game.UI.Theming;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osuTK;
+using osuTK.Graphics;
 
 namespace BeatSight.Game.Screens.Editor
 {
@@ -74,7 +76,7 @@ namespace BeatSight.Game.Screens.Editor
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft,
                 UseFullGlyphHeight = false,
-                Y = -1f
+                Y = 0f
             };
 
             footerSeekTotalText = new SpriteText
@@ -85,7 +87,7 @@ namespace BeatSight.Game.Screens.Editor
                 Anchor = Anchor.CentreRight,
                 Origin = Anchor.CentreRight,
                 UseFullGlyphHeight = false,
-                Y = -1f
+                Y = 0f
             };
 
             footerSeekSlider = new ScrubbableSliderBar
@@ -110,7 +112,7 @@ namespace BeatSight.Game.Screens.Editor
                 },
                 RowDimensions = new[]
                 {
-                    new Dimension(GridSizeMode.Absolute, 28)
+                    new Dimension(GridSizeMode.Absolute, 26)
                 },
                 Content = new[]
                 {
@@ -119,7 +121,7 @@ namespace BeatSight.Game.Screens.Editor
                         new Container
                         {
                             RelativeSizeAxes = Axes.Y,
-                            Width = 84,
+                            Width = 90,
                             Height = 1,
                             Padding = new MarginPadding { Right = 8 },
                             Child = footerSeekCurrentText
@@ -134,11 +136,47 @@ namespace BeatSight.Game.Screens.Editor
                         new Container
                         {
                             RelativeSizeAxes = Axes.Y,
-                            Width = 84,
+                            Width = 90,
                             Height = 1,
                             Padding = new MarginPadding { Left = 8 },
                             Child = footerSeekTotalText
                         }
+                    }
+                }
+            };
+
+            footerTransportBandContainer = new Container
+            {
+                RelativeSizeAxes = Axes.X,
+                Height = 42,
+                Masking = true,
+                CornerRadius = 10,
+                Children = new Drawable[]
+                {
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = EditorColours.Mix(EditorColours.FooterBackground, EditorColours.ControlsBackground, 0.34f)
+                    },
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = EditorColours.PanelStroke,
+                        Alpha = 0.08f
+                    },
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        Height = 1,
+                        Anchor = Anchor.BottomLeft,
+                        Origin = Anchor.BottomLeft,
+                        Colour = EditorColours.Divider.Opacity(0.76f)
+                    },
+                    new Container
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Padding = new MarginPadding { Horizontal = 10, Vertical = 6 },
+                        Child = footerSeekRow
                     }
                 }
             };
@@ -148,7 +186,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 footerRows = new Drawable[]
                 {
-                    footerSeekRow,
+                    footerTransportBandContainer,
                     footerTipsContainer = new Container
                     {
                         RelativeSizeAxes = Axes.X,
@@ -163,51 +201,70 @@ namespace BeatSight.Game.Screens.Editor
                 footerTipsContainer = null!;
                 footerRows = new Drawable[]
                 {
-                    footerSeekRow
+                    footerTransportBandContainer
                 };
             }
 
-            var root = footerRootContainer = new Container
+            footerRootContainer = new Container
             {
-                RelativeSizeAxes = Axes.X,
-                AutoSizeAxes = Axes.Y,
-                Padding = new MarginPadding { Horizontal = 8, Vertical = 11 },
-                Masking = true,
-                CornerRadius = 12,
+                RelativeSizeAxes = Axes.Both,
+                Masking = false,
                 Children = new Drawable[]
                 {
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = EditorColours.HeaderBackground
+                        Colour = EditorColours.FooterBackground
+                    },
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        Height = 44,
+                        Anchor = Anchor.TopLeft,
+                        Origin = Anchor.TopLeft,
+                        Colour = ColourInfo.GradientVertical(
+                            EditorColours.Divider.Opacity(0.12f),
+                            Color4.Transparent)
+                    },
+                    new Box
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        Height = 1,
+                        Anchor = Anchor.TopLeft,
+                        Origin = Anchor.TopLeft,
+                        Colour = EditorColours.Divider.Opacity(0.9f)
                     },
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
                         Colour = EditorColours.PanelStroke,
-                        Alpha = 0.1f
+                        Alpha = 0.08f
                     },
                     footerInnerContainer = new Container
                     {
-                        RelativeSizeAxes = Axes.X,
-                        AutoSizeAxes = Axes.Y,
-                        Padding = new MarginPadding { Horizontal = 10, Vertical = 8 },
-                        Child = new FillFlowContainer
+                        RelativeSizeAxes = Axes.Both,
+                        Padding = new MarginPadding { Left = 14, Right = 14, Top = 8, Bottom = 5 },
+                        Child = new Container
                         {
                             RelativeSizeAxes = Axes.X,
                             AutoSizeAxes = Axes.Y,
                             Anchor = Anchor.TopLeft,
                             Origin = Anchor.TopLeft,
-                            Direction = FillDirection.Vertical,
-                            Spacing = new Vector2(0, 8),
-                            Children = footerRows
+                            Child = new FillFlowContainer
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Direction = FillDirection.Vertical,
+                                Spacing = new Vector2(0, 6),
+                                Children = footerRows
+                            }
                         }
                     },
                 }
             };
 
             syncFooterSeekBar();
-            return root;
+            return footerRootContainer;
         }
 
         private Drawable createTip(string key, string action)

@@ -130,7 +130,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private float lastAppliedDepth = float.NaN;
         private readonly float velocityAlpha;
 
-        public DrawableNote(HitObject hitObject, int lane, Bindable<bool> showGlow, Bindable<bool> showParticles)
+        public DrawableNote(HitObject hitObject, int lane, Bindable<bool> showGlow, Bindable<bool> showParticles, Color4? accentColourOverride = null)
         {
             HitTime = hitObject.Time;
             ComponentName = hitObject.Component;
@@ -151,7 +151,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             Origin = Anchor.Centre;
             Masking = false;
 
-            AccentColour = resolveComponentColour(hitObject.Component);
+            AccentColour = accentColourOverride ?? resolveComponentColour(hitObject.Component);
 
             Colour = AccentColour;
 

@@ -38,7 +38,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private LaneLayout? laneLayout;
         private PlaybackPlayfield? playfield;
 
-        private double currentBpm = 120;
+        private double currentBpm = TimingInfo.DefaultBpm;
         private int beatsPerMeasure = 4;
 
         #endregion
@@ -230,7 +230,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 : 180000;
 
             double offset = beatmap.Timing?.Offset ?? 0;
-            double bpm = beatmap.Timing?.Bpm ?? 120;
+            double bpm = beatmap.Timing?.Bpm ?? TimingInfo.DefaultBpm;
             string signature = beatmap.Timing?.TimeSignature ?? "4/4";
 
             currentBpm = bpm;
@@ -268,7 +268,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private int EmitMarkers(double startTime, double endTime, double bpm, string signature, int measureNumber)
         {
             if (bpm <= 0)
-                bpm = 120;
+                bpm = TimingInfo.DefaultBpm;
 
             var (beatsPerMeasureLocal, beatUnit) = ParseSignature(signature);
             double beatLength = 60000.0 / bpm;
@@ -555,9 +555,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             public void Deactivate()
             {
-                // Clear any pending transforms to prevent accumulation, then fade out
                 this.ClearTransforms();
-                this.FadeOut(DesignSystem.AnimationMedium, Easing.OutQuint);
+                Alpha = 0;
             }
         }
 
@@ -609,9 +608,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             public void Deactivate()
             {
-                // Clear any pending transforms to prevent accumulation, then fade out
                 this.ClearTransforms();
-                this.FadeOut(DesignSystem.AnimationMedium, Easing.OutQuint);
+                Alpha = 0;
             }
         }
 

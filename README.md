@@ -8,7 +8,7 @@
 **See the music before you play it.**
 
 [![CI/CD Pipeline](https://img.shields.io/github/actions/workflow/status/rosacry/BeatSight/ci-cd.yml?style=flat-square&label=CI/CD)](https://github.com/rosacry/BeatSight/actions)
-[![Backend Coverage](https://img.shields.io/badge/backend-84%25-brightgreen?style=flat-square)](https://codecov.io/gh/rosacry/BeatSight)
+[![Backend Tests](https://img.shields.io/badge/backend-3%2C035%20tests-brightgreen?style=flat-square)](https://github.com/rosacry/BeatSight/tree/main/backend/tests)
 [![AI Pipeline Coverage](https://img.shields.io/badge/ai--pipeline-21%25-yellow?style=flat-square)](https://codecov.io/gh/rosacry/BeatSight)
 ![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square)

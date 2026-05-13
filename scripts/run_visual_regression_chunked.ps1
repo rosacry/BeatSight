@@ -48,8 +48,8 @@ function Stop-StaleBeatSightTestProcesses {
         [string]$ProjectPath
     )
 
-    $isWindows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
-    if (-not $isWindows) {
+    $isWindowsOS = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+    if (-not $isWindowsOS) {
         return
     }
 

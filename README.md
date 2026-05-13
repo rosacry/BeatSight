@@ -8,7 +8,6 @@
 **See the music before you play it.**
 
 [![CI/CD Pipeline](https://img.shields.io/github/actions/workflow/status/rosacry/BeatSight/ci-cd.yml?style=flat-square&label=CI/CD)](https://github.com/rosacry/BeatSight/actions)
-[![Deploy](https://img.shields.io/github/actions/workflow/status/rosacry/BeatSight/deploy-production.yml?style=flat-square&label=Deploy)](https://github.com/rosacry/BeatSight/actions)
 [![Backend Coverage](https://img.shields.io/badge/backend-84%25-brightgreen?style=flat-square)](https://codecov.io/gh/rosacry/BeatSight)
 [![AI Pipeline Coverage](https://img.shields.io/badge/ai--pipeline-21%25-yellow?style=flat-square)](https://codecov.io/gh/rosacry/BeatSight)
 ![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?style=flat-square)
@@ -28,32 +27,12 @@
 
 Rhythm games like Guitar Hero, Rock Band, Dance Dance Revolution, and osu! all share one key mechanic: notes scroll toward a timing line *before* you need to hit them. This visual lookahead is what enables rapid skill acquisition—you see what's coming and your brain pre-plans the movement. But when drummers want to learn *real songs on real drums*, they're stuck memorizing by ear, rewinding the same 4-bar section dozens of times, or squinting at static sheet music that offers no timing guidance.
 
-**This matters more than you might think.** Research on rhythm and motor learning ([Rhythm and Music-Based Interventions in Motor Rehabilitation](https://www.frontiersin.org/articles/10.3389/fnhum.2021.789467/full)) demonstrates that visual anticipation dramatically accelerates motor skill acquisition. When you can *see* what's coming, your brain pre-plans the movement instead of reacting after the fact. Drummers have never had this advantage—until now.
-
-### The Problem We're Solving
-
-**There's no universal place where drummers can find, create, share, and refine drum transcriptions for any song.** BeatSight is building that — the first global repository and community hub for drummers, similar to what osu! built for rhythm gaming.
-
-### Why We're Different
-
-| Capability | BeatSight | Learning Platforms (Melodics, Beatlii) | AI Transcribers (Klangio, etc.) |
-|-----------|-----------|---------------------------------------|--------------------------------|
-| **Drum Classes** | **12 classes** (kick, snare, hi-hat types, ride bow/bell, toms, crashes, china, splash) | Basic kit detection | 6-8 basic classes |
-| **Training Data** | **12.9 million samples** | N/A (no AI) | Limited datasets |
-| **Song Access** | **Any song** — AI transcription + community library | Curated lessons only | Any audio |
-| **Technique Detection** | Ghost notes, flams, drags, rolls, velocity | Structured lessons | Limited or none |
-| **Multi-hit Detection** | Simultaneous hits (kick+hi-hat, snare+crash) | N/A | Single hit per frame |
-| **Cymbal Chokes** | ✅ Detected | ❌ Not detected | ❌ Not detected |
-| **Acoustic Drum Support** | ✅ Visual lookahead works for all | ❌ Requires MIDI kit | N/A |
-| **Community Library** | ✅ Anyone can contribute | ❌ Closed content | ❌ No community |
-| **Community-Driven AI** | ✅ Training code open, corrections improve AI | ❌ Proprietary | ❌ No feedback loop |
-
 BeatSight brings the rhythm game paradigm to drum practice:
 
 - **Visual lookahead** — Notes scroll toward a timing line, giving you time to prepare each hit
 - **Community library** — The first universal index for drum transcriptions: discover, share, and refine beatmaps for any song
 - **Multiple creation paths** — Build maps from scratch, use AI-assisted transcription, or polish existing community maps
-- **Professional-grade detection** — 21 drum classes including articulations, techniques, and dynamics
+- **12-class detection** — kick, snare, hi-hat types, ride bow/bell, toms, crash, china, splash; simultaneous hits, ghost notes, velocity
 - **Tempo control** — Slow sections down to 50% without pitch shift, then gradually speed up as you learn
 - **Stem isolation** — Practice with just the drum track, or hear how your part fits the full mix
 
@@ -65,8 +44,8 @@ The goal isn't gamification for its own sake—it's giving drummers the same vis
 - **12 drum classes** — Comprehensive detection: kick, snare, cross-stick, hi-hat (closed/open/pedal), ride (bow/bell), toms, crash, china, splash
 - **Multi-label detection** — Detects simultaneous hits (kick+hi-hat, snare+crash) unlike single-label competitors
 - **Pitch ranking** — Distinguishes tom_1/tom_2/tom_3 and crash_1/crash_2 by pitch analysis
-- **12.9M training samples** — Trained on one of the largest drum transcription datasets assembled
-- **0.91 F1 score** — Validated on diverse drum recordings
+- **16.9M training samples** — dual-model ensemble: one model for body drums on clean audio, one for cymbals on Demucs-separated stems
+- **94.55% balanced accuracy, F1 0.9153** across all 12 classes
 
 ### Beatmap Creation
 - **Manual editor** — Build beatmaps from scratch with a full-featured timeline editor
@@ -245,28 +224,16 @@ See [`docs/BEATMAP_FORMAT.md`](docs/BEATMAP_FORMAT.md) for the full specificatio
 
 ## Contributing
 
-Contributions are welcome! Please read [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) before submitting a PR.
-
-### Why Contribute?
-
-**You're helping build the first universal index for drum transcriptions.** Before BeatSight, there was no central place where drummers could find, create, share, and refine transcriptions for any song. By contributing beatmaps, verifying transcriptions, or improving the codebase, you're participating in building something that benefits drummers worldwide — similar to what osu! built for rhythm gaming.
-
-**Every contribution matters:**
-- 🥁 **Beatmap creators** — Add songs to the global index
-- ✅ **Verifiers** — Ensure quality and earn karma
-- 💻 **Developers** — Improve the platform for everyone
-- 🔬 **AI corrections** — Your feedback trains better models
-
-### Getting Started
+Read [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) before submitting a PR.
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
+2. Create a feature branch: `git checkout -b feature/your-feature`
 3. Make your changes and add tests
 4. Run CI locally: `dotnet test BeatSight.sln` and `cd backend && pytest tests/`
 5. Submit a pull request
 
-> [!IMPORTANT]
-> Beatmap contributions are what make BeatSight valuable—every refined map helps build the global drum transcription library. The AI training code in `ai-pipeline/training/` is provided for transparency; trained weights are proprietary but community corrections continuously improve the model.
+> [!NOTE]
+> The AI training code in `ai-pipeline/training/` is included for transparency. Trained model weights are not distributed.
 
 ## License
 

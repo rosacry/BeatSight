@@ -15,13 +15,70 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
-[Why BeatSight](#why-beatsight) • [Features](#features) • [Getting Started](#getting-started) • [Architecture](#architecture) • [Contributing](#contributing)
+[Current state](#current-state-november-2026) • [Why BeatSight](#why-beatsight) • [Features](#features) • [Getting Started](#getting-started) • [Architecture](#architecture) • [Contributing](#contributing)
 
 :dart: **Live at [beatsight.io](https://beatsight.io)** | :books: **[API Docs](https://api.beatsight.io/docs)**
 
 </div>
 
 ---
+
+## Current state (November 2026)
+
+Recent work has focused on the hardest part of the product: turning a full commercial song into a playable,
+instrument-accurate drum chart.
+
+**Transcription engine.** [`ai-pipeline/adtof_engine/`](ai-pipeline/adtof_engine) is a PyTorch implementation
+of the ADTOF Frame_RNN drum transcriber (Zehren et al.). It runs on a Demucs (htdemucs_ft) drum stem. Its
+features, peak picking and outputs match the reference implementation in audited tests. It is the default
+engine in the app.
+
+**16-class model.** ADTOF only reports five families: kick, snare, tom, hi-hat and cymbal. BeatSight's own
+model, fine-tuned from it, reports 16 instruments: closed, open and pedal hi-hat; ride, ride bell, crash,
+china and splash; high, mid and floor tom; snare, cross-stick, kick, cowbell; and other percussion.
+- Phase 1 trains on synthetic and electronic-kit datasets (STAR, E-GMD, Slakh, Groove).
+- Phase 2 adds 6,809 community rhythm-game charts (447 hours) aligned to their recordings. Those charts only
+  have five lanes, so a grouped (noisy-OR) loss teaches the fine classes through the lanes.
+- Phase 2 also adds a cymbal/hi-hat exclusivity term and a learned ghost-note head.
+
+**How it is measured.** Results come from frozen, held-out test sets that the model never trained on:
+- 202 charted songs from 98 artists, resampled by artist.
+- Real-recording, commercial-chart and e-drum sets.
+
+Each run's protocol is frozen and hashed before any result exists. Differences use paired bootstrap 95%
+intervals.
+
+| Held-out test set (F1 at 50 ms, as the app decodes) | ADTOF baseline | BeatSight 16-class | Difference [95% CI] |
+|---|---|---|---|
+| 202 charted songs, all five families | .874 | **.904** | +.030 [+.023, +.037] |
+| … cymbals | .727 | **.815** | +.087 [+.065, +.113] |
+| … hi-hat | .707 | **.788** | +.081 [+.062, +.099] |
+| 48 real recordings | .829 | **.859** | +.029 [+.010, +.052] |
+| 40 e-drum performances | .730 | **.840** | +.110 [+.070, +.150] |
+| 23 real recordings, fully held out | .643 | .622 | −.022 [−.066, +.027] (not significant) |
+
+**Ghost notes.** A separate head finds ghost snares. On 73 held-out songs it scores F1 .820 (AUROC .977),
+compared with .604 for a loudness rule.
+
+**Known limits:**
+- Low-bitrate MP3s lose fast double-bass detail.
+- Chart conventions for ride vs crash vary between charters.
+- The newest run detects toms less well than the previous one (−.032 on the 202 songs).
+- The desktop still defaults to the five-family engine while listening tests continue.
+
+Model weights are not distributed: they derive from ADTOF weights licensed CC BY-NC-SA 4.0.
+
+**Desktop.** The UI was redesigned around an instrument colour palette, with per-tom lanes and an editor
+layout pass. A new drum-staff notation view is engraved from the chart, with standard drum key, beaming
+and tuplets.
+
+**Write-ups:**
+- [Phase 2, run 2 results](docs/PHASE2_RUN2_RESULTS_2026-11-07.md)
+- [Run 1 results](docs/PHASE2_RUN1_RESULTS_2026-10-23.md)
+- [Evaluation set](docs/EVAL_SET_V1_2026-10-16.md)
+- [Phase 2 plan](docs/PHASE2_PLAN_DRAFT_2026-10-18.md)
+- [UI audit](docs/UI_AUDIT_AND_DIRECTION_2026-10-24.md)
+- [Recovery audit](docs/RECOVERY_AUDIT_2026-10-13.md)
 
 ## Why BeatSight?
 
@@ -44,8 +101,7 @@ The goal isn't gamification for its own sake—it's giving drummers the same vis
 - **12 drum classes** — Comprehensive detection: kick, snare, cross-stick, hi-hat (closed/open/pedal), ride (bow/bell), toms, crash, china, splash
 - **Multi-label detection** — Detects simultaneous hits (kick+hi-hat, snare+crash) unlike single-label competitors
 - **Pitch ranking** — Distinguishes tom_1/tom_2/tom_3 and crash_1/crash_2 by pitch analysis
-- **16.9M training samples** — dual-model ensemble: one model for body drums on clean audio, one for cymbals on Demucs-separated stems
-- **94.55% balanced accuracy, F1 0.9153** across all 12 classes
+- **Measured on held-out songs** — see [Current state](#current-state-november-2026). Accuracy figures from the earlier (pre-2026) pipeline could not be verified and are no longer quoted.
 
 ### Beatmap Creation
 - **Manual editor** — Build beatmaps from scratch with a full-featured timeline editor
@@ -56,7 +112,7 @@ The goal isn't gamification for its own sake—it's giving drummers the same vis
 ### Multiple Practice Views
 - **2D Lane View** — DDR/StepMania-style vertical scrolling with color-coded drum components
 - **3D Highway** — Guitar Hero-inspired perspective with depth and scanline effects
-- **Manuscript View** — Traditional drum notation with a **sweeping playhead highlighter** that glides left-to-right across the staff, its leading edge marking exactly when each note should be played
+- **Notation View** — Standard drum-key staff notation engraved from the chart (beaming, tuplets, dotted rhythms)
 
 ### Practice Tools
 - Stem isolation (drums vs. full mix) via Demucs source separation
@@ -156,8 +212,9 @@ BeatSight/
 ├── desktop/                  # osu-framework desktop client (C#/.NET 8)
 │   ├── BeatSight.Desktop/    # Platform host & window management
 │   ├── BeatSight.Game/       # Playback screens, editor, UI components
-│   └── BeatSight.Tests/      # Unit tests (75 tests)
+│   └── BeatSight.Tests/      # Unit tests (479 tests)
 ├── ai-pipeline/              # ML training & inference pipeline (Python)
+│   ├── adtof_engine/         # Default transcription engine + 16-class models
 │   ├── pipeline/             # Audio processing orchestration
 │   ├── training/             # Model training scripts & configs
 │   ├── transcription/        # Onset detection, drum classification
@@ -175,10 +232,10 @@ BeatSight/
 
 | Component | Stack | Tests/Coverage |
 |-----------|-------|----------------|
-| Desktop | osu-framework, .NET 8, OpenGL | 75 tests |
+| Desktop | osu-framework, .NET 8, OpenGL | 479 tests |
 | Backend | FastAPI, SQLAlchemy, PostgreSQL, Redis | 2895 tests, 84% cov |
 | Frontend | React 18, TypeScript, TailwindCSS, Vite | 283 tests |
-| AI Pipeline | PyTorch, Demucs, librosa | 195 tests |
+| AI Pipeline | PyTorch, Demucs, librosa | 330 tests |
 
 ### Infrastructure
 

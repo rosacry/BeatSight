@@ -145,8 +145,11 @@ namespace BeatSight.Tests.VisualRegression
         private static readonly FieldInfo? editorLastScrubSummaryDurationMsField =
             typeof(EditorScreen).GetField("lastScrubSummaryDurationMs", BindingFlags.Instance | BindingFlags.NonPublic);
 
-        private static readonly TimeSpan startupTimeout = TimeSpan.FromSeconds(20);
-        private static readonly TimeSpan sceneReadyTimeout = TimeSpan.FromSeconds(20);
+        // 60 s, not 20 s: the CI runner renders in software, and the first capture of a batch (cold font and texture
+        // loading) exceeded 20 s there ("Timed out waiting for Intro screen to load", 2026-11-20). Waits end as soon
+        // as the condition holds, so fast hosts are unaffected.
+        private static readonly TimeSpan startupTimeout = TimeSpan.FromSeconds(60);
+        private static readonly TimeSpan sceneReadyTimeout = TimeSpan.FromSeconds(60);
         private static readonly TimeSpan updateThreadActionTimeout = TimeSpan.FromSeconds(120);
         private static readonly TimeSpan screenshotCaptureTimeout = TimeSpan.FromSeconds(20);
 

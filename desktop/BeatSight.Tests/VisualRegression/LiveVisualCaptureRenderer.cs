@@ -221,7 +221,9 @@ namespace BeatSight.Tests.VisualRegression
 
                 await applyWindowSize(host, width, height).ConfigureAwait(false);
 
-                if (scene != VisualScene.Intro)
+                // Every scene, Intro included, waits for the game's own start-up intro to hand off to the main menu.
+                // Pushing the captured IntroScreen while the start-up intro was still running let that intro's delayed
+                // hand-off displace it on slow hosts ("Timed out waiting for Intro screen to load" on CI).
                 {
                     await waitForCondition(
                         async () =>
@@ -229,7 +231,7 @@ namespace BeatSight.Tests.VisualRegression
                             ensureHostRunTaskHealthy(runTask, "main-menu-handoff");
                             return await runOnUpdateThread(host, () => getScreenStack(game)?.CurrentScreen is MainMenuScreen).ConfigureAwait(false);
                         },
-                        TimeSpan.FromSeconds(10),
+                        TimeSpan.FromSeconds(30),
                         "MainMenuScreen startup handoff").ConfigureAwait(false);
                 }
 

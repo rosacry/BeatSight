@@ -99,7 +99,8 @@ class TestStratifiedSampling:
             {"component_idx": 2} for _ in range(25)
         ]
         
-        indices = stratified_sample_indices(labels, fraction=0.5, seed=42)
+        # Test proportional sampling independently from the rare-class quota.
+        indices = stratified_sample_indices(labels, fraction=0.5, seed=42, min_samples_per_class=0)
         
         sampled_classes = [labels[i]["component_idx"] for i in indices]
         class_counts = {c: sampled_classes.count(c) for c in [0, 1, 2]}
@@ -108,6 +109,15 @@ class TestStratifiedSampling:
         assert class_counts[0] > class_counts[1] > class_counts[2]
         # Total should be ~half
         assert len(indices) == pytest.approx(len(labels) * 0.5, rel=0.1)
+
+    def test_rare_class_quota_is_capped_by_available_examples(self):
+        labels = [{"component_idx": component} for component, count in [(0, 100), (1, 50), (2, 25)]
+                  for _ in range(count)]
+        indices = stratified_sample_indices(labels, fraction=0.5, seed=42, min_samples_per_class=50)
+        counts = {component: sum(labels[i]["component_idx"] == component for i in indices)
+                  for component in (0, 1, 2)}
+        assert counts == {0: 50, 1: 50, 2: 25}
+        assert len(indices) == len(set(indices))
 
     def test_stratified_deterministic(self):
         """Verify stratified sampling is deterministic with same seed."""

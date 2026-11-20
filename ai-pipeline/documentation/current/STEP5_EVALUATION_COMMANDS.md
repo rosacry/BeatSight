@@ -1,5 +1,8 @@
 # Step 5 Evaluation Commands
 
+> Historical commands, not an active run plan. Use [recovery tools](../../../tools/recovery/README.md)
+> and [RECOVER.md](../../../RECOVER.md) for current explicit paths, checks, and results.
+
 Last updated: 2026-02-14
 
 These are the exact command blocks for Step 5 evaluation on:

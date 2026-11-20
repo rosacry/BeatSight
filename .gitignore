@@ -33,6 +33,7 @@ env/
 ENV/
 .venv
 .venv/
+.venv-recovery/
 **/.venv/
 **/.mypy_cache/
 **/.ruff_cache/
@@ -268,3 +269,6 @@ nul
 tmp_*
 *.zip
 ai-pipeline/diag_*.py
+
+# ADTOF weights (CC BY-NC-SA 4.0, ADTOF authors); local only, never commit
+ai-pipeline/models/adtof/

@@ -1,5 +1,9 @@
 # BeatSight AI Pipeline Handoff - Session 3 Dual-Model Ensemble
 
+> Historical handoff: start with [RECOVER.md](../../../RECOVER.md) and the
+> [2026-10-13 audit](../../../docs/RECOVERY_AUDIT_2026-10-13.md). The user directs
+> future agents to verify and, where justified, replace inherited AI work.
+
 Last updated: 2026-02-14
 
 This handoff reflects the current training plan and command matrix in active use.

@@ -1,5 +1,9 @@
 # BeatSight AI Pipeline - Accuracy Improvements Tracker
 
+> Historical tracker: superseded on 2026-10-13 by [RECOVER.md](../../../RECOVER.md)
+> and the [recovery audit](../../../docs/RECOVERY_AUDIT_2026-10-13.md). These plans
+> and metrics are not verified current song-level accuracy. No training is active.
+
 Last updated: 2026-02-14
 
 This is the live status doc for the dual-model ensemble train/eval loop.

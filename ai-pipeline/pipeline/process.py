@@ -713,7 +713,8 @@ def process_audio_file(
         print(
             f"   [WARN] No hits passed confidence threshold {confidence_threshold}!"
         )
-        print("   [WARN] This will trigger fallback pattern generation.")
+        if pipeline_mode == "gameplay":
+            print("   [WARN] This will trigger fallback pattern generation.")
         if len(refined_onsets) > 0:
             print(
                 f"   [INFO] Try lowering --confidence threshold (detected {len(refined_onsets)} onsets)"
@@ -1183,6 +1184,15 @@ def process_audio_file(
     else:
         print("   👻 Ghost notes: OFF")
 
+    # A fabricated backing rhythm is not a transcription of the input. Check
+    # after all decoding/filtering and before writing any output, so a failed
+    # analysis cannot replace an existing chart with synthetic notes.
+    if pipeline_mode == "transcription" and not classified_hits:
+        raise ValueError(
+            "No confident drum hits were detected; no transcription was saved. "
+            "Check the audio and model settings, or review the detection sensitivity."
+        )
+
     beatmap, debug_info = generate_beatmap(
         classified_hits,
         audio_path=str(input_path),
@@ -1287,12 +1297,72 @@ def process_audio_file(
     }
 
 
+def _run_adtof_engine(args) -> int:
+    """Run the ADTOF engine. Legacy-only tuning flags do not apply to it."""
+    import sys
+
+    from adtof_engine.engine import transcribe
+
+    print(
+        "[engine] adtof: notes keep detected times; --mode, --sensitivity, --quantization, "
+        "--confidence and ML/classifier flags apply only to --engine legacy"
+    )
+    try:
+        transcribe(
+            args.input,
+            args.output,
+            debug_path=args.debug,
+            separate=not args.no_separation,
+            start_time=args.start_time,
+            end_time=args.end_time,
+            forced_bpm=args.force_bpm,
+            forced_offset=args.force_offset,
+            weights_path=args.adtof_weights,
+            fine_model_dir=args.fine_model,
+            log=lambda message: print(message, flush=True),
+        )
+    except Exception as exc:
+        import traceback
+
+        traceback.print_exc()
+        # The desktop shows the last stderr line, so keep it actionable.
+        print(
+            f"ADTOF transcription failed: {exc}. To use the old engine, set the "
+            "transcription engine to Legacy in BeatSight's AI settings.",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 1
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="BeatSight AI - Audio to Beatmap Processor"
     )
     parser.add_argument("--input", "-i", required=True, help="Input audio file")
     parser.add_argument("--output", "-o", required=True, help="Output .bsm file")
+    parser.add_argument(
+        "--engine",
+        choices=["adtof", "legacy"],
+        default="adtof",
+        help="Transcription engine: adtof (default; htdemucs_ft separation + ADTOF "
+        "Frame_RNN, unquantized broad families) or legacy (inherited onset/classifier "
+        "pipeline, kept as a fallback)",
+    )
+    parser.add_argument(
+        "--adtof-weights",
+        type=str,
+        default=None,
+        help="Path to the audited ADTOF weights (default: models/adtof/)",
+    )
+    parser.add_argument(
+        "--fine-model",
+        type=str,
+        default=None,
+        help="Experimental: directory with a BeatSight 16-class model (best.pt + thresholds.json) "
+        "used instead of ADTOF by --engine adtof; same separation and peak picking",
+    )
     parser.add_argument(
         "--no-separation", action="store_true", help="Skip drum separation"
     )
@@ -1632,6 +1702,14 @@ def main():
     if not Path(args.input).exists():
         print(f"[ERROR] Input file not found: {args.input}")
         return 1
+
+    if args.fine_model and args.engine != "adtof":
+        import sys
+
+        print("[ERROR] --fine-model needs --engine adtof", file=sys.stderr)
+        return 2
+    if args.engine == "adtof":
+        return _run_adtof_engine(args)
 
     tempo_candidates_hint: List[float] | None = None
     if args.tempo_candidates:

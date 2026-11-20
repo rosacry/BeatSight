@@ -1,5 +1,9 @@
 # BeatSight AI Pipeline - Current State
 
+> Superseded on 2026-10-13 by [RECOVER.md](../../../RECOVER.md) and the
+> [measured recovery audit](../../../docs/RECOVERY_AUDIT_2026-10-13.md).
+> Training is not running. Read the new evidence before reusing any command or claim below.
+
 Last updated: 2026-02-14
 
 ## Purpose

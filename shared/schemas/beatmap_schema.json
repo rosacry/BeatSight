@@ -344,7 +344,9 @@
                 "tom_mid",
                 "tom_low",
                 "cowbell",
-                "tambourine"
+                "tambourine",
+                "cross_stick",
+                "percussion"
             ]
         },
         "hitObject": {

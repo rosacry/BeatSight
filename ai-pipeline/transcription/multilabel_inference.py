@@ -871,6 +871,7 @@ class MultiLabelDrumClassifier:
         demucs_threshold_scale: float = 0.7,
         window_ms: float = 100.0,
         demucs_classifier: Optional["MultiLabelDrumClassifier"] = None,
+        use_rms_section_gating: bool = True,
     ) -> List[Dict[str, float]]:
         """
         Ensemble classification: body drums from primary model, cymbals from Demucs model.
@@ -899,6 +900,9 @@ class MultiLabelDrumClassifier:
             demucs_classifier: Optional second classifier for the Demucs path.
                 If provided, uses this model + its thresholds for cymbal classes.
                 If None, uses self for both paths (single-model ensemble).
+            use_rms_section_gating: Retain the legacy absolute-loudness heuristic.
+                False permits controlled evaluation without section relabeling.
+                This does not disable per-onset multi-label refinement.
 
         Returns:
             List of detection dicts, one per onset time.
@@ -961,10 +965,10 @@ class MultiLabelDrumClassifier:
         cymbal_hihat_suppressed = 0
 
         # --- Section-aware detection via RMS energy ---
-        # Neither model can distinguish crash from hihat on Demucs-separated
-        # audio (both always predict hihat > crash).  However, crash sections
-        # are measurably LOUDER than hihat sections in the Demucs drum stem
-        # because crash cymbal hits produce more energy than hihat hits.
+        # Legacy hypothesis: louder passages imply crash rather than hi-hat.
+        # Absolute loudness also depends on mastering and separation gain, so
+        # this is not established instrument evidence. Keep it switchable for
+        # paired evaluation before deciding whether to retire it.
         # We compute RMS energy in a sliding window of the raw Demucs audio
         # centered on each onset and compare to a threshold.
         _RMS_WINDOW_SEC = 3.0   # seconds of audio to average around each onset
@@ -992,6 +996,8 @@ class MultiLabelDrumClassifier:
         hihat_section_count = n_onsets - crash_section_count
         print(f"   Section detection (RMS): {crash_section_count} onsets in crash/china sections, "
               f"{hihat_section_count} in hihat sections")
+        if not use_rms_section_gating:
+            print("   RMS section gating disabled for evaluation; predictions use fixed thresholds")
         print(f"   [DEBUG] RMS per-onset: mean={rms_per_onset.mean():.4f}, "
               f"min={rms_per_onset.min():.4f}, max={rms_per_onset.max():.4f}, "
               f">threshold={int((rms_per_onset > _RMS_CRASH_THRESHOLD).sum())}/{n_onsets}")
@@ -1010,13 +1016,13 @@ class MultiLabelDrumClassifier:
                     base_thresh = self.per_class_thresholds.get(class_name, self.threshold)
 
                     # Section-aware threshold adjustment
-                    if _in_crash:
+                    if use_rms_section_gating and _in_crash:
                         # Crash/china section: lower crash threshold, raise hihat threshold
                         if class_name == 'crash':
                             base_thresh = base_thresh * 0.50   # be more permissive with crash
                         elif class_name in ('hihat_closed', 'hihat_open'):
                             base_thresh = min(base_thresh * 2.0, 0.95)  # make it very hard for hihat to fire
-                    else:
+                    elif use_rms_section_gating:
                         # Hihat section: raise crash threshold to prevent false crashes
                         if class_name == 'crash':
                             base_thresh = min(base_thresh * 2.5, 0.95)  # make crash very hard to fire
@@ -1048,7 +1054,7 @@ class MultiLabelDrumClassifier:
                     # Section-aware: suppress china/splash in hihat sections
                     # (the cymbal boost model outputs uniformly high china probs
                     #  across all sections, so we must gate by section)
-                    if not _in_crash and class_name in ('china', 'splash'):
+                    if use_rms_section_gating and not _in_crash and class_name in ('china', 'splash'):
                         thresh = min(thresh * 3.0, 0.95)  # raise china/splash threshold in hihat sections
 
                     if prob >= thresh:
@@ -1059,7 +1065,7 @@ class MultiLabelDrumClassifier:
             # remaining hihat detections that slipped through the raised
             # threshold.  In hihat sections, the section-aware thresholds
             # already suppress crash, so no additional hihat suppression needed.
-            if is_crash_section[onset_idx] and merged:
+            if use_rms_section_gating and is_crash_section[onset_idx] and merged:
                 for hh_cls in ('hihat_closed', 'hihat_open', 'hihat_pedal'):
                     if hh_cls in merged:
                         del merged[hh_cls]

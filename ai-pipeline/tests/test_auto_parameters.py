@@ -120,6 +120,22 @@ class TestAutoSensitivity:
 class TestAutoQuantization:
     """Tests for automatic quantization grid estimation."""
 
+    def test_simultaneous_drums_do_not_change_rhythm_grid(self):
+        from pipeline.auto_parameters import estimate_optimal_quantization
+
+        times = [i * 0.5 for i in range(32)]
+        single = estimate_optimal_quantization(times, 120.0)
+        chords = estimate_optimal_quantization(times * 3, 120.0)
+        assert chords.grid == single.grid
+        assert chords.finest_ioi_ms == single.finest_ioi_ms == 500.0
+
+    def test_single_chord_and_invalid_times_use_fallback(self):
+        from pipeline.auto_parameters import estimate_optimal_quantization
+
+        result = estimate_optimal_quantization([1.0, 1.0, np.nan, np.inf], 120.0)
+        assert result.grid == "sixteenth"
+        assert result.finest_ioi_ms == 0.0
+
     def test_quarter_note_pattern(self):
         """Simple quarter note pattern -> eighth or quarter grid."""
         from pipeline.auto_parameters import estimate_optimal_quantization

@@ -234,14 +234,17 @@ def estimate_optimal_quantization(
     Returns:
         QuantizationEstimate with recommended grid
     """
-    if len(onset_times) < 2:
+    # Multiple drum components can share one onset. They describe a chord,
+    # not a zero-length rhythmic subdivision.
+    times = np.unique(np.asarray(onset_times, dtype=float))
+    times = times[np.isfinite(times)]
+    if len(times) < 2:
         return QuantizationEstimate(
             grid="sixteenth", finest_ioi_ms=0.0, median_ioi_ms=0.0,
             pct_sub_sixteenth=0.0, estimated_bpm=bpm,
             explanation="Too few onsets, using default sixteenth grid",
         )
 
-    times = np.array(sorted(onset_times))
     iois = np.diff(times) * 1000  # Convert to milliseconds
 
     # Filter out very large gaps (> 2 seconds = silence/gaps between sections)

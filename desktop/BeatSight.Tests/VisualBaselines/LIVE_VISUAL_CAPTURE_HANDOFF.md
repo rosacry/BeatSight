@@ -47,6 +47,13 @@ Run deterministic visual QA using **real rendered game screens** (not synthetic 
   checkout showed neither.
 - Before regenerating, a local compare run failed in exactly the 8 cases that failed on GitHub's
   windows-latest runner. So local renders match CI, and locally generated baselines are valid there.
+- Capture window size (`captureWindowSize`) is capped at 1920x1080 with the aspect ratio kept, then the capture
+  is upscaled to the requested size. The old per-axis clamp to the display made CI's 1024x768 virtual display
+  stretch captures (1280x720 became 1024x720), so 8 cases never matched.
+- CI raises the runner display to 1920x1080 ("Set display resolution for live captures").
+- Baselines can be regenerated on the runner without opening windows on a developer PC: run Desktop CI manually
+  with `update_visual_baselines` on (`gh workflow run desktop.yml -f update_visual_baselines=true`), then commit
+  the `visual-baselines-windows` artifact into this folder.
 - The runner's 180 s batch-startup timeout can fire on a 5-scene batch on a desktop host, because TRX is
   written only at the end. Pass `-BatchStartupTimeoutSeconds 1800` locally, or run one scene per batch.
 

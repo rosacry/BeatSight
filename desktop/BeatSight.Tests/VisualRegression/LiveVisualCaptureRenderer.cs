@@ -1243,6 +1243,27 @@ namespace BeatSight.Tests.VisualRegression
         private static ScreenStack? getScreenStack(BeatSightGame game)
             => screenStackField?.GetValue(game) as ScreenStack;
 
+        /// <summary>Largest window every capture host is expected to fit (CI sets its virtual display to this).</summary>
+        internal const int MaxCaptureWidth = 1920;
+        internal const int MaxCaptureHeight = 1080;
+
+        /// <summary>
+        /// Window size for a capture of <paramref name="width"/> x <paramref name="height"/>: scaled down uniformly
+        /// (aspect ratio kept) to fit both the fixed 1920x1080 cap and the display, then upscaled to the requested size
+        /// after capture. The fixed cap makes every machine with a display of at least 1920x1080 render the same window,
+        /// so baselines do not depend on the monitor. Clamping each axis separately stretched the image non-uniformly,
+        /// e.g. 1280x720 became 1024x720 on CI's 1024x768 display.
+        /// </summary>
+        internal static (int Width, int Height) captureWindowSize(int width, int height, int displayWidth, int displayHeight)
+        {
+            double scale = Math.Min(1.0, Math.Min((double)MaxCaptureWidth / width, (double)MaxCaptureHeight / height));
+            if (displayWidth > 0)
+                scale = Math.Min(scale, (double)displayWidth / width);
+            if (displayHeight > 0)
+                scale = Math.Min(scale, (double)displayHeight / height);
+            return ((int)Math.Round(width * scale), (int)Math.Round(height * scale));
+        }
+
         private static async Task applyWindowSize(GameHost host, int width, int height)
         {
             DrawingSize effectiveSize = await runOnUpdateThread(host, () =>
@@ -1252,14 +1273,7 @@ namespace BeatSight.Tests.VisualRegression
 
                 host.Window.WindowState = osu.Framework.Platform.WindowState.Normal;
                 var displayBounds = host.Window.PrimaryDisplay.Bounds;
-                int targetWidth = Math.Max(960, width);
-                int targetHeight = Math.Max(540, height);
-
-                if (displayBounds.Width > 0)
-                    targetWidth = Math.Min(targetWidth, displayBounds.Width);
-
-                if (displayBounds.Height > 0)
-                    targetHeight = Math.Min(targetHeight, displayBounds.Height);
+                (int targetWidth, int targetHeight) = captureWindowSize(width, height, displayBounds.Width, displayBounds.Height);
 
                 if (!trySetWindowSize(host.Window, targetWidth, targetHeight))
                     throw new VisualCaptureUnavailableException($"Could not set capture window size to {targetWidth}x{targetHeight}.");

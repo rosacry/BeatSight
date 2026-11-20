@@ -19,6 +19,12 @@ on:
       - 'scripts/compare_visual_rollups.ps1'
       - 'scripts/evaluate_visual_rollup.ps1'
       - '.github/workflows/desktop.yml'
+  workflow_dispatch:
+    inputs:
+      update_visual_baselines:
+        description: 'Regenerate live visual baselines on the Windows runner and upload them as an artifact'
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -46,9 +52,23 @@ jobs:
       - name: Run tests with coverage
         run: dotnet test desktop/BeatSight.Tests/BeatSight.Tests.csproj --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
 
+      # The runner's virtual display defaults to 1024x768; captures are capped at 1920x1080 (aspect kept), so raise
+      # the display to that cap to render the same window as a developer machine.
+      - name: Set display resolution for live captures
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          try { Set-DisplayResolution -Width 1920 -Height 1080 -Force -ErrorAction Stop }
+          catch { Write-Host "Set-DisplayResolution failed: $($_.Exception.Message)" }
+          Add-Type -AssemblyName System.Windows.Forms
+          Write-Host "Primary display: $([System.Windows.Forms.Screen]::PrimaryScreen.Bounds)"
+
       - name: Run live visual regression (chunked)
         if: matrix.os == 'windows-latest'
         shell: pwsh
+        env:
+          # Manual runs can regenerate baselines on this runner; they are uploaded as visual-baselines-windows.
+          BEATSIGHT_UPDATE_VISUAL_BASELINES: ${{ github.event_name == 'workflow_dispatch' && inputs.update_visual_baselines && '1' || '' }}
         run: |
           & ./scripts/run_visual_regression_chunked.ps1 `
             -ProjectPath 'desktop/BeatSight.Tests/BeatSight.Tests.csproj' `
@@ -67,6 +87,13 @@ jobs:
             -MaxStartupP95Seconds 180 `
             -MaxTrxMissingRatio 0.30 `
             -FailOnThresholdBreach
+
+      - name: Upload regenerated visual baselines
+        if: always() && matrix.os == 'windows-latest' && github.event_name == 'workflow_dispatch' && inputs.update_visual_baselines
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baselines-windows
+          path: desktop/BeatSight.Tests/VisualBaselines/*.png
 
       - name: Upload visual diff artifacts
         if: always()

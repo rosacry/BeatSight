@@ -3,9 +3,11 @@ param(
     [string]$Configuration = "Release",
     [string]$Resolutions = "720p,1080p,1440p,ultrawide",
     [string]$ResultsDirectory = "desktop/BeatSight.Tests/TestResults/visual-chunked",
+    # One scene per batch: vstest writes the TRX only when a batch ends, so a 5-scene batch (20 captures) outran
+    # the startup timeout on both a desktop host and the CI runner.
     [string[]]$SceneBatches = @(
-        "Intro,MainMenu,SongSelect,SongSelectEditor,Settings",
-        "Recording,Onboarding,AudioImportLoading,MappingChoice,MetadataChoice",
+        "Intro", "MainMenu", "SongSelect", "SongSelectEditor", "Settings",
+        "Recording", "Onboarding", "AudioImportLoading", "MappingChoice", "MetadataChoice",
         "MappingGeneration",
         "Editor",
         "Playback",
@@ -93,8 +95,9 @@ function Stop-VisualTestProcessTree {
         return
     }
 
-    $isWindows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
-    if ($isWindows) {
+    # Not $isWindows: PowerShell 7 has a read-only automatic $IsWindows, and assigning it throws.
+    $onWindows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+    if ($onWindows) {
         & taskkill /PID $ProcessId /T /F 2>$null | Out-Null
         if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq 128) {
             return

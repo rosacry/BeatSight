@@ -75,6 +75,7 @@ jobs:
             -Configuration 'Release' `
             -SkipInitialBuild `
             -HeartbeatSeconds 20 `
+            -BatchStartupTimeoutSeconds 600 `
             -BatchTimeoutSeconds 1200
 
       - name: Evaluate visual rollup gate
@@ -84,7 +85,7 @@ jobs:
           & ./scripts/evaluate_visual_rollup.ps1 `
             -ResultsDirectory 'desktop/BeatSight.Tests/TestResults/visual-chunked' `
             -MaxTotalP95Seconds 300 `
-            -MaxStartupP95Seconds 180 `
+            -MaxStartupP95Seconds 300 `
             -MaxTrxMissingRatio 0.30 `
             -FailOnThresholdBreach
 

@@ -37,7 +37,7 @@ namespace BeatSight.Game.Screens
             float titleSize = ResponsiveLayout.ClampFraction(height, 0.074f, 56f, 82f) + ultraWideRelax * 1.4f;
             float subtitleSize = ResponsiveLayout.ClampFraction(height, 0.024f, 16f, 26f) + ultraWideRelax * 0.35f;
             float subtitleY = ResponsiveLayout.ClampFraction(height, 0.081f, 54f, 94f);
-            float subtitleSpacing = blend(5f, 3.2f, compactBlend) + ultraWideRelax * 0.45f;
+            float subtitleSpacing = blend(2.5f, 1.6f, compactBlend) + ultraWideRelax * 0.3f;
 
             return new MainMenuResponsiveLayoutMetrics(
                 titleSize,

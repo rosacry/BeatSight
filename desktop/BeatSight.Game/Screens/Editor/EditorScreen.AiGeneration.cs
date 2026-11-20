@@ -41,6 +41,9 @@ namespace BeatSight.Game.Screens.Editor
 
             var options = new AiGenerationOptions
             {
+                Engine = config.Get<bool>(BeatSightSetting.UseLegacyTranscriptionEngine)
+                    ? AiTranscriptionEngine.Legacy
+                    : AiTranscriptionEngine.Adtof,
                 ConfidenceThreshold = confidenceThreshold.Value,
                 DetectionSensitivity = (int)detectionSensitivity.Value,
                 EnableDrumSeparation = isolateDrums.Value,
@@ -249,6 +252,9 @@ namespace BeatSight.Game.Screens.Editor
                 var generator = new AiBeatmapGenerator(host);
                 var options = new AiGenerationOptions
                 {
+                    Engine = config.Get<bool>(BeatSightSetting.UseLegacyTranscriptionEngine)
+                        ? AiTranscriptionEngine.Legacy
+                        : AiTranscriptionEngine.Adtof,
                     StartTime = start / 1000.0,
                     EndTime = end / 1000.0,
                     QuantizationGrid = parseQuantizationGrid(quantizationGrid.Value),

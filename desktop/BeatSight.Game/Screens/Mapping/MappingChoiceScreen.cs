@@ -49,92 +49,16 @@ namespace BeatSight.Game.Screens.Mapping
 
             InternalChildren = new Drawable[]
             {
-                new Box
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Colour = new Color4(18, 18, 28, 255)
-                },
-                new ScreenEdgeContainer
-                {
-                    EdgePadding = new MarginPadding { Horizontal = 60, Vertical = 40 },
-                    Content = new FillFlowContainer
+                FlowCardLayout.Page(
+                    FlowCardLayout.Header("Audio imported", "Choose how to build the drum chart for this song."),
+                    FlowCardLayout.SummaryCard(new[]
                     {
-                        RelativeSizeAxes = Axes.X,
-                        AutoSizeAxes = Axes.Y,
-                        Direction = FillDirection.Vertical,
-                        Spacing = new Vector2(0, 20),
-                        Children = new Drawable[]
-                        {
-                            createHeader(),
-                            createSummaryPanel(),
-                            createActions()
-                        }
-                    }
-                }
-            };
-        }
-
-        private Drawable createHeader()
-        {
-            return new FillFlowContainer
-            {
-                RelativeSizeAxes = Axes.X,
-                AutoSizeAxes = Axes.Y,
-                Direction = FillDirection.Vertical,
-                Spacing = new Vector2(0, 6),
-                Children = new Drawable[]
-                {
-                    new SpriteText
-                    {
-                        Text = "Audio Imported",
-                        Font = BeatSightFont.Title(36f),
-                        Colour = Color4.White
-                    },
-                    new SpriteText
-                    {
-                        Text = "Choose how you want to build the chart.",
-                        Font = BeatSightFont.Section(20f),
-                        Colour = new Color4(190, 195, 210, 255)
-                    }
-                }
-            };
-        }
-
-        private Drawable createSummaryPanel()
-        {
-            return new Container
-            {
-                RelativeSizeAxes = Axes.X,
-                AutoSizeAxes = Axes.Y,
-                Masking = true,
-                CornerRadius = 12,
-                Child = new Container
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Padding = new MarginPadding(24),
-                    Children = new Drawable[]
-                    {
-                        new Box
-                        {
-                            RelativeSizeAxes = Axes.Both,
-                            Colour = new Color4(24, 27, 40, 255)
-                        },
-                        new FillFlowContainer
-                        {
-                            RelativeSizeAxes = Axes.X,
-                            AutoSizeAxes = Axes.Y,
-                            Direction = FillDirection.Vertical,
-                            Spacing = new Vector2(0, 10),
-                            Children = new Drawable[]
-                            {
-                                createInfoRow("Title", importedTrack.DisplayName),
-                                createInfoRow("Length", importedTrack.FormatDuration()),
-                                createInfoRow("File Size", importedTrack.FormatFileSize()),
-                                createInfoRow("Source", importedTrack.OriginalPath)
-                            }
-                        }
-                    }
-                }
+                        ("Title", importedTrack.DisplayName),
+                        ("Length", importedTrack.FormatDuration()),
+                        ("File size", importedTrack.FormatFileSize()),
+                        ("Source", importedTrack.OriginalPath)
+                    }),
+                    createActions())
             };
         }
 
@@ -142,20 +66,22 @@ namespace BeatSight.Game.Screens.Mapping
         {
             statusText = new SpriteText
             {
-                Text = "Manual authoring lets you place every hit yourself.\nAI generation analyses the track to suggest a beatmap.",
-                Font = BeatSightFont.Body(18f),
-                Colour = new Color4(180, 185, 205, 255),
-                RelativeSizeAxes = Axes.X
+                Text = "AI transcription separates the drums and charts every hit; you can correct it in the editor.",
+                Font = BeatSightFont.Body(UITheme.TypeBody),
+                Colour = UITheme.TextSecondary,
+                RelativeSizeAxes = Axes.X,
+                Truncate = true
             };
 
-            manualButton = createPrimaryButton("Create Manually", new Color4(120, 200, 255, 255));
+            manualButton = FlowCardLayout.Button("Chart it myself", FlowButtonStyle.Secondary);
             manualButton.Action = () => this.Push(new EditorScreen(null, importedTrack));
 
-            aiButton = createPrimaryButton("Generate with AI", new Color4(180, 130, 255, 255));
+            // AI transcription is the recommended path; charting by hand is the alternative.
+            aiButton = FlowCardLayout.Button("Transcribe with AI", FlowButtonStyle.Primary);
             aiButton.Action = () => this.Push(new MappingGenerationScreen(importedTrack));
 
             // Local AI button (Developer Mode only)
-            localAiButton = createPrimaryButton("Run AI Locally (Dev)", new Color4(255, 180, 100, 255));
+            localAiButton = FlowCardLayout.Button("Run AI locally (developer)", FlowButtonStyle.Secondary);
             localAiButton.Action = () => this.Push(new MappingGenerationScreen(importedTrack, useLocalInference: true));
 
             var hasLocalModel = !string.IsNullOrEmpty(localModelPath.Value) && System.IO.File.Exists(localModelPath.Value);
@@ -183,9 +109,7 @@ namespace BeatSight.Game.Screens.Mapping
                             {
                                 Text = localModelInfo,
                                 Font = BeatSightFont.Body(14f),
-                                Colour = hasLocalModel
-                                    ? new Color4(100, 255, 150, 255)
-                                    : new Color4(255, 180, 100, 255),
+                                Colour = hasLocalModel ? UITheme.AccentSuccess : UITheme.AccentWarning,
                                 Anchor = Anchor.TopCentre,
                                 Origin = Anchor.TopCentre
                             }
@@ -201,7 +125,7 @@ namespace BeatSight.Game.Screens.Mapping
                 localAiButton.Action = null;
             }
 
-            var cancelButton = createSecondaryButton("Cancel", () => this.Exit());
+            var cancelButton = FlowCardLayout.Button("Cancel", FlowButtonStyle.Quiet, () => this.Exit());
 
             return new FillFlowContainer
             {
@@ -212,71 +136,12 @@ namespace BeatSight.Game.Screens.Mapping
                 Children = new Drawable[]
                 {
                     statusText,
-                    manualButton,
                     aiButton,
+                    manualButton,
                     localAiContainer,
                     cancelButton
                 }
             };
-        }
-
-        private Drawable createInfoRow(string label, string value)
-        {
-            return new FillFlowContainer
-            {
-                RelativeSizeAxes = Axes.X,
-                AutoSizeAxes = Axes.Y,
-                Direction = FillDirection.Vertical,
-                Spacing = new Vector2(0, 2),
-                Children = new Drawable[]
-                {
-                    new SpriteText
-                    {
-                        Text = label,
-                        Font = BeatSightFont.Section(16f),
-                        Colour = new Color4(160, 170, 190, 255)
-                    },
-                    new SpriteText
-                    {
-                        Text = value,
-                        Font = BeatSightFont.Section(22f),
-                        Colour = Color4.White
-                    }
-                }
-            };
-        }
-
-        private BasicButton createPrimaryButton(string text, Color4 colour)
-        {
-            return new BasicButton
-            {
-                Text = text,
-                RelativeSizeAxes = Axes.X,
-                Height = 52,
-                BackgroundColour = colour,
-                CornerRadius = 10,
-                Masking = true,
-                Anchor = Anchor.TopCentre,
-                Origin = Anchor.TopCentre
-            };
-        }
-
-        private BasicButton createSecondaryButton(string text, System.Action action)
-        {
-            var button = new BasicButton
-            {
-                Text = text,
-                RelativeSizeAxes = Axes.X,
-                Height = 46,
-                BackgroundColour = new Color4(60, 65, 85, 255),
-                CornerRadius = 10,
-                Masking = true,
-                Anchor = Anchor.TopCentre,
-                Origin = Anchor.TopCentre
-            };
-
-            button.Action = action;
-            return button;
         }
 
         protected override bool OnKeyDown(KeyDownEvent e)

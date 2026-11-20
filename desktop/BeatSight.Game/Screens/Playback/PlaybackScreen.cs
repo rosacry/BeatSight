@@ -81,6 +81,7 @@ namespace BeatSight.Game.Screens.Playback
         protected Track? drumTrack; // New
         protected PlaybackPlayfield? playfield;
         private ConfidenceHeatmap? confidenceHeatmap;
+        private Container? heatmapInsetContainer;
 
         private readonly BindableDouble offsetAdjustment = new BindableDouble
         {
@@ -104,6 +105,8 @@ namespace BeatSight.Game.Screens.Playback
         private readonly BindableDouble backingVolume = new BindableDouble(1.0) { MinValue = 0, MaxValue = 1, Precision = 0.01 }; // New
 
         private SpriteText statusText = null!;
+        private SpriteText headerSubtitleText = null!;
+        private FillFlowContainer headerSubtitleFlow = null!;
         private SpriteText offsetValueText = null!;
         private SpriteText speedValueText = null!;
         private bool pausedByZeroSpeed;
@@ -227,8 +230,9 @@ namespace BeatSight.Game.Screens.Playback
         private LaneLayout currentLaneLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
 
         private const float maxBackgroundBlurSigma = 25f;
-        private static readonly Color4 sidebarButtonInactive = new Color4(48, 56, 86, 255);
-        private static readonly Color4 sidebarButtonActive = new Color4(92, 138, 220, 255);
+        private static readonly Color4 sidebarButtonInactive = UITheme.SurfaceAlt;
+        private static readonly Color4 sidebarButtonActive = UITheme.Mix(UITheme.SurfaceAlt, UITheme.AccentPrimary, 0.5f);
+        private static readonly Color4 primaryTransportColour = UITheme.Mix(UITheme.SurfaceAlt, UITheme.AccentPrimary, 0.75f);
         private const string userSkinDirectory = UserAssetDirectories.Skins;
         private const string userMetronomeDirectory = UserAssetDirectories.MetronomeSounds;
 
@@ -534,9 +538,23 @@ namespace BeatSight.Game.Screens.Playback
             statusText = new SpriteText
             {
                 Font = BeatSightFont.Section(metrics.HeaderStatusFont),
-                Colour = Color4.White,
-                Anchor = Anchor.CentreLeft,
-                Origin = Anchor.CentreLeft,
+                Colour = UITheme.TextPrimary,
+                Truncate = true,
+                RelativeSizeAxes = Axes.X,
+            };
+
+            headerSubtitleText = new SpriteText
+            {
+                Font = BeatSightFont.Caption(metrics.HeaderStatusFont * 0.66f),
+                Colour = UITheme.AccentWarning,
+                Alpha = 0,
+            };
+
+            headerSubtitleFlow = new FillFlowContainer
+            {
+                AutoSizeAxes = Axes.Both,
+                Direction = FillDirection.Horizontal,
+                Spacing = new Vector2(10, 0),
             };
 
             applyHeaderStatus();
@@ -552,7 +570,14 @@ namespace BeatSight.Game.Screens.Playback
                     Top = metrics.HeaderPaddingTop,
                     Bottom = metrics.HeaderPaddingBottom
                 },
-                Child = statusText
+                Child = new FillFlowContainer
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Direction = FillDirection.Vertical,
+                    Spacing = new Vector2(0, 2),
+                    Children = new Drawable[] { statusText, headerSubtitleFlow, headerSubtitleText }
+                }
             };
         }
 
@@ -628,9 +653,10 @@ namespace BeatSight.Game.Screens.Playback
 
             var buttonFlow = new FillFlowContainer
             {
-                RelativeSizeAxes = Axes.X,
-                AutoSizeAxes = Axes.Y,
+                AutoSizeAxes = Axes.Both,
                 Direction = FillDirection.Horizontal,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
                 Spacing = new Vector2(metrics.PlaybackRowSpacingX, 0),
                 Children = new Drawable[]
                 {
@@ -645,6 +671,8 @@ namespace BeatSight.Game.Screens.Playback
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft,
                 Padding = new MarginPadding
                 {
                     Left = metrics.SliderContainerPaddingLeft,
@@ -652,44 +680,48 @@ namespace BeatSight.Game.Screens.Playback
                     Top = metrics.SliderContainerPaddingTop,
                     Bottom = metrics.SliderContainerPaddingBottom
                 },
-                Children = new Drawable[]
+                Child = new FillFlowContainer
                 {
-                    new FillFlowContainer
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Direction = FillDirection.Vertical,
+                    Children = new Drawable[]
                     {
-                        RelativeSizeAxes = Axes.X,
-                        AutoSizeAxes = Axes.Y,
-                        Direction = FillDirection.Vertical,
-                        Children = new Drawable[]
+                        heatmapInsetContainer = new Container
                         {
-                            confidenceHeatmap,
-                            timelineSlider
-                        }
-                    },
-                    timelineTimeFlow = new FillFlowContainer
-                    {
-                        AutoSizeAxes = Axes.Both,
-                        Anchor = Anchor.BottomRight,
-                        Origin = Anchor.BottomRight,
-                        Direction = FillDirection.Horizontal,
-                        Spacing = new Vector2(metrics.TimelineTimeSpacing, 0),
-                        Margin = new MarginPadding { Top = metrics.TimelineTimeTopMargin },
-                        Children = new Drawable[]
-                        {
-                            timelineCurrentText,
-                            timelineSeparatorText = new SpriteText
-                            {
-                                Text = "/",
-                                Font = BeatSightFont.Caption(metrics.TimelineSeparatorFont),
-                                Colour = new Color4(150, 160, 185, 255),
-                                Shadow = false
-                            },
-                            timelineTotalText
-                        }
+                            RelativeSizeAxes = Axes.X,
+                            AutoSizeAxes = Axes.Y,
+                            Child = confidenceHeatmap
+                        },
+                        timelineSlider
                     }
                 }
             };
             toolbarSliderContainer = sliderContainer;
 
+            timelineTimeFlow = new FillFlowContainer
+            {
+                AutoSizeAxes = Axes.Both,
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+                Direction = FillDirection.Horizontal,
+                Spacing = new Vector2(metrics.TimelineTimeSpacing, 0),
+                Children = new Drawable[]
+                {
+                    timelineCurrentText,
+                    timelineSeparatorText = new SpriteText
+                    {
+                        Text = "/",
+                        Font = BeatSightFont.Caption(metrics.TimelineSeparatorFont),
+                        Colour = UITheme.TextMuted,
+                        Shadow = false
+                    },
+                    timelineTotalText
+                }
+            };
+
+            // Transport, progress and time share the toolbar's first row, which stays visible as a peek strip
+            // when the rest of the toolbar is tucked away.
             var playbackRow = new FillFlowContainer
             {
                 RelativeSizeAxes = Axes.X,
@@ -698,8 +730,22 @@ namespace BeatSight.Game.Screens.Playback
                 Spacing = new Vector2(metrics.PlaybackRowSpacingY, metrics.PlaybackRowSpacingY),
                 Children = new Drawable[]
                 {
-                    buttonFlow,
-                    sliderContainer
+                    new GridContainer
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        ColumnDimensions = new[]
+                        {
+                            new Dimension(GridSizeMode.AutoSize),
+                            new Dimension(),
+                            new Dimension(GridSizeMode.AutoSize)
+                        },
+                        RowDimensions = new[] { new Dimension(GridSizeMode.AutoSize) },
+                        Content = new[]
+                        {
+                            new Drawable[] { buttonFlow, sliderContainer, timelineTimeFlow }
+                        }
+                    }
                 }
             };
             playbackRowFlow = playbackRow;
@@ -749,7 +795,7 @@ namespace BeatSight.Game.Screens.Playback
                         new Box
                         {
                             RelativeSizeAxes = Axes.Both,
-                            Colour = new Color4(14, 16, 26, 180)
+                            Colour = UITheme.BackgroundLayer.Opacity(0.94f)
                         },
                         toolbarMainContentFlow = new FillFlowContainer
                         {
@@ -974,8 +1020,9 @@ namespace BeatSight.Game.Screens.Playback
             if (ms < 0)
                 ms = 0;
 
+            // Tenths are enough to find a passage; milliseconds made the readout flicker.
             TimeSpan t = TimeSpan.FromMilliseconds(ms);
-            return $"{(int)t.TotalMinutes}:{t.Seconds:D2}.{t.Milliseconds:D3}";
+            return $"{(int)t.TotalMinutes}:{t.Seconds:D2}.{t.Milliseconds / 100}";
         }
 
         private Drawable createMainContent()
@@ -1386,17 +1433,62 @@ namespace BeatSight.Game.Screens.Playback
             if (statusText == null)
                 return;
 
-            string baseLine = string.IsNullOrWhiteSpace(currentStatusMessage)
-                ? ""
-                : currentStatusMessage.TrimEnd();
+            // The header names the song being practised; transient notices (loading, errors) replace the
+            // subtitle line instead of being mixed into the title.
+            string notice = string.IsNullOrWhiteSpace(currentStatusMessage) ? string.Empty : currentStatusMessage.Trim();
 
-            string kickSuffix = KickLineEnabled
-                ? "Kick lane: shared global line"
-                : "Kick lane: dedicated lane";
+            if (beatmap == null)
+            {
+                statusText.Text = string.IsNullOrEmpty(notice) ? "No song loaded" : notice;
+                headerSubtitleFlow.Clear();
+                headerSubtitleText.Alpha = 0;
+                return;
+            }
 
-            statusText.Text = string.IsNullOrEmpty(baseLine)
-                ? kickSuffix
-                : $"{baseLine} • {kickSuffix}";
+            statusText.Text = string.IsNullOrWhiteSpace(beatmap.Metadata.Title) ? "Untitled" : beatmap.Metadata.Title;
+
+            var parts = BuildHeaderSubtitleParts(beatmap.Metadata.Artist, beatmap.Timing?.Bpm ?? 0, beatmap.Metadata.Creator);
+            float subtitleSize = resolveResponsiveMetrics().HeaderStatusFont * 0.66f;
+            headerSubtitleFlow.Clear();
+            for (int i = 0; i < parts.Count; i++)
+            {
+                // Drawn separators: the bullet glyphs are missing from the UI fonts and render off the baseline.
+                if (i > 0)
+                {
+                    headerSubtitleFlow.Add(new Circle
+                    {
+                        Size = new Vector2(4),
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        Colour = UITheme.TextMuted,
+                    });
+                }
+
+                headerSubtitleFlow.Add(new SpriteText
+                {
+                    Text = parts[i],
+                    Font = BeatSightFont.Caption(subtitleSize),
+                    Colour = UITheme.TextSecondary,
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft,
+                });
+            }
+
+            headerSubtitleText.Text = notice;
+            headerSubtitleText.Alpha = string.IsNullOrEmpty(notice) ? 0 : 1;
+        }
+
+        internal static IReadOnlyList<string> BuildHeaderSubtitleParts(string? artist, double bpm, string? creator)
+        {
+            var parts = new List<string>(3);
+            if (!string.IsNullOrWhiteSpace(artist))
+                parts.Add(artist.Trim());
+            if (double.IsFinite(bpm) && bpm > 0)
+                parts.Add($"{bpm:0} BPM");
+            if (!string.IsNullOrWhiteSpace(creator))
+                parts.Add($"charted by {creator.Trim()}");
+
+            return parts;
         }
 
         private void togglePlayback()
@@ -1442,7 +1534,8 @@ namespace BeatSight.Game.Screens.Playback
 
             bool active = isPlaybackActive();
             playPauseButton.Text = active ? "Pause" : "Play";
-            setButtonState(playPauseButton, active);
+            // Play/Pause is the primary transport action in either state.
+            playPauseButton.BackgroundColour = primaryTransportColour;
         }
 
         private void toggleMetronome()
@@ -1528,7 +1621,7 @@ namespace BeatSight.Game.Screens.Playback
                 var settings = mapSettings.Get(beatmap.Metadata.BeatmapId);
                 autoZoom.Value = settings.AutoZoom;
 
-                setStatusMessage($"Loaded: {beatmap.Metadata.Artist} — {beatmap.Metadata.Title}");
+                setStatusMessage(string.Empty);
                 loadTrack();
                 loadCustomSamples();
                 fallbackElapsed = 0;
@@ -1874,6 +1967,7 @@ namespace BeatSight.Game.Screens.Playback
         {
             base.Update();
             applyResponsivePlaybackDensity();
+            keepHeaderClearOfBackButton();
 
             if (fallbackRunning && track == null)
                 fallbackElapsed += Time.Elapsed * playbackSpeed;
@@ -1910,6 +2004,23 @@ namespace BeatSight.Game.Screens.Playback
             }
         }
 
+        /// <summary>
+        /// The back button is overlaid on the header row; start the song title after it at every resolution.
+        /// Uses the unscaled width so the hover scale does not make the title jitter.
+        /// </summary>
+        private void keepHeaderClearOfBackButton()
+        {
+            if (headerStatusContainer == null || backButton == null || !backButton.IsLoaded || backButton.DrawWidth <= 0)
+                return;
+
+            float backLeft = headerStatusContainer.ToLocalSpace(backButton.ScreenSpaceDrawQuad.TopLeft).X;
+            float requiredLeft = backLeft + backButton.DrawWidth + 24f;
+            float targetLeft = Math.Max(resolveResponsiveMetrics().HeaderPaddingLeft, requiredLeft);
+
+            if (Math.Abs(headerStatusContainer.Padding.Left - targetLeft) > 0.5f)
+                headerStatusContainer.Padding = headerStatusContainer.Padding with { Left = targetLeft };
+        }
+
         private void applyResponsivePlaybackDensity(bool force = false)
         {
             if (DrawWidth <= 0 || DrawHeight <= 0)
@@ -1928,6 +2039,12 @@ namespace BeatSight.Game.Screens.Playback
             if (statusText != null)
                 statusText.Font = BeatSightFont.Section(metrics.HeaderStatusFont);
 
+            if (headerSubtitleText != null)
+            {
+                headerSubtitleText.Font = BeatSightFont.Caption(metrics.HeaderStatusFont * 0.66f);
+                applyHeaderStatus();
+            }
+
             if (headerStatusContainer != null)
             {
                 headerStatusContainer.Padding = new MarginPadding
@@ -1943,6 +2060,12 @@ namespace BeatSight.Game.Screens.Playback
             {
                 playbackToolbar.Padding = new MarginPadding { Bottom = metrics.ToolbarBottomPadding };
                 playbackToolbar.CornerRadius = metrics.ToolbarCornerRadius;
+                // Top padding + the transport row + half the gap to the next row, so no sliver of the
+                // section titles below shows in the tucked strip.
+                float progressColumnHeight = metrics.SliderContainerPaddingTop + metrics.HeatmapHeight + 5f
+                                             + metrics.TimelineSliderHeight + metrics.SliderContainerPaddingBottom;
+                float transportRowHeight = Math.Max(metrics.ToolbarButtonHeight, progressColumnHeight);
+                playbackToolbar.PeekHeight = metrics.ToolbarInnerPaddingV + transportRowHeight + metrics.ToolbarSectionSpacing * 0.5f;
             }
 
             if (toolbarMainContentFlow != null)
@@ -1977,6 +2100,10 @@ namespace BeatSight.Game.Screens.Playback
 
             if (confidenceHeatmap != null)
                 confidenceHeatmap.Height = metrics.HeatmapHeight;
+
+            // Heatmap columns line up with the seek track, which keeps its ends free for the knob.
+            if (heatmapInsetContainer != null && timelineSlider != null)
+                heatmapInsetContainer.Padding = new MarginPadding { Horizontal = timelineSlider.TrackInset };
 
             if (timelineCurrentText != null)
                 timelineCurrentText.Font = BeatSightFont.Section(metrics.TimelineTimeFont);
@@ -2039,7 +2166,7 @@ namespace BeatSight.Game.Screens.Playback
             if (timelineTimeFlow != null)
             {
                 timelineTimeFlow.Spacing = new Vector2(metrics.TimelineTimeSpacing, 0);
-                timelineTimeFlow.Margin = new MarginPadding { Top = metrics.TimelineTimeTopMargin };
+                timelineTimeFlow.Margin = new MarginPadding { Left = metrics.TimelineTimeSpacing * 2 };
             }
 
             lastDensityWidth = DrawWidth;

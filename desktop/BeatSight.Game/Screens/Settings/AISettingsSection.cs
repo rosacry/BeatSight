@@ -84,6 +84,8 @@ namespace BeatSight.Game.Screens.Settings
                 Children = new Drawable[]
                 {
                     createInfoBox(),
+                    // Default is the ADTOF engine; the inherited pipeline stays available as a fallback.
+                    CreateCheckbox("Use legacy transcription engine (fallback)", config.GetBindable<bool>(BeatSightSetting.UseLegacyTranscriptionEngine)),
                     developerUnlockSection,
                     developerContent
                 }
@@ -133,27 +135,21 @@ namespace BeatSight.Game.Screens.Settings
                         {
                             new SpriteText
                             {
-                                Text = "AI Processing",
+                                Text = "AI transcription",
                                 Font = BeatSightFont.Section(18f),
                                 Colour = UITheme.AccentPrimary
                             },
                             new SpriteText
                             {
-                                Text = "BeatSight uses server-side AI processing to analyze your songs.",
+                                Text = "Songs are transcribed on this PC: Demucs separates the drums, then the ADTOF model finds each hit.",
                                 Font = BeatSightFont.Body(14f),
                                 Colour = UITheme.TextSecondary
                             },
                             new SpriteText
                             {
-                                Text = "All AI computation runs on our servers - no local GPU or processing required.",
+                                Text = "A GPU makes this faster but is not required. Generated charts are drafts: check them by ear.",
                                 Font = BeatSightFont.Body(14f),
                                 Colour = UITheme.TextSecondary
-                            },
-                            new SpriteText
-                            {
-                                Text = "This ensures consistent results and keeps your computer running smoothly.",
-                                Font = BeatSightFont.Body(14f),
-                                Colour = UITheme.TextMuted
                             }
                         }
                     }

@@ -16,8 +16,8 @@ namespace BeatSight.Game.UI.Components
     /// </summary>
     public partial class BackButton : BasicButton
     {
-        private static readonly Color4 idleColour = new Color4(58, 70, 112, 255);
-        private static readonly Color4 hoverColour = new Color4(98, 140, 220, 255);
+        private static readonly Color4 idleColour = UITheme.SurfaceAlt;
+        private static readonly Color4 hoverColour = UITheme.SurfaceRaised;
         private const float designWidth = 120f;
         private const float designHeight = 44f;
 
@@ -39,6 +39,8 @@ namespace BeatSight.Game.UI.Components
             Anchor = Anchor.TopLeft;
             Origin = Anchor.TopLeft;
             BackgroundColour = idleColour;
+            BorderThickness = 1;
+            BorderColour = UITheme.Border;
             Text = "Back";
         }
 
@@ -87,15 +89,15 @@ namespace BeatSight.Game.UI.Components
         {
             BackgroundColour = hoverColour;
             uiAudio.PlayHover(e.ScreenSpaceMousePosition.X / GetContainingInputManager().DrawSize.X);
-            this.ScaleTo(1.05f, 400, Easing.OutElastic);
-            hoverGlow.FadeTo(0.2f, 200, Easing.OutQuint);
+            this.ScaleTo(UITheme.HoverScale, UITheme.MotionFast, UITheme.MotionEasing);
+            hoverGlow.FadeTo(0.08f, UITheme.MotionFast, UITheme.MotionEasing);
             return base.OnHover(e);
         }
 
         protected override void OnHoverLost(HoverLostEvent e)
         {
             BackgroundColour = idleColour;
-            this.ScaleTo(1f, 400, Easing.OutElastic);
+            this.ScaleTo(1f, UITheme.MotionNormal, UITheme.MotionEasing);
             hoverGlow.FadeOut(200);
             base.OnHoverLost(e);
         }
@@ -105,20 +107,20 @@ namespace BeatSight.Game.UI.Components
             if (Enabled.Value)
             {
                 uiAudio.PlayClick();
-                flash.FadeTo(0.5f).FadeOut(500, Easing.OutQuint);
+                flash.FadeTo(0.22f).FadeOut(UITheme.MotionSlow, UITheme.MotionEasing);
             }
             return base.OnClick(e);
         }
 
         protected override bool OnMouseDown(MouseDownEvent e)
         {
-            this.ScaleTo(0.95f, 50, Easing.OutQuint);
+            this.ScaleTo(UITheme.PressScale, 60, UITheme.MotionEasing);
             return base.OnMouseDown(e);
         }
 
         protected override void OnMouseUp(MouseUpEvent e)
         {
-            this.ScaleTo(IsHovered ? 1.05f : 1f, 800, Easing.OutElastic);
+            this.ScaleTo(IsHovered ? UITheme.HoverScale : 1f, UITheme.MotionNormal, UITheme.MotionEasing);
             base.OnMouseUp(e);
         }
 

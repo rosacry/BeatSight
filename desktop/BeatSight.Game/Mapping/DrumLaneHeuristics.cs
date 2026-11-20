@@ -311,6 +311,9 @@ namespace BeatSight.Game.Mapping
 
                 addCategory(ref length, buffer, tomCategory);
                 addCategory(ref length, buffer, DrumComponentCategory.TomMid);
+                // Separate tom lanes may lack a mid tom (kit with high and floor toms only): stay on a tom lane.
+                addCategory(ref length, buffer, DrumComponentCategory.TomHigh);
+                addCategory(ref length, buffer, DrumComponentCategory.TomLow);
                 addCategory(ref length, buffer, DrumComponentCategory.Snare);
                 addCategory(ref length, buffer, DrumComponentCategory.Kick);
                 addCategory(ref length, buffer, DrumComponentCategory.Unknown);

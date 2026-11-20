@@ -164,6 +164,8 @@ namespace BeatSight.Game.Services.Generation
                     context.EmitVolatile(PipelinePhase.Separate, GenerationStageId.Separation, stageProgress, message);
                 });
 
+                bool separationRequested = request.Options.EnableDrumSeparation;
+
                 if (request.Options.EnableDrumSeparation)
                 {
                     using (new PhaseScope(PipelinePhase.Separate, GenerationStageId.Separation, logs, stageDurationsCapture))
@@ -191,7 +193,13 @@ namespace BeatSight.Game.Services.Generation
                     await context.EmitAsync(PipelinePhase.Separate, GenerationStageId.Separation, 1.0, "Drum separation skipped").ConfigureAwait(false);
                 }
 
-                if (separationOutput.HasValue)
+                if (request.Options.Engine == AiTranscriptionEngine.Adtof)
+                {
+                    // The ADTOF engine runs its own measured htdemucs_ft separation; a passthrough or
+                    // failed preview separation here must not switch that off.
+                    request.Options.EnableDrumSeparation = separationRequested;
+                }
+                else if (separationOutput.HasValue)
                     request.Options.EnableDrumSeparation = !separationOutput.Value.IsPassthrough;
                 else
                     request.Options.EnableDrumSeparation = false;

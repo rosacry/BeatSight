@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
 using BeatSight.Game.UI.Theming;
@@ -40,23 +41,16 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             public float HeaderDepth { get; }
         }
 
-        private static readonly Color4[] laneAccentPalette =
-        {
-            new Color4(86, 166, 106, 255),
-            new Color4(188, 94, 104, 255),
-            new Color4(206, 181, 92, 255),
-            new Color4(88, 132, 212, 255),
-            new Color4(210, 145, 88, 255),
-            new Color4(154, 114, 208, 255),
-            new Color4(88, 172, 176, 255),
-            new Color4(188, 110, 166, 255)
-        };
-
         private readonly LaneLayout laneLayout;
         private readonly bool kickUsesGlobalLine;
         private ThreeDStageProfile stageProfile;
         private readonly int visibleLaneCount;
         private readonly IReadOnlyList<string> visibleLaneLabels;
+        private readonly IReadOnlyList<LaneIdentity> visibleLaneIdentities;
+
+        /// <summary>Instrument colour of a visual lane (matches the notes in that lane).</summary>
+        private Color4 laneAccent(int visualLane)
+            => visibleLaneIdentities.Count == 0 ? DrumPalette.Percussion : visibleLaneIdentities[((visualLane % visibleLaneIdentities.Count) + visibleLaneIdentities.Count) % visibleLaneIdentities.Count].Colour;
 
         private readonly Container perspectiveLaneLayer;
         private readonly Container perspectiveBoundaryLayer;
@@ -215,7 +209,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             };
         }
 
-        public ThreeDHighwayBackground(LaneLayout laneLayout, bool kickUsesGlobalLine, ThreeDStageProfile stageProfile)
+        public ThreeDHighwayBackground(LaneLayout laneLayout, bool kickUsesGlobalLine, ThreeDStageProfile stageProfile, Func<int, LaneIdentity>? laneIdentityProvider = null)
         {
             this.laneLayout = laneLayout;
             this.kickUsesGlobalLine = kickUsesGlobalLine;
@@ -223,7 +217,16 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             visibleLaneCount = kickUsesGlobalLine
                 ? Math.Max(1, laneLayout.LaneCount - 1)
                 : Math.Max(1, laneLayout.LaneCount);
-            visibleLaneLabels = buildVisibleLaneLabels();
+
+            var identities = new LaneIdentity[visibleLaneCount];
+            for (int visualLane = 0; visualLane < visibleLaneCount; visualLane++)
+            {
+                int actualLane = getActualLaneIndex(visualLane);
+                identities[visualLane] = laneIdentityProvider?.Invoke(actualLane) ?? LaneIdentityResolver.Resolve(laneLayout, actualLane);
+            }
+
+            visibleLaneIdentities = identities;
+            visibleLaneLabels = identities.Select(identity => identity.ShortName).ToArray();
 
             RelativeSizeAxes = Axes.Both;
 
@@ -424,7 +427,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             for (int lane = 0; lane < visibleLaneCount; lane++)
             {
-                Color4 accent = laneAccentPalette[lane % laneAccentPalette.Length];
+                Color4 accent = laneAccent(lane);
                 string label = visibleLaneLabels.Count > lane ? visibleLaneLabels[lane] : $"L{lane + 1}";
 
                 var header = new Container
@@ -438,7 +441,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 var headerFill = new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = new Color4(accent.R, accent.G, accent.B, 116)
+                    Colour = new Color4(accent.R, accent.G, accent.B, 116 / 255f)
                 };
 
                 header.Add(headerFill);
@@ -549,7 +552,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             for (int lane = 0; lane < visibleLaneCount; lane++)
             {
-                Color4 accent = laneAccentPalette[lane % laneAccentPalette.Length];
+                Color4 accent = laneAccent(lane);
                 Color4 emphasised = UITheme.Emphasise(accent, 1.16f);
 
                 var receptor = new Container
@@ -571,14 +574,14 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 var fill = new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = new Color4(accent.R, accent.G, accent.B, 116)
+                    Colour = new Color4(accent.R, accent.G, accent.B, 116 / 255f)
                 };
                 receptor.Add(fill);
 
                 var glow = new Box
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = new Color4(emphasised.R, emphasised.G, emphasised.B, 180),
+                    Colour = new Color4(emphasised.R, emphasised.G, emphasised.B, 180 / 255f),
                     Alpha = 0.30f,
                     Blending = BlendingParameters.Additive
                 };
@@ -689,10 +692,10 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 receptorGlow.FadeTo(hitFeedback.LaneGlowDecayAlpha, laneHitAnimation.ReceptorGlowDecayMs, Easing.OutQuad);
 
                 var receptorFill = laneReceptorFills[laneIndex];
-                Color4 accent = laneAccentPalette[laneIndex % laneAccentPalette.Length];
+                Color4 accent = laneAccent(laneIndex);
                 receptorFill.ClearTransforms();
                 receptorFill.Colour = UITheme.Emphasise(accent, hitFeedback.LaneFillEmphasis);
-                receptorFill.FadeColour(new Color4(accent.R, accent.G, accent.B, hitFeedback.LaneFillRestingAlpha), laneHitAnimation.ReceptorGlowDecayMs + 18f, Easing.OutQuad);
+                receptorFill.FadeColour(new Color4(accent.R, accent.G, accent.B, hitFeedback.LaneFillRestingAlpha / 255f), laneHitAnimation.ReceptorGlowDecayMs + 18f, Easing.OutQuad);
             }
         }
 
@@ -772,7 +775,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 for (int lane = 0; lane < visibleLaneCount; lane++)
                 {
                     var segment = laneSegments[lane][segmentIndex];
-                    Color4 accent = laneAccentPalette[lane % laneAccentPalette.Length];
+                    Color4 accent = laneAccent(lane);
                     Color4 laneBase = UITheme.Mix(new Color4(14, 20, 32, 255), accent, lane % 2 == 0 ? 0.16f : 0.13f);
                     byte laneAlpha = (byte)(96 + curvedDepth * 86);
 
@@ -780,7 +783,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     segment.Y = yStart - 0.7f;
                     segment.Width = Math.Max(1f, laneWidth - laneInset * 2f);
                     segment.Height = segmentHeight;
-                    segment.Colour = new Color4(laneBase.R, laneBase.G, laneBase.B, laneAlpha);
+                    segment.Colour = new Color4(laneBase.R, laneBase.G, laneBase.B, laneAlpha / 255f);
                 }
 
                 for (int boundary = 0; boundary <= visibleLaneCount; boundary++)
@@ -820,7 +823,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             for (int lane = 0; lane < visibleLaneCount; lane++)
             {
-                Color4 accent = laneAccentPalette[lane % laneAccentPalette.Length];
+                Color4 accent = laneAccent(lane);
 
                 var header = laneHeaderBoxes[lane];
                 header.X = headerLeft + lane * headerWidth + 1f;
@@ -828,7 +831,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 header.Width = Math.Max(1f, headerWidth - 2f);
                 header.Height = headerHeight;
 
-                laneHeaderFills[lane].Colour = new Color4(accent.R, accent.G, accent.B, 160);
+                laneHeaderFills[lane].Colour = new Color4(accent.R, accent.G, accent.B, 160 / 255f);
 
                 var headerText = laneHeaderTexts[lane];
                 headerText.Font = FrameworkFont.Regular.With(size: headerFontSize);
@@ -917,18 +920,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             }
         }
 
-        private IReadOnlyList<string> buildVisibleLaneLabels()
-        {
-            var labels = new List<string>(visibleLaneCount);
-            for (int visualLane = 0; visualLane < visibleLaneCount; visualLane++)
-            {
-                int actualLane = getActualLaneIndex(visualLane);
-                labels.Add(resolveLaneLabel(actualLane));
-            }
-
-            return labels;
-        }
-
         private int getActualLaneIndex(int visualLane)
         {
             if (!kickUsesGlobalLine)
@@ -937,47 +928,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             return visualLane >= laneLayout.KickLane
                 ? visualLane + 1
                 : visualLane;
-        }
-
-        private string resolveLaneLabel(int actualLane)
-        {
-            if (actualLane == laneLayout.KickLane)
-                return "K";
-            if (actualLane == laneLayout.SnareLane)
-                return "SN";
-            if (actualLane == laneLayout.HiHatLane)
-                return "HH";
-            if (actualLane == laneLayout.RideLane)
-                return "RD";
-
-            if (laneContains(DrumComponentCategory.Crash, actualLane) || laneContains(DrumComponentCategory.Crash2, actualLane))
-                return "CR";
-            if (laneContains(DrumComponentCategory.China, actualLane))
-                return "CH";
-            if (laneContains(DrumComponentCategory.Splash, actualLane))
-                return "SP";
-            if (laneContains(DrumComponentCategory.TomHigh, actualLane))
-                return "T1";
-            if (laneContains(DrumComponentCategory.TomMid, actualLane))
-                return "T2";
-            if (laneContains(DrumComponentCategory.TomLow, actualLane))
-                return "T3";
-            if (laneContains(DrumComponentCategory.Percussion, actualLane) || laneContains(DrumComponentCategory.AuxPercussion, actualLane))
-                return "PR";
-
-            return $"L{actualLane + 1}";
-        }
-
-        private bool laneContains(DrumComponentCategory category, int lane)
-        {
-            var lanes = laneLayout.GetLanesFor(category);
-            for (int i = 0; i < lanes.Count; i++)
-            {
-                if (lanes[i] == lane)
-                    return true;
-            }
-
-            return false;
         }
 
         private static float lerp(float start, float end, float amount)

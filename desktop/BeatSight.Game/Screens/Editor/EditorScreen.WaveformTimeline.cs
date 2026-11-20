@@ -40,6 +40,11 @@ namespace BeatSight.Game.Screens.Editor
 
             Logger.Log($"[EditorScreen] reloadTimeline: setting beatmap with {beatmap.HitObjects.Count} notes, playbackPreview={(playbackPreview == null ? "NULL" : "exists")}", LoggingTarget.Runtime, LogLevel.Important);
 
+            // Rows follow the practice playfield's lanes; set before loading so the notes are laid out once.
+            var laneLayout = playbackPreview?.ResolveLaneLayoutFor(beatmap);
+            if (laneLayout != null)
+                timeline.SetLaneLayout(laneLayout);
+
             timeline.LoadBeatmap(beatmap, duration, waveformData);
             timeline.SetZoom(timelineZoom);
             timeline.SetWaveformScale(waveformScale);

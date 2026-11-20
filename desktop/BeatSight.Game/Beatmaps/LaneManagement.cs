@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using BeatSight.Game.UI.Theming;
 using Newtonsoft.Json;
 using osuTK.Graphics;
 
@@ -26,7 +27,8 @@ namespace BeatSight.Game.Beatmaps
     public static class LaneManagement
     {
         public const int MinLaneCount = 1;
-        public const int MaxLaneCount = 9;
+        // Eleven covers the largest automatic layout: crash, hi-hat, snare, kick, three toms, ride, china, splash, percussion.
+        public const int MaxLaneCount = 11;
 
         private static readonly string[] defaultLaneNames =
         {
@@ -54,18 +56,8 @@ namespace BeatSight.Game.Beatmaps
             "PC"
         };
 
-        private static readonly Color4[] defaultLanePalette =
-        {
-            new Color4(250, 181, 66, 255),
-            new Color4(242, 164, 42, 255),
-            new Color4(255, 66, 86, 255),
-            new Color4(117, 68, 249, 255),
-            new Color4(68, 145, 255, 255),
-            new Color4(245, 113, 44, 255),
-            new Color4(255, 82, 178, 255),
-            new Color4(92, 212, 208, 255),
-            new Color4(120, 185, 255, 255)
-        };
+        // Canonical lane order matches defaultLaneNames; colours come from the shared instrument palette.
+        private static readonly Color4[] defaultLanePalette = DrumPalette.CanonicalLanes;
 
         public static IReadOnlyList<Color4> DefaultPalette => defaultLanePalette;
 
@@ -156,10 +148,32 @@ namespace BeatSight.Game.Beatmaps
             return fallbackLabel;
         }
 
+        /// <summary>
+        /// True when a stored lane name was chosen by the user rather than written as the positional default
+        /// (the editor stores "Crash", "HiHat", ... by lane index, which is not a statement about the lane's content).
+        /// </summary>
+        public static bool IsCustomLaneName(LaneInfo laneInfo, int laneIndex)
+        {
+            string? name = laneInfo.Name?.Trim();
+            if (string.IsNullOrWhiteSpace(name))
+                return false;
+
+            if (laneIndex >= 0 && laneIndex < defaultLaneNames.Length
+                && string.Equals(name, defaultLaneNames[laneIndex], StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            return !string.Equals(name, $"Lane {laneIndex + 1}", StringComparison.OrdinalIgnoreCase);
+        }
+
         public static bool TryGetLaneColor(Beatmap? beatmap, int laneIndex, out Color4 color)
         {
             color = default;
             if (!TryGetLaneInfo(beatmap, laneIndex, out var laneInfo))
+                return false;
+
+            // A stored positional default (current or pre-2026-10-24) is not a customisation: callers then use the
+            // colour of the instrument the lane holds, which depends on the active lane layout.
+            if (DrumPalette.IsPositionalDefault(laneInfo.ColorHex, laneIndex))
                 return false;
 
             return TryParseColorHex(laneInfo.ColorHex, out color);
@@ -406,6 +420,10 @@ namespace BeatSight.Game.Beatmaps
 
         private static string normalizeColorHex(string? value, int laneIndex)
         {
+            // Untouched pre-2026-10-24 defaults move to the current palette; customised colours are kept.
+            if (DrumPalette.IsLegacyDefault(value, laneIndex))
+                value = null;
+
             if (TryParseColorHex(value, out var color))
                 return ToColorHex(color);
 

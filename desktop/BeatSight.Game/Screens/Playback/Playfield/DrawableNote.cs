@@ -20,75 +20,11 @@ namespace BeatSight.Game.Screens.Playback.Playfield
     /// </summary>
     public partial class DrawableNote : CompositeDrawable
     {
-        private static readonly Dictionary<string, Color4> componentColours = new Dictionary<string, Color4>
-        {
-            // Core palette tuned for strong lane contrast in 3D.
-            {"kick", new Color4(172, 116, 255, 255)},
-            {"snare", new Color4(255, 82, 102, 255)},
-            {"hihat", new Color4(246, 192, 58, 255)},
-            {"hihat_closed", new Color4(246, 192, 58, 255)},
-            {"hihat_open", new Color4(255, 210, 84, 255)},
-            {"hihat_pedal", new Color4(218, 168, 52, 255)},
-            {"tom_high", new Color4(68, 156, 255, 255)},
-            {"tom_mid", new Color4(52, 136, 236, 255)},
-            {"tom_low", new Color4(40, 118, 220, 255)},
-            {"tom", new Color4(52, 136, 236, 255)},
-            {"crash", new Color4(74, 220, 142, 255)},
-            {"ride", new Color4(255, 158, 88, 255)},
-            {"ride_bell", new Color4(255, 158, 88, 255)},
-            {"ride_bow", new Color4(244, 144, 76, 255)},
-            {"china", new Color4(255, 118, 206, 255)},
-            {"splash", new Color4(86, 218, 228, 255)},
-            {"cross_stick", new Color4(255, 206, 96, 255)},
-        };
-
         /// <summary>
-        /// Resolves the colour for a component name, stripping ranked suffixes
-        /// (e.g. "crash_1" → "crash", "china_2" → "china", "tom_1" → "tom").
+        /// Resolves the colour for a component name from the shared instrument palette
+        /// (ranked suffixes such as "crash_1" resolve like their base component).
         /// </summary>
-        private static Color4 resolveComponentColour(string component)
-        {
-            string key = component.ToLowerInvariant();
-
-            // Direct match first
-            if (componentColours.TryGetValue(key, out var colour))
-                return colour;
-
-            // Strip trailing _N suffix (e.g. crash_1 → crash, ride_bell_2 → ride_bell)
-            int lastUnderscore = key.LastIndexOf('_');
-            if (lastUnderscore > 0 && lastUnderscore < key.Length - 1)
-            {
-                bool allDigits = true;
-                for (int i = lastUnderscore + 1; i < key.Length; i++)
-                {
-                    if (!char.IsDigit(key[i]))
-                    {
-                        allDigits = false;
-                        break;
-                    }
-                }
-
-                if (allDigits)
-                {
-                    string baseName = key[..lastUnderscore];
-                    if (componentColours.TryGetValue(baseName, out colour))
-                        return colour;
-                }
-            }
-
-            // Fallback: substring matching for partial hits
-            if (key.Contains("crash")) return componentColours["crash"];
-            if (key.Contains("china")) return componentColours["china"];
-            if (key.Contains("splash")) return componentColours["splash"];
-            if (key.Contains("ride")) return componentColours["ride"];
-            if (key.Contains("tom")) return componentColours["tom"];
-            if (key.Contains("hat") || key.Contains("hh")) return componentColours["hihat"];
-            if (key.Contains("snare")) return componentColours["snare"];
-            if (key.Contains("kick")) return componentColours["kick"];
-
-            // Default gray for truly unknown components
-            return new Color4(180, 180, 200, 255);
-        }
+        private static Color4 resolveComponentColour(string component) => DrumPalette.ForComponent(component);
 
         public double HitTime { get; }
         public int Lane { get; private set; }
@@ -103,20 +39,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private readonly Container noteheadContainer;
         private readonly Box mainBox;
         private readonly Box highlightStrip;
-        private readonly Box manuscriptCrossLineA;
-        private readonly Box manuscriptCrossLineB;
-        private readonly Box manuscriptFlagPrimary;
-        private readonly Box manuscriptFlagSecondary;
-        private readonly Box manuscriptFlagTertiary;
-        private readonly Circle manuscriptHiHatOpenIndicator;
-        private readonly Box manuscriptHiHatClosedHorizontal;
-        private readonly Box manuscriptHiHatClosedVertical;
-        private readonly Box manuscriptHiHatClosedCap;
-        private readonly Box manuscriptHiHatHalfOpenSlash;
-        private readonly Box manuscriptHiHatHalfOpenSlashSecondary;
-        private readonly Circle manuscriptDurationDot;
-        private readonly Box manuscriptGhostParenLeft;
-        private readonly Box manuscriptGhostParenRight;
         private readonly Box? glowBox;
         private readonly Box stem;
         private readonly Bindable<bool> showGlowEffects;
@@ -125,8 +47,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private readonly bool isKickNote;
         private readonly int originalLane;
         private bool kickGlobalMode;
-        private int manuscriptFlagCount;
-        private bool manuscriptDurationDotVisible;
         private float lastAppliedDepth = float.NaN;
         private readonly float velocityAlpha;
 
@@ -198,163 +118,18 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             };
             children.Add(stem);
 
-            manuscriptCrossLineA = new Box
-            {
-                Width = 2,
-                Height = 14,
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre,
-                Colour = AccentColour,
-                Alpha = 0
-            };
-            children.Add(manuscriptCrossLineA);
 
-            manuscriptCrossLineB = new Box
-            {
-                Width = 2,
-                Height = 14,
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre,
-                Colour = AccentColour,
-                Alpha = 0
-            };
-            children.Add(manuscriptCrossLineB);
 
-            manuscriptFlagPrimary = new Box
-            {
-                Width = 14,
-                Height = 2,
-                Anchor = Anchor.Centre,
-                Origin = Anchor.CentreLeft,
-                Colour = AccentColour,
-                Alpha = 0
-            };
-            children.Add(manuscriptFlagPrimary);
 
-            manuscriptFlagSecondary = new Box
-            {
-                Width = 14,
-                Height = 2,
-                Anchor = Anchor.Centre,
-                Origin = Anchor.CentreLeft,
-                Colour = AccentColour,
-                Alpha = 0
-            };
-            children.Add(manuscriptFlagSecondary);
 
-            manuscriptFlagTertiary = new Box
-            {
-                Width = 14,
-                Height = 2,
-                Anchor = Anchor.Centre,
-                Origin = Anchor.CentreLeft,
-                Colour = AccentColour,
-                Alpha = 0
-            };
-            children.Add(manuscriptFlagTertiary);
 
-            manuscriptHiHatOpenIndicator = new Circle
-            {
-                Size = new Vector2(6f),
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre,
-                Colour = Color4.Transparent,
-                BorderThickness = 1.5f,
-                BorderColour = AccentColour,
-                Alpha = 0
-            };
-            children.Add(manuscriptHiHatOpenIndicator);
 
-            manuscriptHiHatClosedHorizontal = new Box
-            {
-                Width = 6,
-                Height = 2,
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre,
-                Colour = AccentColour,
-                Alpha = 0
-            };
-            children.Add(manuscriptHiHatClosedHorizontal);
 
-            manuscriptHiHatClosedVertical = new Box
-            {
-                Width = 2,
-                Height = 6,
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre,
-                Colour = AccentColour,
-                Alpha = 0
-            };
-            children.Add(manuscriptHiHatClosedVertical);
 
-            manuscriptHiHatClosedCap = new Box
-            {
-                Width = 5,
-                Height = 2,
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre,
-                Colour = AccentColour,
-                Alpha = 0
-            };
-            children.Add(manuscriptHiHatClosedCap);
 
-            manuscriptHiHatHalfOpenSlash = new Box
-            {
-                Width = 2,
-                Height = 7,
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre,
-                Colour = AccentColour,
-                Rotation = 35f,
-                Alpha = 0
-            };
-            children.Add(manuscriptHiHatHalfOpenSlash);
 
-            manuscriptHiHatHalfOpenSlashSecondary = new Box
-            {
-                Width = 2,
-                Height = 7,
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre,
-                Colour = AccentColour,
-                Rotation = 35f,
-                Alpha = 0
-            };
-            children.Add(manuscriptHiHatHalfOpenSlashSecondary);
 
-            manuscriptDurationDot = new Circle
-            {
-                Size = new Vector2(2.6f),
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre,
-                Colour = AccentColour,
-                Alpha = 0
-            };
-            children.Add(manuscriptDurationDot);
 
-            manuscriptGhostParenLeft = new Box
-            {
-                Width = 1.5f,
-                Height = 10f,
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre,
-                Rotation = -14f,
-                Colour = AccentColour,
-                Alpha = 0
-            };
-            children.Add(manuscriptGhostParenLeft);
-
-            manuscriptGhostParenRight = new Box
-            {
-                Width = 1.5f,
-                Height = 10f,
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre,
-                Rotation = 14f,
-                Colour = AccentColour,
-                Alpha = 0
-            };
-            children.Add(manuscriptGhostParenRight);
 
             highlightStrip = new Box
             {
@@ -393,190 +168,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         {
             viewMode = mode;
 
-            if (viewMode == LaneViewMode.Manuscript)
-            {
-                Colour = Color4.White;
-                bool cymbalHead = ManuscriptBackgroundEnhanced.UsesCrossNoteheadForComponent(ComponentName);
-                bool diamondHead = ManuscriptBackgroundEnhanced.UsesDiamondNoteheadForComponent(ComponentName);
-                bool crossStickHead = ManuscriptBackgroundEnhanced.IsCrossStickComponent(ComponentName);
-                bool xHead = (cymbalHead && !diamondHead) || crossStickHead;
-                bool ghostNote = Velocity < 0.35;
-                bool accentNote = Velocity > 0.85;
-                bool hiHatOpen = ManuscriptBackgroundEnhanced.IsOpenHiHatComponent(ComponentName);
-                bool hiHatHalfOpen = ManuscriptBackgroundEnhanced.IsHalfOpenHiHatComponent(ComponentName);
-                bool hiHatClosed = ManuscriptBackgroundEnhanced.IsClosedHiHatComponent(ComponentName);
-                float noteWidth = Math.Max(10f, Width);
-                float noteHeight = Math.Max(7f, Height);
-                Color4 manuscriptInk = new Color4(228, 236, 248, 255);
-                mainBox.Shear = Vector2.Zero;
-                noteheadContainer.Masking = true;
-                noteheadContainer.Scale = Vector2.One;
-                noteheadContainer.Rotation = xHead
-                    ? 0f
-                    : diamondHead
-                        ? 45f
-                        : -18f;
-                noteheadContainer.CornerRadius = diamondHead
-                    ? Math.Clamp(noteHeight * 0.18f, 1.4f, 3.6f)
-                    : Math.Clamp(noteHeight * 0.5f, 4f, 13f);
-                mainBox.Colour = ghostNote ? DesignSystem.WithOpacity(manuscriptInk, 0.40f) : manuscriptInk;
-                mainBox.Alpha = xHead
-                    ? 0f
-                    : diamondHead
-                        ? 0.90f * velocityAlpha
-                        : 0.94f * velocityAlpha;
-
-                if (diamondHead)
-                    noteheadContainer.Scale = new Vector2(0.84f, 0.84f);
-
-                float crossLength = Math.Clamp(noteWidth * 0.95f, 9f, 24f);
-                float crossThickness = Math.Clamp(crossLength * 0.15f, 1.5f, 3f);
-                if (crossStickHead)
-                {
-                    crossLength = Math.Clamp(noteWidth * 0.74f, 7f, 18f);
-                    crossThickness = Math.Clamp(crossLength * 0.19f, 1.5f, 3.1f);
-                }
-                manuscriptCrossLineA.Width = crossThickness;
-                manuscriptCrossLineA.Height = crossLength;
-                manuscriptCrossLineA.Rotation = 45f;
-                manuscriptCrossLineA.Colour = manuscriptInk;
-                manuscriptCrossLineA.Alpha = xHead ? 0.95f * velocityAlpha : 0f;
-
-                manuscriptCrossLineB.Width = crossThickness;
-                manuscriptCrossLineB.Height = crossLength;
-                manuscriptCrossLineB.Rotation = -45f;
-                manuscriptCrossLineB.Colour = manuscriptInk;
-                manuscriptCrossLineB.Alpha = xHead ? 0.95f * velocityAlpha : 0f;
-
-                highlightStrip.Anchor = Anchor.Centre;
-                highlightStrip.Origin = Anchor.BottomCentre;
-                highlightStrip.Width = 0.9f;
-                highlightStrip.Height = Math.Clamp(noteHeight * 0.16f, 1.6f, 3f);
-                highlightStrip.Y = -noteHeight * 0.92f;
-                highlightStrip.Colour = manuscriptInk;
-                highlightStrip.Alpha = accentNote
-                    ? 0.72f * velocityAlpha
-                    : ghostNote
-                        ? 0.24f * velocityAlpha
-                        : 0f;
-
-                bool stemDown = ManuscriptBackgroundEnhanced.ShouldUseDownStemForComponent(ComponentName);
-                stem.Colour = manuscriptInk;
-                stem.Width = Math.Clamp(noteWidth * 0.1f, 1.2f, 2.5f);
-                stem.Height = Math.Clamp(noteHeight * 2.65f, 16f, 44f);
-                if (stemDown)
-                {
-                    stem.Anchor = Anchor.CentreLeft;
-                    stem.Origin = Anchor.TopCentre;
-                    stem.X = noteWidth * 0.34f;
-                    stem.Y = -noteHeight * 0.04f;
-                }
-                else
-                {
-                    stem.Anchor = Anchor.CentreRight;
-                    stem.Origin = Anchor.BottomCentre;
-                    stem.X = -noteWidth * 0.34f;
-                    stem.Y = noteHeight * 0.04f;
-                }
-                stem.Alpha = 0.92f * velocityAlpha;
-
-                if (glowBox != null)
-                {
-                    glowBox.Colour = manuscriptInk;
-                    glowBox.Alpha = 0.04f * velocityAlpha;
-                }
-
-                float hiHatArticulationY = ResolveManuscriptHiHatArticulationOffsetY(noteHeight, manuscriptFlagCount, stemDown);
-                float openDiameter = Math.Clamp(noteHeight * 0.65f, 4.5f, 8.4f);
-                manuscriptHiHatOpenIndicator.Size = new Vector2(openDiameter);
-                manuscriptHiHatOpenIndicator.BorderThickness = Math.Clamp(openDiameter * 0.22f, 1.1f, 2f);
-                manuscriptHiHatOpenIndicator.BorderColour = manuscriptInk;
-                manuscriptHiHatOpenIndicator.Colour = Color4.Transparent;
-                manuscriptHiHatOpenIndicator.Y = hiHatArticulationY;
-                manuscriptHiHatOpenIndicator.Alpha = hiHatOpen ? 0.95f * velocityAlpha : 0f;
-
-                manuscriptHiHatHalfOpenSlash.Width = Math.Clamp(noteHeight * 0.18f, 1.1f, 2.2f);
-                manuscriptHiHatHalfOpenSlash.Height = openDiameter + 1.2f;
-                manuscriptHiHatHalfOpenSlash.Colour = manuscriptInk;
-                float halfOpenOffset = ResolveManuscriptHalfOpenSlashOffset(openDiameter);
-                manuscriptHiHatHalfOpenSlash.Y = hiHatArticulationY - halfOpenOffset;
-                manuscriptHiHatHalfOpenSlash.Rotation = 35f;
-                manuscriptHiHatHalfOpenSlash.Alpha = hiHatHalfOpen ? 0.92f * velocityAlpha : 0f;
-
-                manuscriptHiHatHalfOpenSlashSecondary.Width = Math.Clamp(noteHeight * 0.16f, 1.0f, 2.0f);
-                manuscriptHiHatHalfOpenSlashSecondary.Height = openDiameter + 0.8f;
-                manuscriptHiHatHalfOpenSlashSecondary.Colour = manuscriptInk;
-                manuscriptHiHatHalfOpenSlashSecondary.Y = hiHatArticulationY + halfOpenOffset * 0.48f;
-                manuscriptHiHatHalfOpenSlashSecondary.X = Math.Clamp(openDiameter * 0.18f, 0.4f, 1.6f);
-                manuscriptHiHatHalfOpenSlashSecondary.Rotation = 35f;
-                manuscriptHiHatHalfOpenSlashSecondary.Alpha = hiHatHalfOpen ? 0.72f * velocityAlpha : 0f;
-
-                float closedLength = Math.Clamp(noteWidth * 0.34f, 4.5f, 8.2f);
-                float closedThickness = Math.Clamp(closedLength * 0.22f, 1.1f, 2f);
-                manuscriptHiHatClosedHorizontal.Width = closedLength;
-                manuscriptHiHatClosedHorizontal.Height = closedThickness;
-                manuscriptHiHatClosedHorizontal.Colour = manuscriptInk;
-                manuscriptHiHatClosedHorizontal.Y = hiHatArticulationY;
-                manuscriptHiHatClosedHorizontal.Alpha = hiHatClosed ? 0.92f * velocityAlpha : 0f;
-
-                manuscriptHiHatClosedVertical.Width = closedThickness;
-                manuscriptHiHatClosedVertical.Height = closedLength;
-                manuscriptHiHatClosedVertical.Colour = manuscriptInk;
-                manuscriptHiHatClosedVertical.Y = hiHatArticulationY;
-                manuscriptHiHatClosedVertical.Alpha = hiHatClosed ? 0.92f * velocityAlpha : 0f;
-
-                manuscriptHiHatClosedCap.Width = closedLength * 0.62f;
-                manuscriptHiHatClosedCap.Height = closedThickness;
-                manuscriptHiHatClosedCap.Colour = manuscriptInk;
-                manuscriptHiHatClosedCap.Y = hiHatArticulationY - ResolveManuscriptClosedCapOffset(closedLength);
-                manuscriptHiHatClosedCap.Alpha = hiHatClosed ? 0.76f * velocityAlpha : 0f;
-
-                float durationDotDiameter = Math.Clamp(noteHeight * 0.28f, 2.1f, 4.2f);
-                manuscriptDurationDot.Size = new Vector2(durationDotDiameter);
-                manuscriptDurationDot.Colour = manuscriptInk;
-                manuscriptDurationDot.X = noteWidth * 0.72f;
-                manuscriptDurationDot.Y = 0f;
-                manuscriptDurationDot.Alpha = manuscriptDurationDotVisible ? 0.95f * velocityAlpha : 0f;
-
-                float ghostParenOffsetX = ResolveManuscriptGhostParenthesisOffsetX(noteWidth);
-                float ghostParenHeight = ResolveManuscriptGhostParenthesisHeight(noteHeight);
-                float ghostParenThickness = Math.Clamp(ghostParenHeight * 0.14f, 1.2f, 2.2f);
-                bool showGhostParentheses = ghostNote && !xHead;
-
-                manuscriptGhostParenLeft.X = -ghostParenOffsetX;
-                manuscriptGhostParenLeft.Y = 0f;
-                manuscriptGhostParenLeft.Width = ghostParenThickness;
-                manuscriptGhostParenLeft.Height = ghostParenHeight;
-                manuscriptGhostParenLeft.Colour = manuscriptInk;
-                manuscriptGhostParenLeft.Alpha = showGhostParentheses ? 0.82f * velocityAlpha : 0f;
-
-                manuscriptGhostParenRight.X = ghostParenOffsetX;
-                manuscriptGhostParenRight.Y = 0f;
-                manuscriptGhostParenRight.Width = ghostParenThickness;
-                manuscriptGhostParenRight.Height = ghostParenHeight;
-                manuscriptGhostParenRight.Colour = manuscriptInk;
-                manuscriptGhostParenRight.Alpha = showGhostParentheses ? 0.82f * velocityAlpha : 0f;
-
-                updateManuscriptFlagGeometry(noteWidth, noteHeight, stemDown, manuscriptInk);
-
-                return;
-            }
-
             stem.Alpha = 0;
-            manuscriptCrossLineA.Alpha = 0;
-            manuscriptCrossLineB.Alpha = 0;
-            manuscriptFlagPrimary.Alpha = 0;
-            manuscriptFlagSecondary.Alpha = 0;
-            manuscriptFlagTertiary.Alpha = 0;
-            manuscriptHiHatOpenIndicator.Alpha = 0;
-            manuscriptHiHatClosedHorizontal.Alpha = 0;
-            manuscriptHiHatClosedVertical.Alpha = 0;
-            manuscriptHiHatClosedCap.Alpha = 0;
-            manuscriptHiHatHalfOpenSlash.Alpha = 0;
-            manuscriptHiHatHalfOpenSlashSecondary.Alpha = 0;
-            manuscriptDurationDot.Alpha = 0;
-            manuscriptGhostParenLeft.Alpha = 0;
-            manuscriptGhostParenRight.Alpha = 0;
             noteheadContainer.Masking = true;
             noteheadContainer.Rotation = 0f;
             noteheadContainer.Scale = Vector2.One;
@@ -661,50 +253,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             SetViewMode(viewMode);
         }
 
-        public void SetManuscriptFlagCount(int flagCount)
-        {
-            int clamped = Math.Clamp(flagCount, 0, 3);
-            if (manuscriptFlagCount == clamped)
-                return;
-
-            manuscriptFlagCount = clamped;
-            if (viewMode == LaneViewMode.Manuscript)
-                SetViewMode(viewMode);
-        }
-
-        public void SetManuscriptDurationDot(bool visible)
-        {
-            if (manuscriptDurationDotVisible == visible)
-                return;
-
-            manuscriptDurationDotVisible = visible;
-            if (viewMode == LaneViewMode.Manuscript)
-                SetViewMode(viewMode);
-        }
-
-        internal static float ResolveManuscriptHiHatArticulationOffsetY(float noteHeight, int flagCount, bool stemDown)
-        {
-            float clampedHeight = Math.Max(7f, noteHeight);
-            int clampedFlags = Math.Clamp(flagCount, 0, 3);
-
-            float baseDistance = Math.Clamp(clampedHeight * 1.52f, 10f, 28f);
-            float flagLift = Math.Clamp(clampedHeight * 0.62f, 4.2f, 8.6f) * clampedFlags;
-            float offset = Math.Clamp(baseDistance + flagLift, 10f, 52f);
-            return stemDown ? offset : -offset;
-        }
-
-        internal static float ResolveManuscriptHalfOpenSlashOffset(float openDiameter)
-            => Math.Clamp(openDiameter * 0.24f, 0.7f, 2.2f);
-
-        internal static float ResolveManuscriptClosedCapOffset(float closedLength)
-            => Math.Clamp(closedLength * 0.9f, 3.8f, 8.6f);
-
-        internal static float ResolveManuscriptGhostParenthesisOffsetX(float noteWidth)
-            => Math.Clamp(Math.Max(10f, noteWidth) * 0.58f, 5.4f, 12.5f);
-
-        internal static float ResolveManuscriptGhostParenthesisHeight(float noteHeight)
-            => Math.Clamp(Math.Max(7f, noteHeight) * 1.08f, 8.2f, 18f);
-
         public void ApplyKickLineDimensions(float width, float height, LaneViewMode mode)
         {
             if (!isKickNote || !kickGlobalMode)
@@ -739,77 +287,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 if (glowBox != null)
                     glowBox.Alpha = 0.30f * velocityAlpha;
             }
-        }
-
-        private void updateManuscriptFlagGeometry(float noteWidth, float noteHeight, bool stemDown, Color4 manuscriptInk)
-        {
-            float stemHeight = Math.Clamp(noteHeight * 2.65f, 16f, 44f);
-            float stemTipX = stemDown ? noteWidth * 0.34f : -noteWidth * 0.34f;
-            float stemTipY = stemDown
-                ? -noteHeight * 0.04f + stemHeight
-                : noteHeight * 0.04f - stemHeight;
-
-            float flagWidth = Math.Clamp(noteWidth * 0.72f, 8f, 18f);
-            float flagThickness = Math.Clamp(noteHeight * 0.18f, 1.4f, 2.8f);
-            float flagSpacing = Math.Clamp(noteHeight * 0.42f, 3f, 7f);
-            float flagRotation = stemDown ? -26f : 26f;
-            float flagXOffset = stemDown ? -flagWidth * 0.06f : flagWidth * 0.06f;
-            float direction = stemDown ? 1f : -1f;
-
-            configureFlag(
-                manuscriptFlagPrimary,
-                manuscriptFlagCount >= 1,
-                stemTipX + flagXOffset,
-                stemTipY + direction * flagSpacing * 0.15f,
-                flagWidth,
-                flagThickness,
-                flagRotation,
-                manuscriptInk);
-
-            configureFlag(
-                manuscriptFlagSecondary,
-                manuscriptFlagCount >= 2,
-                stemTipX + flagXOffset,
-                stemTipY + direction * (flagSpacing * 1.15f),
-                flagWidth * 0.94f,
-                flagThickness,
-                flagRotation,
-                manuscriptInk);
-
-            configureFlag(
-                manuscriptFlagTertiary,
-                manuscriptFlagCount >= 3,
-                stemTipX + flagXOffset,
-                stemTipY + direction * (flagSpacing * 2.05f),
-                flagWidth * 0.88f,
-                flagThickness,
-                flagRotation,
-                manuscriptInk);
-        }
-
-        private void configureFlag(
-            Box flag,
-            bool visible,
-            float x,
-            float y,
-            float width,
-            float height,
-            float rotation,
-            Color4 colour)
-        {
-            if (!visible)
-            {
-                flag.Alpha = 0f;
-                return;
-            }
-
-            flag.X = x;
-            flag.Y = y;
-            flag.Width = width;
-            flag.Height = height;
-            flag.Rotation = rotation;
-            flag.Colour = colour;
-            flag.Alpha = 0.9f * velocityAlpha;
         }
 
         internal bool ShouldUpdateDepth(float targetDepth, float tolerance)
@@ -850,13 +327,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     if (showParticleEffects.Value)
                     {
                         // Burst effect
-                        this.ScaleTo(1.4f, 100, Easing.OutQuint);
+                        this.ScaleTo(1.12f, 100, Easing.OutQuint);
                         this.FadeOut(150, Easing.OutQuint);
 
-                        // Glow burst
+                        // Glow burst (kept close to the note so it does not bleed into neighbouring lanes)
                         if (showGlowEffects.Value && glowBox != null)
                         {
-                            glowBox.ScaleTo(2f, 200, Easing.OutQuint);
+                            glowBox.ScaleTo(1.3f, 200, Easing.OutQuint);
                             glowBox.FadeOut(200, Easing.OutQuint);
                         }
                     }

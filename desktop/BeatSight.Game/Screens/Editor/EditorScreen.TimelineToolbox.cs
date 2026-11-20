@@ -8,6 +8,8 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Sprites;
+using osu.Framework.Input.Events;
 using SpriteText = BeatSight.Game.UI.Components.BeatSightSpriteText;
 using osu.Framework.Graphics.UserInterface;
 using osuTK;
@@ -76,7 +78,7 @@ namespace BeatSight.Game.Screens.Editor
 
             var zoomSliderContainer = new Container
             {
-                Width = 170,
+                RelativeSizeAxes = Axes.X,
                 Height = 30,
                 Anchor = Anchor.TopLeft,
                 Origin = Anchor.TopLeft,
@@ -133,7 +135,7 @@ namespace BeatSight.Game.Screens.Editor
 
             var waveformSliderContainer = new Container
             {
-                Width = 154,
+                RelativeSizeAxes = Axes.X,
                 Height = 30,
                 Anchor = Anchor.TopLeft,
                 Origin = Anchor.TopLeft,
@@ -172,7 +174,7 @@ namespace BeatSight.Game.Screens.Editor
 
             var playbackRateSliderContainer = new Container
             {
-                Width = 144,
+                RelativeSizeAxes = Axes.X,
                 Height = 30,
                 Anchor = Anchor.TopLeft,
                 Origin = Anchor.TopLeft,
@@ -245,7 +247,7 @@ namespace BeatSight.Game.Screens.Editor
 
             var playbackZoomSliderContainer = new Container
             {
-                Width = 144,
+                RelativeSizeAxes = Axes.X,
                 Height = 30,
                 Anchor = Anchor.TopLeft,
                 Origin = Anchor.TopLeft,
@@ -288,7 +290,7 @@ namespace BeatSight.Game.Screens.Editor
 
             var noteWidthSliderContainer = new Container
             {
-                Width = 144,
+                RelativeSizeAxes = Axes.X,
                 Height = 30,
                 Anchor = Anchor.TopLeft,
                 Origin = Anchor.TopLeft,
@@ -301,8 +303,8 @@ namespace BeatSight.Game.Screens.Editor
                 Text = $"1/{snapDivisor}",
                 Font = BeatSightFont.Title(12.8f),
                 Colour = EditorColours.TextPrimary,
-                Anchor = Anchor.TopLeft,
-                Origin = Anchor.TopLeft
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre
             };
 
             beatGridCheckbox = new BeatSightCheckbox
@@ -341,42 +343,24 @@ namespace BeatSight.Game.Screens.Editor
                 timelineCopy.SectionZoom,
                 timelineZoomValueText,
                 zoomSliderContainer,
-                () => adjustTimelineZoom(false),
-                () => adjustTimelineZoom(true),
                 () => applyTimelineZoom(1.0));
 
             var waveformSection = createTimelineSliderSection(
                 timelineCopy.SectionWaveform,
                 waveformScaleValueText,
                 waveformSliderContainer,
-                () => adjustWaveformScale(false),
-                () => adjustWaveformScale(true),
-                () => setWaveformScale(1.0),
-                new Container
-                {
-                    AutoSizeAxes = Axes.Both,
-                    Child = new BeatSightCheckbox
-                    {
-                        LabelText = timelineCopy.DrumStemLabel,
-                        LabelFontSize = 11.8f,
-                        Current = showDrumStem,
-                    }
-                });
+                () => setWaveformScale(1.0));
 
             var playbackSection = createTimelineSliderSection(
                 timelineCopy.SectionPlayback,
                 playbackRateValueText,
                 playbackRateSliderContainer,
-                () => adjustPlaybackRate(false),
-                () => adjustPlaybackRate(true),
                 resetPlaybackRate);
 
             var playbackZoomSection = createTimelineSliderSection(
                 timelineCopy.SectionPlaybackZoom,
                 playbackZoomValueText,
                 playbackZoomSliderContainer,
-                () => adjustPlaybackZoomScale(false),
-                () => adjustPlaybackZoomScale(true),
                 () => setPlaybackZoomScale(1.0));
 
             var toolbarToggleSection = createTimelineSection("Toolbar",
@@ -391,7 +375,6 @@ namespace BeatSight.Game.Screens.Editor
                         Width = 1f,
                         Height = 32,
                         EnableScaleAnimation = false,
-                        Alpha = 0,
                         Action = toggleTimelineToolboxCollapsed
                     }
                 });
@@ -400,13 +383,16 @@ namespace BeatSight.Game.Screens.Editor
                 timelineCopy.SectionNoteWidth,
                 noteWidthValueText,
                 noteWidthSliderContainer,
-                () => adjustNoteWidthScale(false),
-                () => adjustNoteWidthScale(true),
                 () => setNoteWidthScale(1.0));
 
             var snapSection = createTimelineSection(timelineCopy.SectionSnap,
                 createTimelineMiniButton("-", () => adjustSnapDivisor(false), 32),
-                snapDivisorText,
+                timelineSnapValueContainer = new Container
+                {
+                    // Same height as the buttons beside it (density adjusts both) so the value sits centred between them.
+                    Size = new Vector2(40, 32),
+                    Child = snapDivisorText
+                },
                 createTimelineMiniButton("+", () => adjustSnapDivisor(true), 32));
 
             var gridSection = createTimelineSection(timelineCopy.SectionOverlay,
@@ -416,6 +402,17 @@ namespace BeatSight.Game.Screens.Editor
                     AutoSizeAxes = Axes.Both,
                     Margin = new MarginPadding { Left = 4 },
                     Child = timelineLinkZoomCheckbox
+                },
+                new Container
+                {
+                    AutoSizeAxes = Axes.Both,
+                    Margin = new MarginPadding { Left = 4 },
+                    Child = new BeatSightCheckbox
+                    {
+                        LabelText = timelineCopy.DrumStemLabel,
+                        LabelFontSize = 11.8f,
+                        Current = showDrumStem,
+                    }
                 });
 
             var firstNoteButton = createTimelineMiniButton(timelineCopy.FirstNoteButton, jumpToFirstNote, 98);
@@ -449,6 +446,11 @@ namespace BeatSight.Game.Screens.Editor
                 snapSelectionButton,
                 regenerateButton);
 
+            // Lane names, colours and order are set up once per chart, so their editor stays folded away until asked for.
+            timelineLaneEditorToggleButton = createTimelineMiniButton("Edit", toggleTimelineLaneEditor, 84);
+            timelineLaneEditorToggleText = timelineMiniButtonTexts[^1];
+            var laneToggleSection = createTimelineSection("Lanes", timelineLaneEditorToggleButton);
+
             var laneSection = createTimelineLaneSection();
 
             var contentFlow = new FillFlowContainer
@@ -460,21 +462,24 @@ namespace BeatSight.Game.Screens.Editor
                 Spacing = new Vector2(12, 8),
                 Children = new Drawable[]
                 {
+                    // The first row stays visible when the toolbox is collapsed (it holds the Show button).
+                    timelineToolboxFirstRow = createTimelineSectionGridRow(
+                        (zoomSection, 0.18f),
+                        (playbackZoomSection, 0.18f),
+                        (playbackSection, 0.17f),
+                        (noteWidthSection, 0.17f),
+                        (waveformSection, 0.18f),
+                        (toolbarToggleSection, 0.12f)),
                     createTimelineSectionGridRow(
-                        (zoomSection, 0.22f),
-                        (waveformSection, 0.25f),
-                        (playbackSection, 0.19f),
-                        (playbackZoomSection, 0.19f),
-                        (toolbarToggleSection, 0.15f)),
-                    createTimelineSectionGridRow(
-                        (noteWidthSection, 0.22f),
-                        (snapSection, 0.14f),
-                        (gridSection, 0.18f),
-                        (toolsSection, 0.46f)),
-                    createTimelineSectionGridRow((laneSection, 1f))
+                        (snapSection, 0.13f),
+                        (gridSection, 0.29f),
+                        (toolsSection, 0.46f),
+                        (laneToggleSection, 0.12f)),
+                    timelineLaneEditorRow = createTimelineSectionGridRow((laneSection, 1f))
                 }
             };
             timelineToolboxContentFlow = contentFlow;
+            syncTimelineLaneEditorToggle();
 
             var background = new Box
             {
@@ -518,81 +523,6 @@ namespace BeatSight.Game.Screens.Editor
 
             refreshTimelineToolboxState();
             return timelineToolboxHostContainer;
-        }
-
-        private Drawable createTimelineLaneSection()
-        {
-            var laneNameInput = new BeatSightTextBox
-            {
-                Width = 98,
-                Height = 30,
-                PlaceholderText = "Name",
-                TextSize = 11.6f
-            };
-            timelineLaneNameInput = laneNameInput;
-
-            var laneShortInput = new BeatSightTextBox
-            {
-                Width = 68,
-                Height = 30,
-                PlaceholderText = "Short",
-                TextSize = 11.6f
-            };
-            timelineLaneShortNameInput = laneShortInput;
-
-            var laneColorInput = new BeatSightTextBox
-            {
-                Width = 78,
-                Height = 30,
-                PlaceholderText = "#RRGGBB",
-                TextSize = 11.6f
-            };
-            timelineLaneColorInput = laneColorInput;
-
-            var laneLabel = new SpriteText
-            {
-                Text = "Lane 1",
-                Font = BeatSightFont.Caption(11.6f),
-                Colour = EditorColours.TextPrimary,
-                Anchor = Anchor.TopLeft,
-                Origin = Anchor.TopLeft,
-                Truncate = true,
-                MaxWidth = 104,
-                UseFullGlyphHeight = false
-            };
-            timelineLaneSelectionText = laneLabel;
-
-            var laneInlineRow = new FillFlowContainer
-            {
-                RelativeSizeAxes = Axes.X,
-                Width = 1f,
-                AutoSizeAxes = Axes.Y,
-                Direction = FillDirection.Full,
-                Spacing = new Vector2(6, 0),
-                Children = new Drawable[]
-                {
-                    timelineLanePrevButton = createTimelineMiniButton("<", () => stepTimelineLaneSelection(-1), 32),
-                    new Container
-                    {
-                        Width = 112,
-                        Height = 30,
-                        Anchor = Anchor.TopLeft,
-                        Origin = Anchor.TopLeft,
-                        Child = laneLabel
-                    },
-                    timelineLaneNextButton = createTimelineMiniButton(">", () => stepTimelineLaneSelection(1), 32),
-                    laneNameInput,
-                    laneShortInput,
-                    laneColorInput,
-                    timelineLaneApplyButton = createTimelineMiniButton("Save", applyTimelineLaneEdits, 52),
-                    timelineLaneAddButton = createTimelineMiniButton("+", addTimelineLane, 34),
-                    timelineLaneRemoveButton = createTimelineMiniButton("-", removeTimelineLane, 34),
-                    timelineLaneMoveLeftButton = createTimelineMiniButton("<<", () => moveTimelineLane(-1), 38),
-                    timelineLaneMoveRightButton = createTimelineMiniButton(">>", () => moveTimelineLane(1), 38)
-                }
-            };
-
-            return createTimelineSection("Lanes", laneInlineRow);
         }
 
         private Drawable createTimelineSectionGridRow(params (Drawable Section, float Weight)[] sections)
@@ -744,10 +674,7 @@ namespace BeatSight.Game.Screens.Editor
             string title,
             SpriteText valueText,
             Drawable sliderContainer,
-            Action decreaseAction,
-            Action increaseAction,
-            Action resetAction,
-            Drawable? footerContent = null)
+            Action resetAction)
         {
             var titleText = new SpriteText
             {
@@ -762,54 +689,24 @@ namespace BeatSight.Game.Screens.Editor
             valueText.Anchor = Anchor.CentreRight;
             valueText.Origin = Anchor.CentreRight;
             valueText.Colour = EditorColours.TextPrimary;
+            valueText.Margin = new MarginPadding { Right = TimelineResetButton.ButtonSize + 6 };
 
             var headerRow = new Container
             {
                 RelativeSizeAxes = Axes.X,
                 Width = 1f,
-                Height = 16f,
+                Height = 18f,
                 Children = new Drawable[]
                 {
                     titleText,
-                    valueText
-                }
-            };
-
-            var controlsRow = new FillFlowContainer
-            {
-                RelativeSizeAxes = Axes.X,
-                Width = 1f,
-                AutoSizeAxes = Axes.Y,
-                Direction = FillDirection.Full,
-                Spacing = new Vector2(8, 0),
-                Children = new Drawable[]
-                {
-                    createTimelineMiniButton("-", decreaseAction, 32),
-                    sliderContainer,
-                    createTimelineMiniButton("+", increaseAction, 32),
-                    createTimelineMiniButton("Reset", resetAction, 58)
-                }
-            };
-            timelineSectionControlRows.Add(controlsRow);
-
-            Drawable[] bodyChildren = footerContent == null
-                ? new Drawable[]
-                {
-                    headerRow,
-                    controlsRow
-                }
-                : new Drawable[]
-                {
-                    headerRow,
-                    controlsRow,
-                    new Container
+                    valueText,
+                    new TimelineResetButton(resetAction, $"Reset {title.ToLowerInvariant()}")
                     {
-                        RelativeSizeAxes = Axes.X,
-                        Width = 1f,
-                        AutoSizeAxes = Axes.Y,
-                        Child = footerContent
+                        Anchor = Anchor.CentreRight,
+                        Origin = Anchor.CentreRight
                     }
-                };
+                }
+            };
 
             var sectionBody = new FillFlowContainer
             {
@@ -819,7 +716,11 @@ namespace BeatSight.Game.Screens.Editor
                 Direction = FillDirection.Vertical,
                 Spacing = new Vector2(6, 5),
                 Padding = new MarginPadding { Horizontal = 11, Vertical = 8 },
-                Children = bodyChildren
+                Children = new Drawable[]
+                {
+                    headerRow,
+                    sliderContainer
+                }
             };
             timelineSectionBodies.Add(sectionBody);
 
@@ -832,12 +733,73 @@ namespace BeatSight.Game.Screens.Editor
             };
         }
 
+        private void toggleTimelineLaneEditor()
+        {
+            timelineLaneEditorVisible = !timelineLaneEditorVisible;
+            syncTimelineLaneEditorToggle();
+
+            // The toolbox height follows its content once the flow has re-measured.
+            Scheduler.AddDelayed(() => applyResponsiveEditorLayout(force: true), 34);
+        }
+
+        private void syncTimelineLaneEditorToggle()
+        {
+            if (timelineLaneEditorRow == null)
+                return;
+
+            if (timelineLaneEditorVisible)
+                timelineLaneEditorRow.Show();
+            else
+                timelineLaneEditorRow.Hide();
+
+            if (timelineLaneEditorToggleText != null)
+                timelineLaneEditorToggleText.Text = timelineLaneEditorVisible ? "Done" : "Edit";
+        }
+
+        /// <summary>
+        /// Small icon that resets a toolbox slider to its default.
+        /// </summary>
+        private partial class TimelineResetButton : ClickableContainer
+        {
+            public const float ButtonSize = 18f;
+
+            private readonly SpriteIcon icon;
+
+            public TimelineResetButton(Action resetAction, string description)
+            {
+                Size = new Vector2(ButtonSize);
+                Action = resetAction;
+                Child = icon = new SpriteIcon
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Size = new Vector2(0.7f),
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    Icon = FontAwesome.Solid.Undo,
+                    Colour = EditorColours.TextMuted
+                };
+                Name = description;
+            }
+
+            protected override bool OnHover(HoverEvent e)
+            {
+                icon.FadeColour(EditorColours.TextPrimary, 120, Easing.OutQuint);
+                return base.OnHover(e);
+            }
+
+            protected override void OnHoverLost(HoverLostEvent e)
+            {
+                icon.FadeColour(EditorColours.TextMuted, 160, Easing.OutQuint);
+                base.OnHoverLost(e);
+            }
+        }
+
         private BasicButton createTimelineMiniButton(string text, Action action, float width = 36)
         {
             var button = new BasicButton
             {
                 Size = new Vector2(width, 32),
-                BackgroundColour = EditorColours.Lighten(EditorColours.ControlsBackground, 1.18f),
+                BackgroundColour = UITheme.SurfaceRaised,
                 Anchor = Anchor.TopLeft,
                 Origin = Anchor.TopLeft,
                 Masking = true,
@@ -873,8 +835,10 @@ namespace BeatSight.Game.Screens.Editor
             syncSnapControl();
             syncBeatGridControl();
             syncTimelineZoomLinkControl();
+            // Refreshing (including opening the editor) must not rewrite the shared playback zoom the user practises
+            // with; the linked timeline follows the playback zoom instead. Explicit zoom changes still propagate.
             if (linkTimelineAndPlaybackZoom)
-                syncLinkedPlaybackZoomFromTimeline();
+                syncLinkedTimelineZoomFromPlayback();
             syncTimelineMetronomeButton();
             refreshTimelineLaneEditorControls();
             syncTimelineToolboxCollapseToggle();
@@ -1175,18 +1139,6 @@ namespace BeatSight.Game.Screens.Editor
 
         private void resetPlaybackRate()
             => setPlaybackRate(1.0);
-
-        private void adjustPlaybackZoomScale(bool increase)
-        {
-            double current = playbackZoomSetting?.Value ?? 1.0;
-            setPlaybackZoomScale(current + (increase ? 0.05 : -0.05));
-        }
-
-        private void adjustNoteWidthScale(bool increase)
-        {
-            double current = noteWidthSetting?.Value ?? 1.0;
-            setNoteWidthScale(current + (increase ? 0.05 : -0.05));
-        }
 
         private void setPlaybackZoomScale(double scale, bool announce = true)
         {
@@ -1775,7 +1727,6 @@ namespace BeatSight.Game.Screens.Editor
             bool collapsed = timelineToolboxCollapsed;
             timelineToolboxToggleButton.SetLabel(collapsed ? "Show" : "Hide");
             timelineToolboxToggleButton.UpdateState(true, collapsed ? "Show timeline toolbar." : "Hide timeline toolbar.");
-            timelineToolboxToggleButton.FadeTo(collapsed ? 0.74f : 0.62f, 140, Easing.OutQuint);
         }
 
         private void applyTimelineToolboxDensity(float compactBlend, Vector2 viewport)
@@ -1787,7 +1738,7 @@ namespace BeatSight.Game.Screens.Editor
             float sectionPaddingV = blend(5.8f, 4.9f, compactBlend) + ultraWideRelax * 0.22f;
             float sectionVerticalSpacing = blend(4.2f, 3.6f, compactBlend) + ultraWideRelax * 0.22f;
             float sectionLabelSpacing = blend(7.2f, 5.9f, compactBlend) + ultraWideRelax * 0.85f;
-            float sliderHeight = blend(29f, 25.5f, compactBlend);
+            float sliderHeight = blend(22f, 18f, compactBlend);
             float miniButtonHeight = blend(32f, 28f, compactBlend);
             float miniButtonFont = blend(11.9f, 10.8f, compactBlend) + ultraWideRelax * 0.2f;
             bool ultraCompactControls = compactBlend >= 0.72f && viewport.X <= 1460f;
@@ -1814,31 +1765,26 @@ namespace BeatSight.Game.Screens.Editor
 
             if (timelineZoomSliderContainer != null)
             {
-                timelineZoomSliderContainer.Width = blend(170f, 145f, compactBlend);
                 timelineZoomSliderContainer.Height = sliderHeight;
             }
 
             if (timelineWaveformSliderContainer != null)
             {
-                timelineWaveformSliderContainer.Width = blend(154f, 130f, compactBlend);
                 timelineWaveformSliderContainer.Height = sliderHeight;
             }
 
             if (timelinePlaybackRateSliderContainer != null)
             {
-                timelinePlaybackRateSliderContainer.Width = blend(144f, 116f, compactBlend);
                 timelinePlaybackRateSliderContainer.Height = sliderHeight;
             }
 
             if (timelinePlaybackZoomSliderContainer != null)
             {
-                timelinePlaybackZoomSliderContainer.Width = blend(144f, 116f, compactBlend);
                 timelinePlaybackZoomSliderContainer.Height = sliderHeight;
             }
 
             if (timelineNoteWidthSliderContainer != null)
             {
-                timelineNoteWidthSliderContainer.Width = blend(144f, 116f, compactBlend);
                 timelineNoteWidthSliderContainer.Height = sliderHeight;
             }
 
@@ -1858,6 +1804,9 @@ namespace BeatSight.Game.Screens.Editor
 
             foreach (var row in timelineSectionControlRows)
                 row.Spacing = new Vector2(sectionLabelSpacing, 0);
+
+            if (timelineSnapValueContainer != null)
+                timelineSnapValueContainer.Height = miniButtonHeight;
 
             foreach (var button in timelineMiniButtons)
             {

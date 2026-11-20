@@ -76,7 +76,7 @@ namespace BeatSight.Game.Screens
                                     Anchor = Anchor.Centre,
                                     Origin = Anchor.Centre,
                                     Shadow = true,
-                                    ShadowColour = UITheme.AccentPrimary.Opacity(0.5f),
+                                    ShadowColour = UITheme.AccentPrimary.Opacity(0.25f),
                                     ShadowOffset = new Vector2(0, 0),
                                 },
                                 subtitleText = new SpriteText
@@ -112,23 +112,24 @@ namespace BeatSight.Game.Screens
                                 Spacing = new Vector2(0, 25),
                                 Children = new Drawable[]
                                 {
-                                    new MenuButton("Playback", UITheme.AccentPrimary)
+                                    // One primary action; everything else is neutral so the menu has a clear hierarchy.
+                                    new MenuButton("Playback", MenuButtonStyle.Primary)
                                     {
                                         Action = () => this.Push(new SongSelectScreen())
                                     },
-                                    new MenuButton("Editor", UITheme.AccentSecondary)
+                                    new MenuButton("Editor", MenuButtonStyle.Secondary)
                                     {
                                         Action = () => this.Push(new SongSelectScreen(editorMode: true))
                                     },
-                                    new MenuButton("Record", UITheme.AccentSuccess)
+                                    new MenuButton("Record", MenuButtonStyle.Secondary)
                                     {
                                         Action = () => this.Push(new RecordingScreen())
                                     },
-                                    new MenuButton("Settings", UITheme.AccentWarning)
+                                    new MenuButton("Settings", MenuButtonStyle.Secondary)
                                     {
                                         Action = () => this.Push(new SettingsScreen())
                                     },
-                                    new MenuButton("Exit", UITheme.AccentError)
+                                    new MenuButton("Exit", MenuButtonStyle.Quiet)
                                     {
                                         Action = exitGame
                                     },
@@ -166,11 +167,6 @@ namespace BeatSight.Game.Screens
                 this.Y = 0;
             }
 
-            // Breathing animation
-            Scheduler.AddDelayed(() =>
-            {
-                logoParallax.Loop(b => b.ScaleTo(1.02f, 2000, Easing.InOutSine).Then().ScaleTo(1f, 2000, Easing.InOutSine));
-            }, 2000);
 
             if (fromIntro)
             {
@@ -219,30 +215,25 @@ namespace BeatSight.Game.Screens
                 parallaxEnabled = true;
 
                 // Full Title Animation
-                titleText.ScaleTo(1f).Then().ScaleTo(1.05f, 1000, Easing.OutQuint).Then().ScaleTo(1f, 1000, Easing.OutQuint);
-                titleText.FadeInFromZero(600);
+                titleText.FadeInFromZero(UITheme.MotionSlow, UITheme.MotionEasing);
 
                 // Subtitle Animation
-                subtitleText.Delay(500).FadeIn(600);
+                subtitleText.Delay(150).FadeIn(UITheme.MotionSlow, UITheme.MotionEasing);
 
-                // Button Stagger Animation
+                // Button stagger: short fade and rise, no rotation or bounce.
                 int i = 0;
                 foreach (var child in buttonFlow.Children)
                 {
                     if (child is MenuButton button)
                     {
                         button.Alpha = 0;
-                        button.Y = 100;
-                        button.Scale = new Vector2(0.5f);
-                        button.Rotation = RNG.NextSingle(-10, 10);
+                        button.Y = 14;
 
-                        double delay = 700 + i * 100; // Faster start if from intro
+                        double delay = 350 + i * 60;
 
                         button.Delay(delay)
-                              .FadeIn(400)
-                              .MoveToY(0, 1000, Easing.OutElastic)
-                              .ScaleTo(1f, 1000, Easing.OutElastic)
-                              .RotateTo(0, 1000, Easing.OutElastic);
+                              .FadeIn(UITheme.MotionNormal, UITheme.MotionEasing)
+                              .MoveToY(0, UITheme.MotionSlow, UITheme.MotionEasing);
                         i++;
                     }
                 }
@@ -304,33 +295,67 @@ namespace BeatSight.Game.Screens
         }
     }
 
+    public enum MenuButtonStyle
+    {
+        /// <summary>The one main action: filled accent.</summary>
+        Primary,
+        /// <summary>Other destinations: neutral surface with a subtle border.</summary>
+        Secondary,
+        /// <summary>Leaving the app: text-weight button, never louder than the rest.</summary>
+        Quiet
+    }
+
     public partial class MenuButton : BeatSightButton
     {
-        private Color4 baseColour;
+        private readonly MenuButtonStyle style;
         private BeatSightSpriteText spriteText = null!;
         private string originalText = null!;
         private float lastWidth;
         private float lastHeight;
 
-        public MenuButton(string text, Color4 colour)
+        public MenuButton(string text, MenuButtonStyle style)
         {
             Text = text;
             originalText = text;
-            baseColour = colour;
-            BackgroundColour = colour.Opacity(0.8f);
+            this.style = style;
             Size = new Vector2(320, 70);
             Anchor = Anchor.TopCentre;
             Origin = Anchor.TopCentre;
-
-            BorderThickness = 3;
-            BorderColour = colour;
+            CornerRadius = 12;
         }
+
+        private Color4 idleBackground => style switch
+        {
+            MenuButtonStyle.Primary => UITheme.AccentPrimary,
+            MenuButtonStyle.Secondary => UITheme.Surface,
+            _ => UITheme.Background.Opacity(0f)
+        };
+
+        private Color4 hoverBackground => style switch
+        {
+            MenuButtonStyle.Primary => UITheme.Emphasise(UITheme.AccentPrimary, 1.12f),
+            MenuButtonStyle.Secondary => UITheme.SurfaceAlt,
+            _ => UITheme.Surface
+        };
+
+        private Color4 textColour => style switch
+        {
+            MenuButtonStyle.Primary => UITheme.TextOnAccent,
+            MenuButtonStyle.Secondary => UITheme.TextPrimary,
+            _ => UITheme.TextSecondary
+        };
 
         [BackgroundDependencyLoader]
         private void load()
         {
-            // Re-apply the custom colour after the base load might have reset it
-            BackgroundColour = baseColour.Opacity(0.8f);
+            // Applied after the base load, which resets the background to the accent colour.
+            BackgroundColour = idleBackground;
+            BorderThickness = style == MenuButtonStyle.Secondary ? 1.5f : 0;
+            BorderColour = UITheme.Border;
+
+            // CreateText runs from the base constructor before the style is known, so colour the label here.
+            if (spriteText != null)
+                spriteText.Colour = textColour;
         }
 
         protected override void Update()
@@ -340,9 +365,11 @@ namespace BeatSight.Game.Screens
             if (Parent == null)
                 return;
 
-            float targetWidth = ResponsiveLayout.ClampFraction(Parent.DrawWidth, 0.24f, 230f, 440f);
-            float targetHeight = ResponsiveLayout.ClampFraction(Parent.DrawHeight, 0.095f, 50f, 88f);
-            float targetFont = Math.Clamp(targetHeight * 0.43f, 18f, 34f);
+            float targetWidth = ResponsiveLayout.ClampFraction(Parent.DrawWidth, 0.2f, 240f, 380f);
+            float targetHeight = ResponsiveLayout.ClampFraction(Parent.DrawHeight, 0.062f, 44f, 64f);
+            if (style == MenuButtonStyle.Quiet)
+                targetHeight *= 0.8f;
+            float targetFont = Math.Clamp(targetHeight * 0.36f, 15f, 24f);
 
             if (Math.Abs(targetWidth - lastWidth) > 0.2f)
             {
@@ -357,35 +384,34 @@ namespace BeatSight.Game.Screens
             }
 
             if (spriteText != null)
-                spriteText.Font = BeatSightFont.Button(targetFont);
+                spriteText.Font = BeatSightFont.Button(style == MenuButtonStyle.Quiet ? targetFont * 0.85f : targetFont);
         }
 
         public void DecryptIn(double duration)
         {
-            this.FadeInFromZero(duration);
-            this.ScaleTo(new Vector2(1.2f, 0.1f)).ScaleTo(1f, duration, Easing.OutExpo); // Stretch effect
+            this.FadeInFromZero(duration, UITheme.MotionEasing);
+            this.MoveToY(10).MoveToY(0, duration, UITheme.MotionEasing);
 
-            // Restore text immediately (no scrambling)
             if (spriteText != null)
-            {
                 spriteText.Text = originalText;
-                spriteText.FlashColour(Color4.White, 200, Easing.OutQuint);
-            }
         }
 
         protected override bool OnHover(HoverEvent e)
         {
-            BorderColour = Color4.White;
-            BackgroundColour = baseColour.Opacity(1f);
-            this.ScaleTo(1.05f, 400, Easing.OutElastic);
+            BackgroundColour = hoverBackground;
+            if (style == MenuButtonStyle.Secondary)
+                BorderColour = UITheme.AccentPrimary.Opacity(0.7f);
+            if (spriteText != null && style == MenuButtonStyle.Quiet)
+                spriteText.FadeColour(UITheme.TextPrimary, UITheme.MotionFast, UITheme.MotionEasing);
             return base.OnHover(e);
         }
 
         protected override void OnHoverLost(HoverLostEvent e)
         {
-            BorderColour = baseColour;
-            BackgroundColour = baseColour.Opacity(0.8f);
-            this.ScaleTo(1f, 400, Easing.OutQuint);
+            BackgroundColour = idleBackground;
+            BorderColour = UITheme.Border;
+            if (spriteText != null && style == MenuButtonStyle.Quiet)
+                spriteText.FadeColour(textColour, UITheme.MotionNormal, UITheme.MotionEasing);
             base.OnHoverLost(e);
         }
 
@@ -396,12 +422,8 @@ namespace BeatSight.Game.Screens
                 Depth = -1,
                 Origin = Anchor.Centre,
                 Anchor = Anchor.Centre,
-                Font = BeatSightFont.Button(30f),
-                UseFullGlyphHeight = false,
-                Colour = Color4.White,
-                Shadow = true,
-                ShadowColour = new Color4(0, 0, 0, 100),
-                ShadowOffset = new Vector2(2, 2)
+                Font = BeatSightFont.Button(22f),
+                UseFullGlyphHeight = false
             };
             return spriteText;
         }

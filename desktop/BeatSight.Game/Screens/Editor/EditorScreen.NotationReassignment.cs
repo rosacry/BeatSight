@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BeatSight.Game.Beatmaps;
+using BeatSight.Game.Screens.Playback.Playfield.Notation;
 using BeatSight.Game.Screens.Playback.Playfield.Views;
 
 namespace BeatSight.Game.Screens.Editor
@@ -89,7 +90,8 @@ namespace BeatSight.Game.Screens.Editor
 
             foreach (var hit in targets)
             {
-                string nextComponent = ManuscriptBackgroundEnhanced.GetAdjacentNotationComponent(hit.Component, direction);
+                // "Higher" follows the written staff position (e.g. snare -> mid tom -> high tom -> ride -> hi-hat).
+                string nextComponent = DrumNotation.Adjacent(hit.Component, direction);
                 if (string.Equals(hit.Component, nextComponent, StringComparison.OrdinalIgnoreCase) && !hit.Lane.HasValue)
                     continue;
 

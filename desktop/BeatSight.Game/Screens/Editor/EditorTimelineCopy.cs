@@ -32,7 +32,7 @@ namespace BeatSight.Game.Screens.Editor
             SectionTools: "Tools",
             BeatGridLabel: "Beat Grid",
             LinkZoomLabel: "Link Zoom",
-            DrumStemLabel: "Drums",
+            DrumStemLabel: "Drum Wave",
             FirstNoteButton: "First Note",
             LastNoteButton: "Last Note",
             SnapSelectionButton: "Snap Audio",

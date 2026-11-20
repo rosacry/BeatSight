@@ -46,6 +46,38 @@ public class AiBeatmapGeneratorArgumentsTests
     }
 
     [Fact]
+    public void BuildArguments_DefaultOptions_UsesAdtofEngine()
+    {
+        string args = buildArguments(new AiGenerationOptions());
+
+        Assert.Contains(" --engine adtof", args, StringComparison.Ordinal);
+        Assert.DoesNotContain(" --engine legacy", args, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PythonEnvironment_ForcesUtf8RedirectedOutput()
+    {
+        var startInfo = new System.Diagnostics.ProcessStartInfo("python");
+        var method = typeof(AiBeatmapGenerator).GetMethod("applyPythonEnvironment", BindingFlags.NonPublic | BindingFlags.Static);
+
+        Assert.NotNull(method);
+        method!.Invoke(null, new object[] { startInfo });
+
+        Assert.Equal("utf-8", startInfo.Environment["PYTHONIOENCODING"]);
+        Assert.Equal("1", startInfo.Environment["PYTHONUNBUFFERED"]);
+        Assert.Equal(System.Text.Encoding.UTF8, startInfo.StandardOutputEncoding);
+        Assert.Equal(System.Text.Encoding.UTF8, startInfo.StandardErrorEncoding);
+    }
+
+    [Fact]
+    public void BuildArguments_LegacyEngine_UsesLegacyFlag()
+    {
+        string args = buildArguments(new AiGenerationOptions { Engine = AiTranscriptionEngine.Legacy });
+
+        Assert.Contains(" --engine legacy", args, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void BuildArguments_ManualNonDefaultGrid_UsesExpectedGridName()
     {
         var options = new AiGenerationOptions

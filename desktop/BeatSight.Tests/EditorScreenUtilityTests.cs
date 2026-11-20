@@ -181,7 +181,8 @@ namespace BeatSight.Tests
 
             setPrivateField(screen, "previewMode", new Bindable<EditorPreviewMode>(EditorPreviewMode.Manuscript));
             invokePrivateInstance<object?>(screen, "shiftSelectionToAdjacentNotationLane", true);
-            Assert.Equal("tom_high", selected.Component);
+            // Standard drum staff (2026-10-24): the position above the snare (third space) is the mid tom (fourth line).
+            Assert.Equal("tom_mid", selected.Component);
 
             invokePrivateInstance<object?>(screen, "shiftSelectionToAdjacentNotationLane", false);
             Assert.Equal("snare", selected.Component);

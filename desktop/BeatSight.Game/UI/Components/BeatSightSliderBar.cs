@@ -1,15 +1,19 @@
 using System;
+using BeatSight.Game.UI.Theming;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Utils;
+using osuTK;
 using osuTK.Input;
 
 namespace BeatSight.Game.UI.Components
 {
     /// <summary>
-    /// Slider bar with consistent keyboard and drag stepping behaviour across the game.
+    /// Slider bar with consistent keyboard and drag stepping behaviour across the game, drawn as a slim track with a knob.
     /// </summary>
     public partial class BeatSightSliderBar : BasicSliderBar<double>, ISettingsTooltipSuppressionSource
     {
@@ -26,30 +30,127 @@ namespace BeatSight.Game.UI.Components
         public bool IsTooltipSuppressed => pointerAdjusting;
         public bool IsPointerAdjusting => pointerAdjusting;
 
+        // The control's full height stays the click target; a slim rounded track with a knob is drawn in its middle.
+        private const float maxKnobSize = 14f;
+        private const float minKnobSize = 10f;
+        private const float maxTrackHeight = 6f;
+        private const float minTrackHeight = 4f;
+
+        private readonly Container trackArea;
+        private readonly Container track;
+        private readonly Box trackBackground;
+        private readonly Box trackFill;
+        private readonly CircularContainer knob;
+
         public BeatSightSliderBar()
         {
-            Masking = true;
-            CornerRadius = 10;
+            // The framework's full-height boxes only hold the colours now.
+            Box.Alpha = 0;
+            SelectionBox.Alpha = 0;
+
+            AddRange(new Drawable[]
+            {
+                trackArea = new Container
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Children = new Drawable[]
+                    {
+                        track = new Container
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Anchor = Anchor.CentreLeft,
+                            Origin = Anchor.CentreLeft,
+                            Masking = true,
+                            Children = new Drawable[]
+                            {
+                                trackBackground = new Box { RelativeSizeAxes = Axes.Both },
+                                trackFill = new Box { RelativeSizeAxes = Axes.Both, Width = 0 }
+                            }
+                        },
+                        knob = new CircularContainer
+                        {
+                            Anchor = Anchor.CentreLeft,
+                            Origin = Anchor.Centre,
+                            RelativePositionAxes = Axes.X,
+                            Masking = true,
+                            BorderColour = UITheme.AccentPrimary,
+                            Child = new Box
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Colour = UITheme.TextPrimary
+                            }
+                        }
+                    }
+                }
+            });
         }
+
+        /// <summary>
+        /// Horizontal space kept free at each end so the knob stays inside the control at 0 and 1. Content drawn in
+        /// line with the track (such as the practice heatmap) should be inset by the same amount.
+        /// </summary>
+        public float TrackInset => knobSizeFor(DrawHeight > 0 ? DrawHeight : Height) / 2f;
+
+        private static float knobSizeFor(float height) => Math.Clamp(height, minKnobSize, maxKnobSize);
 
         [osu.Framework.Allocation.BackgroundDependencyLoader]
         private void load()
         {
-            BackgroundColour = BeatSight.Game.UI.Theming.UITheme.SurfaceAlt;
-            SelectionColour = BeatSight.Game.UI.Theming.UITheme.AccentPrimary;
+            BackgroundColour = UITheme.Border;
+            SelectionColour = UITheme.AccentPrimary;
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            float knobSize = knobSizeFor(DrawHeight);
+            float trackHeight = Math.Clamp(DrawHeight * 0.4f, minTrackHeight, maxTrackHeight);
+            float inset = knobSize / 2f;
+
+            // Pointer mapping (base class and adjustValueFromPointer) uses the same inset as the drawing.
+            if (RangePadding != inset)
+                RangePadding = inset;
+
+            trackArea.Padding = new MarginPadding { Horizontal = inset };
+            track.Height = trackHeight;
+            track.CornerRadius = trackHeight / 2f;
+            knob.Size = new Vector2(knobSize);
+
+            trackBackground.Colour = BackgroundColour;
+            trackFill.Colour = SelectionColour;
+        }
+
+        protected override void UpdateValue(float value)
+        {
+            // Follow the pointer directly while dragging; ease programmatic jumps.
+            double duration = pointerAdjusting ? 0 : UITheme.MotionFast;
+            trackFill.ResizeWidthTo(value, duration, Easing.OutQuint);
+            knob.MoveToX(value, duration, Easing.OutQuint);
+        }
+
+        protected override bool OnHover(HoverEvent e)
+        {
+            knob.ScaleTo(1.15f, UITheme.MotionFast, Easing.OutQuint);
+            return base.OnHover(e);
+        }
+
+        protected override void OnHoverLost(HoverLostEvent e)
+        {
+            knob.ScaleTo(1f, UITheme.MotionFast, Easing.OutQuint);
+            base.OnHoverLost(e);
         }
 
         protected override void OnFocus(FocusEvent e)
         {
             base.OnFocus(e);
-            BorderThickness = 2;
-            BorderColour = BeatSight.Game.UI.Theming.UITheme.AccentPrimary;
+            knob.BorderThickness = 3;
         }
 
         protected override void OnFocusLost(FocusLostEvent e)
         {
             base.OnFocusLost(e);
-            BorderThickness = 0;
+            knob.BorderThickness = 0;
             setPointerAdjusting(false);
         }
 
@@ -60,6 +161,7 @@ namespace BeatSight.Game.UI.Components
         {
             base.LoadComplete();
             Current?.BindValueChanged(onCurrentValueChanged, true);
+            Current?.BindDisabledChanged(disabled => this.FadeTo(disabled ? 0.45f : 1f, UITheme.MotionFast, Easing.OutQuint), true);
         }
 
         protected override bool OnMouseDown(MouseDownEvent e)
@@ -172,7 +274,8 @@ namespace BeatSight.Game.UI.Components
             if (!float.IsFinite(localX) || localX < -DrawWidth * 2f || localX > DrawWidth * 3f)
                 localX = ToLocalSpace(e.ScreenSpaceMousePosition).X;
 
-            double progress = Math.Clamp(localX / DrawWidth, 0, 1);
+            float usableWidth = Math.Max(1f, DrawWidth - RangePadding * 2f);
+            double progress = Math.Clamp((localX - RangePadding) / usableWidth, 0, 1);
             double target = min + progress * (max - min);
             double snapped = snapToDragStep(target);
             if (Precision.AlmostEquals(snapped, Current.Value))

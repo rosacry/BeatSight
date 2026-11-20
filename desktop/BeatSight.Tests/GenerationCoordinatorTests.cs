@@ -85,6 +85,7 @@ public class GenerationCoordinatorTests
         await coordinator.RunAsync(parameters, CancellationToken.None);
 
         var options = pipeline.CapturedRequests.Single().Options;
+        Assert.Equal(AiTranscriptionEngine.Adtof, options.Engine);
         Assert.Equal(150, options.ForcedBpm);
         Assert.Equal(0.025, options.ForcedOffsetSeconds);
         Assert.Equal(0.125, options.ForcedStepSeconds);
@@ -131,11 +132,13 @@ public class GenerationCoordinatorTests
             AdaptiveThresholdMethod: "percentile",
             PipelineMode: AiPipelineMode.Transcription,
             AutoSensitivity: true,
-            AutoQuantization: true);
+            AutoQuantization: true,
+            TranscriptionEngine: AiTranscriptionEngine.Legacy);
 
         await coordinator.RunAsync(parameters, CancellationToken.None);
 
         var options = pipeline.CapturedRequests.Single().Options;
+        Assert.Equal(AiTranscriptionEngine.Legacy, options.Engine);
         Assert.Equal(AiPipelineMode.Transcription, options.PipelineMode);
         Assert.True(options.AutoSensitivity);
         Assert.True(options.AutoQuantization);

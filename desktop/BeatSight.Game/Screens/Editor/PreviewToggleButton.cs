@@ -31,9 +31,8 @@ namespace BeatSight.Game.Screens.Editor
         private readonly SpriteIcon icon;
         private readonly SpriteText modeLabel;
         private readonly Bindable<EditorPreviewMode> previewMode;
-        private readonly Color4 colour2D = UITheme.AccentPrimary;
-        private readonly Color4 colour3D = UITheme.AccentSecondary;
-        private Color4 currentBaseColour;
+        // One neutral colour for every mode: the icon and label say which view is active, the colour does not.
+        private readonly Color4 baseColour = UITheme.SurfaceRaised;
         private string fullModeLabel = "2D View";
         private string? availabilityMessage;
 
@@ -57,11 +56,12 @@ namespace BeatSight.Game.Screens.Editor
         public PreviewToggleButton(Bindable<EditorPreviewMode> previewMode)
         {
             this.previewMode = previewMode.GetBoundCopy();
-            currentBaseColour = colour2D;
             availabilityMessage = "Load or create a beatmap to enable 2D/3D switching.";
 
             Masking = true;
             CornerRadius = 9;
+            // BasicButton multiplies the whole button by grey when disabled; the disabled look is drawn here instead.
+            DisabledColour = Color4.White;
 
             AddRange(new Drawable[]
             {
@@ -102,7 +102,7 @@ namespace BeatSight.Game.Screens.Editor
                             Anchor = Anchor.Centre,
                             Origin = Anchor.Centre,
                             Size = new Vector2(15),
-                            Colour = EditorColours.TextPrimary,
+                            Colour = UITheme.AccentPrimary,
                             Icon = FontAwesome.Solid.LayerGroup
                         },
                         modeLabel = new SpriteText
@@ -165,18 +165,15 @@ namespace BeatSight.Game.Screens.Editor
                 case EditorPreviewMode.Playfield3D:
                     icon.Icon = FontAwesome.Solid.Cube;
                     fullModeLabel = "3D View";
-                    currentBaseColour = colour3D;
                     break;
                 case EditorPreviewMode.Manuscript:
                     icon.Icon = FontAwesome.Solid.Music;
                     fullModeLabel = "Sheet Music";
-                    currentBaseColour = Color4.Goldenrod;
                     break;
                 case EditorPreviewMode.Playfield2D:
                 default:
                     icon.Icon = FontAwesome.Solid.LayerGroup;
                     fullModeLabel = "2D View";
-                    currentBaseColour = colour2D;
                     break;
             }
 
@@ -224,7 +221,7 @@ namespace BeatSight.Game.Screens.Editor
             }
             HoverHintChanged?.Invoke(tooltip);
 
-            var targetColour = EditorColours.Lighten(currentBaseColour, 1.15f);
+            var targetColour = EditorColours.Lighten(baseColour, 1.15f);
             background.FadeColour(targetColour, 140, Easing.OutQuint);
             if (EnableScaleAnimation)
                 this.ScaleTo(1.015f, 220, Easing.OutQuint);
@@ -278,14 +275,14 @@ namespace BeatSight.Game.Screens.Editor
 
         private void updateBackgroundForAvailability()
         {
-            var targetColour = Enabled.Value
-                ? currentBaseColour
-                : EditorColours.Lighten(currentBaseColour, 0.65f);
+            var targetColour = Enabled.Value ? baseColour : UITheme.SurfaceAlt;
 
             background.FadeColour(targetColour, 180, Easing.OutQuint);
-            icon.Colour = Enabled.Value ? EditorColours.TextPrimary : EditorColours.TextSecondary;
-            modeLabel.Colour = Enabled.Value ? EditorColours.TextPrimary : EditorColours.TextSecondary;
-            topSheen.FadeTo(Enabled.Value ? 1f : 0.7f, 150, Easing.OutQuint);
+            icon.Colour = Enabled.Value ? UITheme.AccentPrimary : UITheme.TextMuted;
+            modeLabel.Colour = Enabled.Value ? EditorColours.TextPrimary : UITheme.TextMuted;
+            topSheen.FadeTo(Enabled.Value ? 1f : 0f, 150, Easing.OutQuint);
+            BorderThickness = Enabled.Value ? 0f : 1.5f;
+            BorderColour = UITheme.Border;
         }
     }
 

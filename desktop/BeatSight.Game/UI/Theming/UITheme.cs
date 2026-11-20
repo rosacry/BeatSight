@@ -9,32 +9,53 @@ namespace BeatSight.Game.UI.Theming
     /// </summary>
     public static class UITheme
     {
-        // Modern Dark/Neon Theme
-        public static readonly Color4 Background = new Color4(5, 5, 10, 255); // Deep dark blue/black
-        public static readonly Color4 BackgroundLayer = new Color4(15, 15, 25, 255); // Slightly lighter layer
-        public static readonly Color4 Surface = new Color4(25, 25, 40, 255); // Card surface
-        public static readonly Color4 SurfaceAlt = new Color4(35, 35, 55, 255); // Alternate surface
+        // 2026-10-24 direction: calm slate neutrals, one cyan accent, and instrument colours (DrumPalette) as the
+        // only high-chroma colours on screen. The chrome recedes so notes carry the meaning.
+        public static readonly Color4 Background = new Color4(11, 14, 20, 255); // App canvas
+        public static readonly Color4 BackgroundLayer = new Color4(16, 20, 28, 255); // Headers, sidebars
+        public static readonly Color4 Surface = new Color4(24, 29, 40, 255); // Cards, rows
+        public static readonly Color4 SurfaceAlt = new Color4(31, 38, 52, 255); // Controls, raised rows
+        public static readonly Color4 SurfaceRaised = new Color4(41, 49, 66, 255); // Hover / pressed controls
+        public static readonly Color4 Border = new Color4(48, 57, 76, 255);
 
-        public static readonly Color4 AccentPrimary = new Color4(0, 200, 255, 255); // Cyan Neon
-        public static readonly Color4 AccentSecondary = new Color4(255, 0, 128, 255); // Magenta Neon
-        public static readonly Color4 AccentWarning = new Color4(255, 165, 0, 255); // Orange Neon
-        public static readonly Color4 AccentSuccess = new Color4(0, 255, 128, 255); // Green Neon
-        public static readonly Color4 AccentError = new Color4(255, 50, 50, 255); // Red Neon
+        public static readonly Color4 AccentPrimary = new Color4(56, 196, 236, 255); // Primary actions, focus, progress
+        public static readonly Color4 AccentSecondary = new Color4(150, 140, 255, 255); // Rare secondary emphasis
+        public static readonly Color4 AccentWarning = new Color4(245, 184, 65, 255);
+        public static readonly Color4 AccentSuccess = new Color4(61, 214, 140, 255);
+        public static readonly Color4 AccentError = new Color4(242, 85, 90, 255); // Destructive actions only
 
-        public static readonly Color4 TextPrimary = new Color4(255, 255, 255, 255);
-        public static readonly Color4 TextSecondary = new Color4(200, 200, 220, 255);
-        public static readonly Color4 TextMuted = new Color4(100, 100, 120, 255);
+        public static readonly Color4 TextPrimary = new Color4(236, 240, 247, 255);
+        public static readonly Color4 TextSecondary = new Color4(168, 178, 197, 255);
+        public static readonly Color4 TextMuted = new Color4(112, 122, 145, 255);
+        public static readonly Color4 TextOnAccent = new Color4(8, 22, 30, 255);
 
-        public static readonly Color4 Divider = new Color4(255, 255, 255, 30);
-        public static readonly Color4 Overlay = new Color4(0, 0, 0, 150); // Dark overlay for modals
+        public static readonly Color4 Divider = new Color4(255, 255, 255, 22);
+        public static readonly Color4 Overlay = new Color4(4, 6, 10, 170); // Dark overlay for modals
+
+        // Type scale (logical pixels at 1080p, before BeatSightFont's 1.2x family scaling is applied by callers
+        // that use the semantic helpers). Use these instead of ad-hoc sizes.
+        public const float TypeDisplay = 44f;
+        public const float TypeTitle = 26f;
+        public const float TypeHeading = 19f;
+        public const float TypeBody = 15f;
+        public const float TypeLabel = 13f;
+        public const float TypeCaption = 11.5f;
+
+        // Motion: short, decelerating, never elastic. Gameplay feedback stays inside its lane.
+        public const double MotionFast = 120;
+        public const double MotionNormal = 220;
+        public const double MotionSlow = 360;
+        public const Easing MotionEasing = Easing.OutQuint;
+        public const float HoverScale = 1.02f;
+        public const float PressScale = 0.97f;
 
         // Layout Constants
         public const float MainLogoTitleSize = 80f;
         public const float MainLogoSubtitleSize = 24f;
         public const float MainLogoSubtitleY = 60f; // Distance from center to subtitle
 
-        public static readonly Color4 KickGlobalFill = new Color4(0, 200, 255, 100);
-        public static readonly Color4 KickGlobalGlow = new Color4(0, 200, 255, 200);
+        public static readonly Color4 KickGlobalFill = new Color4(255, 148, 64, 100); // DrumPalette.Kick
+        public static readonly Color4 KickGlobalGlow = new Color4(255, 148, 64, 200);
 
         public static readonly MarginPadding ScreenPadding = new MarginPadding { Horizontal = 50, Vertical = 40 };
 

@@ -409,7 +409,13 @@ namespace BeatSight.Game.Screens.Editor
         }
 
         private float resolveMinimumPreviewWorkspaceHeight(Vector2 viewport)
-            => resolveMinimumPreviewWorkspaceHeight(viewport, previewMode?.Value == EditorPreviewMode.Playfield2D);
+        {
+            float minimum = resolveMinimumPreviewWorkspaceHeight(viewport, previewMode?.Value == EditorPreviewMode.Playfield2D);
+
+            // Notes are placed and checked in the preview, so the timeline split never squeezes it below this share.
+            float total = editorLayoutGrid?.DrawHeight > 0 ? editorLayoutGrid.DrawHeight : 0f;
+            return total > 0 ? Math.Max(minimum, total * minimumPreviewWorkspaceShare) : minimum;
+        }
 
         private static float resolveMinimumPreviewWorkspaceHeight(Vector2 viewport, bool isTwoDimensionalPreview)
         {
@@ -431,7 +437,13 @@ namespace BeatSight.Game.Screens.Editor
         }
 
         private float resolveTimelineToolboxCollapsedHeight(Vector2 viewport)
-            => ResponsiveLayout.ClampFraction(viewport.Y, 0.082f, 72f, 92f);
+        {
+            // Collapsed shows exactly the first toolbox row (sliders and the Show button), never a clipped slice of the next.
+            if (timelineToolboxFirstRow != null && timelineToolboxFirstRow.DrawHeight > 0 && timelineToolboxInnerContainer != null)
+                return timelineToolboxFirstRow.DrawHeight + timelineToolboxInnerContainer.Padding.Top + timelineToolboxInnerContainer.Padding.Bottom;
+
+            return ResponsiveLayout.ClampFraction(viewport.Y, 0.082f, 72f, 92f);
+        }
 
         private float resolveTimelineToolboxExpandedHeight()
         {

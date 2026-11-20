@@ -49,6 +49,11 @@ namespace BeatSight.Game.Screens.Editor
             };
             playbackPreview.PlacementInputBlockedAtScreenSpace = isPreviewPlacementBlockedAt;
             playbackPreview.NotePlacementRequested += onPreviewNotePlacementRequested;
+            playbackPreview.LaneLayoutResolved += layout =>
+            {
+                timeline?.SetLaneLayout(layout);
+                refreshTimelineLaneEditorControls();
+            };
             playbackPreview.NoteRemovalRequested += onPreviewNoteRemovalRequested;
 
             var previewContentPadding = sharedSurfacePadding;

@@ -1495,6 +1495,8 @@ namespace BeatSight.Game.Screens.Settings
                 }
             };
 
+            // The row is as tall as its tallest cell: multi-line controls (e.g. the lane profile editor) used to
+            // overflow a row sized only by its label and overlap the next setting.
             return new GridContainer
             {
                 RelativeSizeAxes = Axes.X,
@@ -1504,13 +1506,15 @@ namespace BeatSight.Game.Screens.Settings
                     new Dimension(GridSizeMode.Distributed, textColumnWeight),
                     new Dimension(GridSizeMode.AutoSize)
                 },
+                RowDimensions = new[] { new Dimension(GridSizeMode.AutoSize) },
                 Content = new[]
                 {
                     new Drawable[]
                     {
                         new Container
                         {
-                            RelativeSizeAxes = Axes.Both,
+                            RelativeSizeAxes = Axes.X,
+                            AutoSizeAxes = Axes.Y,
                             Padding = new MarginPadding { Right = 28 },
                             Anchor = Anchor.CentreLeft,
                             Origin = Anchor.CentreLeft,

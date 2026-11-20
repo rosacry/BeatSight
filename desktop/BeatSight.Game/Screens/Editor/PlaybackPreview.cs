@@ -51,6 +51,9 @@ namespace BeatSight.Game.Screens.Editor
 
         public event Action<int, double, bool>? NotePlacementRequested;
         public event Action<int, double>? NoteRemovalRequested;
+
+        /// <summary>Raised whenever the preview settles on a lane layout, so the timeline rows can follow it.</summary>
+        public event Action<LaneLayout>? LaneLayoutResolved;
         public Func<Vector2, bool>? PlacementInputBlockedAtScreenSpace { get; set; }
 
         [Resolved]
@@ -337,7 +340,8 @@ namespace BeatSight.Game.Screens.Editor
                 return;
 
             clearPlacementGhost();
-            currentLaneLayout = resolvePreviewLaneLayout();
+            currentLaneLayout = resolvePreviewLaneLayout(beatmap);
+            LaneLayoutResolved?.Invoke(currentLaneLayout);
 
             playfield.SetLaneLayout(currentLaneLayout);
             playfield.SetKickLineMode(useGlobalKickLine);
@@ -542,9 +546,15 @@ namespace BeatSight.Game.Screens.Editor
             placementGhostBody.CornerRadius = height * 0.48f;
         }
 
-        private LaneLayout resolvePreviewLaneLayout()
+        /// <summary>
+        /// The lane layout the preview uses for <paramref name="map"/>, or null before the preview has its settings.
+        /// </summary>
+        public LaneLayout? ResolveLaneLayoutFor(Beatmap? map)
+            => lanePresetSetting == null ? null : resolvePreviewLaneLayout(map);
+
+        private LaneLayout resolvePreviewLaneLayout(Beatmap? map)
         {
-            int minimumLaneCount = LaneManagement.ResolveLaneCount(beatmap, fallbackLaneCount: 7);
+            int minimumLaneCount = LaneManagement.ResolveLaneCount(map, fallbackLaneCount: 7);
 
             // Match PlaybackScreen lane-resolution behavior exactly so the editor preview
             // stays consistent with full playback mode.
@@ -558,7 +568,7 @@ namespace BeatSight.Game.Screens.Editor
             // If authored data requires more lanes than the selected preset provides,
             // use an auto-dynamic layout sized for authored lane indices to avoid
             // silent remapping of stored lanes.
-            return LaneLayoutFactory.CreateAutoDynamic(beatmap?.DrumKit?.Components, minimumLaneCount);
+            return LaneLayoutFactory.CreateAutoDynamic(map?.DrumKit?.Components, minimumLaneCount);
         }
 
         private static bool previewBeatmapNeedsLaneResolution(Beatmap beatmap, LaneLayout layout)

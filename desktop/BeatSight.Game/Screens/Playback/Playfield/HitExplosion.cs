@@ -31,7 +31,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             {
                 RelativeSizeAxes = Axes.Both,
                 Colour = colour,
-                Alpha = 0.85f,
+                Alpha = 0.7f,
             };
 
             // Bright center highlight
@@ -42,7 +42,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
                 Colour = Color4.White,
-                Alpha = 0.7f,
+                Alpha = 0.45f,
             };
 
             // Outer glow ring
@@ -66,9 +66,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         {
             base.LoadComplete();
 
-            // Expand outward
+            // Expand mostly vertically so the flash stays inside its own lane (wide bursts covered neighbours).
             this.ScaleTo(1.0f)
-                .ScaleTo(new Vector2(1.8f, 2.2f), expand_duration, Easing.OutQuint);
+                .ScaleTo(new Vector2(1.08f, 1.9f), expand_duration, Easing.OutQuint);
 
             // Flash bright then fade
             this.FadeIn(30)

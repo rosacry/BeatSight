@@ -320,23 +320,22 @@ namespace BeatSight.Game.Screens.Onboarding
                     new SpriteText
                     {
                         Text = page.Title,
-                        Font = FrameworkFont.Regular.With(size: 28),
-                        Colour = Color4.White,
+                        Font = BeatSightFont.Title(UITheme.TypeTitle),
+                        Colour = UITheme.TextPrimary,
                         Anchor = Anchor.TopCentre,
                         Origin = Anchor.TopCentre
                     },
-                    // Description
+                    // Description (added once; setting Text as well used to print it twice)
                     new TextFlowContainer
                     {
                         RelativeSizeAxes = Axes.X,
                         AutoSizeAxes = Axes.Y,
-                        TextAnchor = Anchor.TopCentre,
-                        Text = page.Description
+                        TextAnchor = Anchor.TopCentre
                     }.With(t =>
                     {
                         t.AddText(page.Description, s =>
                         {
-                            s.Font = FrameworkFont.Regular.With(size: 16);
+                            s.Font = BeatSightFont.Body(UITheme.TypeBody);
                             s.Colour = UITheme.TextSecondary;
                         });
                     })

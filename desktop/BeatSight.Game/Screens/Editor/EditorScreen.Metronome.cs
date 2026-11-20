@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using BeatSight.Game.Audio;
 using BeatSight.Game.Configuration;
+using BeatSight.Game.UI.Theming;
 using osu.Framework.Audio;
 using osu.Framework.Audio.Sample;
 using osu.Framework.Bindables;
@@ -79,11 +80,15 @@ namespace BeatSight.Game.Screens.Editor
 
             bool enabled = metronomeEnabledSetting?.Value ?? false;
             if (timelineMetronomeButtonText != null)
+            {
                 timelineMetronomeButtonText.Text = enabled ? "Metro On" : "Metro Off";
+                timelineMetronomeButtonText.Colour = enabled ? UITheme.TextOnAccent : EditorColours.TextPrimary;
+            }
 
+            // Off matches the other toolbox buttons; on is the accent, like a lit toggle.
             timelineMetronomeButton.BackgroundColour = enabled
                 ? EditorColours.AccentPlay
-                : EditorColours.Lighten(EditorColours.ControlsBackground, 1.18f);
+                : UITheme.SurfaceRaised;
         }
 
         private void refreshTimingMetronomeControl()

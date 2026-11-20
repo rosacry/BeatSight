@@ -35,17 +35,31 @@ namespace BeatSight.Game.UI.Components
             }
         }
 
+        /// <summary>Label colour; use <see cref="UITheme.TextOnAccent"/> on accent-filled buttons for contrast.</summary>
+        public Color4 TextColour
+        {
+            get => textSprite?.Colour ?? Color4.White;
+            set
+            {
+                if (textSprite != null)
+                    textSprite.Colour = value;
+            }
+        }
+
         public BeatSightButton()
         {
             Masking = true;
             CornerRadius = default_corner_radius;
             MaskingSmoothness = 1.5f;
+
+            // Default set here (not in load) so a colour given in an object initializer is kept. Setting it in
+            // load used to repaint every button cyan, inverting toolbar hierarchy (inactive toggles looked primary).
+            BackgroundColour = UITheme.AccentPrimary;
         }
 
         [BackgroundDependencyLoader]
         private void load()
         {
-            BackgroundColour = UITheme.AccentPrimary;
 
             Add(hoverGlow = new Box
             {
@@ -67,8 +81,8 @@ namespace BeatSight.Game.UI.Components
         protected override bool OnHover(HoverEvent e)
         {
             uiAudio.PlayHover(e.ScreenSpaceMousePosition.X / GetContainingInputManager().DrawSize.X);
-            this.ScaleTo(1.05f, 400, Easing.OutElastic);
-            hoverGlow.FadeTo(0.2f, 200, Easing.OutQuint);
+            this.ScaleTo(UITheme.HoverScale, UITheme.MotionFast, UITheme.MotionEasing);
+            hoverGlow.FadeTo(0.08f, UITheme.MotionFast, UITheme.MotionEasing);
             return base.OnHover(e);
         }
 
@@ -77,27 +91,27 @@ namespace BeatSight.Game.UI.Components
             if (Enabled.Value)
             {
                 uiAudio.PlayClick();
-                flash.FadeTo(0.5f).FadeOut(500, Easing.OutQuint);
+                flash.FadeTo(0.22f).FadeOut(UITheme.MotionSlow, UITheme.MotionEasing);
             }
             return base.OnClick(e);
         }
 
         protected override void OnHoverLost(HoverLostEvent e)
         {
-            this.ScaleTo(1f, 400, Easing.OutElastic);
+            this.ScaleTo(1f, UITheme.MotionNormal, UITheme.MotionEasing);
             hoverGlow.FadeOut(200);
             base.OnHoverLost(e);
         }
 
         protected override bool OnMouseDown(MouseDownEvent e)
         {
-            this.ScaleTo(0.95f, 50, Easing.OutQuint);
+            this.ScaleTo(UITheme.PressScale, 60, UITheme.MotionEasing);
             return base.OnMouseDown(e);
         }
 
         protected override void OnMouseUp(MouseUpEvent e)
         {
-            this.ScaleTo(IsHovered ? 1.05f : 1f, 800, Easing.OutElastic);
+            this.ScaleTo(IsHovered ? UITheme.HoverScale : 1f, UITheme.MotionNormal, UITheme.MotionEasing);
             base.OnMouseUp(e);
         }
 

@@ -967,7 +967,8 @@ namespace BeatSight.Tests.VisualRegression
                 || timelineToolbox.ZoomSliderWidth <= 0
                 || timelineToolbox.ZoomSliderHeight <= 0
                 || timelineToolbox.WaveformSliderWidth <= 0
-                || timelineToolbox.WaveformSliderHeight <= 0)
+                || timelineToolbox.WaveformSliderHeight <= 0
+                || timelineToolbox.ContentWidth <= 0)
             {
                 throw new VisualCaptureUnavailableException(
                     "Editor compact timeline contract failed: timeline toolbox values were not initialized.");
@@ -979,34 +980,41 @@ namespace BeatSight.Tests.VisualRegression
                     $"Editor compact timeline contract failed: content spacing out of range ({timelineToolbox.ContentSpacingX:0.###}, expected 8.5-13.5).");
             }
 
-            if (timelineToolbox.ZoomSliderWidth < 145f || timelineToolbox.ZoomSliderWidth > 170f)
+            // Since the 2026-10-24 toolbox redesign the slider sections share the first row in columns of 18% of the
+            // toolbox width (zoom and waveform alike) and each slider fills its column, less padding, as a slim bar in
+            // a short hit row. Widths are checked against the toolbox's own width (UI scale and a side inspector
+            // change the absolute numbers).
+            float minSliderWidth = timelineToolbox.ContentWidth * 0.14f;
+            float maxSliderWidth = timelineToolbox.ContentWidth * 0.18f;
+
+            if (timelineToolbox.ZoomSliderWidth < minSliderWidth || timelineToolbox.ZoomSliderWidth > maxSliderWidth)
             {
                 throw new VisualCaptureUnavailableException(
-                    $"Editor compact timeline contract failed: zoom slider width out of range ({timelineToolbox.ZoomSliderWidth:0.###}, expected 145-170).");
+                    $"Editor compact timeline contract failed: zoom slider width out of range ({timelineToolbox.ZoomSliderWidth:0.###}, expected {minSliderWidth:0.#}-{maxSliderWidth:0.#}).");
             }
 
-            if (timelineToolbox.WaveformSliderWidth < 130f || timelineToolbox.WaveformSliderWidth > 154f)
+            if (timelineToolbox.WaveformSliderWidth < minSliderWidth || timelineToolbox.WaveformSliderWidth > maxSliderWidth)
             {
                 throw new VisualCaptureUnavailableException(
-                    $"Editor compact timeline contract failed: waveform slider width out of range ({timelineToolbox.WaveformSliderWidth:0.###}, expected 130-154).");
+                    $"Editor compact timeline contract failed: waveform slider width out of range ({timelineToolbox.WaveformSliderWidth:0.###}, expected {minSliderWidth:0.#}-{maxSliderWidth:0.#}).");
             }
 
-            if (timelineToolbox.ZoomSliderWidth < timelineToolbox.WaveformSliderWidth + 8f)
+            if (Math.Abs(timelineToolbox.ZoomSliderWidth - timelineToolbox.WaveformSliderWidth) > 2f)
             {
                 throw new VisualCaptureUnavailableException(
-                    $"Editor compact timeline contract failed: zoom slider should remain wider than waveform slider ({timelineToolbox.ZoomSliderWidth:0.###} vs {timelineToolbox.WaveformSliderWidth:0.###}).");
+                    $"Editor compact timeline contract failed: equal-weight slider columns diverged ({timelineToolbox.ZoomSliderWidth:0.###} vs {timelineToolbox.WaveformSliderWidth:0.###}).");
             }
 
-            if (timelineToolbox.ZoomSliderHeight < 25f || timelineToolbox.ZoomSliderHeight > 31f)
+            if (timelineToolbox.ZoomSliderHeight < 17f || timelineToolbox.ZoomSliderHeight > 23f)
             {
                 throw new VisualCaptureUnavailableException(
-                    $"Editor compact timeline contract failed: zoom slider height out of range ({timelineToolbox.ZoomSliderHeight:0.###}, expected 25-31).");
+                    $"Editor compact timeline contract failed: zoom slider height out of range ({timelineToolbox.ZoomSliderHeight:0.###}, expected 17-23).");
             }
 
-            if (timelineToolbox.WaveformSliderHeight < 25f || timelineToolbox.WaveformSliderHeight > 31f)
+            if (timelineToolbox.WaveformSliderHeight < 17f || timelineToolbox.WaveformSliderHeight > 23f)
             {
                 throw new VisualCaptureUnavailableException(
-                    $"Editor compact timeline contract failed: waveform slider height out of range ({timelineToolbox.WaveformSliderHeight:0.###}, expected 25-31).");
+                    $"Editor compact timeline contract failed: waveform slider height out of range ({timelineToolbox.WaveformSliderHeight:0.###}, expected 17-23).");
             }
 
             if (Math.Abs(timelineToolbox.ZoomSliderHeight - timelineToolbox.WaveformSliderHeight) > 1.5f)
@@ -1156,6 +1164,13 @@ namespace BeatSight.Tests.VisualRegression
             setScreenLaneViewMode(playbackLaneViewModeField?.GetValue(playback), laneViewMode);
             playbackStopMethod.Invoke(playback, null);
             playbackSeekMethod?.Invoke(playback, new object?[] { 0.25d, true });
+
+            // Deterministic toolbar: always the tucked peek strip, never whatever the physical cursor hovers.
+            if (playbackToolbarField?.GetValue(playback) is PlaybackToolbarContainer toolbar)
+            {
+                toolbar.ExpandOnHover = false;
+                toolbar.SetExpanded(false, animate: false);
+            }
         }
 
         private static void setScreenLaneViewMode(object? bindable, LaneViewMode mode)
@@ -1177,15 +1192,23 @@ namespace BeatSight.Tests.VisualRegression
             }
         }
 
+        /// <summary>
+        /// True once the playback toolbar has settled in its tucked peek state (laid out, not expanded, at the
+        /// tucked offset). Captures used to wait for a hover-expanded toolbar, which depended on the real cursor.
+        /// </summary>
         private static bool hasVisiblePlaybackToolbar(Screen screen)
         {
             if (screen is not PlaybackScreen playback)
                 return true;
 
-            if (playbackToolbarField?.GetValue(playback) is not Drawable toolbar)
+            if (playbackToolbarField?.GetValue(playback) is not PlaybackToolbarContainer toolbar)
                 return false;
 
-            return toolbar.DrawHeight > 40 && toolbar.Alpha > 0.95f;
+            float tuckedY = Math.Max(0, toolbar.DrawHeight - toolbar.PeekHeight);
+            return toolbar.DrawHeight > 40
+                   && !toolbar.Expanded
+                   && toolbar.Alpha > 0.5f
+                   && Math.Abs(toolbar.Y - tuckedY) < 0.5f;
         }
 
         private static void disableDynamicBackground(BeatSightGame game)

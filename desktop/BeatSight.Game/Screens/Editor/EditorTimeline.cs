@@ -137,6 +137,22 @@ namespace BeatSight.Game.Screens.Editor
         public string? GetLaneComponentForVisibleLane(int visibleLaneIndex)
             => content.GetLaneComponentForVisibleLane(visibleLaneIndex);
 
+        /// <summary>
+        /// Lays the rows out like the practice playfield (row N is playfield lane N) with the same names and colours.
+        /// Null falls back to rows derived from the beatmap alone.
+        /// </summary>
+        public void SetLaneLayout(LaneLayout? layout) => content.SetLaneLayout(layout);
+
+        /// <summary>Number of timeline rows (lanes).</summary>
+        public int LaneCount => content.LaneCount;
+
+        /// <summary>
+        /// Name, short label and colour of a row as the playfield shows it. Without customisations it is the automatic
+        /// identity (what the lane holds), which the lane editor offers as the default.
+        /// </summary>
+        public LaneIdentity DescribeLane(int laneIndex, bool includeCustomisations = true)
+            => content.DescribeLane(laneIndex, includeCustomisations);
+
         private partial class TimelineContent : CompositeDrawable
         {
             private int laneCount = 7;
@@ -150,7 +166,7 @@ namespace BeatSight.Game.Screens.Editor
             private const double minimumMajorTickSpacing = 80;
             private const double minimumMinorTickSpacing = 40;
             private const int defaultLaneCount = 7;
-            private const int maxEditorLaneCount = 9;
+            private const int maxEditorLaneCount = LaneManagement.MaxLaneCount;
             private const double viewportHintRefreshDeltaMs = 35;
             private const double playheadViewportRatio = 0.18;
 
@@ -197,6 +213,7 @@ namespace BeatSight.Game.Screens.Editor
             private bool beatGridVisible = true;
             private double waveformScale = 1.0;
             private LaneLayout laneResolutionLayout = LaneLayoutFactory.Create(LanePreset.DrumSevenLane);
+            private LaneLayout? sharedLaneLayout;
 
             private readonly List<TimelineNoteDrawable> notes = new();
             private TimelineNoteDrawable? selectedNote;
@@ -271,7 +288,6 @@ namespace BeatSight.Game.Screens.Editor
                                         waveformDrawable = new WaveformDrawable { RelativeSizeAxes = Axes.Both, Alpha = 0.42f },
                                         debugLayer = new Container { RelativeSizeAxes = Axes.Both, Alpha = 0.6f },
                                         onsetLayer = new Container { RelativeSizeAxes = Axes.Both, Alpha = 0.4f },
-                                        laneLabelLayer = new Container { RelativeSizeAxes = Axes.Both },
                                         selectionBox = new Box { RelativeSizeAxes = Axes.Y, Colour = EditorColours.TimelineSelection, Alpha = 0 },
                                         noteLayer = new Container { RelativeSizeAxes = Axes.Both },
                                         viewportHintContainer = new Container
@@ -337,16 +353,20 @@ namespace BeatSight.Game.Screens.Editor
                     {
                         RelativeSizeAxes = Axes.Both,
                         Padding = new MarginPadding { Bottom = rulerHeight + 2f },
-                        Child = fixedPlayhead = new Box
+                        Children = new Drawable[]
                         {
-                            Anchor = Anchor.TopLeft,
-                            Origin = Anchor.TopCentre,
-                            RelativePositionAxes = Axes.X,
-                            X = (float)playheadViewportRatio,
-                            RelativeSizeAxes = Axes.Y,
-                            Width = 2.4f,
-                            Colour = EditorColours.TimelinePlayhead,
-                            EdgeSmoothness = new Vector2(1, 0)
+                            laneLabelLayer = new Container { RelativeSizeAxes = Axes.Both },
+                            fixedPlayhead = new Box
+                            {
+                                Anchor = Anchor.TopLeft,
+                                Origin = Anchor.TopCentre,
+                                RelativePositionAxes = Axes.X,
+                                X = (float)playheadViewportRatio,
+                                RelativeSizeAxes = Axes.Y,
+                                Width = 2.4f,
+                                Colour = EditorColours.TimelinePlayhead,
+                                EdgeSmoothness = new Vector2(1, 0)
+                            }
                         }
                     }
                 };
@@ -438,6 +458,34 @@ namespace BeatSight.Game.Screens.Editor
                 SetCurrentTime(0);
                 laneLayoutDirty = true;
                 updateViewportHint(force: true);
+            }
+
+            public int LaneCount => laneCount;
+
+            public void SetLaneLayout(LaneLayout? layout)
+            {
+                if (layoutSignature(layout) == layoutSignature(sharedLaneLayout))
+                    return;
+
+                sharedLaneLayout = layout;
+                if (beatmap == null)
+                    return;
+
+                resolveLaneConfiguration(beatmap);
+                rebuildLaneBackgrounds();
+                rebuildNotes();
+                laneLayoutDirty = true;
+            }
+
+            private static string layoutSignature(LaneLayout? layout)
+            {
+                if (layout == null)
+                    return string.Empty;
+
+                var parts = layout.Categories
+                    .OrderBy(pair => pair.Key)
+                    .Select(pair => $"{(int)pair.Key}:{string.Join(",", pair.Value)}");
+                return $"{layout.Preset}/{layout.LaneCount}/{string.Join(";", parts)}";
             }
 
             public void UpdateWaveform(WaveformData? waveform)
@@ -633,6 +681,12 @@ namespace BeatSight.Game.Screens.Editor
             {
                 base.Update();
                 refreshLayoutIfNeeded();
+
+                // The fixed playhead line always marks the current time: re-align after resizes (window, inspector,
+                // toolbox) or a zoom anchored elsewhere, not only on the next time change.
+                if (!zoomInteractionActive && !pointerSelectionActive && activeDragNote == null)
+                    ScrollToPlayhead();
+
                 updateViewportHint();
             }
 
@@ -876,6 +930,9 @@ namespace BeatSight.Game.Screens.Editor
                         }
                     });
 
+                    var identity = DescribeLane(lane);
+                    string name = identity.Name;
+                    Color4 colour = identity.Colour;
                     laneLabelLayer.Add(new Container
                     {
                         RelativeSizeAxes = Axes.Both,
@@ -886,24 +943,29 @@ namespace BeatSight.Game.Screens.Editor
                         {
                             AutoSizeAxes = Axes.Both,
                             Masking = true,
-                            CornerRadius = 6,
+                            CornerRadius = 4,
                             Anchor = Anchor.CentreLeft,
                             Origin = Anchor.CentreLeft,
-                            X = 10,
+                            X = 6,
                             Children = new Drawable[]
                             {
                                 new Box
                                 {
                                     RelativeSizeAxes = Axes.Both,
-                                    Colour = EditorColours.TimelineLabelBackground.Opacity(0.92f)
+                                    Colour = EditorColours.TimelineLabelBackground.Opacity(0.9f)
+                                },
+                                new Box
+                                {
+                                    RelativeSizeAxes = Axes.Y,
+                                    Width = 3,
+                                    Colour = colour
                                 },
                                 new SpriteText
                                 {
-                                    Text = getLaneLabel(lane),
+                                    Text = name,
                                     Font = BeatSightFont.Caption(laneLabelFontSize),
                                     Colour = EditorColours.TimelineLabelText,
-                                    Margin = new MarginPadding { Horizontal = laneLabelHorizontalPadding, Vertical = 4 },
-                                    Alpha = 0.96f
+                                    Margin = new MarginPadding { Left = 3 + laneLabelHorizontalPadding, Right = laneLabelHorizontalPadding, Vertical = 3 }
                                 }
                             }
                         }
@@ -913,6 +975,14 @@ namespace BeatSight.Game.Screens.Editor
 
             private void resolveLaneConfiguration(Beatmap beatmap)
             {
+                if (sharedLaneLayout != null)
+                {
+                    laneCount = Math.Max(1, sharedLaneLayout.LaneCount);
+                    laneResolutionLayout = sharedLaneLayout;
+                    laneMapping = buildLayoutLaneMapping(beatmap, sharedLaneLayout, laneCount);
+                    return;
+                }
+
                 int laneCountFromLayout = 0;
                 if (beatmap.DrumKit?.LaneLayout?.Lanes != null && beatmap.DrumKit.LaneLayout.Lanes.Count > 0)
                     laneCountFromLayout = beatmap.DrumKit.LaneLayout.Lanes.Max(l => l.Index) + 1;
@@ -1011,15 +1081,74 @@ namespace BeatSight.Game.Screens.Editor
                 return result;
             }
 
-            private string getLaneLabel(int laneIndex)
+            /// <summary>
+            /// Representative component of each playfield lane: the one the lane holds most, else the lane's own instrument.
+            /// Notes added to a row get this component.
+            /// </summary>
+            private static List<string> buildLayoutLaneMapping(Beatmap beatmap, LaneLayout layout, int count)
             {
-                string fallback;
-                if (laneIndex >= 0 && laneIndex < laneMapping.Count)
-                    fallback = formatLaneName(laneMapping[laneIndex]);
-                else
-                    fallback = $"Lane {laneIndex + 1}";
+                var counts = new Dictionary<string, int>?[count];
+                foreach (var hit in beatmap.HitObjects)
+                {
+                    if (string.IsNullOrWhiteSpace(hit.Component))
+                        continue;
 
-                return LaneManagement.ResolveLaneLabel(beatmap, laneIndex, fallback);
+                    int lane = hit.Lane.HasValue && layout.IsLaneValid(hit.Lane.Value)
+                        ? hit.Lane.Value
+                        : DrumLaneHeuristics.ResolveLane(hit.Component, layout);
+                    if (lane < 0 || lane >= count)
+                        continue;
+
+                    var laneCounts = counts[lane] ??= new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                    laneCounts.TryGetValue(hit.Component, out int current);
+                    laneCounts[hit.Component] = current + 1;
+                }
+
+                var result = new List<string>(count);
+                for (int lane = 0; lane < count; lane++)
+                {
+                    string? mostFrequent = counts[lane]?.OrderByDescending(pair => pair.Value).Select(pair => pair.Key).FirstOrDefault();
+                    result.Add(mostFrequent ?? LaneIdentityResolver.ComponentKey(layout, lane));
+                }
+
+                return result;
+            }
+
+            /// <summary>
+            /// Row identity: the lane's instrument as the playfield names and colours it, with the user's lane name and
+            /// colour on top when <paramref name="includeCustomisations"/> is set.
+            /// </summary>
+            public LaneIdentity DescribeLane(int laneIndex, bool includeCustomisations = true)
+            {
+                LaneIdentity identity;
+                if (sharedLaneLayout != null)
+                {
+                    identity = LaneIdentityResolver.Resolve(sharedLaneLayout, Math.Clamp(laneIndex, 0, Math.Max(0, laneCount - 1)));
+                }
+                else
+                {
+                    bool mapped = laneIndex >= 0 && laneIndex < laneMapping.Count;
+                    string name = mapped ? formatLaneName(laneMapping[laneIndex]) : $"Lane {laneIndex + 1}";
+                    string shortName = name.Length <= 3 ? name.ToUpperInvariant() : name[..2].ToUpperInvariant();
+                    identity = new LaneIdentity(name, shortName, DrumPalette.ForComponent(mapped ? laneMapping[laneIndex] : null));
+                }
+
+                if (!includeCustomisations)
+                    return identity;
+
+                if (LaneManagement.TryGetLaneColor(beatmap, laneIndex, out Color4 customColour))
+                    identity = identity with { Colour = customColour };
+
+                if (LaneManagement.TryGetLaneInfo(beatmap, laneIndex, out var info) && LaneManagement.IsCustomLaneName(info, laneIndex))
+                {
+                    identity = identity with
+                    {
+                        Name = info.Name!,
+                        ShortName = string.IsNullOrWhiteSpace(info.ShortName) ? identity.ShortName : info.ShortName!
+                    };
+                }
+
+                return identity;
             }
 
             private static string formatLaneName(string component)
@@ -1107,9 +1236,10 @@ namespace BeatSight.Game.Screens.Editor
                 if (!drawMeasures && !drawBeats && !drawSubdivisions)
                     return;
 
-                var measureColour = new Color4(247, 212, 152, 220);
-                var beatColour = new Color4(138, 178, 232, 178);
-                var subdivisionColour = new Color4(104, 128, 175, 132);
+                // Neutral, low-contrast grid: at fine snaps the old blue subdivision lines tinted the whole timeline.
+                var measureColour = new Color4(255, 255, 255, 120);
+                var beatColour = new Color4(255, 255, 255, 46);
+                var subdivisionColour = new Color4(255, 255, 255, 18);
 
                 float surfaceWidth = timelineSurface.Width;
                 double duration = durationMs;
@@ -1282,9 +1412,10 @@ namespace BeatSight.Game.Screens.Editor
                     var label = new SpriteText
                     {
                         Text = formatRulerLabel(timeMs),
-                        Font = BeatSightFont.Title(11.6f),
+                        Font = BeatSightFont.Caption(11.6f),
                         Colour = EditorColours.TextSecondary,
-                        Anchor = Anchor.TopCentre,
+                        // Left-anchored like the ticks: a centre anchor offset the labels by half the song's width.
+                        Anchor = Anchor.BottomLeft,
                         Origin = Anchor.BottomCentre,
                         X = x,
                         Y = -19,
@@ -1317,10 +1448,13 @@ namespace BeatSight.Game.Screens.Editor
             {
                 var span = TimeSpan.FromMilliseconds(Math.Max(0, timeMs));
 
-                if (span.TotalHours >= 1)
-                    return $"{(int)span.TotalHours}:{span.Minutes:00}:{span.Seconds:00}.{span.Milliseconds:000}";
+                // Major ticks fall on whole or half seconds, so tenths are the only fraction worth showing.
+                string fraction = span.Milliseconds >= 50 ? $".{span.Milliseconds / 100}" : string.Empty;
 
-                return $"{(int)span.TotalMinutes:00}:{span.Seconds:00}.{span.Milliseconds:000}";
+                if (span.TotalHours >= 1)
+                    return $"{(int)span.TotalHours}:{span.Minutes:00}:{span.Seconds:00}{fraction}";
+
+                return $"{(int)span.TotalMinutes}:{span.Seconds:00}{fraction}";
             }
 
             private partial class TimelineScrollContainer : BeatSightScrollContainer
@@ -1425,6 +1559,9 @@ namespace BeatSight.Game.Screens.Editor
 
             private int resolveLaneFromComponent(string component)
             {
+                if (sharedLaneLayout != null)
+                    return Math.Clamp(DrumLaneHeuristics.ResolveLane(component, sharedLaneLayout), 0, Math.Max(0, laneCount - 1));
+
                 if (!string.IsNullOrWhiteSpace(component))
                 {
                     int exact = laneMapping.FindIndex(mapped => string.Equals(mapped, component, StringComparison.OrdinalIgnoreCase));
@@ -1449,6 +1586,13 @@ namespace BeatSight.Game.Screens.Editor
                 int resolvedLane = Math.Clamp(lane, 0, Math.Max(0, laneCount - 1));
                 if (LaneManagement.TryGetLaneColor(beatmap, resolvedLane, out Color4 laneColour))
                     return laneColour;
+
+                // Uncustomised lanes use the colour of the instrument they hold, matching the practice views.
+                if (sharedLaneLayout != null)
+                    return LaneIdentityResolver.Resolve(sharedLaneLayout, resolvedLane).Colour;
+
+                if (resolvedLane < laneMapping.Count && !string.IsNullOrWhiteSpace(laneMapping[resolvedLane]))
+                    return DrumPalette.ForComponent(laneMapping[resolvedLane]);
 
                 var palette = LaneManagement.DefaultPalette;
                 if (palette.Count > 0)
@@ -2334,14 +2478,13 @@ namespace BeatSight.Game.Screens.Editor
                 Size = new Vector2(baseWidth, 30);
                 CornerRadius = 5;
                 Masking = true;
-                Colour = ResolveColour(hitObject.Component);
 
                 InternalChildren = new Drawable[]
                 {
                     background = new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = Colour
+                        Colour = ResolveColour(hitObject.Component)
                     },
                     topSheen = new Box
                     {
@@ -2449,32 +2592,7 @@ namespace BeatSight.Game.Screens.Editor
                 base.OnHoverLost(e);
             }
 
-            private static Color4 ResolveColour(string component)
-            {
-                string key = component?.ToLowerInvariant() ?? string.Empty;
-                if (key.StartsWith("kick"))
-                    return new Color4(255, 120, 120, 255);
-
-                if (key.StartsWith("snare") || key.StartsWith("cross_stick"))
-                    return new Color4(120, 180, 255, 255);
-
-                if (key.StartsWith("hihat_closed"))
-                    return new Color4(255, 220, 120, 255);
-
-                if (key.StartsWith("hihat_open") || key.StartsWith("hihat_pedal"))
-                    return new Color4(255, 205, 130, 255);
-
-                if (key.StartsWith("tom_") || key.StartsWith("tom"))
-                    return new Color4(140, 220, 170, 255);
-
-                if (key.StartsWith("crash") || key.StartsWith("china") || key.StartsWith("splash"))
-                    return new Color4(255, 160, 220, 255);
-
-                if (key.StartsWith("ride"))
-                    return new Color4(170, 190, 255, 255);
-
-                return new Color4(200, 200, 220, 255);
-            }
+            private static Color4 ResolveColour(string component) => DrumPalette.ForComponent(component);
 
             private void refreshColour(int lane)
             {
@@ -2482,7 +2600,6 @@ namespace BeatSight.Game.Screens.Editor
                 if (background.Colour == resolved)
                     return;
 
-                Colour = resolved;
                 background.Colour = resolved;
             }
 

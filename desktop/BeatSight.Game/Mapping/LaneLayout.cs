@@ -222,19 +222,39 @@ namespace BeatSight.Game.Mapping
                 primaryCategories.Add(classification.PrimaryCategory);
             }
 
-            // 2. Define category groups (related instruments share a lane)
+            // 2. Define category groups (related instruments share a lane). A kit with two or more tom voices gets one
+            //    lane per tom, high to low like Clone Hero's tom lanes; a single tom voice (ADTOF writes every tom as
+            //    tom_mid) keeps one shared "Toms" lane.
+            var tomCategories = new[] { DrumComponentCategory.TomHigh, DrumComponentCategory.TomMid, DrumComponentCategory.TomLow };
+            bool separateToms = tomCategories.Count(primaryCategories.Contains) >= 2;
+            var tomGroups = separateToms
+                ? new (string Name, DrumComponentCategory[] Members)[]
+                {
+                    ("TomHigh", new[] { DrumComponentCategory.TomHigh }),
+                    ("TomMid",  new[] { DrumComponentCategory.TomMid }),
+                    ("TomLow",  new[] { DrumComponentCategory.TomLow }),
+                }
+                : new (string Name, DrumComponentCategory[] Members)[]
+                {
+                    ("Tom", tomCategories),
+                };
+
             var categoryGroups = new (string Name, DrumComponentCategory[] Members)[]
-            {
-                ("Crash",  new[] { DrumComponentCategory.Crash, DrumComponentCategory.Crash2 }),
-                ("HiHat",  new[] { DrumComponentCategory.HiHatPedal, DrumComponentCategory.HiHatClosed, DrumComponentCategory.HiHatOpen, DrumComponentCategory.HiHatFootSplash, DrumComponentCategory.HiHatSplash }),
-                ("Snare",  new[] { DrumComponentCategory.Snare, DrumComponentCategory.SnareCenter, DrumComponentCategory.SnareRimshot, DrumComponentCategory.SnareCrossStick, DrumComponentCategory.Rimshot, DrumComponentCategory.CrossStick }),
-                ("Kick",   new[] { DrumComponentCategory.Kick }),
-                ("Tom",    new[] { DrumComponentCategory.TomHigh, DrumComponentCategory.TomMid, DrumComponentCategory.TomLow }),
-                ("Ride",   new[] { DrumComponentCategory.Ride, DrumComponentCategory.RideBow, DrumComponentCategory.RideBell }),
-                ("China",  new[] { DrumComponentCategory.China }),
-                ("Splash", new[] { DrumComponentCategory.Splash }),
-                ("Perc",   new[] { DrumComponentCategory.Cowbell, DrumComponentCategory.AuxPercussion, DrumComponentCategory.Percussion }),
-            };
+                {
+                    ("Crash",  new[] { DrumComponentCategory.Crash, DrumComponentCategory.Crash2 }),
+                    ("HiHat",  new[] { DrumComponentCategory.HiHatPedal, DrumComponentCategory.HiHatClosed, DrumComponentCategory.HiHatOpen, DrumComponentCategory.HiHatFootSplash, DrumComponentCategory.HiHatSplash }),
+                    ("Snare",  new[] { DrumComponentCategory.Snare, DrumComponentCategory.SnareCenter, DrumComponentCategory.SnareRimshot, DrumComponentCategory.SnareCrossStick, DrumComponentCategory.Rimshot, DrumComponentCategory.CrossStick }),
+                    ("Kick",   new[] { DrumComponentCategory.Kick }),
+                }
+                .Concat(tomGroups)
+                .Concat(new (string Name, DrumComponentCategory[] Members)[]
+                {
+                    ("Ride",   new[] { DrumComponentCategory.Ride, DrumComponentCategory.RideBow, DrumComponentCategory.RideBell }),
+                    ("China",  new[] { DrumComponentCategory.China }),
+                    ("Splash", new[] { DrumComponentCategory.Splash }),
+                    ("Perc",   new[] { DrumComponentCategory.Cowbell, DrumComponentCategory.AuxPercussion, DrumComponentCategory.Percussion }),
+                })
+                .ToArray();
 
             // 3. Determine which groups are present
             var presentGroups = new List<(string Name, DrumComponentCategory[] Members)>();

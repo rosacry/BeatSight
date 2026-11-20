@@ -174,6 +174,13 @@ namespace BeatSight.Game.Screens.SongSelect
             var beatmaps = BeatmapLibrary.GetAvailableBeatmaps();
             carousel.SetBeatmaps(beatmaps);
 
+            // Show a song's details straight away instead of an empty panel.
+            Schedule(() =>
+            {
+                if (selectedBeatmap == null)
+                    carousel.SelectNext();
+            });
+
             // Populate genre dropdown dynamically
             if (genreDropdown != null)
             {
@@ -664,7 +671,7 @@ namespace BeatSight.Game.Screens.SongSelect
                                 difficulty = new SpriteText
                                 {
                                     Font = BeatSightFont.Body(18f),
-                                    Colour = UITheme.AccentWarning,
+                                    Colour = UITheme.TextSecondary,
                                     Anchor = Anchor.TopCentre,
                                     Origin = Anchor.TopCentre,
                                 },
@@ -672,18 +679,20 @@ namespace BeatSight.Game.Screens.SongSelect
                                 {
                                     AutoSizeAxes = Axes.Both,
                                     Masking = true,
-                                    CornerRadius = 4,
+                                    CornerRadius = 5,
+                                    BorderThickness = 1,
+                                    BorderColour = UITheme.AccentPrimary.Opacity(0.6f),
                                     Anchor = Anchor.TopCentre,
                                     Origin = Anchor.TopCentre,
                                     Alpha = 0,
                                     Children = new Drawable[]
                                     {
-                                        new Box { RelativeSizeAxes = Axes.Both, Colour = UITheme.AccentSecondary },
+                                        new Box { RelativeSizeAxes = Axes.Both, Colour = UITheme.AccentPrimary.Opacity(0.12f) },
                                         aiBadgeLabel = new SpriteText
                                         {
-                                            Text = "AI Generated",
+                                            Text = "AI transcription",
                                             Font = BeatSightFont.Caption(12f),
-                                            Colour = Color4.White,
+                                            Colour = UITheme.AccentPrimary,
                                             Padding = new MarginPadding { Horizontal = 8, Vertical = 2 }
                                         }
                                     }
@@ -792,6 +801,8 @@ namespace BeatSight.Game.Screens.SongSelect
                                     Height = metrics.SecondaryButtonHeight,
                                     FontSize = metrics.SecondaryButtonFontSize,
                                     BackgroundColour = UITheme.SurfaceAlt,
+                                    BorderThickness = 1,
+                                    BorderColour = UITheme.Border,
                                     Anchor = Anchor.TopCentre,
                                     Origin = Anchor.TopCentre,
                                     Action = () => ToggleFavoriteAction?.Invoke()
@@ -799,11 +810,12 @@ namespace BeatSight.Game.Screens.SongSelect
                                 createSpacer(20), // Spacer
                                 actionButton = new BeatSightButton
                                 {
-                                    Text = editorMode ? "Edit Beatmap" : "Play Beatmap",
+                                    Text = editorMode ? "Edit" : "Play",
                                     Width = metrics.PrimaryButtonWidth,
                                     Height = metrics.PrimaryButtonHeight,
                                     FontSize = metrics.PrimaryButtonFontSize,
                                     BackgroundColour = UITheme.AccentPrimary,
+                                    TextColour = UITheme.TextOnAccent,
                                     Anchor = Anchor.TopCentre,
                                     Origin = Anchor.TopCentre,
                                     Action = () => { /* Logic to start play/edit */ }
@@ -975,7 +987,10 @@ namespace BeatSight.Game.Screens.SongSelect
                 bpm.Text = $"BPM: {beatmap.Timing.Bpm:F0}";
                 duration.Text = $"Length: {TimeSpan.FromMilliseconds(beatmap.Audio.Duration):mm\\:ss}";
 
-                difficulty.Text = $"Difficulty: {beatmap.Metadata.Difficulty:F1} stars";
+                // The star rating saturates at 10.0 on dense songs; show note density instead.
+                difficulty.Text = beatmap.HitObjects.Count > 0 && beatmap.Audio.Duration > 0
+                    ? $"{beatmap.HitObjects.Count:N0} notes   {beatmap.HitObjects.Count / (beatmap.Audio.Duration / 1000.0):0.0} notes/s"
+                    : string.Empty;
 
                 var aiMeta = beatmap.Editor?.AiGenerationMetadata;
                 if (aiMeta != null)
@@ -1272,6 +1287,10 @@ namespace BeatSight.Game.Screens.SongSelect
                 Width = metrics.RandomWidth,
                 Height = metrics.HeaderControlHeight,
                 FontSize = metrics.HeaderButtonFontSize,
+                // Secondary action: the screen's primary action is Play in the details panel.
+                BackgroundColour = UITheme.SurfaceAlt,
+                BorderThickness = 1,
+                BorderColour = UITheme.Border,
                 Anchor = Anchor.CentreLeft,
                 Origin = Anchor.CentreLeft,
                 Action = () => carousel.SelectRandom()
@@ -1303,8 +1322,10 @@ namespace BeatSight.Game.Screens.SongSelect
                 {
                     randomButton,
                     filterToggleRow,
+                    createHeaderFieldLabel("Tag"),
                     genreDropdown,
                     searchBox,
+                    createHeaderFieldLabel("Sort"),
                     sortDropdown
                 }
             };
@@ -1346,10 +1367,36 @@ namespace BeatSight.Game.Screens.SongSelect
             };
         }
 
+        private static Drawable createHeaderFieldLabel(string text) => new BeatSight.Game.UI.Components.BeatSightSpriteText
+        {
+            Text = text,
+            Font = BeatSightFont.Label(UITheme.TypeLabel),
+            Colour = UITheme.TextMuted,
+            Anchor = Anchor.CentreLeft,
+            Origin = Anchor.CentreLeft,
+        };
+
         protected override void Update()
         {
             base.Update();
             applyResponsiveLayout();
+            alignHeaderControlsWithBackButton();
+        }
+
+        /// <summary>
+        /// The back button sits in its own overlay; centre the header controls on it so the row reads as one line.
+        /// </summary>
+        private void alignHeaderControlsWithBackButton()
+        {
+            if (headerContentContainer == null || headerContainer == null || backButton == null || !backButton.IsLoaded || backButton.DrawHeight <= 0)
+                return;
+
+            float backTop = headerContainer.ToLocalSpace(backButton.ScreenSpaceDrawQuad.TopLeft).Y;
+            float backCentre = backTop + backButton.DrawHeight / 2f;
+            float bottom = Math.Max(0f, headerContainer.DrawHeight - 2f * backCentre);
+
+            if (Math.Abs(headerContentContainer.Padding.Bottom - bottom) > 0.5f)
+                headerContentContainer.Padding = headerContentContainer.Padding with { Bottom = bottom };
         }
 
         private void applyResponsiveLayout(bool force = false)
@@ -1448,7 +1495,8 @@ namespace BeatSight.Game.Screens.SongSelect
             return new MarginPadding
             {
                 Left = Math.Max(metrics.HeaderContentPadding, reservedLeft),
-                Right = metrics.HeaderContentPadding
+                Right = metrics.HeaderContentPadding,
+                Bottom = headerContentContainer?.Padding.Bottom ?? 0
             };
         }
 

@@ -15,6 +15,8 @@ namespace BeatSight.Game.UI.Components
     public partial class BeatSightCheckbox : Checkbox
     {
         private readonly Box fillBox;
+        private readonly Container checkboxContainer;
+        private readonly SpriteIcon checkIcon;
         private readonly SpriteText labelSpriteText;
         private readonly FillFlowContainer fillFlowContainer;
         private float labelFontSize = 12f;
@@ -55,16 +57,29 @@ namespace BeatSight.Game.UI.Components
         {
             AutoSizeAxes = Axes.Both;
 
-            var checkboxContainer = new Container
+            checkboxContainer = new Container
             {
                 Size = new Vector2(20),
                 Masking = true,
                 CornerRadius = 4,
-                BorderColour = UITheme.SurfaceAlt,
+                // Unchecked boxes keep a light outline so they read as controls on any surface.
+                BorderColour = UITheme.TextMuted,
                 BorderThickness = 2,
-                Child = fillBox = new Box
+                Children = new Drawable[]
                 {
-                    RelativeSizeAxes = Axes.Both,
+                    fillBox = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                    },
+                    checkIcon = new SpriteIcon
+                    {
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        Size = new Vector2(11),
+                        Icon = FontAwesome.Solid.Check,
+                        Colour = UITheme.TextOnAccent,
+                        Alpha = 0
+                    }
                 }
             };
 
@@ -95,6 +110,8 @@ namespace BeatSight.Game.UI.Components
         private void onCurrentChanged(ValueChangedEvent<bool> state)
         {
             fillBox.FadeColour(state.NewValue ? CheckedColor : UncheckedColor, FadeDuration);
+            checkIcon.FadeTo(state.NewValue ? 1 : 0, FadeDuration);
+            checkboxContainer.BorderColour = state.NewValue ? CheckedColor : UITheme.TextMuted;
         }
     }
 }

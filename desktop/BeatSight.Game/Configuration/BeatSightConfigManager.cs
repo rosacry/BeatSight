@@ -20,15 +20,54 @@ namespace BeatSight.Game.Configuration
 
         protected override string Filename => "beatsight.ini";
 
+        [ThreadStatic]
+        private static bool configFileExistedBeforeLoad;
+
         public BeatSightConfigManager(Storage storage)
-            : base(storage)
+            : base(recordExistingConfig(storage))
         {
-            performMigrations();
+            performMigrations(configFileExistedBeforeLoad);
             ensureAllSettingsTracked();
         }
 
-        private void performMigrations()
+        private static Storage recordExistingConfig(Storage storage)
         {
+            configFileExistedBeforeLoad = storage.Exists("beatsight.ini");
+            return storage;
+        }
+
+        /// <summary>
+        /// The playback zoom curve used before 2026-10-24 (stored zoom -> effective look-ahead multiplier).
+        /// Kept only to migrate saved settings so existing users keep the look-ahead they chose.
+        /// </summary>
+        internal static double LegacyPlaybackZoomFactor(double storedZoom)
+        {
+            const double min = 0.2, max = 5.0;
+            double clamped = Math.Clamp(storedZoom, min, max);
+            double normalized = (clamped - min) / (max - min);
+            double curved = Math.Pow(normalized, 0.55);
+            double remapped = min + curved * (max - min);
+            double lowEndLift = 1.20 * Math.Pow(1.0 - normalized, 1.7);
+            double boosted = (remapped + lowEndLift) * (1.0 + 1.80 * Math.Pow(normalized, 2.2));
+            return Math.Max(0.1, boosted);
+        }
+
+        private void performMigrations(bool existingConfig)
+        {
+            // Migration (2026-10-24): playback zoom became a direct multiplier (1.0x = map pacing). Existing
+            // configs stored values for the old curve; convert them so the visible look-ahead does not change.
+            if (Get<int>(BeatSightSetting.PlaybackZoomScaleVersion) < 1)
+            {
+                if (existingConfig)
+                {
+                    double stored = Get<double>(BeatSightSetting.PlaybackZoomLevel);
+                    double migrated = Math.Round(Math.Clamp(LegacyPlaybackZoomFactor(stored), 0.2, 5.0), 2);
+                    GetBindable<double>(BeatSightSetting.PlaybackZoomLevel).Value = migrated;
+                }
+
+                GetBindable<int>(BeatSightSetting.PlaybackZoomScaleVersion).Value = 1;
+            }
+
             // Migration: SpeedAdjustmentMin default changed from 0.25 to 0.0.
             // Users with old config files will have 0.25 persisted.
             // Also catch cases where it might be slightly off or user set it to something else that breaks balance if Max is 2.0.
@@ -56,6 +95,7 @@ namespace BeatSight.Game.Configuration
             setDefault(BeatSightSetting.SpeedAdjustmentMin, 0.0);
             setDefault(BeatSightSetting.SpeedAdjustmentMax, 2.0);
             setDefault(BeatSightSetting.PlaybackZoomLevel, 1.0);
+            setDefault(BeatSightSetting.PlaybackZoomScaleVersion, 0);
             setDefault(BeatSightSetting.PlaybackNoteWidth, 1.0);
             setDefault(BeatSightSetting.BackgroundDim, 0.8);
             setDefault(BeatSightSetting.BackgroundBlur, 0.0);
@@ -133,6 +173,7 @@ namespace BeatSight.Game.Configuration
 
             // Local Inference Settings (Developer Mode only)
             setDefault(BeatSightSetting.UseLocalInference, false);
+            setDefault(BeatSightSetting.UseLegacyTranscriptionEngine, false);  // false = ADTOF engine
             setDefault(BeatSightSetting.LocalModelPath, "");  // Path to .pth or .onnx model
             setDefault(BeatSightSetting.LocalModelVariant, "full");  // "full", "distilled", or "tiny"
             setDefault(BeatSightSetting.LocalInferenceDevice, "cuda");  // "cuda" or "cpu"
@@ -154,6 +195,9 @@ namespace BeatSight.Game.Configuration
         {
             foreach (var reset in resetActions)
                 reset();
+
+            // Defaults are already in the current zoom scale; don't let a reset re-trigger the legacy migration.
+            GetBindable<int>(BeatSightSetting.PlaybackZoomScaleVersion).Value = 1;
         }
 
         private void ensureAllSettingsTracked()
@@ -229,6 +273,7 @@ namespace BeatSight.Game.Configuration
         SpeedAdjustmentMin,
         SpeedAdjustmentMax,
         PlaybackZoomLevel,
+        PlaybackZoomScaleVersion,
         PlaybackNoteWidth,
         BackgroundDim,
         BackgroundBlur,
@@ -304,6 +349,7 @@ namespace BeatSight.Game.Configuration
 
         // Local Inference (Developer Mode only)
         UseLocalInference,
+        UseLegacyTranscriptionEngine,
         LocalModelPath,
         LocalModelVariant,
         LocalInferenceDevice,

@@ -319,7 +319,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             fill.Colour = fillColour;
             glow.Colour = UITheme.Emphasise(borderColour, 1.2f);
             glow.Alpha = glowAlpha;
-            rim.Colour = new Color4(borderColour.R, borderColour.G, borderColour.B, 180);
+            rim.Colour = new Color4(borderColour.R, borderColour.G, borderColour.B, 180 / 255f);
             innerHighlight.Alpha = viewMode == LaneViewMode.ThreeDimensional ? 0.13f : 0.4f;
         }
     }

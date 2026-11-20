@@ -38,9 +38,11 @@ public class PlaybackPlayfieldAutoZoomTests
         double atTwo = playfield.GetFutureViewportDurationMsAtZoom(2.0);
         double atHalf = playfield.GetFutureViewportDurationMsAtZoom(0.5);
 
-        Assert.InRange(atOne, 1166.0, 1171.0);
-        Assert.InRange(atTwo, 809.0, 816.0);
-        Assert.InRange(atHalf, 1487.0, 1494.0);
+        // 1.0x is the map's own pacing (2026-10-24, user-approved): 1.4 measures of 4/4 at the default 120 BPM
+        // = 2800 ms of approach plus the capped 360 ms lead-in; zoom divides the approach directly.
+        Assert.InRange(atOne, 3159.0, 3161.0);
+        Assert.InRange(atTwo, 1735.0, 1737.0);
+        Assert.InRange(atHalf, 5959.0, 5961.0);
         Assert.True(atHalf > atOne && atOne > atTwo);
     }
 
@@ -55,7 +57,8 @@ public class PlaybackPlayfieldAutoZoomTests
 
         Assert.True(atOne > 0);
         Assert.True(atTwo > 0);
-        Assert.InRange(atOne / atTwo, 1.43, 1.45);
+        // Auto-zoom multiplies both by the same base factor (no notes loaded), so only the lead-in cap bends the ratio.
+        Assert.InRange(atOne / atTwo, 1.85, 1.87);
     }
 
     [Fact]
@@ -108,6 +111,29 @@ public class PlaybackPlayfieldAutoZoomTests
 
         double interval = invokePrivate<double>(playfield, "resolveSnapIntervalMsForCurrentTime", 0.0);
         Assert.InRange(interval, 62.49, 62.51);
+    }
+
+    [Theory]
+    [InlineData(60)]
+    [InlineData(129)]
+    [InlineData(240)]
+    public void TwoDimensionalNotesAreThinBarsThatNeverFillTheSixteenthGap(double bpm)
+    {
+        // Practice view (no editor snap): bars are a fixed share of the highway, at most 22 px, whatever the tempo.
+        // The old rule made them 64% of the sixteenth gap, 44 px on slow or zoomed-in charts.
+        var playfield = new PlaybackPlayfield(() => 0, () => false, null);
+        playfield.LoadBeatmap(new BeatSight.Game.Beatmaps.Beatmap
+        {
+            Timing = new BeatSight.Game.Beatmaps.TimingInfo { Bpm = bpm, TimeSignature = "4/4" }
+        });
+
+        const float drawHeight = 1000f;
+        float noteHeight = invokePrivate<float>(playfield, "resolveTwoDimensionalNoteHeight", 0.0, drawHeight);
+        float travel = invokePrivate<float>(playfield, "resolveHitLineY", drawHeight);
+        double sixteenthGap = 60000.0 / bpm / 4.0 / playfield.ApproachDuration * travel;
+
+        Assert.InRange(noteHeight, 4f, 22f);
+        Assert.True(noteHeight <= Math.Max(4.0, sixteenthGap * 0.6) + 0.01, $"{noteHeight} px vs sixteenth gap {sixteenthGap:0.#} px");
     }
 
     private static T invokePrivate<T>(object target, string methodName, params object[] args)

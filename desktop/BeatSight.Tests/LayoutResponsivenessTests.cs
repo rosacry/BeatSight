@@ -264,81 +264,28 @@ namespace BeatSight.Tests
         }
 
         [Fact]
-        public void ManuscriptBackgroundIncludesTimelineMeasureLabels()
+        public void ManuscriptModeUsesTheDrumStaffView()
         {
-            string root = resolveRepositoryRoot();
-            string manuscriptPath = Path.Combine(root, "desktop", "BeatSight.Game", "Screens", "Playback", "Playfield", "Views", "ManuscriptViewEnhanced.cs");
-            Assert.True(File.Exists(manuscriptPath), $"Expected file missing: {manuscriptPath}");
-
-            string source = File.ReadAllText(manuscriptPath);
-            Assert.Contains("timelineMeasureLabelLayer", source);
-            Assert.Contains("updateTimelineMeasureLabels", source);
-            Assert.Contains("getTimelineMeasureLabel", source);
-            Assert.Contains("timelinePlayheadLabel", source);
-            Assert.Contains("updateTimelinePlayheadLabel", source);
-            Assert.Contains("timelinePlayheadCountInLayer", source);
-            Assert.Contains("updateTimelinePlayheadCountInGuides", source);
-            Assert.Contains("FormatManuscriptCountInLabel", source);
-            Assert.Contains("ResolveManuscriptCountInLookAroundTicks", source);
-            Assert.Contains("ShouldRenderManuscriptCountInLabel", source);
-            Assert.Contains("ResolveManuscriptAnnotationScale", source);
-            Assert.Contains("ResolveManuscriptAnnotationAlphaScale", source);
-            Assert.Contains("timelineTupletLabelLayer", source);
-            Assert.Contains("updateTimelineTupletLabels", source);
-            Assert.Contains("FormatManuscriptTupletHintLabel", source);
-            Assert.Contains("ResolveManuscriptTupletGroupingTicks", source);
-            Assert.Contains("ShouldRenderManuscriptTupletHint", source);
-            Assert.Contains("ResolveManuscriptTupletBracketEmphasis", source);
-            Assert.Contains("UsesDiamondNoteheadForComponent", source);
-            Assert.Contains("IsCrossStickComponent", source);
-            Assert.Contains("timelineTupletBracketRails", source);
-            Assert.Contains("getTimelineTupletBracketRail", source);
-            Assert.Contains("getTimelineTupletBracketLeftHook", source);
-            Assert.Contains("getTimelineTupletBracketRightHook", source);
-            Assert.Contains("label.Text = $\"M{measureIndex + 1}\"", source);
-        }
-
-        [Fact]
-        public void ManuscriptPlaybackHighlighterUsesBoundedCursorTrailContracts()
-        {
-            string root = resolveRepositoryRoot();
-            string highlighterPath = Path.Combine(root, "desktop", "BeatSight.Game", "Screens", "Playback", "Playfield", "Views", "ManuscriptPlaybackHighlighter.cs");
-            Assert.True(File.Exists(highlighterPath), $"Expected file missing: {highlighterPath}");
-
-            string source = File.ReadAllText(highlighterPath);
-            Assert.Contains("ResolvePlaybackCursorTrailWidth", source);
-            Assert.Contains("previewOverlay", source);
-            Assert.Contains("topTick", source);
-            Assert.Contains("bottomTick", source);
-        }
-
-        [Fact]
-        public void ManuscriptPlayfieldIncludesDurationCueContracts()
-        {
+            // 2026-10-24: manuscript mode is drawn by the drum staff view (behaviour covered by DrumStaffNotationTests);
+            // the playfield keeps its notes only for judging and hides them in this mode.
             string root = resolveRepositoryRoot();
             string playfieldPath = Path.Combine(root, "desktop", "BeatSight.Game", "Screens", "Playback", "Playfield", "PlaybackPlayfield.cs");
-            string drawableNotePath = Path.Combine(root, "desktop", "BeatSight.Game", "Screens", "Playback", "Playfield", "DrawableNote.cs");
+            string staffPath = Path.Combine(root, "desktop", "BeatSight.Game", "Screens", "Playback", "Playfield", "Notation", "DrumStaffView.cs");
             Assert.True(File.Exists(playfieldPath), $"Expected file missing: {playfieldPath}");
-            Assert.True(File.Exists(drawableNotePath), $"Expected file missing: {drawableNotePath}");
+            Assert.True(File.Exists(staffPath), $"Expected file missing: {staffPath}");
 
             string playfieldSource = File.ReadAllText(playfieldPath);
-            string noteSource = File.ReadAllText(drawableNotePath);
+            string staffSource = File.ReadAllText(staffPath);
 
-            Assert.Contains("manuscriptDurationLayer", playfieldSource);
-            Assert.Contains("addManuscriptTieSegment", playfieldSource);
-            Assert.Contains("ShouldRenderManuscriptDottedCue", playfieldSource);
-            Assert.Contains("manuscriptRestSpanLayer", playfieldSource);
-            Assert.Contains("ResolveManuscriptRestSpanEmphasisLevel", playfieldSource);
-            Assert.Contains("buildManuscriptHorizontalClusters", playfieldSource);
-            Assert.Contains("ResolveManuscriptChordHorizontalOffset", playfieldSource);
-            Assert.Contains("ResolveManuscriptSimultaneousTimeKey", playfieldSource);
-            Assert.Contains("renderManuscriptTieCues", playfieldSource);
-            Assert.Contains("ResolveManuscriptTieArchLiftMagnitude", playfieldSource);
-            Assert.Contains("ResolveManuscriptParserFollowAlpha", playfieldSource);
+            Assert.Contains("new DrumStaffView", playfieldSource);
+            Assert.Contains("drumStaffView.SetTime(currentTime)", playfieldSource);
             Assert.Contains("SetCountInGuideMode", playfieldSource);
-            Assert.Contains("SetManuscriptDurationDot", noteSource);
-            Assert.Contains("ResolveManuscriptGhostParenthesisOffsetX", noteSource);
-            Assert.Contains("manuscriptGhostParenLeft", noteSource);
+            Assert.DoesNotContain("ManuscriptBackgroundEnhanced", playfieldSource);
+
+            // Ruler, bar lines, notes and playhead share one time-to-x mapping.
+            Assert.Contains("public float XAtTime(double timeMs)", staffSource);
+            Assert.Contains("public double TimeAtX(float x)", staffSource);
+            Assert.Contains("buildLegend", staffSource);
         }
 
         [Fact]

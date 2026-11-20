@@ -94,16 +94,16 @@ namespace BeatSight.Game.UI.Theming
         #region Color Palette - Core
 
         /// <summary>Deep background color for the main canvas.</summary>
-        public static readonly Color4 ColorBackground = new Color4(8, 10, 18, 255);
+        public static readonly Color4 ColorBackground = UITheme.Background;
 
         /// <summary>Elevated surface color for cards and panels.</summary>
-        public static readonly Color4 ColorSurface = new Color4(18, 22, 35, 255);
+        public static readonly Color4 ColorSurface = UITheme.Surface;
 
         /// <summary>Higher elevated surface for overlays.</summary>
-        public static readonly Color4 ColorSurfaceElevated = new Color4(28, 34, 52, 255);
+        public static readonly Color4 ColorSurfaceElevated = UITheme.SurfaceAlt;
 
         /// <summary>Subtle borders and dividers.</summary>
-        public static readonly Color4 ColorBorder = new Color4(45, 55, 80, 255);
+        public static readonly Color4 ColorBorder = UITheme.Border;
 
         /// <summary>Dimmed border for less emphasis.</summary>
         public static readonly Color4 ColorBorderSubtle = new Color4(35, 42, 62, 255);
@@ -113,13 +113,13 @@ namespace BeatSight.Game.UI.Theming
         #region Color Palette - Text
 
         /// <summary>Primary text color (white).</summary>
-        public static readonly Color4 ColorTextPrimary = new Color4(255, 255, 255, 255);
+        public static readonly Color4 ColorTextPrimary = UITheme.TextPrimary;
 
         /// <summary>Secondary text color for less important text.</summary>
-        public static readonly Color4 ColorTextSecondary = new Color4(180, 188, 210, 255);
+        public static readonly Color4 ColorTextSecondary = UITheme.TextSecondary;
 
         /// <summary>Muted text color for hints and disabled states.</summary>
-        public static readonly Color4 ColorTextMuted = new Color4(100, 110, 140, 255);
+        public static readonly Color4 ColorTextMuted = UITheme.TextMuted;
 
         /// <summary>Inverted text for use on light backgrounds.</summary>
         public static readonly Color4 ColorTextInverted = new Color4(20, 25, 40, 255);
@@ -129,22 +129,22 @@ namespace BeatSight.Game.UI.Theming
         #region Color Palette - Accents
 
         /// <summary>Primary accent - cyan neon for highlights and focus.</summary>
-        public static readonly Color4 ColorAccentPrimary = new Color4(0, 210, 255, 255);
+        public static readonly Color4 ColorAccentPrimary = UITheme.AccentPrimary;
 
         /// <summary>Alias for primary accent.</summary>
         public static readonly Color4 ColorAccent = ColorAccentPrimary;
 
         /// <summary>Secondary accent - magenta for secondary actions.</summary>
-        public static readonly Color4 ColorAccentSecondary = new Color4(255, 50, 150, 255);
+        public static readonly Color4 ColorAccentSecondary = UITheme.AccentSecondary;
 
         /// <summary>Success color - green for positive feedback.</summary>
-        public static readonly Color4 ColorSuccess = new Color4(0, 255, 140, 255);
+        public static readonly Color4 ColorSuccess = UITheme.AccentSuccess;
 
         /// <summary>Warning color - orange for caution states.</summary>
-        public static readonly Color4 ColorWarning = new Color4(255, 180, 0, 255);
+        public static readonly Color4 ColorWarning = UITheme.AccentWarning;
 
         /// <summary>Error color - red for negative feedback.</summary>
-        public static readonly Color4 ColorError = new Color4(255, 70, 70, 255);
+        public static readonly Color4 ColorError = UITheme.AccentError;
 
         /// <summary>Early timing indicator color - blue tint.</summary>
         public static readonly Color4 ColorEarly = new Color4(100, 160, 255, 255);
@@ -156,72 +156,45 @@ namespace BeatSight.Game.UI.Theming
 
         #region Color Palette - Drum Components
 
-        /// <summary>Kick drum color - deep purple/violet.</summary>
-        public static readonly Color4 ColorKick = new Color4(180, 130, 255, 255);
+        // Instrument colours come from the shared DrumPalette so every view agrees.
 
-        /// <summary>Snare drum color - electric blue.</summary>
-        public static readonly Color4 ColorSnare = new Color4(70, 160, 255, 255);
+        /// <summary>Kick drum colour.</summary>
+        public static readonly Color4 ColorKick = DrumPalette.Kick;
 
-        /// <summary>Hi-hat color - golden yellow.</summary>
-        public static readonly Color4 ColorHiHat = new Color4(255, 210, 70, 255);
+        /// <summary>Snare drum colour.</summary>
+        public static readonly Color4 ColorSnare = DrumPalette.Snare;
 
-        /// <summary>Open hi-hat color - brighter gold.</summary>
-        public static readonly Color4 ColorHiHatOpen = new Color4(255, 185, 0, 255);
+        /// <summary>Hi-hat colour.</summary>
+        public static readonly Color4 ColorHiHat = DrumPalette.HiHat;
 
-        /// <summary>High tom color - lime green.</summary>
-        public static readonly Color4 ColorTomHigh = new Color4(140, 220, 50, 255);
+        /// <summary>Open hi-hat colour.</summary>
+        public static readonly Color4 ColorHiHatOpen = DrumPalette.HiHatOpen;
 
-        /// <summary>Mid tom color - teal.</summary>
-        public static readonly Color4 ColorTomMid = new Color4(80, 210, 235, 255);
+        /// <summary>High tom colour.</summary>
+        public static readonly Color4 ColorTomHigh = DrumPalette.TomHigh;
 
-        /// <summary>Low tom color - indigo.</summary>
-        public static readonly Color4 ColorTomLow = new Color4(130, 140, 255, 255);
+        /// <summary>Mid tom colour.</summary>
+        public static readonly Color4 ColorTomMid = DrumPalette.TomMid;
 
-        /// <summary>Crash cymbal color - hot pink.</summary>
-        public static readonly Color4 ColorCrash = new Color4(255, 120, 200, 255);
+        /// <summary>Low tom colour.</summary>
+        public static readonly Color4 ColorTomLow = DrumPalette.TomLow;
 
-        /// <summary>Ride cymbal color - warm coral.</summary>
-        public static readonly Color4 ColorRide = new Color4(255, 160, 140, 255);
+        /// <summary>Crash cymbal colour.</summary>
+        public static readonly Color4 ColorCrash = DrumPalette.Crash;
 
-        /// <summary>China cymbal color - amber.</summary>
-        public static readonly Color4 ColorChina = new Color4(255, 195, 80, 255);
+        /// <summary>Ride cymbal colour.</summary>
+        public static readonly Color4 ColorRide = DrumPalette.Ride;
 
-        /// <summary>Default/unknown component color.</summary>
-        public static readonly Color4 ColorComponentDefault = new Color4(160, 165, 185, 255);
+        /// <summary>China cymbal colour.</summary>
+        public static readonly Color4 ColorChina = DrumPalette.China;
+
+        /// <summary>Default/unknown component colour.</summary>
+        public static readonly Color4 ColorComponentDefault = DrumPalette.Percussion;
 
         /// <summary>
-        /// Get the color for a drum component by name.
+        /// Get the colour for a drum component by name.
         /// </summary>
-        public static Color4 GetComponentColor(string component)
-        {
-            if (string.IsNullOrEmpty(component))
-                return ColorComponentDefault;
-
-            string lower = component.ToLowerInvariant();
-
-            if (lower.Contains("kick"))
-                return ColorKick;
-            if (lower.Contains("snare") || lower.Contains("rim") || lower.Contains("cross"))
-                return ColorSnare;
-            if (lower.Contains("hihat_open") || lower.Contains("hi-hat_open"))
-                return ColorHiHatOpen;
-            if (lower.Contains("hihat") || lower.Contains("hi-hat"))
-                return ColorHiHat;
-            if (lower.Contains("tom_high") || lower.Contains("tom high"))
-                return ColorTomHigh;
-            if (lower.Contains("tom_mid") || lower.Contains("tom mid"))
-                return ColorTomMid;
-            if (lower.Contains("tom_low") || lower.Contains("tom low") || lower.Contains("floor"))
-                return ColorTomLow;
-            if (lower.Contains("crash"))
-                return ColorCrash;
-            if (lower.Contains("ride"))
-                return ColorRide;
-            if (lower.Contains("china") || lower.Contains("splash"))
-                return ColorChina;
-
-            return ColorComponentDefault;
-        }
+        public static Color4 GetComponentColor(string component) => DrumPalette.ForComponent(component);
 
         #endregion
 

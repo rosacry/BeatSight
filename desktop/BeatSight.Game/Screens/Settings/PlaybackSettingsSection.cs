@@ -541,7 +541,7 @@ namespace BeatSight.Game.Screens.Settings
         private static string formatKickLaneMode(KickLaneMode mode) => mode switch
         {
             KickLaneMode.GlobalLine => "Global Line",
-            KickLaneMode.DedicatedLane => "Dedicated Line",
+            KickLaneMode.DedicatedLane => "Dedicated Lane",
             _ => mode.ToString()
         };
 

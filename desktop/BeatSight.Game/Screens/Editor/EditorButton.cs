@@ -28,6 +28,7 @@ namespace BeatSight.Game.Screens.Editor
         private readonly Color4 idleColour;
         private readonly Color4 disabledColour;
         private readonly Color4 borderColour;
+        private readonly Color4 labelColour;
         private readonly SpriteText label;
         private string baseText;
 
@@ -58,11 +59,15 @@ namespace BeatSight.Game.Screens.Editor
             baseText = text;
             hoverColour = EditorColours.Lighten(colour, 1.1f);
             idleColour = colour;
-            disabledColour = EditorColours.Lighten(colour, 0.68f);
+            // Disabled buttons drop their accent and sit on the neutral surface with an outline: clearly off, still legible.
+            disabledColour = UITheme.SurfaceAlt;
             borderColour = EditorColours.Mix(colour, Color4.White, 0.24f).Opacity(0.85f);
+            labelColour = ReadableLabelColour(colour);
 
             Masking = true;
             CornerRadius = 9;
+            // BasicButton multiplies the whole button by grey when disabled; the disabled look is drawn here instead.
+            DisabledColour = Color4.White;
 
             AddInternal(background = new Box
             {
@@ -96,7 +101,7 @@ namespace BeatSight.Game.Screens.Editor
             {
                 Text = text,
                 Font = BeatSightFont.Button(13.4f),
-                Colour = EditorColours.TextPrimary,
+                Colour = labelColour,
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
                 Truncate = true,
@@ -218,7 +223,6 @@ namespace BeatSight.Game.Screens.Editor
         private void updateEnabledState(bool enabled)
         {
             background.FadeColour(enabled ? idleColour : disabledColour, 200, Easing.OutQuint);
-            this.FadeTo(enabled ? 1f : 0.56f, 200, Easing.OutQuint);
             if (!enabled)
             {
                 if (EnableScaleAnimation)
@@ -226,8 +230,19 @@ namespace BeatSight.Game.Screens.Editor
                 else
                     Scale = Vector2.One;
             }
-            label.FadeColour(enabled ? EditorColours.TextPrimary : EditorColours.Lighten(EditorColours.TextPrimary, 0.84f), 200, Easing.OutQuint);
-            topSheen.FadeTo(enabled ? 1f : 0.75f, 160, Easing.OutQuint);
+            label.FadeColour(enabled ? labelColour : UITheme.TextMuted, 200, Easing.OutQuint);
+            topSheen.FadeTo(enabled ? 1f : 0f, 160, Easing.OutQuint);
+            BorderThickness = enabled ? 0f : 1.5f;
+            BorderColour = UITheme.Border;
+        }
+
+        /// <summary>
+        /// Dark text on light accents (cyan, green), light text on dark surfaces.
+        /// </summary>
+        internal static Color4 ReadableLabelColour(Color4 background)
+        {
+            float luminance = 0.2126f * background.R + 0.7152f * background.G + 0.0722f * background.B;
+            return luminance > 0.5f ? UITheme.TextOnAccent : EditorColours.TextPrimary;
         }
     }
 }

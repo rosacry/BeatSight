@@ -50,14 +50,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             {
                 RegisterView(new TwoDimensionalLaneViewEnhanced());
                 RegisterView(new ThreeDimensionalHighwayViewEnhanced());
-                RegisterView(new ManuscriptViewEnhanced());
             }
             else
             {
                 // Legacy views for compatibility
                 RegisterView(new TwoDimensionalLaneView());
                 RegisterView(new ThreeDimensionalHighwayView());
-                RegisterView(new ManuscriptView());
             }
 
             // Create containers for background and strike zone
@@ -90,13 +88,11 @@ namespace BeatSight.Game.Screens.Playback.Playfield.Views
             {
                 RegisterView(new TwoDimensionalLaneViewEnhanced());
                 RegisterView(new ThreeDimensionalHighwayViewEnhanced());
-                RegisterView(new ManuscriptViewEnhanced());
             }
             else
             {
                 RegisterView(new TwoDimensionalLaneView());
                 RegisterView(new ThreeDimensionalHighwayView());
-                RegisterView(new ManuscriptView());
             }
 
             // Re-initialize views with context

@@ -3,6 +3,7 @@
 // See ENGINEERING_ACTION_TRACKER.md item 2.3
 
 using System;
+using System.Linq;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Events;
@@ -17,8 +18,12 @@ namespace BeatSight.Game.Screens.Playback
     public partial class PlaybackToolbarContainer : Container
     {
         private MarginPadding cachedPadding;
-        private const float PEEK_HEIGHT = 50f;
         private bool initialLayoutDone = false;
+
+        /// <summary>Visible height while tucked away: the transport/progress row stays on screen.</summary>
+        public float PeekHeight { get; set; } = 64f;
+
+        private const float tucked_alpha = 0.92f;
 
         public PlaybackToolbarContainer()
         {
@@ -53,39 +58,60 @@ namespace BeatSight.Game.Screens.Playback
                 cachedPadding = targetPadding;
             }
 
-            // Initial layout snap
-            if (!initialLayoutDone && DrawHeight > PEEK_HEIGHT)
+            // Keep the tucked position in step with the real height: the toolbar's content finishes laying out over
+            // several frames, so an offset computed once on the first frame left most of it covering the highway.
+            float hideOffset = Math.Max(0, DrawHeight - PeekHeight);
+            if (!expanded && DrawHeight > PeekHeight)
             {
-                initialLayoutDone = true;
-                if (!IsHovered)
+                if (!initialLayoutDone)
                 {
-                    float hideOffset = Math.Max(0, DrawHeight - PEEK_HEIGHT);
-                    this.Y = hideOffset;
-                    this.FadeTo(0f, 500, Easing.OutQuint);
+                    initialLayoutDone = true;
+                    // Start tucked, not invisible: progress and play/pause should be visible without hunting.
+                    this.FadeTo(tucked_alpha, 300, Easing.OutQuint);
                 }
+
+                if (Math.Abs(Y - hideOffset) > 0.5f && !isAnimatingPosition)
+                    Y = hideOffset;
             }
         }
 
+        private bool expanded;
+        private bool isAnimatingPosition => Transforms.Any(t => t.TargetMember == nameof(Y));
+
+        public bool Expanded => expanded;
+
+        /// <summary>
+        /// Expands the full toolbar or tucks it to the peek strip. Hover drives this in normal use; visual capture
+        /// calls it directly so screenshots never depend on where the real mouse cursor happens to be.
+        /// </summary>
+        public void SetExpanded(bool value, bool animate = true)
+        {
+            expanded = value;
+            initialLayoutDone = true;
+            ClearTransforms();
+
+            float targetY = value ? 0 : Math.Max(0, DrawHeight - PeekHeight);
+            float targetAlpha = value ? 1f : tucked_alpha;
+            double duration = animate ? (value ? 220 : 360) : 0;
+
+            this.MoveToY(targetY, duration, Easing.OutQuint);
+            this.FadeTo(targetAlpha, duration, Easing.OutQuint);
+        }
+
+        /// <summary>When false, hover no longer expands the toolbar (used by visual capture for determinism).</summary>
+        public bool ExpandOnHover { get; set; } = true;
+
         protected override bool OnHover(HoverEvent e)
         {
-            // Ensure we start from the hidden position if this is the first interaction
-            if (!initialLayoutDone && DrawHeight > PEEK_HEIGHT)
-            {
-                initialLayoutDone = true;
-                float hideOffset = Math.Max(0, DrawHeight - PEEK_HEIGHT);
-                this.Y = hideOffset;
-            }
-
-            this.FadeIn(200, Easing.OutQuint);
-            this.MoveToY(0, 200, Easing.OutQuint);
+            if (ExpandOnHover)
+                SetExpanded(true);
             return true;
         }
 
         protected override void OnHoverLost(HoverLostEvent e)
         {
-            float hideOffset = Math.Max(0, DrawHeight - PEEK_HEIGHT);
-            this.MoveToY(hideOffset, 500, Easing.OutQuint);
-            this.FadeTo(0.6f, 500, Easing.OutQuint);
+            if (ExpandOnHover)
+                SetExpanded(false);
         }
     }
 }

@@ -1202,7 +1202,10 @@ namespace BeatSight.Game.Screens.Mapping
                 MultilabelThresholdsPath: thresholdsPath,
                 // Adaptive thresholds
                 UseAdaptiveThresholds: adaptiveThresholdsEnabled.Value,
-                AdaptiveThresholdMethod: "otsu");
+                AdaptiveThresholdMethod: "otsu",
+                TranscriptionEngine: config.Get<bool>(BeatSightSetting.UseLegacyTranscriptionEngine)
+                    ? AiTranscriptionEngine.Legacy
+                    : AiTranscriptionEngine.Adtof);
         }
 
         private static QuantizationGrid mapQuantizationGrid(QuantizationGridSetting setting) => setting switch

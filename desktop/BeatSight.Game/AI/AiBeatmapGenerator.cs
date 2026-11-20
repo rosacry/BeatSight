@@ -24,6 +24,11 @@ namespace BeatSight.Game.AI
     /// </summary>
     public class AiGenerationOptions
     {
+        /// <summary>
+        /// Transcription engine passed as --engine. ADTOF (default) keeps detected note times and
+        /// ignores the legacy-only sensitivity, quantization, mode and classifier options.
+        /// </summary>
+        public AiTranscriptionEngine Engine { get; set; } = AiTranscriptionEngine.Adtof;
         public double ConfidenceThreshold { get; set; } = 0.3;  // Lowered from 0.7 to detect more real drum hits
         public bool EnableDrumSeparation { get; set; } = true;
         public string? PythonExecutablePath { get; set; }
@@ -170,7 +175,7 @@ namespace BeatSight.Game.AI
                 CreateNoWindow = true
             };
 
-            startInfo.Environment["PYTHONUNBUFFERED"] = "1";
+            applyPythonEnvironment(startInfo);
 
             if (options.TempoCandidates is { Count: > 0 })
             {
@@ -366,7 +371,7 @@ namespace BeatSight.Game.AI
                 ? string.Join(" ", laneCounts.OrderBy(kv => kv.Key).Select(kv => $"L{kv.Key}:{kv.Value}"))
                 : "none";
 
-            logs.Add($"[gen] mode={mode} notes={noteCount} bpm={bpm:0.###} offset={offsetMs:0}ms sensitivity={sensitivity} grid={grid} lanes=[{laneDistribution}]");
+            logs.Add($"[gen] engine={toEngineCliValue(options.Engine)} mode={mode} notes={noteCount} bpm={bpm:0.###} offset={offsetMs:0}ms sensitivity={sensitivity} grid={grid} lanes=[{laneDistribution}]");
 
             // Log duration coverage if we have timing info
             if (noteCount > 0 && beatmap.HitObjects != null)
@@ -505,6 +510,7 @@ namespace BeatSight.Game.AI
             builder.Append("-m pipeline.process");
             builder.Append(' ').Append("--input ").Append(quote(inputPath));
             builder.Append(' ').Append("--output ").Append(quote(outputPath));
+            builder.Append(' ').Append("--engine ").Append(toEngineCliValue(options.Engine));
             builder.Append(' ').Append("--confidence ").Append(options.ConfidenceThreshold.ToString("0.###", CultureInfo.InvariantCulture));
             builder.Append(' ').Append("--mode ").Append(options.PipelineMode == AiPipelineMode.Transcription ? "transcription" : "gameplay");
 
@@ -594,6 +600,24 @@ namespace BeatSight.Game.AI
 
             return "\"" + text.Replace("\"", "\\\"") + "\"";
         }
+
+        /// <summary>
+        /// Redirected Python output otherwise uses the Windows ANSI code page and crashes on any
+        /// non-ASCII text the pipeline prints (for example the legacy metadata emoji).
+        /// </summary>
+        internal static void applyPythonEnvironment(ProcessStartInfo startInfo)
+        {
+            startInfo.Environment["PYTHONUNBUFFERED"] = "1";
+            startInfo.Environment["PYTHONIOENCODING"] = "utf-8";
+            startInfo.StandardOutputEncoding = Encoding.UTF8;
+            startInfo.StandardErrorEncoding = Encoding.UTF8;
+        }
+
+        private static string toEngineCliValue(AiTranscriptionEngine engine) => engine switch
+        {
+            AiTranscriptionEngine.Legacy => "legacy",
+            _ => "adtof"
+        };
 
         private static string toQuantizationCliValue(QuantizationGrid grid) => grid switch
         {
@@ -749,6 +773,18 @@ namespace BeatSight.Game.AI
     {
         Gameplay,
         Transcription
+    }
+
+    /// <summary>
+    /// Python transcription engine. Must match ai-pipeline/pipeline/process.py --engine.
+    /// </summary>
+    public enum AiTranscriptionEngine
+    {
+        /// <summary>htdemucs_ft separation + ADTOF Frame_RNN; unquantized broad drum families.</summary>
+        Adtof,
+
+        /// <summary>Inherited onset detector and classifier pipeline, kept as a fallback.</summary>
+        Legacy
     }
 
     /// <summary>

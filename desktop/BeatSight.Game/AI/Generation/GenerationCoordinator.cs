@@ -51,7 +51,8 @@ namespace BeatSight.Game.AI.Generation
         // CLI parity flags
         AiPipelineMode PipelineMode = AiPipelineMode.Gameplay,
         bool AutoSensitivity = false,
-        bool AutoQuantization = false);
+        bool AutoQuantization = false,
+        AiTranscriptionEngine TranscriptionEngine = AiTranscriptionEngine.Adtof);
 
     public readonly record struct GenerationProgress(
         GenStage Stage,
@@ -146,6 +147,7 @@ namespace BeatSight.Game.AI.Generation
 
                 var options = new AiGenerationOptions
                 {
+                    Engine = snapshot.TranscriptionEngine,
                     DetectionSensitivity = snapshot.DetectionSensitivity,
                     QuantizationGrid = snapshot.Quantization,
                     ExportDebugAnalysis = snapshot.DebugOverlayEnabled,

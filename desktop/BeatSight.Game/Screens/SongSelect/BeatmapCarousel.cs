@@ -414,9 +414,10 @@ namespace BeatSight.Game.Screens.SongSelect
                                     },
                                     difficulty = new BeatSight.Game.UI.Components.BeatSightSpriteText
                                     {
-                                        Text = $"[{entry.Beatmap.Metadata.Difficulty:F1}] mapped by {entry.Beatmap.Metadata.Creator}",
-                                        Font = BeatSightFont.Caption(14f),
-                                        Colour = getDifficultyColour((float)entry.Beatmap.Metadata.Difficulty),
+                                        // Practice facts instead of the star rating, which saturates at 10.0 on dense songs.
+                                        Text = FormatPracticeSummary(entry.Beatmap),
+                                        Font = BeatSightFont.Caption(13f),
+                                        Colour = UITheme.TextMuted,
                                         Truncate = true,
                                         RelativeSizeAxes = Axes.X
                                     },
@@ -451,8 +452,8 @@ namespace BeatSight.Game.Screens.SongSelect
                     case PanelState.Selected:
                         BorderColour = UITheme.AccentPrimary;
                         background.FadeColour(UITheme.SurfaceAlt, 200, Easing.OutQuint);
-                        this.ResizeTo(new Vector2(1.0f, expandedHeight), 300, Easing.OutElastic); // Elastic expand
-                        leftBar.ResizeWidthTo(8, 300, Easing.OutElastic);
+                        this.ResizeTo(new Vector2(1.0f, expandedHeight), UITheme.MotionNormal, UITheme.MotionEasing);
+                        leftBar.ResizeWidthTo(5, UITheme.MotionNormal, UITheme.MotionEasing);
                         leftBar.FadeIn(200);
                         break;
 
@@ -466,12 +467,11 @@ namespace BeatSight.Game.Screens.SongSelect
                 }
             }
 
-            private Color4 getDifficultyColour(float stars)
+            /// <summary>Only numeric versions get a "v" prefix ("v1.2"); model ids such as "adtof-frame-rnn-1" stay as they are.</summary>
+            internal static string FormatModelVersion(string modelVersion)
             {
-                if (stars < 2.0f) return UITheme.AccentSuccess;
-                if (stars < 4.0f) return UITheme.AccentWarning;
-                if (stars < 5.5f) return UITheme.AccentError;
-                return UITheme.AccentSecondary;
+                string trimmed = modelVersion.Trim();
+                return trimmed.Length > 0 && char.IsDigit(trimmed[0]) ? $"v{trimmed}" : trimmed;
             }
 
             private Drawable[] getAiInfo(Beatmap beatmap)
@@ -481,21 +481,23 @@ namespace BeatSight.Game.Screens.SongSelect
 
                 if (aiMeta != null)
                 {
-                    // AI Badge
+                    // AI badge: outlined so it reads as a tag, not a button.
                     list.Add(new Container
                     {
                         AutoSizeAxes = Axes.Both,
                         Masking = true,
-                        CornerRadius = 4,
+                        CornerRadius = 5,
+                        BorderThickness = 1,
+                        BorderColour = UITheme.AccentPrimary.Opacity(0.6f),
                         Children = new Drawable[]
                         {
-                            new Box { RelativeSizeAxes = Axes.Both, Colour = UITheme.AccentPrimary },
+                            new Box { RelativeSizeAxes = Axes.Both, Colour = UITheme.AccentPrimary.Opacity(0.12f) },
                             new BeatSight.Game.UI.Components.BeatSightSpriteText
                             {
-                                Text = "AI Generated",
-                                Font = BeatSightFont.Caption(10f),
-                                Colour = Color4.White,
-                                Padding = new MarginPadding { Horizontal = 5, Vertical = 2 }
+                                Text = "AI transcription",
+                                Font = BeatSightFont.Caption(11.5f),
+                                Colour = UITheme.AccentPrimary,
+                                Padding = new MarginPadding { Horizontal = 7, Vertical = 2 }
                             }
                         }
                     });
@@ -516,7 +518,7 @@ namespace BeatSight.Game.Screens.SongSelect
                     {
                         list.Add(new BeatSight.Game.UI.Components.BeatSightSpriteText
                         {
-                            Text = $"v{aiMeta.ModelVersion}",
+                            Text = FormatModelVersion(aiMeta.ModelVersion),
                             Font = BeatSightFont.Caption(12f),
                             Colour = UITheme.TextSecondary,
                             Alpha = 0.7f
@@ -545,6 +547,36 @@ namespace BeatSight.Game.Screens.SongSelect
                 flash.FadeOutFromOne(400, Easing.OutQuad);
                 return base.OnClick(e);
             }
+        }
+
+        /// <summary>
+        /// "6:23   99 BPM   13.1 notes/s   BeatSight AI (ADTOF)" — length, tempo and density are what a
+        /// learner uses to pick a song; the charter says which transcription it is.
+        /// </summary>
+        internal static string FormatPracticeSummary(Beatmap beatmap)
+        {
+            var parts = new List<string>(4);
+            double durationMs = beatmap.Audio?.Duration ?? 0;
+            if (durationMs <= 0 && beatmap.HitObjects.Count > 0)
+                durationMs = beatmap.HitObjects.Max(h => h.Time);
+
+            if (durationMs > 0)
+            {
+                var length = TimeSpan.FromMilliseconds(durationMs);
+                parts.Add(length.TotalHours >= 1 ? length.ToString(@"h\:mm\:ss") : length.ToString(@"m\:ss"));
+            }
+
+            double bpm = beatmap.Timing?.Bpm ?? 0;
+            if (double.IsFinite(bpm) && bpm > 0)
+                parts.Add($"{bpm:0} BPM");
+
+            if (durationMs > 0 && beatmap.HitObjects.Count > 0)
+                parts.Add($"{beatmap.HitObjects.Count / (durationMs / 1000.0):0.0} notes/s");
+
+            if (!string.IsNullOrWhiteSpace(beatmap.Metadata.Creator))
+                parts.Add(beatmap.Metadata.Creator.Trim());
+
+            return string.Join("     ", parts);
         }
 
         public enum SortMode

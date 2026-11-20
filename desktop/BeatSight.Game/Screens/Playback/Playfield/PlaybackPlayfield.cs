@@ -4,6 +4,7 @@ using System.Linq;
 using BeatSight.Game.Beatmaps;
 using BeatSight.Game.Configuration;
 using BeatSight.Game.Mapping;
+using BeatSight.Game.Screens.Playback.Playfield.Notation;
 using BeatSight.Game.Screens.Playback.Playfield.Views;
 using BeatSight.Game.UI.Theming;
 using osu.Framework.Allocation;
@@ -217,20 +218,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             };
         }
 
-        private static class SheetMusicTuning
-        {
-            public const float TimelineWidthRatio = 0.84f;
-            public const float TimelineCenterYRatio = 0.56f;
-            public const double VisibleMeasures = 2.0;
-            public const float PlayheadRatio = 0.24f;
-            public const float NoteWidthRatio = 0.020f;
-            public const float NoteHeightRatio = 0.60f;
-            public const float MinNoteWidth = 10f;
-            public const float MaxNoteWidth = 32f;
-            public const float MinNoteHeight = 10f;
-            public const float MaxNoteHeight = 30f;
-        }
-
         /// <summary>Width ratio of the playfield relative to container. 1.0 = full width.</summary>
         private const float PlayfieldWidthRatio = 1f;
         private const float PreviewTwoDimensionalHitLineLift = 0.015f;
@@ -243,9 +230,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private const double FutureVisibilityLeadInMaxMs = 360;
         private const double ManualZoomMin = 0.2;
         private const double ManualZoomMax = 5.0;
-        private const double ManualZoomResponseExponent = 0.55;
-        private const double ManualZoomHighEndBoost = 1.80;
-        private const double ManualZoomLowEndLift = 1.20;
         private const double PreviewZoomLowEndBoost = 0.22;
         private const double PreviewZoomHighEndBoost = 0.95;
         private const double PreviewZoomLowEndExponent = 1.4;
@@ -275,10 +259,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private Container noteLayer = null!;
         private Container hitExplosionLayer = null!;
         private Container laneBackgroundContainer = null!;
-        private Container manuscriptBeamLayer = null!;
-        private Container manuscriptDurationLayer = null!;
-        private Container manuscriptRestSpanLayer = null!;
-        private Container manuscriptRestLayer = null!;
         private Container threeDProfileHintContainer = null!;
         private SpriteText threeDProfileHintText = null!;
 
@@ -287,7 +267,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private TimingStrikeZone? timingStrikeZone;
         // private KickGuideLine? kickGuideLine2D; // Removed unused field
         private ThreeDHighwayBackground? threeDHighwayBackground;
-        private ManuscriptBackgroundEnhanced? manuscriptBackground;
+        /// <summary>Drum sheet music for manuscript mode (2026-10-24 rebuild); replaces the old manuscript note drawing.</summary>
+        private DrumStaffView? drumStaffView;
+        private Container strikeZoneHost = null!;
         private Beatmap? loadedBeatmap;
 
         private Bindable<LaneViewMode> laneViewMode = null!;
@@ -315,13 +297,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private float lastLayoutAppliedWidth = float.NaN;
         private float lastLayoutAppliedHeight = float.NaN;
 
-        private const float ManuscriptPrimaryBeamThickness = 3.2f;
-        private const float ManuscriptSecondaryBeamThickness = 2.4f;
-        private const float ManuscriptBeamSpacing = 5.2f;
-        private const float ManuscriptBeamAlpha = 0.84f;
-        private const float ManuscriptTieThickness = 2.1f;
-        private const float ManuscriptTieInnerAlpha = 0.46f;
-        private const float ManuscriptTieAlpha = 0.78f;
         private const double MinBeamGapBeats = 0.08;
         private const double SingleBeamThresholdBeats = 0.76;
         private const double DoubleBeamThresholdBeats = 0.38;
@@ -331,92 +306,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private const double DottedGapToleranceBeats = 0.075;
         private const int MaxTieInterveningVoiceNotes = 1;
         private const float MaxTieSpanRatio = 0.34f;
-        private const double ManuscriptParserFocusWindowBeats = 0.55;
-        private const double ManuscriptParserFadeWindowBeats = 4.2;
-        private const float ManuscriptParserFarNoteAlpha = 0.42f;
-        private const float ManuscriptParserFarBeamAlphaScale = 0.38f;
-        private const float ManuscriptParserFarTieAlphaScale = 0.30f;
-        private static readonly Color4 manuscriptBeamColor = new Color4(42, 50, 66, 255);
-        private static readonly Color4 manuscriptTieColor = new Color4(188, 202, 222, 255);
-        private static readonly Color4 manuscriptRestColor = new Color4(210, 220, 236, 255);
-        private static readonly Color4 manuscriptRestSpanColorStrong = new Color4(220, 232, 250, 255);
-        private static readonly Color4 manuscriptRestSpanColorSoft = new Color4(176, 192, 218, 255);
         private ThreeDProfileTuning currentThreeDProfileTuning = resolveThreeDProfileTuning(ThreeDStageProfile.GhClassic);
-
-        private readonly List<Box> manuscriptRestSpanPool = new();
-        private readonly List<DrawableManuscriptRest> manuscriptRestPool = new();
-
-        private readonly struct ManuscriptBeamAnchor
-        {
-            public ManuscriptBeamAnchor(
-                DrawableNote note,
-                ManuscriptBackgroundEnhanced.ManuscriptNotationVoice voice,
-                int notationIndex,
-                bool stemDown,
-                float stemX,
-                float stemTipY,
-                double hitTime,
-                double beatDuration,
-                double beatOrigin)
-            {
-                Note = note;
-                Voice = voice;
-                NotationIndex = notationIndex;
-                StemDown = stemDown;
-                StemX = stemX;
-                StemTipY = stemTipY;
-                HitTime = hitTime;
-                BeatDuration = beatDuration;
-                BeatOrigin = beatOrigin;
-            }
-
-            public DrawableNote Note { get; }
-            public ManuscriptBackgroundEnhanced.ManuscriptNotationVoice Voice { get; }
-            public int NotationIndex { get; }
-            public bool StemDown { get; }
-            public float StemX { get; }
-            public float StemTipY { get; }
-            public double HitTime { get; }
-            public double BeatDuration { get; }
-            public double BeatOrigin { get; }
-        }
-
-        private readonly struct ManuscriptHorizontalClusterEntry
-        {
-            public ManuscriptHorizontalClusterEntry(
-                ManuscriptBackgroundEnhanced.ManuscriptNotationVoice voice,
-                int voiceIndex,
-                int voiceCount,
-                bool hasCrossVoice)
-            {
-                Voice = voice;
-                VoiceIndex = voiceIndex;
-                VoiceCount = voiceCount;
-                HasCrossVoice = hasCrossVoice;
-            }
-
-            public ManuscriptBackgroundEnhanced.ManuscriptNotationVoice Voice { get; }
-            public int VoiceIndex { get; }
-            public int VoiceCount { get; }
-            public bool HasCrossVoice { get; }
-        }
-
-        private readonly struct ManuscriptTieCue
-        {
-            public ManuscriptTieCue(ManuscriptBeamAnchor start, ManuscriptBeamAnchor end, float alphaScale)
-            {
-                Start = start;
-                End = end;
-                AlphaScale = alphaScale;
-            }
-
-            public ManuscriptBeamAnchor Start { get; }
-            public ManuscriptBeamAnchor End { get; }
-            public float AlphaScale { get; }
-            public bool StemDown => Start.StemDown;
-            public int NotationIndex => Start.NotationIndex;
-            public float MidX => (Start.Note.Position.X + End.Note.Position.X) * 0.5f;
-        }
 
         private readonly struct SheetTimelineWindow
         {
@@ -502,41 +392,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 },
                 timingGridOverlay,
                 // KickGuideLine removed
-                new Container
+                strikeZoneHost = new Container
                 {
                     RelativeSizeAxes = Axes.Both,
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
                     Width = PlayfieldWidthRatio,
                     Child = timingStrikeZone
-                },
-                manuscriptBeamLayer = new Container
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    Width = PlayfieldWidthRatio
-                },
-                manuscriptDurationLayer = new Container
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    Width = PlayfieldWidthRatio
-                },
-                manuscriptRestSpanLayer = new Container
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    Width = PlayfieldWidthRatio
-                },
-                manuscriptRestLayer = new Container
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    Width = PlayfieldWidthRatio
                 },
                 noteLayer = new Container
                 {
@@ -559,7 +421,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             laneViewMode.BindValueChanged(onLaneViewModeChanged, true);
             manuscriptCountInGuideModeSetting.BindValueChanged(e =>
             {
-                manuscriptBackground?.SetCountInGuideMode(e.NewValue);
+                drumStaffView?.SetCountInGuideMode(e.NewValue);
             }, true);
 
             if (loadedBeatmap != null)
@@ -638,15 +500,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             if (threeDProfileHintContainer == null || threeDProfileHintText == null)
                 return;
 
-            if (currentLaneViewMode != LaneViewMode.ThreeDimensional)
-            {
-                threeDProfileHintContainer.Alpha = 0;
-                return;
-            }
-
+            // The stage profile is shown on the playback toolbar; keep the note highway free of text overlays.
             threeDProfileHintText.Text = $"3D Stage: {FormatThreeDProfileHintLabel(StageProfile.Value)}";
-            threeDProfileHintText.Font = new FontUsage("Roboto", DrawWidth < 1320 ? 10.4f : 11f);
-            threeDProfileHintContainer.Alpha = 0.9f;
+            threeDProfileHintContainer.Alpha = 0;
         }
 
         private void onLaneViewModeChanged(ValueChangedEvent<LaneViewMode> e)
@@ -674,11 +530,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         public void LoadBeatmap(Beatmap beatmap)
         {
             loadedBeatmap = beatmap;
+            drumStaffView?.SetBeatmap(beatmap);
             notes.Clear();
             noteLayer?.Clear(false);
-            clearManuscriptBeams();
-            clearManuscriptDurationCues();
-            clearManuscriptRests();
             firstActiveNoteIndex = 0;
             sortedTimingPoints.Clear();
             lastTimingPointIndex = -1;
@@ -747,7 +601,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 return;
 
             manuscriptFocusComponent = normalized;
-            manuscriptBackground?.SetFocusedComponent(manuscriptFocusComponent);
+            drumStaffView?.SetFocusComponent(manuscriptFocusComponent);
         }
 
         protected override void Update()
@@ -800,59 +654,11 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             timingGridOverlay?.UpdateState(currentTime, effectiveWidth, DrawHeight, spawnTop, hitLineY, travelDistance, effectiveWidth / activeLaneCount, activeLaneCount, activeLaneCount, laneLayout.KickLane, currentLaneViewMode, kickUsesGlobalLine);
 
             threeDHighwayBackground?.UpdateScroll(currentTime);
-            if (currentLaneViewMode == LaneViewMode.Manuscript && manuscriptBackground != null)
+            if (currentLaneViewMode == LaneViewMode.Manuscript && drumStaffView != null)
             {
-                SheetTimelineWindow sheetWindow = resolveSheetTimelineWindow(currentTime, effectiveWidth, DrawHeight);
-                resolveTimingForHitTime(currentTime, out double beatDuration, out double beatOrigin);
-                int markerSubdivision = resolveManuscriptTimelineSubdivision(sheetWindow, beatDuration);
-                manuscriptBackground.SetTimelineWindow(
-                    sheetWindow.StartTime,
-                    sheetWindow.Duration,
-                    sheetWindow.PlayheadX,
-                    sheetWindow.LeftX,
-                    sheetWindow.RightX,
-                    (int)Math.Max(1, Math.Round(cachedBeatsPerMeasure)),
-                    beatOrigin,
-                    markerSubdivision);
-                manuscriptBackground.UpdatePlaybackPosition(currentTime, cachedBpm);
+                drumStaffView.SetTime(currentTime);
+                drumStaffView.SetZoom(ZoomLevel.Value);
             }
-        }
-
-        private readonly struct ManuscriptRestMarker
-        {
-            public ManuscriptRestMarker(
-                double timeMs,
-                int level,
-                ManuscriptBackgroundEnhanced.ManuscriptNotationVoice voice)
-            {
-                TimeMs = timeMs;
-                Level = level;
-                Voice = voice;
-            }
-
-            public double TimeMs { get; }
-            public int Level { get; }
-            public ManuscriptBackgroundEnhanced.ManuscriptNotationVoice Voice { get; }
-        }
-
-        private readonly struct ManuscriptRestSpan
-        {
-            public ManuscriptRestSpan(
-                double startTimeMs,
-                double endTimeMs,
-                int emphasisLevel,
-                ManuscriptBackgroundEnhanced.ManuscriptNotationVoice voice)
-            {
-                StartTimeMs = startTimeMs;
-                EndTimeMs = endTimeMs;
-                EmphasisLevel = emphasisLevel;
-                Voice = voice;
-            }
-
-            public double StartTimeMs { get; }
-            public double EndTimeMs { get; }
-            public int EmphasisLevel { get; }
-            public ManuscriptBackgroundEnhanced.ManuscriptNotationVoice Voice { get; }
         }
 
         private void updateApproachDuration(double currentTime)
@@ -979,12 +785,7 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private void updateNotes(double currentTime)
         {
             if (notes.Count == 0)
-            {
-                clearManuscriptBeams();
-                clearManuscriptDurationCues();
-                clearManuscriptRests();
                 return;
-            }
 
             float drawHeight = DrawHeight;
             float effectiveWidth = DrawWidth * PlayfieldWidthRatio;
@@ -993,20 +794,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float spawnTop = 0f;
             float travelDistance = hitLineY - spawnTop;
 
-            double beatDuration = 60000.0 / resolveTimingBpmAt(currentTime);
-            SheetTimelineWindow sheetWindow = default;
-            if (currentLaneViewMode == LaneViewMode.Manuscript)
-                sheetWindow = resolveSheetTimelineWindow(currentTime, effectiveWidth, drawHeight);
-
-            List<ManuscriptBeamAnchor>? manuscriptBeamAnchors = currentLaneViewMode == LaneViewMode.Manuscript
-                ? new List<ManuscriptBeamAnchor>()
-                : null;
-
-            double activeFutureVisibilityWindow = futureVisibilityWindow;
-            if (currentLaneViewMode == LaneViewMode.Manuscript && sheetWindow.Duration > 0)
-                activeFutureVisibilityWindow = Math.Max(activeFutureVisibilityWindow, sheetWindow.Duration + 500);
-
-            pruneNotesOutsideVisibilityWindow(currentTime, activeFutureVisibilityWindow);
+            bool staffNotation = currentLaneViewMode == LaneViewMode.Manuscript;
+            pruneNotesOutsideVisibilityWindow(currentTime, futureVisibilityWindow);
 
             // Clean up notes that have fully expired (well past the hit line)
             while (firstActiveNoteIndex < notes.Count && notes[firstActiveNoteIndex].HitTime < currentTime - pastVisibilityWindow)
@@ -1029,16 +818,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             }
 
             // Update visible notes
-            Dictionary<DrawableNote, ManuscriptHorizontalClusterEntry>? manuscriptHorizontalClusters = null;
-            if (currentLaneViewMode == LaneViewMode.Manuscript)
-                manuscriptHorizontalClusters = buildManuscriptHorizontalClusters(currentTime, activeFutureVisibilityWindow);
-
             for (int i = firstActiveNoteIndex; i < notes.Count; i++)
             {
                 var note = notes[i];
                 double timeUntilHit = note.HitTime - currentTime;
 
-                if (timeUntilHit > activeFutureVisibilityWindow)
+                if (timeUntilHit > futureVisibilityWindow)
                     break;
 
                 // Don't re-add judged or disposed notes that were already consumed in this timeline state.
@@ -1052,1126 +837,34 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     note.ApplyKickMode(kickUsesGlobalLine, laneLayout.KickLane);
                 }
 
+                // Sheet music is drawn by the staff view; the note drawables only carry judging and hit sounds there.
+                if (staffNotation)
+                {
+                    note.Alpha = 0;
+                    continue;
+                }
+
                 if (currentLaneViewMode == LaneViewMode.TwoDimensional)
                     note.Height = resolveTwoDimensionalNoteHeight(note.HitTime, drawHeight);
 
-                updateNotePosition(
-                    note,
-                    (float)timeUntilHit,
-                    effectiveWidth,
-                    drawHeight,
-                    hitLineY,
-                    travelDistance,
-                    sheetWindow,
-                    manuscriptHorizontalClusters,
-                    beatDuration);
-
-                if (manuscriptBeamAnchors != null && !note.IsJudged && note.Alpha > 0.01f)
-                    manuscriptBeamAnchors.Add(createManuscriptBeamAnchor(note));
-            }
-
-            if (manuscriptBeamAnchors != null)
-            {
-                updateManuscriptBeams(manuscriptBeamAnchors, currentTime);
-                updateManuscriptRests(currentTime, sheetWindow, effectiveWidth, drawHeight);
-            }
-            else
-            {
-                clearManuscriptBeams();
-                clearManuscriptDurationCues();
-                clearManuscriptRests();
+                updateNotePosition(note, (float)timeUntilHit, effectiveWidth, drawHeight, hitLineY, travelDistance);
             }
         }
 
         private SheetTimelineWindow resolveSheetTimelineWindow(double currentTime, float drawWidth, float drawHeight)
         {
-            double beatsPerMeasure = Math.Max(1, cachedBeatsPerMeasure);
-            double beatDuration = cachedBpm > 0
-                ? 60000.0 / cachedBpm * (4.0 / Math.Max(1.0, cachedBeatUnitDenominator))
-                : 500.0;
-            double measureDuration = Math.Max(beatDuration, beatDuration * beatsPerMeasure);
-            double effectiveZoom = getEffectiveZoomFactor(currentTime, beatDuration, beatsPerMeasure);
-            double windowDuration = (measureDuration * SheetMusicTuning.VisibleMeasures) / effectiveZoom;
-            double playheadRatio = Math.Clamp(SheetMusicTuning.PlayheadRatio, 0.12f, 0.88f);
-            double origin = loadedBeatmap?.Timing?.Offset ?? 0.0;
-            double mapEnd = origin + windowDuration;
-            if (loadedBeatmap?.HitObjects?.Count > 0)
-            {
-                double lastHit = loadedBeatmap.HitObjects.Max(hit => (double)hit.Time);
-                mapEnd = Math.Max(mapEnd, lastHit + measureDuration * 0.8);
-            }
-
-            // Songsterr-like behavior: keep playhead anchored while the notation scrolls.
-            double targetWindowStart = currentTime - windowDuration * playheadRatio;
-            double minStart = origin - windowDuration * 0.06;
-            double maxStart = Math.Max(minStart, mapEnd - windowDuration * (1.0 - playheadRatio));
-            double windowStart = Math.Clamp(targetWindowStart, minStart, maxStart);
-
-            float timelineWidth = Math.Max(260f, drawWidth * SheetMusicTuning.TimelineWidthRatio);
-            float leftX = (drawWidth - timelineWidth) * 0.5f;
-            float rightX = leftX + timelineWidth;
-            float playheadX = leftX + timelineWidth * (float)playheadRatio;
-
+            _ = currentTime;
+            _ = drawWidth;
             _ = drawHeight;
-            return new SheetTimelineWindow(windowStart, windowDuration, leftX, rightX, playheadX);
-        }
 
-        private int resolveManuscriptTimelineSubdivision(in SheetTimelineWindow sheetWindow, double beatDuration)
-        {
-            if (loadedBeatmap?.HitObjects == null || loadedBeatmap.HitObjects.Count < 2 || beatDuration <= 1 || sheetWindow.Duration <= 1)
-                return 1;
-
-            double windowPadding = beatDuration * 0.15;
-            double windowStart = sheetWindow.StartTime - windowPadding;
-            double windowEnd = sheetWindow.StartTime + sheetWindow.Duration + windowPadding;
-
-            var windowHitTimes = loadedBeatmap.HitObjects
-                .Where(hit => hit.Time >= windowStart && hit.Time <= windowEnd)
-                .Select(hit => (double)hit.Time)
-                .OrderBy(time => time)
-                .ToList();
-
-            if (windowHitTimes.Count < 2)
-                return 1;
-
-            List<double> beatGaps = new();
-            double previous = windowHitTimes[0];
-            for (int i = 1; i < windowHitTimes.Count; i++)
-            {
-                double deltaMs = windowHitTimes[i] - previous;
-                previous = windowHitTimes[i];
-
-                // Skip stacked chord hits or effectively identical timestamps.
-                if (deltaMs < 1.0)
-                    continue;
-
-                double gapBeats = deltaMs / beatDuration;
-                if (gapBeats <= 0 || gapBeats > 1.05)
-                    continue;
-
-                beatGaps.Add(gapBeats);
-            }
-
-            return ResolveManuscriptSubdivisionDivisor(beatGaps);
-        }
-
-        private void updateManuscriptRests(double currentTime, in SheetTimelineWindow sheetWindow, float drawWidth, float drawHeight)
-        {
-            if (sheetWindow.Duration <= 1)
-            {
-                clearManuscriptRests();
-                return;
-            }
-
-            resolveTimingForHitTime(currentTime, out double beatDuration, out double beatOrigin);
-            if (beatDuration <= 1)
-            {
-                clearManuscriptRests();
-                return;
-            }
-
-            int subdivision = Math.Clamp(resolveManuscriptTimelineSubdivision(sheetWindow, beatDuration), 1, 8);
-            double tickDuration = beatDuration / subdivision;
-            if (tickDuration <= 1)
-            {
-                clearManuscriptRests();
-                return;
-            }
-
-            double windowStart = sheetWindow.StartTime;
-            double windowEnd = windowStart + sheetWindow.Duration;
-            int firstTick = (int)Math.Floor((windowStart - beatOrigin) / tickDuration);
-            int lastTick = (int)Math.Ceiling((windowEnd - beatOrigin) / tickDuration);
-            if (lastTick <= firstTick)
-            {
-                clearManuscriptRests();
-                return;
-            }
-
-            var voiceNoteTimes = collectVoiceNoteTimesInWindow(windowStart - tickDuration * 0.6, windowEnd + tickDuration * 0.6);
-            var markers = new List<ManuscriptRestMarker>();
-            var spans = new List<ManuscriptRestSpan>();
-            markers.AddRange(buildManuscriptRestMarkers(
-                firstTick,
-                lastTick,
-                beatOrigin,
-                tickDuration,
-                subdivision,
-                voiceNoteTimes.Upper,
-                ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Upper,
-                spans));
-            markers.AddRange(buildManuscriptRestMarkers(
-                firstTick,
-                lastTick,
-                beatOrigin,
-                tickDuration,
-                subdivision,
-                voiceNoteTimes.Lower,
-                ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower,
-                spans));
-
-            markers.Sort((a, b) => a.TimeMs.CompareTo(b.TimeMs));
-            spans.Sort((a, b) => a.StartTimeMs.CompareTo(b.StartTimeMs));
-
-            renderManuscriptRests(markers, spans, sheetWindow, drawWidth, drawHeight);
-        }
-
-        private (List<double> Upper, List<double> Lower) collectVoiceNoteTimesInWindow(double startMs, double endMs)
-        {
-            List<double> upper = new();
-            List<double> lower = new();
-            if (notes.Count == 0)
-                return (upper, lower);
-
-            int startIndex = Math.Max(0, firstActiveNoteIndex - 16);
-            for (int i = startIndex; i < notes.Count; i++)
-            {
-                double hitTime = notes[i].HitTime;
-                if (hitTime < startMs)
-                    continue;
-                if (hitTime > endMs)
-                    break;
-
-                var voice = ManuscriptBackgroundEnhanced.GetNotationVoiceForComponent(notes[i].ComponentName);
-                if (voice == ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower)
-                    lower.Add(hitTime);
-                else
-                    upper.Add(hitTime);
-            }
-
-            return (upper, lower);
-        }
-
-        private List<ManuscriptRestMarker> buildManuscriptRestMarkers(
-            int firstTick,
-            int lastTick,
-            double beatOrigin,
-            double tickDuration,
-            int subdivision,
-            List<double> noteTimes,
-            ManuscriptBackgroundEnhanced.ManuscriptNotationVoice voice,
-            List<ManuscriptRestSpan> spans)
-        {
-            var markers = new List<ManuscriptRestMarker>();
-            if (lastTick <= firstTick)
-                return markers;
-
-            double occupancyTolerance = tickDuration * 0.34;
-            int noteIndex = 0;
-            bool inRun = false;
-            int runStartTick = 0;
-            int runLengthTicks = 0;
-
-            for (int tick = firstTick; tick < lastTick; tick++)
-            {
-                double tickCenter = beatOrigin + (tick + 0.5) * tickDuration;
-                while (noteIndex < noteTimes.Count && noteTimes[noteIndex] < tickCenter - occupancyTolerance)
-                    noteIndex++;
-
-                bool occupied = noteIndex < noteTimes.Count
-                                && Math.Abs(noteTimes[noteIndex] - tickCenter) <= occupancyTolerance;
-
-                if (occupied)
-                {
-                    if (inRun)
-                    {
-                        appendRestMarkersForRun(markers, spans, runStartTick, runLengthTicks, beatOrigin, tickDuration, subdivision, voice);
-                        inRun = false;
-                    }
-
-                    continue;
-                }
-
-                if (!inRun)
-                {
-                    inRun = true;
-                    runStartTick = tick;
-                    runLengthTicks = 0;
-                }
-
-                runLengthTicks++;
-            }
-
-            if (inRun)
-                appendRestMarkersForRun(markers, spans, runStartTick, runLengthTicks, beatOrigin, tickDuration, subdivision, voice);
-
-            return markers;
-        }
-
-        private void appendRestMarkersForRun(
-            List<ManuscriptRestMarker> markers,
-            List<ManuscriptRestSpan> spans,
-            int runStartTick,
-            int runLengthTicks,
-            double beatOrigin,
-            double tickDuration,
-            int subdivision,
-            ManuscriptBackgroundEnhanced.ManuscriptNotationVoice voice)
-        {
-            if (runLengthTicks <= 0)
-                return;
-
-            double runStartMs = beatOrigin + runStartTick * tickDuration;
-            double runEndMs = beatOrigin + (runStartTick + runLengthTicks) * tickDuration;
-            double runBeats = runLengthTicks / (double)Math.Max(1, subdivision);
-            spans.Add(new ManuscriptRestSpan(
-                runStartMs,
-                runEndMs,
-                ResolveManuscriptRestSpanEmphasisLevel(runBeats),
-                voice));
-
-            int cursor = runStartTick;
-            int remaining = runLengthTicks;
-            while (remaining >= subdivision)
-            {
-                double markerTick = cursor + subdivision * 0.5;
-                markers.Add(new ManuscriptRestMarker(beatOrigin + markerTick * tickDuration, 0, voice));
-                cursor += subdivision;
-                remaining -= subdivision;
-            }
-
-            if (remaining <= 0)
-                return;
-
-            double remainingBeats = remaining / (double)subdivision;
-            int level = ResolveManuscriptRestGlyphLevel(remainingBeats);
-            double partialMarkerTick = cursor + remaining * 0.5;
-            markers.Add(new ManuscriptRestMarker(beatOrigin + partialMarkerTick * tickDuration, level, voice));
-        }
-
-        private void renderManuscriptRests(
-            List<ManuscriptRestMarker> markers,
-            List<ManuscriptRestSpan> spans,
-            in SheetTimelineWindow sheetWindow,
-            float drawWidth,
-            float drawHeight)
-        {
-            if ((markers.Count == 0 && spans.Count == 0) || sheetWindow.Duration <= 1)
-            {
-                clearManuscriptRests();
-                return;
-            }
-
-            float timelineWidth = Math.Max(1f, sheetWindow.RightX - sheetWindow.LeftX);
-            float staffCenterY = ManuscriptBackgroundEnhanced.GetStaffCenterYForDrawHeight(drawHeight);
-            float staffSpacing = ManuscriptBackgroundEnhanced.GetStaffSpacingForDrawArea(drawWidth, drawHeight);
-            float upperVoiceY = staffCenterY - staffSpacing * 0.66f;
-            float lowerVoiceY = staffCenterY + staffSpacing * 0.74f;
-
-            int renderedSpans = 0;
-            for (int i = 0; i < spans.Count; i++)
-            {
-                var span = spans[i];
-                if (span.EndTimeMs - span.StartTimeMs <= 2)
-                    continue;
-
-                double startNormalized = (span.StartTimeMs - sheetWindow.StartTime) / sheetWindow.Duration;
-                double endNormalized = (span.EndTimeMs - sheetWindow.StartTime) / sheetWindow.Duration;
-                if (endNormalized < -0.04 || startNormalized > 1.04)
-                    continue;
-
-                float startX = sheetWindow.LeftX + (float)Math.Clamp(startNormalized, 0.0, 1.0) * timelineWidth;
-                float endX = sheetWindow.LeftX + (float)Math.Clamp(endNormalized, 0.0, 1.0) * timelineWidth;
-                float width = endX - startX;
-                if (width < 6f)
-                    continue;
-
-                bool lower = span.Voice == ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower;
-                float y = lower ? lowerVoiceY + staffSpacing * 0.20f : upperVoiceY - staffSpacing * 0.20f;
-                Box restSpan = getOrCreateManuscriptRestSpan(renderedSpans++);
-                restSpan.Position = new Vector2(startX, y);
-                restSpan.Width = width;
-                restSpan.Height = span.EmphasisLevel switch
-                {
-                    >= 2 => 2.8f,
-                    1 => 2.2f,
-                    _ => 1.8f
-                };
-                restSpan.Colour = span.EmphasisLevel >= 2 ? manuscriptRestSpanColorStrong : manuscriptRestSpanColorSoft;
-                restSpan.Alpha = span.EmphasisLevel switch
-                {
-                    >= 2 => lower ? 0.76f : 0.72f,
-                    1 => lower ? 0.62f : 0.60f,
-                    _ => lower ? 0.48f : 0.46f
-                };
-            }
-
-            for (int i = renderedSpans; i < manuscriptRestSpanPool.Count; i++)
-                manuscriptRestSpanPool[i].Alpha = 0f;
-
-            int renderedCount = 0;
-            for (int i = 0; i < markers.Count; i++)
-            {
-                var marker = markers[i];
-                double normalized = (marker.TimeMs - sheetWindow.StartTime) / sheetWindow.Duration;
-                if (normalized < -0.04 || normalized > 1.04)
-                    continue;
-
-                float x = sheetWindow.LeftX + (float)normalized * timelineWidth;
-                var rest = getOrCreateManuscriptRest(renderedCount++);
-                rest.Position = new Vector2(
-                    x,
-                    marker.Voice == ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower
-                        ? lowerVoiceY
-                        : upperVoiceY);
-                rest.SetGlyphLevel(marker.Level);
-                rest.SetVoice(marker.Voice == ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower
-                    ? DrawableManuscriptRest.RestVoice.Lower
-                    : DrawableManuscriptRest.RestVoice.Upper);
-                rest.Colour = manuscriptRestColor;
-                rest.Alpha = marker.Voice == ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower ? 0.82f : 0.86f;
-            }
-
-            for (int i = renderedCount; i < manuscriptRestPool.Count; i++)
-                manuscriptRestPool[i].Alpha = 0f;
-        }
-
-        internal static int ResolveManuscriptSubdivisionDivisor(IEnumerable<double> beatGaps)
-        {
-            int count8 = 0;
-            int count6 = 0;
-            int count4 = 0;
-            int count3 = 0;
-            int count2 = 0;
-
-            foreach (double gap in beatGaps)
-            {
-                if (gap <= 0)
-                    continue;
-
-                if (Math.Abs(gap - 0.125) <= 0.030)
-                    count8++;
-                else if (Math.Abs(gap - (1.0 / 6.0)) <= 0.032)
-                    count6++;
-                else if (Math.Abs(gap - 0.25) <= 0.040)
-                    count4++;
-                else if (Math.Abs(gap - (1.0 / 3.0)) <= 0.045)
-                    count3++;
-                else if (Math.Abs(gap - 0.5) <= 0.060)
-                    count2++;
-            }
-
-            if (count8 >= 2)
-                return 8;
-
-            if (count6 >= 2)
-                return 6;
-
-            if (count4 >= 2)
-                return 4;
-
-            if (count3 >= 2)
-                return 3;
-
-            if (count2 >= 1)
-                return 2;
-
-            return 1;
-        }
-
-        internal static int ResolveManuscriptRestGlyphLevel(double gapBeats)
-        {
-            if (gapBeats >= 0.75)
-                return 0;
-            if (gapBeats >= 0.375)
-                return 1;
-            if (gapBeats >= 0.1875)
-                return 2;
-
-            return 3;
-        }
-
-        internal static int ResolveManuscriptRestSpanEmphasisLevel(double gapBeats)
-        {
-            if (gapBeats >= 1.5)
-                return 2;
-            if (gapBeats >= 0.75)
-                return 1;
-
-            return 0;
-        }
-
-        private Dictionary<DrawableNote, ManuscriptHorizontalClusterEntry> buildManuscriptHorizontalClusters(
-            double currentTime,
-            double activeFutureVisibilityWindow)
-        {
-            var groupedByTime = new Dictionary<long, List<DrawableNote>>();
-            for (int i = firstActiveNoteIndex; i < notes.Count; i++)
-            {
-                DrawableNote note = notes[i];
-                double timeUntilHit = note.HitTime - currentTime;
-                if (timeUntilHit > activeFutureVisibilityWindow)
-                    break;
-                if (note.IsJudged)
-                    continue;
-
-                long key = ResolveManuscriptSimultaneousTimeKey(note.HitTime);
-                if (!groupedByTime.TryGetValue(key, out var bucket))
-                {
-                    bucket = new List<DrawableNote>();
-                    groupedByTime[key] = bucket;
-                }
-
-                bucket.Add(note);
-            }
-
-            var result = new Dictionary<DrawableNote, ManuscriptHorizontalClusterEntry>();
-            foreach (var bucket in groupedByTime.Values)
-            {
-                if (bucket.Count <= 1)
-                    continue;
-
-                List<DrawableNote> lowerVoiceNotes = bucket
-                    .Where(n => ManuscriptBackgroundEnhanced.GetNotationVoiceForComponent(n.ComponentName) == ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower)
-                    .OrderBy(n => ManuscriptBackgroundEnhanced.GetNotationIndexForComponent(n.ComponentName))
-                    .ThenBy(n => n.ComponentName, StringComparer.Ordinal)
-                    .ToList();
-                List<DrawableNote> upperVoiceNotes = bucket
-                    .Where(n => ManuscriptBackgroundEnhanced.GetNotationVoiceForComponent(n.ComponentName) == ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Upper)
-                    .OrderBy(n => ManuscriptBackgroundEnhanced.GetNotationIndexForComponent(n.ComponentName))
-                    .ThenBy(n => n.ComponentName, StringComparer.Ordinal)
-                    .ToList();
-
-                bool hasCrossVoice = lowerVoiceNotes.Count > 0 && upperVoiceNotes.Count > 0;
-                appendManuscriptClusterEntries(result, lowerVoiceNotes, ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower, hasCrossVoice);
-                appendManuscriptClusterEntries(result, upperVoiceNotes, ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Upper, hasCrossVoice);
-            }
-
-            return result;
-        }
-
-        private static void appendManuscriptClusterEntries(
-            Dictionary<DrawableNote, ManuscriptHorizontalClusterEntry> target,
-            List<DrawableNote> clusterNotes,
-            ManuscriptBackgroundEnhanced.ManuscriptNotationVoice voice,
-            bool hasCrossVoice)
-        {
-            if (clusterNotes.Count == 0 || (clusterNotes.Count == 1 && !hasCrossVoice))
-                return;
-
-            for (int i = 0; i < clusterNotes.Count; i++)
-            {
-                target[clusterNotes[i]] = new ManuscriptHorizontalClusterEntry(
-                    voice,
-                    i,
-                    clusterNotes.Count,
-                    hasCrossVoice);
-            }
-        }
-
-        internal static long ResolveManuscriptSimultaneousTimeKey(double hitTimeMs)
-        {
-            if (double.IsNaN(hitTimeMs) || double.IsInfinity(hitTimeMs))
-                return 0;
-
-            return (long)Math.Round(hitTimeMs * 2.0, MidpointRounding.AwayFromZero);
-        }
-
-        internal static float ResolveManuscriptChordHorizontalOffset(
-            int voiceIndex,
-            int voiceCount,
-            bool lowerVoice,
-            bool hasCrossVoice,
-            float noteWidth)
-        {
-            float safeNoteWidth = float.IsFinite(noteWidth)
-                ? Math.Clamp(noteWidth, 6f, 40f)
-                : 10f;
-
-            int safeCount = Math.Clamp(voiceCount, 1, 4);
-            int safeIndex = Math.Clamp(voiceIndex, 0, safeCount - 1);
-            float centeredIndex = safeIndex - (safeCount - 1) * 0.5f;
-
-            float sameVoiceStep = Math.Clamp(safeNoteWidth * 0.40f, 2.8f, 9.8f);
-            float sameVoiceOffset = centeredIndex * sameVoiceStep;
-            if (!hasCrossVoice)
-                return sameVoiceOffset;
-
-            float crossVoiceShift = Math.Clamp(safeNoteWidth * 0.20f, 2.2f, 6.8f);
-            return sameVoiceOffset + (lowerVoice ? -crossVoiceShift : crossVoiceShift);
-        }
-
-        private ManuscriptBeamAnchor createManuscriptBeamAnchor(DrawableNote note)
-        {
-            bool stemDown = ManuscriptBackgroundEnhanced.ShouldUseDownStemForComponent(note.ComponentName);
-            var voice = ManuscriptBackgroundEnhanced.GetNotationVoiceForComponent(note.ComponentName);
-            int notationIndex = ManuscriptBackgroundEnhanced.GetNotationIndexForComponent(note.ComponentName);
-
-            float noteWidth = Math.Max(10f, note.Width);
-            float noteHeight = Math.Max(7f, note.Height);
-            float stemHeight = Math.Clamp(noteHeight * 2.65f, 16f, 44f);
-
-            float stemX = stemDown
-                ? note.Position.X - noteWidth * 0.5f + noteWidth * 0.34f
-                : note.Position.X + noteWidth * 0.5f - noteWidth * 0.34f;
-
-            float stemRootY = note.Position.Y + (stemDown ? -noteHeight * 0.04f : noteHeight * 0.04f);
-            float stemTipY = stemDown
-                ? stemRootY + stemHeight
-                : stemRootY - stemHeight;
-
-            resolveTimingForHitTime(note.HitTime, out double beatDuration, out double beatOrigin);
-
-            return new ManuscriptBeamAnchor(
-                note,
-                voice,
-                notationIndex,
-                stemDown,
-                stemX,
-                stemTipY,
-                note.HitTime,
-                beatDuration,
-                beatOrigin);
-        }
-
-        private void updateManuscriptBeams(List<ManuscriptBeamAnchor> anchors, double currentTime)
-        {
-            clearManuscriptBeams();
-            clearManuscriptDurationCues();
-
-            if (anchors.Count == 0)
-                return;
-
-            foreach (var anchor in anchors)
-            {
-                anchor.Note.SetManuscriptFlagCount(0);
-                anchor.Note.SetManuscriptDurationDot(false);
-            }
-
-            addManuscriptBeamsForVoice(anchors, ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Upper, currentTime);
-            addManuscriptBeamsForVoice(anchors, ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower, currentTime);
-        }
-
-        private void addManuscriptBeamsForVoice(
-            List<ManuscriptBeamAnchor> anchors,
-            ManuscriptBackgroundEnhanced.ManuscriptNotationVoice voice,
-            double currentTime)
-        {
-            var voiceAnchors = anchors
-                .Where(anchor => anchor.Voice == voice)
-                .OrderBy(anchor => anchor.HitTime)
-                .ToList();
-
-            if (voiceAnchors.Count == 0)
-                return;
-
-            var beamedNotes = new HashSet<DrawableNote>();
-            var tieCues = new List<ManuscriptTieCue>();
-
-            for (int i = 0; i < voiceAnchors.Count - 1; i++)
-            {
-                var current = voiceAnchors[i];
-                var next = voiceAnchors[i + 1];
-
-                if (!tryGetBeamLevelCount(current, next, out int levelCount))
-                    continue;
-
-                double beamMidTime = (current.HitTime + next.HitTime) * 0.5;
-                double beamBeatDuration = Math.Max(1.0, (current.BeatDuration + next.BeatDuration) * 0.5);
-                double beamDistanceBeats = Math.Abs((beamMidTime - currentTime) / beamBeatDuration);
-                float beamAlphaScale = ResolveManuscriptParserFollowAlpha(
-                    beamDistanceBeats,
-                    nearAlpha: 1f,
-                    farAlpha: ManuscriptParserFarBeamAlphaScale,
-                    focusBeats: ManuscriptParserFocusWindowBeats,
-                    fadeBeats: ManuscriptParserFadeWindowBeats);
-
-                for (int level = 0; level < levelCount; level++)
-                    addManuscriptBeamSegment(current, next, level, beamAlphaScale);
-
-                beamedNotes.Add(current.Note);
-                beamedNotes.Add(next.Note);
-            }
-
-            var previousByNotation = new Dictionary<int, ManuscriptBeamAnchor>();
-            var previousIndexByNotation = new Dictionary<int, int>();
-            for (int i = 0; i < voiceAnchors.Count; i++)
-            {
-                var anchor = voiceAnchors[i];
-
-                if (previousByNotation.TryGetValue(anchor.NotationIndex, out var previousAnchor))
-                {
-                    int previousIndex = previousIndexByNotation.TryGetValue(anchor.NotationIndex, out int storedIndex)
-                        ? storedIndex
-                        : i - 1;
-                    int interveningVoiceNotes = Math.Max(0, i - previousIndex - 1);
-                    double beatDuration = Math.Max(1.0, (previousAnchor.BeatDuration + anchor.BeatDuration) * 0.5);
-                    double gapBeats = (anchor.HitTime - previousAnchor.HitTime) / beatDuration;
-                    if (gapBeats > 0)
-                    {
-                        if (ShouldRenderManuscriptDottedCue(gapBeats))
-                            previousAnchor.Note.SetManuscriptDurationDot(true);
-
-                        if (ShouldRenderManuscriptTieCue(gapBeats, interveningVoiceNotes))
-                        {
-                            double tieMidTime = (previousAnchor.HitTime + anchor.HitTime) * 0.5;
-                            double tieDistanceBeats = Math.Abs((tieMidTime - currentTime) / beatDuration);
-                            float tieAlphaScale = ResolveManuscriptParserFollowAlpha(
-                                tieDistanceBeats,
-                                nearAlpha: 1f,
-                                farAlpha: ManuscriptParserFarTieAlphaScale,
-                                focusBeats: ManuscriptParserFocusWindowBeats,
-                                fadeBeats: ManuscriptParserFadeWindowBeats);
-                            tieCues.Add(new ManuscriptTieCue(previousAnchor, anchor, tieAlphaScale));
-                        }
-                    }
-                }
-
-                previousByNotation[anchor.NotationIndex] = anchor;
-                previousIndexByNotation[anchor.NotationIndex] = i;
-
-                if (beamedNotes.Contains(anchor.Note))
-                {
-                    anchor.Note.SetManuscriptFlagCount(0);
-                    continue;
-                }
-
-                int standaloneFlags = resolveStandaloneManuscriptFlagCount(voiceAnchors, i);
-                anchor.Note.SetManuscriptFlagCount(standaloneFlags);
-            }
-
-            renderManuscriptTieCues(tieCues);
-        }
-
-        private int resolveStandaloneManuscriptFlagCount(List<ManuscriptBeamAnchor> voiceAnchors, int index)
-        {
-            if (!tryResolveNearestStandaloneGap(voiceAnchors, index, out double nearestGap))
-                return 0;
-
-            if (nearestGap > SingleBeamThresholdBeats)
-                return 0;
-
-            int beamLevel = GetManuscriptBeamLevelCount(nearestGap);
-            return Math.Clamp(beamLevel, 0, 3);
-        }
-
-        private bool tryResolveNearestStandaloneGap(List<ManuscriptBeamAnchor> voiceAnchors, int index, out double nearestGap)
-        {
-            nearestGap = double.MaxValue;
-            if (index < 0 || index >= voiceAnchors.Count)
-                return false;
-
-            var current = voiceAnchors[index];
-
-            for (int i = index - 1; i >= 0; i--)
-            {
-                if (voiceAnchors[i].NotationIndex != current.NotationIndex)
-                    continue;
-
-                nearestGap = (current.HitTime - voiceAnchors[i].HitTime) / Math.Max(1.0, current.BeatDuration);
-                break;
-            }
-
-            for (int i = index + 1; i < voiceAnchors.Count; i++)
-            {
-                if (voiceAnchors[i].NotationIndex != current.NotationIndex)
-                    continue;
-
-                double gap = (voiceAnchors[i].HitTime - current.HitTime) / Math.Max(1.0, current.BeatDuration);
-                nearestGap = Math.Min(nearestGap, gap);
-                break;
-            }
-
-            // Fall back to nearest note in the same voice when this lane is sparse.
-            if (double.IsPositiveInfinity(nearestGap) || nearestGap == double.MaxValue)
-            {
-                if (index > 0)
-                    nearestGap = Math.Min(nearestGap, (current.HitTime - voiceAnchors[index - 1].HitTime) / Math.Max(1.0, current.BeatDuration));
-                if (index < voiceAnchors.Count - 1)
-                    nearestGap = Math.Min(nearestGap, (voiceAnchors[index + 1].HitTime - current.HitTime) / Math.Max(1.0, current.BeatDuration));
-            }
-
-            if (double.IsPositiveInfinity(nearestGap) || nearestGap == double.MaxValue || nearestGap <= 0)
-                return false;
-
-            return true;
-        }
-
-        private bool tryGetBeamLevelCount(in ManuscriptBeamAnchor current, in ManuscriptBeamAnchor next, out int levelCount)
-        {
-            levelCount = 0;
-
-            if (next.HitTime <= current.HitTime)
-                return false;
-
-            // In the rotated timeline manuscript, cross-lane beams become long diagonals.
-            // Keep grouping lane-local to maintain drummer readability.
-            if (current.NotationIndex != next.NotationIndex)
-                return false;
-
-            double beatDuration = (current.BeatDuration + next.BeatDuration) * 0.5;
-            if (beatDuration <= 0)
-                return false;
-
-            int currentBeat = getBeatIndex(current.HitTime, current.BeatOrigin, current.BeatDuration);
-            int nextBeat = getBeatIndex(next.HitTime, next.BeatOrigin, next.BeatDuration);
-            if (currentBeat != nextBeat)
-                return false;
-
-            double gapBeats = (next.HitTime - current.HitTime) / beatDuration;
-            if (!TryResolveManuscriptBeamSubdivision(gapBeats, out int resolvedLevelCount, out int subdivisionDivisor))
-                return false;
-
-            // Keep beams inside their rhythmic grouping bucket (e.g. split 16th streams per half-beat).
-            double beatStart = current.BeatOrigin + currentBeat * beatDuration;
-            double currentBeatProgress = (current.HitTime - beatStart) / beatDuration;
-            double nextBeatProgress = (next.HitTime - beatStart) / beatDuration;
-            if (!IsManuscriptBeamPairWithinSubdivisionGroup(currentBeatProgress, nextBeatProgress, subdivisionDivisor))
-                return false;
-
-            levelCount = resolvedLevelCount;
-            return true;
-        }
-
-        internal static int GetManuscriptBeamLevelCount(double gapBeats)
-        {
-            return TryResolveManuscriptBeamSubdivision(gapBeats, out int levelCount, out _)
-                ? levelCount
-                : 0;
-        }
-
-        internal static bool TryResolveManuscriptBeamSubdivision(double gapBeats, out int levelCount, out int subdivisionDivisor)
-        {
-            levelCount = 0;
-            subdivisionDivisor = 0;
-
-            if (gapBeats < MinBeamGapBeats || gapBeats > SingleBeamThresholdBeats)
-                return false;
-
-            // Snap to common drummer subdivisions so beam groupings stay stable:
-            // 8th (1/2 beat), 8th-triplet (1/3), 16th (1/4), 16th-triplet (1/6), 32nd (1/8).
-            ReadOnlySpan<double> allowedSteps = stackalloc double[]
-            {
-                0.5, 1.0 / 3.0, 0.25, 1.0 / 6.0, 0.125
-            };
-            ReadOnlySpan<int> subdivisions = stackalloc int[] { 2, 3, 4, 6, 8 };
-            ReadOnlySpan<int> beamLevels = stackalloc int[] { 1, 1, 2, 2, 3 };
-
-            int closestIndex = 0;
-            double smallestDelta = double.MaxValue;
-            for (int i = 0; i < allowedSteps.Length; i++)
-            {
-                double delta = Math.Abs(gapBeats - allowedSteps[i]);
-                if (delta < smallestDelta)
-                {
-                    smallestDelta = delta;
-                    closestIndex = i;
-                }
-            }
-
-            // Reject intervals that are too far from useful rhythmic buckets.
-            if (smallestDelta > 0.065)
-                return false;
-
-            subdivisionDivisor = subdivisions[closestIndex];
-            levelCount = beamLevels[closestIndex];
-            return true;
-        }
-
-        internal static int ResolveManuscriptBeamGroupingSpanTicks(int subdivisionDivisor)
-        {
-            int safeSubdivision = Math.Max(1, subdivisionDivisor);
-            if (safeSubdivision <= 3)
-                return safeSubdivision;
-
-            return Math.Max(2, safeSubdivision / 2);
-        }
-
-        internal static bool IsManuscriptBeamPairWithinSubdivisionGroup(double currentBeatProgress, double nextBeatProgress, int subdivisionDivisor)
-        {
-            int safeSubdivision = Math.Max(1, subdivisionDivisor);
-            int groupingSpanTicks = ResolveManuscriptBeamGroupingSpanTicks(safeSubdivision);
-            if (groupingSpanTicks <= 0)
-                return true;
-
-            int currentTick = quantizeManuscriptBeatProgressToTick(currentBeatProgress, safeSubdivision);
-            int nextTick = quantizeManuscriptBeatProgressToTick(nextBeatProgress, safeSubdivision);
-            if (nextTick < currentTick)
-                return false;
-
-            return (currentTick / groupingSpanTicks) == (nextTick / groupingSpanTicks);
-        }
-
-        private static int quantizeManuscriptBeatProgressToTick(double beatProgress, int subdivisionDivisor)
-        {
-            int safeSubdivision = Math.Max(1, subdivisionDivisor);
-            double wrapped = beatProgress - Math.Floor(beatProgress);
-            if (wrapped < 0)
-                wrapped += 1.0;
-
-            int tick = (int)Math.Round(wrapped * safeSubdivision, MidpointRounding.AwayFromZero);
-            return Math.Clamp(tick, 0, safeSubdivision - 1);
-        }
-
-        internal static bool ShouldRenderManuscriptTieCue(double gapBeats)
-            => ShouldRenderManuscriptTieCue(gapBeats, 0);
-
-        internal static bool ShouldRenderManuscriptTieCue(double gapBeats, int interveningVoiceNotes)
-        {
-            if (double.IsNaN(gapBeats) || double.IsInfinity(gapBeats))
-                return false;
-
-            if (interveningVoiceNotes > MaxTieInterveningVoiceNotes)
-                return false;
-
-            if (ShouldRenderManuscriptDottedCue(gapBeats))
-                return false;
-
-            return gapBeats >= MinTieGapBeats && gapBeats <= MaxTieGapBeats;
-        }
-
-        internal static bool ShouldRenderManuscriptDottedCue(double gapBeats)
-        {
-            if (double.IsNaN(gapBeats) || double.IsInfinity(gapBeats) || gapBeats <= 0)
-                return false;
-
-            ReadOnlySpan<double> dottedDurations = stackalloc double[]
-            {
-                0.375, // dotted 16th
-                0.75,  // dotted 8th
-                1.5,   // dotted quarter
-                3.0    // dotted half
-            };
-
-            double nearestDelta = double.MaxValue;
-            for (int i = 0; i < dottedDurations.Length; i++)
-                nearestDelta = Math.Min(nearestDelta, Math.Abs(gapBeats - dottedDurations[i]));
-
-            return nearestDelta <= DottedGapToleranceBeats;
-        }
-
-        private void addManuscriptBeamSegment(
-            in ManuscriptBeamAnchor start,
-            in ManuscriptBeamAnchor end,
-            int beamLevel,
-            float alphaScale)
-        {
-            float direction = start.StemDown ? 1f : -1f;
-            float densityScale = Math.Clamp(DrawHeight / 1080f, 0.78f, 1.18f);
-            float offset = direction * beamLevel * ManuscriptBeamSpacing * densityScale;
-
-            Vector2 beamStart = new Vector2(start.StemX, start.StemTipY + offset);
-            Vector2 beamEnd = new Vector2(end.StemX, end.StemTipY + offset);
-            Vector2 delta = beamEnd - beamStart;
-            float length = delta.Length;
-            if (length < 6f)
-                return;
-
-            float thickness = beamLevel == 0
-                ? ManuscriptPrimaryBeamThickness
-                : ManuscriptSecondaryBeamThickness;
-            thickness *= densityScale;
-
-            manuscriptBeamLayer.Add(new Box
-            {
-                Anchor = Anchor.TopLeft,
-                Origin = Anchor.CentreLeft,
-                Position = beamStart,
-                Width = length,
-                Height = thickness,
-                Rotation = MathF.Atan2(delta.Y, delta.X) * 180f / MathF.PI,
-                Colour = manuscriptBeamColor,
-                Alpha = ManuscriptBeamAlpha * Math.Clamp(alphaScale, 0f, 1f)
-            });
-        }
-
-        private void renderManuscriptTieCues(List<ManuscriptTieCue> tieCues)
-        {
-            if (tieCues.Count == 0)
-                return;
-
-            float clusterThreshold = Math.Clamp(DrawWidth * 0.016f, 18f, 48f);
-            List<ManuscriptTieCue> sorted = tieCues
-                .OrderBy(cue => cue.MidX)
-                .ThenBy(cue => cue.NotationIndex)
-                .ToList();
-
-            int clusterStart = 0;
-            while (clusterStart < sorted.Count)
-            {
-                int clusterEnd = clusterStart;
-                while (clusterEnd + 1 < sorted.Count
-                       && sorted[clusterEnd + 1].StemDown == sorted[clusterStart].StemDown
-                       && Math.Abs(sorted[clusterEnd + 1].MidX - sorted[clusterEnd].MidX) <= clusterThreshold)
-                {
-                    clusterEnd++;
-                }
-
-                int clusterCount = clusterEnd - clusterStart + 1;
-                if (clusterCount <= 1)
-                {
-                    ManuscriptTieCue cue = sorted[clusterStart];
-                    addManuscriptTieSegment(cue.Start, cue.End, tieStackIndex: 0, tieStackCount: 1, cue.AlphaScale);
-                }
-                else
-                {
-                    List<ManuscriptTieCue> cluster = sorted
-                        .GetRange(clusterStart, clusterCount)
-                        .OrderBy(cue => cue.NotationIndex)
-                        .ToList();
-
-                    for (int i = 0; i < cluster.Count; i++)
-                        addManuscriptTieSegment(cluster[i].Start, cluster[i].End, tieStackIndex: i, tieStackCount: cluster.Count, cluster[i].AlphaScale);
-                }
-
-                clusterStart = clusterEnd + 1;
-            }
-        }
-
-        private void addManuscriptTieSegment(
-            in ManuscriptBeamAnchor start,
-            in ManuscriptBeamAnchor end,
-            int tieStackIndex,
-            int tieStackCount,
-            float alphaScale)
-        {
-            float startX = start.Note.Position.X + Math.Max(2f, start.Note.Width * 0.54f);
-            float endX = end.Note.Position.X - Math.Max(2f, end.Note.Width * 0.54f);
-            float span = endX - startX;
-            if (span < 12f)
-                return;
-
-            float maxSpan = Math.Max(72f, DrawWidth * MaxTieSpanRatio);
-            if (span > maxSpan)
-                return;
-
-            float direction = start.StemDown ? -1f : 1f;
-            float startY = start.Note.Position.Y + direction * start.Note.Height * 0.56f;
-            float endY = end.Note.Position.Y + direction * end.Note.Height * 0.56f;
-            float densityScale = Math.Clamp(DrawHeight / 1080f, 0.82f, 1.2f);
-            float archLiftMagnitude = ResolveManuscriptTieArchLiftMagnitude(span, tieStackIndex, tieStackCount);
-            float archLift = direction * archLiftMagnitude;
-
-            var tieStart = new Vector2(startX, startY);
-            var tieEnd = new Vector2(endX, endY);
-            var tieMid = new Vector2((startX + endX) * 0.5f, (startY + endY) * 0.5f + archLift);
-
-            float thickness = ManuscriptTieThickness * densityScale;
-            float clampedAlphaScale = Math.Clamp(alphaScale, 0f, 1f);
-            addManuscriptDurationCurveSegment(tieStart, tieMid, thickness, ManuscriptTieAlpha * clampedAlphaScale);
-            addManuscriptDurationCurveSegment(tieMid, tieEnd, thickness, ManuscriptTieAlpha * clampedAlphaScale);
-
-            Vector2 innerOffset = new Vector2(0f, -direction * thickness * 0.9f);
-            addManuscriptDurationCurveSegment(tieStart + innerOffset, tieMid + innerOffset, thickness * 0.56f, ManuscriptTieInnerAlpha * clampedAlphaScale);
-            addManuscriptDurationCurveSegment(tieMid + innerOffset, tieEnd + innerOffset, thickness * 0.56f, ManuscriptTieInnerAlpha * clampedAlphaScale);
-        }
-
-        internal static float ResolveManuscriptTieArchLiftMagnitude(float span, int tieStackIndex, int tieStackCount)
-        {
-            float safeSpan = float.IsFinite(span)
-                ? Math.Clamp(span, 12f, 1200f)
-                : 12f;
-            int safeStackCount = Math.Clamp(tieStackCount, 1, 6);
-            int safeStackIndex = Math.Clamp(tieStackIndex, 0, safeStackCount - 1);
-
-            float baseLift = Math.Clamp(safeSpan * 0.082f, 2.4f, 9.6f);
-            if (safeStackCount == 1)
-                return baseLift;
-
-            float stackStep = Math.Clamp(safeSpan * 0.02f, 1.1f, 3.8f);
-            float clusterBoost = Math.Clamp((safeStackCount - 1) * 0.16f, 0f, 1.0f);
-            return baseLift + safeStackIndex * (stackStep + clusterBoost);
-        }
-
-        internal static float ResolveManuscriptParserFollowAlpha(
-            double distanceBeats,
-            float nearAlpha = 1f,
-            float farAlpha = 0.34f,
-            double focusBeats = 0.55,
-            double fadeBeats = 4.2)
-        {
-            float clampedNear = Math.Clamp(nearAlpha, 0f, 1f);
-            float clampedFar = Math.Clamp(farAlpha, 0f, clampedNear);
-
-            if (double.IsNaN(distanceBeats) || double.IsInfinity(distanceBeats))
-                return clampedNear;
-
-            double safeFocus = Math.Clamp(focusBeats, 0, 16);
-            double safeFade = Math.Max(safeFocus + 0.001, Math.Clamp(fadeBeats, 0.05, 32));
-            double absoluteDistance = Math.Abs(distanceBeats);
-
-            if (absoluteDistance <= safeFocus)
-                return clampedNear;
-
-            if (absoluteDistance >= safeFade)
-                return clampedFar;
-
-            double t = (absoluteDistance - safeFocus) / (safeFade - safeFocus);
-            return (float)(clampedNear + (clampedFar - clampedNear) * t);
-        }
-
-        private void addManuscriptDurationCurveSegment(Vector2 start, Vector2 end, float thickness, float alpha)
-        {
-            Vector2 delta = end - start;
-            float length = delta.Length;
-            if (length < 5f)
-                return;
-
-            manuscriptDurationLayer.Add(new Box
-            {
-                Anchor = Anchor.TopLeft,
-                Origin = Anchor.CentreLeft,
-                Position = start,
-                Width = length,
-                Height = Math.Max(1f, thickness),
-                Rotation = MathF.Atan2(delta.Y, delta.X) * 180f / MathF.PI,
-                Colour = manuscriptTieColor,
-                Alpha = alpha
-            });
-        }
-
-        private void clearManuscriptBeams()
-        {
-            manuscriptBeamLayer?.Clear(false);
-        }
-
-        private void clearManuscriptDurationCues()
-        {
-            manuscriptDurationLayer?.Clear(false);
-        }
-
-        private Box getOrCreateManuscriptRestSpan(int index)
-        {
-            while (manuscriptRestSpanPool.Count <= index)
-            {
-                var span = new Box
-                {
-                    Anchor = Anchor.TopLeft,
-                    Origin = Anchor.CentreLeft,
-                    Width = 0f,
-                    Height = 0f,
-                    Alpha = 0f
-                };
-                manuscriptRestSpanPool.Add(span);
-                manuscriptRestSpanLayer.Add(span);
-            }
-
-            return manuscriptRestSpanPool[index];
-        }
-
-        private DrawableManuscriptRest getOrCreateManuscriptRest(int index)
-        {
-            while (manuscriptRestPool.Count <= index)
-            {
-                var rest = new DrawableManuscriptRest
-                {
-                    Anchor = Anchor.TopLeft,
-                    Origin = Anchor.Centre,
-                    Alpha = 0f
-                };
-                manuscriptRestPool.Add(rest);
-                manuscriptRestLayer.Add(rest);
-            }
-
-            return manuscriptRestPool[index];
-        }
-
-        private void clearManuscriptRests()
-        {
-            for (int i = 0; i < manuscriptRestSpanPool.Count; i++)
-                manuscriptRestSpanPool[i].Alpha = 0f;
-            for (int i = 0; i < manuscriptRestPool.Count; i++)
-                manuscriptRestPool[i].Alpha = 0f;
+            if (drumStaffView == null || !drumStaffView.HasLayout)
+                return default;
+
+            // Same mapping the staff view draws with, so editor placement lines up with the notation.
+            float left = drumStaffView.TimelineLeftX;
+            float right = Math.Max(left + 1f, drumStaffView.DrawWidth);
+            double start = drumStaffView.TimeAtX(left);
+            return new SheetTimelineWindow(start, drumStaffView.TimeAtX(right) - start, left, right, drumStaffView.PlayheadX);
         }
 
         private int getBeatIndex(double time, double beatOrigin, double beatDuration)
@@ -2223,101 +916,15 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             float drawWidth,
             float drawHeight,
             float hitLineY,
-            float travelDistance,
-            in SheetTimelineWindow sheetWindow,
-            Dictionary<DrawableNote, ManuscriptHorizontalClusterEntry>? manuscriptHorizontalClusters,
-            double currentBeatDuration)
+            float travelDistance)
         {
             // Use the dynamic ApproachDuration here
             float progress = 1 - (timeUntilHit / (float)ApproachDuration);
 
             if (currentLaneViewMode == LaneViewMode.ThreeDimensional)
-            {
                 updateNotePosition3D(note, progress, drawWidth, drawHeight, hitLineY);
-            }
-            else if (currentLaneViewMode == LaneViewMode.Manuscript)
-            {
-                updateNotePositionManuscript(note, timeUntilHit, drawWidth, drawHeight, sheetWindow, manuscriptHorizontalClusters, currentBeatDuration);
-            }
             else
-            {
                 updateNotePosition2D(note, progress, drawWidth, drawHeight, hitLineY, travelDistance);
-            }
-        }
-
-        private void updateNotePositionManuscript(
-            DrawableNote note,
-            float timeUntilHit,
-            float drawWidth,
-            float drawHeight,
-            in SheetTimelineWindow sheetWindow,
-            Dictionary<DrawableNote, ManuscriptHorizontalClusterEntry>? manuscriptHorizontalClusters,
-            double currentBeatDuration)
-        {
-            float timelineWidth = Math.Max(120f, sheetWindow.RightX - sheetWindow.LeftX);
-            double normalized = sheetWindow.Duration <= 0
-                ? 0.0
-                : (note.HitTime - sheetWindow.StartTime) / sheetWindow.Duration;
-
-            float x = sheetWindow.LeftX + (float)(normalized * timelineWidth);
-            float y = ManuscriptBackgroundEnhanced.GetStaffYForComponent(note.ComponentName, drawWidth, drawHeight);
-            float staffSpacing = ManuscriptBackgroundEnhanced.GetStaffSpacingForDrawArea(drawWidth, drawHeight);
-            float noteScaleSetting = (float)Math.Clamp(NoteWidthScale.Value, 0.5, 1.5);
-
-            float noteWidth = Math.Clamp(
-                timelineWidth * SheetMusicTuning.NoteWidthRatio * noteScaleSetting,
-                SheetMusicTuning.MinNoteWidth,
-                SheetMusicTuning.MaxNoteWidth);
-
-            if (manuscriptHorizontalClusters != null
-                && manuscriptHorizontalClusters.TryGetValue(note, out var cluster))
-            {
-                bool lowerVoice = cluster.Voice == ManuscriptBackgroundEnhanced.ManuscriptNotationVoice.Lower;
-                x += ResolveManuscriptChordHorizontalOffset(
-                    cluster.VoiceIndex,
-                    cluster.VoiceCount,
-                    lowerVoice,
-                    cluster.HasCrossVoice,
-                    noteWidth);
-            }
-
-            float noteHeight = Math.Clamp(
-                staffSpacing * SheetMusicTuning.NoteHeightRatio,
-                SheetMusicTuning.MinNoteHeight,
-                SheetMusicTuning.MaxNoteHeight);
-            note.Width = noteWidth;
-            note.Height = noteHeight;
-
-            // Force sheet-music glyph proportions so mode switches do not leave 3D bar widths behind.
-            note.SetViewMode(LaneViewMode.Manuscript);
-            note.RelativePositionAxes = Axes.None;
-            note.Position = new Vector2(x, y);
-            note.Scale = Vector2.One;
-            note.Rotation = 0;
-
-            setNoteDepth(note, 0);
-
-            // Unjudged notes past the hit line: hide as safety fallback
-            // Judged notes: ApplyResult animation handles the fade-out
-            if (!note.IsJudged)
-            {
-                bool inTimeline = x >= sheetWindow.LeftX - note.Width && x <= sheetWindow.RightX + note.Width;
-                bool inRecentPast = timeUntilHit >= -(float)Math.Max(420, pastVisibilityWindow);
-                if (!inTimeline || !inRecentPast)
-                    note.Alpha = 0;
-                else
-                {
-                    double safeBeatDuration = Math.Max(1.0, currentBeatDuration);
-                    double distanceBeats = Math.Abs(timeUntilHit) / safeBeatDuration;
-                    note.Alpha = ResolveManuscriptParserFollowAlpha(
-                        distanceBeats,
-                        nearAlpha: 1f,
-                        farAlpha: ManuscriptParserFarNoteAlpha,
-                        focusBeats: ManuscriptParserFocusWindowBeats,
-                        fadeBeats: ManuscriptParserFadeWindowBeats);
-                }
-            }
-
         }
 
         private void updateNotePosition2D(DrawableNote note, float progress, float drawWidth, float drawHeight, float hitLineY, float travelDistance)
@@ -2411,6 +1018,11 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 tuning.MinNoteHeight,
                 tuning.MaxNoteHeight);
 
+            // A stage much wider than 2:1 (the editor preview) squeezes the travel distance; thin the notes with it so
+            // consecutive hits stay separate instead of stacking into one bar. Practice stages are about 2:1 and unchanged.
+            float verticalCompression = Math.Clamp(drawHeight / Math.Max(1f, drawWidth * 0.5f), 0.4f, 1f);
+            noteHeight = Math.Max(3f, noteHeight * verticalCompression);
+
             bool isGlobalKickVisual = kickUsesGlobalLine && note.IsKick;
             float baseKickWidth = Math.Clamp(
                 currentHighwayWidth * lerp(tuning.KickWidthAtTop, tuning.KickWidthAtBottom, perspectiveProgress),
@@ -2472,7 +1084,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             double quarterDuration = 60000.0 / bpm;
             double sixteenthDuration = quarterDuration / 4.0;
             float travelDistance = Math.Max(1f, resolveHitLineY(drawHeight));
-            float legacyHeight = Math.Clamp((float)(sixteenthDuration / ApproachDuration * travelDistance) * 0.64f, 8f, 44f);
+
+            // Notes are thin bars of a fixed share of the highway height (about 17 px at 1080p), like other 2D note
+            // highways. They used to be 64% of the sixteenth-note gap (up to 44 px), which turned zoomed-in or slower
+            // charts into tall bricks. They still never exceed 60% of the sixteenth gap, so fast runs stay separate.
+            float sixteenthSpacing = (float)(sixteenthDuration / ApproachDuration * travelDistance);
+            float barHeight = Math.Clamp(travelDistance * 0.022f, 8f, 22f);
+            float legacyHeight = Math.Clamp(Math.Min(barHeight, sixteenthSpacing * 0.6f), 4f, 22f);
 
             if (!isSnapCollisionAvoidanceEnabled())
                 return legacyHeight;
@@ -2539,11 +1157,25 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             if (LaneManagement.TryGetLaneColor(loadedBeatmap, resolvedLane, out Color4 laneColour))
                 return laneColour;
 
-            var palette = LaneManagement.DefaultPalette;
-            if (palette.Count > 0)
-                return palette[Math.Abs(resolvedLane) % palette.Count];
+            return GetLaneIdentity(resolvedLane).Colour;
+        }
 
-            return DesignSystem.GetComponentColor(component);
+        /// <summary>
+        /// Name, short label and colour of a logical lane, shared by the 2D, 3D and manuscript views.
+        /// Explicit beatmap lane metadata (editor-customised names/colours) takes precedence.
+        /// </summary>
+        public LaneIdentity GetLaneIdentity(int logicalLane)
+        {
+            int lane = laneLayout.ClampLane(logicalLane);
+            var identity = LaneIdentityResolver.Resolve(laneLayout, lane);
+
+            if (LaneManagement.TryGetLaneColor(loadedBeatmap, lane, out Color4 customColour))
+                identity = identity with { Colour = customColour };
+
+            if (LaneManagement.TryGetLaneInfo(loadedBeatmap, lane, out var info) && LaneManagement.IsCustomLaneName(info, lane))
+                identity = identity with { Name = info.Name!, ShortName = string.IsNullOrWhiteSpace(info.ShortName) ? identity.ShortName : info.ShortName! };
+
+            return identity;
         }
 
         private double resolveTimingBpmAt(double currentTime)
@@ -2648,16 +1280,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield
         private static double computeFutureVisibilityWindowMs(double approachDurationMs)
             => Math.Max(0, approachDurationMs + computeFutureVisibilityPaddingMs(approachDurationMs));
 
+        /// <summary>
+        /// Manual zoom is a direct multiplier on the map's pacing: 1.0x shows <see cref="BaseVisibleMeasures"/>
+        /// measures of look-ahead, 2.0x half of that. (Before 2026-10-24 a curve turned 1.0 into ~2.97x and left
+        /// about half a second of look-ahead; saved settings are migrated in BeatSightConfigManager.)
+        /// </summary>
         private static double remapManualZoomForApproachDuration(double zoomLevel)
-        {
-            double clamped = Math.Clamp(zoomLevel, ManualZoomMin, ManualZoomMax);
-            double normalized = (clamped - ManualZoomMin) / (ManualZoomMax - ManualZoomMin);
-            double curved = Math.Pow(normalized, ManualZoomResponseExponent);
-            double remapped = ManualZoomMin + curved * (ManualZoomMax - ManualZoomMin);
-            double lowEndLift = ManualZoomLowEndLift * Math.Pow(1.0 - normalized, 1.7);
-            double boosted = (remapped + lowEndLift) * (1.0 + ManualZoomHighEndBoost * Math.Pow(normalized, 2.2));
-            return Math.Max(0.1, boosted);
-        }
+            => Math.Clamp(zoomLevel, ManualZoomMin, ManualZoomMax);
 
         private void pruneNotesOutsideVisibilityWindow(double currentTime, double futureVisibilityWindowMs)
         {
@@ -2930,6 +1559,14 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             laneBackgroundContainer.Clear();
 
+            // The staff view draws its own playhead, ruler and notes; hide the highway-style overlays and the
+            // per-note drawables (they still exist for judging and hit sounds).
+            bool staffNotation = currentLaneViewMode == LaneViewMode.Manuscript;
+            float highwayLayerAlpha = staffNotation ? 0f : 1f;
+            strikeZoneHost.Alpha = highwayLayerAlpha;
+            noteLayer.Alpha = highwayLayerAlpha;
+            hitExplosionLayer.Alpha = highwayLayerAlpha;
+
             // Calculate active lanes (excluding kick lane if global)
             int activeLaneCount = kickUsesGlobalLine ? Math.Max(1, laneCount - 1) : laneCount;
 
@@ -2939,8 +1576,8 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             if (currentLaneViewMode == LaneViewMode.ThreeDimensional)
             {
-                threeDHighwayBackground = new ThreeDHighwayBackground(laneLayout, kickUsesGlobalLine, StageProfile.Value);
-                manuscriptBackground = null;
+                threeDHighwayBackground = new ThreeDHighwayBackground(laneLayout, kickUsesGlobalLine, StageProfile.Value, GetLaneIdentity);
+                drumStaffView = null;
                 laneBackgroundContainer.Add(threeDHighwayBackground);
 
                 // if (kickGuideLine2D != null) kickGuideLine2D.Alpha = 0;
@@ -2950,10 +1587,12 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             else if (currentLaneViewMode == LaneViewMode.Manuscript)
             {
                 threeDHighwayBackground = null;
-                manuscriptBackground = new ManuscriptBackgroundEnhanced();
-                manuscriptBackground.SetCountInGuideMode(manuscriptCountInGuideModeSetting.Value);
-                manuscriptBackground.SetFocusedComponent(manuscriptFocusComponent);
-                laneBackgroundContainer.Add(manuscriptBackground);
+                drumStaffView = new DrumStaffView { Compact = isPreviewMode };
+                drumStaffView.SetBeatmap(loadedBeatmap);
+                drumStaffView.SetCountInGuideMode(manuscriptCountInGuideModeSetting.Value);
+                drumStaffView.SetZoom(ZoomLevel.Value);
+                drumStaffView.SetTime(currentTimeProvider());
+                laneBackgroundContainer.Add(drumStaffView);
 
                 // if (kickGuideLine2D != null) kickGuideLine2D.Alpha = 0;
                 if (timingStrikeZone != null) timingStrikeZone.SetViewMode(LaneViewMode.Manuscript);
@@ -2962,19 +1601,17 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             else
             {
                 threeDHighwayBackground = null;
-                manuscriptBackground = null;
+                drumStaffView = null;
                 Color4 twoDimensionalBase = isPreviewMode
                     ? new Color4(20, 29, 48, 255)
                     : new Color4(20, 20, 30, 255);
                 Color4 twoDimensionalLaneTint = isPreviewMode
                     ? new Color4(120, 168, 255, 20)
                     : new Color4(255, 255, 255, 8);
+                // Quiet separators: lanes are identified by note colour and labels, so the grid should not compete.
                 Color4 twoDimensionalSeparator = isPreviewMode
-                    ? new Color4(178, 212, 255, 98)
-                    : new Color4(255, 255, 255, 70);
-                Color4 twoDimensionalLabel = isPreviewMode
-                    ? new Color4(222, 236, 255, 178)
-                    : new Color4(255, 255, 255, 120);
+                    ? new Color4(178, 212, 255, 70)
+                    : new Color4(255, 255, 255, 30);
                 // Add 2D background - fully opaque to prevent any bleed-through
                 laneBackgroundContainer.Add(new Box
                 {
@@ -3050,13 +1687,13 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                         });
                     }
 
-                    // Lane label at bottom
+                    // Lane label at bottom, in the lane's instrument colour so it doubles as a legend.
                     string label = getLaneLabelForIndex(i, activeLaneCount);
                     laneBackgroundContainer.Add(new SpriteText
                     {
                         Text = label,
-                        Font = FrameworkFont.Regular.With(size: isPreviewMode ? 10.2f : 11f),
-                        Colour = twoDimensionalLabel,
+                        Font = BeatSightFont.Label(isPreviewMode ? 10f : 13f),
+                        Colour = UITheme.Mix(getLaneIdentityForVisualIndex(i).Colour, UITheme.TextPrimary, 0.25f),
                         RelativePositionAxes = Axes.Both,
                         Anchor = Anchor.TopLeft,
                         Origin = Anchor.BottomCentre,
@@ -3069,47 +1706,26 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                     timingStrikeZone.UpdateGeometry(effectiveWidth, DrawHeight, resolveHitLineY(DrawHeight), 0f, effectiveWidth / activeLaneCount, activeLaneCount, activeLaneCount, laneLayout.KickLane, kickUsesGlobalLine, currentLaneViewMode);
             }
 
-            clearManuscriptBeams();
-            clearManuscriptDurationCues();
-            clearManuscriptRests();
             applyKickModeToNotes();
         }
         /// Get a human-readable label for a visual lane index.
         /// Prefers explicit beatmap lane metadata when available.
         /// </summary>
         private string getLaneLabelForIndex(int laneIndex, int totalLanes)
+            => getLaneIdentityForVisualIndex(laneIndex).Name;
+
+        private LaneIdentity getLaneIdentityForVisualIndex(int laneIndex)
         {
             int logicalLane = laneIndex;
             if (kickUsesGlobalLine && logicalLane >= laneLayout.KickLane)
                 logicalLane++;
 
-            logicalLane = laneLayout.ClampLane(logicalLane);
-            string fallback = getCanonicalLaneLabel(logicalLane);
-            return LaneManagement.ResolveLaneLabel(loadedBeatmap, logicalLane, fallback);
-        }
-
-        private string getCanonicalLaneLabel(int logicalLane)
-        {
-            return logicalLane switch
-            {
-                0 => "Crash",
-                1 => "HiHat",
-                2 => "Snare",
-                3 => "Kick",
-                4 => "Tom",
-                5 => "Ride",
-                6 => "China",
-                7 => "Splash",
-                8 => "Perc",
-                _ => $"Lane {logicalLane + 1}"
-            };
+            return GetLaneIdentity(logicalLane);
         }
 
         public string GetLaneLabelForLogicalLane(int logicalLane)
         {
-            int lane = laneLayout.ClampLane(logicalLane);
-            string fallback = getCanonicalLaneLabel(lane);
-            return LaneManagement.ResolveLaneLabel(loadedBeatmap, lane, fallback);
+            return GetLaneIdentity(logicalLane).Name;
         }
 
         public bool TryResolveLaneFromScreenSpace(Vector2 screenSpacePosition, out int lane)
@@ -3207,20 +1823,9 @@ namespace BeatSight.Game.Screens.Playback.Playfield
             double currentTime = Math.Max(0, currentTimeProvider());
             if (currentLaneViewMode == LaneViewMode.Manuscript)
             {
-                float effectiveWidth = DrawWidth * PlayfieldWidthRatio;
-                SheetTimelineWindow sheetWindow = resolveSheetTimelineWindow(currentTime, effectiveWidth, DrawHeight);
-                float timelineWidth = Math.Max(120f, sheetWindow.RightX - sheetWindow.LeftX);
-                float noteScaleSetting = (float)Math.Clamp(NoteWidthScale.Value, 0.5, 1.5);
-                float noteWidth = Math.Clamp(
-                    timelineWidth * SheetMusicTuning.NoteWidthRatio * noteScaleSetting,
-                    SheetMusicTuning.MinNoteWidth,
-                    SheetMusicTuning.MaxNoteWidth);
-                float staffSpacing = ManuscriptBackgroundEnhanced.GetStaffSpacingForDrawArea(effectiveWidth, DrawHeight);
-                float noteHeight = Math.Clamp(
-                    staffSpacing * SheetMusicTuning.NoteHeightRatio,
-                    SheetMusicTuning.MinNoteHeight,
-                    SheetMusicTuning.MaxNoteHeight);
-                localSize = new Vector2(noteWidth, noteHeight);
+                // A notehead on the staff view.
+                float space = drumStaffView?.StaffSpace > 0 ? drumStaffView.StaffSpace : 12f;
+                localSize = new Vector2(space * 1.3f, space * 0.96f);
                 return true;
             }
 
@@ -3432,9 +2037,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
                 resetPreviewNotesAroundTime(clampedTime);
                 prunePreviewVisibleNotes(clampedTime);
                 hitExplosionLayer?.Clear(false);
-                clearManuscriptBeams();
-                clearManuscriptDurationCues();
-                clearManuscriptRests();
                 firstActiveNoteIndex = findFirstNoteIndexAtOrAfter(clampedTime - pastVisibilityWindow);
                 lastJumpTargetTimeMs = clampedTime;
                 return;
@@ -3450,9 +2052,6 @@ namespace BeatSight.Game.Screens.Playback.Playfield
 
             noteLayer.Clear(false);
             hitExplosionLayer?.Clear(false);
-            clearManuscriptBeams();
-            clearManuscriptDurationCues();
-            clearManuscriptRests();
 
             firstActiveNoteIndex = findFirstNoteIndexAtOrAfter(clampedTime - pastVisibilityWindow);
             lastJumpTargetTimeMs = clampedTime;

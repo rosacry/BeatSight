@@ -33,7 +33,8 @@ namespace BeatSight.Game.Screens.Editor
         float WaveformSliderWidth,
         float WaveformSliderHeight,
         float SectionRowSpacingX,
-        float MiniButtonHeight);
+        float MiniButtonHeight,
+        float ContentWidth);
 
     internal readonly record struct EditorFooterLayoutContract(
         float SurfaceHeight,
@@ -116,14 +117,16 @@ namespace BeatSight.Game.Screens.Editor
                 headerInformationFlow?.Height ?? 0f,
                 headerInformationFlow?.Alpha ?? 0f);
 
+            // Slider rows fill their toolbox column, so their drawn size is what the layout guarantees.
             var timelineToolbox = new EditorTimelineToolboxLayoutContract(
                 timelineToolboxContentFlow?.Spacing.X ?? 0f,
-                timelineZoomSliderContainer?.Width ?? 0f,
-                timelineZoomSliderContainer?.Height ?? 0f,
-                timelineWaveformSliderContainer?.Width ?? 0f,
-                timelineWaveformSliderContainer?.Height ?? 0f,
+                timelineZoomSliderContainer?.DrawWidth ?? 0f,
+                timelineZoomSliderContainer?.DrawHeight ?? 0f,
+                timelineWaveformSliderContainer?.DrawWidth ?? 0f,
+                timelineWaveformSliderContainer?.DrawHeight ?? 0f,
                 timelineSectionControlRows.Count > 0 ? timelineSectionControlRows[0].Spacing.X : 0f,
-                timelineMiniButtons.Count > 0 ? timelineMiniButtons[0].Height : 0f);
+                timelineMiniButtons.Count > 0 ? timelineMiniButtons[0].Height : 0f,
+                timelineToolboxContentFlow?.DrawWidth ?? 0f);
 
             var footer = new EditorFooterLayoutContract(
                 footerRootContainer?.DrawHeight ?? 0f,

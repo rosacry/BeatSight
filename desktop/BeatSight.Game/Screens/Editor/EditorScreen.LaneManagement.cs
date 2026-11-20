@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using BeatSight.Game.Beatmaps;
+using BeatSight.Game.Mapping;
+using BeatSight.Game.UI.Theming;
 using osu.Framework.Graphics;
 using osuTK.Graphics;
 
@@ -10,7 +12,7 @@ namespace BeatSight.Game.Screens.Editor
     {
         private void refreshTimelineLaneEditorControls()
         {
-            if (timelineLaneSelectionText == null
+            if (timelineLaneChipFlow == null
                 || timelineLaneNameInput == null
                 || timelineLaneShortNameInput == null
                 || timelineLaneColorInput == null)
@@ -18,10 +20,13 @@ namespace BeatSight.Game.Screens.Editor
                 return;
             }
 
-            if (!tryGetEditableLanes(out var lanes))
+            // Lanes are the timeline rows (the playfield's lanes). Showing them never writes to the chart.
+            int laneCount = beatmap == null || timeline == null ? 0 : timeline.LaneCount;
+            if (laneCount <= 0)
             {
+                timelineLaneChipFlow.Clear();
+                lastLaneChipSignature = null;
                 suppressLaneEditorFieldSync = true;
-                timelineLaneSelectionText.Text = "Lane -";
                 timelineLaneNameInput.Current.Value = string.Empty;
                 timelineLaneShortNameInput.Current.Value = string.Empty;
                 timelineLaneColorInput.Current.Value = string.Empty;
@@ -29,28 +34,37 @@ namespace BeatSight.Game.Screens.Editor
                 return;
             }
 
-            var lane = lanes[timelineLaneEditIndex];
-            string fallbackLabel = $"Lane {timelineLaneEditIndex + 1}";
-            string laneLabel = LaneManagement.ResolveLaneLabel(beatmap, timelineLaneEditIndex, fallbackLabel);
-            timelineLaneSelectionText.Text = $"L{timelineLaneEditIndex + 1} {laneLabel}";
+            timelineLaneEditIndex = Math.Clamp(timelineLaneEditIndex, 0, laneCount - 1);
 
+            var lanes = new List<LaneIdentity>(laneCount);
+            for (int i = 0; i < laneCount; i++)
+                lanes.Add(timeline!.DescribeLane(i));
+            refreshTimelineLaneChips(lanes);
+
+            int index = timelineLaneEditIndex;
+            var automatic = timeline!.DescribeLane(index, includeCustomisations: false);
+            bool customName = LaneManagement.TryGetLaneInfo(beatmap, index, out var info) && LaneManagement.IsCustomLaneName(info, index);
+            bool customColour = LaneManagement.TryGetLaneColor(beatmap, index, out Color4 laneColour);
+
+            // Empty fields show the automatic values as placeholders.
             suppressLaneEditorFieldSync = true;
-            timelineLaneNameInput.Current.Value = lane.Name ?? string.Empty;
-            timelineLaneShortNameInput.Current.Value = lane.ShortName ?? string.Empty;
-            timelineLaneColorInput.Current.Value = lane.ColorHex ?? string.Empty;
+            timelineLaneNameInput.PlaceholderText = automatic.Name;
+            timelineLaneNameInput.Current.Value = customName ? info.Name ?? string.Empty : string.Empty;
+            timelineLaneShortNameInput.PlaceholderText = automatic.ShortName;
+            timelineLaneShortNameInput.Current.Value = customName ? info.ShortName ?? string.Empty : string.Empty;
+            timelineLaneColorInput.PlaceholderText = LaneManagement.ToColorHex(automatic.Colour);
+            timelineLaneColorInput.Current.Value = customColour ? LaneManagement.ToColorHex(laneColour) : string.Empty;
             suppressLaneEditorFieldSync = false;
 
-            bool canRemove = lanes.Count > LaneManagement.MinLaneCount;
-            timelineLaneRemoveButton?.FadeTo(canRemove ? 1f : 0.56f, 120, Easing.OutQuint);
-        }
+            string? selectedHex = customColour ? LaneManagement.ToColorHex(laneColour) : null;
+            timelineLaneAutoSwatch?.SetSelected(selectedHex == null);
+            foreach (var swatch in timelineLaneSwatches)
+                swatch.SetSelected(selectedHex != null && string.Equals(swatch.Hex, selectedHex, StringComparison.OrdinalIgnoreCase));
 
-        private void stepTimelineLaneSelection(int delta)
-        {
-            if (!tryGetEditableLanes(out var lanes))
-                return;
-
-            timelineLaneEditIndex = Math.Clamp(timelineLaneEditIndex + delta, 0, lanes.Count - 1);
-            refreshTimelineLaneEditorControls();
+            timelineLaneRemoveButton?.FadeTo(laneCount > LaneManagement.MinLaneCount ? 1f : 0.45f, 120, Easing.OutQuint);
+            timelineLaneAddButton?.FadeTo(laneCount < LaneManagement.MaxLaneCount ? 1f : 0.45f, 120, Easing.OutQuint);
+            timelineLaneMoveLeftButton?.FadeTo(index > 0 ? 1f : 0.45f, 120, Easing.OutQuint);
+            timelineLaneMoveRightButton?.FadeTo(index < laneCount - 1 ? 1f : 0.45f, 120, Easing.OutQuint);
         }
 
         private void applyTimelineLaneEdits()
@@ -65,42 +79,55 @@ namespace BeatSight.Game.Screens.Editor
                 return;
             }
 
-            if (!tryGetEditableLanes(out var lanes))
-                return;
+            int index = timelineLaneEditIndex;
+            string? laneName = emptyToNull(timelineLaneNameInput.Current.Value);
+            string? laneShortName = emptyToNull(timelineLaneShortNameInput.Current.Value);
+            string? laneColorText = emptyToNull(timelineLaneColorInput.Current.Value);
 
-            string laneName = timelineLaneNameInput.Current.Value?.Trim() ?? string.Empty;
-            string laneShortName = timelineLaneShortNameInput.Current.Value?.Trim() ?? string.Empty;
-            string laneColorText = timelineLaneColorInput.Current.Value?.Trim() ?? string.Empty;
+            // A short label alone still names the lane.
+            if (laneName == null && laneShortName != null)
+                laneName = laneShortName;
 
-            bool hasColor = !string.IsNullOrWhiteSpace(laneColorText);
             Color4 parsedColor = default;
-            if (hasColor && !LaneManagement.TryParseColorHex(laneColorText, out parsedColor))
+            if (laneColorText != null && !LaneManagement.TryParseColorHex(laneColorText, out parsedColor))
             {
-                appendStatusDetail("Lane color must be #RRGGBB.");
+                appendStatusDetail("Lane colour must be #RRGGBB.");
                 refreshTimelineLaneEditorControls();
                 return;
             }
 
-            var existing = lanes[timelineLaneEditIndex];
-            string normalizedName = string.IsNullOrWhiteSpace(laneName) ? existing.Name ?? string.Empty : laneName;
-            string normalizedShortName = string.IsNullOrWhiteSpace(laneShortName) ? existing.ShortName ?? string.Empty : laneShortName;
-            string normalizedColor = hasColor ? LaneManagement.ToColorHex(parsedColor) : existing.ColorHex ?? string.Empty;
+            // Compare with what the lane shows now: its custom values, or automatic (null).
+            bool hadCustomName = LaneManagement.TryGetLaneInfo(beatmap, index, out var info) && LaneManagement.IsCustomLaneName(info, index);
+            string? currentName = hadCustomName ? info.Name : null;
+            string? currentShort = hadCustomName ? emptyToNull(info.ShortName) : null;
+            string? currentColour = LaneManagement.TryGetLaneColor(beatmap, index, out Color4 currentLaneColour)
+                ? LaneManagement.ToColorHex(currentLaneColour)
+                : null;
+            string? targetColour = laneColorText != null ? LaneManagement.ToColorHex(parsedColor) : null;
 
-            bool changed = !string.Equals(existing.Name, normalizedName, StringComparison.Ordinal)
-                           || !string.Equals(existing.ShortName, normalizedShortName, StringComparison.Ordinal)
-                           || !string.Equals(existing.ColorHex, normalizedColor, StringComparison.OrdinalIgnoreCase);
-            if (!changed)
+            bool nameChanged = !string.Equals(currentName, laneName, StringComparison.Ordinal)
+                               || (laneName != null && !string.Equals(currentShort, laneShortName, StringComparison.Ordinal));
+            bool colourChanged = !string.Equals(currentColour, targetColour, StringComparison.OrdinalIgnoreCase);
+            if (!nameChanged && !colourChanged)
             {
                 refreshTimelineLaneEditorControls();
                 return;
             }
+
+            if (!tryGetEditableLanes(out _))
+                return;
 
             prepareUndoSnapshot();
-            LaneManagement.RenameLane(beatmap, timelineLaneEditIndex, laneName, laneShortName);
-            if (hasColor)
-                LaneManagement.RecolorLane(beatmap, timelineLaneEditIndex, parsedColor);
 
-            onLaneLayoutMutated($"Updated lane {timelineLaneEditIndex + 1}");
+            // Null name/colour store the positional defaults, which every view reads as "automatic".
+            if (nameChanged)
+                LaneManagement.RenameLane(beatmap, index, laneName, laneShortName);
+            if (colourChanged)
+                LaneManagement.RecolorLane(beatmap, index, targetColour != null ? parsedColor : DrumPalette.ForLane(index));
+
+            onLaneLayoutMutated($"Updated lane {index + 1}");
+
+            static string? emptyToNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         }
 
         private void addTimelineLane()
@@ -113,6 +140,9 @@ namespace BeatSight.Game.Screens.Editor
                 appendStatusDetail("Adding lanes is not allowed in this context.");
                 return;
             }
+
+            if (!tryGetEditableLanes(out _))
+                return;
 
             prepareUndoSnapshot();
             if (!LaneManagement.AddLane(beatmap, out int addedLane))
@@ -206,7 +236,8 @@ namespace BeatSight.Game.Screens.Editor
             if (beatmap == null)
                 return false;
 
-            lanes = LaneManagement.EnsureLaneLayout(beatmap);
+            // Editing writes lane entries for every row the timeline shows (the playfield's lane count).
+            lanes = LaneManagement.EnsureLaneLayout(beatmap, timeline?.LaneCount ?? 7);
             if (lanes.Count == 0)
                 return false;
 

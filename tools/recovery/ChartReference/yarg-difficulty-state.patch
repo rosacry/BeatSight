@@ -1,0 +1,22 @@
+diff --git a/YARG.Core/Chart/Loaders/MoonSong/MoonSongLoader.cs b/YARG.Core/Chart/Loaders/MoonSong/MoonSongLoader.cs
+index 0a8c908..bc76af9 100644
+--- a/YARG.Core/Chart/Loaders/MoonSong/MoonSongLoader.cs
++++ b/YARG.Core/Chart/Loaders/MoonSong/MoonSongLoader.cs
+@@ -152,6 +152,10 @@ namespace YARG.Core.Chart
+             _currentInstrument = instrument;
+             _currentDifficulty = difficulty;
+ 
++            // BeatSight benchmark fix: difficulty-local mix state must not leak
++            // from Expert into ExpertPlus before its first mix event.
++            _mixSetting = DrumsMixSetting.None;
++
+             _currentMoonMode = YargGameModeToMoonGameMode(_currentMode);
+             _currentMoonInstrument = YargInstrumentToMoonInstrument(_currentInstrument);
+             _currentMoonDifficulty = YargDifficultyToMoonDifficulty(_currentDifficulty);
+@@ -621,4 +625,4 @@ namespace YARG.Core.Chart
+             return notesInPhrase;
+         }
+     }
+-}
+\ No newline at end of file
++}

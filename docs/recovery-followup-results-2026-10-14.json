@@ -1,0 +1,52 @@
+{
+  "as_of_local": "2026-10-14",
+  "recovery_phase": "Accessible PC and topical Gmail inventory completed with documented exclusions; identified follow-up survivors preserved",
+  "active_jobs": [],
+  "raw_source_references_present": 118353,
+  "source_presence_not_full_hash_check": true,
+  "recycle_clips_preserved_and_verified": 50209,
+  "recycle_wavs_decoded": 50209,
+  "new_unique_checkpoints_preserved": 43,
+  "checkpoint_file_references_verified": 49,
+  "lakh_checksum_matching_midi": 16300,
+  "lakh_historical_synthesis_files_present": 4602,
+  "lakh_historical_synthesis_files_total": 50722,
+  "split_overlap": "Five current MIDI content hashes cross train/val in the recovered clip subset; 163/163 MIDI hashes freshly match original provenance",
+  "diagnostic_50ms": {
+    "legacy": {
+      "tp": 1206,
+      "fp": 1252,
+      "fn": 1255,
+      "precision": 0.4906427990235964,
+      "recall": 0.4900446972775295,
+      "f1": 0.49034356576539945
+    },
+    "adtof_separated": {
+      "tp": 1770,
+      "fp": 335,
+      "fn": 691,
+      "precision": 0.8408551068883611,
+      "recall": 0.7192198293376676,
+      "f1": 0.7752956636005256
+    }
+  },
+  "validation": "20 recovery/timing tests passed; all archived WAVs decoded; all newly preserved archive entries/copies hash verified",
+  "limitations": [
+    "Not all historical data recovered; original F processed layout absent",
+    "Bulk raw audio has not been completely rehashed or copied to another device",
+    "Lakh archive damaged and mostly missing",
+    "Reference is only five broad families; seven-recording diagnostic has unknown training overlap",
+    "No default app model change, retraining, broad corpus download, or deployment"
+  ],
+  "next_work": [
+    "Use brush/ghost-note and tom failure evidence for a bounded separation/transcription experiment",
+    "Establish independently checked longer-song exclusion set",
+    "Only then evaluate optional native reference-backed charts with honest broad labels and editing support"
+  ],
+  "read_first": [
+    "C:\\github\\BeatSight\\RECOVER.md",
+    "C:\\github\\BeatSight\\docs\\DATA_RECOVERY_INVENTORY_2026-10-14.md",
+    "C:\\github\\BeatSight\\docs\\TRANSCRIPTION_DIAGNOSTIC_2026-10-14.md"
+  ],
+  "output_policy": "D and F read-only; new experiments use scoped C output directories"
+}

@@ -36,6 +36,20 @@ Run deterministic visual QA using **real rendered game screens** (not synthetic 
 - Baselines live in:
   - `desktop/BeatSight.Tests/VisualBaselines/*.png`
 
+## 2026-11-20 Redesign Baselines and Fresh-State Captures
+
+- All 68 baselines were regenerated from one code state after the October 2026 UI redesign (design tokens,
+  instrument palette, drum-staff notation, per-tom lanes).
+- Each capture now starts from a fresh game state: `LiveVisualCaptureRenderer.resetPersistedGameState()`
+  deletes `beatsight.ini` and `user_progress.json` from the portable host storage (the test output folder).
+  Before this, captures inherited settings and practice history from earlier runs. For example, Song Select
+  showed "Sessions: 1993" and a "Last practiced: N days ago" line that changed daily, while a clean CI
+  checkout showed neither.
+- Before regenerating, a local compare run failed in exactly the 8 cases that failed on GitHub's
+  windows-latest runner. So local renders match CI, and locally generated baselines are valid there.
+- The runner's 180 s batch-startup timeout can fire on a 5-scene batch on a desktop host, because TRX is
+  written only at the end. Pass `-BatchStartupTimeoutSeconds 1800` locally, or run one scene per batch.
+
 ## 2026-02-14 Stabilization Update
 
 - Visual full-matrix gate currently passes (`60/60`) in compare mode.

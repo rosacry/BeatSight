@@ -166,6 +166,7 @@ namespace BeatSight.Tests.VisualRegression
                 throw new VisualCaptureUnavailableException("Live visual capture currently runs only on Windows desktop hosts.");
 
             resetFrameworkRandomState();
+            resetPersistedGameState();
             preseedSuppressedInputHandlersConfig();
             preseedSuppressedInputHandlersProfile();
 
@@ -322,6 +323,28 @@ namespace BeatSight.Tests.VisualRegression
         {
             foreach (string key in inputSuppressionEnvKeys)
                 Environment.SetEnvironmentVariable(key, "0");
+        }
+
+        /// <summary>
+        /// Every capture starts from a fresh game state, as on a clean CI checkout. The portable host storage
+        /// (the test output folder) otherwise carries settings and practice history from earlier captures and
+        /// runs (e.g. Song Select showed "Sessions: 1993" and a "days ago" text that changes daily).
+        /// </summary>
+        private static void resetPersistedGameState()
+        {
+            foreach (string name in new[] { "beatsight.ini", "user_progress.json" })
+            {
+                try
+                {
+                    string path = Path.Combine(AppContext.BaseDirectory, name);
+                    if (File.Exists(path))
+                        File.Delete(path);
+                }
+                catch
+                {
+                    // Best effort only, like the other preseed steps.
+                }
+            }
         }
 
         private static void preseedSuppressedInputHandlersConfig()
